@@ -100,7 +100,7 @@ import {
   type SignalResult,
   type SynchronizationUnit,
 } from "./types";
-import { filterOperationsByRevision } from "./utils";
+import { filterOperationsByRevision, isAtRevision } from "./utils";
 
 export * from "./listener";
 export type * from "./types";
@@ -1000,21 +1000,27 @@ export class BaseDocumentDriveServer
   }
 
   async getDrive(drive: string, options?: GetDocumentOptions) {
+    let document: DocumentDriveDocument | undefined;
     try {
-      const document = await this.cache.getDocument("drives", drive); // TODO support GetDocumentOptions
-      if (document && isDocumentDrive(document)) {
-        return document;
+      const cachedDocument = await this.cache.getDocument("drives", drive); // TODO support GetDocumentOptions
+      if (cachedDocument && isDocumentDrive(cachedDocument)) {
+        document = cachedDocument;
+        if (isAtRevision(document, options?.revisions)) {
+          return document;
+        }
       }
     } catch (e) {
       logger.error("Error getting drive from cache", e);
     }
-    const driveStorage = await this.storage.getDrive(drive);
-    const document = this._buildDocument(driveStorage, options);
-    if (!isDocumentDrive(document)) {
+    const driveStorage = document ?? (await this.storage.getDrive(drive));
+    const result = this._buildDocument(driveStorage, options);
+    if (!isDocumentDrive(result)) {
       throw new Error(`Document with id ${drive} is not a Document Drive`);
     } else {
-      this.cache.setDocument("drives", drive, document).catch(logger.error);
-      return document;
+      if (!options?.revisions) {
+        this.cache.setDocument("drives", drive, result).catch(logger.error);
+      }
+      return result;
     }
   }
 
@@ -1039,18 +1045,22 @@ export class BaseDocumentDriveServer
   }
 
   async getDocument(drive: string, id: string, options?: GetDocumentOptions) {
+    let cachedDocument: Document | undefined;
     try {
-      const document = await this.cache.getDocument(drive, id); // TODO support GetDocumentOptions
-      if (document) {
-        return document;
+      cachedDocument = await this.cache.getDocument(drive, id); // TODO support GetDocumentOptions
+      if (cachedDocument && isAtRevision(cachedDocument, options?.revisions)) {
+        return cachedDocument;
       }
     } catch (e) {
       logger.error("Error getting document from cache", e);
     }
-    const documentStorage = await this.storage.getDocument(drive, id);
+    const documentStorage =
+      cachedDocument ?? (await this.storage.getDocument(drive, id));
     const document = this._buildDocument(documentStorage, options);
 
-    this.cache.setDocument(drive, id, document).catch(logger.error);
+    if (!options?.revisions) {
+      this.cache.setDocument(drive, id, document).catch(logger.error);
+    }
     return document;
   }
 
@@ -1293,7 +1303,11 @@ export class BaseDocumentDriveServer
     documentStorage: DocumentStorage<T>,
     options?: GetDocumentOptions,
   ): T {
-    if (documentStorage.state && (!options || options.checkHashes === false)) {
+    if (
+      documentStorage.state &&
+      (!options || options.checkHashes === false) &&
+      isAtRevision(documentStorage as unknown as Document, options?.revisions)
+    ) {
       return documentStorage as T;
     }
 

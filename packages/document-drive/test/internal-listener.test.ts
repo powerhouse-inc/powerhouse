@@ -1,9 +1,16 @@
-import { utils } from "document-model-libs/document-drive";
+import {
+  DocumentDriveDocument,
+  utils,
+} from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import * as DocumentModelLib from "document-model/document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
-import { DocumentDriveServer, IReceiver } from "../src";
+import {
+  DocumentDriveServer,
+  InternalTransmitterUpdate,
+  IReceiver,
+} from "../src";
 import { expectUTCTimestamp, expectUUID } from "./utils";
 
 describe("Internal Listener", () => {
@@ -54,8 +61,8 @@ describe("Internal Listener", () => {
     });
 
     const server = await buildServer({
-      transmit: transmitFn,
-      disconnect: () => Promise.resolve(),
+      onStrands: transmitFn,
+      onDisconnect: () => Promise.resolve(),
     });
     const drive = await server.getDrive("drive");
 
@@ -69,55 +76,88 @@ describe("Internal Listener", () => {
       ["global", "local"],
     );
     await server.addDriveAction("drive", action);
-
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
-    expect(transmitFn).toHaveBeenCalledWith([
-      {
-        branch: "main",
-        documentId: "",
-        driveId: "drive",
-        operations: [
+
+    const update: InternalTransmitterUpdate<DocumentDriveDocument, "global"> = {
+      branch: "main",
+      documentId: "",
+      driveId: "drive",
+      operations: [
+        {
+          hash: expect.any(String) as string,
+          context: undefined,
+          id: expectUUID(expect) as string,
+          index: 0,
+          input: action.input,
+          skip: 0,
+          timestamp: "2024-01-01T00:00:00.000Z",
+          type: "ADD_FILE",
+          state: {
+            icon: "",
+            id: "drive",
+            name: "Global Drive",
+            nodes: [
+              {
+                documentType: "powerhouse/document-model",
+                id: "1",
+                kind: "file",
+                name: "test",
+                parentFolder: null,
+                synchronizationUnits: [
+                  {
+                    branch: "main",
+                    scope: "global",
+                    syncId: expectUUID(expect) as string,
+                  },
+                  {
+                    branch: "main",
+                    scope: "local",
+                    syncId: expectUUID(expect) as string,
+                  },
+                ],
+              },
+            ],
+            slug: "global",
+          },
+          previousState: {
+            icon: "",
+            id: "drive",
+            name: "Global Drive",
+            nodes: [],
+            slug: "global",
+          },
+        },
+      ],
+      state: {
+        icon: "",
+        id: "drive",
+        name: "Global Drive",
+        nodes: [
           {
-            hash: expect.any(String) as string,
-            context: undefined,
-            id: expectUUID(expect),
-            index: 0,
-            input: action.input,
-            skip: 0,
-            timestamp: "2024-01-01T00:00:00.000Z",
-            type: "ADD_FILE",
+            documentType: "powerhouse/document-model",
+            id: "1",
+            kind: "file",
+            name: "test",
+            parentFolder: null,
+            synchronizationUnits: [
+              {
+                branch: "main",
+                scope: "global",
+                syncId: action.input.synchronizationUnits[0]?.syncId,
+              },
+              {
+                branch: "main",
+                scope: "local",
+                syncId: action.input.synchronizationUnits[1]?.syncId,
+              },
+            ],
           },
         ],
-        state: {
-          icon: "",
-          id: "drive",
-          name: "Global Drive",
-          nodes: [
-            {
-              documentType: "powerhouse/document-model",
-              id: "1",
-              kind: "file",
-              name: "test",
-              parentFolder: null,
-              synchronizationUnits: [
-                {
-                  branch: "main",
-                  scope: "global",
-                  syncId: action.input.synchronizationUnits[0]?.syncId,
-                },
-                {
-                  branch: "main",
-                  scope: "local",
-                  syncId: action.input.synchronizationUnits[1]?.syncId,
-                },
-              ],
-            },
-          ],
-          slug: "global",
-        },
-        scope: "global",
+        slug: "global",
       },
-    ]);
+      scope: "global",
+    };
+    expect(transmitFn).toHaveBeenCalledWith([update]);
 
     await server.addAction(
       "drive",
@@ -126,6 +166,36 @@ describe("Internal Listener", () => {
     );
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
+
+    const state = {
+      author: {
+        name: "",
+        website: "",
+      },
+      description: "",
+      extension: "",
+      id: "",
+      name: "test",
+      specifications: [
+        {
+          changeLog: [],
+          modules: [],
+          state: {
+            global: {
+              examples: [],
+              initialValue: "",
+              schema: "",
+            },
+            local: {
+              examples: [],
+              initialValue: "",
+              schema: "",
+            },
+          },
+          version: 1,
+        },
+      ],
+    };
     expect(transmitFn).toHaveBeenLastCalledWith([
       {
         branch: "main",
@@ -143,37 +213,11 @@ describe("Internal Listener", () => {
             skip: 0,
             timestamp: expectUTCTimestamp(expect),
             type: "SET_MODEL_NAME",
+            previousState: { ...state, name: "" },
+            state,
           },
         ],
-        state: {
-          author: {
-            name: "",
-            website: "",
-          },
-          description: "",
-          extension: "",
-          id: "",
-          name: "test",
-          specifications: [
-            {
-              changeLog: [],
-              modules: [],
-              state: {
-                global: {
-                  examples: [],
-                  initialValue: "",
-                  schema: "",
-                },
-                local: {
-                  examples: [],
-                  initialValue: "",
-                  schema: "",
-                },
-              },
-              version: 1,
-            },
-          ],
-        },
+        state,
         scope: "global",
       },
     ]);
@@ -202,6 +246,8 @@ describe("Internal Listener", () => {
             skip: 0,
             timestamp: expectUTCTimestamp(expect),
             type: "SET_MODEL_NAME",
+            previousState: state,
+            state: { ...state, name: "test 2" },
           },
         ],
         state: {
@@ -238,12 +284,12 @@ describe("Internal Listener", () => {
     ]);
   });
 
-  test("should call disconnect function of lreceiver", async () => {
+  test("should call disconnect function of receiver", async () => {
     const disconnectFn = vitest.fn(() => Promise.resolve());
 
     const server = await buildServer({
-      transmit: () => Promise.resolve(),
-      disconnect: disconnectFn,
+      onStrands: () => Promise.resolve(),
+      onDisconnect: disconnectFn,
     });
     await server.deleteDrive("drive");
     expect(disconnectFn).toHaveBeenCalled();
