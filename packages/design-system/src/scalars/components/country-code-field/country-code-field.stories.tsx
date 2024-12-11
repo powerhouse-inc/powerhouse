@@ -170,16 +170,6 @@ export const WithoutFlags: Story = {
   },
 };
 
-export const WithShowErrorOnBlur: Story = {
-  args: {
-    label: "Country",
-    description: 'This field shows errors "on blur"',
-    placeholder: "Select a country",
-    required: true,
-    showErrorOnBlur: true,
-  },
-};
-
 export const WithCodesOnly: Story = {
   args: {
     label: "Country",
