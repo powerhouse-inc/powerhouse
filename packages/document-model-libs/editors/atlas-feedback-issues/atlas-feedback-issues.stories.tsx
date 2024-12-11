@@ -5,19 +5,19 @@ import { Issue, reducer, utils } from "document-models/atlas-feedback-issues";
 import { defaultMockUser } from "document-model-libs/utils/storybook/mocks";
 import { ADDRESS_ALLOW_LIST } from "document-models/atlas-feedback-issues/src/constants";
 
-const mockIssues: Issue[] = Array.from({ length: 3 }, (_, i) => ({
+const mockIssues: Issue[] = Array.from({ length: 5 }, (_, i) => ({
   phid: `PHID-ISSUE-${i}`,
-  relevantNotionIds: [`NOTION-ID-${i}`, `NOTION-ID-${i + 1}`],
-  comments: Array.from({ length: 3 }, (_, j) => ({
+  notionIds: [`NOTION-ID-${i}`, `NOTION-ID-${i + 1}`],
+  comments: Array.from({ length: 5 }, (_, j) => ({
     phid: `COMMENT-ID-${i}-${j}`,
     issuePhid: `PHID-ISSUE-${i}`,
-    relevantNotionId: `NOTION-ID-${i}`,
-    createdAt: "2024-01-01",
-    creatorAddress: ADDRESS_ALLOW_LIST[0],
+    notionId: `NOTION-ID-${i}`,
+    createdAt: "2024-01-01T08:00:00.000Z",
+    creatorAddress: ADDRESS_ALLOW_LIST[j % 2],
     content: `CONTENT-${i}-${j}`,
-    lastEditedAt: "2024-01-01",
+    lastEditedAt: "2024-01-01T08:00:00.000Z",
   })),
-  createdAt: "2024-01-01",
+  createdAt: "2024-01-01T08:00:00.000Z",
   creatorAddress: ADDRESS_ALLOW_LIST[0],
 }));
 
@@ -49,7 +49,10 @@ const { CreateDocumentStory: NotOnAllowList } = createDocumentStory(
     },
   }),
   {
-    user: defaultMockUser,
+    user: {
+      ...defaultMockUser,
+      address: "0x0000000000000000000000000000000000000000",
+    },
   },
 );
 
@@ -69,6 +72,8 @@ const { CreateDocumentStory: AllowedUser } = createDocumentStory(
       ...defaultMockUser,
       address: ADDRESS_ALLOW_LIST[0],
     },
+    customProp: "value",
+    onCustomAction: () => console.log("custom action"),
   },
 );
 
@@ -100,7 +105,10 @@ const { CreateDocumentStory: NotOnAllowListWithItems } = createDocumentStory(
     },
   }),
   {
-    user: defaultMockUser,
+    user: {
+      ...defaultMockUser,
+      address: "0x0000000000000000000000000000000000000000",
+    },
   },
 );
 

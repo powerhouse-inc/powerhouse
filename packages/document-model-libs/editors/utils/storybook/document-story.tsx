@@ -31,6 +31,7 @@ type EditorStoryArgs<S, A extends Action, L> = Partial<{
     backgroundUpdateRate: number;
     backgroundUpdateActions: ((document: Document<S, A, L>) => A)[];
   };
+  [key: string]: any;
 }>;
 
 type EditorStoryProps<S, A extends Action, L = unknown> = EditorProps<S, A, L> &

@@ -29,7 +29,7 @@ The relevant Notion IDs are separate from the Notion IDs referenced in the Comme
 type Issue {
   phid: PHID!
   creatorAddress: EthereumAddress!
-  relevantNotionIds: [String!]!
+  notionIds: [String!]!
   createdAt: DateTime!
   comments: [Comment!]!
 }
@@ -44,7 +44,7 @@ A comment refers to a specific item from the Atlas. This field is required, but 
 type Comment {
   phid: PHID!
   creatorAddress: EthereumAddress!
-  relevantNotionId: String!
+  notionId: String!
   content: String!
   createdAt: DateTime!
   lastEditedAt: DateTime!
@@ -56,11 +56,21 @@ type Comment {
 
 input CreateIssueInput {
   phid: PHID!
-  relevantNotionIds: [String]!
+  notionIds: [String]!
 }
 
 input DeleteIssueInput {
   phid: PHID!
+}
+
+input AddNotionIdInput {
+  phid: PHID!
+  notionId: String!
+}
+
+input RemoveNotionIdInput {
+  phid: PHID!
+  notionId: String!
 }
 
 # comments
@@ -68,7 +78,7 @@ input DeleteIssueInput {
 input CreateCommentInput {
   phid: PHID!
   issuePhid: PHID!
-  relevantNotionId: String!
+  notionId: String!
   content: String!
 }
 
@@ -80,6 +90,6 @@ input DeleteCommentInput {
 input EditCommentInput {
   phid: PHID!
   issuePhid: PHID!
-  relevantNotionId: String
+  notionId: String
   content: String
 }
