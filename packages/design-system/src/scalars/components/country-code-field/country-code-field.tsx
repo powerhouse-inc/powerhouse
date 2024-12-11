@@ -28,7 +28,12 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = ({
     )
     .map((country) => ({
       value: country.alpha2,
-      label: country.name,
+      label:
+        viewMode === "CodesOnly"
+          ? country.alpha2
+          : viewMode === "NamesAndCodes"
+            ? `${country.name} (${country.alpha2})`
+            : country.name,
       icon: showFlagIcons
         ? () => (
             <CircleFlag
@@ -69,9 +74,9 @@ export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
     validations: {
       _validOption:
         ({ allowedCountries, excludedCountries }) =>
-        (value: string) => {
-          if (!value) {
-            return "Please select a valid country";
+        (value: string | undefined) => {
+          if (value === "" || value === undefined) {
+            return true; // show only the required message
           }
 
           const validCountries = countries.all
