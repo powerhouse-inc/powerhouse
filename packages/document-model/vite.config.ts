@@ -18,6 +18,7 @@ const entry = {
   index: "src/index.ts",
   "document-model": "src/document-model/index.ts",
   document: "src/document/index.ts",
+  utils: "src/document/utils/index.ts",
 };
 
 export default defineConfig(({ mode = "node" }) => {
