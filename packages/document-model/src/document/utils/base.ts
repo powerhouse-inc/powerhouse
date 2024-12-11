@@ -1,3 +1,4 @@
+import { ZodError } from "zod";
 import stringifyJson from "safe-stable-stringify";
 import { baseReducer, mutableBaseReducer, updateHeader } from "../reducer";
 import {
@@ -30,6 +31,7 @@ import {
   NOOP,
 } from "../actions/types";
 import { SignalDispatch } from "../signal";
+import { InvalidActionInputError, InvalidActionInputZodError } from "./errors";
 
 export function isNoopOperation(op: Partial<Operation>): boolean {
   return (
@@ -96,7 +98,11 @@ export function createAction<A extends Action>(
   try {
     validator?.().parse(action.input);
   } catch (error) {
-    throw new Error(`Invalid action input: ${error}`);
+    if (error instanceof ZodError) {
+      throw new InvalidActionInputZodError(error.issues);
+    } else {
+      throw new InvalidActionInputError(error);
+    }
   }
 
   return action as A;
