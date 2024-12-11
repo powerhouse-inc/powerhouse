@@ -19,8 +19,10 @@ export const validateIsBigInt =
 export const isInteger = (value: unknown): boolean =>
   Number.isInteger(Number(value));
 
-export const isFloat = (value: unknown): boolean =>
-  !Number.isInteger(Number(value));
+export const isFloat = (value: unknown): boolean => {
+  const number = Number(value);
+  return !isNaN(number) && isFinite(number);
+};
 
 export const validateNumericType =
   ({ allowNegative = false, numericType }: NumberFieldProps) =>
@@ -39,62 +41,50 @@ export const validateNumericType =
 
       case "NegativeInt": {
         if (!isInt) return "Value must be a negative integer";
-        if (!allowNegative && Number(value) >= 0)
-          return "Value must be a negative integer";
+        if (Number(value) >= 0) return "Value must be a negative integer";
         if (isNegative) return true;
         return "Value must be a negative integer";
       }
 
       case "NonNegativeInt": {
         if (!isInt) return "Value must be a non-negative integer";
-        if (!allowNegative && isNegative)
-          return "Value must be a non-negative integer";
+        if (allowNegative) return true;
         if (Number(value) >= 0) return true;
         return "Value must be a non-negative integer";
       }
 
       case "NonPositiveInt": {
         if (!isInt) return "Value must be a non-positive integer";
-        if (!allowNegative && Number(value) > 0)
-          return "Value must be a non-positive integer";
         if (Number(value) <= 0) return true;
         return "Value must be a non-positive integer";
       }
 
       case "PositiveFloat": {
-        if (!isFloat(value) && !isInt)
-          return "Value must be a positive float or integer";
-        if (!allowNegative && parseFloat(value as string) <= 0)
-          return "Value must be a positive float or integer";
+        if (!isFloat(value)) return "Value must be a positive float ";
+        if (allowNegative) return true;
         if (parseFloat(value as string) > 0) return true;
-        return "Value must be a positive float or integer";
+        return "Value must be a positive float";
       }
 
       case "NegativeFloat": {
-        if (!isFloat(value) && !isInt)
-          return "Value must be a negative float or integer";
-        if (!allowNegative && parseFloat(value as string) >= 0)
-          return "Value must be a negative float or integer";
-        if (parseFloat(value as string) < 0) return true;
-        return "Value must be a negative float or integer";
+        if (!isFloat(value)) return "Value must be a negative float";
+        if (parseFloat(value as string) >= 0)
+          return "Value must be a negative float";
+        if (isNegative) return true;
+        return "Value must be a negative float";
       }
 
       case "NonNegativeFloat": {
-        if (!isFloat(value) && !isInt)
-          return "Value must be a non-negative float or integer";
-        if (!allowNegative && parseFloat(value as string) < 0)
-          return "Value must be a non-negative float or integer";
+        if (!isFloat(value)) return "Value must be a non-negative float ";
+        if (allowNegative) return true;
         if (parseFloat(value as string) >= 0) return true;
-        return "Value must be a non-negative float or integer";
+        return "Value must be a non-negative float";
       }
 
       case "NonPositiveFloat": {
-        if (!isFloat(value) && !isInt)
-          return "Value must be a non-positive float or integer";
-        if (!allowNegative && parseFloat(value as string) > 0)
-          return "Value must be a non-positive float or integer";
+        if (!isFloat(value)) return "Value must be a non-positive float";
         if (parseFloat(value as string) <= 0) return true;
-        return "Value must be a non-positive float or integer";
+        return "Value must be a non-positive float";
       }
 
       case "BigInt": {
