@@ -133,9 +133,7 @@ export const Required: Story = {
   args: {
     label: "Country",
     placeholder: "Select a country",
-    description: "This field is required",
     required: true,
-    showErrorOnBlur: true,
   },
 };
 
@@ -169,5 +167,21 @@ export const WithoutFlags: Story = {
     label: "Country",
     placeholder: "Select a country",
     showFlagIcons: false,
+  },
+};
+
+export const WithCodesOnly: Story = {
+  args: {
+    label: "Country",
+    placeholder: "Select a country",
+    viewMode: "CodesOnly",
+  },
+};
+
+export const WithNamesAndCodes: Story = {
+  args: {
+    label: "Country",
+    placeholder: "Select a country",
+    viewMode: "NamesAndCodes",
   },
 };
