@@ -54,6 +54,16 @@
       "types": "./dist/browser/document-model.d.ts",
       "require": "./dist/browser/cjs/document-model.js",
       "import": "./dist/browser/es/document-model.js"
+    },
+    "./utils": {
+      "node": {
+        "import": "./dist/node/es/utils.js",
+        "require": "./dist/node/cjs/utils.js",
+        "types": "./dist/node/utils.d.ts"
+      },
+      "import": "./dist/browser/es/utils.js",
+      "require": "./dist/browser/cjs/utils.js",
+      "types": "./dist/browser/utils.d.ts"
     }
   },
   "devDependencies": {
