@@ -1,6 +1,7 @@
 import { Document, Operation, OperationScope } from "document-model/document";
 import { logger } from "../../../utils/logger";
 import {
+  GetDocumentOptions,
   IBaseDocumentDriveServer,
   Listener,
   ListenerRevision,
@@ -59,16 +60,21 @@ export class InternalTransmitter implements ITransmitter {
       if (state) {
         return state;
       }
-      const document = await this.drive.getDocument(
-        strand.driveId,
-        strand.documentId,
-        {
-          revisions: {
-            [strand.scope]: index,
-          },
-          checkHashes: false,
+
+      const getDocumentOptions: GetDocumentOptions = {
+        revisions: {
+          [strand.scope]: index,
         },
-      );
+        checkHashes: false,
+      };
+      const document = await (strand.documentId
+        ? this.drive.getDocument(
+            strand.driveId,
+            strand.documentId,
+            getDocumentOptions,
+          )
+        : this.drive.getDrive(strand.driveId, getDocumentOptions));
+
       if (index < 0) {
         stateByIndex.set(index, document.initialState.state[strand.scope]);
       } else {
