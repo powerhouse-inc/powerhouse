@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/src/index.ts"
 force: true
 ---
-import { generateUUID } from "document-drive";
+import { randomUUID } from "crypto";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import {
     AnalyticsProcessor,
@@ -18,7 +18,7 @@ import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap
 export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
 
     protected processorOptions: ProcessorOptions = {
-    listenerId: generateUUID(),
+    listenerId: randomUUID(),
     filter: {
       branch: ["main"],
       documentId: ["*"],
