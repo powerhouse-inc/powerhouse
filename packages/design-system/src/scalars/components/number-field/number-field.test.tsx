@@ -459,4 +459,36 @@ describe("NumberField", () => {
       precisionField: 0.9,
     });
   });
+
+  it("should accept integer values when numericType is PositiveFloat", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div>
+            <NumberField
+              label="Positive Float Field"
+              name="positiveFloatField"
+              numericType="PositiveFloat"
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Positive Float Field");
+    await user.type(input, "42");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      positiveFloatField: 42,
+    });
+  });
 });
