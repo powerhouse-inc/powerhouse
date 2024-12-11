@@ -3,7 +3,7 @@ import {
   screen,
   waitForElementToBeRemoved,
 } from "@testing-library/react";
-
+import { it } from "vitest";
 import { WagmiContext } from "@/connect/context/WagmiContext";
 import { ConnectSidebar } from ".";
 

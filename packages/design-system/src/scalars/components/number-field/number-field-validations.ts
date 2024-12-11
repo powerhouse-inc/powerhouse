@@ -23,7 +23,7 @@ export const isFloat = (value: unknown): boolean =>
   !Number.isInteger(Number(value));
 
 export const validateNumericType =
-  ({ allowNegative = false, numericType = "PositiveInt" }: NumberFieldProps) =>
+  ({ allowNegative = false, numericType }: NumberFieldProps) =>
   (value: unknown) => {
     const isPositive = Number(value) > 0;
     const isNegative = Number(value) < 0;
@@ -97,6 +97,10 @@ export const validateNumericType =
       case "BigInt": {
         if (isInt) return true;
         return "This is not a valid BigInt";
+      }
+
+      default: {
+        return true;
       }
     }
   };

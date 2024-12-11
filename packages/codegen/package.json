@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.18.0",
+  "version": "0.20.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "main": "dist/index.js",
@@ -21,9 +21,10 @@
     "./utils": "./dist/utils/index.js"
   },
   "scripts": {
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "clean": "rimraf dist/",
     "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
     "build": "tsup",
@@ -50,14 +51,8 @@
   "devDependencies": {
     "@powerhousedao/scalars": "workspace:*",
     "copyfiles": "^2.4.1",
-    "esbuild-fix-imports-plugin": "^1.0.6",
+    "esbuild-fix-imports-plugin": "^1.0.7",
     "graphql": "^16.8.1",
-    "husky": "^8.0.3",
-    "rimraf": "^5.0.5",
-    "tsx": "^4.19.1"
-  },
-  "peerDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
-    "graphql": "^16.8.1"
+    "husky": "^8.0.3"
   }
 }

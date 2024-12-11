@@ -45,9 +45,10 @@ export function buildOperationSignatureMessage(
   return textEncode.encode(prefix + message);
 }
 
-export function ab2hex(ab: ArrayBuffer): string {
+export function ab2hex(ab: ArrayBuffer | ArrayBufferView): string {
+  const view = ArrayBuffer.isView(ab) ? ab : new Uint8Array(ab);
   return Array.prototype.map
-    .call(new Uint8Array(ab), (x: number) => ("00" + x.toString(16)).slice(-2))
+    .call(view, (x: number) => ("00" + x.toString(16)).slice(-2))
     .join("");
 }
 

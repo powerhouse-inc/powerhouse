@@ -12,7 +12,7 @@ import {
   validateNumericType,
 } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
-import { getDisplayValue, regex } from "./utils";
+import { regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
@@ -40,7 +40,10 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       step = 1,
       pattern,
       isBigInt = false,
+      //Disable this for the transformations values
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       trailingZeros = false,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       precision = 0,
       ...props
     },
@@ -63,8 +66,23 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     const showSteps = step !== 0;
 
     // Prevent to write invalid characters
-    const blockInvalidChar = (e: React.KeyboardEvent<HTMLInputElement>) =>
-      ["e", "E"].includes(e.key) && e.preventDefault();
+    const blockInvalidChar = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (["e", "E"].includes(e.key)) {
+        e.preventDefault();
+        return;
+      }
+      // Handle the arrow keys
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const operation = e.key === "ArrowUp" ? "increment" : "decrement";
+
+        // Call the handleChangeSteps function
+        handleChangeSteps(
+          e as unknown as React.MouseEvent<HTMLButtonElement>,
+          operation,
+        );
+      }
+    };
 
     // Prevent pasting invalid characters
     const blockInvalidPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -88,7 +106,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           (operation === "increment" ? BigInt(1) : BigInt(-1));
         newValue = currentValue + adjustment;
       } else {
-        const currentValue = Number(value ?? defaultValue ?? 0);
+        const currentValue = Number(value ?? 0);
         const adjustment = (step || 1) * (operation === "increment" ? 1 : -1);
         newValue = currentValue + adjustment;
       }
@@ -98,21 +116,13 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         if (minValue !== undefined && Number(newValue) < minValue) return;
       }
 
-      const formattedValue = isBigInt
-        ? BigInt(newValue)
-        : getDisplayValue(newValue, {
-            isBigInt,
-            trailingZeros,
-            precision,
-          });
-
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
 
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: formattedValue },
+        value: { value: newValue },
         writable: false,
       });
 
@@ -120,38 +130,59 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      let numericValue: number | bigint;
+      let numericValue: number | bigint | string;
       const inputValue = e.target.value;
+      // if its empty, keep it empty
+      if (!inputValue || inputValue === "") {
+        onBlur?.(e);
+        return;
+      }
 
       if (isBigInt) {
-        const normalizedValue = inputValue.replace(/[^\d-]/g, ""); // Elimina caracteres no numéricos
+        const normalizedValue = inputValue.replace(/[^\d-]/g, "");
         numericValue = BigInt(normalizedValue);
       } else {
-        numericValue = Number(inputValue);
-        // Keep the value
-        if (isNaN(numericValue)) {
-          numericValue = value || 0;
+        // keep the value if its greater than MAX_SAFE_INTEGER
+        if (Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER) {
+          numericValue = inputValue;
+        } else {
+          numericValue = value?.toString() ?? "";
         }
       }
 
-      //Format the value for BigInt y precisión
-      const formattedValue = isBigInt
-        ? BigInt(numericValue)
-        : getDisplayValue(numericValue, {
-            isBigInt,
-            trailingZeros,
-            precision,
-          });
+      //Check if the value is a number and if its greater than the max safe integer
+      if (
+        !isBigInt &&
+        Math.abs(Number(numericValue)) > Number.MAX_SAFE_INTEGER
+      ) {
+        const nativeEvent = new Event("change", {
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(nativeEvent, "target", {
+          value: { value: numericValue },
+          writable: false,
+        });
+        onChange?.(
+          nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>,
+        );
+        onBlur?.(e);
+        // Add return to avoid the conversion after
+        return;
+      }
+
+      //This case its safe to convert to bigInt or number
+      const finalValue = isBigInt ? BigInt(numericValue) : Number(numericValue);
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
+      // If the value is will be acept send string the use formattedValue instead of finalValue
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: formattedValue },
+        value: { value: finalValue },
         writable: false,
       });
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
-
       onBlur?.(e);
     };
     return (
@@ -180,9 +211,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
             onKeyDown={blockInvalidChar}
-            value={isBigInt ? value?.toString() : Number(value)}
+            value={value === undefined ? "" : value.toString()}
             onBlur={handleBlur}
-            defaultValue={isBigInt ? value?.toString() : Number(value)}
+            defaultValue={defaultValue?.toString()}
             onChange={onChange}
             onPaste={blockInvalidPaste}
             ref={ref}

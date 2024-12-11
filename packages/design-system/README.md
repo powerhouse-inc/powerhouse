@@ -69,3 +69,5 @@ chore!: drop support for Node 6
 > Keep in mind that every time you create a new commit, a pre-commit process is executed to validate that your commit message is valid.
 
 You can find more info about this topic here: https://www.conventionalcommits.org/en/v1.0.0/
+
+

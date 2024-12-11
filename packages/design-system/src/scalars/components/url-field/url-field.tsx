@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React, { useCallback, useId, useMemo } from "react";
 import {
   Input,
   FormGroup,
@@ -11,6 +11,7 @@ import { ErrorHandling, FieldCommonProps } from "../types";
 import { cn } from "@/scalars/lib";
 import { Icon } from "@/powerhouse";
 import { getIconName } from "./utils";
+import { useURLWarnings } from "./useURLWarnings";
 
 interface UrlFieldProps
   extends FieldCommonProps<string>,
@@ -27,14 +28,28 @@ interface UrlFieldProps
 const UrlFieldRaw: React.FC<UrlFieldProps> = ({
   label,
   description,
-  warnings,
+  warnings: warningsProp,
   errors,
   showIcon = false,
+  onBlur,
   ...props
 }) => {
   const idGenerated = useId();
   const id = props.id ?? idGenerated;
   const hasError = !!errors?.length;
+  const { warnings, checkForWarnings } = useURLWarnings(props.value ?? "");
+
+  const combinedWarnings = useMemo(() => {
+    return [...(warningsProp ?? []), ...warnings];
+  }, [warningsProp, warnings]);
+
+  const handleBlur = useCallback(
+    (event: React.FocusEvent<HTMLInputElement>) => {
+      checkForWarnings();
+      onBlur?.(event);
+    },
+    [checkForWarnings, onBlur],
+  );
 
   return (
     <FormGroup>
@@ -53,6 +68,7 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = ({
           {...props}
           value={props.value ?? ""}
           aria-invalid={hasError}
+          onBlur={handleBlur}
           className={cn(showIcon && "pl-8")}
         />
         {showIcon && (
@@ -62,7 +78,9 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = ({
         )}
       </div>
       {description && <FormDescription>{description}</FormDescription>}
-      {warnings && <FormMessageList messages={warnings} type="warning" />}
+      {combinedWarnings.length > 0 && (
+        <FormMessageList messages={combinedWarnings} type="warning" />
+      )}
       {errors && <FormMessageList messages={errors} type="error" />}
     </FormGroup>
   );

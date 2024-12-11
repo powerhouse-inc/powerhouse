@@ -4,7 +4,7 @@ import {
   removeSuccessFiles,
   sortFilesByStatus,
 } from "./get-folder-status";
-
+import { it } from "vitest";
 const filesStatus: FileStatus[] = [
   {
     path: "fol1/doc1",

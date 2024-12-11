@@ -5,14 +5,25 @@ import {
 import { ToggleField, type ToggleFieldProps } from "../fragments/toggle-field";
 
 export interface BooleanFieldProps
-  extends CheckboxFieldProps,
-    ToggleFieldProps {
+  extends Omit<CheckboxFieldProps, "defaultValue" | "onChange" | "value">,
+    Omit<ToggleFieldProps, "onChange" | "value"> {
   isToggle?: boolean;
+  onChange?: (value: boolean) => void;
+  value?: boolean;
 }
 
 export const BooleanField: React.FC<BooleanFieldProps> = ({
   isToggle,
+  onChange,
   ...props
 }) => {
-  return isToggle ? <ToggleField {...props} /> : <CheckboxField {...props} />;
+  const handleChange = (value: string | boolean) => {
+    onChange?.(Boolean(value));
+  };
+
+  return isToggle ? (
+    <ToggleField {...props} onChange={handleChange} />
+  ) : (
+    <CheckboxField {...props} onChange={handleChange} />
+  );
 };

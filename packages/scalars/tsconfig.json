@@ -1,27 +1,15 @@
 {
-    "compilerOptions": {
-        "module": "ESNext",
-        "moduleResolution": "Bundler",
-        "target": "esnext",
-        "types": ["vitest/globals"],
-        "declaration": true,
-        "outDir": "./dist",
-        "esModuleInterop": true,
-        "forceConsistentCasingInFileNames": true,
-        "strict": true,
-        "noImplicitAny": true,
-        "skipLibCheck": true,
-        "emitDeclarationOnly": true,
-        "baseUrl": "."
-    },
-    "include": [
-        "src/**/*",
-        "test/**/*",
-        "*.config.ts",
-        "*.config.js",
-        "reset.d.ts",
-        "modules.d.ts",
-        "vite.config.ts",
-        "vitest.config.ts"
-    ]
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "outDir": "./dist",
+    "types": ["vitest/globals"],
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "*.ts",
+    "package.json"
+  ]
 }
