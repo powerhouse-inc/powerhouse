@@ -10,7 +10,7 @@ import {
     ProcessorUpdate
   } from "@powerhousedao/reactor-api";
 <% documentTypes.forEach(type => { _%>
-import { <%= documentTypesMap[type].name %>Document } from "../../<%= documentTypesMap[type].importPath %>";
+import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
 %><% }); _%>
 
 <% if(documentTypes.length) { %>type DocumentType = <%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } %>;
