@@ -22,8 +22,11 @@ export async function createSchema(knex: Knex) {
         .string("source")
         .notNullable()
         .index("analyticsseries_source_index");
-      table.date("start").notNullable().index("analyticsseries_start_index");
-      table.date("end").nullable().index("analyticsseries_end_index");
+      table
+        .timestamp("start")
+        .notNullable()
+        .index("analyticsseries_start_index");
+      table.timestamp("end").nullable().index("analyticsseries_end_index");
       table
         .string("metric")
         .notNullable()
