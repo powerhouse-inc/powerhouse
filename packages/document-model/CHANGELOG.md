@@ -1,3 +1,14 @@
+## 2.12.0 (2024-12-11)
+
+### 🚀 Features
+
+- **document-model:** added utils export ([b6261961](https://github.com/powerhouse-inc/powerhouse/commit/b6261961))
+- **document-model:** improved invalid action input error ([1d2f1edb](https://github.com/powerhouse-inc/powerhouse/commit/1d2f1edb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.11.0 (2024-12-11)
 
 ### 🚀 Features
