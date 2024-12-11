@@ -26,6 +26,7 @@ export const validateNumericType =
   ({ allowNegative = false, numericType = "PositiveInt" }: NumberFieldProps) =>
   (value: unknown) => {
     const isPositive = Number(value) > 0;
+    const isNegative = Number(value) < 0;
     const isInt = isInteger(value);
 
     switch (numericType) {
@@ -41,13 +42,13 @@ export const validateNumericType =
         if (!isInt) return "Value must be an integer";
         if (!allowNegative && Number(value) >= 0)
           return "Value must be a negative integer";
-        if (Number(value) < 0) return true;
+        if (isNegative) return true;
         return "Value must be a negative integer";
       }
 
       case "NonNegativeInt": {
         if (!isInt) return "Value must be an integer";
-        if (!allowNegative && Number(value) < 0)
+        if (!allowNegative && isNegative)
           return "Value must be a non-negative integer";
         if (Number(value) >= 0) return true;
         return "Value must be a non-negative integer";
@@ -94,7 +95,7 @@ export const validateNumericType =
       }
 
       case "BigInt": {
-        if (!isFloat(value)) return true;
+        if (isInt) return true;
         return "This is not a valid BigInt";
       }
     }

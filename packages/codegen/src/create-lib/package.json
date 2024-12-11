@@ -9,6 +9,7 @@
     "./dist/"
   ],
   "dependencies": {
+    "@powerhousedao/config": "latest",
     "arg": "^5.0.2",
     "enquirer": "^2.4.1"
   },

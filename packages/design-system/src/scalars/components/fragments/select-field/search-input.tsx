@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Command, CommandInput } from "@/scalars/components/fragments/command";
 import { cn } from "@/scalars/lib/utils";
 import { SelectProps } from "@/scalars/components/enum-field/types";
@@ -9,6 +9,7 @@ interface SearchInputProps {
   options?: SelectProps["options"];
   placeholder?: string;
   disabled?: boolean;
+  searchValue?: string;
   onSearch?: (value: string) => void;
   onOpenChange?: (open: boolean) => void;
   onSelectFirstOption?: () => void;
@@ -21,6 +22,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   options = [],
   placeholder,
   disabled,
+  searchValue,
   onSearch,
   onOpenChange,
   onSelectFirstOption,
@@ -28,13 +30,11 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   isPopoverOpen,
 }) => {
   const selectedOption = options.find((o) => o.value === selectedValues[0]);
-  const [value, setValue] = useState(selectedOption?.label || "");
 
   const handleChange = (value: string) => {
-    if (value !== selectedOption?.label) {
+    if (selectedOption && selectedOption.label !== value) {
       handleClear?.();
     }
-    setValue(value);
     onSearch?.(value);
     onOpenChange?.(true);
   };
@@ -51,10 +51,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   };
 
   useEffect(() => {
-    if (selectedValues.length > 0) {
-      setValue(selectedOption?.label || "");
-    }
-  }, [selectedValues, selectedOption]);
+    onSearch?.(selectedOption?.label ?? searchValue ?? "");
+  }, [onSearch, selectedOption, searchValue]);
 
   useEffect(() => {
     if (isPopoverOpen) {
@@ -62,7 +60,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       if (input) {
         setTimeout(() => {
           (input as HTMLInputElement).focus();
-        }, 100);
+        }, 0);
       }
     }
   }, [isPopoverOpen]);
@@ -72,7 +70,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       <div className="flex w-full items-center">
         <Command>
           <CommandInput
-            value={value}
+            value={searchValue}
             onValueChange={handleChange}
             placeholder={placeholder}
             onClick={(e) => {
@@ -81,8 +79,15 @@ export const SearchInput: React.FC<SearchInputProps> = ({
               onOpenChange?.(true);
             }}
             onKeyDown={handleKeyDown}
-            wrapperClassName={cn("group mt-0 border-0 border-none px-0")}
-            className={cn("py-0")}
+            wrapperClassName={cn(
+              "group mt-0 border-0 border-none px-0",
+              "hover:bg-gray-100! dark:hover:bg-charcoal-800!",
+              "focus-within:bg-white! dark:focus-within:bg-charcoal-900!",
+            )}
+            className={cn(
+              "py-0 text-gray-900 dark:text-gray-50",
+              "group-hover:bg-gray-100! dark:group-hover:bg-charcoal-800!",
+            )}
             disabled={disabled}
           />
         </Command>

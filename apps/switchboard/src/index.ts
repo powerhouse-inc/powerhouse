@@ -1,4 +1,3 @@
-import * as searchListener from "@powerhousedao/general-document-indexer";
 import { ReactorRouterManager } from "@powerhousedao/reactor-api";
 import { DocumentDriveServer } from "document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
@@ -36,18 +35,9 @@ const main = async () => {
       "/",
       app,
       driveServer,
-      pool,
     );
     // init router
     await reactorRouterManager.init();
-
-    await reactorRouterManager.registerProcessor({
-      ...searchListener,
-      transmit(strands) {
-        return searchListener.transmit(strands, db);
-      },
-      name: "search/:drive",
-    });
 
     // @TODO: add auth listener
     // await reactorRouterManager.addSubgraph({

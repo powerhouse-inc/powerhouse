@@ -1,3 +1,23 @@
+## 1.119.1 (2024-12-09)
+
+### 🚀 Features
+
+- **document-model-libs:** chatroom document model ([#649](https://github.com/powerhouse-inc/powerhouse/pull/649))
+
+### 🩹 Fixes
+
+- **config:** added build ([aaeb785f](https://github.com/powerhouse-inc/powerhouse/commit/aaeb785f))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/design-system to 1.13.1
+- Updated @powerhousedao/config to 1.1.1
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.118.2 (2024-12-09)
 
 ### 🚀 Features

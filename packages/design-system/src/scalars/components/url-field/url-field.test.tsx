@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UrlField } from "./url-field";
 import { renderWithForm } from "@/scalars/lib/testing";
@@ -63,7 +63,7 @@ describe("UrlField", () => {
     expect(screen.getByText("Enter your website URL")).toBeInTheDocument();
   });
 
-  it("should show error message when provided", () => {
+  it("should show error message when provided", async () => {
     renderWithForm(
       <UrlField
         name="test-url"
@@ -72,7 +72,9 @@ describe("UrlField", () => {
       />,
     );
 
-    expect(screen.getByText("Invalid URL format")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Invalid URL format")).toBeInTheDocument(),
+    );
   });
 
   it("should show warning message when provided", () => {
@@ -115,6 +117,39 @@ describe("UrlField", () => {
     expect(
       await screen.findByText("not-a-url must be a valid URL"),
     ).toBeInTheDocument();
+  });
+
+  it("should be invalid if URL is to long", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <UrlField
+        data-testid="url-field"
+        name="test-url"
+        label="Website URL"
+        maxURLLength={10}
+      />,
+    );
+
+    const input = screen.getByTestId("url-field");
+    await user.type(input, "https://example.com/{enter}"); // 20 characters (including protocol and domain)
+
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(
+      await screen.findByText("Website URL must not exceed 10 characters"),
+    ).toBeInTheDocument();
+  });
+
+  it("should show warning when the URL could be truncated", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <UrlField data-testid="url-field" name="test-url" label="Website URL" />,
+    );
+
+    const input = screen.getByTestId("url-field");
+    await user.type(input, "https://example.com/test...");
+    await user.tab(); // trigger blur
+
+    expect(await screen.findByText("URL may be truncated")).toBeInTheDocument();
   });
 
   it("should be valid when valid", async () => {

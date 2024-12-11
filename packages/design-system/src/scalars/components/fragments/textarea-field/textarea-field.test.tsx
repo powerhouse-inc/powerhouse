@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
 import { TextareaField } from "./textarea-field";
@@ -52,7 +52,7 @@ describe("TextareaField Component", () => {
   });
 
   describe("Messages and Feedback", () => {
-    it("should handle warnings and errors", () => {
+    it("should handle warnings and errors", async () => {
       renderWithForm(
         <TextareaField
           name="textarea"
@@ -65,8 +65,12 @@ describe("TextareaField Component", () => {
       expect(screen.getByText("Help text")).toBeInTheDocument();
       expect(screen.getByText("Warning 1")).toBeInTheDocument();
       expect(screen.getByText("Warning 2")).toBeInTheDocument();
-      expect(screen.getByText("Error 1")).toBeInTheDocument();
-      expect(screen.getByText("Error 2")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByText("Error 1")).toBeInTheDocument(),
+      );
+      await waitFor(() =>
+        expect(screen.getByText("Error 2")).toBeInTheDocument(),
+      );
     });
   });
 

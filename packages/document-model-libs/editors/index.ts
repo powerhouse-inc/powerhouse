@@ -12,3 +12,4 @@ export { module as DocumentModel2 } from "./document-model-2";
 export { module as ScopeFramework } from "./scope-framework";
 export { module as RealWorldAssets } from "./rwa";
 export { module as AtlasFeedbackIssues } from "./atlas-feedback-issues";
+export { module as ChatRoomEditor } from "./chat-room-editor";

@@ -7,6 +7,15 @@ import { useCallback } from "react";
 import { useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
 
+function _isValidRegex(pattern: unknown): boolean {
+  try {
+    new RegExp(pattern as string);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const withForm: Decorator = (Story, context) => {
   const formRef = useRef<UseFormReturn>(null);
   const [showFormButtons, setShowFormButtons] = useState<boolean>(false);
@@ -42,6 +51,11 @@ export const withForm: Decorator = (Story, context) => {
     ...(Array.isArray(context.args.warnings)
       ? { warnings: context.args.warnings }
       : { warnings: undefined }),
+    ...(context.args.pattern !== undefined
+      ? _isValidRegex(context.args.pattern)
+        ? { pattern: context.args.pattern }
+        : { pattern: "" }
+      : {}),
   };
 
   return (

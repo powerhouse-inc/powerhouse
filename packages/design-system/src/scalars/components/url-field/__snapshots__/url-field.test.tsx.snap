@@ -9,12 +9,12 @@ exports[`UrlField > should match snapshot 1`] = `
       class="flex flex-col gap-2"
     >
       <label
-        class="inline-flex items-center text-sm font-medium leading-[22px] text-red-800 group-hover:!text-red-900 dark:text-red-800 dark:group-hover:!text-red-900 mb-[3px]"
+        class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-50 mb-[3px]"
         for=":r0:"
       >
         Website URL
         <span
-          class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50 !text-red-800 group-hover:!text-red-900"
+          class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
         >
           *
         </span>
@@ -23,6 +23,7 @@ exports[`UrlField > should match snapshot 1`] = `
         class="relative"
       >
         <input
+          aria-invalid="false"
           class="flex h-9 w-full rounded-md text-sm text-gray-900 dark:text-gray-50 border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900 px-3 py-2 font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500"
           id=":r0:"
           name="test-url"
@@ -42,12 +43,6 @@ exports[`UrlField > should match snapshot 1`] = `
         data-type="warning"
       >
         URL may be unreachable
-      </p>
-      <p
-        class="mb-0 inline-flex items-center text-xs font-medium text-red-900 dark:text-red-900"
-        data-type="error"
-      >
-        Invalid URL format
       </p>
     </div>
   </form>

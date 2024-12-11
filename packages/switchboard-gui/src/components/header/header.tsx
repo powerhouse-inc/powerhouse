@@ -17,9 +17,13 @@ export default function Header() {
 
   useEffect(() => {
     auth.checkAuthValidity();
-    auth.getDrives().then((drives) => {
-      setDrives(drives);
-    });
+    auth
+      .getDrives()
+      .then((drives) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        setDrives(drives);
+      })
+      .catch(console.error);
   }, [gqlToken, address]);
 
   const selectGraphQLPlayground = (e: React.ChangeEvent<HTMLSelectElement>) => {

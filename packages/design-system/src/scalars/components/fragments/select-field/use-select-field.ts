@@ -20,18 +20,24 @@ export function useSelectField({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedValues, setSelectedValues] = useState<string[]>(() => {
     const initialValue = value ?? defaultValue ?? [];
+    if (initialValue === "") {
+      return [];
+    }
     return Array.isArray(initialValue) ? initialValue : [initialValue];
   });
   const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
-    // avoid unnecessary re-renders
     if (isInternalChange.current) {
       isInternalChange.current = false;
       return;
     }
     const newValue = value ?? defaultValue ?? [];
-    setSelectedValues(Array.isArray(newValue) ? newValue : [newValue]);
+    if (newValue === "") {
+      setSelectedValues([]);
+    } else {
+      setSelectedValues(Array.isArray(newValue) ? newValue : [newValue]);
+    }
     setSearchValue("");
   }, [value]);
 

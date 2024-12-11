@@ -1,16 +1,12 @@
 #! /usr/bin/env node
+import { getConfig } from "@powerhousedao/config/powerhouse";
 import {
   generate,
   generateEditor,
   generateFromFile,
   generateProcessor,
 } from "./codegen/index";
-import {
-  parseArgs,
-  getConfig,
-  promptDirectories,
-  parseConfig,
-} from "./utils/index";
+import { parseArgs, promptDirectories, parseConfig } from "./utils/index";
 
 function parseCommand(argv: string[]) {
   const args = parseArgs(argv, {

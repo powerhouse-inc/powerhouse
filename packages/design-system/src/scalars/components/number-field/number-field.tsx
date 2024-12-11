@@ -17,7 +17,7 @@ import { getDisplayValue, regex } from "./utils";
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
   value?: number;
-  defaultValue?: string | number;
+  defaultValue?: number;
   className?: string;
   pattern?: RegExp;
 }
@@ -49,12 +49,17 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     const generatedId = useId();
     const id = propId ?? generatedId;
     const isIncrementDisabled =
-      maxValue !== undefined && Number(value) >= maxValue;
-    const isDecrementDisabled =
-      minValue !== undefined && Number(value) <= minValue;
+      maxValue !== undefined &&
+      (typeof value === "bigint"
+        ? value >= BigInt(maxValue)
+        : Number(value) >= maxValue);
 
-    // Determines the HTML input type based on `isBigInt`: sets to "text" for BigInt values to avoid numeric input constraints,
-    // Otherwise sets to "number" for standard numeric input.
+    const isDecrementDisabled =
+      minValue !== undefined &&
+      (typeof value === "bigint"
+        ? value <= BigInt(minValue)
+        : Number(value) <= minValue);
+
     const showSteps = step !== 0;
 
     // Prevent to write invalid characters
@@ -68,62 +73,90 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         e.preventDefault();
       }
     };
-
     const handleChangeSteps = (
       e: React.MouseEvent<HTMLButtonElement>,
       operation: "increment" | "decrement",
     ) => {
       e.preventDefault();
 
-      let newValue: string | number;
+      let newValue: number | bigint;
 
       if (isBigInt) {
         const currentValue = BigInt(value ?? 0);
         const adjustment =
           BigInt(step || 1) *
           (operation === "increment" ? BigInt(1) : BigInt(-1));
-        newValue = (currentValue + adjustment).toString(); // Convertir a string para el input
+        newValue = currentValue + adjustment;
       } else {
-        const currentValue = Number(value ?? defaultValue ?? 0);
+        const currentValue = Number(value ?? 0);
         const adjustment = (step || 1) * (operation === "increment" ? 1 : -1);
         newValue = currentValue + adjustment;
       }
 
-      // Validación de límites para valores que no sean BigInt
       if (!isBigInt) {
         if (maxValue !== undefined && Number(newValue) > maxValue) return;
         if (minValue !== undefined && Number(newValue) < minValue) return;
       }
-      // Crear el evento nativo para disparar onChange
+
+      const formattedValue = isBigInt
+        ? BigInt(newValue)
+        : getDisplayValue(newValue.toString(), {
+            isBigInt,
+            trailingZeros,
+            precision,
+          });
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
+
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: newValue },
+        value: { value: Number(formattedValue) },
         writable: false,
       });
+
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      const displayValue = getDisplayValue(String(value), {
-        isBigInt,
-        trailingZeros,
-        precision,
-      });
+      let numericValue: number | bigint;
+      const inputValue = e.target.value;
+      // if its empty, keep it empty
+      if (!inputValue || inputValue === "") {
+        onBlur?.(e);
+        return;
+      }
+
+      if (isBigInt) {
+        const normalizedValue = inputValue.replace(/[^\d-]/g, "");
+        numericValue = BigInt(normalizedValue);
+      } else {
+        numericValue = Number(value);
+      }
+
+      const formattedValue = isBigInt
+        ? BigInt(numericValue)
+        : getDisplayValue(numericValue.toString(), {
+            isBigInt,
+            trailingZeros,
+            precision,
+          });
+
+      const finalValue = isBigInt
+        ? BigInt(numericValue)
+        : Number(formattedValue);
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
+      // If the value is will be acept send string the use formattedValue instead of finalValue
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: displayValue },
+        value: { value: finalValue },
         writable: false,
       });
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
       onBlur?.(e);
     };
-
     return (
       <FormGroup>
         {label && (
@@ -150,7 +183,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
             onKeyDown={blockInvalidChar}
-            value={value}
+            value={isBigInt ? value?.toString() : value}
             onBlur={handleBlur}
             defaultValue={defaultValue}
             onChange={onChange}

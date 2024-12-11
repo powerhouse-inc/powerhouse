@@ -161,6 +161,9 @@ describe("Base utils", () => {
 
     expect(newDocument.state).toStrictEqual(replayedDocument.state);
     expect(newDocument.lastModified).toBe(replayedDocument.lastModified);
+    expect(newDocument.operations.global.map((o) => o.timestamp)).toStrictEqual(
+      replayedDocument.operations.global.map((o) => o.timestamp),
+    );
   });
 
   it("should mutate state on unsafeReducer", () => {

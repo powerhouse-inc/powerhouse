@@ -11,7 +11,7 @@ import {
   ErrorHandling,
   TextProps,
 } from "@/scalars/components/types";
-import ValueTransformer from "../value-transformer/value-transformer";
+import ValueTransformer from "@/scalars/components/fragments/value-transformer";
 import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
 
 type TextareaFieldBaseProps = Omit<
@@ -30,7 +30,7 @@ export interface TextareaProps
 
 const textareaBaseStyles = cn(
   // Base styles
-  "flex w-full rounded-md text-[14px] font-normal leading-5",
+  "flex w-full min-h-9 rounded-md text-[14px] font-normal leading-5",
   // Colors & Background
   "dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white",
   // Placeholder
@@ -78,16 +78,6 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
 
-    const adjustHeight = () => {
-      const textarea = document.getElementById(id);
-      if (textarea) {
-        // Reset height to allow shrinking
-        textarea.style.height = "auto";
-        // Set to scrollHeight to expand based on content
-        textarea.style.height = `${textarea.scrollHeight}px`;
-      }
-    };
-
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Prevent Enter key if multiline is false
       if (multiline === false && e.key === "Enter") {
@@ -99,10 +89,19 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     };
 
     useEffect(() => {
+      const adjustHeight = () => {
+        const textarea = document.getElementById(id);
+        if (textarea) {
+          // Reset height to allow shrinking
+          textarea.style.height = "auto";
+          // Set to scrollHeight to expand based on content
+          textarea.style.height = `${textarea.scrollHeight}px`;
+        }
+      };
       if (value !== undefined && autoExpand) {
         adjustHeight();
       }
-    }, [autoExpand, value]);
+    }, [id, value, autoExpand]);
 
     return (
       <FormGroup>
@@ -162,7 +161,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               {...props}
             />
           </ValueTransformer>
-          {maxLength && (
+          {typeof maxLength === "number" && maxLength > 0 && (
             <div className="mt-0.5 flex justify-end">
               <CharacterCounter maxLength={maxLength} value={value ?? ""} />
             </div>

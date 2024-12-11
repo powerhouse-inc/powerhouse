@@ -31,9 +31,11 @@ import {
   replayOperations,
   isUndoRedo,
   isUndo,
+  getDocumentLastModified,
+  parseResultingState,
 } from "./utils/base";
 import { SignalDispatch } from "./signal";
-import { documentHelpers, parseResultingState } from "./utils";
+import * as documentHelpers from "./utils/document-helpers";
 
 /**
  * Gets the next revision number based on the provided action.
@@ -75,7 +77,7 @@ export function updateHeader<T extends Document>(
       ...document.revision,
       [action.scope]: getNextRevision(document, action),
     },
-    lastModified: new Date().toISOString(),
+    lastModified: getDocumentLastModified(document),
   };
 }
 

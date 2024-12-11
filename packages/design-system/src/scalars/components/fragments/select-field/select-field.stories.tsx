@@ -14,10 +14,6 @@ const meta: Meta<typeof SelectField> = {
   component: SelectField,
   parameters: {
     layout: "padded",
-    controls: {
-      sort: "requiredFirst",
-      expanded: true,
-    },
   },
   decorators: [
     withForm,
@@ -166,6 +162,7 @@ export const WithDefaultValue: Story = {
   args: {
     label: "Preset selection",
     options: defaultOptions,
+    placeholder: "Select an icon",
     defaultValue: "Drive",
   },
 };
@@ -173,9 +170,10 @@ export const WithDefaultValue: Story = {
 export const Disabled: Story = {
   args: {
     label: "Disabled field",
-    disabled: true,
     options: defaultOptions,
+    placeholder: "Select an icon",
     value: "Drive",
+    disabled: true,
   },
 };
 
@@ -184,6 +182,7 @@ export const WithError: Story = {
   args: {
     label: "With error",
     options: defaultOptions,
+    placeholder: "Select icons",
     value: ["Drive"],
     multiple: true,
     errors: ["Please select at least two options"],
@@ -194,6 +193,7 @@ export const WithWarning: Story = {
   args: {
     label: "With warning",
     options: defaultOptions,
+    placeholder: "Select icons",
     value: ["Drive", "Globe"],
     multiple: true,
     warnings: ["Some selected options may not be available in the future"],
@@ -221,8 +221,8 @@ export const WithSearchInInput: Story = {
       { value: "FR", label: "France" },
       { value: "DE", label: "Germany" },
     ],
-    optionsCheckmark: "None",
     placeholder: "Search...",
+    optionsCheckmark: "None",
     searchable: true,
     searchPosition: "Input",
   },
@@ -265,8 +265,8 @@ export const WithoutCheckmarks: Story = {
     label: "No checkmarks",
     description: "Options without checkmark indicators",
     options: defaultOptions,
-    optionsCheckmark: "None",
     placeholder: "Select icons",
+    optionsCheckmark: "None",
   },
 };
 

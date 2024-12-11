@@ -1,4 +1,4 @@
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
 import { ToggleField } from "./toggle-field";
 import { renderWithForm } from "@/scalars/lib/testing";
@@ -36,11 +36,13 @@ describe("ToggleField Component", () => {
     expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
   });
 
-  it("should display an error message when hasMessage is true", () => {
+  it("should display an error message when hasMessage is true", async () => {
     renderWithForm(
       <ToggleField name="test" label="Test Label" errors={["Error message"]} />,
     );
-    expect(screen.getByText("Error message")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Error message")).toBeInTheDocument(),
+    );
   });
 
   it("should call onChange when clicked", () => {

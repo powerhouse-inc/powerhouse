@@ -292,6 +292,15 @@ export function sortMappedOperations<A extends Action>(
     );
 }
 
+// gets the last modified timestamp of a document from
+// it's operations, falling back to the initial state
+export function getDocumentLastModified(document: Document) {
+  const sortedOperations = sortOperations(document.operations);
+  const timestamp =
+    sortedOperations.at(-1)?.timestamp || document.initialState.lastModified;
+  return timestamp;
+}
+
 // Runs the operations on the initial data using the
 // provided reducer, wrapped with the document reducer.
 // This rebuilds the document according to the provided actions.
