@@ -1,3 +1,13 @@
+## 2.13.0 (2024-12-12)
+
+### 🚀 Features
+
+- **document-model:** export generateId method ([71d945b2](https://github.com/powerhouse-inc/powerhouse/commit/71d945b2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.12.0 (2024-12-11)
 
 ### 🚀 Features
