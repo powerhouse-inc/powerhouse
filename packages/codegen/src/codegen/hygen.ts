@@ -151,8 +151,6 @@ export async function generateProcessor(
 ) {
   // Generate the singular files for the document model logic
   const processorType = type === "analytics" ? "analytics" : "operational";
-
-  console.log(">>> ", pascalCase(name));
   await run(
     [
       "powerhouse",
