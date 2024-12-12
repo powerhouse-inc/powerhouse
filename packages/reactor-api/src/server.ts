@@ -17,7 +17,7 @@ import { initialize } from "./subgraphs/analytics";
 type Options = {
   express?: Express;
   port?: number;
-  dbConnection: string | undefined;
+  dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
 };
 
@@ -30,7 +30,7 @@ export async function startAPI(
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 
-  const knex = getKnexClient(options.dbConnection ?? "./dev.db");
+  const knex = getKnexClient(options.dbPath);
   await initialize(knex);
 
   const analyticsStore = new KnexAnalyticsStore({
