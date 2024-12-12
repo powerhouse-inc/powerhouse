@@ -2,7 +2,7 @@
 
 import { type DialogProps } from "@radix-ui/react-dialog";
 import { Command as CommandPrimitive } from "cmdk";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "./dialog";
 import { cn } from "editors/document-model-2";
 import {
   ComponentPropsWithoutRef,

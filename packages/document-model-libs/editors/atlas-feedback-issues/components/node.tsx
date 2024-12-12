@@ -2,25 +2,24 @@ import type { RawViewNode, ViewNode } from "@powerhousedao/mips-parser";
 import { makeViewNodeTitleText } from "@powerhousedao/mips-parser/src";
 import { useCallback, useState } from "react";
 import { twJoin } from "tailwind-merge";
+import { NodeOptionsCombobox } from "./node-options-combobox";
+import { Issue } from "document-models/atlas-feedback-issues";
 
 type Props = {
   viewNode: ViewNode;
+  issue: Issue | null;
+  issues: Issue[];
   level: number;
-  filterNotionIds: string[];
   tempIsDisplay?: boolean;
-  onAddNotionId: (notionId: string) => void;
   onSelectNotionId: (notionId: string) => void;
-  onRemoveNotionId: (notionId: string) => void;
 };
 
 export function Node(props: Props) {
   const {
     viewNode,
     level,
-    filterNotionIds,
-    onAddNotionId,
+    issue,
     onSelectNotionId,
-    onRemoveNotionId,
     tempIsDisplay = false,
   } = props;
   const notionId = viewNode.slugSuffix;
@@ -58,10 +57,12 @@ export function Node(props: Props) {
     if (tempIsDisplay) return true;
     if (
       isCategory &&
-      filterNotionIds.some((id) => viewNode.descendantSlugSuffixes.includes(id))
+      issue?.notionIds.some((id) =>
+        viewNode.descendantSlugSuffixes.includes(id),
+      )
     )
       return true;
-    if (filterNotionIds.includes(viewNode.slugSuffix)) return true;
+    if (issue?.notionIds.includes(viewNode.slugSuffix)) return true;
     return false;
   }
 
@@ -72,25 +73,16 @@ export function Node(props: Props) {
     onSelectNotionId(notionId);
   }, [tempIsDisplay, notionId, onSelectNotionId]);
 
-  const addNotionIdButton = (
-    <button onClick={() => onAddNotionId(notionId)}>Add Notion ID</button>
-  );
-
-  const removeNotionIdButton = (
-    <button onClick={() => onRemoveNotionId(notionId)}>Remove Notion ID</button>
-  );
-
   return (
-    <div>
+    <div className="w-80">
       {showTitle && (
-        <div onClick={onNodeTitleClick} className="flex items-center gap-1">
-          <div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1" onClick={onNodeTitleClick}>
             {title}
             {(hasSubDocuments || hasSupportingDocuments) && chevron}
           </div>
           <div>
-            {tempIsDisplay && addNotionIdButton}
-            {!tempIsDisplay && removeNotionIdButton}
+            <NodeOptionsCombobox {...props} />
           </div>
         </div>
       )}

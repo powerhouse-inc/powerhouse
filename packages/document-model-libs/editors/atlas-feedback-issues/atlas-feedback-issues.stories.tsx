@@ -53,16 +53,22 @@ const mockIssues: Issue[] = Array.from({ length: 5 }, (_, i) => {
 });
 
 function WrappedEditor(props: ComponentProps<typeof Editor>) {
-  const { scopes } = props;
+  const {
+    scopes,
+    document: {
+      state: {
+        global: { issues },
+      },
+    },
+  } = props;
   return (
     <div className="flex gap-2">
       <Scopes
         scopes={scopes}
         tempIsDisplay
-        filterNotionIds={[]}
-        onAddNotionId={() => {}}
+        issue={null}
+        issues={issues}
         onSelectNotionId={() => {}}
-        onRemoveNotionId={() => {}}
       />
       <Editor {...props} />
     </div>

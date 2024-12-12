@@ -22,10 +22,17 @@ import { AtlasFeedbackIssuesAction } from "document-models/atlas-feedback-issues
 import { AtlasFeedbackIssuesState } from "document-models/atlas-feedback-issues";
 import { ADDRESS_ALLOW_LIST } from "document-models/atlas-feedback-issues/src/constants";
 import { TextField } from "editors/document-model-2/components/text-field";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Address } from "viem";
 import { useEnsName } from "wagmi";
 import { Scopes } from "./components/scopes";
+import { dispatchCreateIssueEvent } from "./utils";
+import {
+  AddNotionIdToIssueEvent,
+  CreateIssueEvent,
+  eventNames,
+  RemoveNotionIdFromIssueEvent,
+} from "./utils/events";
 
 export default function Editor(
   props: EditorProps<
@@ -44,7 +51,12 @@ export default function Editor(
   );
 
   const handleCreateIssue = useCallback(
-    (input: CreateIssueInput) => {
+    (event: CreateIssueEvent) => {
+      const { notionIds } = event.detail;
+      const input: CreateIssueInput = {
+        phid: utils.hashKey(),
+        notionIds,
+      };
       dispatch(actions.createIssue(input));
     },
     [dispatch],
@@ -58,14 +70,24 @@ export default function Editor(
   );
 
   const handleAddNotionId = useCallback(
-    (input: AddNotionIdInput) => {
+    (event: AddNotionIdToIssueEvent) => {
+      const { notionId, phid } = event.detail;
+      const input: AddNotionIdInput = {
+        phid,
+        notionId,
+      };
       dispatch(actions.addNotionId(input));
     },
     [dispatch],
   );
 
   const handleRemoveNotionId = useCallback(
-    (input: RemoveNotionIdInput) => {
+    (event: RemoveNotionIdFromIssueEvent) => {
+      const { notionId, phid } = event.detail;
+      const input: RemoveNotionIdInput = {
+        phid,
+        notionId,
+      };
       dispatch(actions.removeNotionId(input));
     },
     [dispatch],
@@ -92,6 +114,30 @@ export default function Editor(
     [dispatch],
   );
 
+  useEffect(() => {
+    window.addEventListener(eventNames.CREATE_ISSUE, handleCreateIssue);
+    window.addEventListener(
+      eventNames.ADD_NOTION_ID_TO_ISSUE,
+      handleAddNotionId,
+    );
+    window.addEventListener(
+      eventNames.REMOVE_NOTION_ID_FROM_ISSUE,
+      handleRemoveNotionId,
+    );
+
+    return () => {
+      window.removeEventListener(eventNames.CREATE_ISSUE, handleCreateIssue);
+      window.removeEventListener(
+        eventNames.ADD_NOTION_ID_TO_ISSUE,
+        handleAddNotionId,
+      );
+      window.removeEventListener(
+        eventNames.REMOVE_NOTION_ID_FROM_ISSUE,
+        handleRemoveNotionId,
+      );
+    };
+  }, [handleCreateIssue, handleAddNotionId, handleRemoveNotionId]);
+
   const isLoggedIn = useMemo(() => !!user?.address, [user?.address]);
   const isOnAllowList = useMemo(
     () => !!user && ADDRESS_ALLOW_LIST.includes(user.address),
@@ -106,6 +152,7 @@ export default function Editor(
           <Issue
             key={issue.phid}
             issue={issue}
+            issues={issues}
             user={user}
             issueNumber={index + 1}
             scopes={scopes}
@@ -113,20 +160,12 @@ export default function Editor(
             handleCreateComment={handleCreateComment}
             handleDeleteComment={handleDeleteComment}
             handleEditComment={handleEditComment}
-            handleAddNotionId={handleAddNotionId}
-            handleRemoveNotionId={handleRemoveNotionId}
           />
         ))
       ) : (
         <div>No issues</div>
       )}
-      <button
-        onClick={() =>
-          handleCreateIssue({ phid: utils.hashKey(), notionIds: [] })
-        }
-      >
-        create issue
-      </button>
+      <button onClick={() => dispatchCreateIssueEvent([])}>create issue</button>
     </div>
   ) : null;
 
@@ -152,6 +191,7 @@ function Login() {
 
 function Issue(props: {
   issue: TIssue;
+  issues: TIssue[];
   user: User;
   issueNumber: number;
   scopes: ViewNode[];
@@ -159,11 +199,10 @@ function Issue(props: {
   handleCreateComment: (input: CreateCommentInput) => void;
   handleDeleteComment: (input: DeleteCommentInput) => void;
   handleEditComment: (input: EditCommentInput) => void;
-  handleAddNotionId: (input: AddNotionIdInput) => void;
-  handleRemoveNotionId: (input: RemoveNotionIdInput) => void;
 }) {
   const {
     issue,
+    issues,
     user,
     issueNumber,
     scopes,
@@ -171,8 +210,6 @@ function Issue(props: {
     handleCreateComment,
     handleDeleteComment,
     handleEditComment,
-    handleAddNotionId,
-    handleRemoveNotionId,
   } = props;
   const [selectedNotionId, setSelectedNotionId] = useState<string | null>(
     issue.notionIds[0],
@@ -184,19 +221,25 @@ function Issue(props: {
     setSelectedNotionId(notionId);
   }, []);
 
-  const onAddNotionId = useCallback(
-    (notionId: string) => {
-      handleAddNotionId({ phid: issue.phid, notionId });
+  const onSubmitCreateComment = useCallback(
+    (input: CreateCommentInput) => {
+      handleCreateComment(input);
+      setIsAddingComment(false);
     },
-    [handleAddNotionId, issue.phid],
+    [handleCreateComment],
   );
 
-  const onRemoveNotionId = useCallback(
-    (notionId: string) => {
-      handleRemoveNotionId({ phid: issue.phid, notionId });
+  const onSubmitEditComment = useCallback(
+    (input: EditCommentInput) => {
+      handleEditComment(input);
+      setIsAddingComment(false);
     },
-    [handleRemoveNotionId, issue.phid],
+    [handleEditComment],
   );
+
+  const onCancelComment = useCallback(() => {
+    setIsAddingComment(false);
+  }, []);
 
   return (
     <div className="my-4 w-fit">
@@ -208,10 +251,9 @@ function Issue(props: {
       </div>
       <Scopes
         scopes={scopes}
-        filterNotionIds={issue.notionIds}
+        issue={issue}
+        issues={issues}
         onSelectNotionId={onSelectNotionId}
-        onRemoveNotionId={onRemoveNotionId}
-        onAddNotionId={onAddNotionId}
       />
       {comments.length ? (
         <ul>
@@ -223,8 +265,8 @@ function Issue(props: {
                   issue={issue}
                   comment={comment}
                   user={user}
-                  handleEditComment={handleEditComment}
-                  handleDeleteComment={handleDeleteComment}
+                  onSubmitEditComment={onSubmitEditComment}
+                  onDeleteComment={handleDeleteComment}
                 />
               </li>
             ))}
@@ -237,11 +279,12 @@ function Issue(props: {
           key="new-comment"
           issue={issue}
           notionId={selectedNotionId}
-          handleCreateComment={handleCreateComment}
+          onSubmit={onSubmitCreateComment}
+          onCancel={onCancelComment}
         />
       )}
       {isAddingComment ? (
-        <button onClick={() => setIsAddingComment(false)}>Cancel</button>
+        <button onClick={onCancelComment}>Cancel</button>
       ) : (
         <button onClick={() => setIsAddingComment(true)}>Add comment</button>
       )}
@@ -253,11 +296,10 @@ function Comment(props: {
   issue: TIssue;
   comment: TComment;
   user: User;
-  handleEditComment: (input: EditCommentInput) => void;
-  handleDeleteComment: (input: DeleteCommentInput) => void;
+  onSubmitEditComment: (input: EditCommentInput) => void;
+  onDeleteComment: (input: DeleteCommentInput) => void;
 }) {
-  const { issue, comment, user, handleEditComment, handleDeleteComment } =
-    props;
+  const { issue, comment, user, onSubmitEditComment, onDeleteComment } = props;
   const [isEdit, setIsEdit] = useState(false);
   const ensNameResult = useEnsName({
     address: comment.creatorAddress as Address,
@@ -266,17 +308,16 @@ function Comment(props: {
   const formattedAddress = formatEthAddress(comment.creatorAddress);
   const displayName = ensName ?? formattedAddress;
   const userIsCreator = user.address === comment.creatorAddress;
-  const nameStyle = userIsCreator ? "" : "text-right";
   return (
     <div className="w-fit">
-      <p className={nameStyle}>{displayName}</p>
+      {!userIsCreator && <p>{displayName}</p>}
       <p>Created: {formatDateForDisplay(comment.createdAt)}</p>
       <p>Edited: {formatDateForDisplay(comment.lastEditedAt)}</p>
       {isEdit ? (
         <EditCommentForm
           issue={issue}
           comment={comment}
-          handleEditComment={handleEditComment}
+          onSubmit={onSubmitEditComment}
         />
       ) : (
         <div>
@@ -286,7 +327,7 @@ function Comment(props: {
               <button onClick={() => setIsEdit(true)}>Edit</button>
               <button
                 onClick={() =>
-                  handleDeleteComment({
+                  onDeleteComment({
                     issuePhid: issue.phid,
                     phid: comment.phid,
                   })
@@ -305,19 +346,20 @@ function Comment(props: {
 function CreateCommentForm(props: {
   issue: TIssue;
   notionId: string;
-  handleCreateComment: (input: CreateCommentInput) => void;
+  onSubmit: (input: CreateCommentInput) => void;
+  onCancel: () => void;
 }) {
-  const { issue, notionId, handleCreateComment } = props;
+  const { issue, notionId, onSubmit, onCancel } = props;
   const handleSubmit = useCallback(
     (content: string) => {
-      handleCreateComment({
+      onSubmit({
         issuePhid: issue.phid,
         phid: utils.hashKey(),
         notionId,
         content,
       });
     },
-    [issue.phid, notionId, handleCreateComment],
+    [issue.phid, notionId, onSubmit],
   );
   return (
     <TextField
@@ -336,15 +378,15 @@ function CreateCommentForm(props: {
 function EditCommentForm(props: {
   issue: TIssue;
   comment: TComment;
-  handleEditComment: (input: EditCommentInput) => void;
+  onSubmit: (input: EditCommentInput) => void;
 }) {
-  const { issue, comment, handleEditComment } = props;
+  const { issue, comment, onSubmit } = props;
 
   const handleSubmit = useCallback(
     (content: string) => {
-      handleEditComment({ issuePhid: issue.phid, phid: comment.phid, content });
+      onSubmit({ issuePhid: issue.phid, phid: comment.phid, content });
     },
-    [issue.phid, comment.phid, handleEditComment],
+    [issue.phid, comment.phid, onSubmit],
   );
 
   return (
