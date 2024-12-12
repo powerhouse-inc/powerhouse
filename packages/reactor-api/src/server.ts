@@ -39,7 +39,12 @@ export async function startAPI(
     analyticsStore,
   );
   await subgraphManager.init();
-  const processorManager = new ProcessorManager(reactor, db, analyticsStore);
+  const processorManager = new ProcessorManager(
+    reactor,
+    db,
+    analyticsStore,
+    db,
+  );
 
   app.listen(port);
   return { app, subgraphManager, processorManager };
