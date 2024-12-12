@@ -22,8 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer as createViteServer, ViteDevServer } from "vite";
 
-const dirname =
-  import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
+const dirname = process.cwd();
 
 dotenv.config();
 
@@ -37,8 +36,8 @@ export type StartServerOptions = {
 
 export const DefaultStartServerOptions = {
   port: 4001,
-  storagePath: path.join(dirname, "./file-storage"),
-  dbPath: undefined,
+  storagePath: path.join(dirname, ".ph/file-storage"),
+  dbPath: path.join(dirname, ".ph/read-model.db"),
   drive: {
     global: {
       id: "powerhouse",
