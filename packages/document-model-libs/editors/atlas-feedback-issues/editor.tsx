@@ -191,9 +191,9 @@ function Login() {
 
 function Issue(props: {
   issue: TIssue;
+  issueNumber: number;
   issues: TIssue[];
   user: User;
-  issueNumber: number;
   scopes: ViewNode[];
   handleDeleteIssue: (input: DeleteIssueInput) => void;
   handleCreateComment: (input: CreateCommentInput) => void;
@@ -211,11 +211,20 @@ function Issue(props: {
     handleDeleteComment,
     handleEditComment,
   } = props;
-  const [selectedNotionId, setSelectedNotionId] = useState<string | null>(
+  const [selectedNotionId, setSelectedNotionId] = useState<string | undefined>(
     issue.notionIds[0],
   );
   const [isAddingComment, setIsAddingComment] = useState(false);
   const comments = useMemo(() => issue.comments, [issue.comments]);
+  const hasNotionIds = useMemo(
+    () => !!issue.notionIds.length,
+    [issue.notionIds],
+  );
+
+  useEffect(() => {
+    if (selectedNotionId) return;
+    setSelectedNotionId(issue.notionIds[0]);
+  }, [issue.notionIds, selectedNotionId]);
 
   const onSelectNotionId = useCallback((notionId: string) => {
     setSelectedNotionId(notionId);
@@ -283,10 +292,16 @@ function Issue(props: {
           onCancel={onCancelComment}
         />
       )}
-      {isAddingComment ? (
-        <button onClick={onCancelComment}>Cancel</button>
-      ) : (
-        <button onClick={() => setIsAddingComment(true)}>Add comment</button>
+      {hasNotionIds && (
+        <>
+          {isAddingComment ? (
+            <button onClick={onCancelComment}>Cancel</button>
+          ) : (
+            <button onClick={() => setIsAddingComment(true)}>
+              Add comment
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -308,17 +323,27 @@ function Comment(props: {
   const formattedAddress = formatEthAddress(comment.creatorAddress);
   const displayName = ensName ?? formattedAddress;
   const userIsCreator = user.address === comment.creatorAddress;
+  const onSubmit = useCallback(
+    (input: EditCommentInput) => {
+      onSubmitEditComment(input);
+      setIsEdit(false);
+    },
+    [onSubmitEditComment],
+  );
   return (
     <div className="w-fit">
       {!userIsCreator && <p>{displayName}</p>}
       <p>Created: {formatDateForDisplay(comment.createdAt)}</p>
       <p>Edited: {formatDateForDisplay(comment.lastEditedAt)}</p>
       {isEdit ? (
-        <EditCommentForm
-          issue={issue}
-          comment={comment}
-          onSubmit={onSubmitEditComment}
-        />
+        <div>
+          <EditCommentForm
+            issue={issue}
+            comment={comment}
+            onSubmit={onSubmit}
+          />
+          <button onClick={() => setIsEdit(false)}>Cancel</button>
+        </div>
       ) : (
         <div>
           <p>{comment.content}</p>

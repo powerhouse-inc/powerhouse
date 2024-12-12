@@ -29,20 +29,21 @@ export function NodeOptionsCombobox(props: Props) {
   const [isAddToExistingIssue, setIsAddToExistingIssue] = useState(false);
   const issuesToShow = issues.filter((i) => i.phid !== issue?.phid);
   const hasIssuesToShow = issuesToShow.length > 0;
-  const triggerIcon = (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 15 15"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+  const comments = issue
+    ? issue.comments.filter(
+        (comment) => comment.notionId === viewNode.slugSuffix,
+      )
+    : issues
+        .flatMap((i) => i.comments)
+        .filter((comment) => comment.notionId === viewNode.slugSuffix);
+  const commentCount = comments.length ?? 0;
+  const hasComments = commentCount > 0;
+  const commentIcon = (
+    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
       <path
-        d="M8.625 2.5C8.625 3.12132 8.12132 3.625 7.5 3.625C6.87868 3.625 6.375 3.12132 6.375 2.5C6.375 1.87868 6.87868 1.375 7.5 1.375C8.12132 1.375 8.625 1.87868 8.625 2.5ZM8.625 7.5C8.625 8.12132 8.12132 8.625 7.5 8.625C6.87868 8.625 6.375 8.12132 6.375 7.5C6.375 6.87868 6.87868 6.375 7.5 6.375C8.12132 6.375 8.625 6.87868 8.625 7.5ZM7.5 13.625C8.12132 13.625 8.625 13.1213 8.625 12.5C8.625 11.8787 8.12132 11.375 7.5 11.375C6.87868 11.375 6.375 11.8787 6.375 12.5C6.375 13.1213 6.87868 13.625 7.5 13.625Z"
+        d="M4.01042 2.66406C2.53775 2.66406 1.34375 3.85806 1.34375 5.33073V13.3307C1.34375 13.9247 2.06975 14.2301 2.48975 13.8101L4.96908 11.9974H12.0104C13.4831 11.9974 14.6771 10.8034 14.6771 9.33073V5.33073C14.6771 3.85806 13.4831 2.66406 12.0104 2.66406H4.01042ZM4.67708 5.33073H11.3437C11.7117 5.33073 12.0104 5.6294 12.0104 5.9974C12.0104 6.3654 11.7117 6.66406 11.3437 6.66406H4.67708C4.30908 6.66406 4.01042 6.3654 4.01042 5.9974C4.01042 5.6294 4.30908 5.33073 4.67708 5.33073ZM4.67708 7.9974H9.34375C9.71175 7.9974 10.0104 8.29606 10.0104 8.66406C10.0104 9.03206 9.71175 9.33073 9.34375 9.33073H4.67708C4.30908 9.33073 4.01042 9.03206 4.01042 8.66406C4.01042 8.29606 4.30908 7.9974 4.67708 7.9974Z"
         fill="currentColor"
-        fillRule="evenodd"
-        clipRule="evenodd"
-      ></path>
+      />
     </svg>
   );
 
@@ -127,7 +128,12 @@ export function NodeOptionsCombobox(props: Props) {
     >
       <PopoverTrigger asChild>
         <button role="combobox" aria-expanded={open} className="">
-          {triggerIcon}
+          {
+            <span className="flex items-center gap-1">
+              <span className="w-4">{commentIcon}</span>
+              {hasComments && <span>{commentCount}</span>}
+            </span>
+          }
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
