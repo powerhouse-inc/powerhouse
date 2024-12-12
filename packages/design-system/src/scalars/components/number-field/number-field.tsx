@@ -47,7 +47,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       precision = 0,
       ...props
     },
-    ref
+    ref,
   ) => {
     const generatedId = useId();
     const id = propId ?? generatedId;
@@ -79,7 +79,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         // Call the handleChangeSteps function
         handleChangeSteps(
           e as unknown as React.MouseEvent<HTMLButtonElement>,
-          operation
+          operation,
         );
       }
     };
@@ -93,7 +93,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     };
     const handleChangeSteps = (
       e: React.MouseEvent<HTMLButtonElement>,
-      operation: "increment" | "decrement"
+      operation: "increment" | "decrement",
     ) => {
       e.preventDefault();
 
@@ -164,7 +164,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           writable: false,
         });
         onChange?.(
-          nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>
+          nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>,
         );
         onBlur?.(e);
         // Add return to avoid the conversion after
@@ -231,7 +231,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                   name="ChevronDown"
                   className={cn(
                     "rotate-180 text-gray-700 dark:text-gray-300",
-                    isIncrementDisabled && "cursor-not-allowed"
+                    isIncrementDisabled && "cursor-not-allowed",
                   )}
                 />
               </button>
@@ -245,7 +245,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                   name="ChevronDown"
                   className={cn(
                     " items-center justify-center text-gray-700 dark:text-gray-300",
-                    isDecrementDisabled && "cursor-not-allowed"
+                    isDecrementDisabled && "cursor-not-allowed",
                   )}
                 />
               </button>
@@ -257,7 +257,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         {errors && <FormMessageList messages={errors} type="error" />}
       </FormGroup>
     );
-  }
+  },
 );
 
 export const NumberField = withFieldValidation<NumberFieldProps>(
@@ -267,6 +267,6 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
       _isBigInt: validateIsBigInt,
       _numericType: validateNumericType,
     },
-  }
+  },
 );
 NumberField.displayName = "NumberField";
