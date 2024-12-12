@@ -12,6 +12,7 @@ import { getConfig } from "@powerhousedao/config/powerhouse";
 export type ReactorOptions = StartServerOptions & {
   generate?: boolean;
   watch?: boolean;
+  dbPath?: string;
 };
 
 export const DefaultReactorOptions = {
@@ -62,6 +63,7 @@ export const reactor: CommandActionType<
   [ReactorOptions],
   Promise<LocalReactor>
 > = (options) => {
+  console.log(options);
   return startLocalReactor(options);
 };
 
@@ -71,6 +73,7 @@ export function reactorCommand(program: Command) {
     .description("Starts local reactor")
     .option("--port <PORT>", "port to host the api", "4001")
     .option("--generate", "generate code when document model is updated")
+    .option("--db-path <DB_PATH>", "path to the database")
     .option(
       "-w, --watch",
       "if the reactor should watch for local changes to document models and processors",
