@@ -26,13 +26,6 @@ export class SubgraphManager {
     private readonly operationalStore: Db,
     private readonly analyticsStore: IAnalyticsStore,
   ) {
-    const args: SubgraphArgs = {
-      reactor: this.reactor,
-      operationalStore: this.operationalStore,
-      analyticsStore: this.analyticsStore,
-      subgraphManager: this,
-    };
-
     // Setup Default subgraphs
     this.registerSubgraph(SystemSubgraph);
     this.registerSubgraph(DriveSubgraph);
@@ -40,9 +33,7 @@ export class SubgraphManager {
   }
 
   async init() {
-    console.log(
-      `Initializing ReactorRouterManager with subgraphs: [${this.subgraphs.map((e) => e.name).join(", ")}]`,
-    );
+    console.log(`Initializing ReactorRouterManager...`);
     const models = this.reactor.getDocumentModels();
     const driveModel = models.find(
       (it) => it.documentModel.name === "DocumentDrive",
