@@ -189,14 +189,8 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     // Avoid to write letters directly in safari
     const handleInput = (event: React.KeyboardEvent<HTMLInputElement>) => {
       const char = event.key;
-      // Allow numbers, decimal point, hyphen (for negatives) and control keys
-      if (
-        !/^[0-9.-]$/.test(char) && // Numbers, decimal point and hyphen
-        !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(
-          char,
-        ) &&
-        !(event.ctrlKey || event.metaKey)
-      ) {
+      // Only prevent letters, allow all other characters
+      if (/^[a-zA-Z]$/.test(char) && !(event.ctrlKey || event.metaKey)) {
         event.preventDefault();
       }
     };
