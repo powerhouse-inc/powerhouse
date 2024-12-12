@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "1.10.8",
+  "version": "1.10.9",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
