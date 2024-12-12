@@ -17,6 +17,7 @@ export function useSelectField({
   onChange,
 }: UseSelectFieldProps) {
   const isInternalChange = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedValues, setSelectedValues] = useState<string[]>(() => {
     const initialValue = value ?? defaultValue ?? [];
@@ -107,6 +108,7 @@ export function useSelectField({
     selectedValues,
     isPopoverOpen,
     searchValue,
+    searchInputRef,
     setIsPopoverOpen,
     toggleOption,
     handleClear,
