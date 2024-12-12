@@ -14,3 +14,4 @@ export {
   makeStringEqualsValidator,
 } from "./zod";
 export { lazyWithPreload } from "./lazy-with-preload";
+export { cn } from "./style";

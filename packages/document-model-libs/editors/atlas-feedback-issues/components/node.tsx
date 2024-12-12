@@ -1,17 +1,30 @@
 import type { RawViewNode, ViewNode } from "@powerhousedao/mips-parser";
 import { makeViewNodeTitleText } from "@powerhousedao/mips-parser/src";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { twJoin } from "tailwind-merge";
+
 type Props = {
   viewNode: ViewNode;
   level: number;
-  filterNotionIds?: string[];
-  onNodeClick?: (node: ViewNode) => void;
+  filterNotionIds: string[];
+  tempIsDisplay?: boolean;
+  onAddNotionId: (notionId: string) => void;
+  onSelectNotionId: (notionId: string) => void;
+  onRemoveNotionId: (notionId: string) => void;
 };
+
 export function Node(props: Props) {
-  const { viewNode, filterNotionIds, level, onNodeClick } = props;
-  const shouldFilter = !!filterNotionIds;
-  const [open, setOpen] = useState(shouldFilter);
+  const {
+    viewNode,
+    level,
+    filterNotionIds,
+    onAddNotionId,
+    onSelectNotionId,
+    onRemoveNotionId,
+    tempIsDisplay = false,
+  } = props;
+  const notionId = viewNode.slugSuffix;
+  const [open, setOpen] = useState(!tempIsDisplay);
   const hasSubDocuments = viewNode.subDocuments.length > 0;
   const supportingDocumentNodes = Object.values(
     viewNode.supportingDocuments,
@@ -42,7 +55,7 @@ export function Node(props: Props) {
   );
 
   function getShowTitle() {
-    if (!shouldFilter) return true;
+    if (tempIsDisplay) return true;
     if (
       isCategory &&
       filterNotionIds.some((id) => viewNode.descendantSlugSuffixes.includes(id))
@@ -52,18 +65,33 @@ export function Node(props: Props) {
     return false;
   }
 
+  const onNodeTitleClick = useCallback(() => {
+    setOpen((prev) => !prev);
+    if (tempIsDisplay) return;
+
+    onSelectNotionId(notionId);
+  }, [tempIsDisplay, notionId, onSelectNotionId]);
+
+  const addNotionIdButton = (
+    <button onClick={() => onAddNotionId(notionId)}>Add Notion ID</button>
+  );
+
+  const removeNotionIdButton = (
+    <button onClick={() => onRemoveNotionId(notionId)}>Remove Notion ID</button>
+  );
+
   return (
     <div>
       {showTitle && (
-        <div
-          onClick={() => {
-            setOpen(!open);
-            onNodeClick?.(viewNode);
-          }}
-          className="flex items-center gap-1"
-        >
-          {title}
-          {(hasSubDocuments || hasSupportingDocuments) && chevron}
+        <div onClick={onNodeTitleClick} className="flex items-center gap-1">
+          <div>
+            {title}
+            {(hasSubDocuments || hasSupportingDocuments) && chevron}
+          </div>
+          <div>
+            {tempIsDisplay && addNotionIdButton}
+            {!tempIsDisplay && removeNotionIdButton}
+          </div>
         </div>
       )}
       {open && (
@@ -71,12 +99,7 @@ export function Node(props: Props) {
           <ul>
             {viewNode.subDocuments.map((subDocument) => (
               <li key={subDocument.slugSuffix}>
-                <Node
-                  level={level + 1}
-                  viewNode={subDocument}
-                  filterNotionIds={filterNotionIds}
-                  onNodeClick={onNodeClick}
-                />
+                <Node {...props} level={level + 1} viewNode={subDocument} />
               </li>
             ))}
           </ul>
@@ -84,10 +107,9 @@ export function Node(props: Props) {
             {supportingDocumentNodes.map((supportingDocument) => (
               <li key={supportingDocument.slugSuffix}>
                 <Node
+                  {...props}
                   level={level + 1}
                   viewNode={supportingDocument}
-                  filterNotionIds={filterNotionIds}
-                  onNodeClick={onNodeClick}
                 />
               </li>
             ))}

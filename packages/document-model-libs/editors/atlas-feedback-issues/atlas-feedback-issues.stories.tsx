@@ -56,7 +56,14 @@ function WrappedEditor(props: ComponentProps<typeof Editor>) {
   const { scopes } = props;
   return (
     <div className="flex gap-2">
-      <Scopes scopes={scopes} />
+      <Scopes
+        scopes={scopes}
+        tempIsDisplay
+        filterNotionIds={[]}
+        onAddNotionId={() => {}}
+        onSelectNotionId={() => {}}
+        onRemoveNotionId={() => {}}
+      />
       <Editor {...props} />
     </div>
   );

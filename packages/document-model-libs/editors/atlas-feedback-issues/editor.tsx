@@ -15,6 +15,8 @@ import {
   CreateCommentInput,
   DeleteCommentInput,
   EditCommentInput,
+  AddNotionIdInput,
+  RemoveNotionIdInput,
 } from "document-models/atlas-feedback-issues";
 import { AtlasFeedbackIssuesAction } from "document-models/atlas-feedback-issues";
 import { AtlasFeedbackIssuesState } from "document-models/atlas-feedback-issues";
@@ -51,6 +53,20 @@ export default function Editor(
   const handleDeleteIssue = useCallback(
     (input: DeleteIssueInput) => {
       dispatch(actions.deleteIssue(input));
+    },
+    [dispatch],
+  );
+
+  const handleAddNotionId = useCallback(
+    (input: AddNotionIdInput) => {
+      dispatch(actions.addNotionId(input));
+    },
+    [dispatch],
+  );
+
+  const handleRemoveNotionId = useCallback(
+    (input: RemoveNotionIdInput) => {
+      dispatch(actions.removeNotionId(input));
     },
     [dispatch],
   );
@@ -97,6 +113,8 @@ export default function Editor(
             handleCreateComment={handleCreateComment}
             handleDeleteComment={handleDeleteComment}
             handleEditComment={handleEditComment}
+            handleAddNotionId={handleAddNotionId}
+            handleRemoveNotionId={handleRemoveNotionId}
           />
         ))
       ) : (
@@ -141,6 +159,8 @@ function Issue(props: {
   handleCreateComment: (input: CreateCommentInput) => void;
   handleDeleteComment: (input: DeleteCommentInput) => void;
   handleEditComment: (input: EditCommentInput) => void;
+  handleAddNotionId: (input: AddNotionIdInput) => void;
+  handleRemoveNotionId: (input: RemoveNotionIdInput) => void;
 }) {
   const {
     issue,
@@ -151,12 +171,33 @@ function Issue(props: {
     handleCreateComment,
     handleDeleteComment,
     handleEditComment,
+    handleAddNotionId,
+    handleRemoveNotionId,
   } = props;
   const [selectedNotionId, setSelectedNotionId] = useState<string | null>(
     issue.notionIds[0],
   );
   const [isAddingComment, setIsAddingComment] = useState(false);
   const comments = useMemo(() => issue.comments, [issue.comments]);
+
+  const onSelectNotionId = useCallback((notionId: string) => {
+    setSelectedNotionId(notionId);
+  }, []);
+
+  const onAddNotionId = useCallback(
+    (notionId: string) => {
+      handleAddNotionId({ phid: issue.phid, notionId });
+    },
+    [handleAddNotionId, issue.phid],
+  );
+
+  const onRemoveNotionId = useCallback(
+    (notionId: string) => {
+      handleRemoveNotionId({ phid: issue.phid, notionId });
+    },
+    [handleRemoveNotionId, issue.phid],
+  );
+
   return (
     <div className="my-4 w-fit">
       <div className="flex justify-between">
@@ -168,9 +209,9 @@ function Issue(props: {
       <Scopes
         scopes={scopes}
         filterNotionIds={issue.notionIds}
-        onNodeClick={(node) => {
-          setSelectedNotionId(node.slugSuffix);
-        }}
+        onSelectNotionId={onSelectNotionId}
+        onRemoveNotionId={onRemoveNotionId}
+        onAddNotionId={onAddNotionId}
       />
       {comments.length ? (
         <ul>

@@ -1,24 +1,17 @@
 import { ViewNode } from "@powerhousedao/mips-parser";
 import { Node } from "./node";
+import { ComponentProps } from "react";
 
 type Props = {
   scopes: ViewNode[];
-  filterNotionIds?: string[];
-  onNodeClick?: (node: ViewNode) => void;
-};
+} & Omit<ComponentProps<typeof Node>, "viewNode" | "level">;
 
 export function Scopes(props: Props) {
-  const { scopes, filterNotionIds, onNodeClick } = props;
+  const { scopes } = props;
   return (
     <div>
       {scopes.map((scope) => (
-        <Node
-          key={scope.slugSuffix}
-          viewNode={scope}
-          level={0}
-          filterNotionIds={filterNotionIds}
-          onNodeClick={onNodeClick}
-        />
+        <Node key={scope.slugSuffix} {...props} viewNode={scope} level={0} />
       ))}
     </div>
   );
