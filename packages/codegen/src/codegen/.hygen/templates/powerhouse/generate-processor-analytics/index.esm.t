@@ -12,8 +12,8 @@ import {
 <% documentTypes.forEach(type => { _%>
 import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
 %><% }); _%>
-
-<% if(documentTypes.length) { %>type DocumentType = <%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } %>;
+<% if(documentTypes.length === 0) { %>import { Document } from "document-model/document";<% } %>
+type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>Document<% } %>;
 
 export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
 
