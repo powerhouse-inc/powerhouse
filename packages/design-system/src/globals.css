@@ -179,7 +179,7 @@
   --orange-600: hsl(var(--color-orange-600));
   --orange-700: hsl(var(--color-orange-700));
   --orange-800: hsl(var(--color-orange-800));
-  --orange-900: hsl(var(--color-orange-900)); 
+  --orange-900: hsl(var(--color-orange-900));
   --charcoal-100: hsl(var(--color-charcoal-100));
   --charcoal-200: hsl(var(--color-charcoal-200));
   --charcoal-300: hsl(var(--color-charcoal-300));
@@ -251,6 +251,10 @@ input[type="number"]::-webkit-outer-spin-button {
   -moz-appearance: none;
   appearance: none;
   margin: 0;
+}
+/* Remove the increment/decrement buttons in Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 h1,
