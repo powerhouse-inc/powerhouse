@@ -83,6 +83,7 @@ export const SelectFieldRaw = React.forwardRef<
       selectedValues,
       isPopoverOpen,
       searchValue,
+      searchInputRef,
       setIsPopoverOpen,
       toggleOption,
       handleClear,
@@ -151,6 +152,7 @@ export const SelectFieldRaw = React.forwardRef<
                   placeholder={placeholder}
                   disabled={disabled}
                   searchValue={searchValue}
+                  ref={searchInputRef}
                   onSearch={handleSearch}
                   onOpenChange={handleOpenChange}
                   onSelectFirstOption={selectFirstFilteredOption}
@@ -173,6 +175,17 @@ export const SelectFieldRaw = React.forwardRef<
           </PopoverTrigger>
           <PopoverContent
             align="start"
+            onOpenAutoFocus={(e) => {
+              if (searchable && searchPosition === "Input") {
+                if (
+                  searchInputRef.current &&
+                  searchInputRef.current !== document.activeElement
+                ) {
+                  searchInputRef.current.focus();
+                }
+                e.preventDefault();
+              }
+            }}
             onEscapeKeyDown={() => setIsPopoverOpen(false)}
             className={cn(
               "w-[--radix-popover-trigger-width] p-0",
