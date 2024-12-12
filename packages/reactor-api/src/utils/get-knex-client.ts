@@ -14,7 +14,6 @@ export function getKnexClient(connectionString: string | undefined) {
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
   const connection = connectionString;
-  console.log(client, connection);
   return knex({
     client,
     // @ts-expect-error
