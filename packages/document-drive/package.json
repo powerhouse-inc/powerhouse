@@ -35,7 +35,7 @@
     "test:watch": "vitest watch",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --schema ./prisma/schema.prisma"
   },
   "peerDependencies": {
     "@powerhousedao/scalars": "workspace:*",
