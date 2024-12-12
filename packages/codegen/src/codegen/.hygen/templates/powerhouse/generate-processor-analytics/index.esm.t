@@ -26,7 +26,7 @@ export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(document
       scope: ["global"],
     },
     block: false,
-    label: "rwa-analytics-processor",
+    label: "<%= name %>",
     system: true,
   };
 
