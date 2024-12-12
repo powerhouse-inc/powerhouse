@@ -3,6 +3,10 @@ import { createHash as createSha1Hash } from "sha1-uint8array";
 
 const FileSystemError = new Error("File system not available.");
 
+export function generateUUID() {
+  return crypto.randomUUID();
+}
+
 export function writeFile(
   path: string,
   name: string,

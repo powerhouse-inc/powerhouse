@@ -1,10 +1,10 @@
-import { ExtendedEditor, EditorContextProps } from "document-model-libs";
 import Editor from "./editor";
 import {
   ChatRoomState,
   ChatRoomAction,
   ChatRoomLocalState,
 } from "../../document-models/chat-room";
+import type { EditorContextProps, ExtendedEditor } from "../types";
 
 export const module: ExtendedEditor<
   ChatRoomState,

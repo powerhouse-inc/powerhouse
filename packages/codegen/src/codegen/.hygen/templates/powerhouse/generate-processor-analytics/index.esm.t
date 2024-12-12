@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/src/index.ts"
 force: true
 ---
-import { randomUUID } from "crypto";
+import { generateId } from "document-model/utils";
 import {
     AnalyticsProcessor,
     ProcessorOptions,
@@ -18,7 +18,7 @@ import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap
 export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
 
     protected processorOptions: ProcessorOptions = {
-    listenerId: randomUUID(),
+    listenerId: generateId(),
     filter: {
       branch: ["main"],
       documentId: ["*"],
