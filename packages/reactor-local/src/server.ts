@@ -38,7 +38,7 @@ export type StartServerOptions = {
 export const DefaultStartServerOptions = {
   port: 4001,
   storagePath: path.join(dirname, "./file-storage"),
-  dbPath: path.join(dirname, "./dev.db"),
+  dbPath: undefined,
   drive: {
     global: {
       id: "powerhouse",
@@ -78,7 +78,7 @@ const baseDocumentModels = [
 const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
-  const { port, storagePath, drive, dev } = {
+  const { port, storagePath, drive, dev, dbPath } = {
     ...DefaultStartServerOptions,
     ...options,
   };
@@ -117,7 +117,7 @@ const startServer = async (
     // start api
     const api = await startAPI(driveServer, {
       port: serverPort,
-      dbConnection: options?.dbPath ?? process.cwd() + "/dev.db",
+      dbPath,
     });
     driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
     console.log(`  ➜  Reactor:   ${driveUrl}`);
