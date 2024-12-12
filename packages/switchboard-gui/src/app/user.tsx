@@ -1,4 +1,3 @@
-"use client";
 import TokenForm from "../components/tokens/token-form";
 import TokensTable from "../components/tokens/tokens-table";
 import useAuth, { authStore } from "../hooks/useAuth";
