@@ -1,5 +1,4 @@
 import { create, castDraft, Draft, unsafe } from "mutative";
-import { v4 as uuid } from "uuid";
 import {
   loadStateOperation,
   pruneOperation,
@@ -36,6 +35,7 @@ import {
 } from "./utils/base";
 import { SignalDispatch } from "./signal";
 import * as documentHelpers from "./utils/document-helpers";
+import { generateId } from "./utils";
 
 /**
  * Gets the next revision number based on the provided action.
@@ -127,7 +127,7 @@ function updateOperations<T extends Document>(
 
     timestamp = action.timestamp;
   } else {
-    operationId = "id" in action ? (action.id as string) : uuid();
+    operationId = "id" in action ? (action.id as string) : generateId();
   }
 
   operations.push({
