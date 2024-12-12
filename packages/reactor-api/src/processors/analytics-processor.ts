@@ -3,6 +3,8 @@ import { Document, OperationScope } from "document-model/document";
 import { Processor } from "./processor";
 import { ProcessorOptions, ProcessorSetupArgs } from "src/types";
 
+export * from "@powerhousedao/analytics-engine-core";
+
 export abstract class AnalyticsProcessor<
   D extends Document = Document,
   S extends OperationScope = OperationScope,

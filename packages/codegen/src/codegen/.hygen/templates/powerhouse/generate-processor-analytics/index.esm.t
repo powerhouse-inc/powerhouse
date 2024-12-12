@@ -3,11 +3,11 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/src/index.ts"
 force: true
 ---
 import { randomUUID } from "crypto";
-import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import {
     AnalyticsProcessor,
     ProcessorOptions,
-    ProcessorUpdate
+    ProcessorUpdate,
+    AnalyticsPath
   } from "@powerhousedao/reactor-api";
 <% documentTypes.forEach(type => { _%>
 import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
