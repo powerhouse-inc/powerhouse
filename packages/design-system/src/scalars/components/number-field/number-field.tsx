@@ -185,6 +185,22 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
       onBlur?.(e);
     };
+
+    // Avoid to write letters directly in safari
+    const handleInput = (event: React.KeyboardEvent<HTMLInputElement>) => {
+      const char = event.key;
+      // Allow numbers, decimal point, hyphen (for negatives) and control keys
+      if (
+        !/^[0-9.-]$/.test(char) && // Numbers, decimal point and hyphen
+        !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(
+          char,
+        ) &&
+        !(event.ctrlKey || event.metaKey)
+      ) {
+        event.preventDefault();
+      }
+    };
+
     return (
       <FormGroup>
         {label && (
@@ -210,7 +226,10 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             aria-valuemin={minValue}
             aria-valuemax={maxValue}
             aria-invalid={!!errors?.length}
-            onKeyDown={blockInvalidChar}
+            onKeyDown={(e) => {
+              handleInput(e);
+              blockInvalidChar(e);
+            }}
             value={value === undefined ? "" : value.toString()}
             onBlur={handleBlur}
             defaultValue={defaultValue?.toString()}
