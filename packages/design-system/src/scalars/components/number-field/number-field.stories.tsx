@@ -99,7 +99,7 @@ export const Default: Story = {
   args: {
     name: "Label",
     label: "Label",
-    placeholder: "0",
+    placeholder: "Enter a number",
     step: 0,
     value: 1234,
   },
@@ -111,6 +111,7 @@ export const Active: Story = {
     autoFocus: true,
     defaultValue: 45,
     step: 0,
+    placeholder: "Enter a number",
   },
   parameters: {
     pseudo: { focus: true },
@@ -132,6 +133,7 @@ export const Required: Story = {
     value: 345,
     required: true,
     step: 0,
+    placeholder: "A number is required",
   },
 };
 export const WithWarning: Story = {
@@ -141,6 +143,7 @@ export const WithWarning: Story = {
     value: 23,
     step: 0,
     warnings: ["Warning message"],
+    placeholder: "Enter  number",
   },
 };
 export const WithError: Story = {
@@ -150,6 +153,7 @@ export const WithError: Story = {
     value: 23,
     step: 0,
     errors: ["Error message"],
+    placeholder: "Enter a number",
   },
 };
 export const WithMultipleErrors: Story = {
@@ -164,6 +168,7 @@ export const WithMultipleErrors: Story = {
       "Error message number 3",
       "Error message number 4",
     ],
+    placeholder: "Enter a number",
   },
 };
 
@@ -173,6 +178,7 @@ export const WithValue: Story = {
     name: "Label",
     label: "Label",
     value: 23,
+    placeholder: "Enter a number",
   },
 };
 
@@ -183,6 +189,7 @@ export const WithDescription: Story = {
     label: "Label",
     value: 0,
     description: "This is the field description",
+    placeholder: "Enter a number",
   },
 };
 
@@ -195,6 +202,7 @@ export const WithFloatNumber: Story = {
     value: 0.0,
     precision: 2,
     trailingZeros: true,
+    placeholder: "Enter a decimal number",
   },
 };
 // BigInt Stories
@@ -205,6 +213,7 @@ export const WithBigInt: Story = {
     value: 999999,
     isBigInt: true,
     step: 0,
+    placeholder: "Enter a large number",
   },
 };
 
@@ -216,5 +225,6 @@ export const WithStep: Story = {
     value: 456,
     step: 10,
     minValue: 20,
+    placeholder: "Enter a number",
   },
 };
