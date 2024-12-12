@@ -56,8 +56,9 @@ async function main() {
       throw new Error("processor name is required (--processor)");
     }
 
-    const type =
-      command.processorType === "analytics" ? "analytics" : "operational";
+    const type = !command.processorType
+      ? "analytics"
+      : (command.processorType as "analytics" | "operational");
 
     await generateProcessor(
       command.processorName,
