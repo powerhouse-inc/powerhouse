@@ -1,5 +1,3 @@
-"use client";
-
 import { jwtDecode } from "jwt-decode";
 import useWallet from "./useWallet";
 import { create } from "zustand";

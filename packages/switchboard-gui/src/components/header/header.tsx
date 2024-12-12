@@ -1,4 +1,3 @@
-"use client";
 import SwitchboardLink from "../text/Link";
 import useAuth, { authStore } from "../../hooks/useAuth";
 import { UserCircleIcon } from "@heroicons/react/24/solid";

@@ -1,4 +1,3 @@
-"use client";
 import GraphQLIframe from "../components/graphql/iframe";
 import { Suspense } from "react";
 
