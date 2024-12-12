@@ -13,11 +13,13 @@ function isPG(connectionString: string) {
 export function getKnexClient(connectionString: string | undefined) {
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
-  const connection = connectionString;
+  const connection = connectionString
+    ? `${process.cwd()}/${connectionString}`
+    : undefined;
   return knex({
     client,
     // @ts-expect-error
-    connection: { pglite: new PGlite(connectionString) },
+    connection: { pglite: new PGlite(connection) },
   });
 }
 
