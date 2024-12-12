@@ -138,7 +138,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         return;
       }
 
-      if (isBigInt) {
+      if (isBigInt || props.numericType === "BigInt") {
         const normalizedValue = inputValue.replace(/[^\d-]/g, "");
         numericValue = BigInt(normalizedValue);
       } else {
