@@ -4,25 +4,66 @@ import { createDocumentStory } from "document-model-libs/utils";
 import { Issue, reducer, utils } from "document-models/atlas-feedback-issues";
 import { defaultMockUser } from "document-model-libs/utils/storybook/mocks";
 import { ADDRESS_ALLOW_LIST } from "document-models/atlas-feedback-issues/src/constants";
+import { ComponentProps } from "react";
+import viewNodeTree from "./mocks/view-node-tree.json";
+import { ViewNode } from "@powerhousedao/mips-parser";
+import { Scopes } from "./components/scopes";
 
-const mockIssues: Issue[] = Array.from({ length: 5 }, (_, i) => ({
-  phid: `PHID-ISSUE-${i}`,
-  notionIds: [`NOTION-ID-${i}`, `NOTION-ID-${i + 1}`],
-  comments: Array.from({ length: 5 }, (_, j) => ({
-    phid: `COMMENT-ID-${i}-${j}`,
-    issuePhid: `PHID-ISSUE-${i}`,
-    notionId: `NOTION-ID-${i}`,
+const scopes = Object.values(viewNodeTree as Record<string, ViewNode>).filter(
+  (node) => node.type === "scope",
+);
+
+const allNotionIds = Object.keys(viewNodeTree);
+
+export function getRandomNotionIds(allIds: string[], count = 5): string[] {
+  const availableIds = [...allIds]; // Create a copy to avoid modifying original array
+  const result: string[] = [];
+
+  // Get minimum between requested count and available IDs
+  const actualCount = Math.min(count, availableIds.length);
+
+  for (let i = 0; i < actualCount; i++) {
+    // Get random index from remaining available IDs
+    const randomIndex = Math.floor(Math.random() * availableIds.length);
+    // Remove and add the ID to our result
+    const [selectedId] = availableIds.splice(randomIndex, 1);
+    result.push(selectedId);
+  }
+
+  return result;
+}
+
+const mockIssues: Issue[] = Array.from({ length: 5 }, (_, i) => {
+  const notionIds = getRandomNotionIds(allNotionIds, 5);
+  return {
+    phid: `PHID-ISSUE-${i}`,
+    notionIds,
+    comments: Array.from({ length: 5 }, (_, j) => ({
+      phid: `COMMENT-ID-${i}-${j}`,
+      issuePhid: `PHID-ISSUE-${i}`,
+      notionId: notionIds[i],
+      createdAt: "2024-01-01T08:00:00.000Z",
+      creatorAddress: ADDRESS_ALLOW_LIST[j % 2],
+      content: `CONTENT-${i}-${j}`,
+      lastEditedAt: "2024-01-01T08:00:00.000Z",
+    })),
     createdAt: "2024-01-01T08:00:00.000Z",
-    creatorAddress: ADDRESS_ALLOW_LIST[j % 2],
-    content: `CONTENT-${i}-${j}`,
-    lastEditedAt: "2024-01-01T08:00:00.000Z",
-  })),
-  createdAt: "2024-01-01T08:00:00.000Z",
-  creatorAddress: ADDRESS_ALLOW_LIST[0],
-}));
+    creatorAddress: ADDRESS_ALLOW_LIST[0],
+  };
+});
+
+function WrappedEditor(props: ComponentProps<typeof Editor>) {
+  const { scopes } = props;
+  return (
+    <div className="flex gap-2">
+      <Scopes scopes={scopes} />
+      <Editor {...props} />
+    </div>
+  );
+}
 
 const { meta, CreateDocumentStory: NotSignedIn } = createDocumentStory(
-  Editor,
+  WrappedEditor,
   reducer,
   utils.createExtendedState({
     state: {
@@ -34,11 +75,12 @@ const { meta, CreateDocumentStory: NotSignedIn } = createDocumentStory(
   }),
   {
     user: undefined,
+    scopes,
   },
 );
 
 const { CreateDocumentStory: NotOnAllowList } = createDocumentStory(
-  Editor,
+  WrappedEditor,
   reducer,
   utils.createExtendedState({
     state: {
@@ -57,7 +99,7 @@ const { CreateDocumentStory: NotOnAllowList } = createDocumentStory(
 );
 
 const { CreateDocumentStory: AllowedUser } = createDocumentStory(
-  Editor,
+  WrappedEditor,
   reducer,
   utils.createExtendedState({
     state: {
@@ -72,13 +114,12 @@ const { CreateDocumentStory: AllowedUser } = createDocumentStory(
       ...defaultMockUser,
       address: ADDRESS_ALLOW_LIST[0],
     },
-    customProp: "value",
-    onCustomAction: () => console.log("custom action"),
+    scopes,
   },
 );
 
 const { CreateDocumentStory: NotSignedInWithItems } = createDocumentStory(
-  Editor,
+  WrappedEditor,
   reducer,
   utils.createExtendedState({
     state: {
@@ -90,11 +131,12 @@ const { CreateDocumentStory: NotSignedInWithItems } = createDocumentStory(
   }),
   {
     user: undefined,
+    scopes,
   },
 );
 
 const { CreateDocumentStory: NotOnAllowListWithItems } = createDocumentStory(
-  Editor,
+  WrappedEditor,
   reducer,
   utils.createExtendedState({
     state: {
@@ -109,11 +151,12 @@ const { CreateDocumentStory: NotOnAllowListWithItems } = createDocumentStory(
       ...defaultMockUser,
       address: "0x0000000000000000000000000000000000000000",
     },
+    scopes,
   },
 );
 
 const { CreateDocumentStory: AllowedUserWithItems } = createDocumentStory(
-  Editor,
+  WrappedEditor,
   reducer,
   utils.createExtendedState({
     state: {
@@ -128,6 +171,7 @@ const { CreateDocumentStory: AllowedUserWithItems } = createDocumentStory(
       ...defaultMockUser,
       address: ADDRESS_ALLOW_LIST[0],
     },
+    scopes,
   },
 );
 

@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "types": ["node", "vitest/globals", "@storybook/types"],
+    "resolveJsonModule": true,
     "outDir": "./dist",
     "jsx": "react-jsx",
     "lib": ["ESNext", "dom", "dom.iterable"],
@@ -31,13 +32,9 @@
     "document-models/**/*.ts",
     "editors/**/*.ts",
     "editors/**/*.tsx",
+    "editors/**/*.json",
     "scripts/**/*.ts",
     "*.ts",
     "*.d.ts"
   ],
-  "references": [
-    {
-      "path": "../design-system"
-    }
-  ]
 }

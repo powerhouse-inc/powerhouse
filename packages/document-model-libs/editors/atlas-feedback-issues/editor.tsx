@@ -3,6 +3,7 @@ import {
   formatEthAddress,
   WagmiContext,
 } from "@powerhousedao/design-system";
+import { ViewNode } from "@powerhousedao/mips-parser";
 import { EditorProps, User, utils } from "document-model/document";
 import {
   AtlasFeedbackIssuesLocalState,
@@ -22,15 +23,18 @@ import { TextField } from "editors/document-model-2/components/text-field";
 import { useCallback, useMemo, useState } from "react";
 import { Address } from "viem";
 import { useEnsName } from "wagmi";
+import { Scopes } from "./components/scopes";
 
 export default function Editor(
   props: EditorProps<
     AtlasFeedbackIssuesState,
     AtlasFeedbackIssuesAction,
     AtlasFeedbackIssuesLocalState
-  >,
+  > & {
+    scopes: ViewNode[];
+  },
 ) {
-  const { document, context, dispatch } = props;
+  const { document, context, scopes, dispatch } = props;
   const { user } = context;
   const issues = useMemo(
     () => document.state.global.issues,
@@ -88,6 +92,7 @@ export default function Editor(
             issue={issue}
             user={user}
             issueNumber={index + 1}
+            scopes={scopes}
             handleDeleteIssue={handleDeleteIssue}
             handleCreateComment={handleCreateComment}
             handleDeleteComment={handleDeleteComment}
@@ -131,6 +136,7 @@ function Issue(props: {
   issue: TIssue;
   user: User;
   issueNumber: number;
+  scopes: ViewNode[];
   handleDeleteIssue: (input: DeleteIssueInput) => void;
   handleCreateComment: (input: CreateCommentInput) => void;
   handleDeleteComment: (input: DeleteCommentInput) => void;
@@ -140,6 +146,7 @@ function Issue(props: {
     issue,
     user,
     issueNumber,
+    scopes,
     handleDeleteIssue,
     handleCreateComment,
     handleDeleteComment,
@@ -150,24 +157,21 @@ function Issue(props: {
   );
   const [isAddingComment, setIsAddingComment] = useState(false);
   const comments = useMemo(() => issue.comments, [issue.comments]);
-
   return (
-    <div className="w-fit my-4">
+    <div className="my-4 w-fit">
       <div className="flex justify-between">
         <p>Issue #{issueNumber}</p>
         <button onClick={() => handleDeleteIssue({ phid: issue.phid })}>
           Delete issue
         </button>
       </div>
-      <ul>
-        {issue.notionIds.map((notionId) => (
-          <li key={notionId}>
-            <button onClick={() => setSelectedNotionId(notionId)}>
-              {notionId}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <Scopes
+        scopes={scopes}
+        filterNotionIds={issue.notionIds}
+        onNodeClick={(node) => {
+          setSelectedNotionId(node.slugSuffix);
+        }}
+      />
       {comments.length ? (
         <ul>
           {comments

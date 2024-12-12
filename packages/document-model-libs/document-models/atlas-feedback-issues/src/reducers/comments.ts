@@ -6,14 +6,14 @@
 
 import { AtlasFeedbackIssuesCommentsOperations } from "../../gen/comments/operations";
 import {
-    CommentSchema,
-    DeleteCommentInputSchema,
-    EditCommentInputSchema,
+  CommentSchema,
+  DeleteCommentInputSchema,
+  EditCommentInputSchema,
 } from "../../gen/schema/zod";
 import { ADDRESS_ALLOW_LIST } from "../constants";
 import {
-    makeNewCommentValidator,
-    makeExistingCommentValidator,
+  makeNewCommentValidator,
+  makeExistingCommentValidator,
 } from "../utils";
 
 export const reducer: AtlasFeedbackIssuesCommentsOperations = {
@@ -109,8 +109,7 @@ export const reducer: AtlasFeedbackIssuesCommentsOperations = {
       throw new Error("User is not allowed to edit this comment");
     }
     comment.content = result.data.content ?? comment.content;
-    comment.notionId =
-      result.data.notionId ?? comment.notionId;
+    comment.notionId = result.data.notionId ?? comment.notionId;
     comment.lastEditedAt = new Date().toISOString();
     issue.comments = issue.comments.map((c) =>
       c.phid === action.input.phid ? comment : c,

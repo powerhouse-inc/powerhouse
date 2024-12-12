@@ -833,6 +833,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@powerhousedao/mips-parser':
+        specifier: ^2.2.0
+        version: 2.2.0(encoding@0.1.13)
       '@powerhousedao/scalars':
         specifier: workspace:*
         version: link:../scalars
@@ -985,7 +988,7 @@ importers:
         version: link:../config
       '@powerhousedao/connect':
         specifier: develop
-        version: 1.0.0-dev.175(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.1)(document-model-libs@packages+document-model-libs)(lightningcss@1.28.2)(terser@5.36.0)
+        version: 1.0.0-dev.179(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.1)(document-model-libs@packages+document-model-libs)(lightningcss@1.28.2)(terser@5.36.0)
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
@@ -4123,6 +4126,10 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
+  '@notionhq/client@2.2.15':
+    resolution: {integrity: sha512-XhdSY/4B1D34tSco/GION+23GMjaS9S2zszcqYkMHo8RcWInymF6L1x+Gk7EmHdrSxNFva2WM8orhC4BwQCwgw==}
+    engines: {node: '>=12'}
+
   '@npmcli/fs@1.1.1':
     resolution: {integrity: sha512-8KG5RD0GVP4ydEzRn/I4BNDuxDtqVbOdm8675T49OIG/NGhaK0pjPX7ZcDlvKYbA+ulvVK3ztfcF4uBdOxuJbQ==}
 
@@ -4479,14 +4486,17 @@ packages:
   '@powerhousedao/analytics-engine-pg@0.3.0':
     resolution: {integrity: sha512-0N90CJzgrjZONA7VzEQKq5ne0DuzGpjTj3ZeZyjoaOq4gKopVdX+6j7zHmbfFKx15bkY6/T/+VoIKt9WN+We0Q==}
 
-  '@powerhousedao/connect@1.0.0-dev.175':
-    resolution: {integrity: sha512-zWCld98ty7ieR2xdbdcL4Pnq4Ja+WZZKWhuujoS1aIVbR0Zswd7FRATrpuelzrnNS5fTsathdjWvdGxa5wNcJg==}
+  '@powerhousedao/connect@1.0.0-dev.179':
+    resolution: {integrity: sha512-fZworcjJHo608/68vpvvUfOkZl9jzWvRGNc0aQAUO9kI7HTkeyNwuwFQtlAYELIpLPesdGPArYZq8XgIryNSGQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
       '@powerhousedao/design-system': latest
       '@powerhousedao/scalars': latest
       document-model-libs: latest
+
+  '@powerhousedao/mips-parser@2.2.0':
+    resolution: {integrity: sha512-0OaM2Dq7oEKuWFQeZKoUUpkCu+TrLAxeMHzdOIA0jY0kMkGS/ZNf8PlRxRL7+2v79MyqP7LJCZw6gw7OVZXUkg==}
 
   '@preact/preset-vite@2.9.1':
     resolution: {integrity: sha512-JecWzrOx7ogFhklSMhY+aH/24pajL0Vx+beEgau3WDMUUAo32cpUo/UqerPhLOyhCKXlxK9a3cRoa8g68ZAp5g==}
@@ -5803,6 +5813,9 @@ packages:
 
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
+
+  '@total-typescript/ts-reset@0.5.1':
+    resolution: {integrity: sha512-AqlrT8YA1o7Ff5wPfMOL0pvL+1X+sw60NN6CcOCqs658emD6RfiXhF7Gu9QcfKBH7ELY2nInLhKSCWVoNL70MQ==}
 
   '@total-typescript/ts-reset@0.6.1':
     resolution: {integrity: sha512-cka47fVSo6lfQDIATYqb/vO1nvFfbPw7uWLayIXIhGETj0wcOOlrlkobOMDNQOFr9QOafegUPq13V2+6vtD7yg==}
@@ -10274,6 +10287,7 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
+    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -17963,6 +17977,13 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.17.1
 
+  '@notionhq/client@2.2.15(encoding@0.1.13)':
+    dependencies:
+      '@types/node-fetch': 2.6.12
+      node-fetch: 2.7.0(encoding@0.1.13)
+    transitivePeerDependencies:
+      - encoding
+
   '@npmcli/fs@1.1.1':
     dependencies:
       '@gar/promisify': 1.1.3
@@ -18468,7 +18489,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/connect@1.0.0-dev.175(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.1)(document-model-libs@packages+document-model-libs)(lightningcss@1.28.2)(terser@5.36.0)':
+  '@powerhousedao/connect@1.0.0-dev.179(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.1)(document-model-libs@packages+document-model-libs)(lightningcss@1.28.2)(terser@5.36.0)':
     dependencies:
       '@powerhousedao/design-system': link:packages/design-system
       '@powerhousedao/scalars': link:packages/scalars
@@ -18488,6 +18509,16 @@ snapshots:
       - stylus
       - sugarss
       - terser
+
+  '@powerhousedao/mips-parser@2.2.0(encoding@0.1.13)':
+    dependencies:
+      '@notionhq/client': 2.2.15(encoding@0.1.13)
+      '@total-typescript/ts-reset': 0.5.1
+      change-case: 5.4.4
+      typescript: 5.7.2
+      zod: 3.23.8
+    transitivePeerDependencies:
+      - encoding
 
   '@preact/preset-vite@2.9.1(@babel/core@7.26.0)(preact@10.25.0)(vite@5.4.11(@types/node@22.10.1)(lightningcss@1.28.2)(terser@5.36.0))':
     dependencies:
@@ -20129,6 +20160,8 @@ snapshots:
     optional: true
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
+
+  '@total-typescript/ts-reset@0.5.1': {}
 
   '@total-typescript/ts-reset@0.6.1': {}
 
