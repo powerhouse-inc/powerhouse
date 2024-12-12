@@ -63,7 +63,6 @@ export const reactor: CommandActionType<
   [ReactorOptions],
   Promise<LocalReactor>
 > = (options) => {
-  console.log(options);
   return startLocalReactor(options);
 };
 
