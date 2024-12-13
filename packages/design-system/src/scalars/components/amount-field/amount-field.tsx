@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-max-depth */
 import React, { FC, useId } from "react";
 import { InputNumberProps } from "../types";
 import { NumberFieldProps, NumberFieldRaw } from "../number-field";
@@ -12,10 +13,6 @@ import {
 } from "../fragments";
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
-import {
-  validateIsBigIntAmount,
-  validatePositiveAmount,
-} from "./amount-field-validations";
 import { AmountFieldPropsGeneric, AmountValue } from "./types";
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
@@ -55,7 +52,6 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   defaultValue,
   type,
   allowedCurrencies = [],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   allowedTokens = [],
   numberProps,
   selectProps,
@@ -64,83 +60,24 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
-  const { isCurrency, isPercent, isSearchable, options, currency } =
-    useAmountField({
-      value,
-      defaultValue,
-      type,
-      allowedCurrencies,
-    });
-
-  const handleOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (type === "AmountCurrency" && typeof value === "object") {
-      const newValue = {
-        ...value,
-        amount: Number(e.target.value),
-      } as AmountValue;
-
-      //Create the event
-      const nativeEvent = new Event("change", {
-        bubbles: true,
-        cancelable: true,
-      });
-      Object.defineProperty(nativeEvent, "target", {
-        value: { value: newValue },
-        writable: false,
-      });
-      onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
-    }
-    if (
-      type === "Amount" ||
-      (type === "AmountPercentage" && typeof value === "number")
-    ) {
-      const newValue = Number(e.target.value);
-      //Create the event
-      const nativeEvent = new Event("change", {
-        bubbles: true,
-        cancelable: true,
-      });
-      Object.defineProperty(nativeEvent, "target", {
-        value: { value: newValue },
-        writable: false,
-      });
-      onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
-    }
-  };
-  const handleOnChangeSelect = (e: string | string[]) => {
-    if (type === "AmountCurrency" && typeof value === "object") {
-      const newValue = {
-        ...value,
-        currency: typeof e === "string" ? e : undefined,
-      } as AmountValue;
-
-      //Create the event
-      const nativeEvent = new Event("change", {
-        bubbles: true,
-        cancelable: true,
-      });
-      Object.defineProperty(nativeEvent, "target", {
-        value: { value: newValue },
-        writable: false,
-      });
-
-      onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
-    }
-  };
-  const handleBlur = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (type === "AmountCurrency" && typeof value === "object") {
-      const newValue = {
-        ...value,
-        amount: e.target.value as unknown as number,
-      } as AmountValue;
-
-      onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
-    }
-    if (type === "Amount" || type === "AmountPercentage") {
-      const newValue = e.target.value as unknown as number;
-      onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
-    }
-  };
+  const {
+    isShowSelect,
+    isPercent,
+    options,
+    valueSelect,
+    valueInput,
+    handleOnChangeInput,
+    handleOnChangeSelect,
+    handleBlur,
+  } = useAmountField({
+    value,
+    defaultValue,
+    type,
+    allowedCurrencies,
+    allowedTokens,
+    onChange,
+    onBlur,
+  });
 
   return (
     <FormGroup>
@@ -157,11 +94,10 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
       )}
       <div className={cn("relative flex items-center")}>
         <div className={cn("relative flex items-center")}>
-          {isCurrency && currencyPosition === "left" && (
+          {isShowSelect && currencyPosition === "left" && (
             <SelectFieldRaw
               optionsCheckmark="None"
-              value={currency}
-              searchable={isSearchable}
+              value={valueSelect}
               name=""
               required={required}
               disabled={disabled}
@@ -181,18 +117,14 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             required={required}
             disabled={disabled}
             name=""
-            value={
-              type === "Amount" || type === "AmountPercentage"
-                ? value
-                : value?.amount
-            }
+            value={valueInput}
             id={id}
             maxValue={maxValue}
             precision={precision}
             minValue={minValue}
             allowNegative={allowNegative}
             trailingZeros={trailingZeros}
-            onChange={handleOnChange}
+            onChange={handleOnChangeInput}
             className={cn(
               currencyPosition === "left" &&
                 "border border-gray-300 rounded-l-none border-l-[0.5px]",
@@ -215,19 +147,18 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             </span>
           )}
         </div>
-        {isCurrency && currencyPosition === "right" && (
+        {isShowSelect && currencyPosition === "right" && (
           <div>
             <SelectFieldRaw
               optionsCheckmark="None"
-              value={currency}
-              searchable={isSearchable}
+              value={valueSelect}
               name=""
               required={required}
               disabled={disabled}
               onChange={handleOnChangeSelect}
               options={options}
               className={cn(
-                "border border-gray-300 rounded-r-md rounded-l-none",
+                "rounded-l-none rounded-r-md border border-gray-300",
                 "border-l-[0.5px] focus:border-l-[1px] focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                 "focus:outline-none",
               )}
@@ -243,12 +174,5 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   );
 };
 
-export const AmountField = withFieldValidation<AmountFieldProps>(
-  AmountFieldRaw,
-  {
-    validations: {
-      _positive: validatePositiveAmount,
-      _isBigInt: validateIsBigIntAmount,
-    },
-  },
-);
+export const AmountField =
+  withFieldValidation<AmountFieldProps>(AmountFieldRaw);

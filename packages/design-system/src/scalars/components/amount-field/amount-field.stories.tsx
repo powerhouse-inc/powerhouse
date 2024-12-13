@@ -96,6 +96,21 @@ export const Currency: Story = {
     },
   },
 };
+export const Token: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    step: 0,
+    type: "AmountToken",
+    allowedTokens: ["BTC", "ETH", "USDT"],
+    currencyPosition: "right",
+    value: {
+      amount: 94453453454,
+      token: "BTC",
+    },
+  },
+};
 
 export const CurrencyLeft: Story = {
   name: "Currency Left",
