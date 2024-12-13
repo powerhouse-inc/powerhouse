@@ -44,7 +44,7 @@ export class ReactorRouterManager {
       typeDefs: systemSubgraph.typeDefs,
     });
     // @ts-expect-error
-    this.app.use(path.join(this.path, "system"), systemMiddleware);
+    this.reactorRouter.use(path.join(this.path, "system"), systemMiddleware);
 
     // drive middleware
     const driveMiddleware = await this.#createSubgraphMiddleware({
@@ -53,7 +53,7 @@ export class ReactorRouterManager {
       typeDefs: driveSubgraph.typeDefs,
     });
     // @ts-expect-error
-    this.app.use(path.join(this.path, "d/:drive"), driveMiddleware);
+    this.reactorRouter.use(path.join(this.path, "d/:drive"), driveMiddleware);
 
     // analytics middleware
     const analyticsMiddleware = await this.#createSubgraphMiddleware({
@@ -61,8 +61,11 @@ export class ReactorRouterManager {
       resolvers: analyticsSubgraph.resolvers as GraphQLResolverMap<Context>,
       typeDefs: analyticsSubgraph.typeDefs,
     });
-    // @ts-expect-error
-    this.app.use(path.join(this.path, "analytics"), analyticsMiddleware);
+    this.reactorRouter.use(
+      path.join(this.path, "analytics"),
+      // @ts-expect-error
+      analyticsMiddleware,
+    );
   }
 
   async #createSubgraphMiddleware(subgraph: Subgraph) {
@@ -80,9 +83,9 @@ export class ReactorRouterManager {
       plugins: [ApolloServerPluginInlineTraceDisabled()],
     });
     await server.start();
-    // @ts-expect-error
-    return expressMiddleware(server, {
-      context: ({ req }): Context => ({
+
+    const middleware = expressMiddleware(server, {
+      context: async ({ req }): Promise<Context> => ({
         headers: req.headers,
         driveId: req.params.drive ?? undefined,
         driveServer: this.reactor,
@@ -92,13 +95,12 @@ export class ReactorRouterManager {
   }
 
   async registerSubgraph(subgraph: Subgraph) {
+    const middleware = await this.#createSubgraphMiddleware(subgraph);
     this.reactorRouter.use(
-      path.join(this.path, subgraph.name),
+      subgraph.name,
       // @ts-expect-error
-      this.#createSubgraphMiddleware(subgraph),
+      middleware,
     );
-    console.log(`Registered [${subgraph.name}] subgraph.`);
-    return Promise.resolve();
   }
 
   getAdditionalContextFields = () => {
