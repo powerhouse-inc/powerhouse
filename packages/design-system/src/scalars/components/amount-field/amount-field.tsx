@@ -130,7 +130,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
               currencyPosition === "right" &&
                 "border border-gray-300 rounded-r-none border-r-[0.5px]",
               isPercent && "pr-7",
-              className
+              className,
             )}
             onBlur={handleBlur}
             {...(numberProps || {})}
@@ -139,7 +139,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             <span
               className={cn(
                 "pointer-events-none absolute inset-y-0 right-2 ml-2 flex items-center",
-                disabled ? "text-gray-400" : "text-gray-900"
+                disabled ? "text-gray-400" : "text-gray-900",
               )}
             >
               %
@@ -159,7 +159,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
               className={cn(
                 "rounded-l-none rounded-r-md border border-gray-300",
                 "border-l-[0.5px] focus:border-l-[1px] focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
-                "focus:outline-none"
+                "focus:outline-none",
               )}
               {...(selectProps || {})}
             />
