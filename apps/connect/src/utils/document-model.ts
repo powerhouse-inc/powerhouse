@@ -1,13 +1,20 @@
+import { IDocumentDriveServer } from 'document-drive';
 import type {
     Action,
     ActionErrorCallback,
     BaseAction,
     Document,
     Operation,
+    OperationScope,
     Reducer,
 } from 'document-model/document';
 import { useEffect, useState } from 'react';
 import { logger } from 'src/services/logger';
+import { Unsubscribe } from 'src/services/renown/types';
+
+export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
+    (import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE as string) || '50',
+);
 
 export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
     operation: Operation,
@@ -98,4 +105,86 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
     };
 
     return [state, dispatch, error] as const;
+}
+
+async function waitForUpdate(
+    timeout: number,
+    documentId: string,
+    scope: OperationScope,
+    lastIndex: number,
+    reactor: IDocumentDriveServer,
+) {
+    let unsubscribe: Unsubscribe | undefined;
+    const promise = new Promise<void>(resolve => {
+        unsubscribe = reactor.on('strandUpdate', update => {
+            const sameScope =
+                update.documentId === documentId && update.scope == scope;
+            if (!sameScope) {
+                return;
+            }
+
+            const lastUpdateIndex = update.operations.at(-1)?.index;
+            if (lastUpdateIndex && lastUpdateIndex >= lastIndex) {
+                resolve();
+            }
+        });
+    });
+
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+            () =>
+                reject(
+                    new Error(
+                        `Timed out waiting for operation ${lastIndex} for document ${documentId}`,
+                    ),
+                ),
+            timeout,
+        ),
+    );
+
+    const withTimeout = Promise.race([promise, timeoutPromise]);
+    void withTimeout.finally(() => {
+        unsubscribe?.();
+    });
+
+    return withTimeout;
+}
+
+export async function uploadDocumentOperations(
+    drive: string,
+    documentId: string,
+    document: Document,
+    reactor: IDocumentDriveServer,
+    pushOperations: (
+        driveId: string,
+        id: string,
+        operations: Operation[],
+    ) => Promise<Document | undefined>,
+    options?: { waitForSync?: boolean; operationsLimit?: number },
+) {
+    const operationsLimit =
+        options?.operationsLimit || FILE_UPLOAD_OPERATIONS_CHUNK_SIZE;
+    for (const operations of Object.values(document.operations)) {
+        for (let i = 0; i < operations.length; i += operationsLimit) {
+            const chunk = operations.slice(i, i + operationsLimit);
+            const operation = chunk.at(-1);
+            if (!operation) {
+                break;
+            }
+            const { scope } = operation;
+
+            await pushOperations(drive, documentId, chunk);
+
+            if (!options?.waitForSync) {
+                continue;
+            }
+            await waitForUpdate(
+                10000,
+                documentId,
+                scope,
+                operation.index,
+                reactor,
+            );
+        }
+    }
 }

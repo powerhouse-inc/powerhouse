@@ -31,15 +31,12 @@ import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { useUnwrappedReactor } from 'src/store/reactor';
 import { useUser } from 'src/store/user';
+import { uploadDocumentOperations } from 'src/utils';
 import { loadFile } from 'src/utils/file';
 import { addActionContext, signOperation } from 'src/utils/signature';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useDocumentDrives } from './useDocumentDrives';
 import { useUserPermissions } from './useUserPermissions';
-
-export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
-    (import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE as string) || '50',
-);
 
 // TODO this should be added to the document model
 export interface SortOptions {
@@ -257,54 +254,22 @@ export function useDocumentDriveServer() {
             );
 
             // then add all the operations
-            const operationsLimit = FILE_UPLOAD_OPERATIONS_CHUNK_SIZE;
-            for (const operations of Object.values(document.operations)) {
-                for (let i = 0; i < operations.length; i += operationsLimit) {
-                    const chunk = operations.slice(i, i + operationsLimit);
-                    const operation = chunk.at(-1);
-                    if (!operation) {
-                        break;
-                    }
-                    const { scope } = operation;
+            const driveDocument = documentDrives.find(
+                documentDrive => documentDrive.state.global.id === drive,
+            );
+            const waitForSync =
+                driveDocument && driveDocument.state.local.listeners.length > 0;
 
-                    await addOperations(drive, fileNode.id, chunk);
-                    const driveDocument = documentDrives.find(
-                        documentDrive =>
-                            documentDrive.state.global.id === drive,
-                    );
-                    const waitForSync =
-                        driveDocument &&
-                        driveDocument.state.local.listeners.length > 0;
-                    if (!waitForSync) {
-                        continue;
-                    }
-                    await new Promise<void>(resolve =>
-                        reactor.on('strandUpdate', update => {
-                            const sameScope =
-                                update.documentId === fileNode.id &&
-                                update.scope == scope;
-                            if (!sameScope) {
-                                return;
-                            }
-
-                            // if all pushed operations are found in the strand
-                            // update then moves on to the next chunk
-                            const operationNotFound = chunk.find(
-                                op =>
-                                    !update.operations.find(strandOp =>
-                                        op.id
-                                            ? op.id === strandOp.id
-                                            : op.index === strandOp.index &&
-                                              op.hash === strandOp.hash,
-                                    ),
-                            );
-                            if (!operationNotFound) {
-                                resolve();
-                            }
-                        }),
-                    );
-                }
-            }
+            uploadDocumentOperations(
+                drive,
+                fileNode.id,
+                document,
+                reactor,
+                addOperations,
+                { waitForSync },
+            ).catch(error => {
+                throw error;
+            });
         },
         [
             addDocument,
