@@ -86,15 +86,48 @@ export const Currency: Story = {
     selectName: "currency",
     label: "Enter Amount and Select Currency",
     name: "amount",
+    step: 0,
     type: "AmountCurrency",
     allowedCurrencies: ["USD", "EUR"],
+    currencyPosition: "right",
     value: {
       amount: 345,
       currency: "USD",
     },
   },
 };
+export const Token: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    step: 0,
+    type: "AmountToken",
+    allowedTokens: ["BTC", "ETH", "USDT"],
+    currencyPosition: "right",
+    value: {
+      amount: 12321312 as unknown as bigint,
+      token: "BTC",
+    },
+  },
+};
 
+export const CurrencyLeft: Story = {
+  name: "Currency Left",
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    step: 0,
+    type: "AmountCurrency",
+    allowedCurrencies: ["USD", "EUR"],
+    currencyPosition: "left",
+    value: {
+      amount: 345,
+      currency: "USD",
+    },
+  },
+};
 export const Default: Story = {
   args: {
     selectName: "currency",
@@ -102,6 +135,7 @@ export const Default: Story = {
     name: "amount",
     type: "Amount",
     value: 345,
+    step: 0,
   },
 };
 export const Percent: Story = {
@@ -111,6 +145,7 @@ export const Percent: Story = {
     name: "amount",
     type: "AmountPercentage",
     value: 9,
+    step: 0,
   },
 };
 
@@ -121,6 +156,7 @@ export const PercentWithActive: Story = {
     name: "amount",
     type: "AmountPercentage",
     value: 345,
+    step: 0,
     numberProps: {
       autoFocus: true,
     },
@@ -136,6 +172,7 @@ export const PercentWithDisable: Story = {
     name: "amount",
     type: "AmountPercentage",
     defaultValue: 345,
+    step: 0,
   },
 };
 
@@ -151,6 +188,7 @@ export const CurrencyWithDisable: Story = {
       currency: "USD",
     },
     disabled: true,
+    step: 0,
   },
 };
 export const CurrencyWithActive: Story = {
@@ -167,6 +205,7 @@ export const CurrencyWithActive: Story = {
     numberProps: {
       autoFocus: true,
     },
+    step: 0,
   },
 };
 
@@ -181,6 +220,7 @@ export const HoverWithCurrency: Story = {
       amount: 345,
       currency: "USD",
     },
+    step: 0,
   },
   parameters: {
     pseudo: {
@@ -200,6 +240,7 @@ export const Required: Story = {
       amount: 345,
       currency: "USD",
     },
+    step: 0,
   },
 };
 export const WithWarning: Story = {
@@ -214,6 +255,7 @@ export const WithWarning: Story = {
       currency: "USD",
     },
     warnings: ["Warning message"],
+    step: 0,
   },
 };
 export const WithError: Story = {
@@ -228,6 +270,7 @@ export const WithError: Story = {
       currency: "USD",
     },
     errors: ["Error message"],
+    step: 0,
   },
 };
 export const WithMultipleErrors: Story = {
@@ -247,5 +290,6 @@ export const WithMultipleErrors: Story = {
       "Error message number 3",
       "Error message number 4",
     ],
+    step: 0,
   },
 };
