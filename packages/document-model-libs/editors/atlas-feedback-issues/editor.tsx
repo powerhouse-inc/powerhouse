@@ -33,6 +33,7 @@ import {
   eventNames,
   RemoveNotionIdFromIssueEvent,
 } from "./utils/events";
+import { filterViewNodesRecursively } from "./utils/nodes";
 
 export default function Editor(
   props: EditorProps<
@@ -220,6 +221,11 @@ function Issue(props: {
     () => !!issue.notionIds.length,
     [issue.notionIds],
   );
+  const filteredScopes = useMemo(() => {
+    return filterViewNodesRecursively(scopes, issue.notionIds);
+  }, [scopes, issue.notionIds]);
+
+  console.log(filteredScopes);
 
   useEffect(() => {
     if (selectedNotionId) return;
@@ -259,7 +265,7 @@ function Issue(props: {
         </button>
       </div>
       <Scopes
-        scopes={scopes}
+        scopes={filteredScopes}
         issue={issue}
         issues={issues}
         onSelectNotionId={onSelectNotionId}

@@ -4,3 +4,5 @@ export {
   dispatchAddNotionIdToIssueEvent,
   dispatchRemoveNotionIdFromIssueEvent,
 } from "./events";
+
+export { filterViewNodesRecursively, makeViewNodeTitleText } from "./nodes";

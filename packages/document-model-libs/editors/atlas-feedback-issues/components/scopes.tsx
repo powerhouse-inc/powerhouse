@@ -11,7 +11,7 @@ export function Scopes(props: Props) {
   return (
     <div>
       {scopes.map((scope) => (
-        <Node key={scope.slugSuffix} {...props} viewNode={scope} level={0} />
+        <Node key={scope.slugSuffix} {...props} viewNode={scope} />
       ))}
     </div>
   );

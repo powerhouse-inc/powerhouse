@@ -1,15 +1,15 @@
 import type { RawViewNode, ViewNode } from "@powerhousedao/mips-parser";
-import { makeViewNodeTitleText } from "@powerhousedao/mips-parser/src";
 import { useCallback, useState } from "react";
 import { twJoin } from "tailwind-merge";
 import { NodeOptionsCombobox } from "./node-options-combobox";
 import { Issue } from "document-models/atlas-feedback-issues";
+import { makeViewNodeTitleText } from "../utils";
 
 type Props = {
   viewNode: ViewNode;
   issue: Issue | null;
   issues: Issue[];
-  level: number;
+  level?: number;
   tempIsDisplay?: boolean;
   onSelectNotionId: (notionId: string) => void;
 };
@@ -17,23 +17,17 @@ type Props = {
 export function Node(props: Props) {
   const {
     viewNode,
-    level,
-    issue,
     onSelectNotionId,
     tempIsDisplay = false,
+    level = 0,
   } = props;
   const notionId = viewNode.slugSuffix;
   const [open, setOpen] = useState(!tempIsDisplay);
   const hasSubDocuments = viewNode.subDocuments.length > 0;
-  const supportingDocumentNodes = Object.values(
-    viewNode.supportingDocuments,
-  ).flat();
-  const hasSupportingDocuments = supportingDocumentNodes.length > 0;
   const isCategory = viewNode.type === "category";
   const title = isCategory
     ? viewNode.title.title
     : makeViewNodeTitleText(viewNode as RawViewNode);
-  const showTitle = getShowTitle();
   const chevron = (
     <svg
       viewBox="0 0 15 15"
@@ -53,19 +47,6 @@ export function Node(props: Props) {
     </svg>
   );
 
-  function getShowTitle() {
-    if (tempIsDisplay) return true;
-    if (
-      isCategory &&
-      issue?.notionIds.some((id) =>
-        viewNode.descendantSlugSuffixes.includes(id),
-      )
-    )
-      return true;
-    if (issue?.notionIds.includes(viewNode.slugSuffix)) return true;
-    return false;
-  }
-
   const onNodeTitleClick = useCallback(() => {
     setOpen((prev) => !prev);
     if (tempIsDisplay) return;
@@ -75,34 +56,24 @@ export function Node(props: Props) {
 
   return (
     <div className="w-80">
-      {showTitle && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1" onClick={onNodeTitleClick}>
-            {title}
-            {(hasSubDocuments || hasSupportingDocuments) && chevron}
-          </div>
-          <div>
-            <NodeOptionsCombobox {...props} />
-          </div>
+      <div
+        className="flex items-center justify-between"
+        style={{ marginLeft: `${(level ?? 0) * 8}px` }}
+      >
+        <div className="flex items-center gap-1" onClick={onNodeTitleClick}>
+          {title}
+          {hasSubDocuments && chevron}
         </div>
-      )}
+        <div>
+          <NodeOptionsCombobox {...props} />
+        </div>
+      </div>
       {open && (
         <div>
           <ul>
             {viewNode.subDocuments.map((subDocument) => (
               <li key={subDocument.slugSuffix}>
-                <Node {...props} level={level + 1} viewNode={subDocument} />
-              </li>
-            ))}
-          </ul>
-          <ul>
-            {supportingDocumentNodes.map((supportingDocument) => (
-              <li key={supportingDocument.slugSuffix}>
-                <Node
-                  {...props}
-                  level={level + 1}
-                  viewNode={supportingDocument}
-                />
+                <Node {...props} viewNode={subDocument} level={level + 1} />
               </li>
             ))}
           </ul>
