@@ -42,6 +42,7 @@ export async function startAPI(
     dataSources: {
       db: {
         Analytics: new AnalyticsModel(new AnalyticsQueryEngine(analyticsStore)),
+        Operational: knex,
       },
     },
   });
