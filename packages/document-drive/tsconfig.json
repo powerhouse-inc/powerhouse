@@ -3,9 +3,7 @@
   "compilerOptions": {
     "emitDeclarationOnly": true,
     "outDir": "./dist",
+    "noUncheckedIndexedAccess": true
   },
-  "include": [
-    "src/**/*.ts",
-    "*.ts",
-  ]
+  "include": ["src/**/*.ts", "*.ts"]
 }

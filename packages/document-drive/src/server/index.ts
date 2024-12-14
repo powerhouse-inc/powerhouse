@@ -1726,100 +1726,6 @@ export class BaseDocumentDriveServer
         this.cache.setDocument(drive, id, document).catch(logger.error);
       }
 
-      // gets all the different scopes and branches combinations from the operations
-      const { scopes, branches } = operationsApplied.reduce(
-        (acc, operation) => {
-          if (!acc.scopes.includes(operation.scope)) {
-            acc.scopes.push(operation.scope);
-          }
-          return acc;
-        },
-        { scopes: [] as string[], branches: ["main"] },
-      );
-
-      const syncUnits = await this.getSynchronizationUnits(
-        drive,
-        [id],
-        scopes,
-        branches,
-      );
-
-      // checks if any of the provided operations where reshufled
-      const newOp = operationsApplied.find(
-        (appliedOp) =>
-          !operations.find(
-            (o) =>
-              o.id === appliedOp.id &&
-              o.index === appliedOp.index &&
-              o.skip === appliedOp.skip &&
-              o.hash === appliedOp.hash,
-          ),
-      );
-
-      // if there are no new operations then reuses the provided source
-      // otherwise sets it to local so listeners know that there were
-      // new changes originating from this document drive server
-      const source: StrandUpdateSource = newOp
-        ? { type: "local" }
-        : (options?.source ?? { type: "local" });
-
-      // update listener cache
-
-      const operationSource = this.getOperationSource(source);
-
-      this.listenerStateManager
-        .updateSynchronizationRevisions(
-          drive,
-          syncUnits,
-          source,
-          () => {
-            this.updateSyncUnitStatus(drive, {
-              [operationSource]: "SYNCING",
-            });
-
-            for (const syncUnit of syncUnits) {
-              this.updateSyncUnitStatus(syncUnit.syncId, {
-                [operationSource]: "SYNCING",
-              });
-            }
-          },
-          this.handleListenerError.bind(this),
-          options?.forceSync ?? source.type === "local",
-        )
-        .then((updates) => {
-          if (updates.length) {
-            this.updateSyncUnitStatus(drive, {
-              [operationSource]: "SUCCESS",
-            });
-          }
-
-          for (const syncUnit of syncUnits) {
-            this.updateSyncUnitStatus(syncUnit.syncId, {
-              [operationSource]: "SUCCESS",
-            });
-          }
-        })
-        .catch((error) => {
-          logger.error("Non handled error updating sync revision", error);
-          this.updateSyncUnitStatus(
-            drive,
-            {
-              [operationSource]: "ERROR",
-            },
-            error as Error,
-          );
-
-          for (const syncUnit of syncUnits) {
-            this.updateSyncUnitStatus(
-              syncUnit.syncId,
-              {
-                [operationSource]: "ERROR",
-              },
-              error as Error,
-            );
-          }
-        });
-
       // after applying all the valid operations,throws
       // an error if there was an invalid operation
       if (error) {
@@ -2322,6 +2228,108 @@ export class BaseDocumentDriveServer
 
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe {
     return this.emitter.on(event, cb);
+  }
+
+  async #updateListeners(
+    driveId: string,
+    documentId: string,
+    operations: Operation[],
+    operationsApplied: Operation[],
+    options?: AddOperationOptions,
+  ) {
+    // gets all the different scopes and branches combinations from the operations
+    const { scopes, branches } = operationsApplied.reduce(
+      (acc, operation) => {
+        if (!acc.scopes.includes(operation.scope)) {
+          acc.scopes.push(operation.scope);
+        }
+        return acc;
+      },
+      { scopes: [] as string[], branches: ["main"] },
+    );
+
+    const syncUnits = await this.getSynchronizationUnits(
+      driveId,
+      [documentId],
+      scopes,
+      branches,
+    );
+
+    // checks if any of the provided operations where reshufled
+    const newOp = operationsApplied.find(
+      (appliedOp) =>
+        !operations.find(
+          (o) =>
+            o.id === appliedOp.id &&
+            o.index === appliedOp.index &&
+            o.skip === appliedOp.skip &&
+            o.hash === appliedOp.hash,
+        ),
+    );
+
+    // if there are no new operations then reuses the provided source
+    // otherwise sets it to local so listeners know that there were
+    // new changes originating from this document drive server
+    const source: StrandUpdateSource = newOp
+      ? { type: "local" }
+      : (options?.source ?? { type: "local" });
+
+    // update listener cache
+
+    const operationSource = this.getOperationSource(source);
+
+    this.listenerStateManager
+      .updateSynchronizationRevisions(
+        driveId,
+        syncUnits,
+        source,
+        () => {
+          this.updateSyncUnitStatus(driveId, {
+            [operationSource]: "SYNCING",
+          });
+
+          for (const syncUnit of syncUnits) {
+            this.updateSyncUnitStatus(syncUnit.syncId, {
+              [operationSource]: "SYNCING",
+            });
+          }
+        },
+        this.handleListenerError.bind(this),
+        options?.forceSync ?? source.type === "local",
+      )
+      .then((updates) => {
+        if (updates.length) {
+          this.updateSyncUnitStatus(driveId, {
+            [operationSource]: "SUCCESS",
+          });
+        }
+
+        for (const syncUnit of syncUnits) {
+          this.updateSyncUnitStatus(syncUnit.syncId, {
+            [operationSource]: "SUCCESS",
+          });
+        }
+      })
+      .catch((error) => {
+        logger.error("Non handled error updating sync revision", error);
+        this.updateSyncUnitStatus(
+          driveId,
+          {
+            [operationSource]: "ERROR",
+          },
+          error as Error,
+        );
+
+        for (const syncUnit of syncUnits) {
+          this.updateSyncUnitStatus(
+            syncUnit.syncId,
+            {
+              [operationSource]: "ERROR",
+            },
+            error as Error,
+          );
+        }
+      });
   }
 
   protected emit<K extends keyof DriveEvents>(

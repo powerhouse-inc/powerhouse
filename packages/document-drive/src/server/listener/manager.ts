@@ -21,30 +21,6 @@ import { InternalTransmitter } from "./transmitter/internal";
 import { SwitchboardPushTransmitter } from "./transmitter/switchboard-push";
 import { ITransmitter, StrandUpdateSource } from "./transmitter/types";
 
-function debounce<T extends unknown[], R>(
-  func: (...args: T) => Promise<R>,
-  delay = 250,
-) {
-  let timer: number;
-  return (immediate: boolean, ...args: T) => {
-    if (timer) {
-      clearTimeout(timer);
-    }
-    return new Promise<R>((resolve, reject) => {
-      if (immediate) {
-        func(...args)
-          .then(resolve)
-          .catch(reject);
-      } else {
-        timer = setTimeout(() => {
-          func(...args)
-            .then(resolve)
-            .catch(reject);
-        }, delay) as unknown as number;
-      }
-    });
-  };
-}
 export class ListenerManager extends BaseListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
 

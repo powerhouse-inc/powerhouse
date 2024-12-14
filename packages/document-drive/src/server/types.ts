@@ -97,25 +97,6 @@ export type SynchronizationUnitQuery = Omit<
   "revision" | "lastUpdated"
 >;
 
-export type Listener = {
-  driveId: string;
-  listenerId: string;
-  label?: string;
-  block: boolean;
-  system: boolean;
-  filter: ListenerFilter;
-  callInfo?: ListenerCallInfo;
-};
-
-export type CreateListenerInput = {
-  driveId: string;
-  label?: string;
-  block: boolean;
-  system: boolean;
-  filter: ListenerFilter;
-  callInfo?: ListenerCallInfo;
-};
-
 export enum TransmitterType {
   Internal,
   SwitchboardPush,

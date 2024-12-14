@@ -14,6 +14,7 @@ import { generateId } from "document-model/utils";
 import { OperationError } from "../server/error";
 import { DocumentDriveStorage, DocumentStorage } from "../storage";
 import { RunAsap } from "./run-asap";
+import { createEventEmitter } from "./event-emitter";
 export * from "./run-asap";
 
 export const runAsap = RunAsap.runAsap;
@@ -87,4 +88,29 @@ export function isNoopUpdate(
 // return true if dateA is before dateB
 export function isBefore(dateA: Date | string, dateB: Date | string) {
   return new Date(dateA) < new Date(dateB);
+}
+
+export function debounce<T extends unknown[], R>(
+  func: (...args: T) => Promise<R>,
+  delay = 250,
+) {
+  let timer: number;
+  return (immediate: boolean, ...args: T) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    return new Promise<R>((resolve, reject) => {
+      if (immediate) {
+        func(...args)
+          .then(resolve)
+          .catch((error: unknown) => reject(error as Error));
+      } else {
+        timer = setTimeout(() => {
+          func(...args)
+            .then(resolve)
+            .catch((error: unknown) => reject(error as Error));
+        }, delay) as unknown as number;
+      }
+    });
+  };
 }
