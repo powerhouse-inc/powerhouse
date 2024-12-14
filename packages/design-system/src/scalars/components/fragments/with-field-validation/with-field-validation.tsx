@@ -209,10 +209,12 @@ export const withFieldValidation = <T extends PossibleProps>(
             // custom errors provided as props
             ...(props.errors
               ? Object.fromEntries(
-                  props.errors.map((error, index) => [
-                    `_propError${index}`,
-                    () => error,
-                  ]),
+                  Array.isArray(props.errors)
+                    ? props.errors.map((error, index) => [
+                        `_propError${index}`,
+                        () => error,
+                      ])
+                    : [],
                 )
               : {}),
             // built in validations by the field in the library
