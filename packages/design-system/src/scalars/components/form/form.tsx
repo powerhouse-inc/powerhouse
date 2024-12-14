@@ -163,8 +163,9 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
                 data[key] = castValue(value, dataCast as ValueCast) as unknown;
               }
             }
-          } catch {
-            // do nothing
+          } catch (error) {
+            // print out the error but continue the execution
+            console.error(error);
           }
         });
 
