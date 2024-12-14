@@ -3,6 +3,7 @@
 exports[`BooleanField > should render checkbox field when isToggle is false 1`] = `
 <div>
   <form
+    id=":r3:"
     novalidate=""
   >
     <div
@@ -18,7 +19,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
           class="peer size-4 shrink-0 rounded border-input border shadow-sm shadow-black/[.04] ring-offset-background transition-shadow focus-visible:border-ring focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-gray-700 disabled:data-[invalid=false]:data-[state=checked]:bg-gray-700 disabled:data-[invalid=false]:data-[state=indeterminate]:bg-gray-700 dark:disabled:data-[invalid=false]:data-[state=checked]:bg-gray-500 dark:disabled:data-[invalid=false]:data-[state=indeterminate]:bg-gray-500 data-[state]:border-gray-700 dark:data-[state]:border-gray-500 data-[state=checked]:bg-gray-900 data-[state=indeterminate]:bg-gray-900 dark:data-[state=checked]:bg-gray-400 dark:data-[state=indeterminate]:bg-gray-400 data-[state=checked]:text-slate-50 data-[state=indeterminate]:text-slate-50 dark:data-[state=checked]:text-gray-900 dark:data-[state=indeterminate]:text-gray-900 group-hover:border-gray-900 data-[state=checked]:group-hover:bg-gray-900 data-[state=indeterminate]:group-hover:bg-gray-900 dark:group-hover:border-slate-50 dark:data-[state=checked]:group-hover:bg-slate-50 dark:data-[state=indeterminate]:group-hover:bg-slate-50 data-[invalid=true]:data-[state]:!border-red-800 data-[invalid=true]:data-[state=checked]:!bg-red-800 data-[invalid=true]:data-[state=indeterminate]:!bg-red-800 dark:data-[invalid=true]:data-[state]:!border-red-800 dark:data-[invalid=true]:data-[state=checked]:!bg-red-800 dark:data-[invalid=true]:data-[state=indeterminate]:!bg-red-800 data-[invalid=true]:group-hover:!border-red-900 data-[invalid=true]:data-[state=checked]:group-hover:!bg-red-900 data-[invalid=true]:data-[state=indeterminate]:group-hover:!bg-red-900"
           data-invalid="false"
           data-state="checked"
-          id=":r2:"
+          id=":r4:"
           role="checkbox"
           type="button"
           value="on"
@@ -55,7 +56,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
         />
         <label
           class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-slate-50 group-hover:cursor-pointer"
-          for=":r2:"
+          for=":r4:"
         >
           Test Field
           <span
@@ -87,6 +88,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
 exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
 <div>
   <form
+    id=":r0:"
     novalidate=""
   >
     <div
@@ -98,11 +100,11 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
       >
         <button
           aria-checked="true"
-          aria-labelledby=":r0:-label"
+          aria-labelledby=":r1:-label"
           aria-required="true"
           class="focus-visible:ring-ring focus-visible:ring-offset-background peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]"
           data-state="checked"
-          id=":r0:"
+          id=":r1:"
           role="switch"
           type="button"
           value="on"
@@ -124,8 +126,8 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
         />
         <label
           class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-slate-50 ml-2"
-          for=":r0:"
-          id=":r0:-label"
+          for=":r1:"
+          id=":r1:-label"
         >
           Test Field
           <span

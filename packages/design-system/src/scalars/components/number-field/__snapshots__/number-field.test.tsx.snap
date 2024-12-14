@@ -3,6 +3,7 @@
 exports[`NumberField > should match snapshot 1`] = `
 <div>
   <form
+    id=":r0:"
     novalidate=""
   >
     <div
@@ -10,7 +11,7 @@ exports[`NumberField > should match snapshot 1`] = `
     >
       <label
         class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-50 mb-[3px]"
-        for=":r0:"
+        for=":r1:"
       >
         Test Label
       </label>
@@ -20,7 +21,8 @@ exports[`NumberField > should match snapshot 1`] = `
         <input
           aria-invalid="false"
           class="flex h-9 w-full rounded-md text-sm text-gray-900 dark:text-gray-50 border border-gray-300 bg-white dark:border-charcoal-700 dark:bg-charcoal-900 px-3 py-2 font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 pr-8"
-          id=":r0:"
+          data-cast="Number"
+          id=":r1:"
           name="Label"
           type="number"
           value="345"
