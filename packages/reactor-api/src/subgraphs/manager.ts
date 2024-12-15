@@ -6,40 +6,42 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
-import { analyticsSubgraph, driveSubgraph, systemSubgraph } from "./subgraphs";
-import { Context, Subgraph } from "./types";
-import { createSchema } from "./utils/create-schema";
+import { Knex } from "knex";
+import { SubgraphArgs, SubgraphClass } from ".";
+import { AnalyticsSubgraph } from "./analytics";
+import { DriveSubgraph } from "./drive";
+import { SystemSubgraph } from "./system";
+import { Context } from "../types";
+import { createSchema } from "../utils/create-schema";
+import { Subgraph } from "./base";
 
-export class ReactorRouterManager {
+export class SubgraphManager {
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
-
-  // @todo: need to persist somewhere
-  private subgraphs: Subgraph[] = [
-    {
-      name: "system",
-      resolvers: systemSubgraph.resolvers,
-      typeDefs: systemSubgraph.typeDefs,
-    },
-    {
-      name: "d/:drive",
-      resolvers: driveSubgraph.resolvers,
-      typeDefs: driveSubgraph.typeDefs,
-    },
-    {
-      name: "analytics",
-      resolvers: analyticsSubgraph.resolvers as GraphQLResolverMap<Context>,
-      typeDefs: analyticsSubgraph.typeDefs,
-    },
-  ];
+  private subgraphs: Subgraph[] = [];
 
   constructor(
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-  ) {}
+    private readonly operationalStore: Knex,
+  ) {
+    const args: SubgraphArgs = {
+      reactor: this.reactor,
+      operationalStore: this.operationalStore,
+      subgraphManager: this,
+    };
+
+    // Setup Default subgraphs
+    this.subgraphs.push(new SystemSubgraph(args));
+    this.subgraphs.push(new AnalyticsSubgraph(args));
+    this.subgraphs.push(new DriveSubgraph(args));
+  }
 
   async init() {
+    console.log(
+      `Initializing ReactorRouterManager with subgraphs: [${this.subgraphs.map((e) => e.name).join(", ")}]`,
+    );
     const models = this.reactor.getDocumentModels();
     const driveModel = models.find(
       (it) => it.documentModel.name === "DocumentDrive",
@@ -67,7 +69,6 @@ export class ReactorRouterManager {
     for (const subgraph of this.subgraphs) {
       const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
       if (!subgraphConfig) continue;
-      console.log(`Setting up subgraph ${subgraphConfig.name}`);
       // get schema
       const schema = createSchema(
         this.reactor,
@@ -102,13 +103,17 @@ export class ReactorRouterManager {
     }
 
     this.reactorRouter = newRouter;
-    console.log("Router updated.");
   }
 
-  async registerSubgraph(subgraph: Subgraph) {
-    this.subgraphs.unshift(subgraph);
+  async registerSubgraph(subgraph: SubgraphClass) {
+    const subgraphInstance = new subgraph({
+      operationalStore: this.operationalStore,
+      reactor: this.reactor,
+      subgraphManager: this,
+    });
+    this.subgraphs.unshift(subgraphInstance);
     console.log(`Registered [${subgraph.name}] subgraph.`);
-    return Promise.resolve();
+    await this.updateRouter();
   }
 
   #getLocalSubgraphConfig(subgraphName: string) {

@@ -3,6 +3,7 @@ import { IDocumentDriveServer } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
 import { IProcessor, IProcessorManager, ProcessorSetupArgs } from "./types";
 import { ProcessorClass, isProcessorClass } from "./processors";
+import { Knex } from "knex";
 
 export class ProcessorManager implements IProcessorManager {
   private reactor: IDocumentDriveServer;
@@ -10,7 +11,7 @@ export class ProcessorManager implements IProcessorManager {
 
   constructor(
     driveServer: IDocumentDriveServer,
-    private analyticsStore: IAnalyticsStore,
+    private operationalStore: Knex,
   ) {
     this.reactor = driveServer;
     driveServer.on("driveAdded", this.#onDriveAdded.bind(this));
@@ -52,9 +53,7 @@ export class ProcessorManager implements IProcessorManager {
   async registerProcessor(module: IProcessor | ProcessorClass) {
     const args: ProcessorSetupArgs = {
       reactor: this.reactor,
-      dataSources: {
-        analyticsStore: this.analyticsStore,
-      },
+      operationalStore: this.operationalStore,
     };
 
     const processor = isProcessorClass(module) ? new module(args) : module;

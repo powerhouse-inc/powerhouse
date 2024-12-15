@@ -8,7 +8,7 @@ import {
   IDocumentDriveServer,
   DocumentDriveServer,
 } from "../../document-drive/src/server";
-import { ReactorRouterManager } from "../src/router";
+import { ReactorRouterManager } from "../src/subgraphs/manager";
 import { getDocumentModelTypeDefs } from "../src/utils/create-schema";
 
 const documentModels = [
