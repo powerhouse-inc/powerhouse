@@ -1,8 +1,10 @@
+import { Subgraph } from "./base";
+
 export * as analyticsSubgraph from "./analytics";
 export * as driveSubgraph from "./drive";
 export * as systemSubgraph from "./system";
 export * from "./types";
-import { Subgraph } from "./base";
+export { Subgraph } from "./base";
 
 export type SubgraphClass = typeof Subgraph;
 export function isSubgraphClass(

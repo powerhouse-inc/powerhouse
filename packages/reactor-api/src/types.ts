@@ -22,22 +22,6 @@ export type API = {
   processorManager: IProcessorManager;
 };
 
-export interface Context {
-  headers: IncomingHttpHeaders;
-  driveId: string | undefined;
-  driveServer: IDocumentDriveServer;
-}
-
-export type Subgraph = {
-  name: string;
-  resolvers: any;
-  typeDefs: string;
-  options?: Omit<Listener, "driveId">;
-  transmit?: (
-    strands: InternalTransmitterUpdate[],
-  ) => Promise<ListenerRevision[]>;
-};
-
 export type ProcessorType = "analytics" | "operational";
 
 export type ProcessorSetupArgs = {

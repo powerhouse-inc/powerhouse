@@ -7,11 +7,10 @@ import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
 import { Knex } from "knex";
-import { SubgraphArgs, SubgraphClass } from ".";
+import { Context, SubgraphArgs, SubgraphClass } from ".";
 import { AnalyticsSubgraph } from "./analytics";
 import { DriveSubgraph } from "./drive";
 import { SystemSubgraph } from "./system";
-import { Context } from "../types";
 import { createSchema } from "../utils/create-schema";
 import { Subgraph } from "./base";
 
@@ -72,7 +71,7 @@ export class SubgraphManager {
       // get schema
       const schema = createSchema(
         this.reactor,
-        subgraphConfig.resolvers as GraphQLResolverMap<Context>,
+        subgraphConfig.resolvers,
         subgraphConfig.typeDefs,
       );
       // create apollo server
@@ -95,6 +94,7 @@ export class SubgraphManager {
             headers: req.headers,
             driveId: req.params.drive ?? undefined,
             driveServer: this.reactor,
+            db: this.operationalStore,
             // analyticStore: undefined, // TODO: add analytic store
             ...this.getAdditionalContextFields(),
           }),
