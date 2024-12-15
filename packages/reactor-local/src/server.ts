@@ -1,9 +1,14 @@
 import {
-  isProcessorClass,
   API,
-  startAPI,
   IProcessorManager,
+  isProcessorClass,
+  startAPI,
+  SubgraphManager,
 } from "@powerhousedao/reactor-api";
+import {
+  isSubgraphClass,
+  SubgraphClass,
+} from "@powerhousedao/reactor-api/src/subgraphs";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
@@ -19,7 +24,6 @@ import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createServer as createViteServer, ViteDevServer } from "vite";
 
 const dirname = process.cwd();
@@ -166,6 +170,10 @@ const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
   const processorsPath = path.join(process.cwd(), "./processors"); // TODO get path from powerhouse config
   await loadProcessors(processorsPath, vite, api.processorManager);
 
+  // load local subgraphs
+  const subgraphsPath = path.join(process.cwd(), "./subgraphs"); // TODO get path from powerhouse config
+  await loadSubgraphs(subgraphsPath, vite, api.subgraphManager);
+
   /**
    * TODO: watch code changes on processors and document models
    */
@@ -199,6 +207,22 @@ async function loadProcessors(
     const ProcessorClass = processor[name];
     if (isProcessorClass(ProcessorClass)) {
       await processorManager.registerProcessor(ProcessorClass);
+    }
+  }
+}
+
+async function loadSubgraphs(
+  path: string,
+  vite: ViteDevServer,
+  subgraphManager: SubgraphManager,
+) {
+  const localSubgraphs = await vite.ssrLoadModule(path);
+  for (const [name, subgraph] of Object.entries(localSubgraphs)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const SubgraphClass = subgraph[name] as SubgraphClass;
+    if (isSubgraphClass(SubgraphClass)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      await subgraphManager.registerSubgraph(SubgraphClass);
     }
   }
 }

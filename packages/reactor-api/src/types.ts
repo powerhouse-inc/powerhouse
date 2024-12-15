@@ -6,11 +6,11 @@ import {
   ListenerRevision,
 } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
-import { IncomingHttpHeaders } from "http";
 import { Express } from "express";
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { ReactorRouterManager } from "./router";
+import { IncomingHttpHeaders } from "http";
+import { Knex } from "knex";
 import { ProcessorClass } from "./processors/processor";
+import { SubgraphManager } from "./subgraphs/manager";
 
 export type IProcessorManager = {
   registerProcessor(module: IProcessor | ProcessorClass): Promise<IProcessor>;
@@ -18,7 +18,7 @@ export type IProcessorManager = {
 
 export type API = {
   app: Express;
-  reactorRouterManager: ReactorRouterManager;
+  subgraphManager: SubgraphManager;
   processorManager: IProcessorManager;
 };
 
@@ -42,9 +42,7 @@ export type ProcessorType = "analytics" | "operational";
 
 export type ProcessorSetupArgs = {
   reactor: IDocumentDriveServer;
-  dataSources: {
-    analyticsStore: IAnalyticsStore;
-  };
+  operationalStore: Knex;
 };
 
 export type IProcessor<
