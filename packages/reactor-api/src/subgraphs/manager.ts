@@ -1,18 +1,17 @@
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
 import { Knex } from "knex";
 import { Context, SubgraphArgs, SubgraphClass } from ".";
+import { createSchema } from "../utils/create-schema";
 import { AnalyticsSubgraph } from "./analytics";
+import { Subgraph } from "./base";
 import { DriveSubgraph } from "./drive";
 import { SystemSubgraph } from "./system";
-import { createSchema } from "../utils/create-schema";
-import { Subgraph } from "./base";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -95,7 +94,6 @@ export class SubgraphManager {
             driveId: req.params.drive ?? undefined,
             driveServer: this.reactor,
             db: this.operationalStore,
-            // analyticStore: undefined, // TODO: add analytic store
             ...this.getAdditionalContextFields(),
           }),
         }),
@@ -112,7 +110,7 @@ export class SubgraphManager {
       subgraphManager: this,
     });
     this.subgraphs.unshift(subgraphInstance);
-    console.log(`Registered [${subgraph.name}] subgraph.`);
+    console.log(`> Registered ${subgraphInstance.name} subgraph.`);
     await this.updateRouter();
   }
 

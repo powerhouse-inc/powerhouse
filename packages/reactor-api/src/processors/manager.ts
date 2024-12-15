@@ -1,9 +1,8 @@
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import { IProcessor, IProcessorManager, ProcessorSetupArgs } from "./types";
-import { ProcessorClass, isProcessorClass } from "./processors";
 import { Knex } from "knex";
+import { ProcessorClass, isProcessorClass } from ".";
+import { IProcessor, IProcessorManager, ProcessorSetupArgs } from "../types";
 
 export class ProcessorManager implements IProcessorManager {
   private reactor: IDocumentDriveServer;
