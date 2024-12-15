@@ -3,6 +3,7 @@ import {
   generateEditor,
   generateFromFile,
   generateProcessor,
+  generateSubgraph,
   promptDirectories,
 } from "@powerhousedao/codegen";
 import { Command } from "commander";
@@ -23,6 +24,7 @@ export const generate: CommandActionType<
       processor?: string;
       documentTypes?: string;
       processorType?: "analytics" | "operational";
+      subgraph?: string;
     },
   ]
 > = async (filePath, options) => {
@@ -49,6 +51,8 @@ export const generate: CommandActionType<
     processor: !!options.processor,
     processorName: options.processor,
     processorType: options.processorType,
+    subgraph: !!options.subgraph,
+    subgraphName: options.subgraph,
   };
 
   if (config.interactive) {
@@ -81,6 +85,11 @@ export const generate: CommandActionType<
     return;
   }
 
+  if (command.subgraph) {
+    await generateSubgraph(command.subgraphName!, config);
+    return;
+  }
+
   if (filePath) {
     await generateFromFile(filePath, config);
     return;
@@ -100,6 +109,7 @@ export function generateCommand(program: Command) {
     .option("--processors <type>", "Path to the processors directory")
     .option("-p, --processor <type>", "Processor Name")
     .option("--processor-type <type>", "Processor Type")
+    .option("-s, --subgraph <type>", "Subgraph Name")
     .option("--document-models <type>", "Path to the document models directory")
     .option("--document-types <type>", "Supported document types by the editor")
     .option("-sf, --skip-format", "Skip formatting the generated code")
