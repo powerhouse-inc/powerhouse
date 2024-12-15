@@ -2,7 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
 import { Pool } from "pg";
-import { ProcessorManager } from "./processor-manager";
+import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
 import { getKnexClient } from "./utils/get-knex-client";

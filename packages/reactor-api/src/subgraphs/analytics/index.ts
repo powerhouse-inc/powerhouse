@@ -39,8 +39,10 @@ export class AnalyticsSubgraph extends Subgraph {
     );
 
     args.subgraphManager.setAdditionalContextFields({
-      db: {
-        Analytics: this.analyticsModel,
+      dataSources: {
+        db: {
+          Analytics: this.analyticsModel,
+        },
       },
     });
   }
