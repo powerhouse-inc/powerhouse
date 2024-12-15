@@ -171,3 +171,24 @@ export async function generateProcessor(
     { skipFormat },
   );
 }
+
+export async function generateSubgraph(
+  name: string,
+  dir: string,
+  { skipFormat = false } = {},
+) {
+  // Generate the singular files for the document model logic
+  await run(
+    [
+      "powerhouse",
+      `generate-subgraph`,
+      "--name",
+      name,
+      "--pascalName",
+      pascalCase(name),
+      "--root-dir",
+      dir,
+    ],
+    { skipFormat },
+  );
+}
