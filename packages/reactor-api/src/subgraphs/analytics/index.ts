@@ -2,14 +2,19 @@ import {
   AnalyticsQueryEngine,
   IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
-import { AnalyticsModel } from "@powerhousedao/analytics-engine-graphql";
+import {
+  AnalyticsModel,
+  typedefs,
+  AnalyticsResolvers,
+} from "@powerhousedao/analytics-engine-graphql";
 import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
 import gql from "graphql-tag";
 import { Subgraph } from "../base/index.js";
-import { SubgraphArgs } from "../index.js";
+import { Context, SubgraphArgs } from "../index.js";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 
 export class AnalyticsSubgraph extends Subgraph {
   analyticsStore: IAnalyticsStore;
@@ -17,16 +22,10 @@ export class AnalyticsSubgraph extends Subgraph {
 
   name = "analytics";
   typeDefs = gql`
-    type Query {
-      analytics: Analytics
-    }
+    ${typedefs}
   `;
 
-  resolvers = {
-    Query: {
-      analytics: () => ({}),
-    },
-  };
+  resolvers = AnalyticsResolvers as GraphQLResolverMap<Context>;
 
   constructor(args: SubgraphArgs) {
     super(args);

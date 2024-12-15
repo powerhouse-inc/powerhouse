@@ -3,8 +3,8 @@ import { IDocumentDriveServer } from "document-drive";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 import { DocumentNode, parse } from "graphql";
-import { Context } from "src/types";
 import gql from "graphql-tag";
+import { Context } from "src/subgraphs";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
@@ -65,7 +65,7 @@ export const getDocumentModelTypeDefs = (
 
   // add the mutation and query types
   const schema = gql`
-    ${scalarsTypeDefs.join("\n")}
+    ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
 
     type Operation {
       type: String!
@@ -81,7 +81,7 @@ export const getDocumentModelTypeDefs = (
       lastModified: DateTime!
       operations: [Operation!]!
     }
-    ${dmSchema}
+    ${dmSchema.replaceAll(";", "")}
 
     ${typeDefs}
   `;

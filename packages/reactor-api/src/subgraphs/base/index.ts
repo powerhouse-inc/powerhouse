@@ -9,8 +9,16 @@ import { Context } from "../types";
 
 export class Subgraph implements ISubgraph {
   name = "example";
-  resolvers: GraphQLResolverMap<Context> = {};
-  typeDefs: DocumentNode = gql``;
+  resolvers: GraphQLResolverMap<Context> = {
+    Query: {
+      hello: () => "world",
+    },
+  };
+  typeDefs: DocumentNode = gql`
+    type Query {
+      hello: String
+    }
+  `;
   reactor: IDocumentDriveServer;
   operationalStore: Knex;
   constructor(args: SubgraphArgs) {
