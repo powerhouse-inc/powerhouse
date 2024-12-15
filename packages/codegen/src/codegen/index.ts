@@ -6,6 +6,7 @@ import {
   generateEditor as _generateEditor,
   generateProcessor as _generateProcessor,
   generateDocumentModel,
+  generateSubgraph as _generateSubgraph,
 } from "./hygen";
 import { generateSchemas, generateSchema } from "./graphql";
 import fs from "node:fs";
@@ -187,4 +188,9 @@ export async function generateProcessor(
     type,
     { skipFormat },
   );
+}
+
+export async function generateSubgraph(name: string, config: PowerhouseConfig) {
+  console.log(name, config);
+  return _generateSubgraph(name, config.subgraphsDir, config);
 }
