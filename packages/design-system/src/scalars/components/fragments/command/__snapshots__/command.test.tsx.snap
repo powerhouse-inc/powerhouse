@@ -3,7 +3,7 @@
 exports[`Command Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="flex size-full flex-col overflow-hidden rounded-md"
+    class="flex size-full flex-col rounded"
     cmdk-root=""
     tabindex="-1"
   >

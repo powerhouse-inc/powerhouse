@@ -73,7 +73,7 @@ const meta: Meta<typeof SelectField> = {
 
     maxSelectedOptionsToShow: {
       control: "number",
-      description: "Maximum number of items that will be shown",
+      description: "Maximum number of selected items that will be shown",
       table: {
         type: { summary: "number" },
         defaultValue: { summary: "3" },
