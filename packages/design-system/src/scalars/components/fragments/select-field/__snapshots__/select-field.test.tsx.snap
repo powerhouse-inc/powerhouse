@@ -3,20 +3,21 @@
 exports[`SelectField Component > should match snapshot 1`] = `
 <DocumentFragment>
   <form
+    id=":r0:"
     novalidate=""
   >
     <div
       class="flex flex-col gap-2"
     >
       <button
-        aria-controls="radix-:r1:"
+        aria-controls="radix-:r2:"
         aria-expanded="false"
         aria-haspopup="dialog"
         aria-invalid="false"
         aria-label="Select"
         class="gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 flex size-full items-center justify-between px-3 py-[7.2px] dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white hover:border-gray-300 hover:bg-gray-100 dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800 dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0"
         data-state="closed"
-        id=":r0:-select"
+        id=":r1:-select"
         name="select"
         role="combobox"
         type="button"

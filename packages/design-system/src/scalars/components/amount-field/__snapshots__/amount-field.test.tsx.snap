@@ -3,6 +3,7 @@
 exports[`AmountField Component > should match snapshot 1`] = `
 <div>
   <form
+    id=":r0:"
     novalidate=""
   >
     <div
@@ -10,7 +11,7 @@ exports[`AmountField Component > should match snapshot 1`] = `
     >
       <label
         class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-50 mb-[3px]"
-        for=":r0:"
+        for=":r1:"
       >
         Amount Label
       </label>

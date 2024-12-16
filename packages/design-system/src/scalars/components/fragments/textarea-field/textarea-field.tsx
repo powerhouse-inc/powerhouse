@@ -1,4 +1,4 @@
-import React, { useId, useEffect } from "react";
+import React, { useId, useEffect, useMemo } from "react";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { FormGroup } from "@/scalars/components/fragments/form-group";
@@ -11,7 +11,9 @@ import {
   ErrorHandling,
   TextProps,
 } from "@/scalars/components/types";
-import ValueTransformer from "@/scalars/components/fragments/value-transformer";
+import ValueTransformer, {
+  type TransformerType,
+} from "@/scalars/components/fragments/value-transformer";
 import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
 
 type TextareaFieldBaseProps = Omit<
@@ -103,6 +105,22 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [id, value, autoExpand]);
 
+    const transformers: TransformerType = useMemo(
+      () => [
+        sharedValueTransformers.trimOnBlur(!!trim),
+        sharedValueTransformers.lowercaseOnChange(!!lowercase),
+        sharedValueTransformers.uppercaseOnChange(!!uppercase),
+        {
+          transformer: (value?: string) => value?.replace(/\n/g, ""),
+          options: {
+            trigger: "change",
+            if: multiline === false,
+          },
+        },
+      ],
+      [trim, lowercase, uppercase, multiline],
+    );
+
     return (
       <FormGroup>
         {label && (
@@ -116,20 +134,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           </FormLabel>
         )}
         <div className="relative">
-          <ValueTransformer
-            transformers={[
-              sharedValueTransformers.trimOnBlur(!!trim),
-              sharedValueTransformers.lowercaseOnChange(!!lowercase),
-              sharedValueTransformers.uppercaseOnChange(!!uppercase),
-              {
-                transformer: (value?: string) => value?.replace(/\n/g, ""),
-                options: {
-                  trigger: "change",
-                  if: multiline === false,
-                },
-              },
-            ]}
-          >
+          <ValueTransformer transformers={transformers}>
             <textarea
               aria-invalid={hasError}
               aria-required={required}
