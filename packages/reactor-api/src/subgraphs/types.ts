@@ -1,8 +1,8 @@
 import type { IncomingHttpHeaders } from "http";
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentNode } from "graphql";
-import { Knex } from "knex";
 import { SubgraphManager } from "./manager";
+import { Db } from "src/types";
 
 export type Context = {
   driveServer: IDocumentDriveServer;
@@ -16,12 +16,12 @@ export type ISubgraph = {
   resolvers: Record<string, any>;
   typeDefs: DocumentNode;
   reactor: IDocumentDriveServer;
-  operationalStore: Knex;
+  operationalStore: Db;
   onSetup?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {
   reactor: IDocumentDriveServer;
-  operationalStore: Knex;
+  operationalStore: Db;
   subgraphManager: SubgraphManager;
 };

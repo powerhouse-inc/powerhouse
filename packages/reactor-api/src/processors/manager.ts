@@ -1,8 +1,12 @@
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import { Knex } from "knex";
 import { ProcessorClass, isProcessorClass } from ".";
-import { IProcessor, IProcessorManager, ProcessorSetupArgs } from "../types";
+import {
+  Db,
+  IProcessor,
+  IProcessorManager,
+  ProcessorSetupArgs,
+} from "../types";
 
 export class ProcessorManager implements IProcessorManager {
   private reactor: IDocumentDriveServer;
@@ -10,7 +14,7 @@ export class ProcessorManager implements IProcessorManager {
 
   constructor(
     driveServer: IDocumentDriveServer,
-    private operationalStore: Knex,
+    private operationalStore: Db,
   ) {
     this.reactor = driveServer;
     driveServer.on("driveAdded", this.#onDriveAdded.bind(this));

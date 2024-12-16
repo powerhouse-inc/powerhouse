@@ -5,7 +5,7 @@ import { Pool } from "pg";
 import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
-import { getKnexClient } from "./utils/get-knex-client";
+import { getDbClient } from "./utils/get-db-client";
 
 type Options = {
   express?: Express;
@@ -22,7 +22,7 @@ export async function startAPI(
 ): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
-  const knex = getKnexClient(options.dbPath);
+  const knex = getDbClient(options.dbPath);
   const subgraphManager = new SubgraphManager("/", app, reactor, knex);
   await subgraphManager.init();
   const processorManager = new ProcessorManager(reactor, knex);
