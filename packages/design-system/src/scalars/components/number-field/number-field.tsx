@@ -3,7 +3,6 @@ import { Input } from "../fragments/input";
 import { FormLabel } from "../fragments/form-label";
 import { FormMessageList } from "../fragments/form-message";
 import { FormGroup } from "../fragments/form-group";
-import { InputNumberProps } from "../types";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { withFieldValidation } from "../fragments/with-field-validation";
@@ -12,7 +11,8 @@ import {
   validateNumericType,
 } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
-import { regex } from "./utils";
+import { getDisplayValue, regex } from "./utils";
+import { InputNumberProps, NumericType } from "../types";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
@@ -41,9 +41,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       pattern,
       isBigInt = false,
       //Disable this for the transformations values
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       trailingZeros = false,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      numericType,
       precision = 0,
       ...props
     },
@@ -130,7 +130,6 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      let numericValue: number | bigint | string;
       const inputValue = e.target.value;
       // if its empty, keep it empty
       if (!inputValue || inputValue === "") {
@@ -138,50 +137,36 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         return;
       }
 
-      if (isBigInt || props.numericType === "BigInt") {
-        const normalizedValue = inputValue.replace(/[^\d-]/g, "");
-        numericValue = BigInt(normalizedValue);
-      } else {
-        // keep the value if its greater than MAX_SAFE_INTEGER
-        if (Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER) {
-          numericValue = inputValue;
-        } else {
-          numericValue = value?.toString() ?? "";
-        }
-      }
+      const integerTypes = [
+        "PositiveInt",
+        "NegativeInt",
+        "NonNegativeInt",
+        "NonPositiveInt",
+        "BigInt",
+      ] as NumericType[];
 
-      //Check if the value is a number and if its greater than the max safe integer
-      if (
-        !isBigInt &&
-        Math.abs(Number(numericValue)) > Number.MAX_SAFE_INTEGER
-      ) {
-        const nativeEvent = new Event("change", {
-          bubbles: true,
-          cancelable: true,
-        });
-        Object.defineProperty(nativeEvent, "target", {
-          value: { value: numericValue },
-          writable: false,
-        });
-        onChange?.(
-          nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>,
-        );
-        onBlur?.(e);
-        // Add return to avoid the conversion after
-        return;
-      }
+      const formattedValue = getDisplayValue(inputValue, {
+        isBigInt,
+        precision,
+        trailingZeros,
+      });
 
-      //This case its safe to convert to bigInt or number
-      const finalValue = isBigInt ? BigInt(numericValue) : Number(numericValue);
+      // if includes some of the integer or bigint types, we remove any decimal part
+      const finalValue =
+        numericType && integerTypes.includes(numericType)
+          ? parseFloat(inputValue).toString()
+          : formattedValue;
+
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
-      // If the value is will be acept send string the use formattedValue instead of finalValue
+
       Object.defineProperty(nativeEvent, "target", {
         value: { value: finalValue },
         writable: false,
       });
+
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
       onBlur?.(e);
     };
