@@ -113,6 +113,7 @@ export class SubgraphManager {
       reactor: this.reactor,
       subgraphManager: this,
     });
+    await subgraphInstance.onSetup();
     this.subgraphs.unshift(subgraphInstance);
     console.log(`> Registered ${subgraphInstance.name} subgraph.`);
     await this.updateRouter();
