@@ -30,7 +30,7 @@ export const validateNumericType =
     const isPositive = Number(value) > 0;
     const isNegative = Number(value) < 0;
     const isInt = isInteger(value);
-
+    if (value === "") return true;
     switch (numericType) {
       case "PositiveInt": {
         if (!isInt) return "Value must be a positive integer";
