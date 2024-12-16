@@ -230,6 +230,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             onChange={onChange}
             onPaste={blockInvalidPaste}
             ref={ref}
+            data-cast={isBigInt ? "BigInt" : "Number"}
             {...props}
           />
           {showSteps && (

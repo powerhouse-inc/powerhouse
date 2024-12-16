@@ -27,7 +27,7 @@ export const withForm: Decorator = (Story, context) => {
     const serializedData = JSON.stringify(
       data,
       (key, value): any =>
-        typeof value === "bigint" ? value.toString() : value,
+        typeof value === "bigint" ? `BigInt(${value.toString()})` : value,
       2,
     );
     alert(serializedData);
