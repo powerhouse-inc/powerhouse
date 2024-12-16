@@ -19,6 +19,9 @@
     },
     {
       "path": "./packages/scalars"
+    },
+    {
+      "path": "./packages/react-reactor"
     }
   ]
 }
