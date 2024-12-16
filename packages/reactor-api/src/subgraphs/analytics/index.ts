@@ -7,10 +7,6 @@ import {
   typedefs,
   AnalyticsResolvers,
 } from "@powerhousedao/analytics-engine-graphql";
-import {
-  KnexAnalyticsStore,
-  KnexQueryExecutor,
-} from "@powerhousedao/analytics-engine-knex";
 import gql from "graphql-tag";
 import { Subgraph } from "../base/index.js";
 import { Context, SubgraphArgs } from "../index.js";
@@ -29,10 +25,7 @@ export class AnalyticsSubgraph extends Subgraph {
 
   constructor(args: SubgraphArgs) {
     super(args);
-    this.analyticsStore = new KnexAnalyticsStore({
-      executor: new KnexQueryExecutor(),
-      knex: args.operationalStore,
-    });
+    this.analyticsStore = args.analyticsStore;
 
     this.analyticsModel = new AnalyticsModel(
       new AnalyticsQueryEngine(this.analyticsStore),

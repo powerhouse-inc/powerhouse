@@ -1,12 +1,14 @@
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import { ProcessorClass, isProcessorClass } from ".";
+
 import {
   Db,
   IProcessor,
   IProcessorManager,
   ProcessorSetupArgs,
 } from "../types";
+import { IAnalyticsStore } from "./analytics-processor";
+import { isProcessorClass, ProcessorClass } from "./processor";
 
 export class ProcessorManager implements IProcessorManager {
   private reactor: IDocumentDriveServer;
@@ -15,6 +17,7 @@ export class ProcessorManager implements IProcessorManager {
   constructor(
     driveServer: IDocumentDriveServer,
     private operationalStore: Db,
+    private analyticsStore: IAnalyticsStore,
   ) {
     this.reactor = driveServer;
     driveServer.on("driveAdded", this.#onDriveAdded.bind(this));
@@ -57,6 +60,7 @@ export class ProcessorManager implements IProcessorManager {
     const args: ProcessorSetupArgs = {
       reactor: this.reactor,
       operationalStore: this.operationalStore,
+      analyticsStore: this.analyticsStore,
     };
 
     const processor = isProcessorClass(module) ? new module(args) : module;

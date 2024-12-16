@@ -1,10 +1,12 @@
 import { IDocumentDriveServer, IReceiver, Listener } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
 import { Express } from "express";
-import { Knex } from "knex";
 import { ProcessorClass } from "./processors/processor";
 import { SubgraphManager } from "./subgraphs/manager";
-export { Knex as Db } from "knex";
+import { Db } from "./utils/get-db-client";
+import { IAnalyticsStore } from "./processors/analytics-processor";
+
+export type { Db } from "./utils/get-db-client";
 
 export type IProcessorManager = {
   registerProcessor(module: IProcessor | ProcessorClass): Promise<IProcessor>;
@@ -20,7 +22,8 @@ export type ProcessorType = "analytics" | "operational";
 
 export type ProcessorSetupArgs = {
   reactor: IDocumentDriveServer;
-  operationalStore: Knex;
+  operationalStore: Db;
+  analyticsStore: IAnalyticsStore;
 };
 
 export type IProcessor<

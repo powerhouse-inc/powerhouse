@@ -6,6 +6,10 @@ import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
 import { getDbClient } from "./utils/get-db-client";
+import {
+  KnexAnalyticsStore,
+  KnexQueryExecutor,
+} from "@powerhousedao/analytics-engine-knex";
 
 type Options = {
   express?: Express;
@@ -22,10 +26,20 @@ export async function startAPI(
 ): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
-  const knex = getDbClient(options.dbPath);
-  const subgraphManager = new SubgraphManager("/", app, reactor, knex);
+  const db = getDbClient(options.dbPath);
+  const analyticsStore = new KnexAnalyticsStore({
+    executor: new KnexQueryExecutor(),
+    knex: db,
+  });
+  const subgraphManager = new SubgraphManager(
+    "/",
+    app,
+    reactor,
+    db,
+    analyticsStore,
+  );
   await subgraphManager.init();
-  const processorManager = new ProcessorManager(reactor, knex);
+  const processorManager = new ProcessorManager(reactor, db, analyticsStore);
 
   app.listen(port);
   return { app, subgraphManager, processorManager };

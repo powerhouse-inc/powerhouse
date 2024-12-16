@@ -1,7 +1,8 @@
 import { PGlite } from "@electric-sql/pglite";
-import pkg from "knex";
+import knex, { type Knex } from "knex";
 import ClientPgLite from "knex-pglite";
-const knex = pkg;
+
+export type Db = Knex;
 
 function isPG(connectionString: string) {
   if (connectionString.startsWith("postgres://")) {
@@ -10,7 +11,9 @@ function isPG(connectionString: string) {
   return false;
 }
 
-export function getDbClient(connectionString: string | undefined = undefined) {
+export function getDbClient(
+  connectionString: string | undefined = undefined,
+): Db {
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
 
