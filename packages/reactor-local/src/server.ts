@@ -5,10 +5,7 @@ import {
   startAPI,
   SubgraphManager,
 } from "@powerhousedao/reactor-api";
-import {
-  isSubgraphClass,
-  SubgraphClass,
-} from "@powerhousedao/reactor-api/src/subgraphs";
+import { isSubgraphClass, SubgraphClass } from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
