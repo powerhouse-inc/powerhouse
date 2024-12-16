@@ -172,8 +172,8 @@ const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
   await loadProcessors(processorsPath, vite, api.processorManager);
 
   // load local subgraphs
-  // const subgraphsPath = path.join(process.cwd(), "./subgraphs"); // TODO get path from powerhouse config
-  // await loadSubgraphs(subgraphsPath, vite, api.subgraphManager);
+  const subgraphsPath = path.join(process.cwd(), "./subgraphs"); // TODO get path from powerhouse config
+  await loadSubgraphs(subgraphsPath, vite, api.subgraphManager);
 
   /**
    * TODO: watch code changes on processors and document models
