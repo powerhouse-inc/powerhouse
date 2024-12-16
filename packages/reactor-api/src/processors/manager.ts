@@ -54,6 +54,8 @@ export class ProcessorManager implements IProcessorManager {
         ),
       ),
     );
+
+    console.log(`> Registered ${options.label} processor.`);
   }
 
   async registerProcessor(module: IProcessor | ProcessorClass) {

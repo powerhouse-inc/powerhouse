@@ -57,6 +57,10 @@ export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(document
   async onDisconnect() {}
 
   private async clearSource(source: AnalyticsPath) {
-    await this.analyticsStore.clearSeriesBySource(source, true);
+    try {
+      await this.analyticsStore.clearSeriesBySource(source, true);
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
