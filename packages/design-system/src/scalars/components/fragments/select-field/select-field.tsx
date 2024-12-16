@@ -1,4 +1,3 @@
-/* eslint-disable tailwindcss/no-custom-classname */
 /* eslint-disable react/jsx-props-no-spreading */
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-max-depth */
@@ -317,7 +316,10 @@ export const SelectFieldRaw = React.forwardRef<
           <Command className="relative">
             <PopoverTrigger asChild={true}>
               {searchable && searchPosition === "Input" ? (
-                <div ref={ref as React.Ref<HTMLDivElement>}>
+                // a div don´t have type="button" but PopoverTrigger expect a button
+                // we need to use PopoverAnchor but it requires some extra work
+                // @ts-expect-error - description above
+                <div ref={ref as React.Ref<HTMLDivElement>} type={undefined}>
                   <CommandInput
                     ref={searchInputRef}
                     value={searchValue}
@@ -351,6 +353,11 @@ export const SelectFieldRaw = React.forwardRef<
                   type="button"
                   role="combobox"
                   onClick={handleTogglePopover}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setIsPopoverOpen(true);
+                    }
+                  }}
                   disabled={disabled}
                   aria-invalid={errors.length > 0}
                   aria-label={
