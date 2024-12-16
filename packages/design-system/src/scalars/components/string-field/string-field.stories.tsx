@@ -11,7 +11,7 @@ import {
 const meta: Meta<typeof StringField> = {
   title: "Document Engineering/Simple Components/String Field",
   component: StringField,
-  decorators: [withForm],
+  decorators: [withForm, (Story) => <div className="w-48">{Story()}</div>],
   parameters: {
     layout: "centered",
   },
