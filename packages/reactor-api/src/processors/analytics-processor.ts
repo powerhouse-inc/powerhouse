@@ -1,9 +1,7 @@
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { Document, OperationScope } from "document-model/document";
 import { Processor } from "./processor";
-import { ProcessorOptions, ProcessorSetupArgs } from "src/types";
-import { KnexQueryExecutor } from "@powerhousedao/analytics-engine-knex";
-import { KnexAnalyticsStore } from "@powerhousedao/analytics-engine-knex";
+import { ProcessorOptions, ProcessorSetupArgs } from "../types";
 
 export * from "@powerhousedao/analytics-engine-core";
 
@@ -15,9 +13,6 @@ export abstract class AnalyticsProcessor<
 
   constructor(args: ProcessorSetupArgs, options?: ProcessorOptions) {
     super(args, options);
-    this.analyticsStore = new KnexAnalyticsStore({
-      executor: new KnexQueryExecutor(),
-      knex: args.operationalStore,
-    });
+    this.analyticsStore = args.analyticsStore;
   }
 }

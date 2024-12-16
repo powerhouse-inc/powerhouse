@@ -11,8 +11,8 @@ import { AnalyticsSubgraph } from "./analytics";
 import { Subgraph } from "./base";
 import { DriveSubgraph } from "./drive";
 import { SystemSubgraph } from "./system";
-import { getDbClient } from "src/utils/get-db-client";
 import { Db } from "src/types";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -23,11 +23,13 @@ export class SubgraphManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-    private readonly operationalStore: Db = getDbClient(),
+    private readonly operationalStore: Db,
+    private readonly analyticsStore: IAnalyticsStore,
   ) {
     const args: SubgraphArgs = {
       reactor: this.reactor,
       operationalStore: this.operationalStore,
+      analyticsStore: this.analyticsStore,
       subgraphManager: this,
     };
 
@@ -107,6 +109,7 @@ export class SubgraphManager {
   async registerSubgraph(subgraph: SubgraphClass) {
     const subgraphInstance = new subgraph({
       operationalStore: this.operationalStore,
+      analyticsStore: this.analyticsStore,
       reactor: this.reactor,
       subgraphManager: this,
     });

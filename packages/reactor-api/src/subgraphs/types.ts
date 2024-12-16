@@ -3,6 +3,7 @@ import { IDocumentDriveServer } from "document-drive";
 import { DocumentNode } from "graphql";
 import { SubgraphManager } from "./manager";
 import { Db } from "src/types";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 
 export type Context = {
   driveServer: IDocumentDriveServer;
@@ -23,5 +24,6 @@ export type ISubgraph = {
 export type SubgraphArgs = {
   reactor: IDocumentDriveServer;
   operationalStore: Db;
+  analyticsStore: IAnalyticsStore;
   subgraphManager: SubgraphManager;
 };
