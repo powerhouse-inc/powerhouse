@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.1.234",
+  "version": "2.1.240",
   "main": "index.js",
   "scripts": {
     "start": "vite-node src/index.ts",
