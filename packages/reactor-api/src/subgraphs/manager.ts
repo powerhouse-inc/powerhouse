@@ -1,18 +1,18 @@
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
+import { Db } from "src/types";
 import { Context, SubgraphArgs, SubgraphClass } from ".";
 import { createSchema } from "../utils/create-schema";
 import { AnalyticsSubgraph } from "./analytics";
 import { Subgraph } from "./base";
 import { DriveSubgraph } from "./drive";
 import { SystemSubgraph } from "./system";
-import { Db } from "src/types";
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -34,9 +34,9 @@ export class SubgraphManager {
     };
 
     // Setup Default subgraphs
-    this.subgraphs.push(new SystemSubgraph(args));
-    this.subgraphs.push(new AnalyticsSubgraph(args));
-    this.subgraphs.push(new DriveSubgraph(args));
+    this.registerSubgraph(SystemSubgraph);
+    this.registerSubgraph(DriveSubgraph);
+    this.registerSubgraph(AnalyticsSubgraph);
   }
 
   async init() {
