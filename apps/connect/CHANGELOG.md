@@ -1,3 +1,10 @@
+# [1.0.0-dev.180](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.179...v1.0.0-dev.180) (2024-12-16)
+
+
+### Bug Fixes
+
+* improved upload of large documents ([88e6f67](https://github.com/powerhouse-inc/document-model-electron/commit/88e6f67c2314d85e0d9f355f350563baacbd00c0))
+
 # [1.0.0-dev.179](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.178...v1.0.0-dev.179) (2024-12-10)
 
 
