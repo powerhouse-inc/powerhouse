@@ -1,16 +1,10 @@
-import {
-  IDocumentDriveServer,
-  InternalTransmitterUpdate,
-  IReceiver,
-  Listener,
-  ListenerRevision,
-} from "document-drive";
+import { IDocumentDriveServer, IReceiver, Listener } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
 import { Express } from "express";
-import { IncomingHttpHeaders } from "http";
 import { Knex } from "knex";
 import { ProcessorClass } from "./processors/processor";
 import { SubgraphManager } from "./subgraphs/manager";
+export { Knex as Db } from "knex";
 
 export type IProcessorManager = {
   registerProcessor(module: IProcessor | ProcessorClass): Promise<IProcessor>;

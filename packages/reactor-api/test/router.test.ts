@@ -1,12 +1,11 @@
-import express from "express";
-import { describe, expect, it } from "vitest";
-import { buildSubgraphSchema } from "@apollo/subgraph";
+import { DocumentDriveServer } from "document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
-import { DocumentDriveServer } from "document-drive";
+import express from "express";
 import { SubgraphManager } from "src";
-import { getKnexClient } from "src/utils/get-knex-client";
+import { getDbClient } from "src/utils/get-db-client";
+import { describe, expect, it } from "vitest";
 
 const documentModels = [
   DocumentModelLib,
@@ -16,7 +15,7 @@ const documentModels = [
 describe("Reactor Router", () => {
   it("should be initialized", async () => {
     const app = express();
-    const knex = getKnexClient();
+    const knex = getDbClient();
     const reactor = new DocumentDriveServer(documentModels);
     const reactorRouter = new SubgraphManager("/", app, reactor, knex);
     await expect(reactorRouter.init()).resolves.toBeUndefined();

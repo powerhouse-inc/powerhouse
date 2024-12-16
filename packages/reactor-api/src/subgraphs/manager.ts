@@ -5,14 +5,14 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
-import { Knex } from "knex";
 import { Context, SubgraphArgs, SubgraphClass } from ".";
 import { createSchema } from "../utils/create-schema";
 import { AnalyticsSubgraph } from "./analytics";
 import { Subgraph } from "./base";
 import { DriveSubgraph } from "./drive";
 import { SystemSubgraph } from "./system";
-import { getKnexClient } from "src/utils/get-knex-client";
+import { getDbClient } from "src/utils/get-db-client";
+import { Db } from "src/types";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -23,7 +23,7 @@ export class SubgraphManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-    private readonly operationalStore: Knex = getKnexClient(),
+    private readonly operationalStore: Db = getDbClient(),
   ) {
     const args: SubgraphArgs = {
       reactor: this.reactor,

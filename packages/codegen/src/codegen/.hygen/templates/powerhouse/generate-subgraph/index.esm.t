@@ -2,8 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
-import { Subgraph } from "@powerhousedao/reactor-api";
-import { Knex } from "knex";
+import { Subgraph, Db } from "@powerhousedao/reactor-api";
 import { gql } from "graphql-tag";
 
 export class <%= pascalName %>Subgraph extends Subgraph {
@@ -29,11 +28,11 @@ export class <%= pascalName %>Subgraph extends Subgraph {
   }
 
   async onSetup() {
-    await this.createOperationalTables(this.operationalStore);
+    await this.createOperationalTables();
   }
 
-  async createOperationalTables(db: Knex) {
-    await db.schema.createTableIfNotExists("example", (table) => {
+  async createOperationalTables() {
+    await this.operationalStore.schema.createTableIfNotExists("example", (table) => {
       table.string("id").primary();
       table.string("name");
     });

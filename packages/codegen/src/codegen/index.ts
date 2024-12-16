@@ -191,6 +191,5 @@ export async function generateProcessor(
 }
 
 export async function generateSubgraph(name: string, config: PowerhouseConfig) {
-  console.log(name, config);
   return _generateSubgraph(name, config.subgraphsDir, config);
 }

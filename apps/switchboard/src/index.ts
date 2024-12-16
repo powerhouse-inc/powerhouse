@@ -1,4 +1,4 @@
-import { SubgraphManager, getKnexClient } from "@powerhousedao/reactor-api";
+import { Db, SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
 import { DocumentDriveServer } from "document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
@@ -26,12 +26,14 @@ const main = async () => {
     // init drive server
     await driveServer.initialize();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const knex = getKnexClient(process.env.DATABASE_URL) as Knex;
+    const dbPath = process.env.DATABASE_URL ?? undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+    const knex = getDbClient(dbPath);
     const reactorRouterManager = new SubgraphManager(
       "/",
       app,
       driveServer,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       knex,
     );
     // init router
