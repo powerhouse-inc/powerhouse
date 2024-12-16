@@ -4,6 +4,7 @@ import { SelectProps } from "@/scalars/components/enum-field/types";
 interface UseSelectFieldProps {
   options?: SelectProps["options"];
   multiple?: boolean;
+  searchPosition?: "Dropdown" | "Input";
   defaultValue?: string | string[];
   value?: string | string[];
   onChange?: (value: string | string[]) => void;
@@ -12,6 +13,7 @@ interface UseSelectFieldProps {
 export function useSelectField({
   options = [],
   multiple = false,
+  searchPosition,
   defaultValue,
   value,
   onChange,
@@ -26,7 +28,13 @@ export function useSelectField({
     }
     return Array.isArray(initialValue) ? initialValue : [initialValue];
   });
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(() => {
+    const initialValue = value ?? defaultValue ?? "";
+    if (initialValue === "" || Array.isArray(initialValue)) {
+      return "";
+    }
+    return options.find((opt) => opt.value === initialValue)?.label ?? "";
+  });
 
   useEffect(() => {
     if (isInternalChange.current) {
@@ -36,10 +44,10 @@ export function useSelectField({
     const newValue = value ?? defaultValue ?? [];
     if (newValue === "") {
       setSelectedValues([]);
+      setSearchValue("");
     } else {
       setSelectedValues(Array.isArray(newValue) ? newValue : [newValue]);
     }
-    setSearchValue("");
   }, [value]);
 
   const handleTogglePopover = useCallback(() => {
@@ -64,14 +72,26 @@ export function useSelectField({
           ? selectedValues.filter((v) => v !== optionValue)
           : [...selectedValues, optionValue];
       } else {
-        newValues = [optionValue];
+        newValues = selectedValues[0] === optionValue ? [] : [optionValue];
+
+        if (searchPosition === "Input") {
+          const selectedOptionLabel = options.find(
+            (opt) => opt.value === optionValue,
+          )?.label;
+          setSearchValue(
+            newValues.length > 0 ? (selectedOptionLabel ?? "") : "",
+          );
+        } else {
+          setSearchValue("");
+        }
+
         setIsPopoverOpen(false);
       }
 
       setSelectedValues(newValues);
-      onChange?.(multiple ? newValues : newValues[0]);
+      onChange?.(multiple ? newValues : (newValues[0] ?? ""));
     },
-    [multiple, selectedValues, onChange],
+    [multiple, selectedValues, options, onChange],
   );
 
   const handleClear = useCallback(() => {
@@ -93,17 +113,6 @@ export function useSelectField({
     onChange?.(multiple ? newValues : newValues[0]);
   }, [options, selectedValues, multiple, onChange]);
 
-  const selectFirstFilteredOption = useCallback(() => {
-    const filteredOptions = options.filter((option) =>
-      option.label.toLowerCase().includes(searchValue.toLowerCase()),
-    );
-
-    const firstOption = filteredOptions.find((opt) => !opt.disabled);
-    if (firstOption) {
-      toggleOption(firstOption.value);
-    }
-  }, [options, searchValue, toggleOption]);
-
   return {
     selectedValues,
     isPopoverOpen,
@@ -116,6 +125,5 @@ export function useSelectField({
     handleTogglePopover,
     handleSearch,
     handleOpenChange,
-    selectFirstFilteredOption,
   };
 }
