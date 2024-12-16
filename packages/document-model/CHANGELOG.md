@@ -1,3 +1,17 @@
+## 2.14.0 (2024-12-16)
+
+### 🚀 Features
+
+- updated nx version ([c9690c35](https://github.com/powerhouse-inc/powerhouse/commit/c9690c35))
+
+### 🩹 Fixes
+
+- **switchboard:** subgraph manager and db instantiation ([874bdc4b](https://github.com/powerhouse-inc/powerhouse/commit/874bdc4b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.13.0 (2024-12-12)
 
 ### 🚀 Features

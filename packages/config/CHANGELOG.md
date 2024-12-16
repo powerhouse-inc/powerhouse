@@ -1,3 +1,13 @@
+## 1.4.0 (2024-12-16)
+
+### 🚀 Features
+
+- updated nx version ([c9690c35](https://github.com/powerhouse-inc/powerhouse/commit/c9690c35))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 1.3.0 (2024-12-16)
 
 ### 🚀 Features
