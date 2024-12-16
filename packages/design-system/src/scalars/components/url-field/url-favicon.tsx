@@ -1,6 +1,5 @@
 import { IconName, iconNames } from "@/powerhouse";
 import { Icon } from "@/powerhouse/components/icon";
-// import { type PlatformIcon } from "./url-field";
 import { useMemo } from "react";
 
 interface UrlFaviconProps {
