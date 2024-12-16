@@ -12,6 +12,7 @@ import { AnalyticsSubgraph } from "./analytics";
 import { Subgraph } from "./base";
 import { DriveSubgraph } from "./drive";
 import { SystemSubgraph } from "./system";
+import { getKnexClient } from "src/utils/get-knex-client";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -22,7 +23,7 @@ export class SubgraphManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-    private readonly operationalStore: Knex,
+    private readonly operationalStore: Knex = getKnexClient(),
   ) {
     const args: SubgraphArgs = {
       reactor: this.reactor,
