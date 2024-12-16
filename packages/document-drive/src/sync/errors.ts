@@ -1,25 +1,3 @@
-import { TransmitterType } from "./types";
-
-export interface IError<T extends string = string> {
-  type: T;
-}
-
-export interface IDuplicatedListenerIdError
-  extends IError<"DuplicatedListenerIdError"> {
-  listenerId: string;
-}
-
-export class DuplicatedListenerIdError
-  extends Error
-  implements IDuplicatedListenerIdError
-{
-  type = "DuplicatedListenerIdError" as const;
-
-  constructor(public listenerId: string) {
-    super(`A listener with id "${listenerId}" already exists.`);
-  }
-}
-
 export interface IDuplicatedTransmitterError
   extends IError<"DuplicatedTransmitterError"> {
   listenerId: string;

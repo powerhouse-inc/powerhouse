@@ -1,12 +1,22 @@
 import { writeFile, readFile } from "fs/promises";
-import { Listener, ListenerMap, IListenerManagerStorage } from "./types";
-import { debounce } from "../utils";
+import {
+  Listener,
+  ListenerMap,
+  IListenerStorage,
+  StatefulListener,
+} from "./types";
+import { debounce } from "../../utils";
+import { ListenerNotFoundError } from "./errors";
 
 export interface IOptions {
   debounce?: number;
 }
-
-export class FileListenerManagerStorage implements IListenerManagerStorage {
+/**
+ * Persists listeners into a json file.
+ * Writes are debounced to prevent excessive writes to the file.
+ * @param filePath The path to the file where listeners are stored.
+ */
+export class FileListenerStorage implements IListenerStorage {
   private debounceTime: number;
   private debouncedSave: (immediate: boolean) => Promise<void>;
   private filePath: string;
@@ -18,12 +28,16 @@ export class FileListenerManagerStorage implements IListenerManagerStorage {
     this.debouncedSave = debounce(this.#save.bind(this), this.debounceTime);
   }
 
+  async #getCurrentListeners(): Promise<ListenerMap> {
+    return this.writeQueue || this.loadListeners();
+  }
+
   // Debounced method to save the listener map to the file
   async #save() {
     if (!this.writeQueue) {
       return;
     }
-    await writeFile(this.filePath, JSON.stringify(this.writeQueue), {
+    await writeFile(this.filePath, JSON.stringify(this.writeQueue, null, 2), {
       encoding: "utf8",
     });
   }
@@ -46,24 +60,32 @@ export class FileListenerManagerStorage implements IListenerManagerStorage {
     }
   }
 
-  async addListener(listener: Listener, listeners: ListenerMap): Promise<void> {
-    this.writeQueue = { ...Object.fromEntries(Object.entries(listeners)) };
+  async addListener(listener: Listener): Promise<void> {
+    const listeners = await this.#getCurrentListeners();
+    listeners[listener.id] = { ...listener, state: { syncUnits: {} } };
+    this.writeQueue = listeners;
     return this.debouncedSave(false);
   }
 
   async updateListener(
-    listener: Listener,
-    listeners: ListenerMap,
+    listenerId: Listener["id"],
+    update: Partial<StatefulListener>,
   ): Promise<void> {
-    this.writeQueue = { ...Object.fromEntries(Object.entries(listeners)) };
+    const listeners = await this.#getCurrentListeners();
+    const listener = listeners[listenerId];
+    if (!listener) {
+      throw new ListenerNotFoundError(listenerId);
+    }
+    Object.assign(listener, update);
+    this.writeQueue = listeners;
     return this.debouncedSave(false);
   }
 
-  async removeListener(
-    listener: Listener,
-    listeners: ListenerMap,
-  ): Promise<void> {
-    this.writeQueue = { ...Object.fromEntries(Object.entries(listeners)) };
+  async removeListener(listenerId: Listener["id"]): Promise<void> {
+    const listeners = await this.#getCurrentListeners();
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete listeners[listenerId];
+    this.writeQueue = listeners;
     return this.debouncedSave(false);
   }
 

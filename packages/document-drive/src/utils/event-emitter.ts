@@ -1,6 +1,17 @@
 // TODO replace with simple implementation that uses node native EventEmitter and EventTarget in the browser
-import { createNanoEvents as createEventEmitter } from "nanoevents";
-export { createNanoEvents as createEventEmitter } from "nanoevents";
+import {
+  createNanoEvents as createEventEmitter,
+  Unsubscribe,
+} from "nanoevents";
+export {
+  createNanoEvents as createEventEmitter,
+  Unsubscribe,
+} from "nanoevents";
+
+export type Subscribe<K, V> = <E extends keyof ObservableMapEvents<K, V>>(
+  event: E,
+  callback: ObservableMapEvents<K, V>[E],
+) => Unsubscribe;
 
 export type ObservableMapEvents<K, V> = {
   add: (key: K, value: V) => void;
