@@ -1,4 +1,4 @@
-import { ReactorRouterManager } from "@powerhousedao/reactor-api";
+import { SubgraphManager, getKnexClient } from "@powerhousedao/reactor-api";
 import { DocumentDriveServer } from "document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
@@ -7,8 +7,7 @@ import dotenv from "dotenv";
 import express from "express";
 import http from "http";
 import path from "path";
-import { Pool } from "pg";
-import * as authListener from "./subgraphs/auth";
+import { Knex } from "knex";
 dotenv.config();
 
 // start document drive server with all available document models
@@ -27,14 +26,13 @@ const main = async () => {
     // init drive server
     await driveServer.initialize();
 
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-    await pool.connect();
-    const reactorRouterManager = new ReactorRouterManager(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    const knex = getKnexClient(process.env.DATABASE_URL) as Knex;
+    const reactorRouterManager = new SubgraphManager(
       "/",
       app,
       driveServer,
+      knex,
     );
     // init router
     await reactorRouterManager.init();

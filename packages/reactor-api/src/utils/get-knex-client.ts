@@ -10,7 +10,9 @@ function isPG(connectionString: string) {
   return false;
 }
 
-export function getKnexClient(connectionString: string | undefined) {
+export function getKnexClient(
+  connectionString: string | undefined = undefined,
+) {
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
 
