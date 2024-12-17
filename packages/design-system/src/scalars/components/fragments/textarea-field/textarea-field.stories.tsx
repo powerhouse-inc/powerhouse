@@ -77,6 +77,7 @@ export const Default: Story = {
   args: {
     label: "Message",
     placeholder: "Enter your message",
+    multiline: true,
   },
 };
 
@@ -85,6 +86,7 @@ export const WithDescription: Story = {
     label: "Bio",
     description: "Tell us a little bit about yourself",
     placeholder: "I am...",
+    multiline: true,
   },
 };
 
@@ -93,6 +95,7 @@ export const Required: Story = {
     label: "Comments",
     required: true,
     placeholder: "This field is required",
+    multiline: true,
   },
 };
 
@@ -101,6 +104,7 @@ export const WithValue: Story = {
     label: "Comments",
     value: "This is a pre-filled value",
     placeholder: "Enter your comments",
+    multiline: true,
   },
 };
 
@@ -110,6 +114,7 @@ export const Disabled: Story = {
     value: "This content cannot be edited",
     disabled: true,
     placeholder: "This field is disabled",
+    multiline: true,
   },
 };
 
@@ -121,6 +126,7 @@ export const WithError: Story = {
     errors: ["Comments must be at least 10 characters long"],
     minLength: 10,
     placeholder: "Enter your comments",
+    multiline: true,
   },
 };
 
@@ -130,6 +136,7 @@ export const WithWarning: Story = {
     value: "OK",
     warnings: ["Your feedback seems quite short"],
     placeholder: "Enter your feedback",
+    multiline: true,
   },
 };
 
@@ -141,6 +148,7 @@ export const WithAutoExpand: Story = {
     placeholder: "This will grow as you type...",
     description:
       "The textarea will automatically expand as you type more content",
+    multiline: true,
   },
 };
 
@@ -161,6 +169,7 @@ export const WithSpellCheck: Story = {
     spellCheck: true,
     placeholder: "Spell checking is enabled...",
     description: "This field will check your spelling",
+    multiline: true,
   },
 };
 
@@ -172,6 +181,7 @@ export const WithTrim: Story = {
     trim: true,
     description: "Leading and trailing whitespace will be removed",
     placeholder: "Enter your comments",
+    multiline: true,
   },
 };
 
@@ -182,6 +192,7 @@ export const WithUppercase: Story = {
     uppercase: true,
     description: "Text will be converted to uppercase",
     placeholder: "Enter your comments",
+    multiline: true,
   },
 };
 
@@ -192,6 +203,7 @@ export const WithLowercase: Story = {
     lowercase: true,
     description: "Text will be converted to lowercase",
     placeholder: "Enter your comments",
+    multiline: true,
   },
 };
 
@@ -202,5 +214,6 @@ export const WithMaxLength: Story = {
     value: "This textarea has a maximum length of 100 characters.",
     description: "You can enter up to 100 characters in this field",
     placeholder: "Enter your comments",
+    multiline: true,
   },
 };
