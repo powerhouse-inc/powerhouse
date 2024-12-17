@@ -147,23 +147,17 @@ export const useNumberField = ({
       "Int",
     ] as NumericType[];
 
-    // Si es BigInt, no formatear el valor
-    if (isBigInt || numericType === "BigInt") {
-      onBlur?.(e);
-      return;
-    }
-
     const formattedValue = getDisplayValue(inputValue, {
       isBigInt,
       precision,
       trailingZeros,
     });
 
-    const isSafeValue =
-      !isBigInt && Math.abs(Number(formattedValue)) > Number.MAX_SAFE_INTEGER;
+    const isNotSafeValue =
+      Math.abs(Number(formattedValue)) > Number.MAX_SAFE_INTEGER;
 
     //Avoid to convert to no safe value in notation scientific
-    if (isSafeValue) {
+    if (isNotSafeValue) {
       onBlur?.(e);
       return;
     }

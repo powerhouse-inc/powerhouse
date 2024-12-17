@@ -4,6 +4,7 @@ export const isPositiveOrUndefiend = (value: unknown): true | string =>
   value === undefined || Number(value) >= 0
     ? true
     : "Value must be a positive value";
+
 export const isBigIntNumber = (
   value: unknown,
   numericType?: NumericType,
@@ -31,12 +32,12 @@ export const isBigIntNumber = (
   const stringValue = String(value);
   const isLargeNumber = Math.abs(Number(stringValue)) > Number.MAX_SAFE_INTEGER;
 
-  // Para tipos float, ignorar isBigInt y solo validar si es número grande
+  // For float types, ignore isBigInt and only validate if it's a large number
   if (isFloat) {
     return isLargeNumber ? "Value is too large for float" : true;
   }
 
-  // Para tipos integer, permitir números grandes solo si isBigInt es true
+  // For integer types, allow large numbers only if isBigInt is true
   if (isInteger) {
     return isLargeNumber && !isBigInt ? "Value is too large for integer" : true;
   }
