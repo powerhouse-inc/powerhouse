@@ -12,3 +12,5 @@ export { module as DocumentModel2 } from "./document-model-2";
 export { module as ScopeFramework } from "./scope-framework";
 export { module as RealWorldAssets } from "./rwa";
 export { module as ChatRoomEditor } from "./chat-room-editor";
+export { module as InvoiceEditor } from "./invoice";
+export { module as LegalEntityEditor } from "./legalEntity";

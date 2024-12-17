@@ -9,3 +9,5 @@ export { module as DocumentDrive } from "./document-drive";
 export { module as ScopeFramework } from "./scope-framework";
 export { module as RealWorldAssets } from "./real-world-assets";
 export { module as ChatRoom } from "./chat-room";
+export { module as Invoice } from "./invoice";
+export { module as LegalEntity } from "./legal-entity";

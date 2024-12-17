@@ -29,6 +29,7 @@ export function getConfig() {
     const configStr = readFileSync("./powerhouse.config.json", "utf-8");
     const userConfig = JSON.parse(configStr) as PowerhouseConfig;
     config = { ...config, ...userConfig };
+    console.log(config.documentModelsDir);
   } catch {
     console.warn("No powerhouse.config.json found, using defaults");
   }

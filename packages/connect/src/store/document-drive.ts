@@ -173,8 +173,8 @@ export function useFileNodeDocument(
         // if selectedNode changes then fetches fileNodeDocument
         if (
             driveId !== fileNodeDocument?.driveId ||
-            documentId !== fileNodeDocument.documentId ||
-            documentType !== fileNodeDocument.documentType
+            documentId !== fileNodeDocument?.documentId ||
+            documentType !== fileNodeDocument?.documentType
         ) {
             const changed = setFileNodeDocument({
                 driveId,
@@ -238,20 +238,22 @@ export function useFileNodeDocument(
         }
 
         // watches for strand updates to update the document
-        const removeListener = onStrandUpdate(strand => {
-            if (
-                strand.driveId === fileNodeDocument.driveId &&
-                strand.documentId === fileNodeDocument.documentId
-            ) {
-                fetchDocument(
-                    fileNodeDocument.driveId,
-                    fileNodeDocument.documentId,
-                    fileNodeDocument.documentType,
-                )
-                    .then(setSelectedDocument)
-                    .catch(logger.error);
-            }
-        });
+        const removeListener = onStrandUpdate(
+            (strand: { driveId: string; documentId: string }) => {
+                if (
+                    strand.driveId === fileNodeDocument.driveId &&
+                    strand.documentId === fileNodeDocument.documentId
+                ) {
+                    fetchDocument(
+                        fileNodeDocument.driveId,
+                        fileNodeDocument.documentId,
+                        fileNodeDocument.documentType,
+                    )
+                        .then(setSelectedDocument)
+                        .catch(logger.error);
+                }
+            },
+        );
 
         return removeListener;
     }, [
