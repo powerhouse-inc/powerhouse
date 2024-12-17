@@ -13,7 +13,9 @@ export const validatePositive =
 export const validateIsBigInt =
   ({ isBigInt, numericType }: NumberFieldProps) =>
   (value: unknown) => {
-    return isBigInt || numericType === "BigInt" || isBigIntNumber(value);
+    return (
+      numericType === "BigInt" || isBigIntNumber(value, numericType, isBigInt)
+    );
   };
 
 export const isInteger = (value: unknown): boolean =>

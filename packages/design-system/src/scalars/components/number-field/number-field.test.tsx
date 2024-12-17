@@ -34,7 +34,12 @@ describe("NumberField", () => {
       <Form onSubmit={mockOnSubmit}>
         {({ formState: { isSubmitting } }) => (
           <div>
-            <NumberField label="BigInt Field" name="BigInt Field" isBigInt />
+            <NumberField
+              label="BigInt Field"
+              name="BigInt Field"
+              isBigInt
+              numericType="PositiveInt"
+            />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Submitting..." : "Submit"}
             </Button>
