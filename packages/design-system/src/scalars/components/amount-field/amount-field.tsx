@@ -1,5 +1,4 @@
 import React, { FC, useId } from "react";
-import { InputNumberProps } from "../types";
 import { NumberFieldProps, NumberFieldRaw } from "../number-field";
 import {
   FormDescription,
@@ -19,6 +18,7 @@ import {
   validateTrailingZerosAmount,
 } from "./amount-field-validations";
 import { AmountFieldPropsGeneric, AmountValue } from "./types";
+import { InputNumberProps } from "../number-field/types";
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
   Omit<InputNumberProps, "onChange" | "onBlur"> & {
