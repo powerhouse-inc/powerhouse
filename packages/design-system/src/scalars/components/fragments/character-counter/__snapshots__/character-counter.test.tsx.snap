@@ -3,7 +3,7 @@
 exports[`CharacterCounter > should match snapshot 1`] = `
 <div>
   <div
-    class="flex items-center text-[10px]"
+    class="flex items-center text-[10px] leading-3"
   >
     <span
       class="text-gray-500"
