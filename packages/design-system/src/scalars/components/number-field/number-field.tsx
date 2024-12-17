@@ -12,7 +12,7 @@ import {
 } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
 import { getDisplayValue, regex } from "./utils";
-import { InputNumberProps, NumericType } from "../types";
+import { InputNumberProps, NumericType } from "./types";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
@@ -40,8 +40,6 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       step = 1,
       pattern,
       isBigInt = false,
-      //Disable this for the transformations values
-
       trailingZeros = false,
       numericType,
       precision = 0,
@@ -143,13 +141,29 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         "NonNegativeInt",
         "NonPositiveInt",
         "BigInt",
+        "Int",
       ] as NumericType[];
+
+      // Si es BigInt, no formatear el valor
+      if (isBigInt || numericType === "BigInt") {
+        onBlur?.(e);
+        return;
+      }
 
       const formattedValue = getDisplayValue(inputValue, {
         isBigInt,
         precision,
         trailingZeros,
       });
+
+      const isSafeValue =
+        !isBigInt && Math.abs(Number(formattedValue)) > Number.MAX_SAFE_INTEGER;
+
+      //Avoid to convert to no safe value in notation scientific
+      if (isSafeValue) {
+        onBlur?.(e);
+        return;
+      }
 
       // if includes some of the integer or bigint types, we remove any decimal part
       const finalValue =

@@ -25,7 +25,7 @@ export const isFloat = (value: unknown): boolean => {
 };
 
 export const validateNumericType =
-  ({ allowNegative = false, numericType }: NumberFieldProps) =>
+  ({ numericType }: NumberFieldProps) =>
   (value: unknown) => {
     const isPositive = Number(value) > 0;
     const isNegative = Number(value) < 0;
@@ -34,7 +34,6 @@ export const validateNumericType =
     switch (numericType) {
       case "PositiveInt": {
         if (!isInt) return "Value must be a positive integer";
-        if (allowNegative) return true;
         if (isPositive) return true;
         return "Value must be a positive integer";
       }
@@ -48,7 +47,6 @@ export const validateNumericType =
 
       case "NonNegativeInt": {
         if (!isInt) return "Value must be a non-negative integer";
-        if (allowNegative) return true;
         if (Number(value) >= 0) return true;
         return "Value must be a non-negative integer";
       }
@@ -61,7 +59,7 @@ export const validateNumericType =
 
       case "PositiveFloat": {
         if (!isFloat(value)) return "Value must be a positive float ";
-        if (allowNegative) return true;
+
         if (parseFloat(value as string) > 0) return true;
         return "Value must be a positive float";
       }
@@ -76,7 +74,7 @@ export const validateNumericType =
 
       case "NonNegativeFloat": {
         if (!isFloat(value)) return "Value must be a non-negative float ";
-        if (allowNegative) return true;
+
         if (parseFloat(value as string) >= 0) return true;
         return "Value must be a non-negative float";
       }
@@ -85,6 +83,16 @@ export const validateNumericType =
         if (!isFloat(value)) return "Value must be a non-positive float";
         if (parseFloat(value as string) <= 0) return true;
         return "Value must be a non-positive float";
+      }
+
+      case "Int": {
+        if (!isInt) return "Value must be an integer";
+        return true;
+      }
+
+      case "Float": {
+        if (!isFloat(value)) return "Value must be a float";
+        return true;
       }
 
       case "BigInt": {

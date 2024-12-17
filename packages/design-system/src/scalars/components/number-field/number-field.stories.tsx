@@ -57,6 +57,8 @@ const meta = {
         "NonNegativeFloat",
         "NonPositiveFloat",
         "BigInt",
+        "Int",
+        "Float",
       ],
       description:
         "Specifies the numeric type of the input field. Possible values are:\n\n\n" +
