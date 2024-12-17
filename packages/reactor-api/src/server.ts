@@ -10,7 +10,8 @@ import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
-
+import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
+import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 type Options = {
   express?: Express;
   port?: number;
@@ -27,10 +28,20 @@ export async function startAPI(
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
   const db = getDbClient(options.dbPath);
-  const analyticsStore = new KnexAnalyticsStore({
-    executor: new KnexQueryExecutor(),
-    knex: db,
-  });
+  const getAnalyticsStore = async (dbPath: string | undefined) => {
+    console.log("dbPath", dbPath);
+
+    if (dbPath?.startsWith("postgres")) {
+      const pgStore = new PostgresAnalyticsStore(dbPath);
+      return pgStore;
+    }
+
+    const memoryStore = new MemoryAnalyticsStore();
+    await memoryStore.init();
+
+    return memoryStore;
+  };
+  const analyticsStore = await getAnalyticsStore(options.dbPath);
   const subgraphManager = new SubgraphManager(
     "/",
     app,
