@@ -13,6 +13,7 @@
     "files": [
         "dist"
     ],
+    "type": "module",
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",
     "repository": {
