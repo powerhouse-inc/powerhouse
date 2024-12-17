@@ -17,7 +17,7 @@
     "lint:nx": "eslint . --fix --quiet",
     "lint:fix": "eslint --fix",
     "postlint": "npm run check-types",
-    "build": "NODE_ENV=production vite build",
+    "build": "vite build",
     "build:watch": "vite build --watch",
     "test": "vitest run",
     "clean": "rimraf dist",
@@ -38,25 +38,30 @@
       "require": "./dist/cjs/src/index.js",
       "import": "./dist/es/src/index.js"
     },
-    "./EthereumAddress": {
-      "types": "./dist/types/src/scalars/EthereumAddress.d.ts",
-      "require": "./dist/cjs/src/scalars/EthereumAddress.js",
-      "import": "./dist/es/src/scalars/EthereumAddress.js"
+    "./src\\scalars\\index": {
+      "types": "./dist/types/src/scalars/src\\scalars\\index.d.ts",
+      "require": "./dist/cjs/src/scalars/src\\scalars\\index.js",
+      "import": "./dist/es/src/scalars/src\\scalars\\index.js"
     },
-    "./EmailAddress": {
-      "types": "./dist/types/src/scalars/EmailAddress.d.ts",
-      "require": "./dist/cjs/src/scalars/EmailAddress.js",
-      "import": "./dist/es/src/scalars/EmailAddress.js"
+    "./src\\scalars\\EthereumAddress": {
+      "types": "./dist/types/src/scalars/src\\scalars\\EthereumAddress.d.ts",
+      "require": "./dist/cjs/src/scalars/src\\scalars\\EthereumAddress.js",
+      "import": "./dist/es/src/scalars/src\\scalars\\EthereumAddress.js"
     },
-    "./AmountTokens": {
-      "types": "./dist/types/src/scalars/AmountTokens.d.ts",
-      "require": "./dist/cjs/src/scalars/AmountTokens.js",
-      "import": "./dist/es/src/scalars/AmountTokens.js"
+    "./src\\scalars\\EmailAddress": {
+      "types": "./dist/types/src/scalars/src\\scalars\\EmailAddress.d.ts",
+      "require": "./dist/cjs/src/scalars/src\\scalars\\EmailAddress.js",
+      "import": "./dist/es/src/scalars/src\\scalars\\EmailAddress.js"
     },
-    "./AmountPercentage": {
-      "types": "./dist/types/src/scalars/AmountPercentage.d.ts",
-      "require": "./dist/cjs/src/scalars/AmountPercentage.js",
-      "import": "./dist/es/src/scalars/AmountPercentage.js"
+    "./src\\scalars\\AmountTokens": {
+      "types": "./dist/types/src/scalars/src\\scalars\\AmountTokens.d.ts",
+      "require": "./dist/cjs/src/scalars/src\\scalars\\AmountTokens.js",
+      "import": "./dist/es/src/scalars/src\\scalars\\AmountTokens.js"
+    },
+    "./src\\scalars\\AmountPercentage": {
+      "types": "./dist/types/src/scalars/src\\scalars\\AmountPercentage.d.ts",
+      "require": "./dist/cjs/src/scalars/src\\scalars\\AmountPercentage.js",
+      "import": "./dist/es/src/scalars/src\\scalars\\AmountPercentage.js"
     }
   }
 }

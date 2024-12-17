@@ -1,0 +1,32 @@
+name: Deploy Connect Powerhouse Develop
+
+on:
+  push:
+    branches: [develop]
+
+env:
+  HUSKY: 0
+
+jobs:
+  build:
+    environment: develop
+    runs-on: ubuntu-latest
+    steps:
+      # Check-out your repository.
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build, Push and Release APP to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          docker_options: >-
+            --build-arg BASE_PATH=/develop/powerhouse/connect
+            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            --build-arg PH_CONNECT_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
+            --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+          process_type: web

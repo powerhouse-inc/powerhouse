@@ -1,0 +1,146 @@
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar Amount_Percentage
+scalar EmailAddress
+scalar Date
+scalar DateTime
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+type LegalEntityState {
+  id: LegalEntityId
+  name: String
+  address: Address
+  contactInfo: ContactInfo
+  country: String
+  paymentRouting: PaymentRouting
+}
+
+type Address {
+  streetAddress: String
+  extendedAddress: String
+  city: String
+  postalCode: String
+  country: String
+  stateProvince: String
+}
+
+type ContactInfo {
+  tel: String
+  email: String
+}
+
+type PaymentRouting {
+  bank: Bank
+  wallet: Wallet
+}
+
+type Bank {
+  name: String!
+  address: Address!
+  ABA: String
+  IBAN: String
+  SWIFT: String
+  accountNum: String!
+  accountType: AccountType
+  beneficiary: String
+  intermediaryBank: IntermediaryBank
+  memo: String
+}
+
+type IntermediaryBank {
+  name: String!
+  address: Address!
+  ABA: String
+  IBAN: String
+  SWIFT: String
+  accountNum: String!
+  accountType: AccountType
+  beneficiary: String
+  memo: String
+}
+
+type Wallet {
+  rpc: String
+  chainName: String
+  chainId: String
+  address: String
+}
+
+union LegalEntityId = LegalEntityTaxId | LegalEntityCorporateRegistrationId
+
+type LegalEntityTaxId {
+  taxId: String!
+}
+
+type LegalEntityCorporateRegistrationId {
+  corpRegId: String!
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  TRUST
+  WALLET
+}
+
+
+
+# general
+
+input EditLegalEntityInput {
+    id: String
+    name: String
+    streetAddress: String
+    extendedAddress: String
+    city: String
+    postalCode: String
+    country: String
+    stateProvince: String
+    tel: String
+    email: String
+}
+
+
+input EditLegalEntityBankInput {
+    name: String
+    streetAddress: String
+    extendedAddress: String
+    city: String
+    postalCode: String
+    country: String
+    stateProvince: String
+    ABA: String
+    IBAN: String
+    SWIFT: String
+    accountNum: String
+    accountType: AccountType
+    beneficiary: String
+    memo: String
+    # intermediaryBank
+    nameIntermediary: String
+    streetAddressIntermediary: String
+    extendedAddressIntermediary: String
+    cityIntermediary: String
+    postalCodeIntermediary: String
+    countryIntermediary: String
+    stateProvinceIntermediary: String
+    ABAIntermediary: String
+    IBANIntermediary: String
+    SWIFTIntermediary: String
+    accountNumIntermediary: String
+    accountTypeIntermediary: AccountType
+    beneficiaryIntermediary: String
+    memoIntermediary: String
+}
+
+
+input EditLegalEntityWalletInput {
+    rpc: String
+    chainName: String
+    chainId: String
+    address: String
+}

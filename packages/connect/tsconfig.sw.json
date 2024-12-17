@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "allowSyntheticDefaultImports": true,
+        "isolatedModules": false,
+        "strict": true,
+        "module": "ESNext",
+        "target": "ESNext",
+        "lib": ["es2019", "es6", "dom", "webworker"],
+        "noEmit": false,
+        "moduleResolution": "node",
+        "skipLibCheck": true,
+        "outDir": "./dist"
+    },
+    "files": ["./src/service-worker.ts"]
+}

@@ -1,0 +1,70 @@
+{
+    "id": "Legal-entity",
+    "name": "legal-entity",
+    "extension": "",
+    "description": "Legal entity",
+    "author": {
+        "name": "zeroknowledgetruth",
+        "website": ""
+    },
+    "specifications": [
+        {
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "global": {
+                    "schema": "type LegalEntityState {\n  id: LegalEntityId\n  name: String\n  address: Address\n  contactInfo: ContactInfo\n  country: String\n  paymentRouting: PaymentRouting\n}\n\ntype Address {\n  streetAddress: String\n  extendedAddress: String\n  city: String\n  postalCode: String\n  country: String\n  stateProvince: String\n}\n\ntype ContactInfo {\n  tel: String\n  email: String\n}\n\ntype PaymentRouting {\n  bank: Bank\n  wallet: Wallet\n}\n\ntype Bank {\n  name: String!\n  address: Address!\n  ABA: String\n  IBAN: String\n  SWIFT: String\n  accountNum: String!\n  accountType: AccountType\n  beneficiary: String\n  intermediaryBank: IntermediaryBank\n  memo: String\n}\n\ntype IntermediaryBank {\n  name: String!\n  address: Address!\n  ABA: String\n  IBAN: String\n  SWIFT: String\n  accountNum: String!\n  accountType: AccountType\n  beneficiary: String\n  memo: String\n}\n\ntype Wallet {\n  rpc: String\n  chainName: String\n  chainId: String\n  address: String\n}\n\nunion LegalEntityId = LegalEntityTaxId | LegalEntityCorporateRegistrationId\n\ntype LegalEntityTaxId {\n  taxId: String!\n}\n\ntype LegalEntityCorporateRegistrationId {\n  corpRegId: String!\n}\n\nenum AccountType {\n  CHECKING\n  SAVINGS\n  TRUST\n  WALLET\n}",
+                    "initialValue": "{\n    \"id\": null,\n    \"name\": \"\",\n    \"address\": {\n        \"streetAddress\": \"\",\n        \"extendedAddress\": \"\",\n        \"city\": \"\",\n        \"postalCode\": \"\",\n        \"country\": \"\",\n        \"stateProvince\": \"\"\n    },\n    \"contactInfo\": { \"tel\": \"\", \"email\": \"\" },\n    \"country\": \"\",\n    \"paymentRouting\": {\n        \"bank\": {\n            \"name\": \"\",\n            \"address\": {\n                \"streetAddress\": \"\",\n                \"extendedAddress\": \"\",\n                \"city\": \"\",\n                \"postalCode\": \"\",\n                \"country\": \"\",\n                \"stateProvince\": \"\"\n            },\n            \"ABA\": \"\",\n            \"IBAN\": \"\",\n            \"SWIFT\": \"\",\n            \"accountNum\": \"\",\n            \"accountType\": \"CHECKING\",\n            \"beneficiary\": \"\",\n            \"intermediaryBank\": {\n                \"name\": \"\",\n                \"address\": {\n                    \"streetAddress\": \"\",\n                    \"extendedAddress\": \"\",\n                    \"city\": \"\",\n                    \"postalCode\": \"\",\n                    \"country\": \"\",\n                    \"stateProvince\": \"\"\n                },\n                \"ABA\": \"\",\n                \"IBAN\": \"\",\n                \"SWIFT\": \"\",\n                \"accountNum\": \"\",\n                \"accountType\": \"CHECKING\",\n                \"beneficiary\": \"\",\n                \"memo\": \"\"\n            },\n            \"memo\": \"\"\n        },\n        \"wallet\": {\n            \"rpc\": \"\",\n            \"chainName\": \"\",\n            \"chainId\": \"\",\n            \"address\": \"\"\n        }\n    }\n}\n",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                }
+            },
+            "modules": [
+                {
+                    "id": "KoJiL/35+KQ4YlImAHnAiTCQB4w=",
+                    "name": "general",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "Mx96pXzMM3jcyozee37nxR8eLN0=",
+                            "name": "EDIT_LEGAL_ENTITY",
+                            "description": "",
+                            "schema": "input EditLegalEntityInput {\n    id: String\n    name: String\n    streetAddress: String\n    extendedAddress: String\n    city: String\n    postalCode: String\n    country: String\n    stateProvince: String\n    tel: String\n    email: String\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "AsHW9z4pZrcMpcA3bh83xL70xwQ=",
+                            "name": "EDIT_LEGAL_ENTITY_BANK",
+                            "description": "",
+                            "schema": "input EditLegalEntityBankInput {\n    name: String\n    streetAddress: String\n    extendedAddress: String\n    city: String\n    postalCode: String\n    country: String\n    stateProvince: String\n    ABA: String\n    IBAN: String\n    SWIFT: String\n    accountNum: String\n    accountType: AccountType\n    beneficiary: String\n    memo: String\n    # intermediaryBank\n    nameIntermediary: String\n    streetAddressIntermediary: String\n    extendedAddressIntermediary: String\n    cityIntermediary: String\n    postalCodeIntermediary: String\n    countryIntermediary: String\n    stateProvinceIntermediary: String\n    ABAIntermediary: String\n    IBANIntermediary: String\n    SWIFTIntermediary: String\n    accountNumIntermediary: String\n    accountTypeIntermediary: AccountType\n    beneficiaryIntermediary: String\n    memoIntermediary: String\n}\n",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "LjlSROxZVdRXoNhKJ2KkeEPgGsg=",
+                            "name": "EDIT_LEGAL_ENTITY_WALLET",
+                            "description": "",
+                            "schema": "input EditLegalEntityWalletInput {\n    rpc: String\n    chainName: String\n    chainId: String\n    address: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

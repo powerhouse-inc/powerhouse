@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+      "target": "es5",
+      "lib": ["DOM", "DOM.Iterable", "ESNext"],
+      "types": ["cypress", "node"]
+    },
+    "include": ["**/*.ts"],
+  }

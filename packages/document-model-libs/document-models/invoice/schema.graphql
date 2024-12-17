@@ -1,0 +1,302 @@
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar Amount_Percentage
+scalar EmailAddress
+scalar Date
+scalar DateTime
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+type InvoiceState {
+    invoiceNo: String! # Invoice Number (e.g., 2024-001) The invoice numbering can be sequential Numbering INV-001 ; INV-002 String-base numbering 2024-09-03-456; drive explorer can set default to previous No + 1
+    dateIssued: String! # default value: today, e.g. 2024-01-31; user defined at first, then automated but user can override, auditor gets notified
+    dateDue: String! # default value: 30 days after issue date;
+    dateDelivered: String
+    title: String # Optional for use of the "file name" of the document.
+    status: Status!
+    refs: [Ref!]! # Legal stuff, component ID, whatever. Placeholdery.
+    issuer: LegalEntity!
+    payer: LegalEntity!
+    currency: String! # Default can be USD
+    lineItems: [InvoiceLineItem!]!
+    totalPriceTaxExcl: Float! # Currency will be the same for now, as is set on the InvoiceState level
+    totalPriceTaxIncl: Float! # Currency will be the same for now, as is set on the InvoiceState level
+}
+
+type Ref {
+    id: OID!
+    value: String!
+}
+
+type Token {
+    evmAddress: String
+    symbol: String
+    chainName: String
+    chainId: String
+    rpc: String
+}
+
+type LegalEntity {
+    id: LegalEntityId
+    name: String
+    address: Address
+    contactInfo: ContactInfo
+    country: String
+    paymentRouting: PaymentRouting
+}
+
+type Address {
+    streetAddress: String
+    extendedAddress: String
+    city: String
+    postalCode: String
+    country: String
+    stateProvince: String
+}
+
+type ContactInfo {
+    tel: String
+    email: String
+}
+
+type PaymentRouting {
+    bank: Bank
+    wallet: Wallet
+}
+
+type Bank {
+    name: String!
+    address: Address!
+    ABA: String
+    IBAN: String
+    SWIFT: String
+    accountNum: String!
+    accountType: AccountType
+    beneficiary: String
+    intermediaryBank: IntermediaryBank
+    memo: String
+}
+
+type IntermediaryBank {
+    name: String!
+    address: Address!
+    ABA: String
+    IBAN: String
+    SWIFT: String
+    accountNum: String!
+    accountType: AccountType
+    beneficiary: String
+    memo: String
+}
+
+type Wallet {
+    rpc: String
+    chainName: String
+    chainId: String
+    address: String
+}
+
+type InvoiceLineItem {
+    id: OID!
+    description: String!
+    taxPercent: Float!
+    quantity: Float!
+    currency: String! # Default can be USD
+    unitPriceTaxExcl: Float! # Currency will be the same for now, as is set on the InvoiceState level
+    unitPriceTaxIncl: Float! # Currency will be the same for now, as is set on the InvoiceState level
+    totalPriceTaxExcl: Float! # Currency will be the same for now, as is set on the InvoiceState level
+    totalPriceTaxIncl: Float! # Currency will be the same for now, as is set on the InvoiceState level
+}
+
+union LegalEntityId = LegalEntityTaxId | LegalEntityCorporateRegistrationId
+
+type LegalEntityTaxId {
+    taxId: String!
+}
+
+type LegalEntityCorporateRegistrationId {
+    corpRegId: String!
+}
+
+enum Status {
+    DRAFT
+    ISSUED
+    ACCEPTED
+    REJECTED
+    PAID
+}
+
+enum AccountType {
+    CHECKING
+    SAVINGS
+    TRUST
+    WALLET
+}
+
+# general
+
+input EditInvoiceInput {
+    invoiceNo: String
+    dateIssued: String
+    dateDue: String
+    dateDelivered: String
+    title: String
+    currency: String
+}
+
+input EditStatusInput {
+    status: Status!
+}
+
+input AddRefInput {
+    id: OID!
+    value: String!
+}
+
+input EditRefInput {
+    id: OID!
+    value: String!
+}
+
+input DeleteRefInput {
+    id: OID!
+}
+
+# parties
+
+input EditIssuerInput {
+    id: String
+    name: String
+    streetAddress: String
+    extendedAddress: String
+    city: String
+    postalCode: String
+    country: String
+    stateProvince: String
+    tel: String
+    email: String
+}
+
+input EditIssuerBankInput {
+    name: String
+    streetAddress: String
+    extendedAddress: String
+    city: String
+    postalCode: String
+    country: String
+    stateProvince: String
+    ABA: String
+    IBAN: String
+    SWIFT: String
+    accountNum: String
+    accountType: AccountType
+    beneficiary: String
+    memo: String
+    # intermediaryBank
+    nameIntermediary: String
+    streetAddressIntermediary: String
+    extendedAddressIntermediary: String
+    cityIntermediary: String
+    postalCodeIntermediary: String
+    countryIntermediary: String
+    stateProvinceIntermediary: String
+    ABAIntermediary: String
+    IBANIntermediary: String
+    SWIFTIntermediary: String
+    accountNumIntermediary: String
+    accountTypeIntermediary: AccountType
+    beneficiaryIntermediary: String
+    memoIntermediary: String
+}
+
+input EditIssuerWalletInput {
+    rpc: String
+    chainName: String
+    chainId: String
+    address: String
+}
+
+input EditPayerInput {
+    id: String
+    name: String
+    streetAddress: String
+    extendedAddress: String
+    city: String
+    postalCode: String
+    country: String
+    stateProvince: String
+    tel: String
+    email: String
+}
+
+input EditPayerBankInput {
+    name: String
+    streetAddress: String
+    extendedAddress: String
+    city: String
+    postalCode: String
+    country: String
+    stateProvince: String
+    ABA: String
+    IBAN: String
+    SWIFT: String
+    accountNum: String
+    accountType: AccountType
+    beneficiary: String
+    memo: String
+    # intermediaryBank
+    nameIntermediary: String
+    streetAddressIntermediary: String
+    extendedAddressIntermediary: String
+    cityIntermediary: String
+    postalCodeIntermediary: String
+    countryIntermediary: String
+    stateProvinceIntermediary: String
+    ABAIntermediary: String
+    IBANIntermediary: String
+    SWIFTIntermediary: String
+    accountNumIntermediary: String
+    accountTypeIntermediary: AccountType
+    beneficiaryIntermediary: String
+    memoIntermediary: String
+}
+
+input EditPayerWalletInput {
+    rpc: String
+    chainName: String
+    chainId: String
+    address: String
+}
+
+# items
+
+input AddLineItemInput {
+    id: OID!
+    description: String!
+    taxPercent: Float!
+    quantity: Float!
+    currency: String! # Default can be USD
+    unitPriceTaxExcl: Float!
+    unitPriceTaxIncl: Float!
+    totalPriceTaxExcl: Float!
+    totalPriceTaxIncl: Float!
+}
+
+input EditLineItemInput {
+    id: OID!
+    description: String
+    taxPercent: Float
+    quantity: Float
+    currency: String
+    unitPriceTaxExcl: Float
+    unitPriceTaxIncl: Float
+    totalPriceTaxExcl: Float
+    totalPriceTaxIncl: Float
+}
+
+input DeleteLineItemInput {
+    id: OID!
+}
