@@ -100,6 +100,7 @@ export const WithValue: Story = {
   args: {
     label: "Comments",
     value: "This is a pre-filled value",
+    placeholder: "Enter your comments",
   },
 };
 
@@ -108,6 +109,7 @@ export const Disabled: Story = {
     label: "Disabled content",
     value: "This content cannot be edited",
     disabled: true,
+    placeholder: "This field is disabled",
   },
 };
 
@@ -118,6 +120,7 @@ export const WithError: Story = {
     value: "error",
     errors: ["Comments must be at least 10 characters long"],
     minLength: 10,
+    placeholder: "Enter your comments",
   },
 };
 
@@ -126,6 +129,7 @@ export const WithWarning: Story = {
     label: "Feedback",
     value: "OK",
     warnings: ["Your feedback seems quite short"],
+    placeholder: "Enter your feedback",
   },
 };
 
@@ -167,6 +171,7 @@ export const WithTrim: Story = {
     value: "  This text will have whitespace trimmed  ",
     trim: true,
     description: "Leading and trailing whitespace will be removed",
+    placeholder: "Enter your comments",
   },
 };
 
@@ -176,6 +181,7 @@ export const WithUppercase: Story = {
     value: "This text will be uppercase",
     uppercase: true,
     description: "Text will be converted to uppercase",
+    placeholder: "Enter your comments",
   },
 };
 
@@ -185,6 +191,7 @@ export const WithLowercase: Story = {
     value: "THIS TEXT WILL BE LOWERCASE",
     lowercase: true,
     description: "Text will be converted to lowercase",
+    placeholder: "Enter your comments",
   },
 };
 
@@ -194,5 +201,6 @@ export const WithMaxLength: Story = {
     maxLength: 100,
     value: "This textarea has a maximum length of 100 characters.",
     description: "You can enter up to 100 characters in this field",
+    placeholder: "Enter your comments",
   },
 };

@@ -181,18 +181,26 @@ export const withFieldValidation = <T extends PossibleProps>(
               message: "This field does not match the required pattern",
             },
           }),
-          ...(props.maxLength && {
-            maxLength: {
-              value: props.maxLength,
-              message: `This field must be less than ${props.maxLength} characters`,
-            },
-          }),
-          ...(props.minLength && {
-            minLength: {
-              value: props.minLength,
-              message: `This field must be more than ${props.minLength} characters`,
-            },
-          }),
+          ...(props.maxLength
+            ? {
+                maxLength: {
+                  value: props.maxLength,
+                  message: `This field must be less than ${props.maxLength} characters`,
+                },
+              }
+            : {
+                maxLength: undefined,
+              }),
+          ...(props.minLength
+            ? {
+                minLength: {
+                  value: props.minLength,
+                  message: `This field must be more than ${props.minLength} characters`,
+                },
+              }
+            : {
+                minLength: undefined,
+              }),
           ...(props.minValue && {
             min: {
               value: props.minValue,

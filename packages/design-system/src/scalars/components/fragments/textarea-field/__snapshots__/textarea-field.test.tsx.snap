@@ -26,17 +26,16 @@ exports[`TextareaField Component > should match snapshot with props 1`] = `
         <textarea
           aria-invalid="false"
           aria-required="true"
-          autocomplete="off"
           class="flex w-full min-h-9 rounded-md text-[14px] font-normal leading-5 dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500 px-3 py-[7.2px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500 resize-y scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600"
           id=":r1:-textarea"
           name="textarea"
-          rows="3"
+          rows="1"
         />
         <div
-          class="mt-0.5 flex justify-end"
+          class="mt-0.5 flex justify-end -mb-1"
         >
           <div
-            class="flex items-center text-[10px]"
+            class="flex items-center text-[10px] leading-3"
           >
             <span
               class="text-gray-500"

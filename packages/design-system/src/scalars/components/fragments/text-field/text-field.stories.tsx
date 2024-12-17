@@ -68,6 +68,7 @@ export const WithValue: Story = {
   args: {
     label: "First Name",
     value: "John",
+    placeholder: "Enter your first name",
   },
 };
 
@@ -76,6 +77,7 @@ export const Disabled: Story = {
     label: "Read Only Field",
     value: "This field is disabled",
     disabled: true,
+    placeholder: "This field is disabled",
   },
 };
 
@@ -85,6 +87,7 @@ export const WithError: Story = {
     value: "jo",
     required: true,
     errors: ["Username must be at least 5 characters long"],
+    placeholder: "Enter your username",
   },
 };
 
@@ -93,6 +96,7 @@ export const WithWarning: Story = {
     label: "Username",
     value: "LKlfnwuirenfanmdpmawef",
     warnings: ["Will you remember this?"],
+    placeholder: "Enter your username",
   },
 };
 
@@ -100,7 +104,7 @@ export const WithDefaultValue: Story = {
   args: {
     label: "Username",
     defaultValue: "johndoe",
-    placeholder: "Enter username",
+    placeholder: "Enter your username",
   },
 };
 
@@ -109,6 +113,7 @@ export const WithMaxLength: Story = {
     label: "Username",
     value: "john",
     maxLength: 10,
+    placeholder: "Enter your username",
   },
 };
 
@@ -117,6 +122,7 @@ export const WithLowercase: Story = {
     label: "Username",
     value: "JohnDOE123",
     lowercase: true,
+    placeholder: "Enter your username",
   },
   render: function Render(args) {
     const [value, setValue] = useState(args.value);
@@ -136,6 +142,7 @@ export const WithUppercase: Story = {
     label: "Username",
     value: "JohnDoe123",
     uppercase: true,
+    placeholder: "Enter your username",
   },
   render: function Render(args) {
     const [value, setValue] = useState(args.value);
@@ -155,6 +162,7 @@ export const WithTrim: Story = {
     label: "Username",
     value: "   john doe   ",
     trim: true,
+    placeholder: "Enter your username",
   },
   render: function Render(args) {
     const [value, setValue] = useState(args.value);
