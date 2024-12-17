@@ -254,6 +254,7 @@ export const PrebuiltArgTypes = {
       },
     },
   },
+  //Improve this to hidden this props base in the numericType
   allowNegative: {
     allowNegative: {
       control: "boolean",

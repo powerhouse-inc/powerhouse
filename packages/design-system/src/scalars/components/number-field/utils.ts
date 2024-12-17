@@ -26,12 +26,12 @@ export function getDisplayValue(
       // If the value is a number with decimals, return it as-is
       return value;
     }
-
-    return BigInt(value);
+    //Return a string no necessarily a BigInt, becase cast in onSubmit
+    return value.toString();
   } else {
     if (Math.abs(Number(value)) > Number.MAX_SAFE_INTEGER) {
       //Remove the decimal places because its a bigInt
-      return value;
+      return value.toString();
     }
     if (precision !== undefined) {
       const formattedValue = parseFloat(value).toFixed(precision);
