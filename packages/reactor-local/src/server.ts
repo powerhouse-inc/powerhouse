@@ -1,9 +1,11 @@
 import {
-  isProcessorClass,
   API,
-  startAPI,
   IProcessorManager,
+  isProcessorClass,
+  startAPI,
+  SubgraphManager,
 } from "@powerhousedao/reactor-api";
+import { isSubgraphClass, SubgraphClass } from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
@@ -19,7 +21,6 @@ import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createServer as createViteServer, ViteDevServer } from "vite";
 
 const dirname = process.cwd();
@@ -77,6 +78,7 @@ const baseDocumentModels = [
 const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
+  process.setMaxListeners(0);
   const { port, storagePath, drive, dev, dbPath } = {
     ...DefaultStartServerOptions,
     ...options,
@@ -166,6 +168,10 @@ const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
   const processorsPath = path.join(process.cwd(), "./processors"); // TODO get path from powerhouse config
   await loadProcessors(processorsPath, vite, api.processorManager);
 
+  // load local subgraphs
+  const subgraphsPath = path.join(process.cwd(), "./subgraphs"); // TODO get path from powerhouse config
+  await loadSubgraphs(subgraphsPath, vite, api.subgraphManager);
+
   /**
    * TODO: watch code changes on processors and document models
    */
@@ -176,15 +182,19 @@ async function loadDocumentModels(
   vite: ViteDevServer,
   driveServer: IDocumentDriveServer,
 ) {
-  console.log("Loading document models from", path);
-  const localDMs = (await vite.ssrLoadModule(path)) as Record<
-    string,
-    DocumentModel
-  >;
-  driveServer.setDocumentModels([
-    ...baseDocumentModels,
-    ...Object.values(localDMs),
-  ]);
+  try {
+    console.log("> Loading document models from", path);
+    const localDMs = (await vite.ssrLoadModule(path)) as Record<
+      string,
+      DocumentModel
+    >;
+    driveServer.setDocumentModels([
+      ...baseDocumentModels,
+      ...Object.values(localDMs),
+    ]);
+  } catch (e) {
+    console.error("Error loading document models", e);
+  }
 }
 
 async function loadProcessors(
@@ -192,14 +202,38 @@ async function loadProcessors(
   vite: ViteDevServer,
   processorManager: IProcessorManager,
 ) {
-  console.log("Loading processors from", path);
-  const localProcessors = await vite.ssrLoadModule(path);
-  for (const [name, processor] of Object.entries(localProcessors)) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const ProcessorClass = processor[name];
-    if (isProcessorClass(ProcessorClass)) {
-      await processorManager.registerProcessor(ProcessorClass);
+  try {
+    console.log("> Loading processors from", path);
+    const localProcessors = await vite.ssrLoadModule(path);
+    for (const [name, processor] of Object.entries(localProcessors)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const ProcessorClass = processor[name];
+      if (isProcessorClass(ProcessorClass)) {
+        await processorManager.registerProcessor(ProcessorClass);
+      }
     }
+  } catch (e) {
+    console.error("Error loading processors", e);
+  }
+}
+
+async function loadSubgraphs(
+  path: string,
+  vite: ViteDevServer,
+  subgraphManager: SubgraphManager,
+) {
+  try {
+    console.log("> Loading subgraphs from", path);
+    const localSubgraphs = await vite.ssrLoadModule(path);
+    for (const [name, subgraph] of Object.entries(localSubgraphs)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const SubgraphClass = subgraph[name] as SubgraphClass;
+      if (isSubgraphClass(SubgraphClass)) {
+        await subgraphManager.registerSubgraph(SubgraphClass);
+      }
+    }
+  } catch (e) {
+    console.error("Error loading subgraphs", e);
   }
 }
 

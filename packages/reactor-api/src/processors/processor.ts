@@ -3,7 +3,7 @@ import {
   InternalTransmitterUpdate,
 } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
-import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "src/types";
+import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "../types";
 
 export type ProcessorUpdate<
   D extends Document = Document,

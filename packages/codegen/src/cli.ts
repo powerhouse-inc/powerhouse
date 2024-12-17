@@ -5,12 +5,14 @@ import {
   generateEditor,
   generateFromFile,
   generateProcessor,
+  generateSubgraph,
 } from "./codegen/index";
 import { parseArgs, promptDirectories, parseConfig } from "./utils/index";
 
 function parseCommand(argv: string[]) {
   const args = parseArgs(argv, {
     "--editor": String,
+    "--subgraph": String,
     "-e": "--editor",
     "--processor": String,
     "--document-types": String,
@@ -19,6 +21,7 @@ function parseCommand(argv: string[]) {
   const editorName = args["--editor"];
   const processorName = args["--processor"];
   const processorType = args["--processor-type"];
+  const subgraphName = args["--subgraph"];
   return {
     processor: !!processorName,
     processorName,
@@ -27,6 +30,8 @@ function parseCommand(argv: string[]) {
     editorName,
     documentTypes: args["--document-types"],
     arg: args._,
+    subgraph: !!subgraphName,
+    subgraphName: subgraphName ?? "example",
   };
 }
 
@@ -66,6 +71,8 @@ async function main() {
       command.documentTypes?.split(/[|,;]/g) ?? [],
       config,
     );
+  } else if (command.subgraph) {
+    await generateSubgraph(command.subgraphName, config);
   } else if (command.arg.length === 2) {
     await generateFromFile(command.arg[1], config);
   } else {

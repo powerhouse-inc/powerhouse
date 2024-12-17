@@ -1,3 +1,19 @@
+## 0.10.0 (2024-12-16)
+
+### 🚀 Features
+
+- updated nx version ([c9690c35](https://github.com/powerhouse-inc/powerhouse/commit/c9690c35))
+- **document-model:** export generateId method ([71d945b2](https://github.com/powerhouse-inc/powerhouse/commit/71d945b2))
+
+### 🩹 Fixes
+
+- **switchboard:** subgraph manager and db instantiation ([874bdc4b](https://github.com/powerhouse-inc/powerhouse/commit/874bdc4b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 0.9.0 (2024-12-11)
 
 ### 🚀 Features

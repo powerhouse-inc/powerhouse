@@ -1,3 +1,29 @@
+## 1.4.0 (2024-12-16)
+
+### 🚀 Features
+
+- updated nx version ([c9690c35](https://github.com/powerhouse-inc/powerhouse/commit/c9690c35))
+
+### ❤️ Thank You
+
+- Frank
+
+## 1.3.0 (2024-12-16)
+
+### 🚀 Features
+
+- **config:** trigger release ([9df86bc4](https://github.com/powerhouse-inc/powerhouse/commit/9df86bc4))
+- **document-model:** export generateId method ([71d945b2](https://github.com/powerhouse-inc/powerhouse/commit/71d945b2))
+
+### 🩹 Fixes
+
+- **switchboard:** subgraph manager and db instantiation ([874bdc4b](https://github.com/powerhouse-inc/powerhouse/commit/874bdc4b))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 1.2.0 (2024-12-11)
 
 ### 🚀 Features

@@ -1,16 +1,12 @@
-import {
-  IDocumentDriveServer,
-  InternalTransmitterUpdate,
-  IReceiver,
-  Listener,
-  ListenerRevision,
-} from "document-drive";
+import { IDocumentDriveServer, IReceiver, Listener } from "document-drive";
 import { Document, OperationScope } from "document-model/document";
-import { IncomingHttpHeaders } from "http";
 import { Express } from "express";
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { ReactorRouterManager } from "./router";
 import { ProcessorClass } from "./processors/processor";
+import { SubgraphManager } from "./subgraphs/manager";
+import { Db } from "./utils/get-db-client";
+import { IAnalyticsStore } from "./processors/analytics-processor";
+
+export type { Db } from "./utils/get-db-client";
 
 export type IProcessorManager = {
   registerProcessor(module: IProcessor | ProcessorClass): Promise<IProcessor>;
@@ -18,33 +14,16 @@ export type IProcessorManager = {
 
 export type API = {
   app: Express;
-  reactorRouterManager: ReactorRouterManager;
+  subgraphManager: SubgraphManager;
   processorManager: IProcessorManager;
-};
-
-export interface Context {
-  headers: IncomingHttpHeaders;
-  driveId: string | undefined;
-  driveServer: IDocumentDriveServer;
-}
-
-export type Subgraph = {
-  name: string;
-  resolvers: any;
-  typeDefs: string;
-  options?: Omit<Listener, "driveId">;
-  transmit?: (
-    strands: InternalTransmitterUpdate[],
-  ) => Promise<ListenerRevision[]>;
 };
 
 export type ProcessorType = "analytics" | "operational";
 
 export type ProcessorSetupArgs = {
   reactor: IDocumentDriveServer;
-  dataSources: {
-    analyticsStore: IAnalyticsStore;
-  };
+  operationalStore: Db;
+  analyticsStore: IAnalyticsStore;
 };
 
 export type IProcessor<

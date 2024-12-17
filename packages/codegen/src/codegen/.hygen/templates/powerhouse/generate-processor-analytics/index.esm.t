@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/src/index.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { generateId } from "document-model/utils";
@@ -57,6 +57,10 @@ export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(document
   async onDisconnect() {}
 
   private async clearSource(source: AnalyticsPath) {
-    await this.analyticsStore.clearSeriesBySource(source, true);
+    try {
+      await this.analyticsStore.clearSeriesBySource(source, true);
+    } catch (e) {
+      console.error(e);
+    }
   }
 }

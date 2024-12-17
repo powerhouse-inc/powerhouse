@@ -2,13 +2,14 @@ import { buildSubgraphSchema } from "@apollo/subgraph";
 import { IDocumentDriveServer } from "document-drive";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
-import { parse } from "graphql";
-import { Context } from "src/types";
+import { DocumentNode, parse } from "graphql";
+import gql from "graphql-tag";
+import { Context } from "src/subgraphs";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
   resolvers: GraphQLResolverMap<Context>,
-  typeDefs: string,
+  typeDefs: DocumentNode,
 ) =>
   buildSubgraphSchema([
     {
@@ -19,7 +20,7 @@ export const createSchema = (
 
 export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
-  typeDefs: string,
+  typeDefs: DocumentNode,
 ) => {
   const documentModels = documentDriveServer.getDocumentModels();
   let dmSchema = "";
@@ -63,29 +64,27 @@ export const getDocumentModelTypeDefs = (
   });
 
   // add the mutation and query types
-  const schema = `
-      ${scalarsTypeDefs.join("\n")}
-      
+  const schema = gql`
+    ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
 
+    type Operation {
+      type: String!
+      index: Int!
+      timestamp: DateTime!
+      hash: String!
+    }
+    interface IDocument {
+      name: String!
+      documentType: String!
+      revision: Int!
+      created: DateTime!
+      lastModified: DateTime!
+      operations: [Operation!]!
+    }
+    ${dmSchema.replaceAll(";", "")}
 
-      type Operation {
-        type: String!
-        index: Int!
-        timestamp: DateTime!
-        hash: String!
-      }
-      interface IDocument {
-          name: String!
-          documentType: String!
-          revision: Int!
-          created: DateTime!
-          lastModified: DateTime!
-          operations: [Operation!]!
-      }
-      ${dmSchema}
-  
-      ${typeDefs}
-      `;
+    ${typeDefs}
+  `;
 
-  return parse(schema.replaceAll(";", ""));
+  return schema;
 };

@@ -1,8 +1,14 @@
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import { IProcessor, IProcessorManager, ProcessorSetupArgs } from "./types";
-import { ProcessorClass, isProcessorClass } from "./processors";
+
+import {
+  Db,
+  IProcessor,
+  IProcessorManager,
+  ProcessorSetupArgs,
+} from "../types";
+import { IAnalyticsStore } from "./analytics-processor";
+import { isProcessorClass, ProcessorClass } from "./processor";
 
 export class ProcessorManager implements IProcessorManager {
   private reactor: IDocumentDriveServer;
@@ -10,6 +16,7 @@ export class ProcessorManager implements IProcessorManager {
 
   constructor(
     driveServer: IDocumentDriveServer,
+    private operationalStore: Db,
     private analyticsStore: IAnalyticsStore,
   ) {
     this.reactor = driveServer;
@@ -47,14 +54,15 @@ export class ProcessorManager implements IProcessorManager {
         ),
       ),
     );
+
+    console.log(`> Registered ${options.label} processor.`);
   }
 
   async registerProcessor(module: IProcessor | ProcessorClass) {
     const args: ProcessorSetupArgs = {
       reactor: this.reactor,
-      dataSources: {
-        analyticsStore: this.analyticsStore,
-      },
+      operationalStore: this.operationalStore,
+      analyticsStore: this.analyticsStore,
     };
 
     const processor = isProcessorClass(module) ? new module(args) : module;

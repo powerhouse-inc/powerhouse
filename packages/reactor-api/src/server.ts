@@ -1,18 +1,15 @@
 import { PGlite } from "@electric-sql/pglite";
-import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
-import { AnalyticsModel } from "@powerhousedao/analytics-engine-graphql";
+import { IDocumentDriveServer } from "document-drive";
+import express, { Express } from "express";
+import { Pool } from "pg";
+import { ProcessorManager } from "./processors";
+import { SubgraphManager } from "./subgraphs/manager";
+import { API } from "./types";
+import { getDbClient } from "./utils/get-db-client";
 import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
-import { IDocumentDriveServer } from "document-drive";
-import express, { Express } from "express";
-import { Pool } from "pg";
-import { ReactorRouterManager } from "./router";
-import { getKnexClient } from "./utils/get-knex-client";
-import { ProcessorManager } from "./processor-manager";
-import { API } from "./types";
-import { initialize } from "./subgraphs/analytics";
 
 type Options = {
   express?: Express;
@@ -29,25 +26,21 @@ export async function startAPI(
 ): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
-
-  const knex = getKnexClient(options.dbPath);
-  await initialize(knex);
-
+  const db = getDbClient(options.dbPath);
   const analyticsStore = new KnexAnalyticsStore({
     executor: new KnexQueryExecutor(),
-    knex,
+    knex: db,
   });
-  const reactorRouterManager = new ReactorRouterManager("/", app, reactor);
-  reactorRouterManager.setAdditionalContextFields({
-    dataSources: {
-      db: {
-        Analytics: new AnalyticsModel(new AnalyticsQueryEngine(analyticsStore)),
-      },
-    },
-  });
-  await reactorRouterManager.init();
-  const processorManager = new ProcessorManager(reactor, analyticsStore);
+  const subgraphManager = new SubgraphManager(
+    "/",
+    app,
+    reactor,
+    db,
+    analyticsStore,
+  );
+  await subgraphManager.init();
+  const processorManager = new ProcessorManager(reactor, db, analyticsStore);
 
   app.listen(port);
-  return { app, reactorRouterManager, processorManager };
+  return { app, subgraphManager, processorManager };
 }

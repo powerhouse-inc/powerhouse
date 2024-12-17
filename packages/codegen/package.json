@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.23.3",
+  "version": "0.25.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "main": "dist/index.js",
