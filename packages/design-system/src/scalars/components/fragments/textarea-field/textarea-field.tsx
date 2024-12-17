@@ -74,18 +74,22 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     },
     ref,
   ) => {
-    const autoCompleteValue = autoComplete ? "on" : "off";
+    const autoCompleteValue =
+      autoComplete === undefined ? undefined : autoComplete ? "on" : "off";
     const hasError = errors && errors.length > 0;
+    const hasContentBelow =
+      !!description ||
+      (Array.isArray(warnings) && warnings.length > 0) ||
+      (Array.isArray(errors) && errors.length > 0);
 
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Prevent Enter key if multiline is false
-      if (multiline === false && e.key === "Enter") {
+      // Prevent Enter key if multiline is falsy
+      if (!multiline && e.key === "Enter") {
         e.preventDefault();
       }
-
       // Call the original onKeyDown
       props.onKeyDown?.(e);
     };
@@ -97,7 +101,9 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           // Reset height to allow shrinking
           textarea.style.height = "auto";
           // Set to scrollHeight to expand based on content
-          textarea.style.height = `${textarea.scrollHeight}px`;
+          setTimeout(() => {
+            textarea.style.height = `${textarea.scrollHeight}px`;
+          }, 0);
         }
       };
       if (value !== undefined && autoExpand) {
@@ -114,7 +120,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           transformer: (value?: string) => value?.replace(/\n/g, ""),
           options: {
             trigger: "change",
-            if: multiline === false,
+            if: !multiline,
           },
         },
       ],
@@ -141,7 +147,6 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               autoComplete={autoCompleteValue}
               className={cn(
                 textareaBaseStyles,
-
                 // Resize behavior based on autoExpand
                 autoExpand
                   ? "resize-none overflow-hidden"
@@ -150,7 +155,6 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
                       "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300",
                       "dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600",
                     ],
-
                 className,
               )}
               ref={ref}
@@ -160,14 +164,19 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               defaultValue={defaultValue}
               minLength={minLength}
               placeholder={placeholder}
-              rows={multiline === false ? 1 : rows}
+              rows={multiline ? rows : 1}
               onChange={onChange}
               onKeyDown={handleKeyDown}
               {...props}
             />
           </ValueTransformer>
           {typeof maxLength === "number" && maxLength > 0 && (
-            <div className="mt-0.5 flex justify-end">
+            <div
+              className={cn(
+                "mt-0.5 flex justify-end",
+                hasContentBelow && "-mb-1",
+              )}
+            >
               <CharacterCounter maxLength={maxLength} value={value ?? ""} />
             </div>
           )}

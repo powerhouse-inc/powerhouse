@@ -12,7 +12,11 @@ export const validatePositiveAmount =
   (value: AmountValue): true | string => {
     const amount =
       type === "AmountCurrency" ? (value as AmountCurrency).amount : value;
-    return allowNegative || isPositiveOrUndefiend(amount);
+    return (
+      allowNegative ||
+      isPositiveOrUndefiend(amount) ||
+      "Must be a positive number"
+    );
   };
 
 export const validateIsBigIntAmount =

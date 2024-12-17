@@ -90,7 +90,7 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
           <div
             className={cn(
               "mt-[-6px] flex justify-end",
-              hasContentBelow && "-mb-1.5",
+              hasContentBelow && "-mb-1",
             )}
           >
             <CharacterCounter maxLength={maxLength} value={value ?? ""} />

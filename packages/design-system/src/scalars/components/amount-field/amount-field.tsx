@@ -1,5 +1,4 @@
 import React, { FC, useId } from "react";
-import { InputNumberProps } from "../types";
 import { NumberFieldProps, NumberFieldRaw } from "../number-field";
 import {
   FormDescription,
@@ -13,6 +12,7 @@ import {
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
 import { AmountFieldPropsGeneric, AmountValue } from "./types";
+import { InputNumberProps } from "../number-field/types";
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
   Omit<InputNumberProps, "onChange" | "onBlur"> & {
