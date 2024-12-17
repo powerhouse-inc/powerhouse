@@ -96,6 +96,25 @@ export const Currency: Story = {
     },
   },
 };
+
+export const CurrencyWithActive: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    allowedCurrencies: ["USD", "EUR"],
+    type: "AmountCurrency",
+    value: {
+      amount: 345,
+      currency: "USD",
+    },
+    currencyPosition: "right",
+    numberProps: {
+      autoFocus: true,
+    },
+    step: 0,
+  },
+};
 export const Token: Story = {
   args: {
     selectName: "currency",
@@ -183,28 +202,12 @@ export const CurrencyWithDisable: Story = {
     name: "amount",
     allowedCurrencies: ["USD", "EUR"],
     type: "AmountCurrency",
+    currencyPosition: "right",
     value: {
       amount: 345,
       currency: "USD",
     },
     disabled: true,
-    step: 0,
-  },
-};
-export const CurrencyWithActive: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    type: "AmountCurrency",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    numberProps: {
-      autoFocus: true,
-    },
     step: 0,
   },
 };
@@ -215,6 +218,7 @@ export const HoverWithCurrency: Story = {
     label: "Enter Amount and Select Currency",
     name: "amount",
     allowedCurrencies: ["USD", "EUR"],
+    currencyPosition: "right",
     type: "AmountCurrency",
     value: {
       amount: 345,
@@ -235,6 +239,7 @@ export const Required: Story = {
     name: "amount",
     allowedCurrencies: ["USD", "EUR"],
     required: true,
+    currencyPosition: "right",
     type: "AmountCurrency",
     value: {
       amount: 345,
@@ -249,6 +254,7 @@ export const WithWarning: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
@@ -264,6 +270,7 @@ export const WithError: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
@@ -279,6 +286,7 @@ export const WithMultipleErrors: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
