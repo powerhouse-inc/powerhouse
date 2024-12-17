@@ -152,6 +152,24 @@ describe("UrlField", () => {
     expect(await screen.findByText("URL may be truncated")).toBeInTheDocument();
   });
 
+  it("should not show warnings if the prop is set false", async () => {
+    const user = userEvent.setup();
+    renderWithForm(
+      <UrlField
+        data-testid="url-field"
+        name="test-url"
+        label="Website URL"
+        showWarnings={false}
+      />,
+    );
+
+    const input = screen.getByTestId("url-field");
+    await user.type(input, "https://example.com/test...");
+    await user.tab(); // trigger blur
+
+    expect(screen.queryByText("URL may be truncated")).not.toBeInTheDocument();
+  });
+
   it("should be valid when valid", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
@@ -166,5 +184,45 @@ describe("UrlField", () => {
     const input = screen.getByTestId("url-field");
     await user.type(input, "https://example.com{enter}");
     expect(onSubmit).toHaveBeenCalled();
+  });
+
+  it("should render platform built-in icon when URL matches configured hostname", () => {
+    renderWithForm(
+      <UrlField
+        data-testid="url-field"
+        name="test-url"
+        label="Website URL"
+        value="https://github.com/test"
+        platformIcons={{
+          "github.com": "Github",
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("icon-fallback")).toBeInTheDocument();
+  });
+
+  it("should render a custom icon when hostname has no configured icon", () => {
+    renderWithForm(
+      <UrlField
+        data-testid="url-field"
+        name="test-url"
+        label="Website URL"
+        value="https://github.com/test"
+        platformIcons={{
+          "github.com": <span data-testid="custom-icon">Custom Icon</span>,
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
+  });
+
+  it("should not render any icon when platformIcons prop is not provided", () => {
+    renderWithForm(
+      <UrlField data-testid="url-field" name="test-url" label="Website URL" />,
+    );
+
+    expect(screen.queryByTestId("icon-fallback")).not.toBeInTheDocument();
   });
 });

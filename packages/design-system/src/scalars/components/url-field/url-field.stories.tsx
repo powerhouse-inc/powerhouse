@@ -37,12 +37,12 @@ const meta: Meta<typeof UrlField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    showIcon: {
-      control: "boolean",
-      description: "Show the protocol icon",
+    platformIcons: {
+      control: "object",
+      description:
+        "An object where the key is the hostname and the value is the icon name or a React element",
       table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
+        type: { summary: "Record<string, IconName | ReactElement>" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -109,5 +109,22 @@ export const WithWarning: Story = {
     label: "Website URL",
     value: "https://example.com",
     warnings: ["URL may be unreachable"],
+  },
+};
+
+export const WithPlatformIcon: Story = {
+  args: {
+    label: "Website URL",
+    value: "https://github.com/test",
+    platformIcons: {
+      "github.com": "Github",
+      "linkedin.com": "Linkedin",
+      "twitter.com": "XTwitter",
+      "x.com": "XTwitter",
+      "youtube.com": "Youtube",
+      "forum.sky.money": "Forum",
+      "discord.com": "Discord",
+      "discord.gg": "Discord",
+    },
   },
 };
