@@ -32,7 +32,7 @@ export async function startAPI(
     console.log("dbPath", dbPath);
 
     if (dbPath?.startsWith("postgres")) {
-      const pgStore = new PostgresAnalyticsStore(dbPath);
+      const pgStore = new PostgresAnalyticsStore({ connectionString: dbPath });
       return pgStore;
     }
 

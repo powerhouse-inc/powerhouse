@@ -36,7 +36,7 @@
     "@powerhousedao/analytics-engine-browser": "^0.4.0",
     "@powerhousedao/analytics-engine-core": "^0.3.0",
     "@powerhousedao/analytics-engine-knex": "^0.4.0",
-    "@powerhousedao/analytics-engine-pg": "^0.3.0",
+    "@powerhousedao/analytics-engine-pg": "^0.4.0",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "document-model-libs": "workspace:*",
