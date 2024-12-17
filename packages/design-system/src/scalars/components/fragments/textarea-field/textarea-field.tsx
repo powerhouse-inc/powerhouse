@@ -32,18 +32,20 @@ export interface TextareaProps
 
 const textareaBaseStyles = cn(
   // Base styles
-  "flex w-full min-h-9 rounded-md text-[14px] font-normal leading-5",
-  // Colors & Background
+  "flex min-h-9 w-full rounded-md text-sm font-normal leading-5 text-gray-900 dark:text-gray-50",
+  // Border & Background
   "dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white",
+  // Padding
+  "px-3 py-[7px]",
   // Placeholder
-  "font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500",
-  // Padding & Spacing
-  "px-3 py-[7.2px]",
-  // Focus state
-  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 focus-visible:ring-offset-white",
-  "dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900",
+  "font-sans placeholder:text-gray-500 dark:placeholder:text-gray-600",
+  // Focus styles
+  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white",
+  "dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 dark:focus:bg-charcoal-900 focus:bg-gray-50",
   // Disabled state
-  "disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500",
+  "disabled:cursor-not-allowed",
+  "disabled:border-gray-300 disabled:bg-white disabled:text-gray-700",
+  "disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300",
 );
 
 const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
@@ -101,9 +103,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           // Reset height to allow shrinking
           textarea.style.height = "auto";
           // Set to scrollHeight to expand based on content
-          setTimeout(() => {
-            textarea.style.height = `${textarea.scrollHeight}px`;
-          }, 0);
+          textarea.style.height = `${textarea.scrollHeight}px`;
         }
       };
       if (value !== undefined && autoExpand) {
@@ -152,8 +152,11 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
                   ? "resize-none overflow-hidden"
                   : [
                       "resize-y",
-                      "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300",
-                      "dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600",
+                      "scrollbar-thin scrollbar-gutter-stable",
+                      "scrollbar-track-transparent",
+                      "scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-300",
+                      "dark:scrollbar-thumb-charcoal-700 dark:hover:scrollbar-thumb-charcoal-700",
+                      "scrollbar-thumb-rounded-md",
                     ],
                 className,
               )}

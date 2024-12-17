@@ -26,14 +26,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     maxLength: 10,
-    value: "Hello",
-  },
-};
-
-export const NearLimit: Story = {
-  args: {
-    maxLength: 10,
-    value: "Hello Wor",
+    value: "",
   },
 };
 
@@ -48,13 +41,6 @@ export const ExceedingLimit: Story = {
   args: {
     maxLength: 10,
     value: "Hello World!",
-  },
-};
-
-export const Empty: Story = {
-  args: {
-    maxLength: 10,
-    value: "",
   },
 };
 
