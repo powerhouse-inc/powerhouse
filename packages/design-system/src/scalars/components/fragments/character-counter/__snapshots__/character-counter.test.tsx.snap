@@ -11,7 +11,7 @@ exports[`CharacterCounter > should match snapshot 1`] = `
       5
     </span>
     <span
-      class="text-gray-300"
+      class="text-gray-300 dark:text-gray-700"
     >
       /
       10
