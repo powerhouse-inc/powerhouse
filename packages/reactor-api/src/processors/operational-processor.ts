@@ -12,11 +12,11 @@ export abstract class OperationalProcessor<
 
   constructor(args: ProcessorSetupArgs, options?: ProcessorOptions) {
     super(args, options);
-    this.operationalStore = args.dataSources.operationalStore;
+    this.operationalStore = args.operationalStore;
   }
 
   onSetup(args: ProcessorSetupArgs) {
     super.onSetup(args);
-    this.operationalStore = args.dataSources.operationalStore;
+    this.operationalStore = args.operationalStore;
   }
 }
