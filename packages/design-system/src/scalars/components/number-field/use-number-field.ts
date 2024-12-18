@@ -7,7 +7,6 @@ interface UseNumberFieldProps {
   minValue?: number;
   step?: number;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  isBigInt?: boolean;
   numericType?: NumericType;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   trailingZeros?: boolean;
@@ -20,7 +19,6 @@ export const useNumberField = ({
   minValue,
   step = 1,
   onChange,
-  isBigInt = false,
   numericType,
   onBlur,
   trailingZeros = false,
@@ -41,17 +39,7 @@ export const useNumberField = ({
   const showSteps = step !== 0;
 
   // Boolean to no convert float values to BigInt
-  const isBigIntExcludingFloats =
-    (numericType &&
-      isBigInt &&
-      ![
-        "Float",
-        "NegativeFloat",
-        "PositiveFloat",
-        "NonNegativeFloat",
-        "NonPositiveFloat",
-      ].includes(numericType)) ||
-    numericType === "BigInt";
+  const isBigInt = numericType && numericType === "BigInt";
 
   // Prevent to write invalid characters and handle the arrow keys
   const preventInvalidCharsAndHandleArrows = (
@@ -148,7 +136,7 @@ export const useNumberField = ({
     ] as NumericType[];
 
     const formattedValue = getDisplayValue(inputValue, {
-      isBigInt,
+      numericType,
       precision,
       trailingZeros,
     });
@@ -156,7 +144,7 @@ export const useNumberField = ({
     const isNotSafeValue =
       Math.abs(Number(formattedValue)) > Number.MAX_SAFE_INTEGER;
 
-    //Avoid to convert to no safe value in notation scientific
+    // //Avoid to convert to no safe value in notation scientific
     if (isNotSafeValue) {
       onBlur?.(e);
       return;
@@ -190,7 +178,7 @@ export const useNumberField = ({
     stepValueHandler,
     blockInvalidPaste,
     preventLetterInput,
-    isBigIntExcludingFloats,
+    isBigInt,
     handleBlur,
   };
 };
