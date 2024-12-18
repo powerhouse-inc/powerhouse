@@ -1,7 +1,6 @@
 /* eslint-disable react/jsx-props-no-spreading */
-/* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-max-depth */
-import React, { useId, useMemo, useEffect } from "react";
+import React, { useId, useMemo, useEffect, useCallback } from "react";
 import {
   Command,
   CommandInput,
@@ -43,6 +42,38 @@ export interface SelectFieldProps
     ErrorHandling,
     SelectProps {}
 
+const renderIcon = (
+  IconComponent:
+    | IconName
+    | React.ComponentType<{ className?: string }>
+    | undefined,
+  disabled?: boolean,
+) => {
+  if (typeof IconComponent === "string") {
+    return (
+      <Icon
+        name={IconComponent}
+        size={16}
+        className={cn(
+          "text-gray-700 dark:text-gray-400",
+          disabled && "opacity-50",
+        )}
+      />
+    );
+  }
+  return (
+    IconComponent && (
+      <IconComponent
+        className={cn(
+          "size-4",
+          "text-gray-700 dark:text-gray-400",
+          disabled && "opacity-50",
+        )}
+      />
+    )
+  );
+};
+
 export const SelectFieldRaw = React.forwardRef<
   HTMLButtonElement | HTMLDivElement,
   SelectFieldProps
@@ -56,6 +87,7 @@ export const SelectFieldRaw = React.forwardRef<
       defaultValue,
       value,
       onChange,
+      onBlur,
 
       // form-related props
       id: propId,
@@ -109,42 +141,24 @@ export const SelectFieldRaw = React.forwardRef<
       defaultValue,
       value,
       onChange,
+      onBlur,
     });
 
     const enabledOptions = options.filter((opt) => !opt.disabled);
 
-    const renderIcon = (
-      IconComponent:
-        | IconName
-        | React.ComponentType<{ className?: string }>
-        | undefined,
-      disabled?: boolean,
-    ) => {
-      if (typeof IconComponent === "string") {
-        return (
-          <Icon
-            name={IconComponent}
-            size={16}
-            className={cn(
-              "text-gray-700 dark:text-gray-400",
-              disabled && "opacity-50",
-            )}
-          />
-        );
-      }
-      return (
-        IconComponent && (
-          <IconComponent
-            className={cn(
-              "size-4",
-              "text-gray-700 dark:text-gray-400",
-              disabled && "opacity-50",
-            )}
-          />
-        )
-      );
-    };
+    const onTriggerBlur = useCallback(
+      (event: any) => {
+        if (!isPopoverOpen) {
+          // trigger the blur event when the trigger loses focus but it is not open
+          // as when the popover is open, the trigger loses focus the select as a component
+          // still has the focus
+          onBlur?.(event as React.FocusEvent<HTMLButtonElement>);
+        }
+      },
+      [onBlur, isPopoverOpen],
+    );
 
+    // TODO: this should be a component
     const Content = () => {
       const search = useCommandState((state) => state.search) as string;
 
@@ -159,6 +173,7 @@ export const SelectFieldRaw = React.forwardRef<
 
       // Scroll to top when search change
       useEffect(() => {
+        // TODO: do this work when there's multiple select fields in the same document?
         const commandList = document.querySelector(".select-command-list");
         if (commandList) {
           commandList.scrollTop = 0;
@@ -315,6 +330,7 @@ export const SelectFieldRaw = React.forwardRef<
         <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
           <Command className="relative">
             <PopoverTrigger asChild={true}>
+              {/* TODO: create a trigger component */}
               {searchable && searchPosition === "Input" ? (
                 // a div don´t have type="button" but PopoverTrigger expect a button
                 // we need to use PopoverAnchor but it requires some extra work
@@ -330,6 +346,7 @@ export const SelectFieldRaw = React.forwardRef<
                         setIsPopoverOpen(true);
                       }
                     }}
+                    onBlur={onTriggerBlur}
                     wrapperClassName={cn("mt-0 border-0 border-none")}
                     className={cn("pr-8", className)}
                     disabled={disabled}
@@ -358,6 +375,7 @@ export const SelectFieldRaw = React.forwardRef<
                       setIsPopoverOpen(true);
                     }
                   }}
+                  onBlur={onTriggerBlur}
                   disabled={disabled}
                   aria-invalid={errors.length > 0}
                   aria-label={
@@ -428,10 +446,7 @@ export const SelectFieldRaw = React.forwardRef<
   },
 );
 
-export const SelectField = withFieldValidation<SelectFieldProps>(
-  SelectFieldRaw,
-) as React.ForwardRefExoticComponent<
-  SelectFieldProps & React.RefAttributes<HTMLButtonElement | HTMLDivElement>
->;
+export const SelectField =
+  withFieldValidation<SelectFieldProps>(SelectFieldRaw);
 
 SelectField.displayName = "SelectField";
