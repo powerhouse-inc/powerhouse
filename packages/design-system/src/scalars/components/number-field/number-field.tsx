@@ -40,7 +40,6 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       maxValue,
       step = 1,
       pattern,
-      isBigInt = false,
       trailingZeros = false,
       numericType,
       precision = 0,
@@ -58,7 +57,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       stepValueHandler,
       blockInvalidPaste,
       preventLetterInput,
-      isBigIntExcludingFloats,
+      isBigInt,
       handleBlur,
     } = useNumberField({
       value,
@@ -66,7 +65,6 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       minValue,
       step,
       onChange,
-      isBigInt,
       numericType,
       onBlur,
       trailingZeros,
@@ -108,7 +106,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             onChange={onChange}
             onPaste={blockInvalidPaste}
             ref={ref}
-            data-cast={isBigIntExcludingFloats ? "BigInt" : "Number"}
+            data-cast={isBigInt ? "BigInt" : "Number"}
             {...props}
           />
           {showSteps && (
