@@ -3,10 +3,10 @@ import { Document, OperationScope } from "document-model/document";
 import { Express } from "express";
 import { ProcessorClass } from "./processors/processor";
 import { SubgraphManager } from "./subgraphs/manager";
-import { Db } from "./utils/get-db-client";
+import { Db } from "./utils/db";
 import { IAnalyticsStore } from "./processors/analytics-processor";
 
-export type { Db } from "./utils/get-db-client";
+export type { Db } from "./utils/db";
 
 export type IProcessorManager = {
   registerProcessor(module: IProcessor | ProcessorClass): Promise<IProcessor>;

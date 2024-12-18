@@ -1,14 +1,12 @@
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { Document, OperationScope } from "document-model/document";
+import { Db, ProcessorOptions, ProcessorSetupArgs } from "src/types";
 import { Processor } from "./processor";
-import { ProcessorOptions, ProcessorSetupArgs } from "src/types";
-import { Knex } from "knex";
 
 export abstract class OperationalProcessor<
   D extends Document = Document,
   S extends OperationScope = OperationScope,
 > extends Processor<D, S> {
-  protected operationalStore: Knex;
+  protected operationalStore: Db;
 
   constructor(args: ProcessorSetupArgs, options?: ProcessorOptions) {
     super(args, options);
