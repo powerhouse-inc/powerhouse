@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 import type {
   FieldCommonProps,
@@ -103,15 +103,14 @@ export const withFieldValidation = <T extends PossibleProps>(
         name={name}
         defaultValue={(value ?? props.defaultValue) as unknown}
         disabled={props.disabled}
+        // eslint-disable-next-line react/jsx-no-bind
         render={({
           // just preventing that onChange is included in the rest of the props
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           field: { onChange: _, onBlur: onBlurController, ...rest },
-        }) => (
-          <Component
-            {...(props as T)}
-            {...rest}
-            onBlur={(event: React.FocusEvent<HTMLInputElement>) => {
+        }) => {
+          const onBlurCallback = useCallback(
+            (event: React.FocusEvent<HTMLInputElement>) => {
               if (showErrorOnBlur) {
                 void trigger(name);
               } else {
@@ -122,8 +121,12 @@ export const withFieldValidation = <T extends PossibleProps>(
               if (onBlurProp) {
                 onBlurProp(event);
               }
-            }}
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+            },
+            [onBlurController],
+          );
+
+          const onChangeCallback = useCallback(
+            (event: React.ChangeEvent<HTMLInputElement>) => {
               // update value state
               if (onChangeProp) {
                 // the fields is controlled by the parent
@@ -164,10 +167,20 @@ export const withFieldValidation = <T extends PossibleProps>(
                   void trigger(name);
                 }
               }
-            }}
-            errors={errors}
-          />
-        )}
+            },
+            [],
+          );
+
+          return (
+            <Component
+              {...(props as T)}
+              {...rest}
+              onBlur={onBlurCallback}
+              onChange={onChangeCallback}
+              errors={errors}
+            />
+          );
+        }}
         rules={{
           ...(props.required && {
             required: {

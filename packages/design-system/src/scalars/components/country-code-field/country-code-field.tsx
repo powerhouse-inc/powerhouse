@@ -10,63 +10,74 @@ export type CountryCodeFieldProps = FieldCommonProps<string> &
   ErrorHandling &
   CountryCodeProps;
 
-const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = ({
-  onChange,
-  placeholder,
-  allowedCountries,
-  excludedCountries,
-  includeDependentAreas = false,
-  viewMode = "NamesOnly",
-  showFlagIcons = true,
-  enableSearch,
-  ...props
-}) => {
-  const defaultOptions = countries.all
-    .filter(
-      (country) =>
-        country.alpha2 && country.emoji && country.status !== "deleted",
-    )
-    .map((country) => ({
-      value: country.alpha2,
-      label:
-        viewMode === "CodesOnly"
-          ? country.alpha2
-          : viewMode === "NamesAndCodes"
-            ? `${country.name} (${country.alpha2})`
-            : country.name,
-      icon: showFlagIcons
-        ? () => (
-            <CircleFlag
-              className="size-4"
-              countryCode={country.alpha2.toLowerCase()}
-              height={16}
-            />
+const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
+  HTMLButtonElement | HTMLDivElement,
+  CountryCodeFieldProps
+>(
+  (
+    {
+      onChange,
+      placeholder,
+      allowedCountries,
+      excludedCountries,
+      // TODO: implement dependant areas
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      includeDependentAreas = false,
+      viewMode = "NamesOnly",
+      showFlagIcons = true,
+      enableSearch,
+      ...props
+    },
+    ref,
+  ) => {
+    const defaultOptions = countries.all
+      .filter(
+        (country) =>
+          country.alpha2 && country.emoji && country.status !== "deleted",
+      )
+      .map((country) => ({
+        value: country.alpha2,
+        label:
+          viewMode === "CodesOnly"
+            ? country.alpha2
+            : viewMode === "NamesAndCodes"
+              ? `${country.name} (${country.alpha2})`
+              : country.name,
+        icon: showFlagIcons
+          ? () => (
+              <CircleFlag
+                className="size-4"
+                countryCode={country.alpha2.toLowerCase()}
+                height={16}
+              />
+            )
+          : undefined,
+      }))
+      .sort((a, b) => (a.label > b.label ? 1 : a.label < b.label ? -1 : 0));
+
+    const options =
+      allowedCountries || excludedCountries
+        ? defaultOptions.filter(
+            (option) =>
+              (!allowedCountries || allowedCountries.includes(option.value)) &&
+              !excludedCountries?.includes(option.value),
           )
-        : undefined,
-    }))
-    .sort((a, b) => (a.label > b.label ? 1 : a.label < b.label ? -1 : 0));
+        : defaultOptions;
 
-  const options =
-    allowedCountries || excludedCountries
-      ? defaultOptions.filter(
-          (option) =>
-            (!allowedCountries || allowedCountries.includes(option.value)) &&
-            !excludedCountries?.includes(option.value),
-        )
-      : defaultOptions;
-
-  return (
-    <SelectFieldRaw
-      options={options}
-      optionsCheckmark="None"
-      searchable={enableSearch}
-      searchPosition="Input"
-      onChange={onChange}
-      placeholder={placeholder}
-      {...props}
-    />
-  );
-};
+    return (
+      <SelectFieldRaw
+        ref={ref}
+        options={options}
+        optionsCheckmark="None"
+        searchable={enableSearch}
+        searchPosition="Input"
+        onChange={onChange}
+        placeholder={placeholder}
+        {...props}
+      />
+    );
+  },
+);
 
 export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
   CountryCodeFieldRaw,

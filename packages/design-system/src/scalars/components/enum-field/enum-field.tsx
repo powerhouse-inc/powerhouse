@@ -31,21 +31,21 @@ export const EnumField: React.FC<EnumFieldProps> = ({
   options = [],
   ...props
 }) => {
-  if (variant === "Auto") {
-    return options.length < 6 ? (
-      <RadioGroupField options={options} {...(props as RadioGroupVariant)} />
-    ) : (
-      <SelectField options={options} {...(props as SelectVariant)} />
-    );
-  }
+  const radio = (
+    <RadioGroupField options={options} {...(props as RadioGroupVariant)} />
+  );
+  const select = (
+    <SelectField options={options} {...(props as SelectVariant)} />
+  );
 
-  if (variant === "RadioGroup") {
-    return (
-      <RadioGroupField options={options} {...(props as RadioGroupVariant)} />
-    );
+  switch (variant) {
+    case "RadioGroup":
+      return radio;
+    case "Select":
+      return select;
+    case "Auto":
+      return options.length < 6 ? radio : select;
   }
-
-  return <SelectField options={options} {...(props as SelectVariant)} />;
 };
 
 EnumField.displayName = "EnumField";
