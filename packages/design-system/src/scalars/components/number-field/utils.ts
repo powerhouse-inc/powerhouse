@@ -1,8 +1,7 @@
+import { MAX_SAFE_INTEGER } from "./number-field-validations";
 import { NumericType } from "./types";
 
 export const regex = /^-?\d*\.?\d*$/;
-
-export const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
 
 const floatTypes: NumericType[] = [
   "NegativeFloat",
