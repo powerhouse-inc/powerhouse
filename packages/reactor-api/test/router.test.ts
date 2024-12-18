@@ -4,7 +4,7 @@ import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import express from "express";
 import { SubgraphManager } from "src";
-import { getDbClient } from "src/utils/get-db-client";
+import { getDbClient } from "src/utils/db";
 import { describe, expect, it } from "vitest";
 
 const documentModels = [

@@ -5,7 +5,7 @@ import { Pool } from "pg";
 import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
-import { getDbClient } from "./utils/get-db-client";
+import { getDbClient } from "./utils/db";
 import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
