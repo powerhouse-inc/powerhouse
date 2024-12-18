@@ -75,7 +75,7 @@ export const useAmountField = ({
       value: { value: newValue },
       writable: false,
     });
-    onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
+    onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
   // Handle the change of the select
@@ -105,7 +105,7 @@ export const useAmountField = ({
       value: { value: newValue },
       writable: false,
     });
-    onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
+    onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
   // Handle the blur of the input
