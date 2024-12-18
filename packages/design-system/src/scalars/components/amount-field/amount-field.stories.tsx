@@ -35,14 +35,7 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    isBigInt: {
-      control: "boolean",
-      description: "Indicates if the input field should allow BigInt values",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
+
     numberProps: {
       control: "object",
       description: "All the props options for number field",
@@ -68,7 +61,6 @@ const meta = {
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minValue,
     ...PrebuiltArgTypes.maxValue,
-    ...PrebuiltArgTypes.allowNegative,
     ...PrebuiltArgTypes.precision,
     ...PrebuiltArgTypes.trailingZeros,
   },

@@ -10,7 +10,7 @@ exports[`UrlField > should match snapshot 1`] = `
       class="flex flex-col gap-2"
     >
       <label
-        class="inline-flex items-center text-sm font-medium leading-[22px] text-gray-900 dark:text-gray-50 mb-[3px]"
+        class="inline-flex items-center text-sm font-medium leading-4 text-gray-900 dark:text-gray-50 mb-[3px]"
         for=":r1:"
       >
         Website URL
