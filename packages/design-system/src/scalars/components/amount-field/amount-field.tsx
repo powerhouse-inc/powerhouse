@@ -38,7 +38,6 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   precision = 0,
   minValue,
   maxValue,
-  allowNegative,
   trailingZeros,
   onChange,
   onBlur,
@@ -121,7 +120,6 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             maxValue={maxValue}
             precision={precision}
             minValue={minValue}
-            allowNegative={allowNegative}
             trailingZeros={trailingZeros}
             onChange={handleOnChangeInput}
             className={cn(
