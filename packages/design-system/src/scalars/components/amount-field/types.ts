@@ -1,12 +1,8 @@
-import { currencies } from "@/scalars/lib/currency-list";
-
-export type CurrencyCode = (typeof currencies)[number];
-
 export type Amount = number;
 export type AmountPercentage = number;
 export interface AmountCurrency {
   amount: number;
-  currency: CurrencyCode;
+  currency: string;
 }
 export interface AmountToken {
   amount: bigint;
@@ -16,6 +12,11 @@ export interface AmountToken {
 export type AmountFieldPropsGeneric =
   | { type: "Amount"; value?: Amount }
   | { type: "AmountCurrency"; value?: AmountCurrency }
-  | { type: "AmountPercentage"; value?: AmountPercentage };
+  | { type: "AmountPercentage"; value?: AmountPercentage }
+  | { type: "AmountToken"; value?: AmountToken };
 
-export type AmountValue = Amount | AmountPercentage | AmountCurrency;
+export type AmountValue =
+  | Amount
+  | AmountPercentage
+  | AmountCurrency
+  | AmountToken;
