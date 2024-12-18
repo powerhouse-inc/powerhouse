@@ -18,7 +18,7 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "devDependencies": {
-    "@powerhousedao/analytics-engine-graphql": "^0.2.0",
+    "@powerhousedao/analytics-engine-graphql": "^0.2.1",
     "@powerhousedao/scalars": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
