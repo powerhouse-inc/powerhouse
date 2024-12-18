@@ -1,12 +1,48 @@
+import { NumericType } from "../components/number-field/types";
+
 export const isPositiveOrUndefiend = (value: unknown): true | string =>
   value === undefined || Number(value) >= 0
     ? true
     : "Value must be a positive value";
 
-export const isBigIntNumber = (value: unknown) => {
+export const isBigIntNumber = (
+  value: unknown,
+  numericType?: NumericType,
+  isBigInt?: boolean,
+) => {
+  const floatsTypes = [
+    "NegativeFloat",
+    "PositiveFloat",
+    "NonNegativeFloat",
+    "NonPositiveFloat",
+    "Float",
+  ] as NumericType[];
+
+  const integerTypes = [
+    "PositiveInt",
+    "NegativeInt",
+    "NonNegativeInt",
+    "NonPositiveInt",
+    "BigInt",
+    "Int",
+  ] as NumericType[];
+
+  const isFloat = numericType && floatsTypes.includes(numericType);
+  const isInteger = numericType && integerTypes.includes(numericType);
   const stringValue = String(value);
   const isLargeNumber = Math.abs(Number(stringValue)) > Number.MAX_SAFE_INTEGER;
-  return isLargeNumber ? "Value is too large for standard integer" : true;
+
+  // For float types, ignore isBigInt and only validate if it's a large number
+  if (isFloat) {
+    return isLargeNumber ? "Value is too large for float" : true;
+  }
+
+  // For integer types, allow large numbers only if isBigInt is true
+  if (isInteger) {
+    return isLargeNumber && !isBigInt ? "Value is too large for integer" : true;
+  }
+
+  return true;
 };
 
 export const isPrecisionZeroOrUndefiend = (

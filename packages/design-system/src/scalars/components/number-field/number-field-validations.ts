@@ -13,7 +13,9 @@ export const validatePositive =
 export const validateIsBigInt =
   ({ isBigInt, numericType }: NumberFieldProps) =>
   (value: unknown) => {
-    return isBigInt || numericType === "BigInt" || isBigIntNumber(value);
+    return (
+      numericType === "BigInt" || isBigIntNumber(value, numericType, isBigInt)
+    );
   };
 
 export const isInteger = (value: unknown): boolean =>
@@ -58,7 +60,7 @@ export const validateNumericType =
       }
 
       case "PositiveFloat": {
-        if (!isFloat(value)) return "Value must be a positive float ";
+        if (!isFloat(value)) return "Value must be a positive float";
 
         if (parseFloat(value as string) > 0) return true;
         return "Value must be a positive float";
