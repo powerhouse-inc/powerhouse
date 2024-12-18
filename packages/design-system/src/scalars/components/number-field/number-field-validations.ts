@@ -1,22 +1,4 @@
-import {
-  isBigIntNumber,
-  isPositiveOrUndefiend,
-} from "@/scalars/lib/share-number-validations";
 import { NumberFieldProps } from "./number-field";
-
-export const validatePositive =
-  ({ allowNegative }: NumberFieldProps) =>
-  (value: unknown): true | string => {
-    return allowNegative || isPositiveOrUndefiend(value);
-  };
-
-export const validateIsBigInt =
-  ({ isBigInt, numericType }: NumberFieldProps) =>
-  (value: unknown) => {
-    return (
-      numericType === "BigInt" || isBigIntNumber(value, numericType, isBigInt)
-    );
-  };
 
 export const isInteger = (value: unknown): boolean =>
   Number.isInteger(Number(value));

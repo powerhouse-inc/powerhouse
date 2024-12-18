@@ -6,10 +6,7 @@ import { FormGroup } from "../fragments/form-group";
 import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { withFieldValidation } from "../fragments/with-field-validation";
-import {
-  validateIsBigInt,
-  validateNumericType,
-} from "./number-field-validations";
+import { validateNumericType } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
 import { regex } from "./utils";
 import { InputNumberProps } from "./types";
@@ -154,7 +151,6 @@ export const NumberField = withFieldValidation<NumberFieldProps>(
   NumberFieldRaw,
   {
     validations: {
-      _isBigInt: validateIsBigInt,
       _numericType: validateNumericType,
     },
   },
