@@ -19,7 +19,9 @@
     "test:all": "pnpm nx run-many --target=test --all",
     "storybook:all": "pnpm nx run-many --target=build-storybook --all",
     "check:all": "pnpm nx run-many --target=build,lint:nx,check-types,test,build-storybook --all",
-    "check:all:ci": "pnpm check:all --exclude=document-drive"
+    "check:all:ci": "pnpm check:all --exclude=document-drive",
+    "check:affected": "pnpm nx affected --target=build,lint:nx,check-types,test,build-storybook",
+    "check:affected:ci": "pnpm check:affected --exclude=document-drive"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3",

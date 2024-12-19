@@ -1,0 +1,46 @@
+{
+  "name": "@renown/sdk",
+  "version": "0.0.1",
+  "description": "",
+  "license": "AGPL-3.0-only",
+  "private": false,
+  "type": "module",
+  "main": "./src/index.browser.ts",
+  "types": "./src/index.browser.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "node": "./src/index.node.ts",
+      "default": "./src/index.browser.ts"
+    }
+  },
+  "files": [
+    "/src",
+    "tsconfig.base.json",
+    "tsconfig.browser.json",
+    "tsconfig.node.json"
+  ],
+  "nx-release-publish": {
+    "options": {
+      "packageRoot": "dist/{projectRoot}"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.browser.json --noEmit",
+    "check-types:node": "tsc -p tsconfig.node.json --noEmit",
+    "check-types:brower": "tsc -p tsconfig.browser.json --noEmit",
+    "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.browser.json",
+    "build:browser": "tsc -p tsconfig.browser.json",
+    "build:node": "tsc -p tsconfig.node.json",
+    "clean": "rimraf dist/",
+    "clean:node_modules": "rimraf node_modules"
+  },
+  "peerDependencies": {
+    "document-model": "workspace:*"
+  },
+  "devDependencies": {
+    "document-model": "workspace:*"
+  }
+}
