@@ -24,6 +24,9 @@
     "lint": {
       "dependsOn": ["^build"]
     },
+    "check-types": {
+      "dependsOn": ["^build"]
+    },
     "generate": {
       "dependsOn": ["^build"]
     },
