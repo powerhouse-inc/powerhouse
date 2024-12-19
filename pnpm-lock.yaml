@@ -1041,6 +1041,9 @@ importers:
       '@powerhousedao/scalars':
         specifier: workspace:*
         version: link:../scalars
+      did-key-creator:
+        specifier: ^1.2.0
+        version: 1.2.0
       document-drive:
         specifier: workspace:*
         version: link:../document-drive
@@ -7901,6 +7904,10 @@ packages:
   diagnostics@1.1.1:
     resolution: {integrity: sha512-8wn1PmdunLJ9Tqbx+Fx/ZEuHfJf4NKSN2ZBj7SJC/OWRWha843+WsTjqMe1B5E3p28jqBlp+mJ2fPVxPyNgYKQ==}
 
+  did-key-creator@1.2.0:
+    resolution: {integrity: sha512-mo5hPvQeAskHQT5s3QCFLttv6fQxr5S/Lo5IXM9lkDml7Y0pWJp7xNsOyf7tGwYBLpTyFDecOU+TSfZPWEAk5g==}
+    engines: {node: '>=14.06'}
+
   didyoumean@1.2.2:
     resolution: {integrity: sha512-gxtyfqMg7GKyhQmb056K7M3xszy/myH8w+B4RT+QXBQsvAOdc3XymqDDPHx1BgPgsdAA5SIifona89YtRATDzw==}
 
@@ -10740,6 +10747,10 @@ packages:
   muggle-string@0.4.1:
     resolution: {integrity: sha512-VNTrAak/KhO2i8dqqnqnAHOa3cYBwXEZe9h+D5h/1ZqFSTEFHdM65lR7RoIqq3tBBYavsOXV84NoHXZ0AkPyqQ==}
 
+  multicodec@3.2.1:
+    resolution: {integrity: sha512-+expTPftro8VAW8kfvcuNNNBgb9gPeNYV9dn+z1kJRWF2vih+/S79f2RVeIwmrJBUJ6NT9IUPWnZDQvegEh5pw==}
+    deprecated: This module has been superseded by the multiformats module
+
   multiformats@9.9.0:
     resolution: {integrity: sha512-HoMUjhH9T8DDBNT+6xzkrd9ga/XiBI4xLr58LJACwK6G3HTOPeMz4nB4KJs33L2BelrIJa7P0VuNaVF3hMYfjg==}
 
@@ -13244,6 +13255,9 @@ packages:
     resolution: {integrity: sha512-ZPtzy0hu4cZjv3z5NW9gfKnNLjoz4y6uv4HlelAjDK7sY/xOkKZv9xK/WQpcsBB3jEybChz9DPC2U/+cusjJVQ==}
     engines: {node: '>=18'}
 
+  uint8arrays@2.1.10:
+    resolution: {integrity: sha512-Q9/hhJa2836nQfEJSZTmr+pg9+cDJS9XEAp7N2Vg5MzL3bK/mkMVfjscRGYruP9jNda6MAdf4QD/y78gSzkp6A==}
+
   uint8arrays@3.1.0:
     resolution: {integrity: sha512-ei5rfKtoRO8OyOIor2Rz5fhzjThwIHJZ3uyDPnDHTXbP0aMQ1RN/6AI5B5d9dBxJOU+BvOAk7ZQ1xphsX8Lrog==}
 
@@ -13563,6 +13577,9 @@ packages:
   value-or-promise@1.0.12:
     resolution: {integrity: sha512-Z6Uz+TYwEqE7ZN50gwn+1LCVo9ZVrpxRPOhOLnncYkY1ZzOYtrX8Fwf/rFktZ8R5mJms6EZf5TqNOMeZmnPq9Q==}
     engines: {node: '>=12'}
+
+  varint@6.0.0:
+    resolution: {integrity: sha512-cXEIW6cfr15lFv563k4GuVuW/fiwjknytD37jIOLSdSWuOI6WnO/oKwmP2FQTU2l01LP8/M5TSAJpzUaGe3uWg==}
 
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
@@ -22507,6 +22524,12 @@ snapshots:
       enabled: 1.0.2
       kuler: 1.0.1
 
+  did-key-creator@1.2.0:
+    dependencies:
+      multicodec: 3.2.1
+      multiformats: 9.9.0
+      uint8arrays: 2.1.10
+
   didyoumean@1.2.2: {}
 
   diff-sequences@29.6.3: {}
@@ -25986,6 +26009,11 @@ snapshots:
 
   muggle-string@0.4.1: {}
 
+  multicodec@3.2.1:
+    dependencies:
+      uint8arrays: 3.1.0
+      varint: 6.0.0
+
   multiformats@9.9.0: {}
 
   mutative@1.1.0: {}
@@ -28764,6 +28792,10 @@ snapshots:
 
   uint8array-extras@1.4.0: {}
 
+  uint8arrays@2.1.10:
+    dependencies:
+      multiformats: 9.9.0
+
   uint8arrays@3.1.0:
     dependencies:
       multiformats: 9.9.0
@@ -29013,6 +29045,8 @@ snapshots:
       react: 18.3.1
 
   value-or-promise@1.0.12: {}
+
+  varint@6.0.0: {}
 
   vary@1.1.2: {}
 
