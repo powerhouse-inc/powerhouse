@@ -1,3 +1,4 @@
+export * from "./amount-field";
 export * from "./boolean-field";
 export * from "./country-code-field";
 export * from "./enum-field";

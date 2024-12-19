@@ -254,17 +254,6 @@ export const PrebuiltArgTypes = {
       },
     },
   },
-  //Improve this to hidden this props base in the numericType
-  allowNegative: {
-    allowNegative: {
-      control: "boolean",
-      description: "Allows the input field to accept negative numbers",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.VALIDATION,
-      },
-    },
-  },
   precision: {
     precision: {
       control: "number",

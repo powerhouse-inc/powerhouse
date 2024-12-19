@@ -37,8 +37,7 @@ describe("NumberField", () => {
             <NumberField
               label="BigInt Field"
               name="BigInt Field"
-              isBigInt
-              numericType="PositiveInt"
+              numericType="BigInt"
             />
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Submitting..." : "Submit"}

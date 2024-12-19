@@ -1,22 +1,4 @@
-import {
-  isBigIntNumber,
-  isPositiveOrUndefiend,
-} from "@/scalars/lib/share-number-validations";
 import { NumberFieldProps } from "./number-field";
-
-export const validatePositive =
-  ({ allowNegative }: NumberFieldProps) =>
-  (value: unknown): true | string => {
-    return allowNegative || isPositiveOrUndefiend(value);
-  };
-
-export const validateIsBigInt =
-  ({ isBigInt, numericType }: NumberFieldProps) =>
-  (value: unknown) => {
-    return (
-      numericType === "BigInt" || isBigIntNumber(value, numericType, isBigInt)
-    );
-  };
 
 export const isInteger = (value: unknown): boolean =>
   Number.isInteger(Number(value));
@@ -26,13 +8,36 @@ export const isFloat = (value: unknown): boolean => {
   return !isNaN(number) && isFinite(number);
 };
 
+export const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
 export const validateNumericType =
   ({ numericType }: NumberFieldProps) =>
   (value: unknown) => {
     const isPositive = Number(value) > 0;
     const isNegative = Number(value) < 0;
     const isInt = isInteger(value);
+    const numberValue = Number(value);
+
     if (value === "") return true;
+
+    if (
+      Math.abs(numberValue) > Number.MAX_SAFE_INTEGER &&
+      numericType !== "BigInt"
+    ) {
+      const isFloatType =
+        numericType &&
+        [
+          "Float",
+          "PositiveFloat",
+          "NegativeFloat",
+          "NonNegativeFloat",
+          "NonPositiveFloat",
+        ].includes(numericType);
+
+      return isFloatType
+        ? "Value is too large for float"
+        : "Value is too large for int";
+    }
+
     switch (numericType) {
       case "PositiveInt": {
         if (!isInt) return "Value must be a positive integer";
