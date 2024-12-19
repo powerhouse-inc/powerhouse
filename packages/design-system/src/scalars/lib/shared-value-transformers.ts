@@ -25,7 +25,7 @@ export const sharedValueTransformers: Record<
       if: ifParam,
     },
   }),
-  trimOnEnter: (ifParam: boolean) => ({
+  trimOnEnter: (ifParam = true) => ({
     transformer: (value?: string) => value?.trim(),
     options: {
       trigger: "keyDown",
