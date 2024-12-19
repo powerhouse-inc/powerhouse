@@ -39,6 +39,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
+    "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "document-model-libs": "workspace:*",
