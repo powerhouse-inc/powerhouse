@@ -7,7 +7,9 @@ import { ErrorHandling, FieldCommonProps, TextProps } from "../../types";
 import { FormDescription } from "../form-description";
 import { CharacterCounter } from "../character-counter";
 import { withFieldValidation } from "../with-field-validation";
-import ValueTransformer from "../value-transformer/value-transformer";
+import ValueTransformer, {
+  type TransformerType,
+} from "@/scalars/components/fragments/value-transformer";
 import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
 import { cn } from "@/scalars/lib/utils";
 
@@ -53,11 +55,12 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
       (Array.isArray(warnings) && warnings.length > 0) ||
       (Array.isArray(errors) && errors.length > 0);
 
-    const transformers = useMemo(
+    const transformers: TransformerType = useMemo(
       () => [
         sharedValueTransformers.trimOnBlur(!!trim),
         sharedValueTransformers.lowercaseOnChange(!!lowercase),
         sharedValueTransformers.uppercaseOnChange(!!uppercase),
+        sharedValueTransformers.trimOnEnter(!!trim),
       ],
       [trim, lowercase, uppercase],
     );

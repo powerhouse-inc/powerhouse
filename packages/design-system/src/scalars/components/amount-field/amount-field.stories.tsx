@@ -7,6 +7,7 @@ import {
   PrebuiltArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
+import { Icon, IconName } from "@/powerhouse";
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",
@@ -34,14 +35,7 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    isBigInt: {
-      control: "boolean",
-      description: "Indicates if the input field should allow BigInt values",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
+
     numberProps: {
       control: "object",
       description: "All the props options for number field",
@@ -67,7 +61,6 @@ const meta = {
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minValue,
     ...PrebuiltArgTypes.maxValue,
-    ...PrebuiltArgTypes.allowNegative,
     ...PrebuiltArgTypes.precision,
     ...PrebuiltArgTypes.trailingZeros,
   },
@@ -77,6 +70,10 @@ const meta = {
     name: "amount-field",
   },
 } satisfies Meta<typeof AmountField>;
+
+const IconComponent = (name: IconName) => {
+  return () => <Icon name={name} size={16} />;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -96,25 +93,27 @@ export const Currency: Story = {
     },
   },
 };
-
-export const CurrencyWithActive: Story = {
+export const TokenIcon: Story = {
+  name: "Token Icon",
   args: {
     selectName: "currency",
     label: "Enter Amount and Select Currency",
     name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    type: "AmountCurrency",
-    value: {
-      amount: 345,
-      currency: "USD",
+    step: 0,
+    type: "AmountToken",
+    allowedTokens: ["BTC", "ETH"],
+    tokenIcons: {
+      BTC: IconComponent("Briefcase"),
+      ETH: IconComponent("Briefcase"),
     },
     currencyPosition: "right",
-    numberProps: {
-      autoFocus: true,
+    value: {
+      amount: 3454564564 as unknown as bigint,
+      token: "BTC",
     },
-    step: 0,
   },
 };
+
 export const Token: Story = {
   args: {
     selectName: "currency",

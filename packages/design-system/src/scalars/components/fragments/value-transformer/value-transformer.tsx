@@ -4,7 +4,7 @@ import { useFormContext } from "react-hook-form";
 
 export type ValueTransformer = (value?: any) => any;
 
-export type TransformerTrigger = "blur" | "change";
+export type TransformerTrigger = "blur" | "change" | "keyDown";
 
 export type TransformerObject = {
   /**
@@ -118,6 +118,7 @@ function _applyTransformers(
  */
 function ValueTransformer({ transformers, children }: ValueTransformerProps) {
   const { setValue } = useFormContext();
+
   useEffect(() => {
     // apply all the transformers on mount to prevent untransformed values
     // if the field is not touched by the user
@@ -166,12 +167,32 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
 
       if (!deepEqual(transformedValue, target.value)) {
         // only dispatch change if the value has changed
-
         setNativeValue(target, transformedValue);
-        const changeEvent = new Event("change", {
-          bubbles: true,
-        });
+        const changeEvent = new Event("change", { bubbles: true });
         target.dispatchEvent(changeEvent);
+      }
+    },
+    onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => {
+      // call the original onKeyDown
+      (children.props as React.HTMLAttributes<HTMLInputElement>).onKeyDown?.(
+        event,
+      );
+
+      // apply the transformers
+      if (event.key === "Enter") {
+        const target = event.target as HTMLInputElement;
+        const transformedValue = _applyTransformers(
+          transformers,
+          target.value,
+          "keyDown",
+        );
+
+        // only dispatch change if the value has changed
+        if (!deepEqual(transformedValue, target.value)) {
+          setNativeValue(target, transformedValue);
+          const changeEvent = new Event("change", { bubbles: true });
+          target.dispatchEvent(changeEvent);
+        }
       }
     },
   });

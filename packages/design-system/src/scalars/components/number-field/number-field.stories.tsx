@@ -30,14 +30,6 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    isBigInt: {
-      control: "boolean",
-      description: "Indicates if the input field should allow BigInt values",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
     autoFocus: {
       table: {
         disable: true,
@@ -70,11 +62,13 @@ const meta = {
         "- NegativeFloat: Negative decimals (-1.0, -2.5)\n" +
         "- NonNegativeFloat: Zero and positive decimals (0.0, 1.0)\n" +
         "- NonPositiveFloat: Zero and negative decimals (0.0, -1.0)\n" +
-        "- BigInt: Large integers (999999999999999999)\n",
+        "- BigInt: Large integers (9999999999999999)\n" +
+        "- Float: Any decimal number (1.0, 2.5, -1.0, -2.5)\n" +
+        "- Int: Any integer number, including positive (1, 2), negative (-1, -2), and zero\n",
       table: {
         type: {
           summary:
-            '"PositiveInt" | "NegativeInt" | "NonNegativeInt" | "NonPositiveInt" | "PositiveFloat" | "NegativeFloat" | "NonNegativeFloat" | "NonPositiveFloat" | "BigInt"',
+            '"PositiveInt" | "NegativeInt" | "NonNegativeInt" | "NonPositiveInt" | "PositiveFloat" | "NegativeFloat" | "NonNegativeFloat" | "NonPositiveFloat" | "BigInt" | "Int" | "Float"',
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
@@ -83,7 +77,6 @@ const meta = {
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minValue,
     ...PrebuiltArgTypes.maxValue,
-    ...PrebuiltArgTypes.allowNegative,
     ...PrebuiltArgTypes.precision,
     ...PrebuiltArgTypes.trailingZeros,
   },
@@ -212,8 +205,8 @@ export const WithBigInt: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 999999,
-    isBigInt: true,
+    value: 99992342343299,
+    numericType: "BigInt",
     step: 0,
     placeholder: "Enter a large number",
   },

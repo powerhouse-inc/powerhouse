@@ -11,8 +11,14 @@ import {
 } from "../fragments";
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
-import { AmountFieldPropsGeneric, AmountValue } from "./types";
 import { InputNumberProps } from "../number-field/types";
+import { AmountValue } from "./types";
+import { AmountFieldPropsGeneric } from "./types";
+import { IconName } from "@/powerhouse";
+
+export interface TokenIcons {
+  [key: string]: IconName | (() => React.JSX.Element);
+}
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
   Omit<InputNumberProps, "onChange" | "onBlur"> & {
@@ -29,6 +35,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
     currencyPosition?: "left" | "right";
+    tokenIcons?: TokenIcons;
   };
 
 const AmountFieldRaw: FC<AmountFieldProps> = ({
@@ -38,7 +45,6 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   precision = 0,
   minValue,
   maxValue,
-  allowNegative,
   trailingZeros,
   onChange,
   onBlur,
@@ -56,6 +62,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   selectProps,
   step = 1,
   currencyPosition,
+  tokenIcons,
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
@@ -76,6 +83,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
     allowedTokens,
     onChange,
     onBlur,
+    tokenIcons,
   });
 
   return (
@@ -99,9 +107,9 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
               value={valueSelect}
               name=""
               required={required}
+              options={options}
               disabled={disabled}
               onChange={handleOnChangeSelect}
-              options={options}
               className={cn(
                 "border border-gray-300 rounded-l-md rounded-r-none",
                 "border-r-[0.5px] focus:border-r-[1px] focus:ring-1 focus:ring-gray-900",
@@ -121,8 +129,8 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             maxValue={maxValue}
             precision={precision}
             minValue={minValue}
-            allowNegative={allowNegative}
             trailingZeros={trailingZeros}
+            data-cast={typeof valueInput === "bigint" ? "BigInt" : "Number"}
             onChange={handleOnChangeInput}
             className={cn(
               currencyPosition === "left" &&
