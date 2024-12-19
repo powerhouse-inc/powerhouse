@@ -227,4 +227,19 @@ describe("withFieldValidation", () => {
 
     expect(await screen.findByTestId("error-message")).toBeInTheDocument();
   });
+
+  it("should revalidate on change after a submission with errors", async () => {
+    renderWithForm(<WrappedComponent name="test" required />);
+
+    const input = screen.getByTestId("test-input");
+    // submit with empty value should fail as the field is required
+    await userEvent.type(input, "{Enter}");
+
+    expect(await screen.findByTestId("error-message")).toBeInTheDocument();
+
+    // change the value to trigger revalidation
+    await userEvent.type(input, "123");
+
+    expect(screen.queryByTestId("error-message")).toBeNull();
+  });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export const useURLWarnings = (value: string) => {
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -9,7 +9,7 @@ export const useURLWarnings = (value: string) => {
     try {
       const url = new URL(value);
       // check for unencoded spaces in the URL
-      if (value.includes(" ")) {
+      if (value.trim().includes(" ")) {
         detectedWarnings.push("Using unencoded spaces in the URL");
       }
       // check for double slashes in the URL
@@ -58,10 +58,25 @@ export const useURLWarnings = (value: string) => {
       }
 
       setWarnings(detectedWarnings);
-    } catch (_) {
+    } catch {
       // the url is not valid so we don't check for warnings
     }
   }, [value]);
+
+  // reset warnings when the value is empty or not a valid url
+  useEffect(() => {
+    if (warnings.length === 0) return;
+
+    if (value === "") {
+      setWarnings([]);
+    }
+
+    try {
+      new URL(value);
+    } catch {
+      setWarnings([]);
+    }
+  }, [value, checkForWarnings]);
 
   return {
     warnings,

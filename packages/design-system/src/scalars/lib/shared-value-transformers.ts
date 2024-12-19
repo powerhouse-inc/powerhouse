@@ -2,23 +2,23 @@ import { TransformerObject } from "../components/fragments/value-transformer/val
 
 export const sharedValueTransformers: Record<
   string,
-  (ifParam: boolean) => TransformerObject
+  (ifParam?: boolean) => TransformerObject
 > = {
-  trimOnBlur: (ifParam) => ({
+  trimOnBlur: (ifParam = true) => ({
     transformer: (value?: string) => value?.trim(),
     options: {
       trigger: "blur",
       if: ifParam,
     },
   }),
-  lowercaseOnChange: (ifParam) => ({
+  lowercaseOnChange: (ifParam = true) => ({
     transformer: (value?: string) => value?.toLowerCase(),
     options: {
       trigger: "change",
       if: ifParam,
     },
   }),
-  uppercaseOnChange: (ifParam) => ({
+  uppercaseOnChange: (ifParam = true) => ({
     transformer: (value?: string) => value?.toUpperCase(),
     options: {
       trigger: "change",

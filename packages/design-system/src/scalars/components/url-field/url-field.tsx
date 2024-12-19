@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-max-depth */
 import React, { useCallback, useId, useMemo } from "react";
 import {
   Input,
@@ -12,6 +13,9 @@ import { cn } from "@/scalars/lib";
 import { IconName } from "@/powerhouse";
 import { useURLWarnings } from "./useURLWarnings";
 import UrlFavicon from "./url-favicon";
+import ValueTransformer from "../fragments/value-transformer";
+import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
+import { url } from "node:inspector";
 
 export type PlatformIcon = IconName | React.ReactElement;
 
@@ -40,6 +44,7 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = React.forwardRef<
       warnings: warningsProp,
       errors,
       platformIcons,
+      value,
       onBlur,
 
       // these are not used in the component but are required by the withFieldValidation HOC
@@ -56,7 +61,7 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = React.forwardRef<
     const idGenerated = useId();
     const id = props.id ?? idGenerated;
     const hasError = !!errors?.length;
-    const { warnings, checkForWarnings } = useURLWarnings(props.value ?? "");
+    const { warnings, checkForWarnings } = useURLWarnings(value ?? "");
     const showIcon = Object.keys(platformIcons ?? {}).length > 0;
 
     const combinedWarnings = useMemo(() => {
@@ -71,6 +76,21 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = React.forwardRef<
       [checkForWarnings, onBlur],
     );
 
+    const handleWarningsOnEnter = useCallback(
+      (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === "Enter") {
+          checkForWarnings();
+        }
+      },
+      [checkForWarnings],
+    );
+
+    // prevent url from having trailing spaces
+    const transformers = useMemo(
+      () => [sharedValueTransformers.trimOnBlur()],
+      [],
+    );
+
     return (
       <FormGroup>
         <FormLabel
@@ -82,17 +102,21 @@ const UrlFieldRaw: React.FC<UrlFieldProps> = React.forwardRef<
           {label}
         </FormLabel>
         <div className="relative">
-          <Input
-            id={id}
-            ref={ref}
-            type="url"
-            {...props}
-            value={props.value ?? ""}
-            aria-invalid={hasError}
-            onBlur={handleBlur}
-            className={cn(showIcon && "pl-8")}
-          />
-          <UrlFavicon url={props.value ?? ""} platformIcons={platformIcons} />
+          <ValueTransformer transformers={transformers}>
+            <Input
+              id={id}
+              ref={ref}
+              type="url"
+              {...props}
+              value={value ?? ""}
+              onBlur={handleBlur}
+              onKeyDown={handleWarningsOnEnter}
+              aria-invalid={hasError}
+              className={cn(showIcon && "pl-8")}
+              data-cast="URLTrim"
+            />
+          </ValueTransformer>
+          <UrlFavicon url={value ?? ""} platformIcons={platformIcons} />
         </div>
         {description && <FormDescription>{description}</FormDescription>}
         {showWarnings && combinedWarnings.length > 0 && (
@@ -109,7 +133,12 @@ export const UrlField = withFieldValidation<UrlFieldProps>(UrlFieldRaw, {
     _validUrl: () => (value) => {
       if (!value) return true;
       try {
-        new URL(value as string);
+        const url = new URL(value as string);
+        const regex =
+          /^(([0-9]{1,3}\.){3}[0-9]{1,3})|(([a-z0-9-_]+\.)+[a-z]{2,})|(localhost)$/i;
+        if (!regex.test(url.hostname)) {
+          return `${value} must be a valid URL`;
+        }
         return true;
       } catch {
         return `${value} must be a valid URL`;
@@ -119,10 +148,15 @@ export const UrlField = withFieldValidation<UrlFieldProps>(UrlFieldRaw, {
       ({ allowedProtocols }) =>
       (value) => {
         if (!value || !allowedProtocols) return true;
-
-        const url = new URL(value as string);
-        const isAllowed = allowedProtocols.includes(url.protocol.slice(0, -1));
-        if (isAllowed) return true;
+        try {
+          const url = new URL(value as string);
+          const isAllowed = allowedProtocols.includes(
+            url.protocol.slice(0, -1),
+          );
+          if (isAllowed) return true;
+        } catch {
+          return true; // handling valid url is handled by _validUrl validation
+        }
 
         let allowedProtocolsString = allowedProtocols.join(", ");
         if (allowedProtocols.length > 1) {
