@@ -5,7 +5,6 @@ import { atom, useAtom } from "jotai";
 import { atomFamily } from "jotai/utils";
 import { Trigger } from "document-model-libs/document-drive";
 
-import { useUnwrappedReactor } from "../useUnwrappedReactor";
 import { documentToHash } from "../utils";
 
 const documentDrivesAtom = atom(
@@ -51,9 +50,7 @@ export type ClientErrorHandler = {
   ) => Promise<void>;
 };
 
-export function useDocumentDrives() {
-  const reactor = useUnwrappedReactor();
-
+export function useDocumentDrives(reactor?: IDocumentDriveServer) {
   const [documentDrives, setDocumentDrives] = useAtom(
     useMemo(readWriteDocumentDrivesAtom(reactor), [reactor]),
   );

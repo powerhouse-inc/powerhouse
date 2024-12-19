@@ -8,18 +8,15 @@ import {
 import { BrowserStorage } from "document-drive/storage/browser";
 import { DocumentModel } from "document-model/document";
 
-// TODO: This should be configurable
-const DEFAULT_DRIVES_URL: string | undefined =
-  "https://apps.powerhouse.io/develop/powerhouse/switchboard/d/core-dev";
+export type ReactorDefaultDrivesConfig = {
+  defaultDrivesUrl?: string[];
+};
 
-const defaultDrivesUrl = DEFAULT_DRIVES_URL
-  ? DEFAULT_DRIVES_URL.split(",")
-  : [];
+export const getReactorDefaultDrivesConfig = (
+  config: ReactorDefaultDrivesConfig = {},
+): Pick<DocumentDriveServerOptions, "defaultDrives"> => {
+  const defaultDrivesUrl = config.defaultDrivesUrl || [];
 
-export const getReactorDefaultDrivesConfig = (): Pick<
-  DocumentDriveServerOptions,
-  "defaultDrives"
-> => {
   const remoteDrives: DefaultRemoteDriveInput[] = defaultDrivesUrl.map(
     (driveUrl) => ({
       url: driveUrl,
@@ -68,12 +65,13 @@ export const getReactorDefaultDrivesConfig = (): Pick<
 export function createBrowserDocumentDriveServer(
   documentModels: DocumentModel[],
   routerBasename: string,
+  documentDriveServerOptions?: DocumentDriveServerOptions,
 ) {
   return new DocumentDriveServer(
     documentModels,
     new BrowserStorage(routerBasename),
     new InMemoryCache(),
     new BaseQueueManager(1, 10),
-    { ...getReactorDefaultDrivesConfig() },
+    documentDriveServerOptions,
   );
 }

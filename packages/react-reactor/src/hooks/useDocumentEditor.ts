@@ -11,6 +11,7 @@ import { useDocumentDispatch } from "./useDocumentDispatch";
 import { signOperation, addActionContext } from "../utils/signature";
 import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
 import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
+import { IDocumentDriveServer } from "document-drive";
 
 export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
   operation: Operation,
@@ -34,7 +35,10 @@ export type UseDocumentEditorProps<
   onChange?: (document: Document<T, A, LocalState>) => void;
 };
 
-export function useDocumentEditor(props: UseDocumentEditorProps) {
+export function useDocumentEditor(
+  reactor: IDocumentDriveServer | undefined,
+  props: UseDocumentEditorProps,
+) {
   const { nodeId, driveId, documentModel, document: initialDocument } = props;
 
   // TODO: implement useUser hook
@@ -43,7 +47,7 @@ export function useDocumentEditor(props: UseDocumentEditorProps) {
   const connectDid = useConnectDid();
   const { sign } = useConnectCrypto();
 
-  const addDebouncedOprations = useAddDebouncedOperations({
+  const addDebouncedOprations = useAddDebouncedOperations(reactor, {
     driveId,
     documentId: nodeId,
   });

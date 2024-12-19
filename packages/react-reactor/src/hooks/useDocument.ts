@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { Document } from "document-model/document";
-import { StrandUpdate } from "document-drive/server";
+import { IDocumentDriveServer, StrandUpdate } from "document-drive/server";
 
-import { useUnwrappedReactor } from "../useUnwrappedReactor";
-
-export type UseDocumentProps = {
+export type DocumentMeta = {
   driveId?: string;
   documentId?: string;
   documentType?: string;
 };
 
-export function useDocument(props: UseDocumentProps) {
-  const { documentId, documentType, driveId } = props;
+export function useDocument(
+  reactor: IDocumentDriveServer | undefined,
+  documentMeta: DocumentMeta = {},
+) {
+  const { documentId, documentType, driveId } = documentMeta;
 
   const [document, setDocument] = useState<Document | undefined>();
-  const reactor = useUnwrappedReactor();
 
   const onStrandUpdate = useCallback(
     (cb: (update: StrandUpdate) => void) => {

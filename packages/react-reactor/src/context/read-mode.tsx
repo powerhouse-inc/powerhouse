@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-parameters */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
+  BaseDocumentDriveServer,
   IDocumentDriveServer,
   InferDocumentLocalState,
   InferDocumentOperation,
@@ -29,7 +30,6 @@ import {
 } from "react";
 import { drivesToHash } from "../utils";
 import { useUserPermissions } from "../hooks";
-import { useReactorAsync } from "../useUnwrappedReactor";
 
 const logger = {
   error: console.error,
@@ -190,6 +190,7 @@ export const ReadModeContext = createContext<IReadModeContext>({
 
 export interface ReadModeContextProviderProps {
   children: ReactNode;
+  reactorPromise: Promise<BaseDocumentDriveServer & IReadModeDriveServer>;
 }
 
 async function getReadDrives(
@@ -207,7 +208,8 @@ async function getReadDrives(
 export const ReadModeContextProvider: FC<ReadModeContextProviderProps> = (
   props,
 ) => {
-  const reactorPromise = useReactorAsync();
+  const { reactorPromise, ...restProps } = props;
+
   const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
   const userPermissions = useUserPermissions();
   const [ready, setReady] = useState(false);
@@ -284,6 +286,6 @@ export const ReadModeContextProvider: FC<ReadModeContextProviderProps> = (
     };
   }, [readDrives]);
 
-  return <ReadModeContext.Provider {...props} value={context} />;
+  return <ReadModeContext.Provider {...restProps} value={context} />;
 };
 export const useReadModeContext = () => useContext(ReadModeContext);

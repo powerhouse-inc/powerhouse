@@ -1,9 +1,9 @@
 import { useMemo, useCallback } from "react";
 import { Document, Operation } from "document-model/document";
 
-import { useUnwrappedReactor } from "../useUnwrappedReactor";
 import { useUserPermissions } from "./useUserPermissions";
 import { useDocumentDrives } from "./useDocumentDrives";
+import { IDocumentDriveServer } from "document-drive";
 
 function debounceOperations(
   callback: (operations: Operation[]) => Promise<Document | undefined>,
@@ -50,12 +50,12 @@ export type UseAddDebouncedOperationsProps = {
 };
 
 export function useAddDebouncedOperations(
+  reactor: IDocumentDriveServer | undefined,
   props: UseAddDebouncedOperationsProps,
 ) {
   const { driveId, documentId } = props;
-  const [documentDrives] = useDocumentDrives();
+  const [documentDrives] = useDocumentDrives(reactor);
 
-  const reactor = useUnwrappedReactor();
   const { isAllowedToEditDocuments } = useUserPermissions() || {
     isAllowedToCreateDocuments: false,
     isAllowedToEditDocuments: false,
