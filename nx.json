@@ -24,6 +24,9 @@
     "lint": {
       "dependsOn": ["^build"]
     },
+    "lint:nx": {
+      "dependsOn": ["^build"]
+    },
     "check-types": {
       "dependsOn": ["^build"]
     },
