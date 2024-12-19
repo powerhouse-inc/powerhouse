@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UrlField } from "./url-field";
 import { renderWithForm } from "@/scalars/lib/testing";
+import { Form } from "@/scalars";
 
 describe("UrlField", () => {
   it("should match snapshot", () => {
@@ -224,5 +225,34 @@ describe("UrlField", () => {
     );
 
     expect(screen.queryByTestId("icon-fallback")).not.toBeInTheDocument();
+  });
+
+  it("should hide warnings when the form is reset", async () => {
+    const user = userEvent.setup();
+    render(
+      <Form onSubmit={() => null} defaultValues={{ "test-url": "" }}>
+        {({ reset }) => (
+          <>
+            <UrlField
+              data-testid="url-field"
+              name="test-url"
+              label="Website URL"
+            />
+            <button type="reset" onClick={reset} data-testid="reset-button">
+              Reset
+            </button>
+          </>
+        )}
+      </Form>,
+    );
+
+    // first show the warnings typing in the input
+    await user.type(screen.getByTestId("url-field"), "https://x.com/test...");
+    await user.tab(); // trigger blur
+    expect(await screen.findByText("URL may be truncated")).toBeInTheDocument();
+
+    // then hide the warnings when the form is reset
+    await user.click(screen.getByTestId("reset-button"));
+    expect(screen.queryByText("URL may be truncated")).toBeNull();
   });
 });

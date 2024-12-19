@@ -105,9 +105,14 @@ export const withFieldValidation = <T extends PossibleProps>(
         disabled={props.disabled}
         // eslint-disable-next-line react/jsx-no-bind
         render={({
-          // just preventing that onChange is included in the rest of the props
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          field: { onChange: _, onBlur: onBlurController, ...rest },
+          field: {
+            // just preventing that onChange is included in the rest of the props
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            onChange: _,
+            onBlur: onBlurController,
+            value: internalValue,
+            ...rest
+          },
         }) => {
           const onBlurCallback = useCallback(
             (event: React.FocusEvent<HTMLInputElement>) => {
@@ -168,13 +173,17 @@ export const withFieldValidation = <T extends PossibleProps>(
                 }
               }
             },
-            [],
+            // `internalValue` is the value of the field that is controlled by the form
+            // it is used to trigger the validation on change, so we need to add it to the dependencies
+            // otherwise the validation will not be triggered on change
+            [internalValue],
           );
 
           return (
             <Component
               {...(props as T)}
               {...rest}
+              value={internalValue as unknown}
               onBlur={onBlurCallback}
               onChange={onChangeCallback}
               errors={errors}
@@ -182,12 +191,16 @@ export const withFieldValidation = <T extends PossibleProps>(
           );
         }}
         rules={{
-          ...(props.required && {
-            required: {
-              value: props.required,
-              message: "This field is required",
-            },
-          }),
+          ...(props.required
+            ? {
+                required: {
+                  value: props.required,
+                  message: "This field is required",
+                },
+              }
+            : {
+                required: undefined,
+              }),
           ...(props.pattern && {
             pattern: {
               value: new RegExp(props.pattern),
