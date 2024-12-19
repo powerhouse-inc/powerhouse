@@ -1,3 +1,20 @@
+## 1.15.0 (2024-12-19)
+
+### 🚀 Features
+
+- **renown:** added initial renown sdk package ([2864fbc6](https://github.com/powerhouse-inc/powerhouse/commit/2864fbc6))
+- **scalars:** added missing resolvers ([#578](https://github.com/powerhouse-inc/powerhouse/pull/578))
+
+### 🩹 Fixes
+
+- **reactor-api:** update graphql dependency ([ed063402](https://github.com/powerhouse-inc/powerhouse/commit/ed063402))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Guillermo Puente Sandoval
+
 ## 1.14.0 (2024-12-16)
 
 ### 🚀 Features
