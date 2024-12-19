@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["ESNext"],
+    "rootDir": "./src",
+    "baseUrl": "./src"
+  },
+  "exclude": ["dist/**/*"]
+}
