@@ -58,6 +58,16 @@ export const withFieldValidation = <T extends PossibleProps>(
     }
 
     useEffect(() => {
+      if (submitCount > 0) {
+        void trigger(name);
+      }
+      // we should trigger a re-validation after the form is submitted, the errors are shown
+      // and the required prop is changed. Other deps can not be added, otherwise a revalidation
+      // will be triggered unnecessarily
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.required]);
+
+    useEffect(() => {
       // if custom errors are provided, then we need to trigger the validation
       // otherwise the errors will not be shown till the form is submitted
       if (props.errors && props.errors.length > 0) {
