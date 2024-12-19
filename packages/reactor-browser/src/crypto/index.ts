@@ -158,12 +158,14 @@ export class ConnectCrypto implements IConnectCrypto {
     };
   }
 
+  // eslint-disable-next-line no-unused-private-class-members
   #sign = async (
     ...args: Parameters<SubtleCrypto["sign"]>
   ): Promise<ArrayBuffer> => {
     return (await this.#subtleCrypto).sign(...args);
   };
 
+  // eslint-disable-next-line no-unused-private-class-members
   #verify = async (
     ...args: Parameters<SubtleCrypto["verify"]>
   ): Promise<boolean> => {

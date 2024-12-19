@@ -21,7 +21,7 @@
       "path": "./packages/scalars"
     },
     {
-      "path": "./packages/react-reactor"
+      "path": "./packages/reactor-browser"
     }
   ]
 }

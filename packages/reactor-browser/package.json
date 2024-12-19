@@ -19,7 +19,7 @@
     "postlint": "npm run check-types",
     "build": "NODE_ENV=production vite build",
     "build:watch": "vite build --watch",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },
