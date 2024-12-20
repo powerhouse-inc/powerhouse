@@ -2,12 +2,14 @@ import { Command } from "commander";
 import { devCommand } from "./dev.js";
 import { helpCommand } from "./help.js";
 import { initCommand } from "./init.js";
-import { generateCommand } from "./generate.js";
+import { connectCommand } from "./connect.js";
 import { reactorCommand } from "./reactor.js";
+import { generateCommand } from "./generate.js";
 
 export const commands = [
   initCommand,
   devCommand,
+  connectCommand,
   generateCommand,
   reactorCommand,
   helpCommand,

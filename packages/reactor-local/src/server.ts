@@ -21,7 +21,15 @@ import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import path from "node:path";
+import { access } from "node:fs/promises";
 import { createServer as createViteServer, ViteDevServer } from "vite";
+
+type FSError = {
+  errno: number;
+  code: string;
+  syscall: string;
+  path: string;
+};
 
 const dirname = process.cwd();
 
@@ -184,6 +192,7 @@ async function loadDocumentModels(
 ) {
   try {
     console.log("> Loading document models from", path);
+    await access(path);
     const localDMs = (await vite.ssrLoadModule(path)) as Record<
       string,
       DocumentModel
@@ -193,7 +202,11 @@ async function loadDocumentModels(
       ...Object.values(localDMs),
     ]);
   } catch (e) {
-    console.error("Error loading document models", e);
+    if ((e as FSError).code === "ENOENT") {
+      console.warn("No local document models found");
+    } else {
+      console.error("Error loading document models", e);
+    }
   }
 }
 
@@ -204,6 +217,7 @@ async function loadProcessors(
 ) {
   try {
     console.log("> Loading processors from", path);
+    await access(path);
     const localProcessors = await vite.ssrLoadModule(path);
     for (const [name, processor] of Object.entries(localProcessors)) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
@@ -213,7 +227,11 @@ async function loadProcessors(
       }
     }
   } catch (e) {
-    console.error("Error loading processors", e);
+    if ((e as FSError).code === "ENOENT") {
+      console.warn("No local document models found");
+    } else {
+      console.error("Error loading processors", e);
+    }
   }
 }
 
@@ -224,6 +242,7 @@ async function loadSubgraphs(
 ) {
   try {
     console.log("> Loading subgraphs from", path);
+    await access(path);
     const localSubgraphs = await vite.ssrLoadModule(path);
     for (const [name, subgraph] of Object.entries(localSubgraphs)) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -233,7 +252,11 @@ async function loadSubgraphs(
       }
     }
   } catch (e) {
-    console.error("Error loading subgraphs", e);
+    if ((e as FSError).code === "ENOENT") {
+      console.warn("No local document models found");
+    } else {
+      console.error("Error loading subgraphs", e);
+    }
   }
 }
 
