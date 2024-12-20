@@ -85,8 +85,8 @@ export const generate: CommandActionType<
     return;
   }
 
-  if (command.subgraph) {
-    await generateSubgraph(command.subgraphName!, config);
+  if (command.subgraph && command.subgraphName) {
+    await generateSubgraph(command.subgraphName, config);
     return;
   }
 

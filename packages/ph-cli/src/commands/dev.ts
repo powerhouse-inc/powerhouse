@@ -1,19 +1,12 @@
-import fs from "node:fs";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
-import {
-  spawn,
-  fork,
-  ChildProcessWithoutNullStreams,
-} from "node:child_process";
+import { fork, ChildProcessWithoutNullStreams } from "node:child_process";
 import { Command } from "commander";
 import { blue, green, red } from "colorette";
 import { CommandActionType } from "../types.js";
 import { DefaultReactorOptions, type ReactorOptions } from "./reactor.js";
-import { getConfig } from "../utils.js";
+import { type ConnectOptions } from "./connect.js";
 
-const CONNECT_BIN_PATH = "node_modules/.bin/connect";
 const __dirname =
   import.meta.dirname || dirname(fileURLToPath(import.meta.url));
 
@@ -34,6 +27,7 @@ function spawnLocalReactor(options?: ReactorOptions) {
         resolve({ driveUrl });
       }
     });
+
     child.stdout.on("data", (data: Buffer) => {
       const message = data.toString();
       const lines = message.split("\n").filter((line) => line.trim().length);
@@ -49,41 +43,32 @@ function spawnLocalReactor(options?: ReactorOptions) {
       process.stderr.write(red(`[Reactor]: ${err}`));
     });
 
-    child.on("close", (code) => {
+    child.on("exit", (code) => {
       console.log(`Reactor process exited with code ${code}`);
     });
   });
 }
 
 async function spawnConnect(
-  projectPath?: string,
-  options?: {
-    localDocumentModels?: string;
-    localEditors?: string;
-    localReactorUrl?: string;
-  },
+  options?: ConnectOptions,
+  localReactorUrl?: string,
 ) {
-  let binPath = path.join(projectPath || ".", "node_modules/.bin/connect");
-  if (!fs.existsSync(binPath)) {
-    const require = createRequire(import.meta.url);
-    const packagePath = require.resolve("@powerhousedao/connect/package.json");
-    const packageDir = path.dirname(packagePath);
-
-    binPath = path.join(packageDir, CONNECT_BIN_PATH);
-  }
-
-  return new Promise<void>((resolve) => {
-    const child = spawn(binPath, {
-      shell: true,
+  const child = fork(
+    path.join(__dirname, "connect.js"),
+    ["spawn", JSON.stringify(options ?? {})],
+    {
+      silent: true,
       env: {
         ...process.env,
         // TODO add studio variables?
-        LOCAL_DOCUMENT_MODELS: options?.localDocumentModels,
+        LOCAL_DOCUMENT_MODELS: options?.localDocuments,
         LOCAL_DOCUMENT_EDITORS: options?.localEditors,
-        PH_CONNECT_DEFAULT_DRIVES_URL: options?.localReactorUrl,
+        PH_CONNECT_DEFAULT_DRIVES_URL: localReactorUrl,
       },
-    });
+    },
+  ) as ChildProcessWithoutNullStreams;
 
+  return new Promise<void>((resolve) => {
     child.stdout.on("data", (data: Buffer) => {
       resolve();
       process.stdout.write(green(`[Connect]: ${data.toString()}`));
@@ -102,30 +87,19 @@ async function spawnConnect(
 export const dev: CommandActionType<
   [
     {
-      projectPath?: string;
       generate?: boolean;
       watch?: boolean;
       reactorPort?: number;
     },
   ]
-> = async ({
-  projectPath,
-  generate,
-  watch,
-  reactorPort = DefaultReactorOptions.port,
-}) => {
+> = async ({ generate, watch, reactorPort = DefaultReactorOptions.port }) => {
   try {
-    const config = getConfig();
     const { driveUrl } = await spawnLocalReactor({
       generate,
       port: reactorPort,
       watch,
     });
-    await spawnConnect(projectPath, {
-      localDocumentModels: config.documentModelsDir,
-      localEditors: config.editorsDir,
-      localReactorUrl: driveUrl,
-    });
+    await spawnConnect(undefined, driveUrl);
   } catch (error) {
     console.error(error);
   }
@@ -135,7 +109,6 @@ export function devCommand(program: Command) {
   program
     .command("dev")
     .description("Starts dev environment")
-    .option("--project-path <type>", "path to the project")
     .option("--generate", "generate code when document model is updated")
     .option("--reactor-port <port>", "port to use for the reactor")
     .option(
