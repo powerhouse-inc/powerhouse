@@ -1,6 +1,13 @@
 import { deepEqual } from "@/scalars/lib/deep-equal";
 import { isEmpty } from "@/scalars/lib/is-empty";
-import { forwardRef, useCallback, useEffect, useImperativeHandle } from "react";
+import { castValue, ValueCast } from "@/scalars/lib/value-cast";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useId,
+  useImperativeHandle,
+} from "react";
 import { FormProvider, useForm, UseFormReturn } from "react-hook-form";
 import { FormServerErrorMessage } from "../fragments";
 
@@ -104,6 +111,7 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
     },
     ref,
   ) => {
+    const formId = useId();
     const methods = useForm({
       defaultValues,
       criteriaMode: "all", // display all errors at once
@@ -153,6 +161,27 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
             ]),
           );
 
+          // cast data if needed to prevent submitting wrong data type
+          const form = document.getElementById(formId);
+          Object.keys(data).map((key) => {
+            try {
+              const value: unknown = data[key];
+              if (value !== null) {
+                const field = form?.querySelector(`[name="${key}"]`);
+                const dataCast = field?.getAttribute("data-cast");
+                if (dataCast) {
+                  data[key] = castValue(
+                    value,
+                    dataCast as ValueCast,
+                  ) as unknown;
+                }
+              }
+            } catch (error) {
+              // print out the error but continue the execution
+              console.error(error);
+            }
+          });
+
           // we need to return the promise from the onSubmit callback if there is one
           // so react-hook-form can wait for it to resolve and update the form state correctly
           return await onSubmit(data);
@@ -165,12 +194,13 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
           methods.setError("root.serverError", { message: errorMessage });
         }
       },
-      [methods, defaultValues, submitChangesOnly, onSubmit],
+      [methods, submitChangesOnly, defaultValues, formId, onSubmit],
     );
 
     return (
       <FormProvider {...methods}>
         <form
+          id={formId}
           onSubmit={methods.handleSubmit(wrappedOnSubmit)}
           className={className}
           noValidate

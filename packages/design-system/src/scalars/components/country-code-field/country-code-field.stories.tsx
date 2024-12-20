@@ -129,11 +129,59 @@ export const Disabled: Story = {
   },
 };
 
+export const Required: Story = {
+  args: {
+    label: "Country",
+    placeholder: "Select a country",
+    required: true,
+  },
+};
+
 export const WithSearchEnabled: Story = {
   args: {
-    label: "Select country",
+    label: "Select a country",
     description: "Type to search through options",
     placeholder: "Search...",
     enableSearch: true,
+  },
+};
+
+export const WithError: Story = {
+  args: {
+    label: "Country",
+    value: "AO",
+    errors: ["Please select a different country"],
+  },
+};
+
+export const WithWarning: Story = {
+  args: {
+    label: "Country",
+    value: "AF",
+    warnings: ["This country may have restricted access"],
+  },
+};
+
+export const WithoutFlags: Story = {
+  args: {
+    label: "Country",
+    placeholder: "Select a country",
+    showFlagIcons: false,
+  },
+};
+
+export const WithCodesOnly: Story = {
+  args: {
+    label: "Country",
+    placeholder: "Select a country",
+    viewMode: "CodesOnly",
+  },
+};
+
+export const WithNamesAndCodes: Story = {
+  args: {
+    label: "Country",
+    placeholder: "Select a country",
+    viewMode: "NamesAndCodes",
   },
 };

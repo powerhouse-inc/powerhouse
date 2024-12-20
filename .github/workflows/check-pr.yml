@@ -4,23 +4,13 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
-    paths:
-      - 'packages/codegen/**'
-      - 'packages/design-system/**'
-      - 'packages/document-model-libs/**'
-      - 'packages/document-model/**'
-      - 'packages/ph-cli/**'
-      - 'packages/scalars/**'
+    paths-ignore:
+      - 'packages/document-drive/**'
   pull_request:
     branches: ["main"]
     types: [opened, synchronize]
-    paths:
-      - 'packages/codegen/**'
-      - 'packages/design-system/**'
-      - 'packages/document-model-libs/**'
-      - 'packages/document-model/**'
-      - 'packages/ph-cli/**'
-      - 'packages/scalars/**'
+    paths-ignore:
+      - 'packages/document-drive/**'
 
 env:
   NX_ISOLATE_PLUGINS: false
@@ -56,8 +46,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build affected projects
-        run: pnpm nx affected --target=build --parallel=3
-
       - name: Run checks
-        run: pnpm affected:check
+        run: pnpm check:all:ci
+

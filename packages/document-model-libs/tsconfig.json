@@ -1,24 +1,31 @@
 {
+  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "types": ["node", "vitest/globals"],
-    "declaration": false,
+    "types": ["node", "vitest/globals", "@storybook/types"],
     "outDir": "./dist",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "skipLibCheck": true,
     "jsx": "react-jsx",
     "lib": ["ESNext", "dom", "dom.iterable"],
-    "baseUrl": "./",
-    "allowJs": true,
+    "baseUrl": ".",
     "paths": {
       "document-model-libs/utils": ["./editors/utils"],
-      "document-model-libs/utils/*": ["./editors/utils/*"]
+      "document-model-libs/utils/*": ["./editors/utils/*"],
+      "@powerhousedao/design-system": ["../design-system/src"],
+      "@powerhousedao/design-system/*": ["../design-system/src/*"]
     }
-  }
+  },
+  "references": [
+    {
+      "path": "../design-system"
+    }
+  ],
+  "include": [
+    ".storybook/**/*.ts",
+    ".storybook/**/*.tsx",
+    "document-models/**/*.ts",
+    "editors/**/*.ts",
+    "editors/**/*.tsx",
+    "scripts/**/*.ts",
+    "*.ts",
+    "*.d.ts"
+  ]
 }

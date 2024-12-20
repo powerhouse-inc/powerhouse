@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "2.8.0",
+  "version": "2.10.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -12,9 +12,10 @@
   "browser": "dist/browser/es/index.js",
   "type": "module",
   "scripts": {
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "build": "NODE_ENV=production npm run build:browser && npm run build:node",
     "build:watch": "NODE_ENV=production npm run build:browser -- --watch && npm run build:node -- --watch",
     "build:browser": "vite build --mode browser",
@@ -26,33 +27,33 @@
   "exports": {
     ".": {
       "node": {
-        "import": "./dist/node/es/index.js",
+        "types": "./dist/node/index.d.ts",
         "require": "./dist/node/cjs/index.js",
-        "types": "./dist/node/index.d.ts"
+        "import": "./dist/node/es/index.js"
       },
-      "import": "./dist/browser/es/index.js",
+      "types": "./dist/browser/index.d.ts",
       "require": "./dist/browser/cjs/index.js",
-      "types": "./dist/browser/index.d.ts"
+      "import": "./dist/browser/es/index.js"
     },
     "./document": {
       "node": {
-        "import": "./dist/node/es/document.js",
+        "types": "./dist/node/document.d.ts",
         "require": "./dist/node/cjs/document.js",
-        "types": "./dist/node/document.d.ts"
+        "import": "./dist/node/es/document.js"
       },
-      "import": "./dist/browser/es/document.js",
+      "types": "./dist/browser/document.d.ts",
       "require": "./dist/browser/cjs/document.js",
-      "types": "./dist/browser/document.d.ts"
+      "import": "./dist/browser/es/document.js"
     },
     "./document-model": {
       "node": {
-        "import": "./dist/node/es/document-model.js",
+        "types": "./dist/node/document-model.d.ts",
         "require": "./dist/node/cjs/document-model.js",
-        "types": "./dist/node/document-model.d.ts"
+        "import": "./dist/node/es/document-model.js"
       },
-      "import": "./dist/browser/es/document-model.js",
+      "types": "./dist/browser/document-model.d.ts",
       "require": "./dist/browser/cjs/document-model.js",
-      "types": "./dist/browser/document-model.d.ts"
+      "import": "./dist/browser/es/document-model.js"
     }
   },
   "devDependencies": {
@@ -64,9 +65,7 @@
     "@types/uuid": "^10.0.0",
     "playwright": "^1.46.1",
     "react": "^18.3.1",
-    "rollup-plugin-polyfill-node": "^0.13.0",
-    "vite-plugin-generate-file": "^0.2.0",
-    "vite-plugin-node-polyfills": "^0.22.0"
+    "rollup-plugin-polyfill-node": "^0.13.0"
   },
   "dependencies": {
     "change-case": "^5.4.4",

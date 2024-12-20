@@ -40,7 +40,7 @@ describe("CountryCodeField Component", () => {
 
   it("should disable the field when disabled prop is true", () => {
     renderWithForm(<CountryCodeField {...defaultProps} disabled />);
-    expect(screen.getByRole("button")).toBeDisabled();
+    expect(screen.getByRole("combobox")).toBeDisabled();
   });
 
   it("should display error messages", async () => {
@@ -69,7 +69,7 @@ describe("CountryCodeField Component", () => {
     const onChange = vi.fn();
     renderWithForm(<CountryCodeField {...defaultProps} onChange={onChange} />);
 
-    const select = screen.getByRole("button");
+    const select = screen.getByRole("combobox");
     await user.click(select);
     await user.click(screen.getByText("United States"));
     expect(onChange).toHaveBeenCalledWith("US");
@@ -101,7 +101,7 @@ describe("CountryCodeField Component", () => {
       <CountryCodeField {...defaultProps} allowedCountries={["US", "GB"]} />,
     );
 
-    const select = screen.getByRole("button");
+    const select = screen.getByRole("combobox");
     await user.click(select);
 
     expect(screen.getByText("United States")).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("CountryCodeField Component", () => {
       <CountryCodeField {...defaultProps} excludedCountries={["FR", "DE"]} />,
     );
 
-    const select = screen.getByRole("button");
+    const select = screen.getByRole("combobox");
     await user.click(select);
 
     expect(screen.getByText("United States")).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe("CountryCodeField Component", () => {
       />,
     );
 
-    const select = screen.getByRole("button");
+    const select = screen.getByRole("combobox");
     await user.click(select);
 
     expect(screen.getByText("United States")).toBeInTheDocument();

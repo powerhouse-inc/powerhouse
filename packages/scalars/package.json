@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/scalars",
-  "version": "1.9.1-canary.64",
+  "version": "1.9.1-canary.98",
   "license": "AGPL-3.0-only",
   "publishConfig": {
     "access": "public"
@@ -13,7 +13,8 @@
   "module": "dist/es/src/index.js",
   "scripts": {
     "check-types": "tsc",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "lint:fix": "eslint --fix",
     "postlint": "npm run check-types",
     "build": "NODE_ENV=production vite build",
@@ -23,11 +24,7 @@
     "clean:node_modules": "rimraf node_modules"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^2.0.5",
     "glob": "^11.0.0",
-    "vite-plugin-dts": "^3.7.1",
-    "vite-plugin-generate-file": "^0.1.1",
-    "vitest": "^2.0.5",
     "graphql": "^16.8.1",
     "zod": "^3.23.8"
   },
@@ -37,29 +34,29 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/types/src/index.d.ts",
       "require": "./dist/cjs/src/index.js",
-      "import": "./dist/es/src/index.js",
-      "types": "./dist/types/src/index.d.ts"
+      "import": "./dist/es/src/index.js"
     },
     "./EthereumAddress": {
+      "types": "./dist/types/src/scalars/EthereumAddress.d.ts",
       "require": "./dist/cjs/src/scalars/EthereumAddress.js",
-      "import": "./dist/es/src/scalars/EthereumAddress.js",
-      "types": "./dist/types/src/scalars/EthereumAddress.d.ts"
+      "import": "./dist/es/src/scalars/EthereumAddress.js"
     },
     "./EmailAddress": {
+      "types": "./dist/types/src/scalars/EmailAddress.d.ts",
       "require": "./dist/cjs/src/scalars/EmailAddress.js",
-      "import": "./dist/es/src/scalars/EmailAddress.js",
-      "types": "./dist/types/src/scalars/EmailAddress.d.ts"
+      "import": "./dist/es/src/scalars/EmailAddress.js"
     },
     "./AmountTokens": {
+      "types": "./dist/types/src/scalars/AmountTokens.d.ts",
       "require": "./dist/cjs/src/scalars/AmountTokens.js",
-      "import": "./dist/es/src/scalars/AmountTokens.js",
-      "types": "./dist/types/src/scalars/AmountTokens.d.ts"
+      "import": "./dist/es/src/scalars/AmountTokens.js"
     },
     "./AmountPercentage": {
+      "types": "./dist/types/src/scalars/AmountPercentage.d.ts",
       "require": "./dist/cjs/src/scalars/AmountPercentage.js",
-      "import": "./dist/es/src/scalars/AmountPercentage.js",
-      "types": "./dist/types/src/scalars/AmountPercentage.d.ts"
+      "import": "./dist/es/src/scalars/AmountPercentage.js"
     }
   }
 }

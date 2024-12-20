@@ -1,22 +1,28 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { SelectProps } from "@/scalars/components/enum-field/types";
+import { SelectFieldProps } from "./select-field";
 
 interface UseSelectFieldProps {
   options?: SelectProps["options"];
   multiple?: boolean;
+  searchPosition?: "Dropdown" | "Input";
   defaultValue?: string | string[];
   value?: string | string[];
   onChange?: (value: string | string[]) => void;
+  onBlur?: SelectFieldProps["onBlur"];
 }
 
 export function useSelectField({
   options = [],
   multiple = false,
+  searchPosition,
   defaultValue,
   value,
   onChange,
+  onBlur,
 }: UseSelectFieldProps) {
   const isInternalChange = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedValues, setSelectedValues] = useState<string[]>(() => {
     const initialValue = value ?? defaultValue ?? [];
@@ -25,7 +31,13 @@ export function useSelectField({
     }
     return Array.isArray(initialValue) ? initialValue : [initialValue];
   });
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(() => {
+    const initialValue = value ?? defaultValue ?? "";
+    if (initialValue === "" || Array.isArray(initialValue)) {
+      return "";
+    }
+    return options.find((opt) => opt.value === initialValue)?.label ?? "";
+  });
 
   useEffect(() => {
     if (isInternalChange.current) {
@@ -35,10 +47,10 @@ export function useSelectField({
     const newValue = value ?? defaultValue ?? [];
     if (newValue === "") {
       setSelectedValues([]);
+      setSearchValue("");
     } else {
       setSelectedValues(Array.isArray(newValue) ? newValue : [newValue]);
     }
-    setSearchValue("");
   }, [value]);
 
   const handleTogglePopover = useCallback(() => {
@@ -63,14 +75,26 @@ export function useSelectField({
           ? selectedValues.filter((v) => v !== optionValue)
           : [...selectedValues, optionValue];
       } else {
-        newValues = [optionValue];
+        newValues = selectedValues[0] === optionValue ? [] : [optionValue];
+
+        if (searchPosition === "Input") {
+          const selectedOptionLabel = options.find(
+            (opt) => opt.value === optionValue,
+          )?.label;
+          setSearchValue(
+            newValues.length > 0 ? (selectedOptionLabel ?? "") : "",
+          );
+        } else {
+          setSearchValue("");
+        }
+
         setIsPopoverOpen(false);
       }
 
       setSelectedValues(newValues);
-      onChange?.(multiple ? newValues : newValues[0]);
+      onChange?.(multiple ? newValues : (newValues[0] ?? ""));
     },
-    [multiple, selectedValues, onChange],
+    [multiple, selectedValues, options, onChange],
   );
 
   const handleClear = useCallback(() => {
@@ -92,21 +116,23 @@ export function useSelectField({
     onChange?.(multiple ? newValues : newValues[0]);
   }, [options, selectedValues, multiple, onChange]);
 
-  const selectFirstFilteredOption = useCallback(() => {
-    const filteredOptions = options.filter((option) =>
-      option.label.toLowerCase().includes(searchValue.toLowerCase()),
-    );
-
-    const firstOption = filteredOptions.find((opt) => !opt.disabled);
-    if (firstOption) {
-      toggleOption(firstOption.value);
+  // call onBlur when the popover is closed to invoke the validation
+  const [haveBeenOpened, setHaveBeenOpened] = useState<boolean>(false);
+  useEffect(() => {
+    if (!isPopoverOpen && haveBeenOpened) {
+      onBlur?.({ target: {} } as React.FocusEvent<HTMLInputElement>);
     }
-  }, [options, searchValue, toggleOption]);
+
+    if (isPopoverOpen) {
+      setHaveBeenOpened(true);
+    }
+  }, [isPopoverOpen, haveBeenOpened, onBlur]);
 
   return {
     selectedValues,
     isPopoverOpen,
     searchValue,
+    searchInputRef,
     setIsPopoverOpen,
     toggleOption,
     handleClear,
@@ -114,6 +140,5 @@ export function useSelectField({
     handleTogglePopover,
     handleSearch,
     handleOpenChange,
-    selectFirstFilteredOption,
   };
 }

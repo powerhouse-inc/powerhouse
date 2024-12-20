@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 import type {
   FieldCommonProps,
@@ -58,6 +58,16 @@ export const withFieldValidation = <T extends PossibleProps>(
     }
 
     useEffect(() => {
+      if (submitCount > 0) {
+        void trigger(name);
+      }
+      // we should trigger a re-validation after the form is submitted, the errors are shown
+      // and the required prop is changed. Other deps can not be added, otherwise a revalidation
+      // will be triggered unnecessarily
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.required]);
+
+    useEffect(() => {
       // if custom errors are provided, then we need to trigger the validation
       // otherwise the errors will not be shown till the form is submitted
       if (props.errors && props.errors.length > 0) {
@@ -103,15 +113,19 @@ export const withFieldValidation = <T extends PossibleProps>(
         name={name}
         defaultValue={(value ?? props.defaultValue) as unknown}
         disabled={props.disabled}
+        // eslint-disable-next-line react/jsx-no-bind
         render={({
-          // just preventing that onChange is included in the rest of the props
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          field: { onChange: _, onBlur: onBlurController, ...rest },
-        }) => (
-          <Component
-            {...(props as T)}
-            {...rest}
-            onBlur={(event: React.FocusEvent<HTMLInputElement>) => {
+          field: {
+            // just preventing that onChange is included in the rest of the props
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            onChange: _,
+            onBlur: onBlurController,
+            value: internalValue,
+            ...rest
+          },
+        }) => {
+          const onBlurCallback = useCallback(
+            (event: React.FocusEvent<HTMLInputElement>) => {
               if (showErrorOnBlur) {
                 void trigger(name);
               } else {
@@ -122,8 +136,12 @@ export const withFieldValidation = <T extends PossibleProps>(
               if (onBlurProp) {
                 onBlurProp(event);
               }
-            }}
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+            },
+            [onBlurController],
+          );
+
+          const onChangeCallback = useCallback(
+            (event: React.ChangeEvent<HTMLInputElement>) => {
               // update value state
               if (onChangeProp) {
                 // the fields is controlled by the parent
@@ -164,35 +182,61 @@ export const withFieldValidation = <T extends PossibleProps>(
                   void trigger(name);
                 }
               }
-            }}
-            errors={errors}
-          />
-        )}
-        rules={{
-          ...(props.required && {
-            required: {
-              value: props.required,
-              message: "This field is required",
             },
-          }),
+            // `internalValue` is the value of the field that is controlled by the form
+            // it is used to trigger the validation on change, so we need to add it to the dependencies
+            // otherwise the validation will not be triggered on change
+            [internalValue],
+          );
+
+          return (
+            <Component
+              {...(props as T)}
+              {...rest}
+              value={internalValue as unknown}
+              onBlur={onBlurCallback}
+              onChange={onChangeCallback}
+              errors={errors}
+            />
+          );
+        }}
+        rules={{
+          ...(props.required
+            ? {
+                required: {
+                  value: props.required,
+                  message: "This field is required",
+                },
+              }
+            : {
+                required: undefined,
+              }),
           ...(props.pattern && {
             pattern: {
               value: new RegExp(props.pattern),
               message: "This field does not match the required pattern",
             },
           }),
-          ...(props.maxLength && {
-            maxLength: {
-              value: props.maxLength,
-              message: `This field must be less than ${props.maxLength} characters`,
-            },
-          }),
-          ...(props.minLength && {
-            minLength: {
-              value: props.minLength,
-              message: `This field must be more than ${props.minLength} characters`,
-            },
-          }),
+          ...(props.maxLength
+            ? {
+                maxLength: {
+                  value: props.maxLength,
+                  message: `This field must be less than ${props.maxLength} characters`,
+                },
+              }
+            : {
+                maxLength: undefined,
+              }),
+          ...(props.minLength
+            ? {
+                minLength: {
+                  value: props.minLength,
+                  message: `This field must be more than ${props.minLength} characters`,
+                },
+              }
+            : {
+                minLength: undefined,
+              }),
           ...(props.minValue && {
             min: {
               value: props.minValue,
@@ -209,10 +253,12 @@ export const withFieldValidation = <T extends PossibleProps>(
             // custom errors provided as props
             ...(props.errors
               ? Object.fromEntries(
-                  props.errors.map((error, index) => [
-                    `_propError${index}`,
-                    () => error,
-                  ]),
+                  Array.isArray(props.errors)
+                    ? props.errors.map((error, index) => [
+                        `_propError${index}`,
+                        () => error,
+                      ])
+                    : [],
                 )
               : {}),
             // built in validations by the field in the library

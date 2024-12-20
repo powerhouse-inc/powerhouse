@@ -6,6 +6,7 @@ import {
   type Document,
 } from "document-model/document";
 import Editor from "./editor";
+import { Meta } from "@storybook/react";
 
 const { meta, CreateDocumentStory: JSONEditor } = createDocumentStory(
   Editor,
@@ -17,6 +18,6 @@ const { meta, CreateDocumentStory: JSONEditor } = createDocumentStory(
   utils.createExtendedState(),
 );
 
-export default { ...meta, title: "JSON Editor" };
+export default { ...meta, title: "JSON Editor" } as Meta<typeof Editor>;
 
 export { JSONEditor };

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/general-document-indexer",
-  "version": "1.5.0",
+  "version": "1.7.4",
   "description": "general document indexer read model",
   "main": "dist/index.mjs",
   "publishConfig": {

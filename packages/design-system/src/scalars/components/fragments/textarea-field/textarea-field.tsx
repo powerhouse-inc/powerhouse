@@ -1,4 +1,4 @@
-import React, { useId, useEffect } from "react";
+import React, { useId, useEffect, useMemo } from "react";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { FormGroup } from "@/scalars/components/fragments/form-group";
@@ -11,7 +11,9 @@ import {
   ErrorHandling,
   TextProps,
 } from "@/scalars/components/types";
-import ValueTransformer from "@/scalars/components/fragments/value-transformer";
+import ValueTransformer, {
+  type TransformerType,
+} from "@/scalars/components/fragments/value-transformer";
 import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
 
 type TextareaFieldBaseProps = Omit<
@@ -30,18 +32,20 @@ export interface TextareaProps
 
 const textareaBaseStyles = cn(
   // Base styles
-  "flex w-full min-h-9 rounded-md text-[14px] font-normal leading-5",
-  // Colors & Background
+  "flex min-h-9 w-full rounded-md text-sm font-normal leading-5 text-gray-900 dark:text-gray-50",
+  // Border & Background
   "dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white",
+  // Padding
+  "px-3 py-[7px]",
   // Placeholder
-  "font-sans placeholder:text-gray-600 dark:placeholder:text-gray-500",
-  // Padding & Spacing
-  "px-3 py-[7.2px]",
-  // Focus state
-  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-1 focus-visible:ring-offset-white",
-  "dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900",
+  "font-sans placeholder:text-gray-500 dark:placeholder:text-gray-600",
+  // Focus styles
+  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white",
+  "dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 dark:focus:bg-charcoal-900 focus:bg-gray-50",
   // Disabled state
-  "disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-500",
+  "disabled:cursor-not-allowed",
+  "disabled:border-gray-300 disabled:bg-white disabled:text-gray-700",
+  "disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300",
 );
 
 const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
@@ -72,18 +76,22 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     },
     ref,
   ) => {
-    const autoCompleteValue = autoComplete ? "on" : "off";
+    const autoCompleteValue =
+      autoComplete === undefined ? undefined : autoComplete ? "on" : "off";
     const hasError = errors && errors.length > 0;
+    const hasContentBelow =
+      !!description ||
+      (Array.isArray(warnings) && warnings.length > 0) ||
+      (Array.isArray(errors) && errors.length > 0);
 
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Prevent Enter key if multiline is false
-      if (multiline === false && e.key === "Enter") {
+      // Prevent Enter key if multiline is falsy
+      if (!multiline && e.key === "Enter") {
         e.preventDefault();
       }
-
       // Call the original onKeyDown
       props.onKeyDown?.(e);
     };
@@ -103,6 +111,22 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [id, value, autoExpand]);
 
+    const transformers: TransformerType = useMemo(
+      () => [
+        sharedValueTransformers.trimOnBlur(!!trim),
+        sharedValueTransformers.lowercaseOnChange(!!lowercase),
+        sharedValueTransformers.uppercaseOnChange(!!uppercase),
+        {
+          transformer: (value?: string) => value?.replace(/\n/g, ""),
+          options: {
+            trigger: "change",
+            if: !multiline,
+          },
+        },
+      ],
+      [trim, lowercase, uppercase, multiline],
+    );
+
     return (
       <FormGroup>
         {label && (
@@ -116,36 +140,24 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           </FormLabel>
         )}
         <div className="relative">
-          <ValueTransformer
-            transformers={[
-              sharedValueTransformers.trimOnBlur(!!trim),
-              sharedValueTransformers.lowercaseOnChange(!!lowercase),
-              sharedValueTransformers.uppercaseOnChange(!!uppercase),
-              {
-                transformer: (value?: string) => value?.replace(/\n/g, ""),
-                options: {
-                  trigger: "change",
-                  if: multiline === false,
-                },
-              },
-            ]}
-          >
+          <ValueTransformer transformers={transformers}>
             <textarea
               aria-invalid={hasError}
               aria-required={required}
               autoComplete={autoCompleteValue}
               className={cn(
                 textareaBaseStyles,
-
                 // Resize behavior based on autoExpand
                 autoExpand
                   ? "resize-none overflow-hidden"
                   : [
                       "resize-y",
-                      "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300",
-                      "dark:scrollbar-track-gray-900 dark:scrollbar-thumb-gray-600",
+                      "scrollbar-thin scrollbar-gutter-stable",
+                      "scrollbar-track-transparent",
+                      "scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-300",
+                      "dark:scrollbar-thumb-charcoal-700 dark:hover:scrollbar-thumb-charcoal-700",
+                      "scrollbar-thumb-rounded-md",
                     ],
-
                 className,
               )}
               ref={ref}
@@ -155,14 +167,19 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               defaultValue={defaultValue}
               minLength={minLength}
               placeholder={placeholder}
-              rows={multiline === false ? 1 : rows}
+              rows={multiline ? rows : 1}
               onChange={onChange}
               onKeyDown={handleKeyDown}
               {...props}
             />
           </ValueTransformer>
           {typeof maxLength === "number" && maxLength > 0 && (
-            <div className="mt-0.5 flex justify-end">
+            <div
+              className={cn(
+                "mt-0.5 flex justify-end",
+                hasContentBelow && "-mb-1",
+              )}
+            >
               <CharacterCounter maxLength={maxLength} value={value ?? ""} />
             </div>
           )}

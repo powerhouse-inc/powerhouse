@@ -25,7 +25,7 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: 9
           run_install: false
 
       - name: git config

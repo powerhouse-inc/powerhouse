@@ -10,7 +10,6 @@ import { PgDatabase } from "drizzle-orm/pg-core";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import express, { IRouter, Router } from "express";
 import pg from "pg";
-const { Pool } = pg;
 import {
   InternalListenerManager,
   InternalListenerModule,
@@ -18,7 +17,7 @@ import {
 import { driveSubgraph, systemSubgraph } from "./subgraphs";
 import { Context, Processor } from "./types";
 import { createSchema } from "./utils/create-schema";
-import { GraphQLSchema } from "graphql";
+const { Pool } = pg;
 
 export class ReactorRouterManager {
   private database: PgDatabase<any, any, any> | undefined;
@@ -44,8 +43,8 @@ export class ReactorRouterManager {
     private readonly driveServer: IDocumentDriveServer,
     private readonly client: PGlite | typeof Pool = new PGlite(),
     private listenerManager: InternalListenerManager = new InternalListenerManager(
-      driveServer
-    )
+      driveServer,
+    ),
   ) {}
 
   async init() {
@@ -57,7 +56,7 @@ export class ReactorRouterManager {
     await this.listenerManager.init();
     const models = this.driveServer.getDocumentModels();
     const driveModel = models.find(
-      (it) => it.documentModel.name === "DocumentDrive"
+      (it) => it.documentModel.name === "DocumentDrive",
     );
     if (!driveModel) {
       throw new Error("DocumentDrive model required");
@@ -68,7 +67,7 @@ export class ReactorRouterManager {
     });
 
     this.app.use(this.path, (req, res, next) =>
-      this.reactorRouter(req, res, next)
+      this.reactorRouter(req, res, next),
     );
 
     await this.updateRouter();
@@ -99,7 +98,7 @@ export class ReactorRouterManager {
       const schema = createSchema(
         this.driveServer,
         subgraphConfig.resolvers,
-        subgraphConfig.typeDefs
+        subgraphConfig.typeDefs,
       );
       // create apollo server
       const server = new ApolloServer({
@@ -125,7 +124,7 @@ export class ReactorRouterManager {
             // analyticStore: undefined, // TODO: add analytic store
             ...this.getAdditionalContextFields(),
           }),
-        })
+        }),
       );
     }
 
@@ -137,7 +136,7 @@ export class ReactorRouterManager {
     const schema = createSchema(
       this.driveServer,
       processor.resolvers,
-      processor.typeDefs
+      processor.typeDefs,
     );
 
     this.registry.unshift({

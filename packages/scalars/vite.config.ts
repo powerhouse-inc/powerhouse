@@ -1,6 +1,6 @@
 import { writeFileSync } from "fs";
 import { glob } from "glob";
-import { defineConfig, UserConfig } from "vite";
+import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 import generateFile from "vite-plugin-generate-file";
 import pkg from "./package.json";
@@ -32,9 +32,9 @@ const mappedExports = glob
     return {
       ...acc,
       [`./${key}`]: {
+        types: `./dist/types/src/scalars/${filePath}.d.ts`,
         require: `./dist/cjs/src/scalars/${filePath}.js`,
         import: `./dist/es/src/scalars/${filePath}.js`,
-        types: `./dist/types/src/scalars/${filePath}.d.ts`,
       },
     };
   }, {});
@@ -80,9 +80,9 @@ export default defineConfig({
       closeBundle() {
         const exportsConfig = {
           ".": {
+            types: "./dist/types/src/index.d.ts", // TypeScript declarations
             require: "./dist/cjs/src/index.js", // CommonJS entry point
             import: "./dist/es/src/index.js", // ES module entry point
-            types: "./dist/types/src/index.d.ts", // TypeScript declarations
           },
           ...mappedExports,
         };
@@ -101,4 +101,4 @@ export default defineConfig({
       },
     },
   ],
-} as UserConfig);
+});

@@ -1,0 +1,23 @@
+{
+  "name": "@powerhousedao/config",
+  "version": "1.1.1",
+  "description": "",
+  "license": "AGPL-3.0-only",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "nx-release-publish": {
+    "options": {
+      "packageRoot": "dist/{projectRoot}"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist/",
+    "clean:node_modules": "rimraf node_modules"
+  }
+}

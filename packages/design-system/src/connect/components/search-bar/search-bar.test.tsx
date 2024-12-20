@@ -5,6 +5,7 @@ import {
   waitForElementToBeRemoved,
 } from "@testing-library/react";
 import { ConnectSearchBar, ConnectSearchBarProps } from "./search-bar";
+import { it, vi } from "vitest";
 
 const filterItems: ConnectSearchBarProps["filterItems"] = [
   {

@@ -27,11 +27,11 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: 9
           run_install: false
 
       - name: Install Dependencies
-        run: pnpm --filter @powerhousedao/design-system install --frozen-lockfile
+        run: pnpm install
 
       - name: Lint
         run: npx nx run @powerhousedao/design-system:lint
@@ -47,11 +47,11 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: 9
           run_install: false
 
       - name: Install Dependencies
-        run: pnpm --filter @powerhousedao/design-system install --frozen-lockfile
+        run: pnpm install
 
       - name: Test
         run: npx nx run @powerhousedao/design-system:test
@@ -67,11 +67,11 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: 9
           run_install: false
 
       - name: Install Dependencies
-        run: pnpm --filter @powerhousedao/design-system install --frozen-lockfile
+        run: pnpm install
 
       - name: Test
         run: npx nx run @powerhousedao/design-system:build-storybook
@@ -87,11 +87,11 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v3
         with:
-          version: latest-8
+          version: 9
           run_install: false
 
       - name: Install Dependencies
-        run: pnpm --filter @powerhousedao/design-system install --frozen-lockfile
+        run: pnpm install
 
       - name: Build
         run: npx nx run @powerhousedao/design-system:build

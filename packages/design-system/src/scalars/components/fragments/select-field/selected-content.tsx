@@ -1,6 +1,5 @@
 import React from "react";
 import { Badge } from "@/scalars/components/fragments/badge";
-import { Button } from "@/scalars/components/fragments/button";
 import { cn } from "@/scalars/lib/utils";
 import { SelectProps } from "@/scalars/components/enum-field/types";
 import { Icon, type IconName } from "@/powerhouse/components/icon";
@@ -12,7 +11,6 @@ interface SelectedContentProps {
   searchable?: boolean;
   maxSelectedOptionsToShow: number;
   placeholder?: string;
-  disabled?: boolean;
   handleClear: () => void;
 }
 
@@ -23,7 +21,6 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
   searchable,
   maxSelectedOptionsToShow,
   placeholder,
-  disabled,
   handleClear,
 }) => {
   const renderIcon = (
@@ -96,14 +93,12 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
       </div>
       <div className="flex items-center justify-between gap-2">
         {multiple && selectedValues.length > 0 && (
-          <Button
-            type="button"
+          <div
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               handleClear();
             }}
-            disabled={disabled}
             className="size-4 p-0"
           >
             <Icon
@@ -111,7 +106,7 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
               size={16}
               className="cursor-pointer text-gray-700 dark:text-gray-400"
             />
-          </Button>
+          </div>
         )}
         {searchable ? (
           <Icon

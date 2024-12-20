@@ -17,5 +17,5 @@
       "document-drive": ["../document-drive/src/index.ts"]
     }
   },
-  "include": ["src/**/*", "*.config.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "*.config.ts"]
 }

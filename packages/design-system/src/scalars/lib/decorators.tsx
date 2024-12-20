@@ -23,7 +23,18 @@ export const withForm: Decorator = (Story, context) => {
   const { viewMode } = context;
 
   const onSubmit = useCallback((data: any) => {
-    alert(JSON.stringify(data, null, 2));
+    // Allow to show bigInt values in the alert
+    const serializedData = JSON.stringify(
+      data,
+      (key, value): any =>
+        typeof value === "bigint" ? `BigInt(${value.toString()})` : value,
+      2,
+    );
+
+    // delay the alert to allow component JS to finish the execution
+    setTimeout(() => {
+      alert(serializedData);
+    }, 300);
   }, []);
 
   const onReset = useCallback(() => {

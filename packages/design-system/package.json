@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.9.1-canary.64",
+  "version": "1.9.1-canary.98",
   "description": "",
   "files": [
     "/dist"
@@ -13,17 +13,26 @@
   },
   "sideEffects": false,
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
     "./style.css": {
       "import": "./dist/style.css",
       "require": "./dist/style.css"
     },
-    "./scalars": "./dist/scalars/index.js"
+    "./scalars": {
+      "types": "./dist/src/scalars/index.d.ts",
+      "require": "./dist/scalars/index.js",
+      "import": "./dist/scalars/index.js"
+    }
   },
   "scripts": {
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
     "prepare": "npm run create-icon-components",
     "prepublish": "npm run create-icon-components",
@@ -55,19 +64,8 @@
   "homepage": "https://github.com/powerhouse-inc/design-system#readme",
   "devDependencies": {
     "@hookform/devtools": "^4.3.1",
-    "@powerhousedao/scalars": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
     "@prettier/sync": "^0.5.2",
-    "@storybook/addon-actions": "^8.4.6",
-    "@storybook/addon-docs": "^8.4.6",
-    "@storybook/addon-essentials": "^8.4.6",
-    "@storybook/addon-interactions": "^8.4.6",
-    "@storybook/addon-links": "^8.4.6",
-    "@storybook/addon-themes": "^8.4.6",
-    "@storybook/blocks": "^8.4.6",
-    "@storybook/preview-api": "^8.4.6",
-    "@storybook/react": "^8.4.6",
-    "@storybook/react-vite": "^8.4.6",
-    "@storybook/testing-library": "^0.2.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
@@ -76,31 +74,22 @@
     "@types/jest": "^29.5.14",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "camelcase": "^8.0.0",
-    "chromatic": "^11.11.0",
     "cross-env": "^7.0.3",
-    "document-model": "workspace:*",
     "fast-xml-parser": "^4.3.4",
     "jsdom": "^24.0.0",
-    "lightningcss": "^1.27.0",
-    "postcss": "^8.4.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "rollup-plugin-visualizer": "^5.12.0",
-    "storybook": "^8.4.6",
-    "storybook-addon-pseudo-states": "^4.0.2",
-    "tsx": "^4.19.1"
+    "rollup-plugin-visualizer": "^5.12.0"
   },
   "peerDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
-    "document-model": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "dependencies": {
     "@internationalized/date": "^3.5.6",
+    "@powerhousedao/scalars": "workspace:*",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.2",
@@ -121,7 +110,9 @@
     "country-data-list": "^1.3.4",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "document-model": "workspace:*",
     "mathjs": "^13.1.1",
+    "nanoid": "^5.0.9",
     "natural-orderby": "^4.0.0",
     "react-circle-flags": "^0.0.22",
     "react-hook-form": "^7.53.0",
@@ -130,8 +121,6 @@
     "react-select": "^5.8.0",
     "react-toastify": "^10.0.4",
     "tailwind-merge": "^2.5.2",
-    "tailwind-scrollbar": "^3.1.0",
-    "tailwindcss": "^3.4.12",
     "tailwindcss-animate": "^1.0.7",
     "usehooks-ts": "^3.1.0",
     "viem": "^2.16.1",

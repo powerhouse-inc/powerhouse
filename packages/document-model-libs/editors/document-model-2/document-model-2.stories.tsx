@@ -2,6 +2,7 @@ import { reducer, utils } from "document-model/document-model";
 import Editor from "./editor";
 import { createDocumentStory } from "document-model-libs/utils";
 import { v7 as uuidv7 } from "uuid";
+import { Meta } from "@storybook/react";
 const { meta, CreateDocumentStory: Empty } = createDocumentStory(
   Editor,
   reducer,
@@ -287,6 +288,6 @@ type TestLocalDefinition${id} {
   },
 );
 
-export default { ...meta, title: "Document Model 2" };
+export default { ...meta, title: "Document Model 2" } as Meta<typeof Editor>;
 
 export { Empty, WithData, WithBackgroundUpdates };

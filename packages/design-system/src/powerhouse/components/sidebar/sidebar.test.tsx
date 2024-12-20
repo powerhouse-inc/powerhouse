@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-
+import { it } from "vitest";
 import { Sidebar, SidebarFooter, SidebarHeader, SidebarPanel } from ".";
 
 describe("Sidebar Component", () => {

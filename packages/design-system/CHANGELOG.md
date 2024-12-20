@@ -1,3 +1,42 @@
+## 1.13.1 (2024-12-09)
+
+### 🩹 Fixes
+
+- **config:** added build ([aaeb785f](https://github.com/powerhouse-inc/powerhouse/commit/aaeb785f))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/config to 1.1.1
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 1.11.1 (2024-12-09)
+
+### 🚀 Features
+
+- **monorepo:** simplify check action ([a22745f4](https://github.com/powerhouse-inc/powerhouse/commit/a22745f4))
+- **monorepo:** simplify parallel task execution ([0ed8df13](https://github.com/powerhouse-inc/powerhouse/commit/0ed8df13))
+- **monorepo:** handle merge conflicts ([bfa6f0a0](https://github.com/powerhouse-inc/powerhouse/commit/bfa6f0a0))
+- **monorepo:** handle project references ([3b6c046f](https://github.com/powerhouse-inc/powerhouse/commit/3b6c046f))
+- **document-model-libs:** move tailwind config to workspace root ([74b9869a](https://github.com/powerhouse-inc/powerhouse/commit/74b9869a))
+- **document-model-libs:** remove wrong peer deps ([5fd7ef67](https://github.com/powerhouse-inc/powerhouse/commit/5fd7ef67))
+- use unified deps ([38c759a9](https://github.com/powerhouse-inc/powerhouse/commit/38c759a9))
+- **monorepo:** fix export declarations ([58908779](https://github.com/powerhouse-inc/powerhouse/commit/58908779))
+
+### 🩹 Fixes
+
+- **design-system:** add missing comma ([48a9f8c2](https://github.com/powerhouse-inc/powerhouse/commit/48a9f8c2))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/config to 1.1.0
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 1.0.0-alpha.183 (2024-10-09)
 
 ### 🚀 Features

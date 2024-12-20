@@ -7,6 +7,7 @@ import {
   PrebuiltArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
+import { Icon, IconName } from "@/powerhouse";
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",
@@ -34,14 +35,7 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    isBigInt: {
-      control: "boolean",
-      description: "Indicates if the input field should allow BigInt values",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
+
     numberProps: {
       control: "object",
       description: "All the props options for number field",
@@ -67,7 +61,6 @@ const meta = {
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minValue,
     ...PrebuiltArgTypes.maxValue,
-    ...PrebuiltArgTypes.allowNegative,
     ...PrebuiltArgTypes.precision,
     ...PrebuiltArgTypes.trailingZeros,
   },
@@ -78,6 +71,10 @@ const meta = {
   },
 } satisfies Meta<typeof AmountField>;
 
+const IconComponent = (name: IconName) => {
+  return () => <Icon name={name} size={16} />;
+};
+
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -86,15 +83,69 @@ export const Currency: Story = {
     selectName: "currency",
     label: "Enter Amount and Select Currency",
     name: "amount",
+    step: 0,
     type: "AmountCurrency",
     allowedCurrencies: ["USD", "EUR"],
+    currencyPosition: "right",
     value: {
       amount: 345,
       currency: "USD",
     },
   },
 };
+export const TokenIcon: Story = {
+  name: "Token Icon",
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    step: 0,
+    type: "AmountToken",
+    allowedTokens: ["BTC", "ETH"],
+    tokenIcons: {
+      BTC: IconComponent("Briefcase"),
+      ETH: IconComponent("Briefcase"),
+    },
+    currencyPosition: "right",
+    value: {
+      amount: 3454564564 as unknown as bigint,
+      token: "BTC",
+    },
+  },
+};
 
+export const Token: Story = {
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    step: 0,
+    type: "AmountToken",
+    allowedTokens: ["BTC", "ETH", "USDT"],
+    currencyPosition: "right",
+    value: {
+      amount: 12321312 as unknown as bigint,
+      token: "BTC",
+    },
+  },
+};
+
+export const CurrencyLeft: Story = {
+  name: "Currency Left",
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    step: 0,
+    type: "AmountCurrency",
+    allowedCurrencies: ["USD", "EUR"],
+    currencyPosition: "left",
+    value: {
+      amount: 345,
+      currency: "USD",
+    },
+  },
+};
 export const Default: Story = {
   args: {
     selectName: "currency",
@@ -102,6 +153,7 @@ export const Default: Story = {
     name: "amount",
     type: "Amount",
     value: 345,
+    step: 0,
   },
 };
 export const Percent: Story = {
@@ -111,6 +163,7 @@ export const Percent: Story = {
     name: "amount",
     type: "AmountPercentage",
     value: 9,
+    step: 0,
   },
 };
 
@@ -121,6 +174,7 @@ export const PercentWithActive: Story = {
     name: "amount",
     type: "AmountPercentage",
     value: 345,
+    step: 0,
     numberProps: {
       autoFocus: true,
     },
@@ -136,6 +190,7 @@ export const PercentWithDisable: Story = {
     name: "amount",
     type: "AmountPercentage",
     defaultValue: 345,
+    step: 0,
   },
 };
 
@@ -146,27 +201,13 @@ export const CurrencyWithDisable: Story = {
     name: "amount",
     allowedCurrencies: ["USD", "EUR"],
     type: "AmountCurrency",
+    currencyPosition: "right",
     value: {
       amount: 345,
       currency: "USD",
     },
     disabled: true,
-  },
-};
-export const CurrencyWithActive: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    type: "AmountCurrency",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    numberProps: {
-      autoFocus: true,
-    },
+    step: 0,
   },
 };
 
@@ -176,11 +217,13 @@ export const HoverWithCurrency: Story = {
     label: "Enter Amount and Select Currency",
     name: "amount",
     allowedCurrencies: ["USD", "EUR"],
+    currencyPosition: "right",
     type: "AmountCurrency",
     value: {
       amount: 345,
       currency: "USD",
     },
+    step: 0,
   },
   parameters: {
     pseudo: {
@@ -195,11 +238,13 @@ export const Required: Story = {
     name: "amount",
     allowedCurrencies: ["USD", "EUR"],
     required: true,
+    currencyPosition: "right",
     type: "AmountCurrency",
     value: {
       amount: 345,
       currency: "USD",
     },
+    step: 0,
   },
 };
 export const WithWarning: Story = {
@@ -208,12 +253,14 @@ export const WithWarning: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
       currency: "USD",
     },
     warnings: ["Warning message"],
+    step: 0,
   },
 };
 export const WithError: Story = {
@@ -222,12 +269,14 @@ export const WithError: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
       currency: "USD",
     },
     errors: ["Error message"],
+    step: 0,
   },
 };
 export const WithMultipleErrors: Story = {
@@ -236,6 +285,7 @@ export const WithMultipleErrors: Story = {
     name: "Label",
     label: "Label",
     type: "AmountCurrency",
+    currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 345,
@@ -247,5 +297,6 @@ export const WithMultipleErrors: Story = {
       "Error message number 3",
       "Error message number 4",
     ],
+    step: 0,
   },
 };

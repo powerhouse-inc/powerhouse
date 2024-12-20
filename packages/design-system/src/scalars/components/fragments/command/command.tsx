@@ -9,10 +9,7 @@ const Command = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive
     ref={ref}
-    className={cn(
-      "flex size-full flex-col overflow-hidden rounded-md",
-      className,
-    )}
+    className={cn("flex size-full flex-col rounded", className)}
     {...props}
   />
 ));
@@ -26,11 +23,11 @@ const CommandInput = React.forwardRef<
 >(({ wrapperClassName, className, ...props }, ref) => (
   <div
     className={cn(
-      "group mt-1 flex items-center gap-2 rounded-t border-y px-3",
-      "border-b-gray-300 border-t-transparent dark:border-b-gray-900",
-      "hover:border hover:border-gray-300 dark:hover:border-gray-900",
+      "group relative flex items-center border-b",
+      "border-b-gray-300 dark:border-b-gray-900",
+      "hover:border-b-gray-300 dark:hover:border-b-gray-800",
       "hover:bg-gray-100 dark:hover:bg-gray-900",
-      "focus-within:border focus-within:border-gray-300 dark:focus-within:border-gray-900",
+      "focus-within:border-b-gray-300 dark:focus-within:border-b-gray-800",
       "focus-within:bg-gray-100 dark:focus-within:bg-gray-900",
       wrapperClassName,
     )}
@@ -40,8 +37,7 @@ const CommandInput = React.forwardRef<
       name="Search"
       size={16}
       className={cn(
-        "text-gray-500",
-        "dark:text-gray-700",
+        "pointer-events-none absolute left-3 top-3.5 text-gray-500 dark:text-gray-700",
         "group-hover:text-gray-700 dark:group-hover:text-gray-500",
         "group-focus-within:!text-gray-900 dark:group-focus-within:!text-gray-50",
       )}
@@ -49,7 +45,7 @@ const CommandInput = React.forwardRef<
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex w-full bg-transparent py-[7.2px] text-[14px] font-normal leading-5 outline-none",
+        "flex w-full bg-transparent pb-2 pl-9 pr-3 pt-3 text-[14px] font-normal leading-5 outline-none",
         "placeholder:text-gray-500 dark:placeholder:text-gray-700",
         "group-hover:placeholder:text-gray-700 dark:group-hover:placeholder:text-gray-500",
         "group-focus-within:placeholder:!text-gray-300 dark:group-focus-within:placeholder:!text-gray-700",
@@ -105,7 +101,7 @@ const CommandItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex select-none items-center justify-between",
-      "gap-2 rounded-md px-2 py-[7px]",
+      "gap-2 rounded-md px-2 py-[6.4px]",
       "text-[14px] leading-4 outline-none",
       "border-y-2 border-white dark:border-slate-600",
       "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-75",

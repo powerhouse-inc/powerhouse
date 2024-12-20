@@ -1,6 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { act } from "react";
 import { usePagination } from "./usePagination";
+import { it } from "vitest";
 
 const items = Array.from({ length: 107 }, (_, i) => `Page ${i + 1}`);
 

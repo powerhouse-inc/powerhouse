@@ -1,5 +1,5 @@
 import { mergeClassNameProps } from "./mergeClassNameProps";
-
+import { it } from "vitest";
 describe("Utils", () => {
   describe("mergeClassNameProps", () => {
     it("should inlcude className argument value as part of the returned props", () => {
