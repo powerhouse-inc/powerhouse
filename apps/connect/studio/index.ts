@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import fs from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-
 import { startServer } from './server';
 
 type PowerhouseConfig = {
@@ -20,7 +19,7 @@ const readJsonFile = (filePath: string): PowerhouseConfig | null => {
     }
 };
 
-type ConnectStudioOptions = {
+export type ConnectStudioOptions = {
     port?: string;
     host?: boolean;
     configFile?: string;
@@ -28,9 +27,7 @@ type ConnectStudioOptions = {
     localDocuments?: string;
 };
 
-type ConnectStudioAction = (options: ConnectStudioOptions) => void;
-
-const connectStudioAction: ConnectStudioAction = options => {
+export function startConnectStudio(options: ConnectStudioOptions) {
     if (options.port) {
         process.env.PORT = options.port;
     }
@@ -68,10 +65,10 @@ const connectStudioAction: ConnectStudioAction = options => {
         process.env.LOCAL_DOCUMENT_MODELS = options.localDocuments;
     }
 
-    startServer().catch(error => {
+    return startServer().catch(error => {
         throw error;
     });
-};
+}
 
 export const program = new Command();
 
@@ -92,7 +89,7 @@ program
         '-ld, --local-documents <localDocuments>',
         'Link local documents path',
     )
-    .action(connectStudioAction);
+    .action(startConnectStudio);
 
 program
     .command('help')

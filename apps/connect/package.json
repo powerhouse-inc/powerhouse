@@ -3,7 +3,8 @@
     "productName": "Powerhouse-Connect",
     "version": "1.0.0-dev.180",
     "description": "Powerhouse Connect",
-    "main": "./index.js",
+    "main": "./dist/studio/index.js",
+    "types": "./dist/studio/index.d.ts",
     "type": "module",
     "bin": {
         "connect": "./dist/studio/cli.js"
@@ -40,6 +41,7 @@
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "build:studio": "node studio/esbuild.studio.config.mjs",
         "prebuild:studio": "BUILD_STUDIO=true npm run build:web",
+        "postbuild:studio": "tsc -p tsconfig.studio.json",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "release": "semantic-release",
         "e2e": "playwright test",
