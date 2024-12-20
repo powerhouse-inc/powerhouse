@@ -1,3 +1,10 @@
+# [1.0.0-dev.181](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.180...v1.0.0-dev.181) (2024-12-20)
+
+
+### Features
+
+* export studio types ([e823e22](https://github.com/powerhouse-inc/document-model-electron/commit/e823e225136303bb72680769fe6f6ba4abb0380a))
+
 # [1.0.0-dev.180](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.179...v1.0.0-dev.180) (2024-12-16)
 
 
