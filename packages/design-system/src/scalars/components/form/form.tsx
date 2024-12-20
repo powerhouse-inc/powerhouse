@@ -9,6 +9,7 @@ import {
   useImperativeHandle,
 } from "react";
 import { FormProvider, useForm, UseFormReturn } from "react-hook-form";
+import { FormServerErrorMessage } from "../fragments";
 
 interface FormProps {
   /**
@@ -24,7 +25,7 @@ interface FormProps {
    *
    * @param data - An object containing the form values, keyed by field names
    */
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => void | Promise<void>;
 
   /**
    * Whether to reset the form after a successful submit.
@@ -48,6 +49,13 @@ interface FormProps {
    * Useful for editing existing data or setting initial state.
    */
   defaultValues?: Record<string, any>;
+
+  /**
+   * Whether to handle submit errors manually instead of showing them automatically.
+   *
+   * @default false The errors will be rendered automatically on top of the form.
+   */
+  renderSubmitErrorsManually?: boolean;
 
   /**
    * Additional CSS class name to apply to the form element.
@@ -99,6 +107,7 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
       submitChangesOnly = false,
       defaultValues,
       className,
+      renderSubmitErrorsManually = false,
     },
     ref,
   ) => {
@@ -121,59 +130,71 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
     ]);
 
     const wrappedOnSubmit = useCallback(
-      (rawData: Record<string, any>) => {
-        let data = rawData;
-        // we should make sure that empty fields are submitted as `null`
-        // react-hook-form doesn't submit fields with `undefined` values
-        // so we need to add them to the data as `null`
-        Object.keys(methods.control._fields).forEach((fieldName) => {
-          if (!Object.keys(data).includes(fieldName)) {
-            data[fieldName] = null;
-          }
-        });
-
-        if (submitChangesOnly && !!defaultValues) {
-          // remove fields that didn't change it's value
-          data = Object.fromEntries(
-            Object.entries(rawData).filter(
-              ([fieldName, value]) =>
-                !deepEqual(value, defaultValues[fieldName]),
-            ),
-          );
-        }
-
-        // at this point all the fields that need to be submitted are in the data
-        // we just need to make sure that "empty" values are submitted as `null`
-        data = Object.fromEntries(
-          Object.entries(data).map(([fieldName, value]) => [
-            fieldName,
-            isEmpty(value) ? null : value,
-          ]),
-        );
-
-        // cast data if needed to prevent submitting wrong data type
-        const form = document.getElementById(formId);
-        Object.keys(data).map((key) => {
-          try {
-            const value: unknown = data[key];
-            if (value !== null) {
-              const field = form?.querySelector(`[name="${key}"]`);
-              const dataCast = field?.getAttribute("data-cast");
-              if (dataCast) {
-                data[key] = castValue(value, dataCast as ValueCast) as unknown;
-              }
+      async (rawData: Record<string, any>) => {
+        try {
+          let data = rawData;
+          // we should make sure that empty fields are submitted as `null`
+          // react-hook-form doesn't submit fields with `undefined` values
+          // so we need to add them to the data as `null`
+          Object.keys(methods.control._fields).forEach((fieldName) => {
+            if (!Object.keys(data).includes(fieldName)) {
+              data[fieldName] = null;
             }
-          } catch (error) {
-            // print out the error but continue the execution
-            console.error(error);
-          }
-        });
+          });
 
-        // we need to return the promise from the onSubmit callback if there is one
-        // so react-hook-form can wait for it to resolve and update the form state correctly
-        return onSubmit(data);
+          if (submitChangesOnly && !!defaultValues) {
+            // remove fields that didn't change it's value
+            data = Object.fromEntries(
+              Object.entries(rawData).filter(
+                ([fieldName, value]) =>
+                  !deepEqual(value, defaultValues[fieldName]),
+              ),
+            );
+          }
+
+          // at this point all the fields that need to be submitted are in the data
+          // we just need to make sure that "empty" values are submitted as `null`
+          data = Object.fromEntries(
+            Object.entries(data).map(([fieldName, value]) => [
+              fieldName,
+              isEmpty(value) ? null : value,
+            ]),
+          );
+
+          // cast data if needed to prevent submitting wrong data type
+          const form = document.getElementById(formId);
+          Object.keys(data).map((key) => {
+            try {
+              const value: unknown = data[key];
+              if (value !== null) {
+                const field = form?.querySelector(`[name="${key}"]`);
+                const dataCast = field?.getAttribute("data-cast");
+                if (dataCast) {
+                  data[key] = castValue(
+                    value,
+                    dataCast as ValueCast,
+                  ) as unknown;
+                }
+              }
+            } catch (error) {
+              // print out the error but continue the execution
+              console.error(error);
+            }
+          });
+
+          // we need to return the promise from the onSubmit callback if there is one
+          // so react-hook-form can wait for it to resolve and update the form state correctly
+          return await onSubmit(data);
+        } catch (error) {
+          // if there is an error, we need to set it to the form state
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "An error occurred while submitting the data";
+          methods.setError("root.serverError", { message: errorMessage });
+        }
       },
-      [methods.control, submitChangesOnly, defaultValues, formId, onSubmit],
+      [methods, submitChangesOnly, defaultValues, formId, onSubmit],
     );
 
     return (
@@ -184,6 +205,12 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
           className={className}
           noValidate
         >
+          {!renderSubmitErrorsManually &&
+            methods.formState.errors.root?.serverError?.message && (
+              <div className="mb-2">
+                <FormServerErrorMessage />
+              </div>
+            )}
           {typeof children === "function" ? children(methods) : children}
         </form>
       </FormProvider>
