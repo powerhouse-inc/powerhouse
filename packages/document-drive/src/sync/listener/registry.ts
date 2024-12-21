@@ -7,9 +7,9 @@ import {
   StatefulListener,
 } from "./types";
 import { DuplicatedListenerIdError, ListenerNotFoundError } from "./errors";
-import { ObservableMap, Subscribe } from "../../utils/event-emitter";
 import { buildListenerFilter, listensToSyncUnit } from "../utils";
 import { OperationScope } from "document-model/document";
+import { ObservableMap, Subscribe } from "../../utils/observable-map";
 
 export class ListenerRegistry implements IListenerRegistry {
   protected listeners = new ObservableMap<Listener["id"], StatefulListener>();

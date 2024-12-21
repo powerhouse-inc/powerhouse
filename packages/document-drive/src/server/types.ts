@@ -36,6 +36,7 @@ import {
   PullResponderTrigger,
   StrandUpdateSource,
 } from "./listener/transmitter/types";
+import { ListenerInput } from "../sync/listener";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -188,6 +189,8 @@ export interface DriveEvents {
   ) => void;
   documentModels: (documentModels: DocumentModel[]) => void;
   driveAdded: (drive: DocumentDriveDocument) => void;
+
+  deleteDrive: (driveId: string) => void;
   driveDeleted: (driveId: string) => void;
 }
 
@@ -429,14 +432,8 @@ export abstract class AbstractDocumentDriveServer {
   ): SyncStatus | SynchronizationUnitNotFoundError;
 
   abstract addInternalListener(
-    driveId: string,
     receiver: IInternalListener,
-    options: {
-      listenerId: string;
-      label: string;
-      block: boolean;
-      filter: ListenerFilter;
-    },
+    options: ListenerInput,
   ): Promise<IInternalTransmitter>;
 
   /** Synchronization methods */

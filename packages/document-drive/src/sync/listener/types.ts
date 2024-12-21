@@ -1,7 +1,7 @@
 import { OperationScope } from "document-model/document";
 import { IDuplicatedListenerIdError } from "./errors";
 import { Optional } from "../../utils/types";
-import { Subscribe } from "../../utils/event-emitter";
+import { Subscribe } from "../../utils/observable-map";
 
 export type ListenerFilter = {
   branch: string[];

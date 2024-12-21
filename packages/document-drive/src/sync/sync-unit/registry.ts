@@ -1,8 +1,8 @@
 import { ISyncUnitRegistry, SyncUnit } from "./types";
 import { DuplicatedSyncUnitIdError, SyncUnitNotFoundError } from "./errors";
-import { ObservableMap, Subscribe } from "../../utils/event-emitter";
 import { listensToSyncUnit } from "../utils";
 import { OperationScope } from "document-model/document";
+import { ObservableMap, Subscribe } from "../../utils/observable-map";
 
 export class SyncUnitRegistry implements ISyncUnitRegistry {
   protected syncUnits = new ObservableMap<SyncUnit["id"], SyncUnit>();
@@ -53,7 +53,7 @@ export class SyncUnitRegistry implements ISyncUnitRegistry {
   filterSyncUnits(filter: {
     driveId?: string[];
     documentId?: string[];
-    scope?: OperationScope[];
+    scope?: (OperationScope | "*")[];
     branch?: string[];
     documentType?: string[];
   }): Promise<SyncUnit[]> {

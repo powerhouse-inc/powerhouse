@@ -1,5 +1,5 @@
 import { OperationScope } from "document-model/document";
-import { Subscribe } from "../../utils/event-emitter";
+import { Subscribe } from "../../utils/observable-map";
 
 export type SyncUnit = {
   id: string;
@@ -68,7 +68,7 @@ export interface ISyncUnitRegistry extends ISyncUnitAPI {
   filterSyncUnits(filter: {
     driveId?: string[];
     documentId?: string[];
-    scope?: OperationScope[];
+    scope?: (OperationScope | "*")[];
     branch?: string[];
     documentType?: string[];
   }): Promise<SyncUnit[]>;

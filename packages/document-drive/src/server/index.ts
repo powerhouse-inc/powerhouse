@@ -23,7 +23,6 @@ import {
   OperationScope,
 } from "document-model/document";
 import { ClientError } from "graphql-request";
-import { createNanoEvents, Unsubscribe } from "nanoevents";
 import { ICache } from "../cache";
 import InMemoryCache from "../cache/memory";
 import { BaseQueueManager } from "../queue/base";
@@ -68,7 +67,6 @@ import {
   OperationError,
   SynchronizationUnitNotFoundError,
 } from "./error";
-import { ListenerManager } from "./listener/manager";
 import {
   CancelPullLoop,
   InternalTransmitter,
@@ -101,6 +99,9 @@ import {
   type SynchronizationUnit,
 } from "./types";
 import { filterOperationsByRevision, isAtRevision } from "./utils";
+import { ISyncManager, MemorySyncManager } from "../sync";
+import { createEventEmitter } from "../utils/event-emitter";
+import { ListenerInput } from "../sync/listener";
 
 export * from "./listener";
 export type * from "./types";
@@ -113,15 +114,17 @@ export class BaseDocumentDriveServer
   extends AbstractDocumentDriveServer
   implements IBaseDocumentDriveServer
 {
-  private emitter = createNanoEvents<DriveEvents>();
+  private emitter = createEventEmitter<DriveEvents>();
   private cache: ICache;
   private documentModels: DocumentModel[];
   private storage: IDriveStorage;
-  private listenerStateManager: ListenerManager;
+  private syncManager: ISyncManager;
   private triggerMap = new Map<
     DocumentDriveState["id"],
     Map<Trigger["id"], CancelPullLoop>
   >();
+
+  // TODO remove syncStatus and use syncManager
   private syncStatus = new Map<string, SyncUnitStatusObject>();
 
   private queueManager: IQueueManager;
@@ -154,11 +157,7 @@ export class BaseDocumentDriveServer
           : options.taskQueueMethod,
     };
 
-    this.listenerStateManager = new ListenerManager(
-      this,
-      undefined,
-      options?.listenerManager,
-    );
+    this.syncManager = new MemorySyncManager();
     this.documentModels = documentModels;
     this.storage = storage;
     this.cache = cache;
@@ -386,7 +385,7 @@ export class BaseDocumentDriveServer
     this.updateSyncUnitStatus(driveId, { push: status }, error);
   }
 
-  private shouldSyncRemoteDrive(drive: DocumentDriveDocument) {
+  private shouldSyncDrive(drive: DocumentDriveDocument) {
     return (
       drive.state.local.availableOffline &&
       drive.state.local.triggers.length > 0
@@ -491,7 +490,7 @@ export class BaseDocumentDriveServer
                 this.getSynchronizationUnitsRevision(driveId, syncUnits)
                   .then((syncUnitRevisions) => {
                     for (const revision of syncUnitRevisions) {
-                      this.listenerStateManager
+                      this.syncManager
                         .updateListenerRevision(
                           pushListener.listenerId,
                           driveId,
@@ -598,7 +597,7 @@ export class BaseDocumentDriveServer
     const errors: Error[] = [];
     const drives = await this.getDrives();
     for (const drive of drives) {
-      await this._initializeDrive(drive).catch((error) => {
+      await this._initializeDrive(drive).catch((error: unknown) => {
         logger.error(`Error initializing drive ${drive}`, error);
         errors.push(error as Error);
       });
@@ -612,7 +611,7 @@ export class BaseDocumentDriveServer
     // then triggers the listeners update
     if (typeof window !== "undefined") {
       window.addEventListener("online", () => {
-        this.listenerStateManager
+        this.syncManager
           .triggerUpdate(
             false,
             { type: "local" },
@@ -629,13 +628,20 @@ export class BaseDocumentDriveServer
 
   private async _initializeDrive(driveId: string) {
     const drive = await this.getDrive(driveId);
-    await this.initializeDriveSyncStatus(driveId, drive);
-
-    if (this.shouldSyncRemoteDrive(drive)) {
-      await this.startSyncRemoteDrive(driveId);
+    if (!this.shouldSyncDrive(drive)) {
+      return;
     }
 
-    await this.listenerStateManager.initDrive(drive);
+    await this.initializeDriveSyncStatus(driveId, drive);
+
+    await this.syncManager.addDocumentSyncUnits(driveId, driveId, drive);
+
+    for (const node of drive.state.global.nodes) {
+      if (isFileNode(node)) {
+        const document = await this.getDocument(driveId, node.id);
+        await this.syncManager.addDocumentSyncUnits(node.id, driveId, document);
+      }
+    }
   }
 
   public async getSynchronizationUnits(
@@ -981,9 +987,11 @@ export class BaseDocumentDriveServer
   }
 
   async deleteDrive(id: string) {
+    // TODO: use deleteDrive command with inversion of control
+    // await this.emitter.emitAsync("deleteDrive", id);
     const result = await Promise.allSettled([
       this.stopSyncRemoteDrive(id),
-      this.listenerStateManager.removeDrive(id),
+      this.syncManager.removeDriveSyncUnits(id),
       this.cache.deleteDocument("drives", id),
       this.storage.deleteDrive(id),
     ]);
@@ -1102,7 +1110,7 @@ export class BaseDocumentDriveServer
     for (const syncUnit of input.synchronizationUnits) {
       this.initSyncStatus(syncUnit.syncId, {
         pull: this.triggerMap.get(driveId) ? "INITIAL_SYNC" : undefined,
-        push: this.listenerStateManager.driveHasListeners(driveId)
+        push: this.syncManager.driveHasListeners(driveId)
           ? "SUCCESS"
           : undefined,
       });
@@ -1139,7 +1147,7 @@ export class BaseDocumentDriveServer
       for (const syncUnit of syncUnits) {
         this.updateSyncUnitStatus(syncUnit.syncId, null);
       }
-      await this.listenerStateManager.removeSyncUnits(driveId, syncUnits);
+      await this.syncManager.removeDocumentSyncUnits(id, driveId);
     } catch (error) {
       logger.warn("Error deleting document", error);
     }
@@ -1972,7 +1980,7 @@ export class BaseDocumentDriveServer
 
         const operationSource = this.getOperationSource(source);
 
-        this.listenerStateManager
+        this.syncManager
           .updateSynchronizationRevisions(
             drive,
             [
@@ -2108,17 +2116,8 @@ export class BaseDocumentDriveServer
     return result;
   }
 
-  async addInternalListener(
-    driveId: string,
-    receiver: IReceiver,
-    options: {
-      listenerId: string;
-      label: string;
-      block: boolean;
-      filter: ListenerFilter;
-    },
-  ) {
-    const listener: AddListenerInput["listener"] = {
+  async addInternalListener(receiver: IReceiver, options: ListenerInput) {
+    const listener: ListenerInput = {
       callInfo: {
         data: "",
         name: "Interal",
@@ -2127,7 +2126,7 @@ export class BaseDocumentDriveServer
       system: true,
       ...options,
     };
-    await this.addDriveAction(driveId, actions.addListener({ listener }));
+    await this.addListener(listener);
     const transmitter = await this.getTransmitter(driveId, options.listenerId);
     if (!transmitter) {
       logger.error("Internal listener not found");
@@ -2167,22 +2166,9 @@ export class BaseDocumentDriveServer
     );
   }
 
-  private async addListener(
-    driveId: string,
-    operation: Operation<Action<"ADD_LISTENER", AddListenerInput>>,
-  ) {
-    const { listener } = operation.input;
-    await this.listenerStateManager.addListener({
+  private async addListener(listener: ListenerInput) {
+    await this.syncManager.addListener({
       ...listener,
-      driveId,
-      label: listener.label ?? "",
-      system: listener.system ?? false,
-      filter: {
-        branch: listener.filter.branch ?? [],
-        documentId: listener.filter.documentId ?? [],
-        documentType: listener.filter.documentType ?? [],
-        scope: listener.filter.scope ?? [],
-      },
       callInfo: {
         data: listener.callInfo?.data ?? "",
         name: listener.callInfo?.name ?? "PullResponder",
@@ -2196,21 +2182,21 @@ export class BaseDocumentDriveServer
     operation: Operation<Action<"REMOVE_LISTENER", RemoveListenerInput>>,
   ) {
     const { listenerId } = operation.input;
-    await this.listenerStateManager.removeListener(driveId, listenerId);
+    await this.syncManager.removeListener(driveId, listenerId);
   }
 
   getTransmitter(
     driveId: string,
     listenerId: string,
   ): Promise<ITransmitter | undefined> {
-    return this.listenerStateManager.getTransmitter(driveId, listenerId);
+    return this.syncManager.getTransmitter(driveId, listenerId);
   }
 
   getListener(
     driveId: string,
     listenerId: string,
   ): Promise<ListenerState | undefined> {
-    return this.listenerStateManager.getListener(driveId, listenerId);
+    return this.syncManager.getListener(driveId, listenerId);
   }
 
   getSyncStatus(
@@ -2278,7 +2264,7 @@ export class BaseDocumentDriveServer
 
     const operationSource = this.getOperationSource(source);
 
-    this.listenerStateManager
+    this.syncManager
       .updateSynchronizationRevisions(
         driveId,
         syncUnits,

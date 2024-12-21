@@ -14,7 +14,6 @@ import { generateId } from "document-model/utils";
 import { OperationError } from "../server/error";
 import { DocumentDriveStorage, DocumentStorage } from "../storage";
 import { RunAsap } from "./run-asap";
-import { createEventEmitter } from "./event-emitter";
 export * from "./run-asap";
 
 export const runAsap = RunAsap.runAsap;

@@ -3,6 +3,14 @@ import { Optional } from "../utils/types";
 import { ListenerFilter } from "./listener/types";
 import { SyncUnit } from "./sync-unit/types";
 
+export function buildSyncUnitId(
+  documentId: string,
+  scope: OperationScope,
+  branch?: string,
+): string {
+  return `${documentId}:${scope}:${branch}`;
+}
+
 export function buildListenerFilter(
   filter?: Partial<{
     branch: string[] | null;
