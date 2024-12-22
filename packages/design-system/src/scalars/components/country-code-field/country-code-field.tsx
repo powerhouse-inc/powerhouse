@@ -11,7 +11,7 @@ export type CountryCodeFieldProps = FieldCommonProps<string> &
   CountryCodeProps;
 
 const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
-  HTMLButtonElement | HTMLDivElement,
+  HTMLButtonElement,
   CountryCodeFieldProps
 >(
   (
@@ -20,7 +20,7 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
       placeholder,
       allowedCountries,
       excludedCountries,
-      // TODO: implement dependant areas
+      // TODO: implement dependent areas
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       includeDependentAreas = false,
       viewMode = "NamesOnly",
@@ -68,9 +68,9 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
       <SelectFieldRaw
         ref={ref}
         options={options}
-        optionsCheckmark="None"
+        optionsCheckmark="Checkmark"
+        optionsCheckmarkPosition="Right"
         searchable={enableSearch}
-        searchPosition="Input"
         onChange={onChange}
         placeholder={placeholder}
         {...props}

@@ -9,7 +9,8 @@ describe("CountryCodeField Component", () => {
     name: "country",
     label: "Select Country",
   };
-  window.HTMLElement.prototype.scrollIntoView = () => {};
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  window.Element.prototype.scrollTo = vi.fn();
 
   it("should match snapshot", () => {
     const { asFragment } = renderWithForm(
@@ -85,9 +86,8 @@ describe("CountryCodeField Component", () => {
       />,
     );
 
-    const input = screen.getByRole("combobox");
-    await user.click(input);
-    await user.type(input, "united");
+    await user.click(screen.getByRole("combobox"));
+    await user.type(screen.getByPlaceholderText("Search..."), "united");
 
     expect(screen.getByText("United States")).toBeInTheDocument();
     expect(screen.getByText("United Kingdom")).toBeInTheDocument();

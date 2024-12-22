@@ -139,9 +139,9 @@ export const Required: Story = {
 
 export const WithSearchEnabled: Story = {
   args: {
-    label: "Select a country",
+    label: "Country",
     description: "Type to search through options",
-    placeholder: "Search...",
+    placeholder: "Select a country",
     enableSearch: true,
   },
 };

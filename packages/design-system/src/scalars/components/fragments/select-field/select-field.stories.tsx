@@ -41,27 +41,6 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
-    searchable: {
-      control: "boolean",
-      description: "Whether to enable search functionality",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
-    searchPosition: {
-      control: "radio",
-      options: ["Dropdown", "Input"],
-      description:
-        "Position of the search input. Note: 'Input' is only available when multiple=false",
-      table: {
-        type: { summary: '"Dropdown" | "Input"' },
-        defaultValue: { summary: '"Dropdown"' },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
     multiple: {
       control: "boolean",
       description: "Whether multiple options can be selected",
@@ -71,23 +50,37 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
-    maxSelectedOptionsToShow: {
-      control: "number",
-      description: "Maximum number of selected items that will be shown",
+    optionsCheckmark: {
+      control: "radio",
+      options: ["Auto", "Checkmark"],
+      description:
+        "Type of checkmark to show in the options. " +
+        "Auto: Show a Radio for Single Select and a Checkbox for Multi Select. " +
+        "Checkmark: Show a Checkmark for Single and Multi Select. ",
       table: {
-        type: { summary: "number" },
-        defaultValue: { summary: "3" },
+        type: { summary: '"Auto" | "Checkmark"' },
+        defaultValue: { summary: '"Auto"' },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
 
-    optionsCheckmark: {
+    optionsCheckmarkPosition: {
       control: "radio",
-      options: ["Auto", "None"],
-      description: "Whether to show checkmarks in options",
+      options: ["Left", "Right"],
+      description:
+        'Checkmark position in options. Only apply if optionsCheckmark is "Checkmark".',
       table: {
-        type: { summary: '"Auto" | "None"' },
-        defaultValue: { summary: '"Auto"' },
+        type: { summary: '"Left" | "Right"' },
+        defaultValue: { summary: '"Left"' },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    searchable: {
+      control: "boolean",
+      description: "Whether to enable search functionality",
+      table: {
+        type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -113,6 +106,13 @@ const IconComponent = (
 };
 
 const defaultOptions = [
+  { value: "Briefcase", label: "Briefcase" },
+  { value: "Drive", label: "Drive" },
+  { value: "Globe", label: "Globe" },
+  { value: "Settings", label: "Settings" },
+];
+
+const defaultOptionsWithIcon = [
   {
     value: "Briefcase",
     label: "Briefcase",
@@ -128,24 +128,28 @@ const defaultOptions = [
     label: "Globe",
     icon: IconComponent("Globe"),
   },
-  { value: "None", label: "None" },
+  {
+    value: "Settings",
+    label: "Settings",
+    icon: IconComponent("Settings"),
+  },
 ];
 
 // Basic examples
 export const Default: Story = {
   args: {
-    label: "Favorite icon",
+    label: "Favorite icon name",
     options: defaultOptions,
-    placeholder: "Select an icon",
+    placeholder: "Select an icon name",
   },
 };
 
 export const WithDescription: Story = {
   args: {
-    label: "Favorite icon",
-    description: "Choose your favorite icon from the list",
+    label: "Favorite icon name",
+    description: "Choose your favorite icon name",
     options: defaultOptions,
-    placeholder: "Select an icon",
+    placeholder: "Select an icon name",
   },
 };
 
@@ -162,7 +166,7 @@ export const WithDefaultValue: Story = {
   args: {
     label: "Preset selection",
     options: defaultOptions,
-    placeholder: "Select an icon",
+    placeholder: "Select an icon name",
     defaultValue: "Drive",
   },
 };
@@ -171,7 +175,7 @@ export const Disabled: Story = {
   args: {
     label: "Disabled field",
     options: defaultOptions,
-    placeholder: "Select an icon",
+    placeholder: "Select an icon name",
     value: "Drive",
     disabled: true,
   },
@@ -182,7 +186,7 @@ export const WithError: Story = {
   args: {
     label: "With error",
     options: defaultOptions,
-    placeholder: "Select icons",
+    placeholder: "Select icon names",
     value: ["Drive"],
     multiple: true,
     errors: ["Please select at least two options"],
@@ -193,7 +197,7 @@ export const WithWarning: Story = {
   args: {
     label: "With warning",
     options: defaultOptions,
-    placeholder: "Select icons",
+    placeholder: "Select icon names",
     value: ["Drive", "Globe"],
     multiple: true,
     warnings: ["Some selected options may not be available in the future"],
@@ -206,25 +210,8 @@ export const Searchable: Story = {
     label: "Searchable field",
     description: "Type to search through options",
     options: defaultOptions,
-    placeholder: "Select an icon",
+    placeholder: "Select an icon name",
     searchable: true,
-  },
-};
-
-export const WithSearchInInput: Story = {
-  args: {
-    label: "Select country",
-    description: "Type to search through options",
-    options: [
-      { value: "US", label: "United States" },
-      { value: "GB", label: "United Kingdom" },
-      { value: "FR", label: "France" },
-      { value: "DE", label: "Germany" },
-    ],
-    placeholder: "Search...",
-    optionsCheckmark: "None",
-    searchable: true,
-    searchPosition: "Input",
   },
 };
 
@@ -235,7 +222,7 @@ export const WithDisabledOption: Story = {
       ...defaultOptions,
       { value: "disabled", label: "Disabled option", disabled: true },
     ],
-    placeholder: "Select an icon",
+    placeholder: "Select an icon name",
   },
 };
 
@@ -244,48 +231,28 @@ export const Multiple: Story = {
     label: "Multi select",
     description: "You can select multiple options",
     options: defaultOptions,
-    placeholder: "Select icons",
+    placeholder: "Select icon names",
     multiple: true,
   },
 };
 
-export const WithMaxItemsToShow: Story = {
+export const WithCheckmark: Story = {
   args: {
-    label: "Limited display",
-    description: "Only shows 2 selected items at a time",
+    label: "With checkmark",
+    description: "This select field shows a checkmark for selected options",
     options: defaultOptions,
-    placeholder: "Select icons",
-    multiple: true,
-    maxSelectedOptionsToShow: 2,
+    optionsCheckmark: "Checkmark",
+    placeholder: "Select an icon name",
   },
 };
 
-export const WithoutCheckmarks: Story = {
+export const WithIcon: Story = {
   args: {
-    label: "No checkmarks",
-    description: "Options without checkmark indicators",
-    options: defaultOptions,
-    placeholder: "Select icons",
-    optionsCheckmark: "None",
-  },
-};
-
-export const WithPredefinedIcons: Story = {
-  args: {
-    label: "Options with predefined icon",
-    description: "Choose your favorite predefined icon",
-    options: [
-      { value: "CircleInfo", label: "CircleInfo", icon: "CircleInfo" },
-      { value: "Calendar", label: "Calendar", icon: "Calendar" },
-      {
-        value: "Settings",
-        label: "Settings",
-        icon: "Settings",
-        disabled: true,
-      },
-      { value: "Trash", label: "Trash", icon: "Trash" },
-      { value: "None", label: "None" },
-    ],
+    label: "Favorite icon",
+    description: "Choose your favorite icon",
+    options: defaultOptionsWithIcon,
+    optionsCheckmark: "Checkmark",
+    optionsCheckmarkPosition: "Right",
     placeholder: "Select an icon",
   },
 };
@@ -299,7 +266,6 @@ export const WithLongOptionLabel: Story = {
         value: "very-long-option-1",
         label:
           "This is a very long option label that might need truncation in the UI",
-        icon: IconComponent("CircleInfo"),
       },
       ...defaultOptions,
     ],

@@ -1,15 +1,13 @@
 import React from "react";
-import { Badge } from "@/scalars/components/fragments/badge";
 import { cn } from "@/scalars/lib/utils";
 import { SelectProps } from "@/scalars/components/enum-field/types";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
+import { Icon } from "@/powerhouse/components/icon";
 
 interface SelectedContentProps {
   selectedValues: string[];
-  options?: SelectProps["options"];
+  options: SelectProps["options"];
   multiple?: boolean;
   searchable?: boolean;
-  maxSelectedOptionsToShow: number;
   placeholder?: string;
   handleClear: () => void;
 }
@@ -19,22 +17,9 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
   options = [],
   multiple,
   searchable,
-  maxSelectedOptionsToShow,
   placeholder,
   handleClear,
 }) => {
-  const renderIcon = (
-    IconComponent:
-      | IconName
-      | React.ComponentType<{ className?: string }>
-      | undefined,
-  ) => {
-    if (typeof IconComponent === "string") {
-      return <Icon name={IconComponent} size={16} />;
-    }
-    return IconComponent && <IconComponent className="size-4" />;
-  };
-
   if (selectedValues.length === 0) {
     return (
       <div
@@ -67,29 +52,23 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
 
   return (
     <div className="flex w-full items-center justify-between gap-3">
-      <div className="flex w-full flex-wrap items-center gap-3 overflow-hidden">
-        {selectedValues.slice(0, maxSelectedOptionsToShow).map((value) => {
+      <div className="max-w-full truncate text-gray-900 dark:text-gray-50">
+        {selectedValues.map((value, index) => {
           const option = options.find((o) => o.value === value);
           return (
-            <Badge
-              key={value}
+            <span
+              key={`${value}-${index}`}
               className={cn(
-                "max-w-full",
-                "text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-300",
-                "border-none p-0",
-                "flex items-center gap-2",
+                "text-[14px] font-normal leading-5 text-gray-900 dark:text-gray-50",
+                "mr-1 p-0",
               )}
             >
-              {renderIcon(option?.icon)}
-              <span className="truncate">{option?.label}</span>
-            </Badge>
+              {index !== selectedValues.length - 1
+                ? `${option?.label},`
+                : option?.label}
+            </span>
           );
         })}
-        {multiple && selectedValues.length > maxSelectedOptionsToShow && (
-          <Badge className="border-none p-0 text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-300">
-            {`+ ${selectedValues.length - maxSelectedOptionsToShow} more`}
-          </Badge>
-        )}
       </div>
       <div className="flex items-center justify-between gap-2">
         {multiple && selectedValues.length > 0 && (
