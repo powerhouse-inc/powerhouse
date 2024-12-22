@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "@/scalars/lib/utils";
 import { SelectProps } from "@/scalars/components/enum-field/types";
-import { Icon } from "@/powerhouse/components/icon";
+import { Icon, type IconName } from "@/powerhouse/components/icon";
 
 interface SelectedContentProps {
   selectedValues: string[];
@@ -20,6 +20,18 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
   placeholder,
   handleClear,
 }) => {
+  const renderIcon = (
+    IconComponent:
+      | IconName
+      | React.ComponentType<{ className?: string }>
+      | undefined,
+  ) => {
+    if (typeof IconComponent === "string") {
+      return <Icon name={IconComponent} size={16} />;
+    }
+    return IconComponent && <IconComponent className="size-4" />;
+  };
+
   if (selectedValues.length === 0) {
     return (
       <div
@@ -52,16 +64,25 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
 
   return (
     <div className="flex w-full items-center justify-between gap-3">
-      <div className="max-w-full truncate text-gray-900 dark:text-gray-50">
+      <div
+        className={cn(
+          "max-w-full text-gray-900 dark:text-gray-50",
+          multiple && "truncate",
+        )}
+      >
         {selectedValues.map((value, index) => {
           const option = options.find((o) => o.value === value);
-          return (
+          return !multiple ? (
+            <div key={value} className="flex items-center gap-2">
+              {renderIcon(option?.icon)}
+              <span className="truncate text-[14px] font-normal leading-5">
+                {option?.label}
+              </span>
+            </div>
+          ) : (
             <span
-              key={`${value}-${index}`}
-              className={cn(
-                "text-[14px] font-normal leading-5 text-gray-900 dark:text-gray-50",
-                "mr-1 p-0",
-              )}
+              key={value}
+              className="mr-1 text-[14px] font-normal leading-5"
             >
               {index !== selectedValues.length - 1
                 ? `${option?.label},`
