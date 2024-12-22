@@ -58,6 +58,16 @@ export const withFieldValidation = <T extends PossibleProps>(
     }
 
     useEffect(() => {
+      if (submitCount > 0) {
+        void trigger(name);
+      }
+      // we should trigger a re-validation after the form is submitted, the errors are shown
+      // and the required prop is changed. Other deps can not be added, otherwise a revalidation
+      // will be triggered unnecessarily
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.required]);
+
+    useEffect(() => {
       // if custom errors are provided, then we need to trigger the validation
       // otherwise the errors will not be shown till the form is submitted
       if (props.errors && props.errors.length > 0) {
@@ -105,9 +115,14 @@ export const withFieldValidation = <T extends PossibleProps>(
         disabled={props.disabled}
         // eslint-disable-next-line react/jsx-no-bind
         render={({
-          // just preventing that onChange is included in the rest of the props
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          field: { onChange: _, onBlur: onBlurController, ...rest },
+          field: {
+            // just preventing that onChange is included in the rest of the props
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            onChange: _,
+            onBlur: onBlurController,
+            value: internalValue,
+            ...rest
+          },
         }) => {
           const onBlurCallback = useCallback(
             (event: React.FocusEvent<HTMLInputElement>) => {
@@ -168,13 +183,17 @@ export const withFieldValidation = <T extends PossibleProps>(
                 }
               }
             },
-            [],
+            // `internalValue` is the value of the field that is controlled by the form
+            // it is used to trigger the validation on change, so we need to add it to the dependencies
+            // otherwise the validation will not be triggered on change
+            [internalValue],
           );
 
           return (
             <Component
               {...(props as T)}
               {...rest}
+              value={internalValue as unknown}
               onBlur={onBlurCallback}
               onChange={onChangeCallback}
               errors={errors}
@@ -182,12 +201,16 @@ export const withFieldValidation = <T extends PossibleProps>(
           );
         }}
         rules={{
-          ...(props.required && {
-            required: {
-              value: props.required,
-              message: "This field is required",
-            },
-          }),
+          ...(props.required
+            ? {
+                required: {
+                  value: props.required,
+                  message: "This field is required",
+                },
+              }
+            : {
+                required: undefined,
+              }),
           ...(props.pattern && {
             pattern: {
               value: new RegExp(props.pattern),

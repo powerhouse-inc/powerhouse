@@ -30,7 +30,11 @@ export const withForm: Decorator = (Story, context) => {
         typeof value === "bigint" ? `BigInt(${value.toString()})` : value,
       2,
     );
-    alert(serializedData);
+
+    // delay the alert to allow component JS to finish the execution
+    setTimeout(() => {
+      alert(serializedData);
+    }, 300);
   }, []);
 
   const onReset = useCallback(() => {

@@ -141,7 +141,9 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
         "change",
       );
 
-      setNativeValue(event.target, transformedValue);
+      if (transformedValue !== event.target.value) {
+        setNativeValue(event.target, transformedValue);
+      }
 
       // call the original onChange
       (children.props as React.HTMLAttributes<HTMLInputElement>).onChange?.(
