@@ -117,48 +117,53 @@ export const SelectFieldRaw = React.forwardRef<
           </FormLabel>
         )}
         <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
-          <PopoverTrigger asChild={true}>
-            {/* TODO: create a trigger component */}
-            <Button
-              id={id}
-              name={name}
-              type="button"
-              role="combobox"
-              onBlur={onTriggerBlur}
-              disabled={disabled}
-              aria-invalid={errors.length > 0}
-              aria-label={
-                label ? undefined : multiple ? "Multi select" : "Select"
-              }
-              aria-required={required}
-              aria-expanded={isPopoverOpen}
-              className={cn(
-                "flex h-9 w-full items-center justify-between px-3 py-2",
-                "dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white",
-                "hover:border-gray-300 hover:bg-gray-100",
-                "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800",
-                "dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
-                "dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0",
-                disabled && [
-                  "!pointer-events-auto cursor-not-allowed",
-                  "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900 hover:border-gray-300 hover:bg-white",
-                ],
-                className,
-              )}
-              {...props}
-              ref={ref}
-            >
-              <SelectedContent
-                selectedValues={selectedValues}
-                options={options}
-                multiple={multiple}
-                searchable={searchable}
-                placeholder={placeholder}
-                handleClear={handleClear}
-              />
-            </Button>
-          </PopoverTrigger>
           <Command>
+            <PopoverTrigger asChild={true}>
+              {/* TODO: create a trigger component */}
+              <Button
+                id={id}
+                name={name}
+                type="button"
+                role="combobox"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleOpenChange(true);
+                  }
+                }}
+                onBlur={onTriggerBlur}
+                disabled={disabled}
+                aria-invalid={errors.length > 0}
+                aria-label={
+                  label ? undefined : multiple ? "Multi select" : "Select"
+                }
+                aria-required={required}
+                aria-expanded={isPopoverOpen}
+                className={cn(
+                  "flex h-9 w-full items-center justify-between px-3 py-2",
+                  "dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white",
+                  "hover:border-gray-300 hover:bg-gray-100",
+                  "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800",
+                  "dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
+                  "dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0",
+                  disabled && [
+                    "!pointer-events-auto cursor-not-allowed",
+                    "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900 hover:border-gray-300 hover:bg-white",
+                  ],
+                  className,
+                )}
+                {...props}
+                ref={ref}
+              >
+                <SelectedContent
+                  selectedValues={selectedValues}
+                  options={options}
+                  multiple={multiple}
+                  searchable={searchable}
+                  placeholder={placeholder}
+                  handleClear={handleClear}
+                />
+              </Button>
+            </PopoverTrigger>
             <PopoverContent
               align="start"
               className={cn(
