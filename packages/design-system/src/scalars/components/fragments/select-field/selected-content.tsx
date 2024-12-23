@@ -63,26 +63,29 @@ export const SelectedContent: React.FC<SelectedContentProps> = ({
   }
 
   return (
-    <div className="flex w-full items-center justify-between gap-3">
+    <div className="flex w-full items-center justify-between gap-2">
       <div
         className={cn(
-          "max-w-full text-gray-900 dark:text-gray-50",
-          multiple && "truncate",
+          "max-w-full truncate text-gray-900 dark:text-gray-50",
+          !multiple && "flex items-center gap-2",
         )}
       >
         {selectedValues.map((value, index) => {
           const option = options.find((o) => o.value === value);
           return !multiple ? (
-            <div key={value} className="flex items-center gap-2">
+            <React.Fragment key={value}>
               {renderIcon(option?.icon)}
               <span className="truncate text-[14px] font-normal leading-5">
                 {option?.label}
               </span>
-            </div>
+            </React.Fragment>
           ) : (
             <span
               key={value}
-              className="mr-1 text-[14px] font-normal leading-5"
+              className={cn(
+                "text-[14px] font-normal leading-5",
+                index !== selectedValues.length - 1 && "mr-1",
+              )}
             >
               {index !== selectedValues.length - 1
                 ? `${option?.label},`
