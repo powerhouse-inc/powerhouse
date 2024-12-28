@@ -1,0 +1,24 @@
+name: powerhouse
+
+services:
+  switchboard:
+    build:
+      context: .
+      dockerfile: ./apps/switchboard/Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    ports:
+      - '127.0.0.1:8080:3000'
+  redis:
+    image: redis:7.2.1
+    ports:
+      - '127.0.0.1:6380:6379'
+    # command: redis-server /usr/local/etc/redis/redis.conf
+  postgres:
+    image: postgres:16.1
+    ports:
+      - '127.0.0.1:5444:5432'
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
