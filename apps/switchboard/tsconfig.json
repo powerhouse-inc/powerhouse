@@ -5,7 +5,7 @@
     "lib": ["es2022"],
     "noEmit": true
   },
-  "include": ["./src/**/*.ts", "./drizzle/**/*.ts", "*.ts", "*.json"],
+  "include": ["./src/**/*.ts", "*.ts", "*.json"],
   "references": [
     {
       "path": "../../packages/scalars"

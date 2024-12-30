@@ -23,16 +23,12 @@ dotenv.config();
 const app = express();
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
-let db: any;
 const main = async () => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const redis = await initRedis();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const prismaClient = new PrismaClient();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const knex = getDbClient(process.env.DATABASE_URL);
     const redisCache = new RedisCache(redis);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const storage = new PrismaStorage(prismaClient);
     const driveServer = new DocumentDriveServer(
       [
@@ -45,15 +41,11 @@ const main = async () => {
 
     // init drive server
     await driveServer.initialize();
-
-    const dbPath = process.env.DATABASE_URL ?? undefined;
-
-    const knex = getDbClient(dbPath);
     const analyticsStore = new KnexAnalyticsStore({
       executor: new KnexQueryExecutor(),
       knex,
     });
-    const reactorRouterManager = new SubgraphManager(
+    const subgraphManager = new SubgraphManager(
       "/",
       app,
       driveServer,
@@ -61,12 +53,7 @@ const main = async () => {
       analyticsStore,
     );
     // init router
-    await reactorRouterManager.init();
-
-    // @TODO: add auth listener
-    // await reactorRouterManager.addSubgraph({
-    //   ...authListener,
-    // });
+    await subgraphManager.init();
 
     // load switchboard-gui
     app.use(
