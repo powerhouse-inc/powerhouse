@@ -27,7 +27,14 @@ const main = async () => {
   try {
     const redis = await initRedis();
     const prismaClient = new PrismaClient();
-    const knex = getDbClient(process.env.DATABASE_URL);
+    const connectionString = process.env.DATABASE_URL;
+    const dbUrl =
+      connectionString?.includes("amazonaws") &&
+      !connectionString.includes("sslmode=no-verify")
+        ? connectionString + "?sslmode=no-verify"
+        : connectionString;
+    console.log("dbUrl", dbUrl);
+    const knex = getDbClient(dbUrl);
     const redisCache = new RedisCache(redis);
     const storage = new PrismaStorage(prismaClient);
     const driveServer = new DocumentDriveServer(

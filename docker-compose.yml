@@ -6,7 +6,8 @@ services:
       context: .
       dockerfile: ./apps/switchboard/Dockerfile
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      - REDIS_TLS_URL=redis://redis:6379
     ports:
       - '127.0.0.1:8080:3000'
   redis:
