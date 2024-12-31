@@ -1,0 +1,43 @@
+name: Deploy Sky Atlas (Staging)
+
+on:
+  push:
+    branches: [sky-atlas-staging]
+
+jobs:
+  deploy:
+    environment: Sky Atlas Staging
+    runs-on: ubuntu-latest
+    steps:
+      # Check-out your repository.
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build, Push and Release API to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          dockerfile_directory: ./apps/switchboard
+          dockerfile_name: Dockerfile
+          process_type: web
+      # - name: Build, Push and Release Frontend to Heroku. # Your custom step name
+      #   uses: gonuit/heroku-docker-deploy@v1.3.3
+      #   with:
+      #     email: ${{ secrets.HEROKU_EMAIL }}
+      #     heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+      #     heroku_app_name: ${{ secrets.HEROKU_FRONTEND_NAME }}
+      #     dockerfile_directory: ./frontend
+      #     dockerfile_name: Dockerfile
+      #     process_type: web
+      #     docker_options: "--build-arg NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST=${{ secrets.NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST }} --build-arg BASE_PATH=/staging/makerdao/switchboard"
+      # - name: Build, Push and Release NGINX to Heroku. # Your custom step name
+      #   uses: gonuit/heroku-docker-deploy@v1.3.3
+      #   with:
+      #     email: ${{ secrets.HEROKU_EMAIL }}
+      #     heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+      #     heroku_app_name: ${{ secrets.HEROKU_NGINX_NAME }}
+      #     dockerfile_directory: ./nginx
+      #     dockerfile_name: Dockerfile
+      #     process_type: web
