@@ -1,6 +1,6 @@
 {
   "name": "document-model-libs",
-  "version": "1.123.0",
+  "version": "1.124.0",
   "license": "AGPL-3.0-only",
   "types": "dist/index.d.ts",
   "main": "dist/cjs/index.cjs",
@@ -95,9 +95,9 @@
     "@hookform/resolvers": "^3.9.0",
     "@monaco-editor/react": "^4.6.0",
     "@mui/material": "^5.15.5",
+    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@radix-ui/react-checkbox": "^1.1.2",
