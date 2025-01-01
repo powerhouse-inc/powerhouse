@@ -24,5 +24,8 @@
     "build": "tsup",
     "clean": "rimraf dist/",
     "clean:node_modules": "rimraf node_modules"
+  },
+  "dependencies": {
+    "@microsoft/api-extractor": "^7.48.1"
   }
 }

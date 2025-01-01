@@ -8,7 +8,8 @@
     "start": "vite-node src/index.ts",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "codegen": "gql-gen --config codegen.yml"
+    "codegen": "gql-gen --config codegen.yml",
+    "postinstall": "pnpx prisma generate --schema node_modules/document-drive/prisma/schema.prisma"
   },
   "author": "",
   "license": "ISC",

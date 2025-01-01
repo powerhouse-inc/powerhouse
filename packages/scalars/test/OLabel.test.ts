@@ -1,50 +1,50 @@
-import { Kind } from 'graphql';
-import { scalar } from '../src/scalars/OLabel';
+import { Kind } from "graphql";
+import { scalar } from "../src/scalars/OLabel";
 
-describe('OLabel Scalar', () => {
-    it('should serialize a valid OLabel address', () => {
-        const label = 'some-value';
+describe("OLabel Scalar", () => {
+  it("should serialize a valid OLabel address", () => {
+    const label = "some-value";
 
-        expect(scalar.serialize(label)).toBe(label);
-    });
+    expect(scalar.serialize(label)).toBe(label);
+  });
 
-    it('should throw an error if the value is not a string', () => {
-        const label = 123;
+  it("should throw an error if the value is not a string", () => {
+    const label = 123;
 
-        expect(() => scalar.serialize(label)).toThrow();
-    });
+    expect(() => scalar.serialize(label)).toThrow();
+  });
 
-    it('should parse a valid OLabel address', () => {
-        const label = 'some-value';
+  it("should parse a valid OLabel address", () => {
+    const label = "some-value";
 
-        expect(scalar.parseValue(label)).toBe(label);
-    });
+    expect(scalar.parseValue(label)).toBe(label);
+  });
 
-    it('should throw an error if parse a value that is not a string', () => {
-        const label = 123;
+  it("should throw an error if parse a value that is not a string", () => {
+    const label = 123;
 
-        expect(() => scalar.parseValue(label)).toThrow();
-    });
+    expect(() => scalar.parseValue(label)).toThrow();
+  });
 
-    it('should parse a valid OLabel address from a literal', () => {
-        const label = 'some-value';
+  it("should parse a valid OLabel address from a literal", () => {
+    const label = "some-value";
 
-        expect(
-            scalar.parseLiteral({
-                kind: Kind.STRING,
-                value: label,
-            }),
-        ).toBe(label);
-    });
+    expect(
+      scalar.parseLiteral({
+        kind: Kind.STRING,
+        value: label,
+      }),
+    ).toBe(label);
+  });
 
-    it('should throw an error if parse a literal that is not a string', () => {
-        const label = 'some-value';
+  it("should throw an error if parse a literal that is not a string", () => {
+    const label = "some-value";
 
-        expect(() =>
-            scalar.parseLiteral({
-                kind: Kind.INT,
-                value: label,
-            }),
-        ).toThrow();
-    });
+    expect(() =>
+      scalar.parseLiteral({
+        kind: Kind.INT,
+        value: label,
+      }),
+    ).toThrow();
+  });
 });

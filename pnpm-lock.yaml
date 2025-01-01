@@ -444,7 +444,11 @@ importers:
         specifier: ^8.0.3
         version: 8.0.3
 
-  packages/config: {}
+  packages/config:
+    dependencies:
+      '@microsoft/api-extractor':
+        specifier: ^7.48.1
+        version: 7.48.1(@types/node@22.10.3)
 
   packages/design-system:
     dependencies:
@@ -23748,7 +23752,7 @@ snapshots:
   graphql-import@0.7.1(graphql@16.10.0):
     dependencies:
       graphql: 16.10.0
-      lodash: 4.17.11
+      lodash: 4.17.21
       resolve-from: 4.0.0
 
   graphql-language-service-interface@2.10.2(@types/node@22.10.3)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(utf-8-validate@5.0.10):

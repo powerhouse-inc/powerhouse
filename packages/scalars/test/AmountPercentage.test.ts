@@ -1,73 +1,73 @@
-import { Kind } from 'graphql';
-import { scalar } from '../src/scalars/AmountPercentage';
+import { Kind } from "graphql";
+import { scalar } from "../src/scalars/AmountPercentage";
 
-describe('AmountPercentage Scalar', () => {
-    it('should serialize a valid AmountPercentage', () => {
-        const percentage = 77.32;
+describe("AmountPercentage Scalar", () => {
+  it("should serialize a valid AmountPercentage", () => {
+    const percentage = 77.32;
 
-        expect(scalar.serialize(percentage)).toBe(percentage);
-    });
+    expect(scalar.serialize(percentage)).toBe(percentage);
+  });
 
-    it('should throw an error if the value is not a number', () => {
-        const percentage = '77.32';
+  it("should throw an error if the value is not a number", () => {
+    const percentage = "77.32";
 
-        expect(() => scalar.serialize(percentage)).toThrow();
-    });
+    expect(() => scalar.serialize(percentage)).toThrow();
+  });
 
-    it('should throw an error if the value is not a valid AmountPercentage', () => {
-        const percentage = Infinity;
+  it("should throw an error if the value is not a valid AmountPercentage", () => {
+    const percentage = Infinity;
 
-        expect(() => scalar.serialize(percentage)).toThrow();
-    });
+    expect(() => scalar.serialize(percentage)).toThrow();
+  });
 
-    it('should parse a valid AmountPercentage', () => {
-        const percentage = 77.32;
+  it("should parse a valid AmountPercentage", () => {
+    const percentage = 77.32;
 
-        expect(scalar.parseValue(percentage)).toBe(percentage);
-    });
+    expect(scalar.parseValue(percentage)).toBe(percentage);
+  });
 
-    it('should throw an error if parse a value that is not a valid AmountPercentage', () => {
-        const percentage = Infinity;
+  it("should throw an error if parse a value that is not a valid AmountPercentage", () => {
+    const percentage = Infinity;
 
-        expect(() => scalar.parseValue(percentage)).toThrow();
-    });
+    expect(() => scalar.parseValue(percentage)).toThrow();
+  });
 
-    it('should throw an error if parse a value that is not a number', () => {
-        const percentage = '77.32';
+  it("should throw an error if parse a value that is not a number", () => {
+    const percentage = "77.32";
 
-        expect(() => scalar.parseValue(percentage)).toThrow();
-    });
+    expect(() => scalar.parseValue(percentage)).toThrow();
+  });
 
-    it('should parse a valid AmountPercentage from a literal', () => {
-        const percentage = 77.32;
+  it("should parse a valid AmountPercentage from a literal", () => {
+    const percentage = 77.32;
 
-        expect(
-            scalar.parseLiteral({
-                kind: Kind.FLOAT,
-                value: percentage.toString(),
-            }),
-        ).toBe(percentage);
-    });
+    expect(
+      scalar.parseLiteral({
+        kind: Kind.FLOAT,
+        value: percentage.toString(),
+      }),
+    ).toBe(percentage);
+  });
 
-    it('should throw an error if parse a literal that is not a valid AmountPercentage', () => {
-        const percentage = 'test';
+  it("should throw an error if parse a literal that is not a valid AmountPercentage", () => {
+    const percentage = "test";
 
-        expect(() =>
-            scalar.parseLiteral({
-                kind: Kind.FLOAT,
-                value: percentage,
-            }),
-        ).toThrow();
-    });
+    expect(() =>
+      scalar.parseLiteral({
+        kind: Kind.FLOAT,
+        value: percentage,
+      }),
+    ).toThrow();
+  });
 
-    it('should throw an error if parse a literal that is not a number', () => {
-        const percentage = '77.32';
+  it("should throw an error if parse a literal that is not a number", () => {
+    const percentage = "77.32";
 
-        expect(() =>
-            scalar.parseLiteral({
-                kind: Kind.STRING,
-                value: percentage,
-            }),
-        ).toThrow();
-    });
+    expect(() =>
+      scalar.parseLiteral({
+        kind: Kind.STRING,
+        value: percentage,
+      }),
+    ).toThrow();
+  });
 });
