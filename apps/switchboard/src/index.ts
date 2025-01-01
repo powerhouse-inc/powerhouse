@@ -20,7 +20,9 @@ dotenv.config();
 // start document drive server with all available document models
 
 // Create a monolith express app for all subgraphs
-const app = express();
+const app = express({
+
+});
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 const main = async () => {
@@ -34,7 +36,6 @@ const main = async () => {
       !connectionString.includes("sslmode=no-verify")
         ? connectionString + "?sslmode=no-verify"
         : connectionString;
-    console.log("dbUrl", dbUrl);
     const knex = getDbClient(dbUrl);
     const redisCache = new RedisCache(redis);
     const storage = new PrismaStorage(prismaClient);
@@ -54,7 +55,7 @@ const main = async () => {
       knex,
     });
     const subgraphManager = new SubgraphManager(
-      "/",
+      process.env.BASE_PATH || "/",
       app,
       driveServer,
       knex,
