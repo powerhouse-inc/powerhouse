@@ -6,6 +6,7 @@ RUN npm install --global pnpm
 RUN pnpm --version
 COPY . .
 RUN pnpm install --no-frozen-lockfile
+RUN pnpm build:all
 RUN pnpm --filter "@powerhousedao/switchboard" build 
 RUN mkdir pruned && pnpm --filter "@powerhousedao/switchboard" deploy --prod pruned
 
