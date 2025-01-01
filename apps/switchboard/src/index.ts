@@ -26,7 +26,8 @@ const httpServer = http.createServer(app);
 const main = async () => {
   try {
     const redis = await initRedis();
-    const prismaClient = new PrismaClient() as PrismaClient;
+    // @ts-ignore: @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const prismaClient: PrismaClient = new PrismaClient();
     const connectionString = process.env.DATABASE_URL;
     const dbUrl =
       connectionString?.includes("amazonaws") &&
