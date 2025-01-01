@@ -26,7 +26,7 @@ const httpServer = http.createServer(app);
 const main = async () => {
   try {
     const redis = await initRedis();
-    const prismaClient = new PrismaClient();
+    const prismaClient = new PrismaClient() as PrismaClient;
     const connectionString = process.env.DATABASE_URL;
     const dbUrl =
       connectionString?.includes("amazonaws") &&
