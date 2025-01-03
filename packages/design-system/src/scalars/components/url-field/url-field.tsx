@@ -15,7 +15,6 @@ import { useURLWarnings } from "./useURLWarnings";
 import UrlFavicon from "./url-favicon";
 import ValueTransformer from "../fragments/value-transformer";
 import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
-import { url } from "node:inspector";
 
 export type PlatformIcon = IconName | React.ReactElement;
 
@@ -24,7 +23,7 @@ interface UrlFieldProps
     ErrorHandling,
     Omit<
       React.InputHTMLAttributes<HTMLInputElement>,
-      "pattern" | "value" | "defaultValue" | "name"
+      "pattern" | "value" | "defaultValue" | "name" | "maxLength"
     > {
   allowedProtocols?: string[];
   maxURLLength?: number;
