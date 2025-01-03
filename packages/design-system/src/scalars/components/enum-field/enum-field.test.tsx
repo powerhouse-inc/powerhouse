@@ -14,7 +14,8 @@ describe("EnumField Component", () => {
       { value: "option3", label: "Option 3" },
     ],
   };
-  window.HTMLElement.prototype.scrollIntoView = () => {};
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  window.Element.prototype.scrollTo = vi.fn();
 
   it("should match snapshot", () => {
     const { asFragment } = renderWithForm(<EnumField {...defaultProps} />);

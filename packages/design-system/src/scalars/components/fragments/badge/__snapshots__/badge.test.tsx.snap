@@ -1,9 +1,0 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`Badge Component > should match snapshot 1`] = `
-<DocumentFragment>
-  <div
-    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none border-transparent"
-  />
-</DocumentFragment>
-`;

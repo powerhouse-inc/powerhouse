@@ -57,6 +57,50 @@ const meta: Meta<typeof EnumField> = {
       },
     },
 
+    multiple: {
+      control: "boolean",
+      description: "Whether multiple options can be selected",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    optionsCheckmark: {
+      control: "radio",
+      options: ["Auto", "Checkmark"],
+      description:
+        "Type of checkmark to show in the options. " +
+        "Auto: Show a Radio for Single Select and a Checkbox for Multi Select. " +
+        "Checkmark: Show a Checkmark for Single and Multi Select. ",
+      table: {
+        type: { summary: '"Auto" | "Checkmark"' },
+        defaultValue: { summary: '"Auto"' },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    optionsCheckmarkPosition: {
+      control: "radio",
+      options: ["Left", "Right"],
+      description:
+        'Checkmark position in options. Only apply if optionsCheckmark is "Checkmark".',
+      table: {
+        type: { summary: '"Left" | "Right"' },
+        defaultValue: { summary: '"Left"' },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    searchable: {
+      control: "boolean",
+      description: "Whether to enable search functionality",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
     ...getValidationArgTypes(),
   },
   args: {
@@ -83,10 +127,12 @@ type EnumFieldArgs = {
     description?: string;
     disabled?: boolean;
   }[];
+  optionsCheckmark?: "Auto" | "Checkmark";
+  optionsCheckmarkPosition?: "Left" | "Right";
   placeholder?: string;
   required?: boolean;
   searchable?: boolean;
-  value?: string;
+  value?: string | string[];
   variant: "Auto" | "RadioGroup" | "Select";
   warnings?: string[];
 };
@@ -102,6 +148,13 @@ const IconComponent = (
 };
 
 const defaultOptions = [
+  { value: "Briefcase", label: "Briefcase" },
+  { value: "Drive", label: "Drive" },
+  { value: "Globe", label: "Globe" },
+  { value: "Settings", label: "Settings" },
+];
+
+const defaultOptionsWithIcon = [
   {
     value: "Briefcase",
     label: "Briefcase",
@@ -117,7 +170,11 @@ const defaultOptions = [
     label: "Globe",
     icon: IconComponent("Globe"),
   },
-  { value: "None", label: "None" },
+  {
+    value: "Settings",
+    label: "Settings",
+    icon: IconComponent("Settings"),
+  },
 ];
 
 export const Default: Story = {
@@ -218,11 +275,10 @@ export const SelectWithDescription: Story = {
 
 export const MultiSelect: Story = {
   args: {
-    label: "Multi-select variant",
+    label: "Multi Select variant",
     variant: "Select",
     options: defaultOptions,
     placeholder: "Select options",
-    defaultValue: ["Drive", "Globe"],
     multiple: true,
   },
 };
@@ -234,5 +290,28 @@ export const SearchableSelect: Story = {
     options: defaultOptions,
     placeholder: "Search and select an option",
     searchable: true,
+  },
+};
+
+export const SelectWithCheckmark: Story = {
+  args: {
+    label: "With checkmark",
+    description: "Shows a checkmark for selected options",
+    variant: "Select",
+    options: defaultOptions,
+    optionsCheckmark: "Checkmark",
+    placeholder: "Select an icon name",
+  },
+};
+
+export const SelectWithIcon: Story = {
+  args: {
+    label: "Favorite icon",
+    description: "Choose your favorite icon",
+    variant: "Select",
+    options: defaultOptionsWithIcon,
+    optionsCheckmark: "Checkmark",
+    optionsCheckmarkPosition: "Right",
+    placeholder: "Select an icon",
   },
 };

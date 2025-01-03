@@ -17,12 +17,11 @@ export interface SelectProps {
     label: string;
     disabled?: boolean;
   }[];
-  optionsCheckmark?: "Auto" | "None";
+  optionsCheckmark?: "Auto" | "Checkmark";
+  optionsCheckmarkPosition?: "Left" | "Right";
   placeholder?: string;
-  maxSelectedOptionsToShow?: number;
   multiple?: boolean;
   searchable?: boolean;
-  searchPosition?: "Dropdown" | "Input";
   onChange?: (value: string | string[]) => void;
 }
 

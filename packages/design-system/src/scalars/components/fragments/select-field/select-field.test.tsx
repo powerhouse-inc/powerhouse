@@ -10,7 +10,8 @@ describe("SelectField Component", () => {
     { label: "Option 2", value: "2" },
     { label: "Option 3", value: "3", disabled: true },
   ];
-  window.HTMLElement.prototype.scrollIntoView = () => {};
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  window.Element.prototype.scrollTo = vi.fn();
 
   // Basic Rendering Tests
   it("should match snapshot", () => {
@@ -112,22 +113,6 @@ describe("SelectField Component", () => {
 
     expect(screen.getByText("Option 1")).toBeInTheDocument();
     expect(screen.queryByText("Option 2")).not.toBeInTheDocument();
-  });
-
-  // Search Position Tests
-  it("should render search input in combobox when searchPosition is 'Input'", () => {
-    renderWithForm(
-      <SelectField
-        name="select"
-        options={defaultOptions}
-        searchable
-        searchPosition="Input"
-      />,
-    );
-
-    const searchInput = screen.getByRole("combobox");
-    expect(searchInput).toBeInTheDocument();
-    expect(searchInput).toHaveAttribute("type", "text");
   });
 
   // Validation and Error Handling Tests

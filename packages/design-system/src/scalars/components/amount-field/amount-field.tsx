@@ -103,7 +103,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
         <div className={cn("relative flex items-center")}>
           {isShowSelect && currencyPosition === "left" && (
             <SelectFieldRaw
-              optionsCheckmark="None"
+              optionsCheckmark="Checkmark"
               value={valueSelect}
               name=""
               required={required}
@@ -157,7 +157,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
         {isShowSelect && currencyPosition === "right" && (
           <div>
             <SelectFieldRaw
-              optionsCheckmark="None"
+              optionsCheckmark="Checkmark"
               value={valueSelect}
               name=""
               required={required}
