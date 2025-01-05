@@ -141,4 +141,28 @@ describe("CountryCodeField Component", () => {
     expect(screen.getByText("United Kingdom")).toBeInTheDocument();
     expect(screen.queryByText("France")).not.toBeInTheDocument();
   });
+
+  it("should include dependent areas when includeDependentAreas is true", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    renderWithForm(
+      <CountryCodeField
+        {...defaultProps}
+        includeDependentAreas
+        onChange={onChange}
+      />,
+    );
+
+    const select = screen.getByRole("combobox");
+    await user.click(select);
+
+    expect(screen.getByText("Puerto Rico")).toBeInTheDocument(); // US territory
+    expect(screen.getByText("Guam")).toBeInTheDocument(); // US territory
+
+    await user.click(screen.getByText("Puerto Rico"));
+    expect(onChange).toHaveBeenCalledWith("PR");
+
+    expect(screen.getByText("Puerto Rico")).toBeInTheDocument();
+  });
 });
