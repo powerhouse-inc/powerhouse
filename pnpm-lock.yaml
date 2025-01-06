@@ -908,7 +908,7 @@ importers:
         version: 1.0.1(document-model@packages+document-model)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.4.7(bufferutil@4.0.9)(prettier@3.4.2)(utf-8-validate@5.0.10))
       dspot-powerhouse-components:
         specifier: ^1.1.0
-        version: 1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.124.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.125.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       graphql:
         specifier: ^16.9.0
         version: 16.10.0
@@ -1148,6 +1148,13 @@ importers:
 
   packages/reactor-browser:
     dependencies:
+      did-key-creator:
+        specifier: ^1.2.0
+        version: 1.2.0
+      jotai:
+        specifier: ^2.10.3
+        version: 2.11.0(@types/react@18.3.18)(react@18.3.1)
+    devDependencies:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
@@ -1157,9 +1164,12 @@ importers:
       '@powerhousedao/scalars':
         specifier: workspace:*
         version: link:../scalars
-      did-key-creator:
-        specifier: ^1.2.0
-        version: 1.2.0
+      '@types/react':
+        specifier: ^18.3.1
+        version: 18.3.18
+      '@types/react-dom':
+        specifier: ^18.3.1
+        version: 18.3.5(@types/react@18.3.18)
       document-drive:
         specifier: workspace:*
         version: link:../document-drive
@@ -1169,16 +1179,6 @@ importers:
       document-model-libs:
         specifier: workspace:*
         version: link:../document-model-libs
-      jotai:
-        specifier: ^2.10.3
-        version: 2.11.0(@types/react@18.3.18)(react@18.3.1)
-    devDependencies:
-      '@types/react':
-        specifier: ^18.3.1
-        version: 18.3.18
-      '@types/react-dom':
-        specifier: ^18.3.1
-        version: 18.3.5(@types/react@18.3.18)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -7832,8 +7832,8 @@ packages:
       react-dom: ^18.2.0
       storybook: ^7.0.17
 
-  document-model-libs@1.124.0:
-    resolution: {integrity: sha512-5tA4i4feY01vfl7Pgb8asyqEhf2gkoPECHACuGcW3Au2ty4CtBtLoDHjwJvaUdqE+Uf4IsBfiJ+dlsTh30CCSg==}
+  document-model-libs@1.125.0:
+    resolution: {integrity: sha512-6j8az0N76ae2wc88Qe24nK7R49zEQiuaeGfOEkAPO/Ax85e1k72FQzWbUxz8Q1hG8LI5+TiwF/u/xcyUgmgCcA==}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -22269,13 +22269,10 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       storybook: 8.4.7(bufferutil@4.0.9)(prettier@3.4.2)(utf-8-validate@5.0.10)
 
-  document-model-libs@1.124.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  document-model-libs@1.125.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      '@acaldas/graphql-codegen-typescript-validation-schema': 0.12.3(encoding@0.1.13)(graphql@16.10.0)
       '@codemirror/lang-json': 6.0.1
       '@codemirror/search': 6.5.8
-      '@graphql-codegen/core': 4.0.2(graphql@16.10.0)
-      '@graphql-codegen/typescript': 4.1.2(encoding@0.1.13)(graphql@16.10.0)
       '@graphql-tools/schema': 10.0.14(graphql@16.10.0)
       '@graphql-tools/utils': 10.7.0(graphql@16.10.0)
       '@internationalized/date': 3.6.0
@@ -22292,11 +22289,9 @@ snapshots:
       - '@codemirror/view'
       - '@types/react'
       - '@types/react-dom'
-      - encoding
       - graphql
       - react
       - react-dom
-      - supports-color
 
   dom-accessibility-api@0.5.16: {}
 
@@ -22375,12 +22370,12 @@ snapshots:
 
   dset@3.1.4: {}
 
-  dspot-powerhouse-components@1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.124.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  dspot-powerhouse-components@1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.125.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@emotion/react': 11.14.0(@types/react@18.3.18)(react@18.3.1)
       '@emotion/styled': 11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1)
       '@mui/material': 5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      document-model-libs: 1.124.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      document-model-libs: 1.125.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
