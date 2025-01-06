@@ -73,7 +73,7 @@ export const Content: React.FC<ContentProps> = ({
   const cmdkSearch = useCommandState((state) => state.search) as string;
   // scroll to top when search change
   useEffect(() => {
-    commandListRef.current?.scrollTo({ top: 0, behavior: "instant" });
+    commandListRef.current?.scrollTo?.({ top: 0, behavior: "instant" });
   }, [commandListRef, cmdkSearch]);
 
   return (
