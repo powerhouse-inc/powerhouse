@@ -1,20 +1,23 @@
-import { and, eq } from "drizzle-orm";
-import { DrizzleD1Database } from "drizzle-orm/d1";
-import { PgDatabase } from "drizzle-orm/pg-core";
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { GraphQLError } from "graphql";
 import ms from "ms";
 import { SiweMessage } from "siwe";
-import { Context } from "../../../../types";
-import { sessionTable } from "../db-schema";
 import { JWT_EXPIRATION_PERIOD } from "../env";
+import { Session } from "../types";
 import {
   generateTokenAndSession,
   validateOriginAgainstAllowed,
   verifyToken,
-} from "../helpers";
+} from "./helpers";
+import { Db } from "../../../types";
+import { Context } from "src/subgraphs/types";
 
 export const createAuthenticationSession = async (
-  db: PgDatabase<any, any, any>,
+  db: Db,
   userId: string,
   allowedOrigins = ["*"],
 ) => {
@@ -33,7 +36,7 @@ export const createAuthenticationSession = async (
 };
 
 export const createCustomSession = async (
-  db: PgDatabase<any, any, any>,
+  db: Db,
   userId: string,
   session: {
     expiryDurationSeconds?: number | null;
@@ -45,27 +48,15 @@ export const createCustomSession = async (
   return generateTokenAndSession(db, session, userId, isUserCreated);
 };
 
-export const listSessions = async (
-  db: PgDatabase<any, any, any>,
-  userId: string,
-) => {
-  return db
-    .select()
-    .from(sessionTable)
-    .where(eq(sessionTable.createdBy, userId));
+export const listSessions = async (db: Db, userId: string) => {
+  return db<Session>("Session").select().where("createdBy", userId);
 };
 
-export const revoke = async (
-  db: DrizzleD1Database,
-  sessionId: string,
-  userId: string,
-) => {
-  const [session] = await db
-    .select()
-    .from(sessionTable)
-    .where(
-      and(eq(sessionTable.id, sessionId), eq(sessionTable.createdBy, userId)),
-    );
+export const revoke = async (db: Db, sessionId: string, userId: string) => {
+  const [session] = await db<Session>("Session").select().where({
+    id: sessionId,
+    userId,
+  });
 
   if (!session) {
     throw new GraphQLError("Session not found", {
@@ -77,17 +68,19 @@ export const revoke = async (
       extensions: { code: "SESSION_ALREADY_REVOKED" },
     });
   }
-  await db
-    .update(sessionTable)
-    .set({
+  await db<Session>("Session")
+    .update({
       revokedAt: new Date().toISOString(),
     })
-    .where(eq(sessionTable.id, sessionId));
+    .where({
+      id: sessionId,
+      userId,
+    });
 };
 
 export const authenticate = async (context: Context) => {
   const authorization = context.headers.authorization;
-  const db = context.db;
+  const db = context.db as Db;
   if (!authorization) {
     throw new GraphQLError("Not authenticated", {
       extensions: { code: "NOT_AUTHENTICATED" },
@@ -100,7 +93,7 @@ export const authenticate = async (context: Context) => {
 };
 
 export const getSessionByToken = async (
-  db: PgDatabase<any, any, any>,
+  db: Db,
   origin?: string,
   token?: string,
 ) => {
@@ -116,10 +109,9 @@ export const getSessionByToken = async (
     });
   }
   const { sessionId } = verificationTokenResult;
-  const [session] = await db
-    .select()
-    .from(sessionTable)
-    .where(eq(sessionTable.id, sessionId));
+  const [session] = await db<Session>("Session").select().where({
+    id: sessionId,
+  });
   if (!session) {
     throw new GraphQLError("Session not found", {
       extensions: { code: "SESSION_NOT_FOUND" },
@@ -132,8 +124,9 @@ export const getSessionByToken = async (
   }
   if (
     origin &&
-    session.allowedOrigins !== "*" &&
-    !session.allowedOrigins.includes(origin)
+    (!session.allowedOrigins ||
+      session.allowedOrigins === "*" ||
+      session.allowedOrigins.includes(origin))
   ) {
     validateOriginAgainstAllowed(session.allowedOrigins, origin);
   }

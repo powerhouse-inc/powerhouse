@@ -6,10 +6,11 @@ import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { gql } from "graphql-tag";
 import { Context } from "../types";
 import { Db } from "src/types";
+import { SubgraphManager } from "../manager";
 
 export class Subgraph implements ISubgraph {
   name = "example";
-  resolvers: GraphQLResolverMap<Context> = {
+  resolvers: Record<string, any> = {
     Query: {
       hello: () => this.name,
     },
@@ -20,9 +21,11 @@ export class Subgraph implements ISubgraph {
     }
   `;
   reactor: IDocumentDriveServer;
+  subgraphManager: SubgraphManager;
   operationalStore: Db;
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
+    this.subgraphManager = args.subgraphManager;
     this.operationalStore = args.operationalStore;
   }
   async onSetup() {

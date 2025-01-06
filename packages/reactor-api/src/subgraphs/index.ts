@@ -3,6 +3,7 @@ import { Subgraph } from "./base";
 export * as analyticsSubgraph from "./analytics";
 export * as driveSubgraph from "./drive";
 export * as systemSubgraph from "./system";
+export * as authSubgraph from "./auth";
 export * from "./types";
 export { Subgraph } from "./base";
 

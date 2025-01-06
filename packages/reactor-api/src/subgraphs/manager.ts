@@ -7,12 +7,13 @@ import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
 import { Db } from "src/types";
-import { Context, SubgraphArgs, SubgraphClass } from ".";
+import { authSubgraph, Context, SubgraphArgs, SubgraphClass } from ".";
 import { createSchema } from "../utils/create-schema";
 import { AnalyticsSubgraph } from "./analytics";
 import { Subgraph } from "./base";
 import { DriveSubgraph } from "./drive";
 import { SystemSubgraph } from "./system";
+import { AuthSubgraph } from "./auth";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -27,6 +28,7 @@ export class SubgraphManager {
     private readonly analyticsStore: IAnalyticsStore,
   ) {
     // Setup Default subgraphs
+    this.registerSubgraph(AuthSubgraph);
     this.registerSubgraph(SystemSubgraph);
     this.registerSubgraph(DriveSubgraph);
     this.registerSubgraph(AnalyticsSubgraph);
@@ -106,7 +108,7 @@ export class SubgraphManager {
     });
     await subgraphInstance.onSetup();
     this.subgraphs.unshift(subgraphInstance);
-    console.log(`> Registered ${subgraphInstance.name} subgraph.`);
+    console.log(`> Registered ${this.path.slice(-1) === "/" ? this.path : this.path+ "/"}${subgraphInstance.name} subgraph.`);
     await this.updateRouter();
   }
 

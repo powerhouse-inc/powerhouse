@@ -16,10 +16,11 @@ export function getDbClient(
 ): Db {
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
-
+  const connection = isPg
+    ? { connectionString }
+    : { pglite: new PGlite(connectionString) };
   return knex({
     client,
-    // @ts-expect-error
-    connection: { pglite: new PGlite(connectionString) },
+    connection,
   });
 }

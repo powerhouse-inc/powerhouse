@@ -1,1 +1,0 @@
-ALTER TABLE "searchTable" RENAME COLUMN "description" TO "type";

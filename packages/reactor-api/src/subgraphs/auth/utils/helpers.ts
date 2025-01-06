@@ -1,14 +1,16 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { randomUUID } from "crypto";
-import { DrizzleD1Database } from "drizzle-orm/d1";
 import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
 import ms from "ms";
 import wildcard from "wildcard-match";
 import z from "zod";
-import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from "./env";
-import { sessionTable } from "./db-schema";
-import { SessionInput } from "./types";
-import { PgDatabase } from "drizzle-orm/pg-core";
+import { Session, SessionInput } from "../types";
+import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from "../env";
+import { Db } from "../../../utils/db";
 const jwtSchema = z.object({
   sessionId: z.string(),
   exp: z.optional(z.number()),
@@ -104,7 +106,7 @@ export function validateOriginAgainstAllowed(
 }
 
 export const generateTokenAndSession = async (
-  db: PgDatabase<any, any, any>,
+  db: Db,
   session: SessionInput,
   userId: string,
   isUserCreated: boolean,
@@ -118,18 +120,15 @@ export const generateTokenAndSession = async (
       ? session.allowedOrigins.join(",")
       : session.allowedOrigins,
   );
-  const createdSession = await db
-    .insert(sessionTable)
-    .values({
-      id: sessionId,
-      name: session.name,
-      allowedOrigins,
-      referenceExpiryDate: referenceExpiryDate?.toISOString(),
-      referenceTokenId,
-      isUserCreated: isUserCreated,
-      createdBy: userId,
-    })
-    .returning();
+  const createdSession = await db<Session>("Session").insert({
+    id: sessionId,
+    name: session.name,
+    allowedOrigins,
+    referenceExpiryDate: referenceExpiryDate?.toISOString(),
+    referenceTokenId,
+    isUserCreated: isUserCreated,
+    createdBy: userId,
+  });
   return {
     token: generatedToken,
     session: createdSession,
