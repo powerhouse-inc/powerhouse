@@ -1,3 +1,21 @@
+## 0.11.0 (2025-01-06)
+
+### 🚀 Features
+
+- removed document-model editor v1 ([#745](https://github.com/powerhouse-inc/powerhouse/pull/745))
+- **reactor-browser:** initial package setup ([ad637dcb](https://github.com/powerhouse-inc/powerhouse/commit/ad637dcb))
+- **renown:** added initial renown sdk package ([2864fbc6](https://github.com/powerhouse-inc/powerhouse/commit/2864fbc6))
+
+### 🩹 Fixes
+
+- **reactor-api:** update graphql dependency ([ed063402](https://github.com/powerhouse-inc/powerhouse/commit/ed063402))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 0.10.0 (2024-12-16)
 
 ### 🚀 Features

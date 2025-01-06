@@ -1,3 +1,14 @@
+## 1.16.0 (2025-01-06)
+
+### 🚀 Features
+
+- removed document-model editor v1 ([#745](https://github.com/powerhouse-inc/powerhouse/pull/745))
+- **reactor-browser:** initial package setup ([ad637dcb](https://github.com/powerhouse-inc/powerhouse/commit/ad637dcb))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval
+
 ## 1.15.0 (2024-12-19)
 
 ### 🚀 Features
