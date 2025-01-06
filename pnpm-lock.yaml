@@ -746,21 +746,12 @@ importers:
 
   packages/document-model-libs:
     dependencies:
-      '@acaldas/graphql-codegen-typescript-validation-schema':
-        specifier: ^0.12.3
-        version: 0.12.3(encoding@0.1.13)(graphql@16.10.0)
       '@codemirror/lang-json':
         specifier: ^6.0.1
         version: 6.0.1
       '@codemirror/search':
         specifier: ^6.5.7
         version: 6.5.8
-      '@graphql-codegen/core':
-        specifier: ^4.0.2
-        version: 4.0.2(graphql@16.10.0)
-      '@graphql-codegen/typescript':
-        specifier: ^4.0.6
-        version: 4.1.2(encoding@0.1.13)(graphql@16.10.0)
       '@graphql-tools/schema':
         specifier: ^10.0.7
         version: 10.0.14(graphql@16.10.0)
@@ -921,9 +912,6 @@ importers:
       graphql:
         specifier: ^16.9.0
         version: 16.10.0
-      graphql-codegen-typescript-validation-schema:
-        specifier: ^0.16.0
-        version: 0.16.1(encoding@0.1.13)(graphql@16.10.0)
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
@@ -8890,11 +8878,6 @@ packages:
   graphql-codegen-typescript-common@0.18.2:
     resolution: {integrity: sha512-uGGHd/vgwMlnCNOMQkvMxW8Xz0fqPGjPHROsniRNP1ragsa6KfFBrGu9toHgxv8m3MzC6ZPeoUa3wtwtS9oVnA==}
 
-  graphql-codegen-typescript-validation-schema@0.16.1:
-    resolution: {integrity: sha512-S8uNJEYUJBB0J3s3uzdbNON0PJSfdcU225rAhDYt1XrD9KKum2LIjG9qpQ8MSxk6mnPSk3MK71uYzs6B2pAj+w==}
-    peerDependencies:
-      graphql: ^16.9.0
-
   graphql-config@4.5.0:
     resolution: {integrity: sha512-x6D0/cftpLUJ0Ch1e5sj1TZn6Wcxx4oMfmhaG9shM0DKajA9iR+j1z86GSTQ19fShbGvrSSvbIQsHku6aQ6BBw==}
     engines: {node: '>= 10.0.0'}
@@ -10022,7 +10005,6 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
-    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -23673,18 +23655,6 @@ snapshots:
       graphql-codegen-plugin-helpers: 0.18.2(graphql@16.10.0)
     transitivePeerDependencies:
       - graphql
-      - supports-color
-
-  graphql-codegen-typescript-validation-schema@0.16.1(encoding@0.1.13)(graphql@16.10.0):
-    dependencies:
-      '@graphql-codegen/plugin-helpers': 5.1.0(graphql@16.10.0)
-      '@graphql-codegen/schema-ast': 4.1.0(graphql@16.10.0)
-      '@graphql-codegen/visitor-plugin-common': 5.6.0(encoding@0.1.13)(graphql@16.10.0)
-      '@graphql-tools/utils': 10.7.0(graphql@16.10.0)
-      graphlib: 2.1.8
-      graphql: 16.10.0
-    transitivePeerDependencies:
-      - encoding
       - supports-color
 
   graphql-config@4.5.0(@types/node@22.10.3)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(utf-8-validate@5.0.10):
