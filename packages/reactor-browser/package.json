@@ -2,15 +2,15 @@
   "name": "@powerhousedao/reactor-browser",
   "version": "1.2.0",
   "license": "AGPL-3.0-only",
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
   "files": [
     "dist"
   ],
-  "types": "dist/types/src/index.d.ts",
-  "main": "dist/cjs/index.js",
-  "module": "dist/es/index.js",
+  "types": "dist/src/index.d.ts",
+  "main": "dist/index.js",
   "scripts": {
     "check-types": "tsc",
     "lint": "eslint .",
@@ -26,23 +26,29 @@
   "keywords": [],
   "author": "",
   "devDependencies": {
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "peerDependencies": {
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "dependencies": {
-    "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
     "did-key-creator": "^1.2.0",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
     "jotai": "^2.10.3"
   }
 }
