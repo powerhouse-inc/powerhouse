@@ -45,7 +45,7 @@ export const useNumberField = ({
   const preventInvalidCharsAndHandleArrows = (
     e: React.KeyboardEvent<HTMLInputElement>,
   ) => {
-    if (["e", "E"].includes(e.key)) {
+    if (["e", "E", "+"].includes(e.key)) {
       e.preventDefault();
       return;
     }
