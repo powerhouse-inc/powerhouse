@@ -112,6 +112,13 @@ export const SelectFieldRaw = React.forwardRef<
             disabled={disabled}
             hasError={errors.length > 0}
             inline={false}
+            onClick={(e) => {
+              e.preventDefault();
+              const button = document.getElementById(id);
+              if (button) {
+                button.focus();
+              }
+            }}
           >
             {label}
           </FormLabel>
