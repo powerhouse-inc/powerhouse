@@ -1,4 +1,3 @@
-"use client";
 import SwitchboardLink from "../text/Link";
 import useAuth, { authStore } from "../../hooks/useAuth";
 import { UserCircleIcon } from "@heroicons/react/24/solid";
@@ -17,9 +16,13 @@ export default function Header() {
 
   useEffect(() => {
     auth.checkAuthValidity();
-    auth.getDrives().then((drives) => {
-      setDrives(drives);
-    });
+    auth
+      .getDrives()
+      .then((drives) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        setDrives(drives);
+      })
+      .catch(console.error);
   }, [gqlToken, address]);
 
   const selectGraphQLPlayground = (e: React.ChangeEvent<HTMLSelectElement>) => {

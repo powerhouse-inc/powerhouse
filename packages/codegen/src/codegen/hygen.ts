@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { Logger, runner } from "hygen";
 import { DocumentModel } from "document-model";
 import { loadDocumentModel } from "./utils";
+import { DocumentTypesMap } from ".";
+import { pascalCase } from "change-case";
 
 const require = createRequire(import.meta.url);
 
@@ -113,7 +115,7 @@ export async function generateDocumentModel(
 export async function generateEditor(
   name: string,
   documentTypes: string[],
-  documentTypesMap: Record<string, string>,
+  documentTypesMap: DocumentTypesMap,
   dir: string,
   documentModelsDir: string,
   { skipFormat = false } = {},
@@ -141,21 +143,22 @@ export async function generateEditor(
 export async function generateProcessor(
   name: string,
   documentTypes: string[],
-  documentTypesMap: Record<string, string>,
+  documentTypesMap: DocumentTypesMap,
   dir: string,
   documentModelsDir: string,
   type = "analytics",
   { skipFormat = false } = {},
 ) {
   // Generate the singular files for the document model logic
-  const processorType = type === "analytics" ? "analytics" : "operational";
-
+  const processorType = type === "operational" ? "operational" : "analytics";
   await run(
     [
       "powerhouse",
       `generate-processor-${processorType}`,
       "--name",
       name,
+      "--pascalName",
+      pascalCase(name),
       "--root-dir",
       dir,
       "--document-types",
@@ -164,6 +167,27 @@ export async function generateProcessor(
       JSON.stringify(documentTypesMap),
       "--document-models-dir",
       documentModelsDir,
+    ],
+    { skipFormat },
+  );
+}
+
+export async function generateSubgraph(
+  name: string,
+  dir: string,
+  { skipFormat = false } = {},
+) {
+  // Generate the singular files for the document model logic
+  await run(
+    [
+      "powerhouse",
+      `generate-subgraph`,
+      "--name",
+      name,
+      "--pascalName",
+      pascalCase(name),
+      "--root-dir",
+      dir,
     ],
     { skipFormat },
   );

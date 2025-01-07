@@ -1,5 +1,5 @@
 {
-  "include": [],
+  "include": ["vitest.workspace.ts"],
   "extends": "./tsconfig.options.json",
   "references": [
     {
@@ -20,5 +20,8 @@
     {
       "path": "./packages/scalars"
     },
+    {
+      "path": "./packages/reactor-browser"
+    }
   ]
 }

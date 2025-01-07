@@ -3,7 +3,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "target": "esnext",
-    "types": ["node", "./types.d.ts"],
+    "types": ["@types/node", "./types.d.ts"],
     "declaration": true,
     "outDir": "./dist",
     "esModuleInterop": true,

@@ -1,3 +1,4 @@
+import { ZodError } from "zod";
 import stringifyJson from "safe-stable-stringify";
 import { baseReducer, mutableBaseReducer, updateHeader } from "../reducer";
 import {
@@ -30,6 +31,7 @@ import {
   NOOP,
 } from "../actions/types";
 import { SignalDispatch } from "../signal";
+import { InvalidActionInputError, InvalidActionInputZodError } from "./errors";
 
 export function isNoopOperation(op: Partial<Operation>): boolean {
   return (
@@ -96,7 +98,11 @@ export function createAction<A extends Action>(
   try {
     validator?.().parse(action.input);
   } catch (error) {
-    throw new Error(`Invalid action input: ${error}`);
+    if (error instanceof ZodError) {
+      throw new InvalidActionInputZodError(error.issues);
+    } else {
+      throw new InvalidActionInputError(error);
+    }
   }
 
   return action as A;
@@ -290,6 +296,15 @@ export function sortMappedOperations<A extends Action>(
         new Date(a.operation.timestamp).getTime() -
         new Date(b.operation.timestamp).getTime(),
     );
+}
+
+// gets the last modified timestamp of a document from
+// it's operations, falling back to the initial state
+export function getDocumentLastModified(document: Document) {
+  const sortedOperations = sortOperations(document.operations);
+  const timestamp =
+    sortedOperations.at(-1)?.timestamp || document.initialState.lastModified;
+  return timestamp;
 }
 
 // Runs the operations on the initial data using the

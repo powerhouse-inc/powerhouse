@@ -343,7 +343,7 @@ describe.each(storageLayers)(
       const documents = await server.getDocuments("1");
       expect(documents).toStrictEqual([]);
 
-      expect(server.getDocument("1", "1.1")).rejects.toThrowError(
+      await expect(server.getDocument("1", "1.1")).rejects.toThrowError(
         "Document with id 1.1 not found",
       );
     });
@@ -408,7 +408,7 @@ describe.each(storageLayers)(
       const documents = await server.getDocuments("1");
       expect(documents).toStrictEqual([]);
 
-      expect(server.getDocument("1", "1.1")).rejects.toThrowError(
+      await expect(server.getDocument("1", "1.1")).rejects.toThrowError(
         "Document with id 1.1 not found",
       );
     });
@@ -910,11 +910,53 @@ describe.each(storageLayers)(
         context,
       });
 
-      await server.addDriveOperation("1", drive.operations.global[0]!, false);
+      await server.addDriveOperation("1", drive.operations.global[0]!);
       const storedDrive = await server.getDrive("1");
       expect(storedDrive.operations.global[0]).toMatchObject(
         drive.operations.global[0]!,
       );
+    });
+
+    it("gets document at specific revision", async ({ expect }) => {
+      const server = new DocumentDriveServer(
+        documentModels,
+        await buildStorage(),
+      );
+      await server.addDrive({
+        global: {
+          id: "1",
+          name: "name",
+          icon: "icon",
+          slug: "slug",
+        },
+        local: {
+          availableOffline: false,
+          sharingType: "public",
+          listeners: [],
+          triggers: [],
+        },
+      });
+      const drive = await server.getDrive("1");
+
+      // adds file
+      const newDrive = reducer(
+        drive,
+        DocumentDriveUtils.generateAddNodeAction(
+          drive.state.global,
+          {
+            id: "1.1",
+            name: "document 1",
+            documentType: "powerhouse/document-model",
+          },
+          ["global", "local"],
+        ),
+      );
+
+      await server.addDriveOperation("1", newDrive.operations.global[0]!);
+
+      const drive0 = await server.getDrive("1", { revisions: { global: -1 } });
+      expect(drive0.operations.global.length).toBe(0);
+      expect(drive0).toStrictEqual(drive);
     });
   },
 );

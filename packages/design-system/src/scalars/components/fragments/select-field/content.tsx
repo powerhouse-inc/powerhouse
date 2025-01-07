@@ -83,10 +83,9 @@ export const Content: React.FC<ContentProps> = ({
           placeholder="Search..."
           wrapperClassName="rounded-t"
           className="text-gray-900 dark:text-gray-50"
-          autoFocus
         />
       )}
-      <CommandList ref={commandListRef}>
+      <CommandList ref={commandListRef} tabIndex={!searchable ? 0 : undefined}>
         <CommandEmpty className="p-4 text-center text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-400">
           No results found.
         </CommandEmpty>

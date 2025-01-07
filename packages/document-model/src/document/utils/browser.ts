@@ -3,6 +3,14 @@ import { createHash as createSha1Hash } from "sha1-uint8array";
 
 const FileSystemError = new Error("File system not available.");
 
+export function generateUUID() {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (!crypto.randomUUID) {
+    throw new Error("generateUUID is not available in unsecure contexts.");
+  }
+  return crypto.randomUUID();
+}
+
 export function writeFile(
   path: string,
   name: string,
