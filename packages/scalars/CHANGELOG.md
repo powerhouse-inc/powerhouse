@@ -1,3 +1,66 @@
+## 1.16.0 (2025-01-06)
+
+### 🚀 Features
+
+- removed document-model editor v1 ([#745](https://github.com/powerhouse-inc/powerhouse/pull/745))
+- **reactor-browser:** initial package setup ([ad637dcb](https://github.com/powerhouse-inc/powerhouse/commit/ad637dcb))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval
+
+## 1.15.0 (2024-12-19)
+
+### 🚀 Features
+
+- **renown:** added initial renown sdk package ([2864fbc6](https://github.com/powerhouse-inc/powerhouse/commit/2864fbc6))
+- **scalars:** added missing resolvers ([#578](https://github.com/powerhouse-inc/powerhouse/pull/578))
+
+### 🩹 Fixes
+
+- **reactor-api:** update graphql dependency ([ed063402](https://github.com/powerhouse-inc/powerhouse/commit/ed063402))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Guillermo Puente Sandoval
+
+## 1.14.0 (2024-12-16)
+
+### 🚀 Features
+
+- updated nx version ([c9690c35](https://github.com/powerhouse-inc/powerhouse/commit/c9690c35))
+- **document-model:** export generateId method ([71d945b2](https://github.com/powerhouse-inc/powerhouse/commit/71d945b2))
+
+### 🩹 Fixes
+
+- **switchboard:** subgraph manager and db instantiation ([874bdc4b](https://github.com/powerhouse-inc/powerhouse/commit/874bdc4b))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
+## 1.13.0 (2024-12-11)
+
+### 🚀 Features
+
+- **reactor-api:** Added support for processors ([#655](https://github.com/powerhouse-inc/powerhouse/pull/655))
+- **design-system:** release dspot-scalars components ([881b8995](https://github.com/powerhouse-inc/powerhouse/commit/881b8995))
+
+### 🩹 Fixes
+
+- **monorepo:** remove nx cloud id ([45da8784](https://github.com/powerhouse-inc/powerhouse/commit/45da8784))
+- **config:** added build ([aaeb785f](https://github.com/powerhouse-inc/powerhouse/commit/aaeb785f))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+- Guillermo Puente Sandoval
+- ryanwolhuter
+
 ## 1.12.0 (2024-12-09)
 
 ### 🚀 Features

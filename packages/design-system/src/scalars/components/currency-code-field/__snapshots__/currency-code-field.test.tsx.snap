@@ -15,52 +15,40 @@ exports[`CurrencyCodeField > should match snapshot 1`] = `
       >
         Currency
       </label>
-      <div
-        class="flex size-full flex-col rounded"
-        cmdk-root=""
-        tabindex="-1"
+      <button
+        aria-controls="radix-:r2:"
+        aria-expanded="false"
+        aria-haspopup="dialog"
+        aria-invalid="false"
+        class="gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 flex h-9 w-full items-center justify-between px-3 py-2 dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white hover:border-gray-300 hover:bg-gray-100 dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800 dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0"
+        data-state="closed"
+        id=":r1:-select"
+        name="currency"
+        role="combobox"
+        type="button"
       >
-        <label
-          cmdk-label=""
-          for="radix-:r5:"
-          id="radix-:r4:"
-          style="position: absolute; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border-width: 0px;"
-        />
-        <button
-          aria-controls="radix-:r2:"
-          aria-expanded="false"
-          aria-haspopup="dialog"
-          aria-invalid="false"
-          class="gap-2 whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 flex h-9 w-full items-center justify-between px-3 py-2 dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white hover:border-gray-300 hover:bg-gray-100 dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800 dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0 dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0"
-          data-state="closed"
-          id=":r1:-select"
-          name="currency"
-          role="combobox"
-          type="button"
+        <div
+          class="flex w-full items-center justify-between gap-2"
         >
           <div
-            class="flex w-full items-center justify-between gap-2"
+            class="max-w-full truncate text-gray-900 dark:text-gray-50 flex items-center gap-2"
+          >
+            <span
+              class="truncate text-[14px] font-normal leading-5"
+            >
+              United States Dollar
+            </span>
+          </div>
+          <div
+            class="flex items-center justify-between gap-2"
           >
             <div
-              class="max-w-full truncate text-gray-900 dark:text-gray-50 flex items-center gap-2"
-            >
-              <span
-                class="truncate text-[14px] font-normal leading-5"
-              >
-                United States Dollar
-              </span>
-            </div>
-            <div
-              class="flex items-center justify-between gap-2"
-            >
-              <div
-                data-testid="icon-fallback"
-                style="width: 16px; height: 16px;"
-              />
-            </div>
+              data-testid="icon-fallback"
+              style="width: 16px; height: 16px;"
+            />
           </div>
-        </button>
-      </div>
+        </div>
+      </button>
       <p
         class="font-sans text-sm font-normal leading-5 text-gray-600 dark:text-gray-500"
       >

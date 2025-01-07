@@ -1,16 +1,11 @@
 {
   "namedInputs": {
-    "noMarkdown": [
-      "!{projectRoot}/**/*.md"
-    ],
+    "noMarkdown": ["!{projectRoot}/**/*.md"],
     "noStories": [
       "!{projectRoot}/**/*.stories.tsx",
       "!{projectRoot}/.storybook/**/*"
     ],
-    "noLicenses": [
-      "!{projectRoot}/LICENSE",
-      "!{projectRoot}/LICENSE.md"
-    ],
+    "noLicenses": ["!{projectRoot}/LICENSE", "!{projectRoot}/LICENSE.md"],
     "noTests": [
       "!{projectRoot}/**/*.spec.ts",
       "!{projectRoot}/**/*.spec.tsx",
@@ -24,35 +19,29 @@
   },
   "targetDefaults": {
     "build-storybook": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "lint": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
+    },
+    "lint:nx": {
+      "dependsOn": ["^build"]
+    },
+    "check-types": {
+      "dependsOn": ["^build"]
     },
     "generate": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "dev": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "build": {
       "cache": true,
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "inputs": [
         "noMarkdown",
         "^noMarkdown",
@@ -66,19 +55,12 @@
     },
     "@nx/js:tsc": {
       "cache": true,
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "default",
-        "^default"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^default"]
     }
   },
   "release": {
-    "projects": [
-      "packages/*"
-    ],
+    "projects": ["packages/*"],
     "projectsRelationship": "independent",
     "version": {
       "conventionalCommits": true,
@@ -99,5 +81,10 @@
         "targetName": "lint"
       }
     }
-  ]
+  ],
+  "pluginsConfig": {
+    "@nx/js": {
+      "projectsAffectedByDependencyUpdates": "auto"
+    }
+  }
 }

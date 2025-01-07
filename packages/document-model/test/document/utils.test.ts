@@ -8,8 +8,14 @@ import {
   replayDocument,
   validateOperations,
 } from "../../src/document/utils";
-import { hash as hashBrowser } from "../../src/document/utils/browser";
-import { hash as hashNode } from "../../src/document/utils/node";
+import {
+  hash as hashBrowser,
+  generateUUID as generateUUIDBrowser,
+} from "../../src/document/utils/browser";
+import {
+  hash as hashNode,
+  generateUUID as generateUUIDNode,
+} from "../../src/document/utils/node";
 import {
   baseCountReducer,
   CountAction,
@@ -50,6 +56,17 @@ describe("Base utils", () => {
 
   it("should throw exception when file doesn't exists", async () => {
     await expect(getLocalFile("as")).rejects.toBeDefined();
+  });
+
+  it("should generateId in browser and node", () => {
+    expect(generateUUIDNode()).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(generateUUIDBrowser()).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(generateUUIDNode().length).toEqual(generateUUIDBrowser().length);
+    expect(generateUUIDNode()).not.toEqual(generateUUIDBrowser());
   });
 
   it("should hash in browser and node", () => {
@@ -161,6 +178,9 @@ describe("Base utils", () => {
 
     expect(newDocument.state).toStrictEqual(replayedDocument.state);
     expect(newDocument.lastModified).toBe(replayedDocument.lastModified);
+    expect(newDocument.operations.global.map((o) => o.timestamp)).toStrictEqual(
+      replayedDocument.operations.global.map((o) => o.timestamp),
+    );
   });
 
   it("should mutate state on unsafeReducer", () => {

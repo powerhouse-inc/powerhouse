@@ -10,8 +10,7 @@ import {
   Operation,
   OperationScope,
 } from "document-model/document";
-// import setAsap from 'setasap';
-import { v4 as uuidv4 } from "uuid";
+import { generateId } from "document-model/utils";
 import { OperationError } from "../server/error";
 import { DocumentDriveStorage, DocumentStorage } from "../storage";
 import { RunAsap } from "./run-asap";
@@ -64,7 +63,7 @@ export function mergeOperations<A extends Action = Action>(
 }
 
 export function generateUUID(): string {
-  return uuidv4();
+  return generateId();
 }
 
 export function isNoopUpdate(

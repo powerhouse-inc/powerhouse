@@ -3,12 +3,28 @@ import * as AmountTokens from "./AmountTokens";
 import * as EthereumAddress from "./EthereumAddress";
 import * as AmountPercentage from "./AmountPercentage";
 import * as EmailAddress from "./EmailAddress";
+import * as DateScalar from "./Date";
+import * as DateTime from "./DateTime";
+import * as URLScalar from "./URL";
+import * as AmountMoney from "./AmountMoney";
+import * as OLabel from "./OLabel";
+import * as Currency from "./Currency";
+import * as PHID from "./PHID";
+import * as OID from "./OID";
 
 // export types -- DO NOT REMOVE OR EDIT THIS COMMENT
 export type { ScalarType as AmountTokensScalarType } from "./AmountTokens";
 export type { ScalarType as EthereumAddressScalarType } from "./EthereumAddress";
 export type { ScalarType as AmountPercentageScalarType } from "./AmountPercentage";
 export type { ScalarType as EmailAddressScalarType } from "./EmailAddress";
+export type { ScalarType as DateScalarType } from "./Date";
+export type { ScalarType as DateTimeScalarType } from "./DateTime";
+export type { ScalarType as URLScalarType } from "./URL";
+export type { ScalarType as AmountMoneyScalarType } from "./AmountMoney";
+export type { ScalarType as OLabelScalarType } from "./OLabel";
+export type { ScalarType as CurrencyScalarType } from "./Currency";
+export type { ScalarType as PHIDScalarType } from "./PHID";
+export type { ScalarType as OIDScalarType } from "./OID";
 
 export {
   // export object -- DO NOT REMOVE OR EDIT THIS COMMENT
@@ -16,6 +32,14 @@ export {
   EthereumAddress,
   AmountPercentage,
   EmailAddress,
+  DateScalar,
+  DateTime,
+  URLScalar,
+  AmountMoney,
+  OLabel,
+  Currency,
+  PHID,
+  OID,
 };
 
 export const resolvers = {
@@ -24,6 +48,14 @@ export const resolvers = {
   EthereumAddress: EthereumAddress.scalar,
   AmountPercentage: AmountPercentage.scalar,
   EmailAddress: EmailAddress.scalar,
+  Date: DateScalar.scalar,
+  DateTime: DateTime.scalar,
+  URL: URLScalar.scalar,
+  AmountMoney: AmountMoney.scalar,
+  OLabel: OLabel.scalar,
+  Currency: Currency.scalar,
+  PHID: PHID.scalar,
+  OID: OID.scalar,
 };
 
 export const typeDefs = [
@@ -32,14 +64,14 @@ export const typeDefs = [
   EthereumAddress.typedef,
   AmountPercentage.typedef,
   EmailAddress.typedef,
-  "scalar Date",
-  "scalar DateTime",
-  "scalar URL",
-  "scalar Amount_Money",
-  "scalar OLabel",
-  "scalar Currency",
-  "scalar PHID",
-  "scalar OID",
+  DateScalar.typedef,
+  DateTime.typedef,
+  URLScalar.typedef,
+  AmountMoney.typedef,
+  OLabel.typedef,
+  Currency.typedef,
+  PHID.typedef,
+  OID.typedef,
 ];
 
 export const generatorTypeDefs = {
@@ -48,14 +80,14 @@ export const generatorTypeDefs = {
   [EthereumAddress.config.name]: EthereumAddress.type,
   [EmailAddress.config.name]: EmailAddress.type,
   [AmountPercentage.config.name]: AmountPercentage.type,
-  Date: "string",
-  DateTime: "string",
-  URL: "string",
-  Amount_Money: "number",
-  OLabel: "string",
-  Currency: "string",
-  PHID: "string",
-  OID: "string",
+  [DateScalar.config.name]: DateScalar.type,
+  [DateTime.config.name]: DateTime.type,
+  [URLScalar.config.name]: URLScalar.type,
+  [AmountMoney.config.name]: AmountMoney.type,
+  [OLabel.config.name]: OLabel.type,
+  [Currency.config.name]: Currency.type,
+  [PHID.config.name]: PHID.type,
+  [OID.config.name]: OID.type,
 };
 
 export const validationSchema = {
@@ -64,12 +96,12 @@ export const validationSchema = {
   [EthereumAddress.config.name]: EthereumAddress.stringSchema,
   [EmailAddress.config.name]: EmailAddress.stringSchema,
   [AmountPercentage.config.name]: AmountPercentage.stringSchema,
-  Date: "z.string()",
-  DateTime: "z.string()",
-  URL: "z.string()",
-  Amount_Money: "z.number()",
-  OLabel: "z.string()",
-  Currency: "z.string()",
-  PHID: "z.string()",
-  OID: "z.string()",
+  [DateScalar.config.name]: DateScalar.stringSchema,
+  [DateTime.config.name]: DateTime.stringSchema,
+  [URLScalar.config.name]: URLScalar.stringSchema,
+  [AmountMoney.config.name]: AmountMoney.stringSchema,
+  [OLabel.config.name]: OLabel.stringSchema,
+  [Currency.config.name]: Currency.stringSchema,
+  [PHID.config.name]: PHID.stringSchema,
+  [OID.config.name]: OID.stringSchema,
 };

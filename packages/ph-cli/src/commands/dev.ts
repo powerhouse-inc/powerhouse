@@ -74,6 +74,7 @@ async function spawnConnect(
 
   return new Promise<void>((resolve) => {
     const child = spawn(binPath, {
+      shell: true,
       env: {
         ...process.env,
         // TODO add studio variables?

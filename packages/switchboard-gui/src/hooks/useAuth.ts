@@ -1,4 +1,3 @@
-"use client";
 import { jwtDecode } from "jwt-decode";
 import useWallet from "./useWallet";
 import { create } from "zustand";
@@ -84,6 +83,8 @@ const useAuth = () => {
   const httpLink = createHttpLink({
     uri: "/system",
   });
+
+  /* eslint-disable */
 
   const authLink = setContext((_, { headers }) => {
     return {
