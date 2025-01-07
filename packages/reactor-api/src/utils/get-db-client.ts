@@ -4,8 +4,8 @@ import ClientPgLite from "knex-pglite";
 
 export type Db = Knex;
 
-function isPG(connectionString: string) {
-  if (connectionString.startsWith("postgres://")) {
+export function isPG(connectionString: string) {
+  if (connectionString.startsWith("postgresql://")) {
     return true;
   }
   return false;

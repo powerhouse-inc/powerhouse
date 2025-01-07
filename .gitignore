@@ -5,3 +5,4 @@ node_modules/
 .next
 *.tsbuildinfo
 dev.db
+.DS_Store

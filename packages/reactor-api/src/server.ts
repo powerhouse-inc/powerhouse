@@ -5,11 +5,7 @@ import { Pool } from "pg";
 import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
-import { getDbClient } from "./utils/get-db-client";
-import {
-  KnexAnalyticsStore,
-  KnexQueryExecutor,
-} from "@powerhousedao/analytics-engine-knex";
+import { getDbClient, isPG } from "./utils/get-db-client";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 type Options = {
@@ -29,10 +25,15 @@ export async function startAPI(
   const app = options.express ?? express();
   const db = getDbClient(options.dbPath);
   const getAnalyticsStore = async (dbPath: string | undefined) => {
-    console.log("dbPath", dbPath);
-
-    if (dbPath?.startsWith("postgres")) {
-      const pgStore = new PostgresAnalyticsStore({ connectionString: dbPath });
+    if (isPG(dbPath || "")) {
+      const pgStore = new PostgresAnalyticsStore({
+        connectionString: dbPath,
+        // todo: make options
+        /*queryLogger: defaultQueryLogger("reactor-api:postgres:query"),
+        resultsLogger: (i, results) => {
+          console.log(JSON.stringify(results, null, 2));
+        }*/
+      });
       return pgStore;
     }
 

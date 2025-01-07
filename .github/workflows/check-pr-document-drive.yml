@@ -14,7 +14,7 @@ on:
 
 env:
   NX_ISOLATE_PLUGINS: false
-  DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90
+  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90
   REDIS_TLS_URL: redis://redis:6379
 
 jobs:
