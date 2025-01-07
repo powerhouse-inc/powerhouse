@@ -267,7 +267,7 @@ export const withFieldValidation = <T extends PossibleProps>(
                   Object.entries(options.validations).map(
                     ([key, validatorFactory]) => {
                       const propsWithValues = {
-                        value,
+                        value: getValues(name) as unknown, // get the actual value of the field in the form
                         name,
                         showErrorOnBlur,
                         showErrorOnChange,

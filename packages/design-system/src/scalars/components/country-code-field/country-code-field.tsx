@@ -1,7 +1,7 @@
 import React from "react";
 import { SelectFieldRaw } from "@/scalars/components/fragments/select-field";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { countries } from "country-data-list";
+import countries from "world-countries";
 import { CircleFlag } from "react-circle-flags";
 import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
 import { CountryCodeProps } from "./types";
@@ -20,8 +20,6 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
       placeholder,
       allowedCountries,
       excludedCountries,
-      // TODO: implement dependent areas
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       includeDependentAreas = false,
       viewMode = "NamesOnly",
       showFlagIcons = true,
@@ -30,24 +28,25 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
     },
     ref,
   ) => {
-    const defaultOptions = countries.all
+    const defaultOptions = countries
       .filter(
         (country) =>
-          country.alpha2 && country.emoji && country.status !== "deleted",
+          (includeDependentAreas ? true : country.independent) &&
+          country.cca2 !== "AQ", // exclude Antarctica
       )
       .map((country) => ({
-        value: country.alpha2,
+        value: country.cca2,
         label:
           viewMode === "CodesOnly"
-            ? country.alpha2
+            ? country.cca2
             : viewMode === "NamesAndCodes"
-              ? `${country.name} (${country.alpha2})`
-              : country.name,
+              ? `${country.name.common} (${country.cca2})`
+              : country.name.common,
         icon: showFlagIcons
           ? () => (
               <CircleFlag
                 className="size-4"
-                countryCode={country.alpha2.toLowerCase()}
+                countryCode={country.cca2.toLowerCase()}
                 height={16}
               />
             )
@@ -84,18 +83,19 @@ export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
   {
     validations: {
       _validOption:
-        ({ allowedCountries, excludedCountries }) =>
+        ({ allowedCountries, excludedCountries, includeDependentAreas }) =>
         (value: string | undefined) => {
           if (value === "" || value === undefined) {
-            return true; // show only the required message
+            return true;
           }
 
-          const validCountries = countries.all
+          const validCountries = countries
             .filter(
               (country) =>
-                country.alpha2 && country.emoji && country.status !== "deleted",
+                (includeDependentAreas ? true : country.independent) &&
+                country.cca2 !== "AQ",
             )
-            .map((country) => country.alpha2);
+            .map((country) => country.cca2);
 
           // First check if it's a valid country code
           if (!validCountries.includes(value)) {
