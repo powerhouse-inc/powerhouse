@@ -89,6 +89,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             pattern={isBigInt ? regex.toString() : pattern?.toString()}
             type="text"
             inputMode="numeric"
+            role="spinbutton"
             min={minValue}
             max={maxValue}
             aria-valuemin={minValue}

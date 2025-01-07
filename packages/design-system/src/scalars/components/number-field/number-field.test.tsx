@@ -166,7 +166,7 @@ describe("NumberField", () => {
 
     await user.type(input, "10");
     expect(mockOnChange).toHaveBeenCalled();
-    expect(input).toHaveValue(10);
+    expect(input).toHaveValue("10");
   });
 
   it("should disable the input when disabled prop is true", () => {
@@ -178,7 +178,7 @@ describe("NumberField", () => {
         name="Label"
       />,
     );
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByLabelText("Test Label");
 
     expect(input).toBeDisabled();
   });
@@ -206,7 +206,7 @@ describe("NumberField", () => {
     );
     const input = screen.getByRole("spinbutton");
 
-    expect(input).toHaveValue(5);
+    expect(input).toHaveValue("5");
   });
 
   // Test for step
@@ -397,7 +397,7 @@ describe("NumberField", () => {
     await user.clear(input);
 
     expect(input).toHaveAttribute("placeholder", placeholder);
-    expect(input).toHaveValue(null);
+    expect(input).toHaveValue("");
   });
 
   it("should increment/decrement by specified step using keyboard", async () => {
@@ -494,5 +494,43 @@ describe("NumberField", () => {
     expect(mockOnSubmit).toHaveBeenCalledWith({
       positiveFloatField: 42,
     });
+  });
+
+  it("should retain the input value '4546-56' and display an error message", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div>
+            <NumberField
+              label="Special Case Field"
+              name="specialCaseField"
+              onChange={mockOnChange}
+              errors={["Invalid input format"]}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Special Case Field");
+    await user.type(input, "4546-56");
+
+    // Check that the input retains the value
+    expect(input).toHaveValue("4546-56");
+
+    // Check that the error message is displayed
+    expect(screen.getByText("Value is not a valid number")).toBeInTheDocument();
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    // Ensure the form submission is not called due to the error
+    expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 });

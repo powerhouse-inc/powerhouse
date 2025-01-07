@@ -71,7 +71,7 @@ describe("AmountField Component", () => {
         disabled
       />,
     );
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByLabelText("Amount Label");
 
     expect(input).toBeDisabled();
   });

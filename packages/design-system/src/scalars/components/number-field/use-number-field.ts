@@ -153,7 +153,7 @@ export const useNumberField = ({
     }
 
     const finalValue =
-      numericType && integerTypes.includes(numericType)
+      !numericType || integerTypes.includes(numericType)
         ? parseFloat(inputValue).toString()
         : formattedValue;
 
