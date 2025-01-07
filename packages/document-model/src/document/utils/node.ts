@@ -1,7 +1,11 @@
-import crypto from "crypto";
-import fs from "fs";
-import https from "https";
-import { join } from "path";
+import crypto, { RandomUUIDOptions } from "node:crypto";
+import fs from "node:fs";
+import https from "node:https";
+import { join } from "node:path";
+
+export function generateUUID(options?: RandomUUIDOptions) {
+  return crypto.randomUUID(options);
+}
 
 export function writeFile(
   path: string,

@@ -1,6 +1,12 @@
-import * as searchListener from "@powerhousedao/general-document-indexer";
-import { ReactorRouterManager } from "@powerhousedao/reactor-api";
+import {
+  KnexAnalyticsStore,
+  KnexQueryExecutor,
+} from "@powerhousedao/analytics-engine-knex";
+import { SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
+import { PrismaClient } from "@prisma/client";
 import { DocumentDriveServer } from "document-drive";
+import RedisCache from "document-drive/cache/redis";
+import { PrismaStorage } from "document-drive/storage/prisma";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
@@ -8,51 +14,55 @@ import dotenv from "dotenv";
 import express from "express";
 import http from "http";
 import path from "path";
-import { Pool } from "pg";
-import * as authListener from "./subgraphs/auth";
+import { initRedis } from "./clients/redis";
 dotenv.config();
 
 // start document drive server with all available document models
-const driveServer = new DocumentDriveServer([
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
-] as DocumentModel[]);
 
 // Create a monolith express app for all subgraphs
-const app = express();
+const app = express({
+
+});
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
-let db: any;
 const main = async () => {
   try {
+    const redis = await initRedis();
+    // @ts-ignore: @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const prismaClient: PrismaClient = new PrismaClient();
+    const connectionString = process.env.DATABASE_URL;
+    const dbUrl =
+      connectionString?.includes("amazonaws") &&
+      !connectionString.includes("sslmode=no-verify")
+        ? connectionString + "?sslmode=no-verify"
+        : connectionString;
+    const knex = getDbClient(dbUrl);
+    const redisCache = new RedisCache(redis);
+    const storage = new PrismaStorage(prismaClient);
+    const driveServer = new DocumentDriveServer(
+      [
+        DocumentModelLib,
+        ...Object.values(DocumentModelsLibs),
+      ] as DocumentModel[],
+      storage,
+      redisCache,
+    );
+
     // init drive server
     await driveServer.initialize();
-
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+    const analyticsStore = new KnexAnalyticsStore({
+      executor: new KnexQueryExecutor(),
+      knex,
     });
-    await pool.connect();
-    const reactorRouterManager = new ReactorRouterManager(
-      "/",
+    const subgraphManager = new SubgraphManager(
+      process.env.BASE_PATH || "/",
       app,
       driveServer,
-      pool,
+      knex,
+      analyticsStore,
     );
     // init router
-    await reactorRouterManager.init();
-
-    await reactorRouterManager.registerProcessor({
-      ...searchListener,
-      transmit(strands) {
-        return searchListener.transmit(strands, db);
-      },
-      name: "search/:drive",
-    });
-
-    // @TODO: add auth listener
-    // await reactorRouterManager.addSubgraph({
-    //   ...authListener,
-    // });
+    await subgraphManager.init();
 
     // load switchboard-gui
     app.use(

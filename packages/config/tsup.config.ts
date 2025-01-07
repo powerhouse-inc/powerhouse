@@ -11,5 +11,5 @@ export default defineConfig({
   platform: "node",
   target: "node20",
   cjsInterop: true,
-  dts: true,
+  experimentalDts: true,
 });

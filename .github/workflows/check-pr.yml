@@ -5,12 +5,12 @@ on:
   push:
     branches: ["main"]
     paths-ignore:
-      - 'packages/document-drive/**'
+      - "packages/document-drive/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize]
     paths-ignore:
-      - 'packages/document-drive/**'
+      - "packages/document-drive/**"
 
 env:
   NX_ISOLATE_PLUGINS: false
@@ -41,11 +41,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run checks
-        run: pnpm check:all:ci
-
+      - name: Run checks for affected projects
+        run: pnpm affected:check:ci

@@ -2,13 +2,14 @@ import { buildSubgraphSchema } from "@apollo/subgraph";
 import { IDocumentDriveServer } from "document-drive";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
-import { parse } from "graphql";
-import { Context } from "src/types";
+import { DocumentNode, parse } from "graphql";
+import gql from "graphql-tag";
+import { Context } from "src/subgraphs";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
   resolvers: GraphQLResolverMap<Context>,
-  typeDefs: string
+  typeDefs: DocumentNode,
 ) =>
   buildSubgraphSchema([
     {
@@ -19,7 +20,7 @@ export const createSchema = (
 
 export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
-  typeDefs: string
+  typeDefs: DocumentNode,
 ) => {
   const documentModels = documentDriveServer.getDocumentModels();
   let dmSchema = "";
@@ -32,7 +33,7 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll(`: Account`, `: ${documentModel.name}Account`)
                 .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
                 .replaceAll("scalar DateTime", "")
-                .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
+                .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
             )
             .join("\n")};
   
@@ -46,14 +47,15 @@ export const getDocumentModelTypeDefs = (
                 .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
                 .replaceAll("type AccountSnapshotLocalState", "")
                 .replaceAll("type BudgetStatementLocalState", "")
-                .replaceAll("type ScopeFrameworkLocalState", "")
+                .replaceAll("type ScopeFrameworkLocalState", ""),
             )
             .join("\n")};
-  
-          type ${documentModel.name} implements IDocument {
+
+    type ${documentModel.name} implements IDocument {
               id: ID!
               name: String!
               documentType: String!
+              operations: [Operation!]!
               revision: Int!
               created: DateTime!
               lastModified: DateTime!
@@ -62,21 +64,27 @@ export const getDocumentModelTypeDefs = (
   });
 
   // add the mutation and query types
-  const schema = `
-      ${scalarsTypeDefs.join("\n")}
-      
-      interface IDocument {
-          name: String!
-          documentType: String!
-          revision: Int!
-          created: DateTime!
-          lastModified: DateTime!
-          
-      }
-      ${dmSchema}
-  
-      ${typeDefs}
-      `;
+  const schema = gql`
+    ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
 
-  return parse(schema.replaceAll(";", ""));
+    type Operation {
+      type: String!
+      index: Int!
+      timestamp: DateTime!
+      hash: String!
+    }
+    interface IDocument {
+      name: String!
+      documentType: String!
+      revision: Int!
+      created: DateTime!
+      lastModified: DateTime!
+      operations: [Operation!]!
+    }
+    ${dmSchema.replaceAll(";", "")}
+
+    ${typeDefs}
+  `;
+
+  return schema;
 };

@@ -102,6 +102,8 @@ export class ListenerManager extends BaseListenerManager {
     const driveTransmitters = this.transmitters[drive] || {};
     driveTransmitters[listener.listenerId] = transmitter;
     this.transmitters[drive] = driveTransmitters;
+
+    this.triggerUpdate(true, { type: "local" });
     return Promise.resolve(transmitter);
   }
 

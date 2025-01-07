@@ -18,6 +18,7 @@ const entry = {
   index: "src/index.ts",
   "document-model": "src/document-model/index.ts",
   document: "src/document/index.ts",
+  utils: "src/document/utils/index.ts",
 };
 
 export default defineConfig(({ mode = "node" }) => {
@@ -26,7 +27,7 @@ export default defineConfig(({ mode = "node" }) => {
 
   // if building for node then don't polyfill node core modules
   if (!isBrowser) {
-    external.push("path", "crypto", "fs", "https");
+    external.push("node:path", "node:crypto", "node:fs", "node:https");
   }
 
   return {

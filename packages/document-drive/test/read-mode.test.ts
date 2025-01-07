@@ -101,15 +101,15 @@ describe("Read mode methods", () => {
     expect(fetchMocker).toHaveBeenCalledWith(context.url, {
       body: JSON.stringify({
         query: `
-                query getDrive {
-                    drive {
-                        id
-                        name
-                        icon
-                        slug
-                    }
-                }
-            `,
+        query getDrive {
+          drive {
+            id
+            name
+            icon
+            slug
+          }
+        }
+      `,
         operationName: "getDrive",
       }),
       headers: {

@@ -2,12 +2,12 @@ import { DocumentDriveDocument } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel as BaseDocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
-import { v4 as uuid } from "uuid";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DefaultRemoteDriveInput,
   DocumentDriveServer,
   DocumentDriveServerOptions,
+  generateUUID,
 } from "../src";
 import { MemoryStorage } from "../src/storage/memory";
 import { DriveInfo } from "../src/utils/graphql";
@@ -128,7 +128,7 @@ vi.mock("graphql-request", () => ({
           if (query.includes("mutation registerPullResponderListener")) {
             return Promise.resolve({
               registerPullResponderListener: {
-                listenerId: uuid(),
+                listenerId: generateUUID(),
               },
             });
           }

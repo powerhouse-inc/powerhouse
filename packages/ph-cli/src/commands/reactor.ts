@@ -5,12 +5,14 @@ import {
   StartServerOptions,
   LocalReactor,
 } from "@powerhousedao/reactor-local";
-import { getConfig, generateFromFile } from "@powerhousedao/codegen";
+import { generateFromFile } from "@powerhousedao/codegen";
 import { CommandActionType } from "../types.js";
+import { getConfig } from "@powerhousedao/config/powerhouse";
 
 export type ReactorOptions = StartServerOptions & {
   generate?: boolean;
   watch?: boolean;
+  dbPath?: string;
 };
 
 export const DefaultReactorOptions = {
@@ -27,7 +29,7 @@ async function startLocalReactor(reactorOptions: ReactorOptions) {
     const generateTransmitter = await reactor.addListener(
       "powerhouse",
       {
-        transmit: async function (strands) {
+        onStrands: async function (strands) {
           const documentPaths = new Set<string>();
           for (const strand of strands) {
             documentPaths.add(
@@ -39,7 +41,7 @@ async function startLocalReactor(reactorOptions: ReactorOptions) {
           }
           return Promise.resolve();
         },
-        disconnect: () => Promise.resolve(),
+        onDisconnect: () => Promise.resolve(),
       },
       {
         filter: {
@@ -70,6 +72,7 @@ export function reactorCommand(program: Command) {
     .description("Starts local reactor")
     .option("--port <PORT>", "port to host the api", "4001")
     .option("--generate", "generate code when document model is updated")
+    .option("--db-path <DB_PATH>", "path to the database")
     .option(
       "-w, --watch",
       "if the reactor should watch for local changes to document models and processors",
