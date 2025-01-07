@@ -38,7 +38,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       step = 1,
       pattern,
       trailingZeros = false,
-      numericType,
+      numericType = "Float",
       precision = 0,
       ...props
     },
