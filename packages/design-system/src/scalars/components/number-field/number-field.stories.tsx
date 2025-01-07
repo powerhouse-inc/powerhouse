@@ -66,6 +66,7 @@ const meta = {
         "- Float: Any decimal number (1.0, 2.5, -1.0, -2.5)\n" +
         "- Int: Any integer number, including positive (1, 2), negative (-1, -2), and zero\n",
       table: {
+        defaultValue: { summary: "Float" },
         type: {
           summary:
             '"PositiveInt" | "NegativeInt" | "NonNegativeInt" | "NonPositiveInt" | "PositiveFloat" | "NegativeFloat" | "NonNegativeFloat" | "NonPositiveFloat" | "BigInt" | "Int" | "Float"',

@@ -45,7 +45,7 @@ export const useNumberField = ({
   const preventInvalidCharsAndHandleArrows = (
     e: React.KeyboardEvent<HTMLInputElement>,
   ) => {
-    if (["e", "E"].includes(e.key)) {
+    if (["e", "E", "+"].includes(e.key)) {
       e.preventDefault();
       return;
     }
@@ -120,8 +120,9 @@ export const useNumberField = ({
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    // if its empty, keep it empty
-    if (!inputValue || inputValue === "") {
+
+    // If the value is not a number, not an empty string, or is empty, show the error message or keep it empty
+    if (inputValue === "" || isNaN(Number(inputValue))) {
       onBlur?.(e);
       return;
     }
@@ -135,6 +136,7 @@ export const useNumberField = ({
       "Int",
     ] as NumericType[];
 
+    // Get the formatted value for keeping the trailing zeros
     const formattedValue = getDisplayValue(inputValue, {
       numericType,
       precision,
@@ -142,17 +144,16 @@ export const useNumberField = ({
     });
 
     const isNotSafeValue =
-      Math.abs(Number(formattedValue)) > Number.MAX_SAFE_INTEGER;
+      Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER;
 
-    // //Avoid to convert to no safe value in notation scientific
+    // Evitar convertir a un valor no seguro en notación científica
     if (isNotSafeValue) {
       onBlur?.(e);
       return;
     }
 
-    // if includes some of the integer or bigint types, we remove any decimal part
     const finalValue =
-      numericType && integerTypes.includes(numericType)
+      !numericType || integerTypes.includes(numericType)
         ? parseFloat(inputValue).toString()
         : formattedValue;
 
