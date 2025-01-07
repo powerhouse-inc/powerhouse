@@ -74,6 +74,7 @@ const meta: Meta<typeof SelectField> = {
         defaultValue: { summary: '"Left"' },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
+      if: { arg: "optionsCheckmark", eq: "Checkmark" },
     },
 
     searchable: {
