@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.8.4",
+  "version": "1.13.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "module": "./src/index.ts",
@@ -34,8 +34,7 @@
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:watch": "vitest watch",
     "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules",
-    "build": "prisma generate"
+    "clean:node_modules": "rimraf node_modules"
   },
   "peerDependencies": {
     "@powerhousedao/scalars": "workspace:*",
@@ -46,39 +45,38 @@
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
     "nanoevents": "^9.0.0",
-    "sanitize-filename": "^1.6.3",
-    "uuid": "^9.0.1"
+    "prisma": "^5.18.0",
+    "sanitize-filename": "^1.6.3"
   },
   "optionalDependencies": {
+    "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "^5.18.0",
     "exponential-backoff": "^3.1.1",
     "localforage": "^1.10.0",
     "redis": "^4.6.15",
     "sequelize": "^6.37.3",
-    "sqlite3": "^5.1.7",
-    "@powerhousedao/scalars": "workspace:*"
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",
+    "change-case": "^5.4.4",
     "document-model": "workspace:*",
     "document-model-libs": "workspace:*",
-    "fake-indexeddb": "^5.0.2",
-    "localforage": "^1.10.0",
-    "msw": "^2.3.1",
-    "prisma": "^5.18.0",
-    "sequelize": "^6.37.2",
-    "sqlite3": "^5.1.7",
-    "webdriverio": "^9.0.9",
-    "vitest-fetch-mock": "^0.3.0",
-    "change-case": "^5.4.4",
     "exponential-backoff": "^3.1.1",
+    "fake-indexeddb": "^5.0.2",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
+    "localforage": "^1.10.0",
+    "msw": "^2.3.1",
     "nanoevents": "^9.0.0",
+    "prisma": "^5.18.0",
     "sanitize-filename": "^1.6.3",
-    "uuid": "^9.0.1"
+    "sequelize": "^6.37.2",
+    "sqlite3": "^5.1.7",
+    "vitest-fetch-mock": "^0.3.0",
+    "webdriverio": "^9.0.9"
   }
 }

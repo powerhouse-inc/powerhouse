@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.10.4",
+  "version": "0.15.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -32,15 +32,16 @@
   "author": "",
   "devDependencies": {
     "@powerhousedao/analytics-engine-core": "^0.3.0",
-    "@powerhousedao/analytics-engine-graphql": "^0.2.0",
+    "@powerhousedao/analytics-engine-graphql": "^0.2.1",
     "@powerhousedao/analytics-engine-pg": "^0.3.0",
     "document-drive": "workspace:*",
-    "drizzle-kit": "^0.25.0",
-    "drizzle-orm": "^0.34.1",
+    "graphql-tag": "^2.12.6",
+    "knex": "^3.1.0",
     "luxon": "^3.5.0"
   },
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
     "@powerhousedao/connect": "develop",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
@@ -48,7 +49,7 @@
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "document-model-libs": "workspace:*",
-    "graphql": "^16.8.1",
+    "graphql": "^16.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }

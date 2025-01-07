@@ -11,7 +11,16 @@ import type {
   Reducer,
   Signature,
 } from "../types";
-import { hash } from "./node";
+import { generateUUID, hash } from "./node";
+
+export function generateId(method?: "UUIDv4"): string {
+  if (method && method.toString() !== "UUIDv4") {
+    throw new Error(
+      `Id generation method not supported: "${method.toString()}"`,
+    );
+  }
+  return generateUUID();
+}
 
 export function getUnixTimestamp(date: Date | string): string {
   return (new Date(date).getTime() / 1000).toFixed(0);

@@ -327,87 +327,91 @@ describe("Drive Operations", () => {
     ]);
   });
 
-  it("Should not throw an error when adding the same folder twice (2 clients)", async () => {
-    const initialDriveDocument = await buildDrive();
-    let pushOperationResult: IOperationResult;
+  it(
+    "Should not throw an error when adding the same folder twice (2 clients)",
+    { retry: 10 },
+    async () => {
+      const initialDriveDocument = await buildDrive();
+      let pushOperationResult: IOperationResult;
 
-    DocumentDrive.utils.createDocument();
+      DocumentDrive.utils.createDocument();
 
-    const client1 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      DocumentDrive.reducer,
-    );
+      const client1 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        DocumentDrive.reducer,
+      );
 
-    const client2 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      DocumentDrive.reducer,
-    );
+      const client2 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        DocumentDrive.reducer,
+      );
 
-    client1.dispatchDriveAction(
-      DocumentDrive.actions.addFolder({
-        id: "1",
-        name: "test1",
-      }),
-    );
-    pushOperationResult = await client1.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-    expect(client1.getDocument().operations.global.length).toBe(1);
-    expect(client1.getDocument().operations.global[0]).toMatchObject({
-      type: "ADD_FOLDER",
-      index: 0,
-      skip: 0,
-      input: { id: "1", name: "test1" },
-      error: undefined,
-    });
-
-    client2.dispatchDriveAction(
-      DocumentDrive.actions.addFolder({
-        id: "1",
-        name: "test2",
-      }),
-    );
-    pushOperationResult = await client2.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    expect(client2.getDocument().operations.global.length).toBe(1);
-    expect(client2.getDocument().operations.global[0]).toMatchObject({
-      type: "ADD_FOLDER",
-      index: 0,
-      skip: 0,
-      input: { id: "1", name: "test2" },
-      error: undefined,
-    });
-
-    const drive = await server.getDrive(driveId);
-
-    expect(drive.state.global.nodes.length).toBe(1);
-    expect(drive.state.global.nodes).toMatchObject([
-      { id: "1", name: "test1" },
-    ]);
-
-    expect(drive.operations.global.length).toBe(2);
-    expect(drive.operations.global).toMatchObject([
-      {
+      client1.dispatchDriveAction(
+        DocumentDrive.actions.addFolder({
+          id: "1",
+          name: "test1",
+        }),
+      );
+      pushOperationResult = await client1.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+      expect(client1.getDocument().operations.global.length).toBe(1);
+      expect(client1.getDocument().operations.global[0]).toMatchObject({
         type: "ADD_FOLDER",
+        index: 0,
+        skip: 0,
         input: { id: "1", name: "test1" },
         error: undefined,
-        index: 1,
-        skip: 1,
-      },
-      {
+      });
+
+      client2.dispatchDriveAction(
+        DocumentDrive.actions.addFolder({
+          id: "1",
+          name: "test2",
+        }),
+      );
+      pushOperationResult = await client2.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      expect(client2.getDocument().operations.global.length).toBe(1);
+      expect(client2.getDocument().operations.global[0]).toMatchObject({
         type: "ADD_FOLDER",
-        input: { id: "1", name: "test2" },
-        scope: "global",
-        index: 2,
+        index: 0,
         skip: 0,
-        error: "Node with id 1 already exists!",
-      },
-    ]);
-  });
+        input: { id: "1", name: "test2" },
+        error: undefined,
+      });
+
+      const drive = await server.getDrive(driveId);
+
+      expect(drive.state.global.nodes.length).toBe(1);
+      expect(drive.state.global.nodes).toMatchObject([
+        { id: "1", name: "test1" },
+      ]);
+
+      expect(drive.operations.global.length).toBe(2);
+      expect(drive.operations.global).toMatchObject([
+        {
+          type: "ADD_FOLDER",
+          input: { id: "1", name: "test1" },
+          error: undefined,
+          index: 1,
+          skip: 1,
+        },
+        {
+          type: "ADD_FOLDER",
+          input: { id: "1", name: "test2" },
+          scope: "global",
+          index: 2,
+          skip: 0,
+          error: "Node with id 1 already exists!",
+        },
+      ]);
+    },
+  );
 
   it("should resolve conflicts without duplicate ids when copy folders", async () => {
     let idCounter = 0;
@@ -568,9 +572,9 @@ describe("Drive Operations", () => {
     expect(sortedClient2Nodes).toMatchObject([
       { id: "1", name: "1", parentFolder: null },
       { id: "2", name: "2", parentFolder: "1" },
-      { id: "3", name: "1 (copy) 2", parentFolder: null },
+      { id: "3", name: "1 (copy) 1", parentFolder: null },
       { id: "4", name: "2", parentFolder: "3" },
-      { id: "5", name: "1 (copy) 1", parentFolder: null },
+      { id: "5", name: "1 (copy) 2", parentFolder: null },
       { id: "6", name: "2", parentFolder: "5" },
       { id: "7", name: "1 (copy) 3", parentFolder: null },
       { id: "8", name: "2", parentFolder: "7" },

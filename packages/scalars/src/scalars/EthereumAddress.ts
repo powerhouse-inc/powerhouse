@@ -33,7 +33,7 @@ const addressValidation = (value: unknown): string => {
   throw new GraphQLError(result.error.message);
 };
 
-export const config: GraphQLScalarTypeConfig<any, any> = {
+export const config: GraphQLScalarTypeConfig<string, string> = {
   name: "EthereumAddress",
   description:
     'A custom scalar representing an Ethereum address, validated as a 42-character hexadecimal string prefixed with "0x"',

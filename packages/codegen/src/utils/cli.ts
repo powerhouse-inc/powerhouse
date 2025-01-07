@@ -1,28 +1,11 @@
+import {
+  DEFAULT_CONFIG,
+  PowerhouseConfig,
+} from "@powerhousedao/config/powerhouse";
 import arg from "arg";
 import enquirer from "enquirer";
-import { readFileSync, writeFileSync } from "node:fs";
 
 const { prompt } = enquirer;
-
-export type PowerhouseConfig = {
-  documentModelsDir: string;
-  editorsDir: string;
-  processorsDir: string;
-  interactive?: boolean;
-  skipFormat?: boolean;
-  watch?: boolean;
-};
-
-const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
-const DEFAULT_EDITORS_DIR = "./editors";
-const DEFAULT_PROCESSORS_DIR = "./processors";
-
-export const DEFAULT_CONFIG: PowerhouseConfig = {
-  documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,
-  editorsDir: DEFAULT_EDITORS_DIR,
-  processorsDir: DEFAULT_PROCESSORS_DIR,
-  skipFormat: false,
-};
 
 export const configSpec = {
   "--document-models": String,
@@ -34,22 +17,6 @@ export const configSpec = {
   "-sf": "--skip-format",
   "-w": "--watch",
 } as const;
-
-export function getConfig() {
-  let config: PowerhouseConfig = { ...DEFAULT_CONFIG };
-  try {
-    const configStr = readFileSync("./powerhouse.config.json", "utf-8");
-    const userConfig = JSON.parse(configStr) as PowerhouseConfig;
-    config = { ...config, ...userConfig };
-  } catch {
-    console.warn("No powerhouse.config.json found, using defaults");
-  }
-  return config;
-}
-
-export function writeConfig(config: PowerhouseConfig) {
-  writeFileSync("./powerhouse.config.json", JSON.stringify(config, null, 4));
-}
 
 export function parseArgs<T extends arg.Spec>(argv: string[], spec: T) {
   const args = arg(spec, {

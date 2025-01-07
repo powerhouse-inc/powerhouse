@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "2.10.0",
+  "version": "2.15.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -54,6 +54,16 @@
       "types": "./dist/browser/document-model.d.ts",
       "require": "./dist/browser/cjs/document-model.js",
       "import": "./dist/browser/es/document-model.js"
+    },
+    "./utils": {
+      "node": {
+        "types": "./dist/node/utils.d.ts",
+        "import": "./dist/node/es/utils.js",
+        "require": "./dist/node/cjs/utils.js"
+      },
+      "types": "./dist/browser/utils.d.ts",
+      "import": "./dist/browser/es/utils.js",
+      "require": "./dist/browser/cjs/utils.js"
     }
   },
   "devDependencies": {
@@ -74,7 +84,6 @@
     "mutative": "^1.0.5",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
-    "uuid": "^9.0.1",
     "zod": "^3.22.4"
   }
 }

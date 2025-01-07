@@ -13,11 +13,6 @@
       "@powerhousedao/design-system/*": ["../design-system/src/*"]
     }
   },
-  "references": [
-    {
-      "path": "../design-system"
-    }
-  ],
   "include": [
     ".storybook/**/*.ts",
     ".storybook/**/*.tsx",
@@ -27,5 +22,10 @@
     "scripts/**/*.ts",
     "*.ts",
     "*.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../design-system"
+    }
   ]
 }

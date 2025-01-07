@@ -1,5 +1,4 @@
 import { create, castDraft, Draft, unsafe } from "mutative";
-import { v4 as uuid } from "uuid";
 import {
   loadStateOperation,
   pruneOperation,
@@ -31,9 +30,12 @@ import {
   replayOperations,
   isUndoRedo,
   isUndo,
+  getDocumentLastModified,
+  parseResultingState,
 } from "./utils/base";
 import { SignalDispatch } from "./signal";
-import { documentHelpers, parseResultingState } from "./utils";
+import * as documentHelpers from "./utils/document-helpers";
+import { generateId } from "./utils";
 
 /**
  * Gets the next revision number based on the provided action.
@@ -75,7 +77,7 @@ export function updateHeader<T extends Document>(
       ...document.revision,
       [action.scope]: getNextRevision(document, action),
     },
-    lastModified: new Date().toISOString(),
+    lastModified: getDocumentLastModified(document),
   };
 }
 
@@ -125,7 +127,7 @@ function updateOperations<T extends Document>(
 
     timestamp = action.timestamp;
   } else {
-    operationId = "id" in action ? (action.id as string) : uuid();
+    operationId = "id" in action ? (action.id as string) : generateId();
   }
 
   operations.push({
