@@ -11,20 +11,25 @@ export const isFloat = (value: unknown): boolean => {
 export const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
 
 // Utility function to check if a value is a valid number
-export const isValidNumber = (value: unknown): boolean =>
-  /^-?\d+(\.\d+)?$/.test(value as string);
+export const isValidNumber = (value: unknown): boolean => {
+  return /^-?\d+(\.\d+)?$/.test(value as string);
+};
 
 export const validateNumericType =
   ({ numericType }: NumberFieldProps) =>
   (value: unknown) => {
-    if (!isValidNumber(value)) return "Value is not a valid number";
+    if (value === "") {
+      return true;
+    }
+
+    if (!isValidNumber(value)) {
+      return "Value is not a valid number";
+    }
 
     const isPositive = Number(value) > 0;
     const isNegative = Number(value) < 0;
     const isInt = isInteger(value);
     const numberValue = Number(value);
-
-    if (value === "") return true;
 
     if (
       Math.abs(numberValue) > Number.MAX_SAFE_INTEGER &&
