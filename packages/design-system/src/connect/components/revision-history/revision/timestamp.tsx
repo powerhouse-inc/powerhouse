@@ -7,7 +7,11 @@ export type TimestampProps = {
 
 export function Timestamp(props: TimestampProps) {
   const { timestamp } = props;
-  const date = new Date(timestamp);
+
+  const timestampNumber =
+    typeof timestamp === "string" ? parseInt(timestamp) : timestamp;
+
+  const date = new Date(timestampNumber);
   const shortDate = format(date, "HH:mm 'UTC'");
   const longDate = format(date, "eee, dd MMM yyyy HH:mm:ss 'UTC'");
   const tooltipContent = <div>{longDate}</div>;

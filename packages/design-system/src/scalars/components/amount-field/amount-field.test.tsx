@@ -54,6 +54,7 @@ describe("AmountField Component", () => {
         name="amount"
         type="AmountPercentage"
         value={345}
+        step={0}
       />,
     );
     expect(screen.getByText("%")).toBeInTheDocument();

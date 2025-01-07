@@ -1,24 +1,24 @@
 import React, { FC, useId } from "react";
-import { InputNumberProps } from "../types";
 import { NumberFieldProps, NumberFieldRaw } from "../number-field";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
-  SelectField,
   SelectFieldProps,
+  SelectFieldRaw,
   withFieldValidation,
 } from "../fragments";
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
-import {
-  validateIsBigIntAmount,
-  validatePositiveAmount,
-  validatePrecisionAmount,
-  validateTrailingZerosAmount,
-} from "./amount-field-validations";
-import { AmountFieldPropsGeneric, AmountValue } from "./types";
+import { InputNumberProps } from "../number-field/types";
+import { AmountValue } from "./types";
+import { AmountFieldPropsGeneric } from "./types";
+import { IconName } from "@/powerhouse";
+
+export interface TokenIcons {
+  [key: string]: IconName | (() => React.JSX.Element);
+}
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
   Omit<InputNumberProps, "onChange" | "onBlur"> & {
@@ -31,8 +31,11 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     allowedTokens?: string[];
     selectName: string;
     defaultValue?: AmountValue;
-    onChange?: (event: AmountValue) => void;
-    onBlur?: (event: AmountValue) => void;
+    value?: AmountValue;
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+    currencyPosition?: "left" | "right";
+    tokenIcons?: TokenIcons;
   };
 
 const AmountFieldRaw: FC<AmountFieldProps> = ({
@@ -42,7 +45,6 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   precision = 0,
   minValue,
   maxValue,
-  allowNegative,
   trailingZeros,
   onChange,
   onBlur,
@@ -55,61 +57,34 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   defaultValue,
   type,
   allowedCurrencies = [],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   allowedTokens = [],
   numberProps,
   selectProps,
+  step = 1,
+  currencyPosition,
+  tokenIcons,
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
-  const { isCurrency, isPercent, isSearchable, valueInput, options, currency } =
-    useAmountField({
-      value,
-      defaultValue,
-      type,
-      allowedCurrencies,
-    });
-
-  const handleOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (type === "AmountCurrency" && typeof value === "object") {
-      const newValue = {
-        ...value,
-        amount: e.target.value as unknown as number,
-      } as AmountValue;
-
-      onChange?.(newValue);
-    }
-    if (type === "Amount" || type === "AmountPercentage") {
-      const newValue = {
-        amount: e.target.value as unknown as number,
-      } as AmountValue;
-      onChange?.(newValue);
-    }
-  };
-  const handleOnChangeSelect = (e: string | string[]) => {
-    if (type === "AmountCurrency" && typeof value === "object") {
-      const newValue = {
-        ...value,
-        currency: typeof e === "string" ? e : undefined,
-      } as AmountValue;
-
-      onChange?.(newValue);
-    }
-  };
-  const handleBlur = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (type === "AmountCurrency") {
-      const newValue = {
-        ...value,
-        amount: e.target.value as unknown as number,
-      } as AmountValue;
-
-      onBlur?.(newValue);
-    }
-    if (type === "Amount" || type === "AmountPercentage") {
-      const newValue = e.target.value as unknown as number;
-      onBlur?.(newValue);
-    }
-  };
+  const {
+    isShowSelect,
+    isPercent,
+    options,
+    valueSelect,
+    valueInput,
+    handleOnChangeInput,
+    handleOnChangeSelect,
+    handleBlur,
+  } = useAmountField({
+    value,
+    defaultValue,
+    type,
+    allowedCurrencies,
+    allowedTokens,
+    onChange,
+    onBlur,
+    tokenIcons,
+  });
 
   return (
     <FormGroup>
@@ -119,33 +94,56 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
           required={required}
           disabled={disabled}
           hasError={!!errors?.length}
-          className={cn(disabled && "text-gray-400")}
+          className={cn(disabled && "text-gray-400 mb-[3px]")}
         >
           {label}
         </FormLabel>
       )}
-      <div className={cn("relative flex items-center gap-1")}>
+      <div className={cn("relative flex items-center")}>
         <div className={cn("relative flex items-center")}>
+          {isShowSelect && currencyPosition === "left" && (
+            <SelectFieldRaw
+              optionsCheckmark="Checkmark"
+              value={valueSelect}
+              name=""
+              required={required}
+              options={options}
+              disabled={disabled}
+              onChange={handleOnChangeSelect}
+              className={cn(
+                "border border-gray-300 rounded-l-md rounded-r-none",
+                "border-r-[0.5px] focus:border-r-[1px] focus:ring-1 focus:ring-gray-900",
+                "focus:outline-none",
+                selectProps?.className,
+              )}
+              {...(selectProps || {})}
+            />
+          )}
           <NumberFieldRaw
+            step={step}
             required={required}
             disabled={disabled}
             name=""
-            defaultValue={valueInput}
             value={valueInput}
             id={id}
             maxValue={maxValue}
             precision={precision}
             minValue={minValue}
-            allowNegative={allowNegative}
             trailingZeros={trailingZeros}
-            onChange={handleOnChange}
-            className={cn("flex-1 pr-6 outline-none", className)}
-            showErrorOnBlur
-            showErrorOnChange
+            data-cast={typeof valueInput === "bigint" ? "BigInt" : "Number"}
+            onChange={handleOnChangeInput}
+            className={cn(
+              currencyPosition === "left" &&
+                "border border-gray-300 rounded-l-none border-l-[0.5px]",
+              currencyPosition === "right" &&
+                "border border-gray-300 rounded-r-none border-r-[0.5px]",
+              isPercent && "pr-7",
+              className,
+            )}
             onBlur={handleBlur}
             {...(numberProps || {})}
           />
-          {isPercent && (
+          {isPercent && step === 0 && (
             <span
               className={cn(
                 "pointer-events-none absolute inset-y-0 right-2 ml-2 flex items-center",
@@ -156,17 +154,21 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             </span>
           )}
         </div>
-        {isCurrency && (
+        {isShowSelect && currencyPosition === "right" && (
           <div>
-            <SelectField
-              optionsCheckmark="None"
-              value={currency}
-              searchable={isSearchable}
+            <SelectFieldRaw
+              optionsCheckmark="Checkmark"
+              value={valueSelect}
               name=""
               required={required}
               disabled={disabled}
               onChange={handleOnChangeSelect}
               options={options}
+              className={cn(
+                "rounded-l-none rounded-r-md border border-gray-300",
+                "border-l-[0.5px] focus:border-l-[1px] focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
+                "focus:outline-none",
+              )}
               {...(selectProps || {})}
             />
           </div>
@@ -179,14 +181,5 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   );
 };
 
-export const AmountField = withFieldValidation<AmountFieldProps>(
-  AmountFieldRaw,
-  {
-    validations: {
-      _positive: validatePositiveAmount,
-      _isBigInt: validateIsBigIntAmount,
-      _precision: validatePrecisionAmount,
-      _trailingZeros: validateTrailingZerosAmount,
-    },
-  },
-);
+export const AmountField =
+  withFieldValidation<AmountFieldProps>(AmountFieldRaw);

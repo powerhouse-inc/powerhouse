@@ -10,19 +10,20 @@ export interface RadioGroupProps {
   onChange?: (value: string) => void;
 }
 
+export interface SelectOption {
+  icon?: IconName | React.ComponentType<{ className?: string }>;
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
 export interface SelectProps {
-  options?: {
-    icon?: IconName | React.ComponentType<{ className?: string }>;
-    value: string;
-    label: string;
-    disabled?: boolean;
-  }[];
-  optionsCheckmark?: "Auto" | "None";
+  options?: SelectOption[];
+  optionsCheckmark?: "Auto" | "Checkmark";
+  optionsCheckmarkPosition?: "Left" | "Right";
   placeholder?: string;
-  maxSelectedOptionsToShow?: number;
   multiple?: boolean;
   searchable?: boolean;
-  searchPosition?: "Dropdown" | "Input";
   onChange?: (value: string | string[]) => void;
 }
 

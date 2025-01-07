@@ -1,6 +1,27 @@
+import { MAX_SAFE_INTEGER } from "./number-field-validations";
+import { NumericType } from "./types";
+
 export const regex = /^-?\d*\.?\d*$/;
+
+const floatTypes: NumericType[] = [
+  "NegativeFloat",
+  "PositiveFloat",
+  "NonNegativeFloat",
+  "NonPositiveFloat",
+  "Float",
+];
+
+const formatValue = (
+  value: string,
+  precision?: number,
+  trailingZeros?: boolean,
+) => {
+  const formattedValue = parseFloat(value).toFixed(precision);
+  return trailingZeros ? formattedValue : parseFloat(formattedValue).toString();
+};
+
 type TransformProps = {
-  isBigInt?: boolean;
+  numericType?: NumericType;
   trailingZeros?: boolean;
   precision?: number;
 };
@@ -9,37 +30,35 @@ export function getDisplayValue(
   value?: string,
   transformProps?: TransformProps,
 ) {
+  if (!value) return "";
+
   const {
-    isBigInt = false,
+    numericType,
     precision,
     trailingZeros = false,
   } = transformProps || {};
 
-  // Return an empty string if value is empty
-  if (!value) {
-    return "";
-  }
+  const isFloat = numericType && floatTypes.includes(numericType);
+  const numberValue = Number(value);
 
-  // Handle the case when isBigInt is true
-  if (isBigInt) {
-    if (!Number.isInteger(Number(value))) {
-      // If the value is a number with decimals, return it as-is
-      return value;
-    }
-
-    return BigInt(value);
-  } else {
-    if (Math.abs(Number(value)) > Number.MAX_SAFE_INTEGER) {
-      //Remove the decimal places because its a bigInt
-      return value;
-    }
-    if (precision !== undefined) {
-      const formattedValue = parseFloat(value).toFixed(precision);
-
-      return trailingZeros
-        ? formattedValue // keep the zeros
-        : parseFloat(formattedValue).toString(); // delete the zeros and convert to string
-    }
+  if (numericType === "BigInt") {
+    //Not need to convert a BigInt the convertion is done in the onSubmit
     return value;
   }
+  //kee the value as its if a flaot and no precision is set
+  if (isFloat && precision === 0) {
+    return numberValue.toString();
+  }
+
+  //keep the value as its if the value is greater than the max safe integer
+  // to avoid convert to cientific notation
+  if (Math.abs(numberValue) > MAX_SAFE_INTEGER) {
+    return value.toString();
+  }
+
+  if (precision !== 0) {
+    return formatValue(value, precision, trailingZeros);
+  }
+
+  return value;
 }
