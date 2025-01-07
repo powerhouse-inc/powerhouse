@@ -137,7 +137,7 @@ export const withFieldValidation = <T extends PossibleProps>(
                 onBlurProp(event);
               }
             },
-            [onBlurController],
+            [onBlurController, showErrorOnBlur],
           );
 
           const onChangeCallback = useCallback(
@@ -186,7 +186,7 @@ export const withFieldValidation = <T extends PossibleProps>(
             // `internalValue` is the value of the field that is controlled by the form
             // it is used to trigger the validation on change, so we need to add it to the dependencies
             // otherwise the validation will not be triggered on change
-            [internalValue],
+            [internalValue, showErrorOnChange, showErrorOnBlur],
           );
 
           return (
