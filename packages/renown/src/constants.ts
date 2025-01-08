@@ -1,4 +1,4 @@
-export const DEFAULT_RENOWN_URL = "https://www.renown.id";
+export const DEFAULT_RENOWN_URL = "https://auth.renown.id";
 export const DEFAULT_RENOWN_NETWORK_ID = "eip155";
 export const DEFAULT_RENOWN_CHAIN_ID = "1";
 
