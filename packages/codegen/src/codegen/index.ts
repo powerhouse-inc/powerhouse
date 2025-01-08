@@ -144,8 +144,13 @@ export async function generateEditor(
   documentTypes: string[],
   config: PowerhouseConfig,
 ) {
+  const pathOrigin = "../../";
+
   const { documentModelsDir, skipFormat } = config;
-  const documentTypesMap = await getDocumentTypesMap(documentModelsDir);
+  const documentTypesMap = await getDocumentTypesMap(
+    documentModelsDir,
+    pathOrigin,
+  );
 
   const invalidType = documentTypes.find(
     (type) => !Object.keys(documentTypesMap).includes(type),
