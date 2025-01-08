@@ -1,3 +1,10 @@
+# [1.0.0-dev.182](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.181...v1.0.0-dev.182) (2025-01-08)
+
+
+### Bug Fixes
+
+* base href ([69990b7](https://github.com/powerhouse-inc/document-model-electron/commit/69990b76bc3c0748d6cd1875ad9eb3c799f87538))
+
 # [1.0.0-dev.181](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.180...v1.0.0-dev.181) (2024-12-20)
 
 
