@@ -3,17 +3,19 @@ import { IListenerAPI, IListenerRegistry } from "./listener";
 import { ISyncUnitRegistry, SyncUnit } from "./sync-unit";
 
 export interface ISyncManager extends IListenerAPI {
+  // listeners
+  removeDriveListeners(driveId: string): Promise<void>;
+
+  // sync units
   addDocumentSyncUnits(
     documentId: string,
     driveId: string | undefined,
     document: Document,
   ): Promise<SyncUnit[]>;
-
   removeDocumentSyncUnits(
     documentId: string,
     driveId: string | undefined,
   ): Promise<SyncUnit[]>;
-
   removeDriveSyncUnits(driveId: string): Promise<SyncUnit[]>;
 
   onListener: IListenerRegistry["on"];

@@ -100,7 +100,7 @@ import {
 } from "./types";
 import { filterOperationsByRevision, isAtRevision } from "./utils";
 import { ISyncManager, MemorySyncManager } from "../sync";
-import { createEventEmitter } from "../utils/event-emitter";
+import { createEventEmitter, Unsubscribe } from "../utils/event-emitter";
 import { ListenerInput } from "../sync/listener";
 
 export * from "./listener";
@@ -1939,19 +1939,6 @@ export class BaseDocumentDriveServer
 
       this.cache.setDocument("drives", drive, document).catch(logger.error);
 
-      for (const operation of operationsApplied) {
-        switch (operation.type) {
-          case "ADD_LISTENER": {
-            await this.addListener(drive, operation);
-            break;
-          }
-          case "REMOVE_LISTENER": {
-            await this.removeListener(drive, operation);
-            break;
-          }
-        }
-      }
-
       // update listener cache
       const lastOperation = operationsApplied
         .filter((op) => op.scope === "global")
@@ -2143,14 +2130,11 @@ export class BaseDocumentDriveServer
 
   async detachDrive(driveId: string) {
     const documentDrive = await this.getDrive(driveId);
-    const listeners = documentDrive.state.local.listeners || [];
     const triggers = documentDrive.state.local.triggers || [];
 
+    const listeners = await this.syncManager.getAllListeners();
     for (const listener of listeners) {
-      await this.addDriveAction(
-        driveId,
-        actions.removeListener({ listenerId: listener.listenerId }),
-      );
+      await this.syncManager.removeListener(listener.id);
     }
 
     for (const trigger of triggers) {
@@ -2177,14 +2161,6 @@ export class BaseDocumentDriveServer
     });
   }
 
-  private async removeListener(
-    driveId: string,
-    operation: Operation<Action<"REMOVE_LISTENER", RemoveListenerInput>>,
-  ) {
-    const { listenerId } = operation.input;
-    await this.syncManager.removeListener(driveId, listenerId);
-  }
-
   getTransmitter(
     driveId: string,
     listenerId: string,
@@ -2192,11 +2168,8 @@ export class BaseDocumentDriveServer
     return this.syncManager.getTransmitter(driveId, listenerId);
   }
 
-  getListener(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ListenerState | undefined> {
-    return this.syncManager.getListener(driveId, listenerId);
+  getListener(listenerId: string) {
+    return this.syncManager.getListener(listenerId);
   }
 
   getSyncStatus(
@@ -2214,108 +2187,6 @@ export class BaseDocumentDriveServer
 
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe {
     return this.emitter.on(event, cb);
-  }
-
-  async #updateListeners(
-    driveId: string,
-    documentId: string,
-    operations: Operation[],
-    operationsApplied: Operation[],
-    options?: AddOperationOptions,
-  ) {
-    // gets all the different scopes and branches combinations from the operations
-    const { scopes, branches } = operationsApplied.reduce(
-      (acc, operation) => {
-        if (!acc.scopes.includes(operation.scope)) {
-          acc.scopes.push(operation.scope);
-        }
-        return acc;
-      },
-      { scopes: [] as string[], branches: ["main"] },
-    );
-
-    const syncUnits = await this.getSynchronizationUnits(
-      driveId,
-      [documentId],
-      scopes,
-      branches,
-    );
-
-    // checks if any of the provided operations where reshufled
-    const newOp = operationsApplied.find(
-      (appliedOp) =>
-        !operations.find(
-          (o) =>
-            o.id === appliedOp.id &&
-            o.index === appliedOp.index &&
-            o.skip === appliedOp.skip &&
-            o.hash === appliedOp.hash,
-        ),
-    );
-
-    // if there are no new operations then reuses the provided source
-    // otherwise sets it to local so listeners know that there were
-    // new changes originating from this document drive server
-    const source: StrandUpdateSource = newOp
-      ? { type: "local" }
-      : (options?.source ?? { type: "local" });
-
-    // update listener cache
-
-    const operationSource = this.getOperationSource(source);
-
-    this.syncManager
-      .updateSynchronizationRevisions(
-        driveId,
-        syncUnits,
-        source,
-        () => {
-          this.updateSyncUnitStatus(driveId, {
-            [operationSource]: "SYNCING",
-          });
-
-          for (const syncUnit of syncUnits) {
-            this.updateSyncUnitStatus(syncUnit.syncId, {
-              [operationSource]: "SYNCING",
-            });
-          }
-        },
-        this.handleListenerError.bind(this),
-        options?.forceSync ?? source.type === "local",
-      )
-      .then((updates) => {
-        if (updates.length) {
-          this.updateSyncUnitStatus(driveId, {
-            [operationSource]: "SUCCESS",
-          });
-        }
-
-        for (const syncUnit of syncUnits) {
-          this.updateSyncUnitStatus(syncUnit.syncId, {
-            [operationSource]: "SUCCESS",
-          });
-        }
-      })
-      .catch((error) => {
-        logger.error("Non handled error updating sync revision", error);
-        this.updateSyncUnitStatus(
-          driveId,
-          {
-            [operationSource]: "ERROR",
-          },
-          error as Error,
-        );
-
-        for (const syncUnit of syncUnits) {
-          this.updateSyncUnitStatus(
-            syncUnit.syncId,
-            {
-              [operationSource]: "ERROR",
-            },
-            error as Error,
-          );
-        }
-      });
   }
 
   protected emit<K extends keyof DriveEvents>(

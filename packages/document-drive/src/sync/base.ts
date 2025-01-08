@@ -5,7 +5,7 @@ import { ISyncManager } from "./types";
 import { IListenerRegistry, Listener, ListenerInput } from "./listener/types";
 import { ISyncUnitRegistry, SyncUnit, SyncUnitRegistry } from "./sync-unit";
 import { OperationScope, Document } from "document-model/document";
-import { buildSyncUnitId } from "./utils";
+import { buildListenerFilter, buildSyncUnitId } from "./utils";
 import { Subscribe } from "../utils/observable-map";
 
 export interface ISyncManagerOptions {
@@ -122,5 +122,12 @@ export class SyncManager implements ISyncManager {
     const removed = await this.listenerRegistry.removeListener(listenerId);
     this.transmitterManager.deleteTransmitter(listenerId);
     return removed;
+  }
+
+  async removeDriveListeners(driveId: string): Promise<void> {
+    const listeners = await this.listenerRegistry.getSyncUnitListeners({
+      ...buildListenerFilter(),
+      driveId,
+    });
   }
 }
