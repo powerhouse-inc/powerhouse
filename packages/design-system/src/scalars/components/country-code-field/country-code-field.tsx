@@ -55,7 +55,7 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
       .sort((a, b) => (a.label > b.label ? 1 : a.label < b.label ? -1 : 0));
 
     const options =
-      allowedCountries || excludedCountries
+      Array.isArray(allowedCountries) || Array.isArray(excludedCountries)
         ? defaultOptions.filter(
             (option) =>
               (!allowedCountries || allowedCountries.includes(option.value)) &&
@@ -102,11 +102,17 @@ export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
             return "Please select a valid country";
           }
           // Check if country is in allowed list
-          if (allowedCountries && !allowedCountries.includes(value)) {
+          if (
+            Array.isArray(allowedCountries) &&
+            !allowedCountries.includes(value)
+          ) {
             return "Please select a valid country";
           }
           // Check if country is in excluded list
-          if (excludedCountries?.includes(value)) {
+          if (
+            Array.isArray(excludedCountries) &&
+            excludedCountries.includes(value)
+          ) {
             return "Please select a valid country";
           }
 
