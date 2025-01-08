@@ -6,12 +6,12 @@ import {
   DocumentModel,
   ActionErrorCallback,
 } from "document-model/document";
-
 import { useDocumentDispatch } from "./useDocumentDispatch";
 import { signOperation, addActionContext } from "../utils/signature";
 import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
 import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
 import { IDocumentDriveServer } from "document-drive";
+import { User } from "../renown/types";
 
 export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
   operation: Operation,
@@ -30,6 +30,7 @@ export type UseDocumentEditorProps<
   nodeId: string;
   document: Document<T, A, LocalState> | undefined;
   documentModel: DocumentModel<unknown, Action>;
+  user?: User;
   onExport?: () => void;
   onOpenSwitchboardLink?: () => Promise<void>;
   onChange?: (document: Document<T, A, LocalState>) => void;
@@ -39,10 +40,13 @@ export function useDocumentEditor(
   reactor: IDocumentDriveServer | undefined,
   props: UseDocumentEditorProps,
 ) {
-  const { nodeId, driveId, documentModel, document: initialDocument } = props;
-
-  // TODO: implement useUser hook
-  const user = undefined;
+  const {
+    nodeId,
+    driveId,
+    documentModel,
+    document: initialDocument,
+    user,
+  } = props;
 
   const connectDid = useConnectDid();
   const { sign } = useConnectCrypto();
