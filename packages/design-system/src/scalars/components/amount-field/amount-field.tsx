@@ -15,13 +15,14 @@ import { InputNumberProps } from "../number-field/types";
 import { AmountValue } from "./types";
 import { AmountFieldPropsGeneric } from "./types";
 import { IconName } from "@/powerhouse";
+import { validateAmount } from "./amount-field-validations";
 
 export interface TokenIcons {
   [key: string]: IconName | (() => React.JSX.Element);
 }
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
-  Omit<InputNumberProps, "onChange" | "onBlur"> & {
+  Omit<InputNumberProps, "onChange" | "onBlur" | "precision"> & {
     className?: string;
     name: string;
     pattern?: RegExp;
@@ -38,14 +39,12 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     tokenIcons?: TokenIcons;
   };
 
-const AmountFieldRaw: FC<AmountFieldProps> = ({
+export const AmountFieldRaw: FC<AmountFieldProps> = ({
   label,
   value,
   id: propId,
-  precision = 0,
   minValue,
   maxValue,
-  trailingZeros,
   onChange,
   onBlur,
   disabled,
@@ -75,6 +74,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
     handleOnChangeInput,
     handleOnChangeSelect,
     handleBlur,
+    isBigInt,
   } = useAmountField({
     value,
     defaultValue,
@@ -94,7 +94,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
           required={required}
           disabled={disabled}
           hasError={!!errors?.length}
-          className={cn(disabled && "text-gray-400 mb-[3px]")}
+          className={cn(disabled && "mb-[3px] text-gray-400")}
         >
           {label}
         </FormLabel>
@@ -111,8 +111,8 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
               disabled={disabled}
               onChange={handleOnChangeSelect}
               className={cn(
-                "border border-gray-300 rounded-l-md rounded-r-none",
-                "border-r-[0.5px] focus:border-r-[1px] focus:ring-1 focus:ring-gray-900",
+                "rounded-l-md rounded-r-none border border-gray-300",
+                "border-r-[0.5px] focus:border-r focus:ring-1 focus:ring-gray-900",
                 "focus:outline-none",
                 selectProps?.className,
               )}
@@ -120,23 +120,21 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
             />
           )}
           <NumberFieldRaw
+            name=""
             step={step}
             required={required}
             disabled={disabled}
-            name=""
-            value={valueInput}
+            value={valueInput === undefined ? undefined : valueInput}
             id={id}
             maxValue={maxValue}
-            precision={precision}
             minValue={minValue}
-            trailingZeros={trailingZeros}
-            data-cast={typeof valueInput === "bigint" ? "BigInt" : "Number"}
+            data-cast={isBigInt ? "BigInt" : "Number"}
             onChange={handleOnChangeInput}
             className={cn(
               currencyPosition === "left" &&
-                "border border-gray-300 rounded-l-none border-l-[0.5px]",
+                "rounded-l-none border border-l-[0.5px] border-gray-300",
               currencyPosition === "right" &&
-                "border border-gray-300 rounded-r-none border-r-[0.5px]",
+                "rounded-r-none border border-r-[0.5px] border-gray-300",
               isPercent && "pr-7",
               className,
             )}
@@ -166,7 +164,7 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
               options={options}
               className={cn(
                 "rounded-l-none rounded-r-md border border-gray-300",
-                "border-l-[0.5px] focus:border-l-[1px] focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
+                "border-l-[0.5px] focus:border-l focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                 "focus:outline-none",
               )}
               {...(selectProps || {})}
@@ -181,5 +179,12 @@ const AmountFieldRaw: FC<AmountFieldProps> = ({
   );
 };
 
-export const AmountField =
-  withFieldValidation<AmountFieldProps>(AmountFieldRaw);
+export const AmountField = withFieldValidation<AmountFieldProps>(
+  AmountFieldRaw,
+  {
+    validations: {
+      _numericAmount: validateAmount,
+    },
+  },
+);
+AmountField.displayName = "AmountField";

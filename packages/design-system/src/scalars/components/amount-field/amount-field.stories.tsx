@@ -27,6 +27,21 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+
+    trailingZeros: {
+      control: "boolean",
+      description:
+        "When precision is set, for example to 2, determines if the the trailing zeros should be preserved ( for example: 25.00,7.50, etc.) or not ( for example: 25, 7.5).",
+      if: {
+        arg: "type",
+        neq: "AmountToken",
+      },
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.VALIDATION,
+      },
+    },
+
     selectName: {
       control: "object",
       description: "Add the label for the select",
@@ -35,7 +50,6 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-
     numberProps: {
       control: "object",
       description: "All the props options for number field",
@@ -57,12 +71,11 @@ const meta = {
       valueControlType: "object",
       valueType: "object",
     }),
+
     ...PrebuiltArgTypes.placeholder,
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minValue,
     ...PrebuiltArgTypes.maxValue,
-    ...PrebuiltArgTypes.precision,
-    ...PrebuiltArgTypes.trailingZeros,
   },
   args: {
     errors: [],
