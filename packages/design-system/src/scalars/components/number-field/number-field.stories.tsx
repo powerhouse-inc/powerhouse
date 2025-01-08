@@ -30,14 +30,6 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    isBigInt: {
-      control: "boolean",
-      description: "Indicates if the input field should allow BigInt values",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
     autoFocus: {
       table: {
         disable: true,
@@ -57,6 +49,8 @@ const meta = {
         "NonNegativeFloat",
         "NonPositiveFloat",
         "BigInt",
+        "Int",
+        "Float",
       ],
       description:
         "Specifies the numeric type of the input field. Possible values are:\n\n\n" +
@@ -68,11 +62,13 @@ const meta = {
         "- NegativeFloat: Negative decimals (-1.0, -2.5)\n" +
         "- NonNegativeFloat: Zero and positive decimals (0.0, 1.0)\n" +
         "- NonPositiveFloat: Zero and negative decimals (0.0, -1.0)\n" +
-        "- BigInt: Large integers (999999999999999999)\n",
+        "- BigInt: Large integers (9999999999999999)\n" +
+        "- Float: Any decimal number (1.0, 2.5, -1.0, -2.5)\n" +
+        "- Int: Any integer number, including positive (1, 2), negative (-1, -2), and zero\n",
       table: {
         type: {
           summary:
-            '"PositiveInt" | "NegativeInt" | "NonNegativeInt" | "NonPositiveInt" | "PositiveFloat" | "NegativeFloat" | "NonNegativeFloat" | "NonPositiveFloat" | "BigInt"',
+            '"PositiveInt" | "NegativeInt" | "NonNegativeInt" | "NonPositiveInt" | "PositiveFloat" | "NegativeFloat" | "NonNegativeFloat" | "NonPositiveFloat" | "BigInt" | "Int" | "Float"',
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
@@ -81,7 +77,6 @@ const meta = {
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minValue,
     ...PrebuiltArgTypes.maxValue,
-    ...PrebuiltArgTypes.allowNegative,
     ...PrebuiltArgTypes.precision,
     ...PrebuiltArgTypes.trailingZeros,
   },
@@ -99,7 +94,7 @@ export const Default: Story = {
   args: {
     name: "Label",
     label: "Label",
-    placeholder: "0",
+    placeholder: "Enter a number",
     step: 0,
     value: 1234,
   },
@@ -109,8 +104,9 @@ export const Active: Story = {
     name: "Label",
     label: "Label",
     autoFocus: true,
-    defaultValue: 45,
+    value: 45,
     step: 0,
+    placeholder: "Enter a number",
   },
   parameters: {
     pseudo: { focus: true },
@@ -132,6 +128,7 @@ export const Required: Story = {
     value: 345,
     required: true,
     step: 0,
+    placeholder: "A number is required",
   },
 };
 export const WithWarning: Story = {
@@ -141,6 +138,7 @@ export const WithWarning: Story = {
     value: 23,
     step: 0,
     warnings: ["Warning message"],
+    placeholder: "Enter  number",
   },
 };
 export const WithError: Story = {
@@ -150,6 +148,7 @@ export const WithError: Story = {
     value: 23,
     step: 0,
     errors: ["Error message"],
+    placeholder: "Enter a number",
   },
 };
 export const WithMultipleErrors: Story = {
@@ -164,6 +163,7 @@ export const WithMultipleErrors: Story = {
       "Error message number 3",
       "Error message number 4",
     ],
+    placeholder: "Enter a number",
   },
 };
 
@@ -173,6 +173,7 @@ export const WithValue: Story = {
     name: "Label",
     label: "Label",
     value: 23,
+    placeholder: "Enter a number",
   },
 };
 
@@ -183,6 +184,7 @@ export const WithDescription: Story = {
     label: "Label",
     value: 0,
     description: "This is the field description",
+    placeholder: "Enter a number",
   },
 };
 
@@ -195,6 +197,7 @@ export const WithFloatNumber: Story = {
     value: 0.0,
     precision: 2,
     trailingZeros: true,
+    placeholder: "Enter a decimal number",
   },
 };
 // BigInt Stories
@@ -202,9 +205,10 @@ export const WithBigInt: Story = {
   args: {
     name: "Label",
     label: "Label",
-    value: 999999,
-    isBigInt: true,
+    value: 99992342343299,
+    numericType: "BigInt",
     step: 0,
+    placeholder: "Enter a large number",
   },
 };
 
@@ -216,5 +220,6 @@ export const WithStep: Story = {
     value: 456,
     step: 10,
     minValue: 20,
+    placeholder: "Enter a number",
   },
 };

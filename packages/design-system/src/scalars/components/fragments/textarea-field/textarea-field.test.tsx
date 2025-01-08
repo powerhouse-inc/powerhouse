@@ -27,6 +27,7 @@ describe("TextareaField Component", () => {
         label="Test Label"
         required
         disabled
+        multiline
         rows={5}
         spellCheck={true}
       />,

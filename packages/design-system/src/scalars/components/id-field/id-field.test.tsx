@@ -50,9 +50,10 @@ describe("IdField", () => {
     expect(input).toHaveValue("static-id");
   });
 
-  it("should use UUID generator by default", () => {
-    const mockUUID = "00000000-0000-0000-0000-000000000000";
-    vi.spyOn(crypto, "randomUUID").mockReturnValue(mockUUID);
+  it("should use nanoid generator by default", () => {
+    vi.mock("nanoid", () => ({
+      nanoid: () => "aaa",
+    }));
 
     render(
       <Form onSubmit={() => {}}>
@@ -61,7 +62,7 @@ describe("IdField", () => {
     );
 
     const input = screen.getByTestId("id-field");
-    expect(input).toHaveValue(mockUUID);
+    expect(input).toHaveValue("aaa");
   });
 
   it("should use custom generator function when provided", () => {
@@ -90,7 +91,7 @@ describe("IdField", () => {
 
     render(
       <Form onSubmit={handleSubmit}>
-        <IdField data-testid="id-field" />
+        <IdField data-testid="id-field" generator="uuid" />
         <button type="submit">Submit</button>
       </Form>,
     );

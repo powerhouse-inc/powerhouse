@@ -1,4 +1,7 @@
-import React, { useId } from "react";
+/* eslint-disable react/jsx-max-depth */
+/* eslint-disable react/jsx-props-no-spreading */
+import React, { useId, useCallback } from "react";
+import { Command } from "@/scalars/components/fragments/command";
 import { Button } from "@/scalars/components/fragments/button";
 import {
   Popover,
@@ -14,7 +17,6 @@ import { cn } from "@/scalars/lib/utils";
 import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
 import { SelectProps } from "@/scalars/components/enum-field/types";
 import { useSelectField } from "./use-select-field";
-import { SearchInput } from "./search-input";
 import { SelectedContent } from "./selected-content";
 import { Content } from "./content";
 
@@ -39,14 +41,12 @@ export const SelectFieldRaw = React.forwardRef<
     {
       // core functionality props
       options = [],
-      optionsCheckmark = "Auto",
-      multiple,
       defaultValue,
       value,
       onChange,
+      onBlur,
 
       // form-related props
-      autoFocus,
       id: propId,
       name,
       label,
@@ -58,12 +58,13 @@ export const SelectFieldRaw = React.forwardRef<
       warnings = [],
 
       // behavior props
+      multiple,
+      optionsCheckmark = "Auto",
+      optionsCheckmarkPosition = "Left",
       searchable,
-      searchPosition = "Dropdown",
 
       // display props
       description,
-      maxSelectedOptionsToShow = 3,
       placeholder,
       className,
 
@@ -71,33 +72,36 @@ export const SelectFieldRaw = React.forwardRef<
     },
     ref,
   ) => {
-    // If not valid configuration, fallback to 'Dropdown'
-    if (searchPosition === "Input" && multiple) {
-      searchPosition = "Dropdown";
-    }
-
     const prefix = useId();
     const id = propId ?? `${prefix}-select`;
 
     const {
       selectedValues,
       isPopoverOpen,
-      searchValue,
-      setIsPopoverOpen,
+      commandListRef,
       toggleOption,
       handleClear,
       toggleAll,
-      handleTogglePopover,
-      handleSearch,
       handleOpenChange,
-      selectFirstFilteredOption,
     } = useSelectField({
       options,
       multiple,
       defaultValue,
       value,
       onChange,
+      onBlur,
     });
+
+    const onTriggerBlur = useCallback(
+      (event: any) => {
+        if (!isPopoverOpen) {
+          // trigger the blur event when the trigger loses focus but the popover is not open,
+          // because when the popover is open, the trigger loses focus but the select as a component still has the focus
+          onBlur?.(event as React.FocusEvent<HTMLButtonElement>);
+        }
+      },
+      [onBlur, isPopoverOpen],
+    );
 
     return (
       <FormGroup>
@@ -114,13 +118,13 @@ export const SelectFieldRaw = React.forwardRef<
         )}
         <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
           <PopoverTrigger asChild={true}>
+            {/* TODO: create a trigger component */}
             <Button
               id={id}
               name={name}
               type="button"
-              role={searchPosition === "Input" ? "button" : "combobox"}
-              autoFocus={autoFocus}
-              onClick={handleTogglePopover}
+              role="combobox"
+              onBlur={onTriggerBlur}
               disabled={disabled}
               aria-invalid={errors.length > 0}
               aria-label={
@@ -129,7 +133,7 @@ export const SelectFieldRaw = React.forwardRef<
               aria-required={required}
               aria-expanded={isPopoverOpen}
               className={cn(
-                "flex size-full items-center justify-between px-3 py-[7.2px]",
+                "flex h-9 w-full items-center justify-between px-3 py-2",
                 "dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white",
                 "hover:border-gray-300 hover:bg-gray-100",
                 "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800",
@@ -144,53 +148,37 @@ export const SelectFieldRaw = React.forwardRef<
               {...props}
               ref={ref}
             >
-              {searchable && searchPosition === "Input" ? (
-                <SearchInput
-                  selectedValues={selectedValues}
-                  options={options}
-                  placeholder={placeholder}
-                  disabled={disabled}
-                  searchValue={searchValue}
-                  onSearch={handleSearch}
-                  onOpenChange={handleOpenChange}
-                  onSelectFirstOption={selectFirstFilteredOption}
-                  handleClear={handleClear}
-                  isPopoverOpen={isPopoverOpen}
-                />
-              ) : (
-                <SelectedContent
-                  selectedValues={selectedValues}
-                  options={options}
-                  multiple={multiple}
-                  searchable={searchable}
-                  maxSelectedOptionsToShow={maxSelectedOptionsToShow}
-                  placeholder={placeholder}
-                  disabled={disabled}
-                  handleClear={handleClear}
-                />
-              )}
+              <SelectedContent
+                selectedValues={selectedValues}
+                options={options}
+                multiple={multiple}
+                searchable={searchable}
+                placeholder={placeholder}
+                handleClear={handleClear}
+              />
             </Button>
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            onEscapeKeyDown={() => setIsPopoverOpen(false)}
             className={cn(
               "w-[--radix-popover-trigger-width] p-0",
-              "border border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
+              "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-700",
               "rounded shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
             )}
           >
-            <Content
-              selectedValues={selectedValues}
-              options={options}
-              optionsCheckmark={optionsCheckmark}
-              multiple={multiple}
-              searchable={searchable}
-              searchPosition={searchPosition}
-              searchValue={searchValue}
-              toggleOption={toggleOption}
-              toggleAll={toggleAll}
-            />
+            <Command>
+              <Content
+                searchable={searchable}
+                commandListRef={commandListRef}
+                multiple={multiple}
+                selectedValues={selectedValues}
+                optionsCheckmark={optionsCheckmark}
+                optionsCheckmarkPosition={optionsCheckmarkPosition}
+                options={options}
+                toggleAll={toggleAll}
+                toggleOption={toggleOption}
+              />
+            </Command>
           </PopoverContent>
         </Popover>
         {description && <FormDescription>{description}</FormDescription>}
@@ -205,10 +193,7 @@ export const SelectFieldRaw = React.forwardRef<
   },
 );
 
-export const SelectField = withFieldValidation<SelectFieldProps>(
-  SelectFieldRaw,
-) as React.ForwardRefExoticComponent<
-  SelectFieldProps & React.RefAttributes<HTMLButtonElement>
->;
+export const SelectField =
+  withFieldValidation<SelectFieldProps>(SelectFieldRaw);
 
 SelectField.displayName = "SelectField";

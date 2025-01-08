@@ -1,4 +1,4 @@
-import { forwardRef, useId } from "react";
+import { forwardRef, useId, useMemo } from "react";
 import { Input } from "../input";
 import { FormLabel } from "../form-label";
 import { FormMessageList } from "../form-message";
@@ -7,8 +7,11 @@ import { ErrorHandling, FieldCommonProps, TextProps } from "../../types";
 import { FormDescription } from "../form-description";
 import { CharacterCounter } from "../character-counter";
 import { withFieldValidation } from "../with-field-validation";
-import ValueTransformer from "../value-transformer/value-transformer";
+import ValueTransformer, {
+  type TransformerType,
+} from "@/scalars/components/fragments/value-transformer";
 import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
+import { cn } from "@/scalars/lib/utils";
 
 export interface TextFieldProps
   extends Omit<
@@ -47,6 +50,20 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
     const id = props.id ?? idGenerated;
     const autoCompleteValue =
       autoComplete === undefined ? undefined : autoComplete ? "on" : "off";
+    const hasContentBelow =
+      !!description ||
+      (Array.isArray(warnings) && warnings.length > 0) ||
+      (Array.isArray(errors) && errors.length > 0);
+
+    const transformers: TransformerType = useMemo(
+      () => [
+        sharedValueTransformers.trimOnBlur(!!trim),
+        sharedValueTransformers.lowercaseOnChange(!!lowercase),
+        sharedValueTransformers.uppercaseOnChange(!!uppercase),
+        sharedValueTransformers.trimOnEnter(!!trim),
+      ],
+      [trim, lowercase, uppercase],
+    );
 
     return (
       <FormGroup>
@@ -60,13 +77,7 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
             {label}
           </FormLabel>
         )}
-        <ValueTransformer
-          transformers={[
-            sharedValueTransformers.trimOnBlur(!!trim),
-            sharedValueTransformers.lowercaseOnChange(!!lowercase),
-            sharedValueTransformers.uppercaseOnChange(!!uppercase),
-          ]}
-        >
+        <ValueTransformer transformers={transformers}>
           <Input
             id={id}
             value={value ?? ""}
@@ -79,7 +90,12 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
           />
         </ValueTransformer>
         {typeof maxLength === "number" && maxLength > 0 && (
-          <div className="flex justify-end">
+          <div
+            className={cn(
+              "mt-[-6px] flex justify-end",
+              hasContentBelow && "-mb-1",
+            )}
+          >
             <CharacterCounter maxLength={maxLength} value={value ?? ""} />
           </div>
         )}

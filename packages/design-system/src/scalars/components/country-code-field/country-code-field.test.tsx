@@ -9,7 +9,8 @@ describe("CountryCodeField Component", () => {
     name: "country",
     label: "Select Country",
   };
-  window.HTMLElement.prototype.scrollIntoView = () => {};
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  window.Element.prototype.scrollTo = vi.fn();
 
   it("should match snapshot", () => {
     const { asFragment } = renderWithForm(
@@ -40,7 +41,7 @@ describe("CountryCodeField Component", () => {
 
   it("should disable the field when disabled prop is true", () => {
     renderWithForm(<CountryCodeField {...defaultProps} disabled />);
-    expect(screen.getByRole("button")).toBeDisabled();
+    expect(screen.getByRole("combobox")).toBeDisabled();
   });
 
   it("should display error messages", async () => {
@@ -69,7 +70,7 @@ describe("CountryCodeField Component", () => {
     const onChange = vi.fn();
     renderWithForm(<CountryCodeField {...defaultProps} onChange={onChange} />);
 
-    const select = screen.getByRole("button");
+    const select = screen.getByRole("combobox");
     await user.click(select);
     await user.click(screen.getByText("United States"));
     expect(onChange).toHaveBeenCalledWith("US");
@@ -85,9 +86,8 @@ describe("CountryCodeField Component", () => {
       />,
     );
 
-    const input = screen.getByRole("combobox");
-    await user.click(input);
-    await user.type(input, "united");
+    await user.click(screen.getByRole("combobox"));
+    await user.type(screen.getByPlaceholderText("Search..."), "united");
 
     expect(screen.getByText("United States")).toBeInTheDocument();
     expect(screen.getByText("United Kingdom")).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe("CountryCodeField Component", () => {
       <CountryCodeField {...defaultProps} allowedCountries={["US", "GB"]} />,
     );
 
-    const select = screen.getByRole("button");
+    const select = screen.getByRole("combobox");
     await user.click(select);
 
     expect(screen.getByText("United States")).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("CountryCodeField Component", () => {
       <CountryCodeField {...defaultProps} excludedCountries={["FR", "DE"]} />,
     );
 
-    const select = screen.getByRole("button");
+    const select = screen.getByRole("combobox");
     await user.click(select);
 
     expect(screen.getByText("United States")).toBeInTheDocument();
@@ -134,11 +134,35 @@ describe("CountryCodeField Component", () => {
       />,
     );
 
-    const select = screen.getByRole("button");
+    const select = screen.getByRole("combobox");
     await user.click(select);
 
     expect(screen.getByText("United States")).toBeInTheDocument();
     expect(screen.getByText("United Kingdom")).toBeInTheDocument();
     expect(screen.queryByText("France")).not.toBeInTheDocument();
+  });
+
+  it("should include dependent areas when includeDependentAreas is true", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    renderWithForm(
+      <CountryCodeField
+        {...defaultProps}
+        includeDependentAreas
+        onChange={onChange}
+      />,
+    );
+
+    const select = screen.getByRole("combobox");
+    await user.click(select);
+
+    expect(screen.getByText("Puerto Rico")).toBeInTheDocument(); // US territory
+    expect(screen.getByText("Guam")).toBeInTheDocument(); // US territory
+
+    await user.click(screen.getByText("Puerto Rico"));
+    expect(onChange).toHaveBeenCalledWith("PR");
+
+    expect(screen.getByText("Puerto Rico")).toBeInTheDocument();
   });
 });
