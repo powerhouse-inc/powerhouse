@@ -68,12 +68,14 @@ export const getDocumentModelTypeDefs = (
     ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
 
     type Operation {
+      id: ID!
       type: String!
       index: Int!
       timestamp: DateTime!
       hash: String!
     }
     interface IDocument {
+      id: ID!
       name: String!
       documentType: String!
       revision: Int!
