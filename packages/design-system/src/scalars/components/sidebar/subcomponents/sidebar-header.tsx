@@ -1,0 +1,41 @@
+interface SidebarHeaderProps {
+  sidebarTitle?: string;
+  sidebarIcon?: React.ReactNode;
+  enableMacros?: number;
+}
+
+export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
+  sidebarTitle,
+  sidebarIcon,
+  enableMacros = 0,
+}) => {
+  if (!sidebarTitle && !sidebarIcon && !enableMacros) {
+    return null;
+  }
+
+  return (
+    <header className="flex items-center justify-between border-b border-gray-300 bg-gray-50 p-4">
+      <div className="flex items-center gap-2">
+        {sidebarIcon}
+        <div className="truncate text-sm font-semibold text-gray-700">
+          {sidebarTitle}
+        </div>
+      </div>
+
+      {enableMacros > 0 && (
+        <div className="flex items-center gap-2">
+          {Array.from({ length: Math.min(enableMacros, 4) }).map((_, index) => (
+            <div
+              // eslint-disable-next-line react/no-array-index-key
+              key={`macro-${index}`}
+              role="button"
+              className="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100"
+            >
+              {index + 1}
+            </div>
+          ))}
+        </div>
+      )}
+    </header>
+  );
+};
