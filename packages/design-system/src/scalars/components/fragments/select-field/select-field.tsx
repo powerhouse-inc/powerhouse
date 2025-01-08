@@ -114,10 +114,7 @@ export const SelectFieldRaw = React.forwardRef<
             inline={false}
             onClick={(e) => {
               e.preventDefault();
-              const button = document.getElementById(id);
-              if (button) {
-                button.focus();
-              }
+              (e.target as HTMLLabelElement).control?.focus();
             }}
           >
             {label}
