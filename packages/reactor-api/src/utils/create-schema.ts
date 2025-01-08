@@ -1,8 +1,8 @@
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import { IDocumentDriveServer } from "document-drive";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
-import { DocumentNode, parse } from "graphql";
+import { IDocumentDriveServer } from "document-drive";
+import { DocumentNode } from "graphql";
 import gql from "graphql-tag";
 import { Context } from "src/subgraphs";
 
@@ -51,7 +51,7 @@ export const getDocumentModelTypeDefs = (
             )
             .join("\n")};
 
-    type ${documentModel.name} implements IDocument {
+    type ${documentModel.name.replaceAll(" ", "")} implements IDocument {
               id: String!
               name: String!
               documentType: String!
@@ -59,8 +59,8 @@ export const getDocumentModelTypeDefs = (
               revision: Int!
               created: DateTime!
               lastModified: DateTime!
-              ${documentModel.name !== "DocumentModel" ? `initialState: ${documentModel.name}State!` : ""}
-              ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ""}
+              ${documentModel.name !== "DocumentModel" ? `initialState: ${documentModel.name.replaceAll(" ", "")}State!` : ""}
+              ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name.replaceAll(" ", "")}State!` : ""}
           }\n`;
   });
 
