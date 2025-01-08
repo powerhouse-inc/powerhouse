@@ -67,6 +67,11 @@ const CommandList = React.forwardRef<
     className={cn(
       "max-h-[300px] overflow-y-auto overflow-x-hidden",
       "focus:outline-none",
+      "scrollbar-thin scrollbar-gutter-stable",
+      "scrollbar-track-transparent",
+      "scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-300",
+      "dark:scrollbar-thumb-charcoal-700 dark:hover:scrollbar-thumb-charcoal-700",
+      "scrollbar-thumb-rounded-md",
       className,
     )}
     {...props}
