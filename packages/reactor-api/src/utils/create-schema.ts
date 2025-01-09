@@ -59,6 +59,7 @@ export const getDocumentModelTypeDefs = (
               revision: Int!
               created: DateTime!
               lastModified: DateTime!
+              ${documentModel.name !== "DocumentModel" ? `initialState: ${documentModel.name}State!` : ""}
               ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ""}
           }\n`;
   });
