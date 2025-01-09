@@ -37,6 +37,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
     currencyPosition?: "left" | "right";
     tokenIcons?: TokenIcons;
+    viewPrecision?: number;
   };
 
 export const AmountFieldRaw: FC<AmountFieldProps> = ({
@@ -62,6 +63,9 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
   step = 1,
   currencyPosition,
   tokenIcons,
+  name,
+  trailingZeros,
+  viewPrecision,
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
@@ -100,6 +104,11 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
         </FormLabel>
       )}
       <div className={cn("relative flex items-center")}>
+        <input
+          name={name}
+          type="hidden"
+          data-cast={isBigInt ? "AmountBigInt" : "AmountNumber"}
+        />
         <div className={cn("relative flex items-center")}>
           {isShowSelect && currencyPosition === "left" && (
             <SelectFieldRaw
@@ -122,13 +131,14 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
           <NumberFieldRaw
             name=""
             step={step}
+            trailingZeros={trailingZeros}
+            precision={viewPrecision}
             required={required}
             disabled={disabled}
             value={valueInput === undefined ? undefined : valueInput}
             id={id}
             maxValue={maxValue}
             minValue={minValue}
-            data-cast={isBigInt ? "BigInt" : "Number"}
             onChange={handleOnChangeInput}
             className={cn(
               currencyPosition === "left" &&
