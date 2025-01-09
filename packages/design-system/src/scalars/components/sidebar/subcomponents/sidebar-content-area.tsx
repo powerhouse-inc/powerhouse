@@ -1,11 +1,18 @@
 import { SidebarItem } from "./sidebar-item";
+import { useSidebar } from "./sidebar-provider";
 
 export const SidebarContentArea = () => {
+  const { state } = useSidebar();
   return (
     <div className="flex flex-col gap-1 p-2">
-      <SidebarItem title="Item 1" />
-      <SidebarItem title="Item 2" />
-      <SidebarItem title="Item 3" />
+      {state.items.map((item) => (
+        <SidebarItem
+          key={item.id}
+          id={item.id}
+          title={item.title}
+          childrens={item.childrens}
+        />
+      ))}
     </div>
   );
 };
