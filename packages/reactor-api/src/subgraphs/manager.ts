@@ -108,7 +108,9 @@ export class SubgraphManager {
     });
     await subgraphInstance.onSetup();
     this.subgraphs.unshift(subgraphInstance);
-    console.log(`> Registered ${this.path.slice(-1) === "/" ? this.path : this.path+ "/"}${subgraphInstance.name} subgraph.`);
+    console.log(
+      `> Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${subgraphInstance.name} subgraph.`,
+    );
     await this.updateRouter();
   }
 
