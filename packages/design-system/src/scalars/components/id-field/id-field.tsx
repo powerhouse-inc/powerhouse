@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
+import { nanoid } from "nanoid";
 
 export type GeneratorFn = () => string;
 
-export type BuiltInGenerator = "UUID";
+export type BuiltInGenerator = "uuid" | "nanoid";
 
 export interface IdFieldProps {
   name?: string;
@@ -14,7 +15,7 @@ export interface IdFieldProps {
 export const IdField: React.FC<IdFieldProps> = ({
   name = "id",
   value,
-  generator = "UUID",
+  generator = "nanoid",
   ...rest
 }) => {
   const {
@@ -22,12 +23,18 @@ export const IdField: React.FC<IdFieldProps> = ({
     formState: { submitCount },
   } = useFormContext();
   const actualValue = useMemo(
-    () =>
-      value !== undefined
-        ? value
-        : typeof generator === "function"
-          ? generator()
-          : crypto.randomUUID(),
+    () => {
+      if (value !== undefined) return value;
+
+      if (typeof generator === "function") return generator();
+
+      switch (generator) {
+        case "nanoid":
+          return nanoid();
+        case "uuid":
+          return crypto.randomUUID();
+      }
+    },
     // We want to re-generate the ID on every submit
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [value, generator, submitCount],

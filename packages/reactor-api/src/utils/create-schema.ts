@@ -52,13 +52,14 @@ export const getDocumentModelTypeDefs = (
             .join("\n")};
 
     type ${documentModel.name} implements IDocument {
-              id: ID!
+              id: String!
               name: String!
               documentType: String!
-              operations: [Operation!]!
+              operations(skip: Int, first: Int): [Operation!]!
               revision: Int!
               created: DateTime!
               lastModified: DateTime!
+              ${documentModel.name !== "DocumentModel" ? `initialState: ${documentModel.name}State!` : ""}
               ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ""}
           }\n`;
   });
@@ -67,19 +68,46 @@ export const getDocumentModelTypeDefs = (
   const schema = gql`
     ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
 
+    type PHOperationContext {
+      signer: Signer
+    }
+
+    type Signer {
+      user: SignerUser
+      app: SignerApp
+      signatures: [String!]!
+    }
+
+    type SignerUser {
+      address: String!
+      networkId: String!
+      chainId: Int!
+    }
+
+    type SignerApp {
+      name: String!
+      key: String!
+    }
+
     type Operation {
+      id: String!
       type: String!
       index: Int!
       timestamp: DateTime!
       hash: String!
+      skip: Int
+      inputText: String
+      error: String
+      context: PHOperationContext
     }
     interface IDocument {
+      id: String!
       name: String!
       documentType: String!
       revision: Int!
       created: DateTime!
       lastModified: DateTime!
-      operations: [Operation!]!
+      operations(first: Int, skip: Int): [Operation!]!
     }
     ${dmSchema.replaceAll(";", "")}
 

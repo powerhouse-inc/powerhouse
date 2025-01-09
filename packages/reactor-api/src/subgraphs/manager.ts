@@ -7,12 +7,13 @@ import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
 import { Db } from "src/types";
-import { Context, SubgraphArgs, SubgraphClass } from ".";
+import { authSubgraph, Context, SubgraphArgs, SubgraphClass } from ".";
 import { createSchema } from "../utils/create-schema";
 import { AnalyticsSubgraph } from "./analytics";
 import { Subgraph } from "./base";
 import { DriveSubgraph } from "./drive";
 import { SystemSubgraph } from "./system";
+import { AuthSubgraph } from "./auth";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -26,23 +27,15 @@ export class SubgraphManager {
     private readonly operationalStore: Db,
     private readonly analyticsStore: IAnalyticsStore,
   ) {
-    const args: SubgraphArgs = {
-      reactor: this.reactor,
-      operationalStore: this.operationalStore,
-      analyticsStore: this.analyticsStore,
-      subgraphManager: this,
-    };
-
     // Setup Default subgraphs
+    this.registerSubgraph(AuthSubgraph);
     this.registerSubgraph(SystemSubgraph);
     this.registerSubgraph(DriveSubgraph);
     this.registerSubgraph(AnalyticsSubgraph);
   }
 
   async init() {
-    console.log(
-      `Initializing ReactorRouterManager with subgraphs: [${this.subgraphs.map((e) => e.name).join(", ")}]`,
-    );
+    console.log(`Initializing ReactorRouterManager...`);
     const models = this.reactor.getDocumentModels();
     const driveModel = models.find(
       (it) => it.documentModel.name === "DocumentDrive",
@@ -115,7 +108,9 @@ export class SubgraphManager {
     });
     await subgraphInstance.onSetup();
     this.subgraphs.unshift(subgraphInstance);
-    console.log(`> Registered ${subgraphInstance.name} subgraph.`);
+    console.log(
+      `> Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${subgraphInstance.name} subgraph.`,
+    );
     await this.updateRouter();
   }
 

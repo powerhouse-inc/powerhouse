@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { SelectProps } from "@/scalars/components/enum-field/types";
+import { SelectFieldProps } from "./select-field";
 
 interface UseSelectFieldProps {
   options?: SelectProps["options"];
@@ -7,6 +8,7 @@ interface UseSelectFieldProps {
   defaultValue?: string | string[];
   value?: string | string[];
   onChange?: (value: string | string[]) => void;
+  onBlur?: SelectFieldProps["onBlur"];
 }
 
 export function useSelectField({
@@ -15,8 +17,10 @@ export function useSelectField({
   defaultValue,
   value,
   onChange,
+  onBlur,
 }: UseSelectFieldProps) {
   const isInternalChange = useRef(false);
+  const commandListRef = useRef<HTMLDivElement>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedValues, setSelectedValues] = useState<string[]>(() => {
     const initialValue = value ?? defaultValue ?? [];
@@ -25,7 +29,6 @@ export function useSelectField({
     }
     return Array.isArray(initialValue) ? initialValue : [initialValue];
   });
-  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     if (isInternalChange.current) {
@@ -38,16 +41,7 @@ export function useSelectField({
     } else {
       setSelectedValues(Array.isArray(newValue) ? newValue : [newValue]);
     }
-    setSearchValue("");
   }, [value]);
-
-  const handleTogglePopover = useCallback(() => {
-    setIsPopoverOpen(!isPopoverOpen);
-  }, [isPopoverOpen]);
-
-  const handleSearch = useCallback((value: string) => {
-    setSearchValue(value);
-  }, []);
 
   const handleOpenChange = useCallback((open: boolean) => {
     setIsPopoverOpen(open);
@@ -63,14 +57,15 @@ export function useSelectField({
           ? selectedValues.filter((v) => v !== optionValue)
           : [...selectedValues, optionValue];
       } else {
-        newValues = [optionValue];
+        newValues = selectedValues[0] === optionValue ? [] : [optionValue];
+
         setIsPopoverOpen(false);
       }
 
       setSelectedValues(newValues);
-      onChange?.(multiple ? newValues : newValues[0]);
+      onChange?.(multiple ? newValues : (newValues[0] ?? ""));
     },
-    [multiple, selectedValues, onChange],
+    [multiple, selectedValues, options, onChange],
   );
 
   const handleClear = useCallback(() => {
@@ -92,28 +87,38 @@ export function useSelectField({
     onChange?.(multiple ? newValues : newValues[0]);
   }, [options, selectedValues, multiple, onChange]);
 
-  const selectFirstFilteredOption = useCallback(() => {
-    const filteredOptions = options.filter((option) =>
-      option.label.toLowerCase().includes(searchValue.toLowerCase()),
-    );
-
-    const firstOption = filteredOptions.find((opt) => !opt.disabled);
-    if (firstOption) {
-      toggleOption(firstOption.value);
+  // call onBlur when the popover is closed to invoke the validation
+  const [haveBeenOpened, setHaveBeenOpened] = useState<boolean>(false);
+  useEffect(() => {
+    if (!isPopoverOpen && haveBeenOpened) {
+      onBlur?.({ target: {} } as React.FocusEvent<HTMLButtonElement>);
     }
-  }, [options, searchValue, toggleOption]);
+
+    if (isPopoverOpen) {
+      setHaveBeenOpened(true);
+    }
+  }, [isPopoverOpen, haveBeenOpened, onBlur]);
+
+  useEffect(() => {
+    if (!multiple && selectedValues.length > 1) {
+      isInternalChange.current = true;
+      setSelectedValues([selectedValues[0]]);
+      onChange?.(selectedValues[0]);
+      return;
+    }
+    if (selectedValues.length > 0) {
+      isInternalChange.current = true;
+      onChange?.(multiple ? [selectedValues[0]] : selectedValues[0]);
+    }
+  }, [multiple]);
 
   return {
     selectedValues,
     isPopoverOpen,
-    searchValue,
-    setIsPopoverOpen,
+    commandListRef,
     toggleOption,
     handleClear,
     toggleAll,
-    handleTogglePopover,
-    handleSearch,
     handleOpenChange,
-    selectFirstFilteredOption,
   };
 }

@@ -3,12 +3,6 @@ export const isPositiveOrUndefiend = (value: unknown): true | string =>
     ? true
     : "Value must be a positive value";
 
-export const isBigIntNumber = (value: unknown) => {
-  const stringValue = String(value);
-  const isLargeNumber = Math.abs(Number(stringValue)) > Number.MAX_SAFE_INTEGER;
-  return isLargeNumber ? "Value is too large for standard integer" : true;
-};
-
 export const isPrecisionZeroOrUndefiend = (
   value: unknown,
   precision?: number,

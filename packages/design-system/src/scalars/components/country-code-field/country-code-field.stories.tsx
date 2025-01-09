@@ -133,17 +133,15 @@ export const Required: Story = {
   args: {
     label: "Country",
     placeholder: "Select a country",
-    description: "This field is required",
     required: true,
-    showErrorOnBlur: true,
   },
 };
 
 export const WithSearchEnabled: Story = {
   args: {
-    label: "Select a country",
+    label: "Country",
     description: "Type to search through options",
-    placeholder: "Search...",
+    placeholder: "Select a country",
     enableSearch: true,
   },
 };
@@ -167,7 +165,35 @@ export const WithWarning: Story = {
 export const WithoutFlags: Story = {
   args: {
     label: "Country",
+    description: "Shows country options without flag icons",
     placeholder: "Select a country",
     showFlagIcons: false,
+  },
+};
+
+export const WithCodesOnly: Story = {
+  args: {
+    label: "Country",
+    description: "Shows country codes only",
+    placeholder: "Select a country",
+    viewMode: "CodesOnly",
+  },
+};
+
+export const WithNamesAndCodes: Story = {
+  args: {
+    label: "Country",
+    description: "Shows country names and codes",
+    placeholder: "Select a country",
+    viewMode: "NamesAndCodes",
+  },
+};
+
+export const WithDependentAreas: Story = {
+  args: {
+    label: "Country",
+    description: "Shows dependent areas",
+    placeholder: "Select a country",
+    includeDependentAreas: true,
   },
 };

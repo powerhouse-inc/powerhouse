@@ -39,7 +39,6 @@ const MultipleFieldsWithComplexLayout = () => {
               label="Age"
               placeholder="25"
               required
-              allowNegative={false}
               precision={0}
               showErrorOnBlur
             />
@@ -49,8 +48,6 @@ const MultipleFieldsWithComplexLayout = () => {
               label="Height (cm)"
               placeholder="180"
               required
-              allowNegative={false}
-              isBigInt={false}
               precision={2}
               trailingZeros
             />

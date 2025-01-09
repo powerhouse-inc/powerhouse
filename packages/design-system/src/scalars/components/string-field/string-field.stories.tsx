@@ -11,7 +11,7 @@ import {
 const meta: Meta<typeof StringField> = {
   title: "Document Engineering/Simple Components/String Field",
   component: StringField,
-  decorators: [withForm],
+  decorators: [withForm, (Story) => <div className="w-48">{Story()}</div>],
   parameters: {
     layout: "centered",
   },
@@ -85,6 +85,7 @@ export const WithValue: Story = {
   args: {
     label: "Email",
     value: "john.doe@example.com",
+    placeholder: "Enter your email",
   },
 };
 
@@ -93,6 +94,7 @@ export const Disabled: Story = {
     label: "Read Only Field",
     value: "This field is disabled",
     disabled: true,
+    placeholder: "This field is disabled",
   },
 };
 
@@ -102,6 +104,7 @@ export const WithError: Story = {
     value: "123",
     required: true,
     errors: ["Username must be at least 8 characters long"],
+    placeholder: "Enter your username",
   },
 };
 
@@ -110,6 +113,7 @@ export const WithWarning: Story = {
     label: "Password",
     value: "password123",
     warnings: ["Consider using a stronger password"],
+    placeholder: "Enter your password",
   },
 };
 

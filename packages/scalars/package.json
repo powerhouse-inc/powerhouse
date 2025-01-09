@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/scalars",
-  "version": "1.14.0",
+  "version": "1.16.0",
   "license": "AGPL-3.0-only",
   "publishConfig": {
     "access": "public"
@@ -38,6 +38,26 @@
       "require": "./dist/cjs/src/index.js",
       "import": "./dist/es/src/index.js"
     },
+    "./URL": {
+      "types": "./dist/types/src/scalars/URL.d.ts",
+      "require": "./dist/cjs/src/scalars/URL.js",
+      "import": "./dist/es/src/scalars/URL.js"
+    },
+    "./PHID": {
+      "types": "./dist/types/src/scalars/PHID.d.ts",
+      "require": "./dist/cjs/src/scalars/PHID.js",
+      "import": "./dist/es/src/scalars/PHID.js"
+    },
+    "./OLabel": {
+      "types": "./dist/types/src/scalars/OLabel.d.ts",
+      "require": "./dist/cjs/src/scalars/OLabel.js",
+      "import": "./dist/es/src/scalars/OLabel.js"
+    },
+    "./OID": {
+      "types": "./dist/types/src/scalars/OID.d.ts",
+      "require": "./dist/cjs/src/scalars/OID.js",
+      "import": "./dist/es/src/scalars/OID.js"
+    },
     "./EthereumAddress": {
       "types": "./dist/types/src/scalars/EthereumAddress.d.ts",
       "require": "./dist/cjs/src/scalars/EthereumAddress.js",
@@ -48,6 +68,21 @@
       "require": "./dist/cjs/src/scalars/EmailAddress.js",
       "import": "./dist/es/src/scalars/EmailAddress.js"
     },
+    "./DateTime": {
+      "types": "./dist/types/src/scalars/DateTime.d.ts",
+      "require": "./dist/cjs/src/scalars/DateTime.js",
+      "import": "./dist/es/src/scalars/DateTime.js"
+    },
+    "./Date": {
+      "types": "./dist/types/src/scalars/Date.d.ts",
+      "require": "./dist/cjs/src/scalars/Date.js",
+      "import": "./dist/es/src/scalars/Date.js"
+    },
+    "./Currency": {
+      "types": "./dist/types/src/scalars/Currency.d.ts",
+      "require": "./dist/cjs/src/scalars/Currency.js",
+      "import": "./dist/es/src/scalars/Currency.js"
+    },
     "./AmountTokens": {
       "types": "./dist/types/src/scalars/AmountTokens.d.ts",
       "require": "./dist/cjs/src/scalars/AmountTokens.js",
@@ -57,6 +92,11 @@
       "types": "./dist/types/src/scalars/AmountPercentage.d.ts",
       "require": "./dist/cjs/src/scalars/AmountPercentage.js",
       "import": "./dist/es/src/scalars/AmountPercentage.js"
+    },
+    "./AmountMoney": {
+      "types": "./dist/types/src/scalars/AmountMoney.d.ts",
+      "require": "./dist/cjs/src/scalars/AmountMoney.js",
+      "import": "./dist/es/src/scalars/AmountMoney.js"
     }
   }
 }

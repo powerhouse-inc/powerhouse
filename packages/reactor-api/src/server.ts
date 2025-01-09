@@ -5,9 +5,10 @@ import { Pool } from "pg";
 import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
-import { getDbClient, isPG } from "./utils/get-db-client";
+import { getDbClient, isPG } from "./utils/db";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+
 type Options = {
   express?: Express;
   port?: number;

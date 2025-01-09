@@ -254,16 +254,6 @@ export const PrebuiltArgTypes = {
       },
     },
   },
-  allowNegative: {
-    allowNegative: {
-      control: "boolean",
-      description: "Allows the input field to accept negative numbers",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.VALIDATION,
-      },
-    },
-  },
   precision: {
     precision: {
       control: "number",

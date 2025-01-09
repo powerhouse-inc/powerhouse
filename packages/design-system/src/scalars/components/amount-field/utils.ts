@@ -1,8 +1,29 @@
-import { currencies } from "@/scalars/lib/currency-list";
+import { TokenIcons } from "./amount-field";
 
-// Allows only numbers, optionally including a negative sign at the beginning and a decimal point.
-export const getLabelValueCurrenct = (subCurrency: string[]) =>
-  subCurrency.map((item) => ({
-    value: currencies[item],
-    label: currencies[item],
+export const getOptions = (items: string[] = []) => {
+  return items.map((item) => ({
+    value: item,
+    label: item,
   }));
+};
+
+export const getCountryCurrencies = (allowedCurrencies: string[] = []) => {
+  return getOptions(allowedCurrencies);
+};
+
+export const getTokens = (
+  allowedTokens: string[] = [],
+  tokenIcons?: TokenIcons,
+) => {
+  const options = allowedTokens.map((token) => {
+    const iconFn = tokenIcons?.[token];
+
+    return {
+      value: token,
+      label: token,
+      icon: iconFn,
+    };
+  });
+
+  return options;
+};

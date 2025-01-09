@@ -10,9 +10,9 @@ const counterVariants = {
 };
 
 const maxLengthVariants = {
-  normal: "text-gray-300",
-  warning: "text-orange-400",
-  error: "text-red-400",
+  normal: "text-gray-300 dark:text-gray-700",
+  warning: "text-orange-400 dark:text-[#855922]",
+  error: "text-red-400 dark:text-[#7D3D37]",
 };
 
 export const CharacterCounter: React.FC<CharacterCounterProps> = ({
@@ -24,7 +24,7 @@ export const CharacterCounter: React.FC<CharacterCounterProps> = ({
     remaining < 90 ? "normal" : remaining <= 100 ? "warning" : "error";
 
   return (
-    <div className="flex items-center text-[10px]">
+    <div className="flex items-center text-[10px] leading-3">
       <span className={counterVariants[state]}>{value.length}</span>
       <span className={maxLengthVariants[state]}>/{maxLength}</span>
     </div>

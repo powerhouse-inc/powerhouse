@@ -24,6 +24,10 @@ const amountPercentageValidation = (value: unknown): number => {
     throw new GraphQLError(`Value is not number: ${JSON.stringify(value)}`);
   }
 
+  if (!Number.isFinite(value)) {
+    throw new GraphQLError(`Value is not a finite number: ${value}`);
+  }
+
   const result = schema.safeParse(value);
 
   if (result.success) return result.data;
@@ -40,7 +44,9 @@ export const config: GraphQLScalarTypeConfig<number, number> = {
       throw new GraphQLError("some error message", { nodes: value });
     }
 
-    return amountPercentageValidation(value.value);
+    const parsedValue = parseFloat(value.value);
+
+    return amountPercentageValidation(parsedValue);
   },
 };
 
