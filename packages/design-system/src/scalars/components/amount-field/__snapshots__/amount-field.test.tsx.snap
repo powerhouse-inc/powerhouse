@@ -18,6 +18,11 @@ exports[`AmountField Component > should match snapshot 1`] = `
       <div
         class="relative flex items-center"
       >
+        <input
+          data-cast="AmountNumber"
+          name="amount"
+          type="hidden"
+        />
         <div
           class="relative flex items-center"
         >
