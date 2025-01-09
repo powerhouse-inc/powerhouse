@@ -29,7 +29,7 @@ export class DriveSubgraph extends Subgraph {
     type Query {
       system: System
       drive: DocumentDriveState
-      document(id: ID!): IDocument
+      document(id: String!): IDocument
       documents: [String!]!
     }
 
