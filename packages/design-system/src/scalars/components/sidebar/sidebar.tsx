@@ -1,12 +1,18 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
 import { SidebarHeader } from "./subcomponents/sidebar-header";
 import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
 import { SidebarSearch } from "./subcomponents/sidebar-search";
 import { SidebarSeparator } from "./subcomponents/sidebar-separator";
+import { SidebarNode } from "./types";
+import { useSidebar } from "./subcomponents/sidebar-provider";
 
 export interface SidebarProps {
   value: string; // TODO: define the type
+  /**
+   * The nodes to be displayed in the sidebar
+   */
+  nodes?: SidebarNode[];
   /**
    * Which level should be shown by default (i.e., level 1).
    */
@@ -42,6 +48,7 @@ export interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
+  nodes,
   sidebarIcon,
   sidebarTitle,
   enableMacros = 0,
@@ -57,6 +64,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleResize = useCallback((width: number) => {
     setSidebarWidth(width);
   }, []);
+
+  const { setItems } = useSidebar();
+  useEffect(() => {
+    if (nodes) {
+      setItems(nodes);
+    }
+  }, [nodes, setItems]);
 
   return (
     <aside

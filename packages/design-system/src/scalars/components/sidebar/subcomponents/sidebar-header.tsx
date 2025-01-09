@@ -1,3 +1,5 @@
+import { useSidebar } from "./sidebar-provider";
+
 interface SidebarHeaderProps {
   sidebarTitle?: string;
   sidebarIcon?: React.ReactNode;
@@ -9,6 +11,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   sidebarIcon,
   enableMacros = 0,
 }) => {
+  const { openLevel } = useSidebar();
   if (!sidebarTitle && !sidebarIcon && !enableMacros) {
     return null;
   }
@@ -30,6 +33,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
               key={`macro-${index}`}
               role="button"
               className="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100"
+              onClick={() => openLevel(index + 1)}
             >
               {index + 1}
             </div>
