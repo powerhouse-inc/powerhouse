@@ -28,12 +28,16 @@ const getAmount = (
 };
 
 export const validateAmount =
-  ({ type }: AmountFieldProps) =>
+  ({ type, required }: AmountFieldProps) =>
   (value: unknown): ValidatorResult => {
     const amount = getAmount(value as AmountValue, type);
-    // Check if the value is undefined or empty string
-    if (amount === undefined) return true;
-
+    if (value === "") return true;
+    if (amount === undefined) {
+      if (required) {
+        return "This field is required";
+      }
+      return true;
+    }
     if (!isValidNumber(amount)) {
       return "Value is not a valid number";
     }

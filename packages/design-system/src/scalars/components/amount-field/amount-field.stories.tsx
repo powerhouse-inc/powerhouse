@@ -41,6 +41,14 @@ const meta = {
         category: StorybookControlCategory.VALIDATION,
       },
     },
+    viewPrecision: {
+      control: "number",
+      description: "Number of decimal places viewed",
+      table: {
+        type: { summary: "number" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
 
     selectName: {
       control: "object",
@@ -112,7 +120,6 @@ export const TokenIcon: Story = {
     selectName: "currency",
     label: "Enter Amount and Select Currency",
     name: "amount",
-    step: 0,
     type: "AmountToken",
     allowedTokens: ["BTC", "ETH"],
     tokenIcons: {
@@ -204,6 +211,7 @@ export const PercentWithDisable: Story = {
     type: "AmountPercentage",
     defaultValue: 345,
     step: 0,
+    disabled: true,
   },
 };
 

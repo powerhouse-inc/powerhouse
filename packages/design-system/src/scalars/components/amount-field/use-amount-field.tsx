@@ -1,7 +1,5 @@
-import { useMemo, useState } from "react";
 import { TokenIcons } from "./amount-field";
 import {
-  Amount,
   AmountCurrency,
   AmountFieldPropsGeneric,
   AmountToken,
@@ -19,8 +17,6 @@ interface UseAmountFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   tokenIcons?: TokenIcons;
-  viewPrecision?: number;
-  numberPrecision?: number;
 }
 
 export const useAmountField = ({
@@ -65,21 +61,10 @@ export const useAmountField = ({
     const inputValue = e.target.value;
 
     if (type === "AmountCurrency" && typeof value === "object") {
-      let newValue = {
+      const newValue = {
         ...value,
         amount: e.target.value === "" ? undefined : e.target.value,
       } as AmountValue;
-
-      newValue = {
-        ...value,
-        amount:
-          inputValue === ""
-            ? undefined
-            : !isValidNumber(inputValue) ||
-                Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER
-              ? inputValue
-              : Number(inputValue),
-      } as AmountCurrency;
 
       //Create the event
       const nativeEvent = new Event("change", {
@@ -93,20 +78,10 @@ export const useAmountField = ({
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     }
     if (type === "AmountToken" && typeof value === "object") {
-      let newValueToken = {
+      const newValueToken = {
         ...value,
         amount: e.target.value === "" ? undefined : e.target.value,
       } as AmountValue;
-
-      newValueToken = {
-        ...value,
-        amount:
-          inputValue === ""
-            ? undefined
-            : !isValidNumber(inputValue)
-              ? inputValue
-              : BigInt(inputValue),
-      } as AmountToken;
 
       //Create the event
       const nativeEvent = new Event("change", {
@@ -173,27 +148,27 @@ export const useAmountField = ({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    let newValue: AmountValue = {} as unknown as AmountValue;
+    let newValue = {};
     // Handle the blur of the input if type is AmountCurrency or AmountToken should be a bigint
     if (type === "AmountCurrency" && typeof value === "object") {
       newValue = {
         ...value,
-        amount: Number(e.target.value),
-      } as AmountCurrency;
+        amount: e.target.value,
+      };
 
       onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
     if (type === "AmountToken" && typeof value === "object") {
       newValue = {
         ...value,
-        amount: BigInt(e.target.value),
-      } as AmountToken;
+        amount: e.target.value,
+      };
 
       onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
 
     if (type === "Amount" || type === "AmountPercentage") {
-      newValue = Number(e.target.value);
+      newValue = e.target.value;
       onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
   };
