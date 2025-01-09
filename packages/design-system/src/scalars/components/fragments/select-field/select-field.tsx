@@ -27,11 +27,10 @@ type SelectFieldBaseProps = Omit<
   | keyof SelectProps
 >;
 
-export interface SelectFieldProps
-  extends SelectFieldBaseProps,
-    FieldCommonProps<string | string[]>,
-    ErrorHandling,
-    SelectProps {}
+export type SelectFieldProps = SelectFieldBaseProps &
+  FieldCommonProps<string | string[]> &
+  ErrorHandling &
+  SelectProps;
 
 export const SelectFieldRaw = React.forwardRef<
   HTMLButtonElement,
@@ -59,8 +58,8 @@ export const SelectFieldRaw = React.forwardRef<
 
       // behavior props
       multiple,
-      optionsCheckmark = "Auto",
-      optionsCheckmarkPosition = "Left",
+      selectionIcon = "auto",
+      selectionIconPosition = "left",
       searchable,
 
       // display props
@@ -176,8 +175,8 @@ export const SelectFieldRaw = React.forwardRef<
                 commandListRef={commandListRef}
                 multiple={multiple}
                 selectedValues={selectedValues}
-                optionsCheckmark={optionsCheckmark}
-                optionsCheckmarkPosition={optionsCheckmarkPosition}
+                selectionIcon={selectionIcon}
+                selectionIconPosition={selectionIconPosition}
                 options={options}
                 toggleAll={toggleAll}
                 toggleOption={toggleOption}

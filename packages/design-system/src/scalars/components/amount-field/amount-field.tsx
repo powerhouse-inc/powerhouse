@@ -27,7 +27,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     name: string;
     pattern?: RegExp;
     numberProps?: Omit<NumberFieldProps, "name">;
-    selectProps?: Omit<SelectFieldProps, "name">;
+    selectProps?: SelectFieldProps;
     allowedCurrencies?: string[];
     allowedTokens?: string[];
     selectName: string;
@@ -112,9 +112,8 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
         <div className={cn("relative flex items-center")}>
           {isShowSelect && currencyPosition === "left" && (
             <SelectFieldRaw
-              optionsCheckmark="Checkmark"
+              selectionIcon="checkmark"
               value={valueSelect}
-              name=""
               required={required}
               options={options}
               disabled={disabled}
@@ -125,7 +124,7 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
                 "focus:outline-none",
                 selectProps?.className,
               )}
-              {...(selectProps || {})}
+              {...(selectProps ?? { name: "" })}
             />
           )}
           <NumberFieldRaw
@@ -165,9 +164,8 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
         {isShowSelect && currencyPosition === "right" && (
           <div>
             <SelectFieldRaw
-              optionsCheckmark="Checkmark"
+              selectionIcon="checkmark"
               value={valueSelect}
-              name=""
               required={required}
               disabled={disabled}
               onChange={handleOnChangeSelect}
@@ -177,7 +175,7 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
                 "border-l-[0.5px] focus:border-l focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                 "focus:outline-none",
               )}
-              {...(selectProps || {})}
+              {...(selectProps ?? { name: "" })}
             />
           </div>
         )}

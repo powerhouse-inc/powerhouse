@@ -17,8 +17,8 @@ interface ContentProps {
   commandListRef: React.RefObject<HTMLDivElement>;
   multiple?: boolean;
   selectedValues: string[];
-  optionsCheckmark: "Auto" | "Checkmark";
-  optionsCheckmarkPosition: "Left" | "Right";
+  selectionIcon: "auto" | "checkmark";
+  selectionIconPosition: "left" | "right";
   options: SelectProps["options"];
   toggleAll: () => void;
   toggleOption: (value: string) => void;
@@ -61,8 +61,8 @@ export const Content: React.FC<ContentProps> = ({
   commandListRef,
   multiple,
   selectedValues,
-  optionsCheckmark,
-  optionsCheckmarkPosition,
+  selectionIcon,
+  selectionIconPosition,
   options = [],
   toggleAll,
   toggleOption,
@@ -73,7 +73,7 @@ export const Content: React.FC<ContentProps> = ({
   const cmdkSearch = useCommandState((state) => state.search) as string;
   // scroll to top when search change
   useEffect(() => {
-    commandListRef.current?.scrollTo?.({ top: 0, behavior: "instant" });
+    commandListRef.current?.scrollTo({ top: 0, behavior: "instant" });
   }, [commandListRef, cmdkSearch]);
 
   return (
@@ -105,7 +105,7 @@ export const Content: React.FC<ContentProps> = ({
               aria-selected={selectedValues.length === enabledOptions.length}
             >
               <div className="flex w-full items-center gap-2">
-                {optionsCheckmark === "Auto" && (
+                {selectionIcon === "auto" && (
                   <div
                     className={cn(
                       "flex size-4 items-center justify-center rounded border",
@@ -119,10 +119,10 @@ export const Content: React.FC<ContentProps> = ({
                     )}
                   </div>
                 )}
-                {optionsCheckmark === "Checkmark" &&
-                  !(optionsCheckmarkPosition === "Right" && hasAnyIcon) && (
+                {selectionIcon === "checkmark" &&
+                  !(selectionIconPosition === "right" && hasAnyIcon) && (
                     <div className="size-4">
-                      {optionsCheckmarkPosition === "Left" &&
+                      {selectionIconPosition === "left" &&
                         selectedValues.length === enabledOptions.length && (
                           <Icon
                             name="Checkmark"
@@ -137,8 +137,8 @@ export const Content: React.FC<ContentProps> = ({
                     ? "Deselect All"
                     : "Select All"}
                 </span>
-                {optionsCheckmark === "Checkmark" &&
-                  optionsCheckmarkPosition === "Right" && (
+                {selectionIcon === "checkmark" &&
+                  selectionIconPosition === "right" && (
                     <div className="ml-auto size-4">
                       {selectedValues.length === enabledOptions.length && (
                         <Icon
@@ -176,7 +176,7 @@ export const Content: React.FC<ContentProps> = ({
                 role="option"
                 aria-selected={isSelected}
               >
-                {optionsCheckmark === "Auto" &&
+                {selectionIcon === "auto" &&
                   (multiple ? (
                     <div
                       className={cn(
@@ -205,10 +205,10 @@ export const Content: React.FC<ContentProps> = ({
                       )}
                     </div>
                   ))}
-                {optionsCheckmark === "Checkmark" &&
-                  !(optionsCheckmarkPosition === "Right" && hasAnyIcon) && (
+                {selectionIcon === "checkmark" &&
+                  !(selectionIconPosition === "right" && hasAnyIcon) && (
                     <div className="size-4">
-                      {optionsCheckmarkPosition === "Left" && isSelected && (
+                      {selectionIconPosition === "left" && isSelected && (
                         <Icon
                           name="Checkmark"
                           size={16}
@@ -227,8 +227,8 @@ export const Content: React.FC<ContentProps> = ({
                 >
                   {opt.label}
                 </span>
-                {optionsCheckmark === "Checkmark" &&
-                  optionsCheckmarkPosition === "Right" && (
+                {selectionIcon === "checkmark" &&
+                  selectionIconPosition === "right" && (
                     <div className="size-4">
                       {isSelected && (
                         <Icon

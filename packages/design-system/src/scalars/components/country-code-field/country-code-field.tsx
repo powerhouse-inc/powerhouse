@@ -67,8 +67,8 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
       <SelectFieldRaw
         ref={ref}
         options={options}
-        optionsCheckmark="Checkmark"
-        optionsCheckmarkPosition="Right"
+        selectionIcon="checkmark"
+        selectionIconPosition="right"
         searchable={enableSearch}
         onChange={onChange}
         placeholder={placeholder}

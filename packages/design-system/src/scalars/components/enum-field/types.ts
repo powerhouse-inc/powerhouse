@@ -17,19 +17,27 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-export interface SelectProps {
+export interface SelectBaseProps {
   options?: SelectOption[];
-  optionsCheckmark?: "Auto" | "Checkmark";
-  optionsCheckmarkPosition?: "Left" | "Right";
   placeholder?: string;
   multiple?: boolean;
   searchable?: boolean;
   onChange?: (value: string | string[]) => void;
 }
 
+export type SelectProps =
+  | (SelectBaseProps & {
+      selectionIcon?: "auto";
+      selectionIconPosition?: "left";
+    })
+  | (SelectBaseProps & {
+      selectionIcon: "checkmark";
+      selectionIconPosition?: "left" | "right";
+    });
+
 export type EnumProps =
   | ({
-      variant?: "Auto";
+      variant?: "auto";
     } & (RadioGroupProps | SelectProps))
   | ({
       variant: "RadioGroup";
