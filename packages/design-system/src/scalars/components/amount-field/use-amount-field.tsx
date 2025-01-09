@@ -1,11 +1,14 @@
+import { useMemo, useState } from "react";
 import { TokenIcons } from "./amount-field";
 import {
+  Amount,
   AmountCurrency,
   AmountFieldPropsGeneric,
   AmountToken,
   AmountValue,
 } from "./types";
 import { getCountryCurrencies, getTokens } from "./utils";
+import { isValidNumber } from "../number-field/number-field-validations";
 
 interface UseAmountFieldProps {
   value?: AmountValue;
@@ -16,11 +19,13 @@ interface UseAmountFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   tokenIcons?: TokenIcons;
+  viewPrecision?: number;
+  numberPrecision?: number;
 }
 
 export const useAmountField = ({
   value,
-  defaultValue = 0,
+  defaultValue,
   type,
   allowedCurrencies = [],
   allowedTokens = [],
@@ -28,11 +33,14 @@ export const useAmountField = ({
   onBlur,
   tokenIcons,
 }: UseAmountFieldProps) => {
+  // Boolean to no convert float values to BigInt
+  const isBigInt = type === "AmountToken";
+
   const currentValue = value ?? defaultValue;
 
-  const valueInput =
+  const baseValue =
     type === "Amount" || type === "AmountPercentage"
-      ? (currentValue as number)
+      ? (currentValue as number | undefined)
       : (currentValue as AmountCurrency | AmountToken).amount;
 
   const isPercent = type === "AmountPercentage";
@@ -54,35 +62,86 @@ export const useAmountField = ({
 
   // Handle the change of the input
   const handleOnChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let newValue: AmountValue = {} as unknown as AmountValue;
+    const inputValue = e.target.value;
+
     if (type === "AmountCurrency" && typeof value === "object") {
+      let newValue = {
+        ...value,
+        amount: e.target.value === "" ? undefined : e.target.value,
+      } as AmountValue;
+
       newValue = {
         ...value,
-        amount: Number(e.target.value),
-      } as AmountValue;
+        amount:
+          inputValue === ""
+            ? undefined
+            : !isValidNumber(inputValue) ||
+                Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER
+              ? inputValue
+              : Number(inputValue),
+      } as AmountCurrency;
+
+      //Create the event
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: newValue },
+        writable: false,
+      });
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     }
     if (type === "AmountToken" && typeof value === "object") {
-      newValue = {
+      let newValueToken = {
         ...value,
-        amount: BigInt(e.target.value),
+        amount: e.target.value === "" ? undefined : e.target.value,
       } as AmountValue;
+
+      newValueToken = {
+        ...value,
+        amount:
+          inputValue === ""
+            ? undefined
+            : !isValidNumber(inputValue)
+              ? inputValue
+              : BigInt(inputValue),
+      } as AmountToken;
+
+      //Create the event
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: newValueToken },
+        writable: false,
+      });
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     }
+
     if (type === "Amount" || type === "AmountPercentage") {
-      newValue = Number(e.target.value);
+      const amountValue = inputValue === "" ? undefined : inputValue;
+      const newAmountValue =
+        amountValue === ""
+          ? undefined
+          : !isValidNumber(inputValue) ||
+              Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER
+            ? inputValue
+            : Number(inputValue);
+
+      // Create the event
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: newAmountValue },
+        writable: false,
+      });
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     }
-
-    //Create the event
-    const nativeEvent = new Event("change", {
-      bubbles: true,
-      cancelable: true,
-    });
-    Object.defineProperty(nativeEvent, "target", {
-      value: { value: newValue },
-      writable: false,
-    });
-    onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
   };
-
   // Handle the change of the select
   const handleOnChangeSelect = (e: string | string[]) => {
     let newValue: AmountCurrency | AmountToken = {} as
@@ -114,33 +173,28 @@ export const useAmountField = ({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    let newValue: AmountValue = {} as unknown as AmountValue;
     // Handle the blur of the input if type is AmountCurrency or AmountToken should be a bigint
-    if (
-      (type === "AmountCurrency" || type === "AmountToken") &&
-      typeof value === "object"
-    ) {
-      const newValue = {
+    if (type === "AmountCurrency" && typeof value === "object") {
+      newValue = {
         ...value,
-        amount: BigInt(e.target.value),
-      } as AmountValue;
+        amount: Number(e.target.value),
+      } as AmountCurrency;
 
       onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
+    if (type === "AmountToken" && typeof value === "object") {
+      newValue = {
+        ...value,
+        amount: BigInt(e.target.value),
+      } as AmountToken;
+
+      onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
+    }
+
     if (type === "Amount" || type === "AmountPercentage") {
-      const newValue = Number(e.target.value);
-
-      //Create the event
-      const nativeEvent = new Event("change", {
-        bubbles: true,
-        cancelable: true,
-      });
-      Object.defineProperty(nativeEvent, "target", {
-        value: { value: newValue },
-        writable: false,
-      });
-      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
-
-      onBlur?.(e);
+      newValue = Number(e.target.value);
+      onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
   };
 
@@ -148,10 +202,11 @@ export const useAmountField = ({
     isPercent,
     isShowSelect,
     options,
-    valueInput,
+    valueInput: baseValue,
     valueSelect,
     handleOnChangeInput,
     handleOnChangeSelect,
     handleBlur,
+    isBigInt,
   };
 };
