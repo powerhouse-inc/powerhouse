@@ -1,19 +1,27 @@
 {
-  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM"],
-    "emitDeclarationOnly": true,
-    "jsx": "react-jsx",
-    "outDir": "./dist",
-    "types": ["vitest/globals"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowJs": true,
     "resolveJsonModule": true,
-    "experimentalDecorators": true
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "outDir": "dist",
+    "sourceMap": true,
+    "declaration": true,
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "module": "ESNext",
+    "noEmit": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "./types.d.ts"],
+    "jsx": "react-jsx",
+    "experimentalDecorators": true,
+    "paths": {
+      "document-drive": ["../document-drive/src/index.ts"],
+    }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "test/**/*.ts",
-    "*.ts",
-    "package.json"
-  ]
+  "include": ["./"]
 }

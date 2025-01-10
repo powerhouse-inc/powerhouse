@@ -19,7 +19,8 @@ function debounceOperations(
       (op) => op.scope === operation.scope && op.index === operation.index,
     );
     if (index > -1) {
-      const oldOperation = operations[index];
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const oldOperation = operations[index]!;
       if (
         !(
           oldOperation.type === operation.type &&

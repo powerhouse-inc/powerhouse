@@ -9,16 +9,23 @@
   "files": [
     "dist"
   ],
-  "types": "dist/src/index.d.ts",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "check-types": "tsc",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "lint:fix": "eslint --fix",
     "postlint": "npm run check-types",
-    "build": "NODE_ENV=production vite build",
-    "build:watch": "vite build --watch",
+    "build": "tsup",
+    "build:watch": "tsup --watch",
     "test": "vitest run --passWithNoTests",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
@@ -26,28 +33,22 @@
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "peerDependencies": {
-    "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "dependencies": {
+    "@powerhousedao/config": "^1.5.0",
+    "@powerhousedao/design-system": "^1.19.0",
+    "@powerhousedao/scalars": "^1.16.0",
+    "document-drive": "^1.13.2",
+    "document-model": "^2.15.0",
+    "document-model-libs": "^1.125.2",
     "did-key-creator": "^1.2.0",
     "jotai": "^2.10.3"
   }
