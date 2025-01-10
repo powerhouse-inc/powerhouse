@@ -1,6 +1,6 @@
 import { Icon } from "@/index";
 import React, { KeyboardEventHandler, useCallback } from "react";
-import { Node } from "../types";
+import { SidebarNode } from "../types";
 import { cn } from "@/scalars/lib";
 import {
   useSidebar,
@@ -72,7 +72,7 @@ export const Item: React.FC<ItemProps> = ({ id, title, open, pinnedMode }) => {
 export interface SidebarItemProps {
   id: string;
   title: string;
-  childrens?: Node[];
+  childrens?: SidebarNode[];
 }
 
 export const SidebarItem: React.FC<SidebarItemProps> = ({
