@@ -22,7 +22,7 @@
     "@heroicons/react": "^2.1.5",
     "@libsql/client": "^0.14.0",
     "@powerhousedao/analytics-engine-knex": "^0.4.0",
-    "@powerhousedao/atlas-feedback-issues": "^1.0.8",
+    "@powerhousedao/atlas-feedback-issues": "^1.0.9",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@powerhousedao/switchboard-gui": "workspace:*",

@@ -247,8 +247,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0(sqlite3@5.1.7)
       '@powerhousedao/atlas-feedback-issues':
-        specifier: ^1.0.8
-        version: 1.0.8(@tanstack/react-query@5.62.11(react@18.3.1))(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2)(utf-8-validate@5.0.10)(zod@3.24.1)
+        specifier: ^1.0.9
+        version: 1.0.9(@tanstack/react-query@5.62.11(react@18.3.1))(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2)(utf-8-validate@5.0.10)(zod@3.24.1)
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../../packages/reactor-api
@@ -4487,8 +4487,8 @@ packages:
   '@powerhousedao/analytics-engine-pg@0.3.0':
     resolution: {integrity: sha512-0N90CJzgrjZONA7VzEQKq5ne0DuzGpjTj3ZeZyjoaOq4gKopVdX+6j7zHmbfFKx15bkY6/T/+VoIKt9WN+We0Q==}
 
-  '@powerhousedao/atlas-feedback-issues@1.0.8':
-    resolution: {integrity: sha512-eN/dY/VsqjPkyJpSJkXw0PmLOm6xBKIHfl+5gz5u0zuacjAaSZrnsjH4PTxNSd0JJD9VvbkHuaMKg9mDFxyarA==}
+  '@powerhousedao/atlas-feedback-issues@1.0.9':
+    resolution: {integrity: sha512-lwnqUeDmtxXtEA8nQ5hjdhUWwtG3qsZc0ss/LidEUe6BeH4lteQnRq0nzpz4xuzHmJ70+mNG5mprWQ+gNRgg1Q==}
     peerDependencies:
       react: ^18.3.1
       react-dom: ^18.3.1
@@ -18001,7 +18001,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/atlas-feedback-issues@1.0.8(@tanstack/react-query@5.62.11(react@18.3.1))(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2)(utf-8-validate@5.0.10)(zod@3.24.1)':
+  '@powerhousedao/atlas-feedback-issues@1.0.9(@tanstack/react-query@5.62.11(react@18.3.1))(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(date-fns@4.1.0)(encoding@0.1.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2)(utf-8-validate@5.0.10)(zod@3.24.1)':
     dependencies:
       '@hookform/resolvers': 3.9.1(react-hook-form@7.54.2(react@18.3.1))
       '@radix-ui/react-dialog': 1.1.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
