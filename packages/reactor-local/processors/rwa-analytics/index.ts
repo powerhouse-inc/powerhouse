@@ -4,6 +4,7 @@ import {
   ProcessorOptions,
   ProcessorUpdate,
   AnalyticsPath,
+  AnalyticsSeriesInput,
 } from "@powerhousedao/reactor-api";
 import {
   CreateGroupTransactionInput,
@@ -30,6 +31,8 @@ export class RwaAnalyticsProcessor extends AnalyticsProcessor<DocumentType> {
     if (strands.length === 0) {
       return;
     }
+    
+    const analyticsInputs: AnalyticsSeriesInput[] = [];
 
     for (const strand of strands) {
       if (strand.operations.length === 0) {
@@ -42,84 +45,84 @@ export class RwaAnalyticsProcessor extends AnalyticsProcessor<DocumentType> {
       const source = AnalyticsPath.fromString(
         `ph/${strand.driveId}/${documentId}/${strand.branch}/${strand.scope}`,
       );
+
+      // block to clear the source
       if (firstOp.index === 0) {
         await this.clearSource(source);
       }
-      try {
-        for (const operation of strand.operations) {
-          console.log(">>> ", operation.type);
 
-          if (operation.type === "CREATE_GROUP_TRANSACTION") {
-            const groupTransaction =
-              operation.input as CreateGroupTransactionInput;
-            if (
-              groupTransaction.type !== "AssetPurchase" &&
-              groupTransaction.type !== "AssetSale" &&
-              groupTransaction.type !== "PrincipalDraw" &&
-              groupTransaction.type !== "PrincipalReturn"
-            ) {
-              continue;
-            }
+      for (const operation of strand.operations) {
+        console.log(">>> ", operation.type);
 
-            const { fixedIncomeTransaction, cashTransaction } =
-              groupTransaction;
-            if (fixedIncomeTransaction) {
-              const dimensions = {
-                asset: AnalyticsPath.fromString(
-                  `sky/rwas/assets/t-bills/${fixedIncomeTransaction.assetId}`,
-                ),
-                portfolio: AnalyticsPath.fromString(
-                  `sky/rwas/portfolios/${documentId}`,
-                ),
-              };
+        if (operation.type === "CREATE_GROUP_TRANSACTION") {
+          const groupTransaction =
+            operation.input as CreateGroupTransactionInput;
+          if (
+            groupTransaction.type !== "AssetPurchase" &&
+            groupTransaction.type !== "AssetSale" &&
+            groupTransaction.type !== "PrincipalDraw" &&
+            groupTransaction.type !== "PrincipalReturn"
+          ) {
+            continue;
+          }
 
-              const args = {
-                dimensions,
-                metric: "AssetBalance",
-                source,
-                start: DateTime.fromISO(fixedIncomeTransaction.entryTime),
-                value:
-                  groupTransaction.type === "AssetPurchase"
-                    ? fixedIncomeTransaction.amount
-                    : -fixedIncomeTransaction.amount,
-              };
+          const { fixedIncomeTransaction, cashTransaction } =
+            groupTransaction;
+          if (fixedIncomeTransaction) {
+            const dimensions = {
+              asset: AnalyticsPath.fromString(
+                `sky/rwas/assets/t-bills/${fixedIncomeTransaction.assetId}`,
+              ),
+              portfolio: AnalyticsPath.fromString(
+                `sky/rwas/portfolios/${documentId}`,
+              ),
+            };
 
-              console.log(">>> ", JSON.stringify(args, null, 4));
+            const args = {
+              dimensions,
+              metric: "AssetBalance",
+              source,
+              start: DateTime.fromISO(fixedIncomeTransaction.entryTime),
+              value:
+                groupTransaction.type === "AssetPurchase"
+                  ? fixedIncomeTransaction.amount
+                  : -fixedIncomeTransaction.amount,
+            };
 
-              await this.analyticsStore.addSeriesValue(args);
-            }
+            analyticsInputs.push(args);
+          }
 
-            if (cashTransaction) {
-              const dimensions = {
-                asset: AnalyticsPath.fromString(`sky/rwas/assets/cash`),
-                portfolio: AnalyticsPath.fromString(
-                  `sky/rwas/portfolios/${documentId}`,
-                ),
-              };
+          if (cashTransaction) {
+            const dimensions = {
+              asset: AnalyticsPath.fromString(`sky/rwas/assets/cash`),
+              portfolio: AnalyticsPath.fromString(
+                `sky/rwas/portfolios/${documentId}`,
+              ),
+            };
 
-              const args = {
-                dimensions,
-                metric: "AssetBalance",
-                source,
-                start: DateTime.fromISO(cashTransaction.entryTime),
-                value:
-                  groupTransaction.type === "AssetPurchase" ||
-                  groupTransaction.type === "PrincipalReturn"
-                    ? -cashTransaction.amount
-                    : cashTransaction.amount,
-              };
+            const args = {
+              dimensions,
+              metric: "AssetBalance",
+              source,
+              start: DateTime.fromISO(cashTransaction.entryTime),
+              value:
+                groupTransaction.type === "AssetPurchase" ||
+                groupTransaction.type === "PrincipalReturn"
+                  ? -cashTransaction.amount
+                  : cashTransaction.amount,
+            };
 
-              console.log(">>> ", JSON.stringify(args, null, 4));
-              try {
-                await this.analyticsStore.addSeriesValue(args);
-              } catch (e) {
-                console.error(e);
-              }
-            }
+            analyticsInputs.push(args);
           }
         }
-      } catch (e) {
-        console.error(e);
+      }
+
+      if (analyticsInputs.length > 0) {
+        try {
+          await this.analyticsStore.addSeriesValues(analyticsInputs);
+        } catch (e) {
+          console.error(`Error adding series values: ${e}`);
+        }
       }
     }
   }
