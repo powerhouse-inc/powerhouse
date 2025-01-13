@@ -16,7 +16,7 @@ import { AmountValue } from "./types";
 import { AmountFieldPropsGeneric } from "./types";
 import { IconName } from "@/powerhouse";
 import { validateAmount } from "./amount-field-validations";
-import { isValidNumber } from "../number-field/number-field-validations";
+import { ValidatorHandler } from "../types";
 
 export interface TokenIcons {
   [key: string]: IconName | (() => React.JSX.Element);
@@ -38,6 +38,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
     currencyPosition?: "left" | "right";
     tokenIcons?: TokenIcons;
+    allowNegative?: boolean;
     // handle precision
     viewPrecision?: number;
     precision?: number;
@@ -70,6 +71,7 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
   trailingZeros,
   viewPrecision,
   precision,
+  // customValidators,
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
