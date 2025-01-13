@@ -5,7 +5,10 @@ import {
   AmountToken,
   AmountValue,
 } from "./types";
-import { isValidNumber } from "../number-field/number-field-validations";
+import {
+  isInteger,
+  isValidNumber,
+} from "../number-field/number-field-validations";
 import { ValidatorResult } from "@/scalars";
 
 const isAmountCurrency = (
@@ -38,14 +41,17 @@ export const validateAmount =
       }
       return true;
     }
-    if (!isValidNumber(amount)) {
+    if (!isValidNumber(amount) && type !== "AmountToken") {
       return "Value is not a valid number";
     }
+    if (type === "AmountToken") {
+      if (!isInteger(amount)) {
+        return "Value is not an bigint";
+      }
+      return true;
+    }
 
-    if (
-      Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER &&
-      type !== "AmountToken"
-    ) {
+    if (Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER) {
       return "Value is too large for number";
     }
 

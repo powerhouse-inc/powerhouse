@@ -16,6 +16,7 @@ import { AmountValue } from "./types";
 import { AmountFieldPropsGeneric } from "./types";
 import { IconName } from "@/powerhouse";
 import { validateAmount } from "./amount-field-validations";
+import { isValidNumber } from "../number-field/number-field-validations";
 
 export interface TokenIcons {
   [key: string]: IconName | (() => React.JSX.Element);
@@ -37,7 +38,9 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
     currencyPosition?: "left" | "right";
     tokenIcons?: TokenIcons;
+    // handle precision
     viewPrecision?: number;
+    precision?: number;
   };
 
 export const AmountFieldRaw: FC<AmountFieldProps> = ({
@@ -66,6 +69,7 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
   name,
   trailingZeros,
   viewPrecision,
+  precision,
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
@@ -79,6 +83,7 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
     handleOnChangeSelect,
     handleBlur,
     isBigInt,
+    handleIsFocus,
   } = useAmountField({
     value,
     defaultValue,
@@ -88,6 +93,9 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
     onChange,
     onBlur,
     tokenIcons,
+    precision,
+    viewPrecision,
+    trailingZeros,
   });
 
   return (
@@ -130,15 +138,20 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
           <NumberFieldRaw
             name=""
             step={step}
-            trailingZeros={trailingZeros}
-            precision={viewPrecision}
             required={required}
             disabled={disabled}
-            value={valueInput === undefined ? undefined : valueInput}
+            value={
+              valueInput === undefined
+                ? undefined
+                : (valueInput as unknown as number)
+            }
             id={id}
             maxValue={maxValue}
+            trailingZeros={trailingZeros}
+            precision={precision}
             minValue={minValue}
             onChange={handleOnChangeInput}
+            onFocus={handleIsFocus}
             className={cn(
               currencyPosition === "left" &&
                 "rounded-l-none border border-l-[0.5px] border-gray-300",
