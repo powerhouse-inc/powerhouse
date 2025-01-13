@@ -59,7 +59,15 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-
+    allowNegative: {
+      control: "boolean",
+      description: "Whether negative values are allowed (true or false).",
+      table: {
+        defaultValue: { summary: "false" },
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     selectName: {
       control: "object",
       description: "Add the label for the select",

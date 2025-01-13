@@ -31,7 +31,14 @@ const getAmount = (
 };
 
 export const validateAmount =
-  ({ type, required }: AmountFieldProps) =>
+  ({
+    type,
+    required,
+    minValue,
+    maxValue,
+    allowNegative,
+    pattern,
+  }: AmountFieldProps) =>
   (value: unknown): ValidatorResult => {
     const amount = getAmount(value as AmountValue, type);
     if (value === "") return true;
@@ -44,11 +51,29 @@ export const validateAmount =
     if (!isValidNumber(amount) && type !== "AmountToken") {
       return "Value is not a valid number";
     }
+    if (!allowNegative && amount < 0) {
+      return "Value must be positive";
+    }
     if (type === "AmountToken") {
       if (!isInteger(amount)) {
         return "Value is not an bigint";
       }
       return true;
+    }
+    if (maxValue) {
+      if (amount > maxValue) {
+        return `This field must be less than ${maxValue}`;
+      }
+    }
+    if (minValue) {
+      if (amount < minValue) {
+        return `This field must be more than ${minValue}`;
+      }
+    }
+    if (pattern) {
+      if (!new RegExp(pattern).test(amount as unknown as string)) {
+        return `This field must match the pattern ${pattern}`;
+      }
     }
 
     if (Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER) {
