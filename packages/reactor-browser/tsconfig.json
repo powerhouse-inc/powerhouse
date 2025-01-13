@@ -12,7 +12,7 @@
     "sourceMap": true,
     "declaration": true,
     "moduleResolution": "Bundler",
-    "target": "ESNext",
+    "target": "ES2022",
     "module": "ESNext",
     "noEmit": true,
     "lib": ["ES2022", "DOM"],
@@ -23,5 +23,5 @@
       "document-drive": ["../document-drive/src/index.ts"],
     }
   },
-  "include": ["./"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
 }
