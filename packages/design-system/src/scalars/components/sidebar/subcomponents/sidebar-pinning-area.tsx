@@ -1,9 +1,14 @@
+import { Item } from "./sidebar-item";
+import { useSidebar } from "./sidebar-provider";
+
 export const SidebarPinningArea = () => {
+  const { state } = useSidebar();
+
   return (
     <div className="flex flex-col gap-1 p-2">
-      <div>Item 1</div>
-      <div>Item 2</div>
-      <div>Item 3</div>
+      {state.pinnedItems.map((node) => (
+        <Item key={node.id} id={node.id} title={node.title} pinnedMode={true} />
+      ))}
     </div>
   );
 };
