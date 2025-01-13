@@ -47,7 +47,6 @@ export const useAmountField = ({
       ? (currentValue as number | undefined)
       : (currentValue as AmountCurrency | AmountToken).amount;
 
-  // const [isFocus, setIsFocus] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
 
   // Handle the complete value
