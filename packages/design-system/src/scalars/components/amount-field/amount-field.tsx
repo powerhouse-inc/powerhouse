@@ -42,6 +42,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     // handle precision
     viewPrecision?: number;
     precision?: number;
+    customValidators?: ValidatorHandler | ValidatorHandler[] | undefined;
   };
 
 export const AmountFieldRaw: FC<AmountFieldProps> = ({
@@ -85,7 +86,7 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
     handleOnChangeSelect,
     handleBlur,
     isBigInt,
-    handleIsFocus,
+    handleIsInputFocused,
   } = useAmountField({
     value,
     defaultValue,
@@ -153,13 +154,15 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
             precision={precision}
             minValue={minValue}
             onChange={handleOnChangeInput}
-            onFocus={handleIsFocus}
+            onFocus={handleIsInputFocused}
             className={cn(
               currencyPosition === "left" &&
                 "rounded-l-none border border-l-[0.5px] border-gray-300",
               currencyPosition === "right" &&
                 "rounded-r-none border border-r-[0.5px] border-gray-300",
               isPercent && "pr-7",
+              // focus state
+              "focus:border-r-0",
               className,
             )}
             onBlur={handleBlur}
@@ -187,8 +190,11 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
               options={options}
               className={cn(
                 "rounded-l-none rounded-r-md border border-gray-300",
-                "border-l-[0.5px] focus:border-l focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
+                "border-l-[0.5px]",
+                // focus state
+                "focus:border-l-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
                 "focus:outline-none",
+                selectProps?.className,
               )}
               {...(selectProps ?? { name: "" })}
             />
@@ -207,6 +213,7 @@ export const AmountField = withFieldValidation<AmountFieldProps>(
   {
     validations: {
       _numericAmount: validateAmount,
+      customValidators: (props) => props.customValidators as ValidatorHandler,
     },
   },
 );
