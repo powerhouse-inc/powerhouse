@@ -1,6 +1,6 @@
 {
-  "name": "ph-cli",
-  "version": "0.16.0",
+  "name": "ph-cmd",
+  "version": "0.17.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
