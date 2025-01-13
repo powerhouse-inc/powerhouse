@@ -8,6 +8,7 @@ export type PowerhouseConfig = {
   interactive?: boolean;
   skipFormat?: boolean;
   watch?: boolean;
+  modules?: string[];
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
@@ -21,6 +22,7 @@ export const DEFAULT_CONFIG: PowerhouseConfig = {
   processorsDir: DEFAULT_PROCESSORS_DIR,
   subgraphsDir: DEFAULT_SUBGRAPHS_DIR,
   skipFormat: false,
+  modules: [],
 };
 
 export function getConfig() {
