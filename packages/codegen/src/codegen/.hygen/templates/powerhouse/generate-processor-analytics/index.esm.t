@@ -7,7 +7,8 @@ import {
     AnalyticsProcessor,
     ProcessorOptions,
     ProcessorUpdate,
-    AnalyticsPath
+    AnalyticsPath,
+    AnalyticsSeriesInput,
   } from "@powerhousedao/reactor-api";
 <% documentTypes.forEach(type => { _%>
 import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
@@ -35,6 +36,8 @@ export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(document
       return;
     }
 
+    const analyticsInputs: AnalyticsSeriesInput[] = [];
+
     for (const strand of strands) {
       if (strand.operations.length === 0) {
         continue;
@@ -50,6 +53,14 @@ export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(document
 
       for (const operation of strand.operations) {
         console.log(">>> ", operation.type);
+      }
+    }
+
+    if (analyticsInputs.length > 0) {
+      try {
+        await this.analyticsStore.addSeriesValues(analyticsInputs);
+      } catch (e) {
+        console.error(`Error adding series values: ${e}`);
       }
     }
   }
