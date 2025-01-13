@@ -50,6 +50,16 @@ const meta = {
       },
     },
 
+    // precision
+    precision: {
+      control: "number",
+      description: "Number of decimal places viewed",
+      table: {
+        type: { summary: "number" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
     selectName: {
       control: "object",
       description: "Add the label for the select",

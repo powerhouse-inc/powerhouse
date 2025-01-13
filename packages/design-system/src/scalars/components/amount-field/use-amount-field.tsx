@@ -7,6 +7,7 @@ import {
 } from "./types";
 import { getCountryCurrencies, getTokens } from "./utils";
 import { isValidNumber } from "../number-field/number-field-validations";
+import { useState } from "react";
 
 interface UseAmountFieldProps {
   value?: AmountValue;
@@ -17,6 +18,10 @@ interface UseAmountFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   tokenIcons?: TokenIcons;
+
+  precision?: number;
+  viewPrecision?: number;
+  trailingZeros?: boolean;
 }
 
 export const useAmountField = ({
@@ -28,6 +33,9 @@ export const useAmountField = ({
   onChange,
   onBlur,
   tokenIcons,
+  precision,
+  viewPrecision,
+  trailingZeros,
 }: UseAmountFieldProps) => {
   // Boolean to no convert float values to BigInt
   const isBigInt = type === "AmountToken";
@@ -38,6 +46,18 @@ export const useAmountField = ({
     type === "Amount" || type === "AmountPercentage"
       ? (currentValue as number | undefined)
       : (currentValue as AmountCurrency | AmountToken).amount;
+
+  const [isFocus, setIsFocus] = useState(false);
+
+  // Handle the complete value
+  const [rawAmountState, setRawAmountState] = useState(
+    baseValue?.toString() ?? "",
+  );
+
+  // Handle the formatted value
+  const [formattedAmountState, setFormattedAmountState] = useState(
+    baseValue?.toString() ?? "",
+  );
 
   const isPercent = type === "AmountPercentage";
 
@@ -59,11 +79,13 @@ export const useAmountField = ({
   // Handle the change of the input
   const handleOnChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
+    setRawAmountState(inputValue);
+    setFormattedAmountState(inputValue);
 
     if (type === "AmountCurrency" && typeof value === "object") {
       const newValue = {
         ...value,
-        amount: e.target.value === "" ? undefined : e.target.value,
+        amount: inputValue === "" ? undefined : inputValue,
       } as AmountValue;
 
       //Create the event
@@ -80,7 +102,7 @@ export const useAmountField = ({
     if (type === "AmountToken" && typeof value === "object") {
       const newValueToken = {
         ...value,
-        amount: e.target.value === "" ? undefined : e.target.value,
+        amount: inputValue === "" ? undefined : inputValue,
       } as AmountValue;
 
       //Create the event
@@ -148,40 +170,78 @@ export const useAmountField = ({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    let newValue = {};
-    // Handle the blur of the input if type is AmountCurrency or AmountToken should be a bigint
+    setIsFocus(false);
+    const inputValue = e.target.value;
+    console.log("viewPrecision", viewPrecision);
     if (type === "AmountCurrency" && typeof value === "object") {
-      newValue = {
-        ...value,
-        amount: e.target.value,
-      };
+      const formatValue =
+        viewPrecision !== undefined
+          ? trailingZeros
+            ? parseFloat(inputValue).toFixed(viewPrecision)
+            : parseFloat(
+                parseFloat(inputValue).toFixed(viewPrecision),
+              ).toString()
+          : inputValue;
+      if (Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER) {
+        const newValue = {
+          ...value,
+          amount: inputValue,
+        };
+        onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
+        return;
+      }
 
+      // Update the state with the formatted value
+      setFormattedAmountState(formatValue);
+      const newValue = {
+        ...value,
+        amount: formatValue,
+      };
       onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
     if (type === "AmountToken" && typeof value === "object") {
-      newValue = {
+      const newValue = {
         ...value,
-        amount: e.target.value,
+        amount: inputValue,
       };
 
       onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
 
     if (type === "Amount" || type === "AmountPercentage") {
-      newValue = e.target.value;
-      onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
+      const formatValue =
+        viewPrecision !== undefined
+          ? trailingZeros
+            ? parseFloat(inputValue).toFixed(viewPrecision)
+            : parseFloat(
+                parseFloat(inputValue).toFixed(viewPrecision),
+              ).toString()
+          : inputValue;
+      if (Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER) {
+        const newValue = formatValue;
+        onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
+        return;
+      }
+      onBlur?.(formatValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
   };
 
+  const handleIsFocus = () => {
+    setIsFocus(true);
+    setFormattedAmountState(rawAmountState);
+  };
   return {
     isPercent,
     isShowSelect,
     options,
-    valueInput: baseValue,
+    valueInput: formattedAmountState,
+    rawInput: rawAmountState,
     valueSelect,
     handleOnChangeInput,
     handleOnChangeSelect,
     handleBlur,
     isBigInt,
+    handleIsFocus,
+    isFocus,
   };
 };
