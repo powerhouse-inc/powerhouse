@@ -21,6 +21,7 @@ export const withForm: Decorator = (Story, context) => {
   const [showFormButtons, setShowFormButtons] = useState<boolean>(false);
   const checkboxId = useId();
   const { viewMode } = context;
+  const isDocs = viewMode === "docs";
 
   const onSubmit = useCallback((data: any) => {
     // Allow to show bigInt values in the alert
@@ -74,7 +75,7 @@ export const withForm: Decorator = (Story, context) => {
       <Form ref={formRef} onSubmit={onSubmit}>
         <Story args={overrideArgs} />
 
-        {showFormButtons ? (
+        {showFormButtons || isDocs ? (
           <div className="flex gap-2">
             <Button
               className="mt-4 w-full"
@@ -95,7 +96,7 @@ export const withForm: Decorator = (Story, context) => {
         )}
       </Form>
 
-      {viewMode !== "docs" && (
+      {!isDocs && (
         <div className="absolute bottom-5 right-5 z-50">
           <div className="flex items-center gap-2">
             <Checkbox
