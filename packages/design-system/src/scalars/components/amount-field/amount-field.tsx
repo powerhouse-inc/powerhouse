@@ -42,7 +42,6 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     // handle precision
     viewPrecision?: number;
     precision?: number;
-    customValidators?: ValidatorHandler | ValidatorHandler[] | undefined;
   };
 
 export const AmountFieldRaw: FC<AmountFieldProps> = ({
@@ -72,7 +71,6 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
   trailingZeros,
   viewPrecision,
   precision,
-  // customValidators,
 }) => {
   const generatedId = useId();
   const id = propId ?? generatedId;
@@ -131,7 +129,9 @@ export const AmountFieldRaw: FC<AmountFieldProps> = ({
               onChange={handleOnChangeSelect}
               className={cn(
                 "rounded-l-md rounded-r-none border border-gray-300",
-                "border-r-[0.5px] focus:border-r focus:ring-1 focus:ring-gray-900",
+                "border-r-[0.5px]",
+                // focus state
+                "focus:border-r-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
                 "focus:outline-none",
                 selectProps?.className,
               )}
@@ -213,7 +213,6 @@ export const AmountField = withFieldValidation<AmountFieldProps>(
   {
     validations: {
       _numericAmount: validateAmount,
-      customValidators: (props) => props.customValidators as ValidatorHandler,
     },
   },
 );

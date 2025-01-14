@@ -68,18 +68,6 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    customValidators: {
-      control: "object",
-      description:
-        "A custom function for validating the input, allowing tailored rules based on the application. Possible error messages include:\n\n" +
-        "- Invalid amount. Please enter a valid number.\n" +
-        "- Currency is required. Select a valid fiat or cryptocurrency code.\n" +
-        "- Value exceeds the allowed maximum.\n",
-      table: {
-        type: { summary: "string" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
     selectName: {
       control: "object",
       description: "Add the label for the select",
@@ -135,7 +123,7 @@ export const Currency: Story = {
     label: "Enter Amount and Select Currency",
     name: "amount",
     step: 0,
-    type: "AmountCurrency",
+    type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
     currencyPosition: "right",
     value: {
@@ -150,7 +138,7 @@ export const TokenIcon: Story = {
     selectName: "currency",
     label: "Enter Amount and Select Currency",
     name: "amount",
-    type: "AmountToken",
+    type: "AmountCurrencyCrypto",
     allowedTokens: ["BTC", "ETH"],
     tokenIcons: {
       BTC: IconComponent("Briefcase"),
@@ -159,7 +147,7 @@ export const TokenIcon: Story = {
     currencyPosition: "right",
     value: {
       amount: 3454564564 as unknown as bigint,
-      token: "BTC",
+      currency: "BTC",
     },
   },
 };
@@ -170,12 +158,12 @@ export const Token: Story = {
     label: "Enter Amount and Select Currency",
     name: "amount",
     step: 0,
-    type: "AmountToken",
+    type: "AmountCurrencyCrypto",
     allowedTokens: ["BTC", "ETH", "USDT"],
     currencyPosition: "right",
     value: {
       amount: 12321312 as unknown as bigint,
-      token: "BTC",
+      currency: "BTC",
     },
   },
 };
@@ -187,7 +175,7 @@ export const CurrencyLeft: Story = {
     label: "Enter Amount and Select Currency",
     name: "amount",
     step: 0,
-    type: "AmountCurrency",
+    type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
     currencyPosition: "left",
     value: {
@@ -251,7 +239,7 @@ export const CurrencyWithDisable: Story = {
     label: "Enter Amount and Select Currency",
     name: "amount",
     allowedCurrencies: ["USD", "EUR"],
-    type: "AmountCurrency",
+    type: "AmountCurrencyFiat",
     currencyPosition: "right",
     value: {
       amount: 345,
@@ -269,7 +257,7 @@ export const HoverWithCurrency: Story = {
     name: "amount",
     allowedCurrencies: ["USD", "EUR"],
     currencyPosition: "right",
-    type: "AmountCurrency",
+    type: "AmountCurrencyFiat",
     value: {
       amount: 345,
       currency: "USD",
@@ -290,7 +278,7 @@ export const Required: Story = {
     allowedCurrencies: ["USD", "EUR"],
     required: true,
     currencyPosition: "right",
-    type: "AmountCurrency",
+    type: "AmountCurrencyFiat",
     value: {
       amount: 345,
       currency: "USD",
@@ -303,7 +291,7 @@ export const WithWarning: Story = {
     selectName: "currency",
     name: "Label",
     label: "Label",
-    type: "AmountCurrency",
+    type: "AmountCurrencyFiat",
     currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
@@ -319,7 +307,7 @@ export const WithError: Story = {
     selectName: "currency",
     name: "Label",
     label: "Label",
-    type: "AmountCurrency",
+    type: "AmountCurrencyFiat",
     currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
@@ -332,7 +320,7 @@ export const WithError: Story = {
 };
 export const WithMultipleErrors: Story = {
   args: {
-    customValidators: (value: unknown) => {
+    validators: (value: unknown) => {
       if (
         typeof value === "object" &&
         value !== null &&
@@ -346,7 +334,7 @@ export const WithMultipleErrors: Story = {
     selectName: "currency",
     name: "Label",
     label: "Label",
-    type: "AmountCurrency",
+    type: "AmountCurrencyFiat",
     currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
     value: {
