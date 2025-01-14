@@ -47,7 +47,7 @@ export const useAmountField = ({
       ? (currentValue as number | undefined)
       : (currentValue as AmountCurrency | AmountToken).amount;
 
-  const [isFocus, setIsFocus] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
 
   // Handle the complete value
   const [rawAmountState, setRawAmountState] = useState(
@@ -170,7 +170,7 @@ export const useAmountField = ({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocus(false);
+    setInputFocused(false);
     const inputValue = e.target.value;
     if (type === "AmountCurrency" && typeof value === "object") {
       const formatValue =
@@ -225,10 +225,11 @@ export const useAmountField = ({
     }
   };
 
-  const handleIsFocus = () => {
-    setIsFocus(true);
+  const handleIsInputFocused = () => {
+    setInputFocused(true);
     setFormattedAmountState(rawAmountState);
   };
+
   return {
     isPercent,
     isShowSelect,
@@ -240,7 +241,7 @@ export const useAmountField = ({
     handleOnChangeSelect,
     handleBlur,
     isBigInt,
-    handleIsFocus,
-    isFocus,
+    handleIsInputFocused,
+    inputFocused,
   };
 };

@@ -68,6 +68,18 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    customValidators: {
+      control: "object",
+      description:
+        "A custom function for validating the input, allowing tailored rules based on the application. Possible error messages include:\n\n" +
+        "- Invalid amount. Please enter a valid number.\n" +
+        "- Currency is required. Select a valid fiat or cryptocurrency code.\n" +
+        "- Value exceeds the allowed maximum.\n",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     selectName: {
       control: "object",
       description: "Add the label for the select",
@@ -320,6 +332,17 @@ export const WithError: Story = {
 };
 export const WithMultipleErrors: Story = {
   args: {
+    customValidators: (value: unknown) => {
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        "amount" in value &&
+        value.amount !== "0"
+      ) {
+        return "Must be equal to zero";
+      }
+      return true;
+    },
     selectName: "currency",
     name: "Label",
     label: "Label",
