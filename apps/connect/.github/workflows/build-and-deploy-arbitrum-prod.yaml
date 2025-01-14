@@ -15,7 +15,8 @@ jobs:
       # Check-out your repository.
       - name: Checkout
         uses: actions/checkout@v2
-
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Build, Push and Release APP to Heroku. # Your custom step name
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
