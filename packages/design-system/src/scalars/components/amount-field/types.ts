@@ -1,12 +1,12 @@
 export type Amount = number | undefined;
 export type AmountPercentage = number | undefined;
-export interface AmountCurrency {
+export interface AmountCurrencyFiat {
   amount?: number;
   currency: string;
 }
-export interface AmountToken {
+export interface AmountCurrencyCrypto {
   amount?: bigint;
-  token: string;
+  currency: string;
 }
 
 export type AmountFieldPropsGeneric =
@@ -16,8 +16,8 @@ export type AmountFieldPropsGeneric =
       trailingZeros?: boolean;
     }
   | {
-      type: "AmountCurrency";
-      value?: AmountCurrency;
+      type: "AmountCurrencyFiat";
+      value?: AmountCurrencyFiat;
       trailingZeros?: boolean;
     }
   | {
@@ -26,12 +26,12 @@ export type AmountFieldPropsGeneric =
       trailingZeros?: boolean;
     }
   | {
-      type: "AmountToken";
-      value?: AmountToken;
+      type: "AmountCurrencyCrypto";
+      value?: AmountCurrencyCrypto;
     };
 
 export type AmountValue =
   | Amount
   | AmountPercentage
-  | AmountCurrency
-  | AmountToken;
+  | AmountCurrencyFiat
+  | AmountCurrencyCrypto;
