@@ -1,3 +1,15 @@
+# [1.0.0-dev.185](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.184...v1.0.0-dev.185) (2025-01-14)
+
+
+### Bug Fixes
+
+* base path ([5ba898b](https://github.com/powerhouse-inc/document-model-electron/commit/5ba898b0a3b87646550a5d2f80ea8a06f186b610))
+* base path 2 ([7196815](https://github.com/powerhouse-inc/document-model-electron/commit/7196815025d85fb4dc75d410a3deb1f0e4ce9bc9))
+* cannot unmarshal map into string ([63baca5](https://github.com/powerhouse-inc/document-model-electron/commit/63baca56e3eeba989d6b9d1219868d9c4e4129b1))
+* new deployments action ([c2205ae](https://github.com/powerhouse-inc/document-model-electron/commit/c2205ae00dafe4fd7e58694be792f40cd3d55ca3))
+* removed sequence ([5f70683](https://github.com/powerhouse-inc/document-model-electron/commit/5f7068340f86c30c99d548aa1f8717e4ed4c8706))
+* set proper heroku email ([6888ca5](https://github.com/powerhouse-inc/document-model-electron/commit/6888ca5bcc06294647afb32a34eb1fd75629e9d4))
+
 # [1.0.0-dev.184](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.183...v1.0.0-dev.184) (2025-01-08)
 
 
