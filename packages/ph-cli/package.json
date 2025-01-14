@@ -1,6 +1,6 @@
 {
-  "name": "@powerhousedao/ph-cli",
-  "version": "0.15.5",
+  "name": "ph-cmd",
+  "version": "0.18.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -42,7 +42,7 @@
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/connect": "develop",
+    "@powerhousedao/connect": "1.0.0-dev.181",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",

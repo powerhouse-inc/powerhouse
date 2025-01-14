@@ -42,6 +42,10 @@ export class RwaAnalyticsProcessor extends AnalyticsProcessor<DocumentType> {
       const documentId = strand.documentId.replace("/", "-");
 
       const firstOp = strand.operations[0];
+      if (!firstOp) {
+        continue;
+      }
+      
       const source = AnalyticsPath.fromString(
         `ph/${strand.driveId}/${documentId}/${strand.branch}/${strand.scope}`,
       );
