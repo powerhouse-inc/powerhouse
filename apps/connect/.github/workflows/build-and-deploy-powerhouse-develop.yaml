@@ -12,27 +12,21 @@ jobs:
     environment: develop
     runs-on: ubuntu-latest
     steps:
-      # Check-out your repository.
+      - name: Set up heroku:
+        run: apt update -y && apt install heroku-cli -y
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build, Push and Release APP to Heroku. # Your custom step name
-        uses: akhileshns/heroku-deploy@v3.13.15
+        uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
-          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          usedocker: true
-          docker_build_args: |
-            BASE_PATH
-            PH_CONNECT_SENTRY_DSN
-            PH_CONNECT_SENTRY_ENV
-            SENTRY_AUTH_TOKEN
-            SENTRY_ORG
-            SENTRY_PROJECT
-        env:
-          BASE_PATH: "/develop/powerhouse/connect"
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          PH_CONNECT_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          PH_CONNECT_SENTRY_ENV: ${{ secrets.SENTRY_ENV }}
+          docker_options: >-
+            --build-arg BASE_PATH=/develop/powerhouse/connect
+            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            --build-arg PH_CONNECT_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
+            --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+          process_type: web
