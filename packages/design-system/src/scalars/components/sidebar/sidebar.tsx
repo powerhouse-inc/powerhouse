@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setSidebarWidth(width);
   }, []);
 
-  const { setItems } = useSidebar();
+  const { state, setItems } = useSidebar();
   useEffect(() => {
     if (nodes) {
       setItems(nodes);
@@ -85,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         sidebarIcon={sidebarIcon}
         enableMacros={enableMacros}
       />
-      {allowPinning && (
+      {allowPinning && state.pinnedItems.length > 0 && (
         <>
           <SidebarPinningArea />
           <SidebarSeparator />

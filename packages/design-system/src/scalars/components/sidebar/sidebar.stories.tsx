@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Sidebar } from "./sidebar";
 import { Icon } from "@/powerhouse";
 import { SidebarProvider } from "./subcomponents/sidebar-provider";
-import { Node } from "./types";
+import { SidebarNode } from "./types";
 
 const meta: Meta<typeof Sidebar> = {
   title: "Document Engineering/Complex Components/Sidebar",
@@ -32,7 +32,7 @@ const meta: Meta<typeof Sidebar> = {
 export default meta;
 type Story = StoryObj<typeof Sidebar>;
 
-const MOCKED_ITEMS: Node[] = [
+const MOCKED_ITEMS: SidebarNode[] = [
   {
     title: "1 - Item",
     id: "1",

@@ -7,16 +7,16 @@ import React, {
 import { SidebarNode } from "../types";
 
 interface SidebarState {
-  items: SidebarNode[];
+  items: Array<SidebarNode>;
   itemsState: { [nodeId: string]: boolean };
+  pinnedItems: Array<SidebarNode>;
 }
 
 enum SidebarActionType {
   SET_ITEMS = "SET_ITEMS",
-  OPEN_ITEM = "OPEN_ITEM",
-  CLOSE_ITEM = "CLOSE_ITEM",
   TOGGLE_ITEM = "TOGGLE_ITEM",
   OPEN_LEVEL = "OPEN_LEVEL",
+  TOGGLE_PIN = "TOGGLE_PIN",
 }
 
 type SidebarAction =
@@ -26,20 +26,16 @@ type SidebarAction =
       defaultLevel?: number;
     }
   | {
-      type: SidebarActionType.OPEN_ITEM;
-      nodeId: string;
-    }
-  | {
-      type: SidebarActionType.CLOSE_ITEM;
-      nodeId: string;
-    }
-  | {
       type: SidebarActionType.TOGGLE_ITEM;
       nodeId: string;
     }
   | {
       type: SidebarActionType.OPEN_LEVEL;
       level: number;
+    }
+  | {
+      type: SidebarActionType.TOGGLE_PIN;
+      nodeId: string;
     };
 
 const getOpenLevels = (
@@ -63,12 +59,58 @@ const getOpenLevels = (
   return result;
 };
 
+const getPinnedPath = (
+  items: SidebarNode[],
+  nodeId: string,
+): Array<SidebarNode> | null => {
+  // Helper function to recursively search for the path in a single node
+  function findPath(
+    node: SidebarNode,
+    id: string,
+    path: SidebarNode[],
+  ): SidebarNode[] | null {
+    // Add the current node to the path
+    path.push(node);
+
+    // Check if the current node is the target
+    if (node.id === id) {
+      return path;
+    }
+
+    // Recursively search in the children
+    if (node.childrens) {
+      for (const child of node.childrens) {
+        const result = findPath(child, id, path);
+        if (result) {
+          return result;
+        }
+      }
+    }
+
+    // Backtrack if not found in this path
+    path.pop();
+    return null;
+  }
+
+  // Iterate through each node in the array of nodes
+  for (const root of items) {
+    const result = findPath(root, nodeId, []);
+    if (result) {
+      return result; // Return as soon as a path is found
+    }
+  }
+
+  // Return an empty array if no path is found
+  return null;
+};
+
 const reducer = (state: SidebarState, action: SidebarAction): SidebarState => {
   switch (action.type) {
     case SidebarActionType.SET_ITEMS:
       return {
         items: action.items,
         itemsState: getOpenLevels(action.items, action.defaultLevel ?? -1),
+        pinnedItems: [],
       };
     case SidebarActionType.TOGGLE_ITEM:
       return {
@@ -83,6 +125,17 @@ const reducer = (state: SidebarState, action: SidebarAction): SidebarState => {
         ...state,
         itemsState: getOpenLevels(state.items, action.level),
       };
+    case SidebarActionType.TOGGLE_PIN: {
+      const isPinned =
+        state.pinnedItems.length > 0 &&
+        state.pinnedItems[state.pinnedItems.length - 1].id === action.nodeId;
+      return {
+        ...state,
+        pinnedItems: isPinned
+          ? [] // unpin
+          : (getPinnedPath(state.items, action.nodeId) ?? []),
+      };
+    }
     default:
       return state;
   }
@@ -91,19 +144,17 @@ const reducer = (state: SidebarState, action: SidebarAction): SidebarState => {
 type SidebarContextType = {
   state: SidebarState;
   setItems: (items: SidebarNode[], defaultLevel?: number) => void;
-  openItem: (nodeId: string) => void;
-  closeItem: (nodeId: string) => void;
   toggleItem: (nodeId: string) => void;
   openLevel: (level: number) => void;
+  togglePin: (nodeId: string) => void;
 };
 
 const SidebarContext = createContext<SidebarContextType>({
-  state: { items: [], itemsState: {} },
+  state: { items: [], itemsState: {}, pinnedItems: [] },
   setItems: () => null,
-  openItem: () => null,
-  closeItem: () => null,
   toggleItem: () => null,
   openLevel: () => null,
+  togglePin: () => null,
 });
 
 interface SidebarProviderProps extends React.PropsWithChildren {
@@ -117,23 +168,12 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
   const [state, dispatch] = useReducer(reducer, {
     items: nodes || [],
     itemsState: {},
+    pinnedItems: [],
   });
 
   const setItems = useCallback(
     (items: SidebarNode[]) => {
       dispatch({ type: SidebarActionType.SET_ITEMS, items });
-    },
-    [dispatch],
-  );
-  const openItem = useCallback(
-    (nodeId: string) => {
-      dispatch({ type: SidebarActionType.OPEN_ITEM, nodeId });
-    },
-    [dispatch],
-  );
-  const closeItem = useCallback(
-    (nodeId: string) => {
-      dispatch({ type: SidebarActionType.CLOSE_ITEM, nodeId });
     },
     [dispatch],
   );
@@ -149,16 +189,21 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     },
     [dispatch],
   );
+  const togglePin = useCallback(
+    (nodeId: string) => {
+      dispatch({ type: SidebarActionType.TOGGLE_PIN, nodeId });
+    },
+    [dispatch],
+  );
 
   return (
     <SidebarContext.Provider
       value={{
         state,
         setItems,
-        openItem,
-        closeItem,
         toggleItem,
         openLevel,
+        togglePin,
       }}
     >
       {children}
@@ -171,6 +216,18 @@ const useSidebarNodeState = (nodeId: string): boolean => {
   const { state } = useSidebar();
   return !!state.itemsState[nodeId];
 };
+const useSidebarItemPinned = (nodeId: string): boolean => {
+  const { state } = useSidebar();
+  return (
+    state.pinnedItems.length > 0 &&
+    state.pinnedItems[state.pinnedItems.length - 1].id === nodeId
+  );
+};
 
-export { SidebarProvider, useSidebar, useSidebarNodeState };
+export {
+  SidebarProvider,
+  useSidebar,
+  useSidebarNodeState,
+  useSidebarItemPinned,
+};
 export type { SidebarState };

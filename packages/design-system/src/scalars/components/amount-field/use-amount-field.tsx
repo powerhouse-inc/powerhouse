@@ -172,7 +172,6 @@ export const useAmountField = ({
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     setInputFocused(false);
     const inputValue = e.target.value;
-    console.log("viewPrecision", viewPrecision);
     if (type === "AmountCurrency" && typeof value === "object") {
       const formatValue =
         viewPrecision !== undefined
