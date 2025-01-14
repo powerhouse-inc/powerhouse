@@ -339,7 +339,7 @@ export const WithMultipleErrors: Story = {
         "amount" in value &&
         value.amount !== "0"
       ) {
-        return "Tiene que ser igual a cero";
+        return "Must be equal to zero";
       }
       return true;
     },
