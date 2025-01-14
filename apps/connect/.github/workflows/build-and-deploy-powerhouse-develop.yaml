@@ -29,10 +29,10 @@ jobs:
             SENTRY_AUTH_TOKEN
             SENTRY_ORG
             SENTRY_PROJECT
-          env:
-            BASE_PATH: "/develop/powerhouse/connect"
-            SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-            SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-            SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-            PH_CONNECT_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-            PH_CONNECT_SENTRY_ENV: ${{ secrets.SENTRY_ENV }}
+        env:
+          BASE_PATH: "/develop/powerhouse/connect"
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          PH_CONNECT_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          PH_CONNECT_SENTRY_ENV: ${{ secrets.SENTRY_ENV }}
