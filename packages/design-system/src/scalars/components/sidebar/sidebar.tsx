@@ -71,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setItems(nodes);
     }
   }, [nodes, setItems]);
-
+  console.log("testing");
   return (
     <aside
       // TODO: move the variable somewhere else where it fits better
