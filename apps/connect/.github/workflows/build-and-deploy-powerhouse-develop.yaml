@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up heroku
-        run: apt update -y && apt install heroku-cli -y
+        run: sudo apt update -y && sudo apt install heroku-cli -y
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build, Push and Release APP to Heroku. # Your custom step name
