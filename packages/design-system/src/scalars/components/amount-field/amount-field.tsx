@@ -66,7 +66,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
       numberProps,
       selectProps,
       step = 1,
-      currencyPosition,
+      currencyPosition = "right",
       tokenIcons,
       name,
       trailingZeros,
@@ -89,6 +89,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
       handleBlur,
       isBigInt,
       handleIsInputFocused,
+      isAmount,
     } = useAmountField({
       value,
       defaultValue,
@@ -165,9 +166,10 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                   "rounded-l-none border border-l-[0.5px] border-gray-300",
                 currencyPosition === "right" &&
                   "rounded-r-none border border-r-[0.5px] border-gray-300",
-                isPercent && "pr-7",
+                isPercent && "pr-7 rounded-md",
                 // focus state
                 "focus:border-r-0",
+                isAmount && "rounded-md",
                 className,
               )}
               onBlur={handleBlur}
