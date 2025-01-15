@@ -69,6 +69,7 @@ export const useAmountField = ({
   );
 
   const isPercent = type === "AmountPercentage";
+  const isAmount = type === "Amount";
 
   //Allow select only if type is AmountCurrencyFiat or AmountCurrencyCrypto
   const isShowSelect =
@@ -328,5 +329,6 @@ export const useAmountField = ({
     isBigInt,
     handleIsInputFocused,
     inputFocused,
+    isAmount,
   };
 };

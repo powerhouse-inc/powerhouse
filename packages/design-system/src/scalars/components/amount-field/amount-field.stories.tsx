@@ -118,9 +118,10 @@ const IconComponent = (name: IconName) => {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Currency: Story = {
+export const Default: Story = {
   args: {
     selectName: "currency",
+    placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
     step: 0,
@@ -137,6 +138,7 @@ export const TokenIcon: Story = {
   name: "Token Icon",
   args: {
     selectName: "currency",
+    placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
     type: "AmountCurrencyCrypto",
@@ -156,6 +158,7 @@ export const TokenIcon: Story = {
 export const Token: Story = {
   args: {
     selectName: "currency",
+    placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
     step: 0,
@@ -168,26 +171,10 @@ export const Token: Story = {
     },
   },
 };
-
-export const CurrencyLeft: Story = {
-  name: "Currency Left",
+export const Amount: Story = {
   args: {
     selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    step: 0,
-    type: "AmountCurrencyFiat",
-    allowedCurrencies: ["USD", "EUR"],
-    currencyPosition: "left",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-  },
-};
-export const Default: Story = {
-  args: {
-    selectName: "currency",
+    placeholder: "Enter Amount",
     label: "Enter Amount ",
     name: "amount",
     type: "Amount",
@@ -199,6 +186,7 @@ export const Percent: Story = {
   args: {
     selectName: "currency",
     label: "Enter Percentage ",
+    placeholder: "Enter Amount",
     name: "amount",
     type: "AmountPercentage",
     value: 9,
@@ -206,156 +194,12 @@ export const Percent: Story = {
   },
 };
 
-export const PercentWithActive: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Percentage ",
-    name: "amount",
-    type: "AmountPercentage",
-    value: 345,
-    step: 0,
-    numberProps: {
-      autoFocus: true,
-    },
-  },
-  parameters: {
-    pseudo: { focus: true },
-  },
-};
-export const PercentWithDisable: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Percentage ",
-    name: "amount",
-    type: "AmountPercentage",
-    defaultValue: 345,
-    step: 0,
-    disabled: true,
-  },
-};
-
-export const CurrencyWithDisable: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    type: "AmountCurrencyFiat",
-    currencyPosition: "right",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    disabled: true,
-    step: 0,
-  },
-};
-
-export const HoverWithCurrency: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    currencyPosition: "right",
-    type: "AmountCurrencyFiat",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    step: 0,
-  },
-  parameters: {
-    pseudo: {
-      hover: true,
-    },
-  },
-};
-export const Required: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    required: true,
-    currencyPosition: "right",
-    type: "AmountCurrencyFiat",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    step: 0,
-  },
-};
-export const WithWarning: Story = {
-  args: {
-    selectName: "currency",
-    name: "Label",
-    label: "Label",
-    type: "AmountCurrencyFiat",
-    currencyPosition: "right",
-    allowedCurrencies: ["USD", "EUR"],
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    warnings: ["Warning message"],
-    step: 0,
-  },
-};
-export const WithError: Story = {
-  args: {
-    selectName: "currency",
-    name: "Label",
-    label: "Label",
-    type: "AmountCurrencyFiat",
-    currencyPosition: "right",
-    allowedCurrencies: ["USD", "EUR"],
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    errors: ["Error message"],
-    step: 0,
-  },
-};
-export const WithMultipleErrors: Story = {
-  args: {
-    validators: (value: unknown) => {
-      if (
-        typeof value === "object" &&
-        value !== null &&
-        "amount" in value &&
-        value.amount !== "0"
-      ) {
-        return "Must be equal to zero";
-      }
-      return true;
-    },
-    selectName: "currency",
-    name: "Label",
-    label: "Label",
-    type: "AmountCurrencyFiat",
-    currencyPosition: "right",
-    allowedCurrencies: ["USD", "EUR"],
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    errors: [
-      "Error message number 1",
-      "Error message number 2",
-      "Error message number 3",
-      "Error message number 4",
-    ],
-    step: 0,
-  },
-};
 export const UniversalAmountCurrency: Story = {
   args: {
     selectName: "currency",
     name: "amount",
     label: "Label",
+    placeholder: "Enter Amount",
     type: "AmountCurrencyUniversal",
     currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],

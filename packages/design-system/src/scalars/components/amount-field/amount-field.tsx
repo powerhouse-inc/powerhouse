@@ -1,4 +1,4 @@
-import React, { FC, useId } from "react";
+import React, { useId, forwardRef } from "react";
 import { NumberFieldProps, NumberFieldRaw } from "../number-field";
 import {
   FormDescription,
@@ -43,169 +43,181 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     precision?: number;
   };
 
-export const AmountFieldRaw: FC<AmountFieldProps> = ({
-  label,
-  value,
-  id: propId,
-  minValue,
-  maxValue,
-  onChange,
-  onBlur,
-  disabled,
-  className,
-  required,
-  errors,
-  warnings,
-  description,
-  defaultValue,
-  type,
-  allowedCurrencies = [],
-  allowedTokens = [],
-  numberProps,
-  selectProps,
-  step = 1,
-  currencyPosition,
-  tokenIcons,
-  name,
-  trailingZeros,
-  viewPrecision,
-  precision,
-}) => {
-  const generatedId = useId();
-  const id = propId ?? generatedId;
-  const {
-    isShowSelect,
-    isPercent,
-    options,
-    valueSelect,
-    valueInput,
-    handleOnChangeInput,
-    handleOnChangeSelect,
-    handleBlur,
-    isBigInt,
-    handleIsInputFocused,
-  } = useAmountField({
-    value,
-    defaultValue,
-    type,
-    allowedCurrencies,
-    allowedTokens,
-    onChange,
-    onBlur,
-    tokenIcons,
-    precision,
-    viewPrecision,
-    trailingZeros,
-  });
+export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
+  (
+    {
+      label,
+      value,
+      id: propId,
+      minValue,
+      maxValue,
+      onChange,
+      onBlur,
+      disabled,
+      className,
+      required,
+      errors,
+      warnings,
+      description,
+      defaultValue,
+      type,
+      allowedCurrencies = [],
+      allowedTokens = [],
+      numberProps,
+      selectProps,
+      step = 1,
+      currencyPosition = "right",
+      tokenIcons,
+      name,
+      trailingZeros,
+      viewPrecision,
+      precision,
+      placeholder,
+    },
+    ref,
+  ) => {
+    const generatedId = useId();
+    const id = propId ?? generatedId;
+    const {
+      isShowSelect,
+      isPercent,
+      options,
+      valueSelect,
+      valueInput,
+      handleOnChangeInput,
+      handleOnChangeSelect,
+      handleBlur,
+      isBigInt,
+      handleIsInputFocused,
+      isAmount,
+    } = useAmountField({
+      value,
+      defaultValue,
+      type,
+      allowedCurrencies,
+      allowedTokens,
+      onChange,
+      onBlur,
+      tokenIcons,
+      precision,
+      viewPrecision,
+      trailingZeros,
+    });
 
-  return (
-    <FormGroup>
-      {label && (
-        <FormLabel
-          htmlFor={id}
-          required={required}
-          disabled={disabled}
-          hasError={!!errors?.length}
-          className={cn(disabled && "mb-[3px] text-gray-400")}
-        >
-          {label}
-        </FormLabel>
-      )}
-      <div className={cn("relative flex items-center")}>
-        <input
-          name={name}
-          type="hidden"
-          data-cast={isBigInt ? "AmountBigInt" : "AmountNumber"}
-        />
-        <div className={cn("relative flex items-center")}>
-          {isShowSelect && currencyPosition === "left" && (
-            <SelectFieldRaw
-              selectionIcon="checkmark"
-              value={valueSelect}
-              required={required}
-              options={options}
-              disabled={disabled}
-              onChange={handleOnChangeSelect}
-              className={cn(
-                "rounded-l-md rounded-r-none border border-gray-300",
-                "border-r-[0.5px]",
-                // focus state
-                "focus:border-r-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
-                "focus:outline-none",
-                selectProps?.className,
-              )}
-              {...(selectProps ?? { name: "" })}
-            />
-          )}
-          <NumberFieldRaw
-            name=""
-            step={step}
+    return (
+      <FormGroup>
+        {label && (
+          <FormLabel
+            htmlFor={id}
             required={required}
             disabled={disabled}
-            value={
-              valueInput === undefined
-                ? undefined
-                : (valueInput as unknown as number)
-            }
-            id={id}
-            maxValue={maxValue}
-            trailingZeros={trailingZeros}
-            precision={precision}
-            minValue={minValue}
-            onChange={handleOnChangeInput}
-            onFocus={handleIsInputFocused}
-            className={cn(
-              currencyPosition === "left" &&
-                "rounded-l-none border border-l-[0.5px] border-gray-300",
-              currencyPosition === "right" &&
-                "rounded-r-none border border-r-[0.5px] border-gray-300",
-              isPercent && "pr-7",
-              // focus state
-              "focus:border-r-0",
-              className,
-            )}
-            onBlur={handleBlur}
-            {...(numberProps || {})}
+            hasError={!!errors?.length}
+            className={cn(disabled && "mb-[3px]")}
+          >
+            {label}
+          </FormLabel>
+        )}
+        <div className={cn("relative flex items-center")}>
+          <input
+            name={name}
+            type="hidden"
+            data-cast={isBigInt ? "AmountBigInt" : "AmountNumber"}
           />
-          {isPercent && step === 0 && (
-            <span
-              className={cn(
-                "pointer-events-none absolute inset-y-0 right-2 ml-2 flex items-center",
-                disabled ? "text-gray-400" : "text-gray-900",
-              )}
-            >
-              %
-            </span>
-          )}
-        </div>
-        {isShowSelect && currencyPosition === "right" && (
-          <div>
-            <SelectFieldRaw
-              selectionIcon="checkmark"
-              value={valueSelect}
+          <div className={cn("relative flex items-center")}>
+            {isShowSelect && currencyPosition === "left" && (
+              <SelectFieldRaw
+                selectionIcon="checkmark"
+                value={valueSelect}
+                required={required}
+                options={options}
+                disabled={disabled}
+                onChange={handleOnChangeSelect}
+                className={cn(
+                  "rounded-l-md rounded-r-none border border-gray-300",
+                  "border-r-[0.5px]",
+                  // focus state
+                  "focus:border-r-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
+                  "focus:outline-none",
+                  selectProps?.className,
+                )}
+                {...(selectProps ?? { name: "" })}
+              />
+            )}
+            <NumberFieldRaw
+              name=""
+              step={step}
               required={required}
               disabled={disabled}
-              onChange={handleOnChangeSelect}
-              options={options}
+              value={
+                valueInput === undefined
+                  ? undefined
+                  : (valueInput as unknown as number)
+              }
+              id={id}
+              maxValue={maxValue}
+              trailingZeros={trailingZeros}
+              precision={precision}
+              minValue={minValue}
+              onChange={handleOnChangeInput}
+              onFocus={handleIsInputFocused}
+              placeholder={placeholder}
               className={cn(
-                "rounded-l-none rounded-r-md border border-gray-300",
-                "border-l-[0.5px]",
+                currencyPosition === "left" &&
+                  "rounded-l-none border border-l-[0.5px] border-gray-300",
+                currencyPosition === "right" &&
+                  "rounded-r-none border border-r-[0.5px] border-gray-300",
+                isPercent && "pr-7 rounded-md",
                 // focus state
-                "focus:border-l-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
-                "focus:outline-none",
-                selectProps?.className,
+                "focus:border-r-0",
+                isAmount && "rounded-md",
+                className,
               )}
-              {...(selectProps ?? { name: "" })}
+              onBlur={handleBlur}
+              ref={ref}
+              {...(numberProps || {})}
             />
+            {isPercent && step === 0 && (
+              <span
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 right-2 ml-2 flex items-center",
+                  disabled ? "text-gray-400" : "text-gray-900",
+                )}
+              >
+                %
+              </span>
+            )}
           </div>
-        )}
-      </div>
-      {description && <FormDescription>{description}</FormDescription>}
-      {warnings && <FormMessageList messages={warnings} type="warning" />}
-      {errors && <FormMessageList messages={errors} type="error" />}
-    </FormGroup>
-  );
-};
+          {isShowSelect && currencyPosition === "right" && (
+            <div>
+              <SelectFieldRaw
+                selectionIcon="checkmark"
+                value={valueSelect}
+                required={required}
+                disabled={disabled}
+                onChange={handleOnChangeSelect}
+                options={options}
+                className={cn(
+                  "rounded-l-none rounded-r-md border border-gray-300",
+                  "border-l-[0.5px]",
+                  // focus state
+                  "focus:border-l-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
+                  "focus:outline-none",
+                  selectProps?.className,
+                )}
+                {...(selectProps ?? { name: "" })}
+              />
+            </div>
+          )}
+        </div>
+        {description && <FormDescription>{description}</FormDescription>}
+        {warnings && <FormMessageList messages={warnings} type="warning" />}
+        {errors && <FormMessageList messages={errors} type="error" />}
+      </FormGroup>
+    );
+  },
+);
+
+AmountFieldRaw.displayName = "AmountFieldRaw";
 
 export const AmountField = withFieldValidation<AmountFieldProps>(
   AmountFieldRaw,
