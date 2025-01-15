@@ -8,6 +8,10 @@ export interface AmountCurrencyCrypto {
   amount?: bigint;
   currency: string;
 }
+export interface AmountCurrencyUniversal {
+  amount?: number | bigint; // Accept high-precision values
+  currency: string;
+}
 
 export type AmountFieldPropsGeneric =
   | {
@@ -28,10 +32,15 @@ export type AmountFieldPropsGeneric =
   | {
       type: "AmountCurrencyCrypto";
       value?: AmountCurrencyCrypto;
+    }
+  | {
+      type: "AmountCurrencyUniversal";
+      value?: AmountCurrencyUniversal;
     };
 
 export type AmountValue =
   | Amount
   | AmountPercentage
   | AmountCurrencyFiat
-  | AmountCurrencyCrypto;
+  | AmountCurrencyCrypto
+  | AmountCurrencyUniversal;

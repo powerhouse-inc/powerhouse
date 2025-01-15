@@ -22,7 +22,7 @@ export const castFunctions: Record<ValueCast, (value: any) => any> = {
   },
 
   AmountBigInt: (value: AmountValue) => {
-    if (typeof value === "object" && "token" in value) {
+    if (typeof value === "object" && "currency" in value) {
       return {
         ...value,
         amount: value.amount !== undefined ? BigInt(value.amount) : undefined,

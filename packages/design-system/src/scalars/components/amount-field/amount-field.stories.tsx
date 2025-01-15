@@ -8,6 +8,7 @@ import {
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
 import { Icon, IconName } from "@/powerhouse";
+import { AmountPercentage } from "@powerhousedao/scalars";
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",
@@ -347,6 +348,22 @@ export const WithMultipleErrors: Story = {
       "Error message number 3",
       "Error message number 4",
     ],
+    step: 0,
+  },
+};
+export const UniversalAmountCurrency: Story = {
+  args: {
+    selectName: "currency",
+    name: "amount",
+    label: "Label",
+    type: "AmountCurrencyUniversal",
+    currencyPosition: "right",
+    allowedCurrencies: ["USD", "EUR"],
+
+    value: {
+      amount: 2324234,
+      currency: "USD",
+    },
     step: 0,
   },
 };

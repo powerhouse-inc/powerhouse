@@ -3,6 +3,7 @@ import {
   AmountCurrencyFiat,
   AmountFieldPropsGeneric,
   AmountCurrencyCrypto,
+  AmountCurrencyUniversal,
   AmountValue,
 } from "./types";
 import {
@@ -19,14 +20,26 @@ const isAmountCurrencyCrypto = (
   type: AmountFieldPropsGeneric["type"],
 ): type is "AmountCurrencyCrypto" => type === "AmountCurrencyCrypto";
 
+const isAmountCurrencyUniversal = (
+  type: AmountFieldPropsGeneric["type"],
+): type is "AmountCurrencyUniversal" => type === "AmountCurrencyUniversal";
+
 const getAmount = (
   value: AmountValue,
   type: AmountFieldPropsGeneric["type"],
 ): number | bigint | undefined => {
-  if (isAmountCurrencyFiat(type) || isAmountCurrencyCrypto(type)) {
-    return (value as AmountCurrencyFiat | AmountCurrencyCrypto).amount;
+  if (
+    isAmountCurrencyFiat(type) ||
+    isAmountCurrencyCrypto(type) ||
+    isAmountCurrencyUniversal(type)
+  ) {
+    return (
+      value as
+        | AmountCurrencyFiat
+        | AmountCurrencyCrypto
+        | AmountCurrencyUniversal
+    ).amount;
   }
-
   return value as number;
 };
 
@@ -48,7 +61,7 @@ export const validateAmount =
       }
       return true;
     }
-    if (!isValidNumber(amount) && type !== "AmountCurrencyCrypto") {
+    if (!isValidNumber(amount)) {
       return "Value is not a valid number";
     }
     if (!allowNegative && amount < 0) {
@@ -60,6 +73,19 @@ export const validateAmount =
       }
       return true;
     }
+    if (type === "AmountCurrencyUniversal") {
+      if (!isValidNumber(amount)) {
+        return "Value is not a valid number";
+      }
+      if (Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER) {
+        const amountStr = amount.toString();
+        if (!/^\d+$/.test(amountStr)) {
+          return "Value is not a valid bigint";
+        }
+        return true;
+      }
+    }
+
     if (maxValue) {
       if (amount > maxValue) {
         return `This field must be less than ${maxValue}`;
@@ -76,7 +102,12 @@ export const validateAmount =
       }
     }
 
-    if (Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER) {
+    if (
+      Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER &&
+      (type === "AmountCurrencyFiat" ||
+        type === "AmountPercentage" ||
+        type === "Amount")
+    ) {
       return "Value is too large for number";
     }
 
