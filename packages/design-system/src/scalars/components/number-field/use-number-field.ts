@@ -146,7 +146,7 @@ export const useNumberField = ({
 
     const isNotSafe = isNotSafeValue(inputValue);
 
-    // Evitar convertir a un valor no seguro en notación científica
+    // Avoid converting an unsafe value to scientific notation
     if (isNotSafe) {
       onBlur?.(e);
       return;
