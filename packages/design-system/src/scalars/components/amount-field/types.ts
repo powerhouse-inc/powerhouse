@@ -32,10 +32,12 @@ export type AmountFieldPropsGeneric =
   | {
       type: "AmountCurrencyCrypto";
       value?: AmountCurrencyCrypto;
+      trailingZeros?: never;
     }
   | {
       type: "AmountCurrencyUniversal";
       value?: AmountCurrencyUniversal;
+      trailingZeros?: never;
     };
 
 export type AmountValue =
