@@ -6,7 +6,6 @@ describe("AmountField Component", () => {
   it("should match snapshot", () => {
     const { container } = renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -19,7 +18,6 @@ describe("AmountField Component", () => {
   it("should render label when provided", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -32,7 +30,6 @@ describe("AmountField Component", () => {
   it("should render error messages when provided", async () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -51,7 +48,6 @@ describe("AmountField Component", () => {
   it("should render the percentage sign if the type is percent", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="AmountPercentage"
@@ -65,7 +61,6 @@ describe("AmountField Component", () => {
   it("should disable the input when disabled prop is true", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -81,7 +76,6 @@ describe("AmountField Component", () => {
   it("should set the input as required when required prop is true", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -95,7 +89,6 @@ describe("AmountField Component", () => {
   it("should render the description when provided", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
