@@ -169,7 +169,14 @@ export const SelectFieldRaw = React.forwardRef<
               "rounded shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
             )}
           >
-            <Command>
+            <Command
+              defaultValue={
+                !multiple && selectedValues[0]
+                  ? options.find((opt) => opt.value === selectedValues[0])
+                      ?.label
+                  : undefined
+              }
+            >
               <Content
                 searchable={searchable}
                 commandListRef={commandListRef}
