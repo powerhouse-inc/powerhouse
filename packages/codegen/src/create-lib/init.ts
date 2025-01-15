@@ -3,8 +3,8 @@ import { execSync } from "child_process";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
-import { configSpec, parseArgs, promptDirectories } from "../utils/cli";
-import { getPackageManager } from "./command";
+import { parseArgs, promptDirectories } from "../utils/cli";
+import { getPackageManager } from "./utils";
 // eslint-disable-next-line
 // @ts-ignore-error
 import { DEFAULT_CONFIG } from "@powerhousedao/config/powerhouse";
@@ -14,6 +14,23 @@ const BOILERPLATE_REPO =
 
 const packageManager = getPackageManager(process.env.npm_config_user_agent);
 const isNpm = packageManager === "npm";
+
+export const createCommandSpec = {
+  "--name": String,
+  "--project-name": "--name",
+  "--version": String,
+  "--interactive": Boolean,
+  "--dev": Boolean,
+  "--staging": Boolean,
+  "-p": "--name",
+  "-v": "--version",
+} as const;
+
+export interface ICreateProjectOptions {
+  name: string | undefined;
+  version: string;
+  interactive: boolean;
+}
 
 const { prompt } = enquirer;
 
@@ -78,11 +95,44 @@ function runCmd(command: string) {
   }
 }
 
-export async function init(_args?: arg.Result<typeof configSpec>) {
-  const args = _args || parseArgs(process.argv.slice(2), configSpec);
+export function parseVersion(args: {
+  version?: string;
+  dev?: boolean;
+  staging?: boolean;
+}) {
+  if (args.version) {
+    return args.version;
+  }
+  if (args.dev) {
+    return "dev";
+  } else if (args.staging) {
+    return "staging";
+  } else {
+    return "main";
+  }
+}
 
+function parseVersionArgs(args: arg.Result<typeof createCommandSpec>) {
+  return parseVersion({
+    version: args["--version"],
+    dev: args["--dev"],
+    staging: args["--staging"],
+  });
+}
+
+export function initCli() {
+  const args = parseArgs(process.argv.slice(2), createCommandSpec);
+  const options: ICreateProjectOptions = {
+    name: args["--name"] ?? args._.shift(),
+    interactive: args["--interactive"] ?? false,
+    version: parseVersionArgs(args),
+  };
+  return init(options);
+}
+
+export async function init(options: ICreateProjectOptions) {
   // checks if a project name was provided
-  let projectName = args._.shift();
+  let projectName = options.name;
   if (!projectName) {
     const result = await prompt<{ projectName: string }>([
       {
@@ -101,7 +151,10 @@ export async function init(_args?: arg.Result<typeof configSpec>) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const { documentModelsDir, editorsDir } = args["--interactive"]
+  const {
+    documentModelsDir,
+    editorsDir,
+  }: { documentModelsDir: string; editorsDir: string } = options.interactive
     ? await promptDirectories()
     : DEFAULT_CONFIG;
 
@@ -122,18 +175,20 @@ export async function init(_args?: arg.Result<typeof configSpec>) {
     process.exit(1);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  createProject(projectName, documentModelsDir, editorsDir);
+  createProject(projectName, documentModelsDir, editorsDir, options.version);
 }
 
 function createProject(
   projectName: string,
   documentModelsDir: string,
   editorsDir: string,
+  version = "main",
 ) {
   try {
     console.log("\x1b[33m", "Downloading the project structure...", "\x1b[0m");
-    runCmd(`git clone --depth 1 ${BOILERPLATE_REPO} ${projectName}`);
+    runCmd(
+      `git clone --depth 1 -b ${version} ${BOILERPLATE_REPO} ${projectName}`,
+    );
 
     const appPath = path.join(process.cwd(), projectName);
     process.chdir(appPath);
