@@ -1,12 +1,13 @@
 import { Command } from "commander";
+import { connectCommand } from "./connect.js";
 import { devCommand } from "./dev.js";
+import { generateCommand } from "./generate.js";
 import { helpCommand } from "./help.js";
 import { initCommand } from "./init.js";
-import { connectCommand } from "./connect.js";
-import { reactorCommand } from "./reactor.js";
-import { generateCommand } from "./generate.js";
 import { installCommand } from "./install.js";
+import { reactorCommand } from "./reactor.js";
 
+import { serviceCommand } from "./service.js";
 export const commands = [
   initCommand,
   devCommand,
@@ -15,6 +16,7 @@ export const commands = [
   reactorCommand,
   helpCommand,
   installCommand,
+  serviceCommand,
 ];
 
 export default function registerCommands(program: Command) {
@@ -22,7 +24,8 @@ export default function registerCommands(program: Command) {
 }
 
 export * from "./dev.js";
+export * from "./generate.js";
 export * from "./help.js";
 export * from "./init.js";
-export * from "./generate.js";
 export * from "./reactor.js";
+export * from "./service.js";

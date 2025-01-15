@@ -1,0 +1,12 @@
+module.exports = {
+  apps: [
+    {
+      name: "reactor",
+      script: "dist/cli.js reactor",
+    },
+    {
+      name: "connect",
+      script: "dist/cli.js connect",
+    },
+  ],
+};

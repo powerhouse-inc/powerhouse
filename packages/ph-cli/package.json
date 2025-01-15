@@ -23,6 +23,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/cli.ts",
+    "service": "tsx src/cli.ts service",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
@@ -50,6 +51,7 @@
     "commander": "^12.1.0",
     "document-model-libs": "workspace:*",
     "graphql": "^16.9.0",
+    "pm2": "^5.4.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }
