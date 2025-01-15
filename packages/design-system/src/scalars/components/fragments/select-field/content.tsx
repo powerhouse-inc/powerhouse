@@ -29,28 +29,20 @@ const renderIcon = (
     | IconName
     | React.ComponentType<{ className?: string }>
     | undefined,
-  disabled?: boolean,
 ) => {
   if (typeof IconComponent === "string") {
     return (
       <Icon
         name={IconComponent}
         size={16}
-        className={cn(
-          "text-gray-700 dark:text-gray-400",
-          disabled && "opacity-75",
-        )}
+        className={cn("text-gray-700 dark:text-gray-400")}
       />
     );
   }
   return (
     IconComponent && (
       <IconComponent
-        className={cn(
-          "size-4",
-          "text-gray-700 dark:text-gray-400",
-          disabled && "opacity-75",
-        )}
+        className={cn("size-4", "text-gray-700 dark:text-gray-400")}
       />
     )
   );
@@ -97,8 +89,6 @@ export const Content: React.FC<ContentProps> = ({
               disabled={false}
               className={cn(
                 "cursor-pointer",
-                "hover:not([data-highlighted]):bg-gray-100 dark:hover:not([data-highlighted]):bg-gray-900",
-                "data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-900",
                 "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
               )}
               role="option"
@@ -167,11 +157,9 @@ export const Content: React.FC<ContentProps> = ({
                 disabled={opt.disabled}
                 className={cn(
                   "cursor-pointer",
-                  "hover:not([data-highlighted]):bg-gray-100 dark:hover:not([data-highlighted]):bg-gray-900",
-                  "data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-900",
                   "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
                   opt.disabled &&
-                    "!pointer-events-auto cursor-not-allowed opacity-75 hover:bg-transparent dark:hover:bg-transparent",
+                    "!pointer-events-auto cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent",
                 )}
                 role="option"
                 aria-selected={isSelected}
@@ -184,7 +172,6 @@ export const Content: React.FC<ContentProps> = ({
                         "border-gray-700 dark:border-gray-400",
                         isSelected &&
                           "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black",
-                        opt.disabled && "opacity-75",
                       )}
                     >
                       {isSelected && <Icon name="Checkmark" size={16} />}
@@ -197,7 +184,6 @@ export const Content: React.FC<ContentProps> = ({
                           ? "border-gray-900 dark:border-gray-400"
                           : "border-gray-800 dark:border-gray-400",
                         "bg-transparent dark:bg-transparent",
-                        opt.disabled && "opacity-75",
                       )}
                     >
                       {isSelected && (
@@ -217,7 +203,7 @@ export const Content: React.FC<ContentProps> = ({
                       )}
                     </div>
                   )}
-                {renderIcon(opt.icon, opt.disabled)}
+                {renderIcon(opt.icon)}
                 <span
                   className={cn(
                     "flex-1 truncate text-[14px] font-medium leading-4",
