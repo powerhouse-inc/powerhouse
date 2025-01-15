@@ -16,7 +16,11 @@
     "skipLibCheck": true,
     "experimentalDecorators": true,
     "declaration": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "@powerhousedao/config": ["../config/src"],
+      "@powerhousedao/config/*": ["../config/src/*"]
+    }
   },
   "include": [
     "src/**/*.ts",
@@ -24,5 +28,6 @@
     "reset.d.ts",
     "*.config.ts"
   ],
-  "exclude": ["**/*.esm.t"]
+  "exclude": ["**/*.esm.t"],
+  "references": [{ "path": "../config" }]
 }

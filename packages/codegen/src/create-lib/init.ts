@@ -5,15 +5,17 @@ import fs from "node:fs";
 import path from "path";
 import { parseArgs, promptDirectories } from "../utils/cli";
 import { getPackageManager } from "./utils";
-// eslint-disable-next-line
-// @ts-ignore-error
-import { DEFAULT_CONFIG } from "@powerhousedao/config/powerhouse";
 
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
 
 const packageManager = getPackageManager(process.env.npm_config_user_agent);
 const isNpm = packageManager === "npm";
+
+const defaultDirectories = {
+  documentModelsDir: "./document-models",
+  editorsDir: "./editors",
+};
 
 export const createCommandSpec = {
   "--name": String,
@@ -150,13 +152,12 @@ export async function init(options: ICreateProjectOptions) {
     projectName = result.projectName;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const {
     documentModelsDir,
     editorsDir,
   }: { documentModelsDir: string; editorsDir: string } = options.interactive
-    ? await promptDirectories()
-    : DEFAULT_CONFIG;
+    ? await promptDirectories(defaultDirectories)
+    : defaultDirectories;
 
   const appPath = path.join(process.cwd(), projectName);
 
