@@ -403,9 +403,6 @@ importers:
       '@graphql-codegen/typescript':
         specifier: ^4.0.1
         version: 4.1.2(encoding@0.1.13)(graphql@16.10.0)
-      '@powerhousedao/config':
-        specifier: workspace:*
-        version: link:../config
       '@types/node':
         specifier: ^20.11.2
         version: 20.17.11
