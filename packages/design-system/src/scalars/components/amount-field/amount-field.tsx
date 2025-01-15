@@ -16,7 +16,6 @@ import { AmountValue } from "./types";
 import { AmountFieldPropsGeneric } from "./types";
 import { IconName } from "@/powerhouse";
 import { validateAmount } from "./amount-field-validations";
-import { ValidatorHandler } from "../types";
 
 export interface TokenIcons {
   [key: string]: IconName | (() => React.JSX.Element);

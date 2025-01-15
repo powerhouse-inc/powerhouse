@@ -1,3 +1,4 @@
+import { isNotSafeValue } from "../amount-field/utils";
 import { NumericType } from "./types";
 import { getDisplayValue } from "./utils";
 
@@ -143,11 +144,10 @@ export const useNumberField = ({
       trailingZeros,
     });
 
-    const isNotSafeValue =
-      Math.abs(Number(inputValue)) > Number.MAX_SAFE_INTEGER;
+    const isNotSafe = isNotSafeValue(inputValue);
 
     // Evitar convertir a un valor no seguro en notación científica
-    if (isNotSafeValue) {
+    if (isNotSafe) {
       onBlur?.(e);
       return;
     }
