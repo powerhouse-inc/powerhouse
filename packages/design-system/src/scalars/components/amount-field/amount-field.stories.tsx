@@ -8,7 +8,6 @@ import {
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
 import { Icon, IconName } from "@/powerhouse";
-import { AmountPercentage } from "@powerhousedao/scalars";
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",
@@ -22,9 +21,51 @@ const meta = {
     allowedCurrencies: {
       control: "object",
       description:
-        "Array of custom error messages. These errors are going to be added to the internal validation errors if there's any.",
+        "Array of strings — List of accepted fiat currency codes (e.g., ['USD', 'EUR', 'GBP']).",
       table: {
         type: { summary: "string[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: {
+        arg: "type",
+        neq: ["Amount", "AmountPercentage"],
+      },
+    },
+    allowedTokens: {
+      control: "object",
+      description:
+        "Array of strings — List of accepted cryptocurrency codes (e.g., ['BTC', 'ETH', 'USDT']).",
+      table: {
+        type: { summary: "string[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    tokenIcons: {
+      control: "object",
+      description:
+        "Mapping of token identifiers to icon references (e.g., { 'BTC': 'icon-btc', 'ETH': 'icon-eth' }).",
+      table: {
+        type: { summary: "object" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    step: {
+      control: "number",
+      description: "The step value for the amount field",
+      table: {
+        defaultValue: { summary: "1" },
+        type: { summary: "number" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    currencyPosition: {
+      control: "select",
+      options: ["left", "right"],
+      description:
+        "Determines the position of the currency select dropdown relative to the amount input field.",
+      table: {
+        defaultValue: { summary: "right" },
+        type: { summary: "string" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -51,7 +92,6 @@ const meta = {
       },
     },
 
-    // precision
     precision: {
       control: "number",
       description: "Number of decimal places viewed",
@@ -69,14 +109,7 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    selectName: {
-      control: "object",
-      description: "Add the label for the select",
-      table: {
-        type: { summary: "string" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
+
     numberProps: {
       control: "object",
       description: "All the props options for number field",
@@ -94,16 +127,38 @@ const meta = {
       },
     },
     // TODO:Improve the AmountType descriptions for the value
-    ...getDefaultArgTypes({
-      valueControlType: "object",
-      valueType: "object",
-    }),
+    ...getDefaultArgTypes(),
 
+    value: {
+      control: "object",
+      description:
+        "The value of the amount field. Can be a number, an object with currency, or undefined. Examples: { amount: 100, currency: 'USD' }, 200, undefined.",
+      table: {
+        type: { summary: "object | number | undefined" },
+        category: StorybookControlCategory.DEFAULT,
+      },
+    },
     ...PrebuiltArgTypes.placeholder,
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minValue,
     ...PrebuiltArgTypes.maxValue,
+    type: {
+      control: "select",
+      options: [
+        "Amount",
+        "AmountCurrencyFiat",
+        "AmountPercentage",
+        "AmountCurrencyCrypto",
+        "AmountCurrencyUniversal",
+      ],
+      description: "The type of amount field.",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
+
   args: {
     errors: [],
     warnings: [],
@@ -120,7 +175,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    selectName: "currency",
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
@@ -137,7 +191,6 @@ export const Default: Story = {
 export const TokenIcon: Story = {
   name: "Token Icon",
   args: {
-    selectName: "currency",
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
@@ -157,7 +210,6 @@ export const TokenIcon: Story = {
 
 export const Token: Story = {
   args: {
-    selectName: "currency",
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
@@ -173,7 +225,6 @@ export const Token: Story = {
 };
 export const Amount: Story = {
   args: {
-    selectName: "currency",
     placeholder: "Enter Amount",
     label: "Enter Amount ",
     name: "amount",
@@ -184,7 +235,6 @@ export const Amount: Story = {
 };
 export const Percent: Story = {
   args: {
-    selectName: "currency",
     label: "Enter Percentage ",
     placeholder: "Enter Amount",
     name: "amount",
@@ -196,7 +246,6 @@ export const Percent: Story = {
 
 export const UniversalAmountCurrency: Story = {
   args: {
-    selectName: "currency",
     name: "amount",
     label: "Label",
     placeholder: "Enter Amount",

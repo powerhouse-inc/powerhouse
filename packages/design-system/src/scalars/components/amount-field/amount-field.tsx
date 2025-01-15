@@ -25,12 +25,10 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
   Omit<InputNumberProps, "onChange" | "onBlur" | "precision"> & {
     className?: string;
     name: string;
-    pattern?: RegExp;
     numberProps?: Omit<NumberFieldProps, "name">;
     selectProps?: SelectFieldProps;
     allowedCurrencies?: string[];
     allowedTokens?: string[];
-    selectName: string;
     defaultValue?: AmountValue;
     value?: AmountValue;
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -166,7 +164,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                   "rounded-l-none border border-l-[0.5px] border-gray-300",
                 currencyPosition === "right" &&
                   "rounded-r-none border border-r-[0.5px] border-gray-300",
-                isPercent && "pr-7 rounded-md",
+                isPercent && "rounded-md pr-7",
                 // focus state
                 "focus:border-r-0",
                 isAmount && "rounded-md",
