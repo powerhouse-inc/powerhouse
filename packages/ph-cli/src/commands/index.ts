@@ -5,6 +5,7 @@ import { initCommand } from "./init.js";
 import { connectCommand } from "./connect.js";
 import { reactorCommand } from "./reactor.js";
 import { generateCommand } from "./generate.js";
+import { installCommand } from "./install.js";
 
 export const commands = [
   initCommand,
@@ -13,6 +14,7 @@ export const commands = [
   generateCommand,
   reactorCommand,
   helpCommand,
+  installCommand,
 ];
 
 export default function registerCommands(program: Command) {
