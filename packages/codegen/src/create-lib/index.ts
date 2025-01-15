@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
-import { init } from "./init";
+import { initCli } from "./init";
 
-init().catch((e: unknown) => {
+initCli().catch((e: unknown) => {
   throw e;
 });
