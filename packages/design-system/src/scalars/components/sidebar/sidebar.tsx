@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
 import { SidebarHeader } from "./subcomponents/sidebar-header";
 import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
@@ -6,6 +6,8 @@ import { SidebarSearch } from "./subcomponents/sidebar-search";
 import { SidebarSeparator } from "./subcomponents/sidebar-separator";
 import { SidebarNode } from "./types";
 import { useSidebar } from "./subcomponents/sidebar-provider";
+import { useSidebarResize } from "./use-sidebar-resize";
+import { cn } from "@/scalars/lib";
 
 export interface SidebarProps {
   value: string; // TODO: define the type
@@ -53,17 +55,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   sidebarTitle,
   enableMacros = 0,
   allowPinning = true,
-  // TODO: implement this
-  // resizable = true,
+  resizable = true,
   showSearchBar = true,
 }) => {
-  const [sidebarWidth, setSidebarWidth] = useState<number>(300);
-
-  // TODO: use this handler to resize the sidebar
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleResize = useCallback((width: number) => {
-    setSidebarWidth(width);
-  }, []);
+  const { sidebarRef, sidebarWidth, startResizing, isResizing } =
+    useSidebarResize({
+      defaultWidth: 300,
+      minWidth: 100,
+      maxWidth: 650,
+    });
 
   const { state, setItems } = useSidebar();
   useEffect(() => {
@@ -74,11 +74,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
+      ref={sidebarRef}
       // TODO: move the variable somewhere else where it fits better
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       style={{ "--system-sidebar-width": `${sidebarWidth}px` }}
-      className="group peer relative h-screen max-h-screen w-[--system-sidebar-width] bg-gray-50 shadow-lg"
+      className={cn(
+        "group peer relative h-screen max-h-screen w-[--system-sidebar-width] bg-gray-50 shadow-lg",
+      )}
     >
       <SidebarHeader
         sidebarTitle={sidebarTitle}
@@ -93,6 +96,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
       <SidebarContentArea />
       {showSearchBar && <SidebarSearch />}
+
+      <div
+        className={cn(
+          "absolute right-0 top-0 h-full w-px cursor-ew-resize transition-colors hover:bg-gray-500",
+          isResizing && "bg-blue-500",
+        )}
+        onMouseDown={resizable ? startResizing : undefined}
+      />
     </aside>
   );
 };

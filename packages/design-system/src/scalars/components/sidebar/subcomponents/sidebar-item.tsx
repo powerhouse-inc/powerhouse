@@ -1,6 +1,6 @@
 import { Icon } from "@/index";
 import React, { KeyboardEventHandler, useCallback } from "react";
-import { SidebarNode } from "../types";
+import type { SidebarNode } from "../types";
 import { cn } from "@/scalars/lib";
 import {
   useSidebar,
@@ -30,7 +30,7 @@ export const Item: React.FC<ItemProps> = ({ id, title, open, pinnedMode }) => {
   return (
     <div
       className={cn(
-        "group/sidebar-item relative flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100",
+        "group/sidebar-item relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100",
         // line between pinned items
         pinnedMode &&
           "after:absolute after:-top-2.5 after:left-3.5 after:h-4 after:w-px after:bg-gray-300 first:after:hidden",
