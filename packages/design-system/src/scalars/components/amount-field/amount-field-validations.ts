@@ -1,8 +1,8 @@
 import { AmountFieldProps } from "./amount-field";
 import {
-  AmountCurrency,
+  AmountCurrencyFiat,
   AmountFieldPropsGeneric,
-  AmountToken,
+  AmountCurrencyCrypto,
   AmountValue,
 } from "./types";
 import {
@@ -11,27 +11,34 @@ import {
 } from "../number-field/number-field-validations";
 import { ValidatorResult } from "@/scalars";
 
-const isAmountCurrency = (
+const isAmountCurrencyFiat = (
   type: AmountFieldPropsGeneric["type"],
-): type is "AmountCurrency" => type === "AmountCurrency";
+): type is "AmountCurrencyFiat" => type === "AmountCurrencyFiat";
 
-const isAmountToken = (
+const isAmountCurrencyCrypto = (
   type: AmountFieldPropsGeneric["type"],
-): type is "AmountToken" => type === "AmountToken";
+): type is "AmountCurrencyCrypto" => type === "AmountCurrencyCrypto";
 
 const getAmount = (
   value: AmountValue,
   type: AmountFieldPropsGeneric["type"],
 ): number | bigint | undefined => {
-  if (isAmountCurrency(type) || isAmountToken(type)) {
-    return (value as AmountCurrency | AmountToken).amount;
+  if (isAmountCurrencyFiat(type) || isAmountCurrencyCrypto(type)) {
+    return (value as AmountCurrencyFiat | AmountCurrencyCrypto).amount;
   }
 
   return value as number;
 };
 
 export const validateAmount =
-  ({ type, required }: AmountFieldProps) =>
+  ({
+    type,
+    required,
+    minValue,
+    maxValue,
+    allowNegative,
+    pattern,
+  }: AmountFieldProps) =>
   (value: unknown): ValidatorResult => {
     const amount = getAmount(value as AmountValue, type);
     if (value === "") return true;
@@ -41,14 +48,32 @@ export const validateAmount =
       }
       return true;
     }
-    if (!isValidNumber(amount) && type !== "AmountToken") {
+    if (!isValidNumber(amount) && type !== "AmountCurrencyCrypto") {
       return "Value is not a valid number";
     }
-    if (type === "AmountToken") {
+    if (!allowNegative && amount < 0) {
+      return "Value must be positive";
+    }
+    if (type === "AmountCurrencyCrypto") {
       if (!isInteger(amount)) {
         return "Value is not an bigint";
       }
       return true;
+    }
+    if (maxValue) {
+      if (amount > maxValue) {
+        return `This field must be less than ${maxValue}`;
+      }
+    }
+    if (minValue) {
+      if (amount < minValue) {
+        return `This field must be more than ${minValue}`;
+      }
+    }
+    if (pattern) {
+      if (!new RegExp(pattern).test(amount as unknown as string)) {
+        return `This field must match the pattern ${pattern}`;
+      }
     }
 
     if (Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER) {

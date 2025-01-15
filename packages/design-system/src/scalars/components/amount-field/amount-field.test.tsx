@@ -38,11 +38,13 @@ describe("AmountField Component", () => {
         type="Amount"
         value={345}
         errors={["Error 1", "Error 2"]}
+        validators={() => "Error 3"}
       />,
     );
     await waitFor(() => {
       expect(screen.getByText("Error 1")).toBeInTheDocument();
       expect(screen.getByText("Error 2")).toBeInTheDocument();
+      expect(screen.getByText("Error 3")).toBeInTheDocument();
     });
   });
 

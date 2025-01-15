@@ -1,8 +1,8 @@
 import { TokenIcons } from "./amount-field";
 import {
-  AmountCurrency,
+  AmountCurrencyCrypto,
+  AmountCurrencyFiat,
   AmountFieldPropsGeneric,
-  AmountToken,
   AmountValue,
 } from "./types";
 import { getCountryCurrencies, getTokens } from "./utils";
@@ -38,16 +38,16 @@ export const useAmountField = ({
   trailingZeros,
 }: UseAmountFieldProps) => {
   // Boolean to no convert float values to BigInt
-  const isBigInt = type === "AmountToken";
+  const isBigInt = type === "AmountCurrencyCrypto";
 
   const currentValue = value ?? defaultValue;
 
   const baseValue =
     type === "Amount" || type === "AmountPercentage"
       ? (currentValue as number | undefined)
-      : (currentValue as AmountCurrency | AmountToken).amount;
+      : (currentValue as AmountCurrencyFiat | AmountCurrencyCrypto).amount;
 
-  const [isFocus, setIsFocus] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
 
   // Handle the complete value
   const [rawAmountState, setRawAmountState] = useState(
@@ -61,20 +61,21 @@ export const useAmountField = ({
 
   const isPercent = type === "AmountPercentage";
 
-  //Allow select only if type is AmountCurrency or AmountToken
-  const isShowSelect = type === "AmountCurrency" || type === "AmountToken";
+  //Allow select only if type is AmountCurrencyFiat or AmountCurrencyCrypto
+  const isShowSelect =
+    type === "AmountCurrencyFiat" || type === "AmountCurrencyCrypto";
 
   // Filter only if allowedCurrencies is provided
   const optionsCurrencies = getCountryCurrencies(allowedCurrencies);
   const optionsTokenIcons = getTokens(allowedTokens, tokenIcons);
 
   const options =
-    type === "AmountCurrency" ? optionsCurrencies : optionsTokenIcons;
+    type === "AmountCurrencyFiat" ? optionsCurrencies : optionsTokenIcons;
 
   const valueSelect =
-    type === "AmountCurrency"
-      ? (currentValue as AmountCurrency).currency
-      : (currentValue as AmountToken).token;
+    type === "AmountCurrencyFiat"
+      ? (currentValue as AmountCurrencyFiat).currency
+      : (currentValue as AmountCurrencyCrypto).currency;
 
   // Handle the change of the input
   const handleOnChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,7 +83,7 @@ export const useAmountField = ({
     setRawAmountState(inputValue);
     setFormattedAmountState(inputValue);
 
-    if (type === "AmountCurrency" && typeof value === "object") {
+    if (type === "AmountCurrencyFiat" && typeof value === "object") {
       const newValue = {
         ...value,
         amount: inputValue === "" ? undefined : inputValue,
@@ -99,7 +100,7 @@ export const useAmountField = ({
       });
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
     }
-    if (type === "AmountToken" && typeof value === "object") {
+    if (type === "AmountCurrencyCrypto" && typeof value === "object") {
       const newValueToken = {
         ...value,
         amount: inputValue === "" ? undefined : inputValue,
@@ -141,20 +142,20 @@ export const useAmountField = ({
   };
   // Handle the change of the select
   const handleOnChangeSelect = (e: string | string[]) => {
-    let newValue: AmountCurrency | AmountToken = {} as
-      | AmountCurrency
-      | AmountToken;
-    if (type === "AmountCurrency" && typeof value === "object") {
+    let newValue: AmountCurrencyFiat | AmountCurrencyCrypto = {} as
+      | AmountCurrencyFiat
+      | AmountCurrencyCrypto;
+    if (type === "AmountCurrencyFiat" && typeof value === "object") {
       newValue = {
         ...value,
         currency: typeof e === "string" ? e : undefined,
-      } as AmountCurrency;
+      } as AmountCurrencyFiat;
     }
-    if (type === "AmountToken" && typeof value === "object") {
+    if (type === "AmountCurrencyCrypto" && typeof value === "object") {
       newValue = {
         ...value,
-        token: typeof e === "string" ? e : undefined,
-      } as AmountToken;
+        currency: typeof e === "string" ? e : undefined,
+      } as AmountCurrencyCrypto;
     }
 
     //Create the event
@@ -170,9 +171,9 @@ export const useAmountField = ({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocus(false);
+    setInputFocused(false);
     const inputValue = e.target.value;
-    if (type === "AmountCurrency" && typeof value === "object") {
+    if (type === "AmountCurrencyFiat" && typeof value === "object") {
       const formatValue =
         viewPrecision !== undefined
           ? trailingZeros
@@ -198,7 +199,7 @@ export const useAmountField = ({
       };
       onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
     }
-    if (type === "AmountToken" && typeof value === "object") {
+    if (type === "AmountCurrencyCrypto" && typeof value === "object") {
       const newValue = {
         ...value,
         amount: inputValue,
@@ -225,10 +226,11 @@ export const useAmountField = ({
     }
   };
 
-  const handleIsFocus = () => {
-    setIsFocus(true);
+  const handleIsInputFocused = () => {
+    setInputFocused(true);
     setFormattedAmountState(rawAmountState);
   };
+
   return {
     isPercent,
     isShowSelect,
@@ -240,7 +242,7 @@ export const useAmountField = ({
     handleOnChangeSelect,
     handleBlur,
     isBigInt,
-    handleIsFocus,
-    isFocus,
+    handleIsInputFocused,
+    inputFocused,
   };
 };
