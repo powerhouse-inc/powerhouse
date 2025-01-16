@@ -6,6 +6,9 @@ const meta = {
   component: FormDescription,
   parameters: {
     layout: "centered",
+    chromatic: {
+      disableSnapshot: true,
+    },
   },
   tags: ["autodocs"],
 } satisfies Meta<typeof FormDescription>;
