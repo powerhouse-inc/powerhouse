@@ -162,6 +162,8 @@ const meta = {
   args: {
     errors: [],
     warnings: [],
+    allowedTokens: [],
+    allowedCurrencies: [],
     name: "amount-field",
   },
 } satisfies Meta<typeof AmountField>;

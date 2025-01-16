@@ -42,8 +42,6 @@ export const useAmountField = ({
   viewPrecision,
   trailingZeros,
 }: UseAmountFieldProps) => {
-  // Boolean to no convert float values to BigInt
-
   const currentValue = value ?? defaultValue;
 
   const baseValue =
