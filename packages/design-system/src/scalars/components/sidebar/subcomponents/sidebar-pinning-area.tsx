@@ -7,7 +7,13 @@ export const SidebarPinningArea = () => {
   return (
     <div className="flex flex-col gap-1 p-2">
       {state.pinnedItems.map((node) => (
-        <Item key={node.id} id={node.id} title={node.title} pinnedMode={true} />
+        <Item
+          key={node.id}
+          id={node.id}
+          title={node.title}
+          pinnedMode={true}
+          allowPinning={true}
+        />
       ))}
     </div>
   );
