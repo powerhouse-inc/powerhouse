@@ -177,6 +177,22 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
+    placeholder: "0",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    step: 0,
+    type: "AmountCurrencyFiat",
+    allowedCurrencies: ["USD", "EUR"],
+    currencyPosition: "right",
+    value: {
+      amount: undefined,
+      currency: "USD",
+    },
+  },
+};
+
+export const WithValue: Story = {
+  args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
@@ -185,13 +201,23 @@ export const Default: Story = {
     allowedCurrencies: ["USD", "EUR"],
     currencyPosition: "right",
     value: {
-      amount: 345,
       currency: "USD",
+      amount: 100,
     },
   },
 };
-export const TokenIcon: Story = {
-  name: "Token Icon",
+export const WithAmount: Story = {
+  args: {
+    placeholder: "Enter Amount",
+    label: "EnterAmout ",
+    name: "amount",
+    type: "Amount",
+    value: 345,
+    step: 0,
+  },
+};
+export const CurrencyIcon: Story = {
+  name: "Currency Icon",
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
@@ -210,7 +236,7 @@ export const TokenIcon: Story = {
   },
 };
 
-export const Token: Story = {
+export const WithToken: Story = {
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
@@ -225,17 +251,8 @@ export const Token: Story = {
     },
   },
 };
-export const Amount: Story = {
-  args: {
-    placeholder: "Enter Amount",
-    label: "Enter Amount ",
-    name: "amount",
-    type: "Amount",
-    value: 345,
-    step: 0,
-  },
-};
-export const Percent: Story = {
+
+export const WithValuePercent: Story = {
   args: {
     label: "Enter Percentage ",
     placeholder: "Enter Amount",
@@ -245,8 +262,23 @@ export const Percent: Story = {
     step: 0,
   },
 };
+export const Disable: Story = {
+  args: {
+    label: "Enter Amount ",
+    placeholder: "Enter Amount",
+    name: "amount",
+    type: "AmountCurrencyFiat",
+    allowedCurrencies: ["USD", "EUR"],
+    disabled: true,
+    value: {
+      amount: 9,
+      currency: "USD",
+    },
+    step: 0,
+  },
+};
 
-export const UniversalAmountCurrency: Story = {
+export const WithValueUniversalAmountCurrency: Story = {
   args: {
     name: "amount",
     label: "Label",
