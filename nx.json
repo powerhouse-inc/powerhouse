@@ -28,7 +28,7 @@
       "dependsOn": ["^build"]
     },
     "check-types": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "generate"]
     },
     "generate": {
       "dependsOn": ["^build"]
@@ -41,7 +41,7 @@
     },
     "build": {
       "cache": true,
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "generate"],
       "inputs": [
         "noMarkdown",
         "^noMarkdown",
