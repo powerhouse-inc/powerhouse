@@ -65,7 +65,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       maxWidth: 650,
     });
 
-  const { state, setItems } = useSidebar();
+  const {
+    state: { pinnedItems },
+    setItems,
+  } = useSidebar();
   useEffect(() => {
     if (nodes) {
       setItems(nodes);
@@ -80,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       // @ts-expect-error
       style={{ "--system-sidebar-width": `${sidebarWidth}px` }}
       className={cn(
-        "group peer relative h-screen max-h-screen w-[--system-sidebar-width] bg-gray-50 shadow-lg",
+        "group peer relative flex h-svh max-h-screen w-[--system-sidebar-width] flex-col bg-gray-50 shadow-lg",
       )}
     >
       <SidebarHeader
@@ -88,22 +91,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
         sidebarIcon={sidebarIcon}
         enableMacros={enableMacros}
       />
-      {allowPinning && state.pinnedItems.length > 0 && (
+      {allowPinning && pinnedItems.length > 0 && (
         <>
           <SidebarPinningArea />
           <SidebarSeparator />
         </>
       )}
-      <SidebarContentArea />
+      <SidebarContentArea allowPinning={allowPinning} />
       {showSearchBar && <SidebarSearch />}
 
-      <div
-        className={cn(
-          "absolute right-0 top-0 h-full w-px cursor-ew-resize transition-colors hover:bg-gray-500",
-          isResizing && "bg-blue-500",
-        )}
-        onMouseDown={resizable ? startResizing : undefined}
-      />
+      {resizable && (
+        <div
+          className={cn(
+            "absolute right-0 top-0 h-full w-px cursor-ew-resize select-none transition-colors hover:bg-gray-500",
+            isResizing && "bg-blue-500",
+          )}
+          onMouseDown={startResizing}
+        />
+      )}
     </aside>
   );
 };

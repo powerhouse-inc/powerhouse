@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Sidebar } from "./sidebar";
 import { Icon } from "@/powerhouse";
 import { SidebarProvider } from "./subcomponents/sidebar-provider";
-import { SidebarNode } from "./types";
+import mockedTree from "./mocked_tree.json";
 
 const meta: Meta<typeof Sidebar> = {
   title: "Document Engineering/Complex Components/Sidebar",
@@ -10,13 +10,51 @@ const meta: Meta<typeof Sidebar> = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <SidebarProvider>
+      <SidebarProvider nodes={mockedTree}>
         <Story />
       </SidebarProvider>
     ),
   ],
   parameters: {
     layout: "fullscreen",
+  },
+  argTypes: {
+    nodes: {
+      control: "object",
+      table: {
+        readonly: true,
+      },
+      description:
+        "The nodes to be displayed in the sidebar. It can be provided through the SidebarProvider to prevent flickering.",
+    },
+    sidebarTitle: {
+      control: "text",
+      description: "The title of the sidebar.",
+    },
+    sidebarIcon: {
+      control: "object",
+      table: {
+        readonly: true,
+      },
+      description: "The icon of the sidebar.",
+    },
+    enableMacros: {
+      control: "number",
+      description:
+        "The number of macros to be displayed in the sidebar. Recommended up to 4.",
+    },
+    allowPinning: {
+      control: "boolean",
+      description: "Whether the sidebar items can be pinned.",
+    },
+    resizable: {
+      control: "boolean",
+      description: "Whether the sidebar is resizable.",
+    },
+    showSearchBar: {
+      control: "boolean",
+      description: "Whether the sidebar allows searching.",
+    },
   },
   args: {
     sidebarTitle: "Title Sidebar",
@@ -25,70 +63,11 @@ const meta: Meta<typeof Sidebar> = {
         <Icon name="M" className="text-gray-50" size={16} />
       </div>
     ),
-    enableMacros: 3,
+    enableMacros: 4,
   },
 };
 
 export default meta;
 type Story = StoryObj<typeof Sidebar>;
 
-const MOCKED_ITEMS: SidebarNode[] = [
-  {
-    title: "1 - Item",
-    id: "1",
-    childrens: [
-      {
-        title: "1.1 - Subitem",
-        id: "1-1",
-      },
-      {
-        title: "1.2 - Subitem",
-        id: "1-2",
-        childrens: [
-          {
-            title: "1.2.1 - Subitem",
-            id: "1-2-1",
-          },
-          {
-            title: "1.2.2 - Subitem",
-            id: "1-2-2",
-            childrens: [
-              {
-                title: "1.2.2.1 - Subitem",
-                id: "1-2-2-1",
-              },
-              {
-                title: "1.2.2.2 - Subitem",
-                id: "1-2-2-2",
-              },
-              {
-                title: "1.2.2.3 - Subitem",
-                id: "1-2-2-3",
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: "2 - Item",
-    id: "2",
-    childrens: [
-      {
-        title: "2.1 - Subitem",
-        id: "2-1",
-      },
-    ],
-  },
-  {
-    title: "3 - Item",
-    id: "3",
-  },
-];
-
-export const Default: Story = {
-  args: {
-    nodes: MOCKED_ITEMS,
-  },
-};
+export const Default: Story = {};

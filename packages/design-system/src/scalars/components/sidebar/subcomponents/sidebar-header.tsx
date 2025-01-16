@@ -17,8 +17,8 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-gray-300 bg-gray-50 p-4">
-      <div className="flex items-center gap-2">
+    <header className="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4">
+      <div className="flex items-center gap-2 truncate">
         {sidebarIcon}
         <div className="truncate text-sm font-semibold text-gray-700">
           {sidebarTitle}
@@ -32,7 +32,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
               // eslint-disable-next-line react/no-array-index-key
               key={`macro-${index}`}
               role="button"
-              className="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100"
+              className="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 hover:bg-slate-100 hover:text-slate-200"
               onClick={() => openLevel(index + 1)}
             >
               {index + 1}

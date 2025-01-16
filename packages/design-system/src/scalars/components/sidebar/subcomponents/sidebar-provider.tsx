@@ -3,6 +3,7 @@ import React, {
   useReducer,
   useContext,
   useCallback,
+  useState,
 } from "react";
 import { SidebarNode } from "../types";
 
@@ -143,18 +144,22 @@ const reducer = (state: SidebarState, action: SidebarAction): SidebarState => {
 
 type SidebarContextType = {
   state: SidebarState;
+  searchTerm: string;
   setItems: (items: SidebarNode[], defaultLevel?: number) => void;
   toggleItem: (nodeId: string) => void;
   openLevel: (level: number) => void;
   togglePin: (nodeId: string) => void;
+  changeSearchTerm: (newSearchTerm: string) => void;
 };
 
 const SidebarContext = createContext<SidebarContextType>({
   state: { items: [], itemsState: {}, pinnedItems: [] },
+  searchTerm: "",
   setItems: () => null,
   toggleItem: () => null,
   openLevel: () => null,
   togglePin: () => null,
+  changeSearchTerm: () => null,
 });
 
 interface SidebarProviderProps extends React.PropsWithChildren {
@@ -170,6 +175,7 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     itemsState: {},
     pinnedItems: [],
   });
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const setItems = useCallback(
     (items: SidebarNode[]) => {
@@ -195,6 +201,9 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     },
     [dispatch],
   );
+  const changeSearchTerm = useCallback((newSearchTerm: string) => {
+    setSearchTerm(newSearchTerm);
+  }, []);
 
   return (
     <SidebarContext.Provider
@@ -204,6 +213,8 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
         toggleItem,
         openLevel,
         togglePin,
+        searchTerm,
+        changeSearchTerm,
       }}
     >
       {children}
