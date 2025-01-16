@@ -3,14 +3,9 @@ import fs from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 import { Command } from "commander";
+import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 
 import { CommandActionType } from "../types.js";
-
-type PowerhouseConfig = {
-  documentModelsDir: string;
-  editorsDir: string;
-  include?: string[];
-};
 
 const PH_BIN = "ph";
 const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
@@ -213,9 +208,9 @@ export function updateConfigFile(
     fs.readFileSync(configPath, "utf-8"),
   ) as PowerhouseConfig;
 
-  const updatedConfig = {
+  const updatedConfig: PowerhouseConfig = {
     ...config,
-    include: [...(config.include || []), ...dependencies],
+    projects: [...((config.projects || []) as string[]), ...dependencies],
   };
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
