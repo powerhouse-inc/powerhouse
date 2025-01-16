@@ -1,49 +1,31 @@
-import path, { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { fork, ChildProcessWithoutNullStreams, exec } from "node:child_process";
 import { Argument, Command } from "commander";
-import { blue, green, red } from "colorette";
+import { exec } from "node:child_process";
 import { CommandActionType } from "../types.js";
-import { DefaultReactorOptions, type ReactorOptions } from "./reactor.js";
-import { type ConnectOptions } from "./connect.js";
+import pm2 from "pm2";
+const actions = ["start", "stop", "status", "list", "install", "save"];
+const services = ["reactor", "connect", "all"];
 
-export const manageService: CommandActionType<
-  [
-    {
-      action: "start" | "stop" | "status" | "list";
-      service: "reactor" | "connect" | "all";
-    },
-  ]
-> = async (action: string, service: string) => {
-  console.log(action, service);
-  switch (action) {
-    case "start":
-      exec("pm2 start ecosystem.config.cjs").on("message", (message) => {
-        console.log(message);
-      });
-      break;
-    case "stop":
-      exec("pm2 stop ecosystem.config.cjs");
-      break;
-    default:
-      exec("pm2 list");
-  }
+export const manageService: CommandActionType<[string, string]> = async (
+  action,
+  service
+) => {
+  // TODO: Add error handling
+  // TODO: Add service selection
+  exec(
+    `pm2 ${action} powerhouse-services.config.json`,
+    (error, stdout, stderr) => {
+      console.log(stdout);
+    }
+  );
 };
 
 export function serviceCommand(program: Command) {
   program
     .command("service")
     .description("Manage services")
+    .addArgument(new Argument("action").choices(actions).default("list"))
     .addArgument(
-      new Argument("action")
-        .choices(["start", "stop", "status", "list"])
-        .default("list")
-    )
-    .addArgument(
-      new Argument("service")
-        .choices(["reactor", "connect", "all"])
-        .argRequired()
-        .default("all")
+      new Argument("service").choices(services).argOptional().default("all")
     )
     .action(manageService);
 }

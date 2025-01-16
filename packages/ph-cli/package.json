@@ -23,7 +23,6 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/cli.ts",
-    "service": "tsx src/cli.ts service",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
