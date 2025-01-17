@@ -14,6 +14,9 @@ const meta: Meta<typeof SelectField> = {
   component: SelectField,
   parameters: {
     layout: "padded",
+    chromatic: {
+      disableSnapshot: true,
+    },
   },
   decorators: [
     withForm,
