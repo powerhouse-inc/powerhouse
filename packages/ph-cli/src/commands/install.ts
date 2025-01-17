@@ -10,7 +10,26 @@ import { CommandActionType } from "../types.js";
 const PH_BIN = "ph";
 const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 const SUPPORTED_PACKAGE_MANAGERS = ["npm", "yarn", "pnpm", "bun"];
-const GLOBAL_CONFIG_PATH = path.join(homedir(), ".ph", POWERHOUSE_CONFIG_FILE);
+const POWERHOUSE_GLOBAL_DIR = path.join(homedir(), ".ph");
+const GLOBAL_CONFIG_PATH = path.join(
+  POWERHOUSE_GLOBAL_DIR,
+  POWERHOUSE_CONFIG_FILE,
+);
+const GLOBAL_PACKAGE_JSON_PATH = path.join(
+  POWERHOUSE_GLOBAL_DIR,
+  "package.json",
+);
+
+const defaultPackageJson = {
+  name: "global-powerhouse-env",
+  version: "1.0.0",
+  description: "",
+  author: "powerhouse",
+  license: "ISC",
+  dependencies: {
+    "document-model": "^2.15.0",
+  },
+};
 
 const packageManagers = {
   bun: {
@@ -133,7 +152,7 @@ export function getProjectInfo(debug?: boolean): ProjectInfo {
 
     return {
       isGlobal: true,
-      path: globalPath,
+      path: POWERHOUSE_GLOBAL_DIR,
     };
   }
 
@@ -161,20 +180,42 @@ export function installDependency(
     dependencies.join(" "),
   );
 
-  if (global) {
-    installCommand += " -g";
-  }
-
   if (workspace) {
     installCommand += ` ${manager.workspaceOption}`;
   }
 
-  const commandOptions = global ? {} : { cwd: projectPath };
+  const commandOptions = { cwd: projectPath };
 
   execSync(installCommand, {
     stdio: "inherit",
     ...commandOptions,
   });
+}
+
+export function createGlobalPHProject(debug = false) {
+  if (!fs.existsSync(POWERHOUSE_GLOBAL_DIR)) {
+    if (debug) {
+      console.log(">>> Creating a new global powerhouse project");
+    }
+    fs.mkdirSync(POWERHOUSE_GLOBAL_DIR, { recursive: true });
+  }
+
+  if (!fs.existsSync(GLOBAL_PACKAGE_JSON_PATH)) {
+    if (debug) {
+      console.log(">>> Creating a new global package.json file");
+    }
+    fs.writeFileSync(
+      GLOBAL_PACKAGE_JSON_PATH,
+      JSON.stringify(defaultPackageJson, null, 2),
+    );
+  }
+
+  if (!fs.existsSync(GLOBAL_CONFIG_PATH)) {
+    if (debug) {
+      console.log(">>> Creating a new global config file");
+    }
+    fs.writeFileSync(GLOBAL_CONFIG_PATH, "{}");
+  }
 }
 
 export function updateConfigFile(
@@ -208,9 +249,16 @@ export function updateConfigFile(
     fs.readFileSync(configPath, "utf-8"),
   ) as PowerhouseConfig;
 
+  const mappedProjects: PowerhouseConfig["projects"] = dependencies.map(
+    (dep) => ({
+      packageName: dep,
+      global,
+    }),
+  );
+
   const updatedConfig: PowerhouseConfig = {
     ...config,
-    projects: [...((config.projects || []) as string[]), ...dependencies],
+    projects: [...(config.projects ?? []), ...mappedProjects],
   };
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
@@ -257,6 +305,10 @@ export const install: CommandActionType<
 
   const packageManager =
     options.packageManager || getPackageManager(projectInfo.path);
+
+  if (isGlobal) {
+    createGlobalPHProject(options.debug);
+  }
 
   if (options.debug) {
     console.log("\n>>> installDependency arguments:");
