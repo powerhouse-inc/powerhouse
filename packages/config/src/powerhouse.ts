@@ -8,7 +8,10 @@ export type PowerhouseConfig = {
   interactive?: boolean;
   skipFormat?: boolean;
   watch?: boolean;
-  projects?: string[];
+  projects?: {
+    packageName: string;
+    global: boolean;
+  }[];
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
