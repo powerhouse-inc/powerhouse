@@ -1,3 +1,13 @@
+## 1.7.0 (2025-01-17)
+
+### 🚀 Features
+
+- **ph-cli:** default to root project when installing a dep globally ([#840](https://github.com/powerhouse-inc/powerhouse/pull/840))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval
+
 ## 1.6.0 (2025-01-16)
 
 ### 🚀 Features
