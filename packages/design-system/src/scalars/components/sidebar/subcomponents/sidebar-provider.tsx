@@ -1,165 +1,44 @@
+/* eslint-disable prettier/prettier */
 import React, {
   createContext,
   useReducer,
   useContext,
   useCallback,
   useState,
+  useEffect,
 } from "react";
 import { SidebarNode } from "../types";
-
-interface SidebarState {
-  items: Array<SidebarNode>;
-  itemsState: { [nodeId: string]: boolean };
-  pinnedItems: Array<SidebarNode>;
-}
-
-enum SidebarActionType {
-  SET_ITEMS = "SET_ITEMS",
-  TOGGLE_ITEM = "TOGGLE_ITEM",
-  OPEN_LEVEL = "OPEN_LEVEL",
-  TOGGLE_PIN = "TOGGLE_PIN",
-}
-
-type SidebarAction =
-  | {
-      type: SidebarActionType.SET_ITEMS;
-      items: SidebarNode[];
-      defaultLevel?: number;
-    }
-  | {
-      type: SidebarActionType.TOGGLE_ITEM;
-      nodeId: string;
-    }
-  | {
-      type: SidebarActionType.OPEN_LEVEL;
-      level: number;
-    }
-  | {
-      type: SidebarActionType.TOGGLE_PIN;
-      nodeId: string;
-    };
-
-const getOpenLevels = (
-  items: SidebarNode[],
-  level: number,
-): { [nodeId: string]: boolean } => {
-  const result: { [nodeId: string]: boolean } = {};
-
-  function traverse(nodes: SidebarNode[], currentLevel: number) {
-    for (const node of nodes) {
-      if (currentLevel <= level) {
-        result[node.id] = true;
-      }
-      if (node.childrens) {
-        traverse(node.childrens, currentLevel + 1);
-      }
-    }
-  }
-
-  traverse(items, 1); // Start from level 1
-  return result;
-};
-
-const getPinnedPath = (
-  items: SidebarNode[],
-  nodeId: string,
-): Array<SidebarNode> | null => {
-  // Helper function to recursively search for the path in a single node
-  function findPath(
-    node: SidebarNode,
-    id: string,
-    path: SidebarNode[],
-  ): SidebarNode[] | null {
-    // Add the current node to the path
-    path.push(node);
-
-    // Check if the current node is the target
-    if (node.id === id) {
-      return path;
-    }
-
-    // Recursively search in the children
-    if (node.childrens) {
-      for (const child of node.childrens) {
-        const result = findPath(child, id, path);
-        if (result) {
-          return result;
-        }
-      }
-    }
-
-    // Backtrack if not found in this path
-    path.pop();
-    return null;
-  }
-
-  // Iterate through each node in the array of nodes
-  for (const root of items) {
-    const result = findPath(root, nodeId, []);
-    if (result) {
-      return result; // Return as soon as a path is found
-    }
-  }
-
-  // Return an empty array if no path is found
-  return null;
-};
-
-const reducer = (state: SidebarState, action: SidebarAction): SidebarState => {
-  switch (action.type) {
-    case SidebarActionType.SET_ITEMS:
-      return {
-        items: action.items,
-        itemsState: getOpenLevels(action.items, action.defaultLevel ?? -1),
-        pinnedItems: [],
-      };
-    case SidebarActionType.TOGGLE_ITEM:
-      return {
-        ...state,
-        itemsState: {
-          ...state.itemsState,
-          [action.nodeId]: !state.itemsState[action.nodeId],
-        },
-      };
-    case SidebarActionType.OPEN_LEVEL:
-      return {
-        ...state,
-        itemsState: getOpenLevels(state.items, action.level),
-      };
-    case SidebarActionType.TOGGLE_PIN: {
-      const isPinned =
-        state.pinnedItems.length > 0 &&
-        state.pinnedItems[state.pinnedItems.length - 1].id === action.nodeId;
-      return {
-        ...state,
-        pinnedItems: isPinned
-          ? [] // unpin
-          : (getPinnedPath(state.items, action.nodeId) ?? []),
-      };
-    }
-    default:
-      return state;
-  }
-};
+import { SidebarActionType, sidebarReducer, SidebarState } from "./sidebar-reducer";
+import { nodesSearch } from "../utils";
 
 type SidebarContextType = {
   state: SidebarState;
   searchTerm: string;
+  searchLoading: boolean;
+  searchResults: SidebarNode[];
   setItems: (items: SidebarNode[], defaultLevel?: number) => void;
   toggleItem: (nodeId: string) => void;
   openLevel: (level: number) => void;
   togglePin: (nodeId: string) => void;
   changeSearchTerm: (newSearchTerm: string) => void;
+  activeSearchIndex: number;
+  nextSearchResult: () => void;
+  previousSearchResult: () => void;
 };
 
 const SidebarContext = createContext<SidebarContextType>({
   state: { items: [], itemsState: {}, pinnedItems: [] },
   searchTerm: "",
+  searchLoading: false,
+  searchResults: [],
   setItems: () => null,
   toggleItem: () => null,
   openLevel: () => null,
   togglePin: () => null,
   changeSearchTerm: () => null,
+  activeSearchIndex: 0,
+  nextSearchResult: () => null,
+  previousSearchResult: () => null,
 });
 
 interface SidebarProviderProps extends React.PropsWithChildren {
@@ -170,12 +49,11 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
   children,
   nodes,
 }) => {
-  const [state, dispatch] = useReducer(reducer, {
+  const [state, dispatch] = useReducer(sidebarReducer, {
     items: nodes || [],
     itemsState: {},
     pinnedItems: [],
   });
-  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const setItems = useCallback(
     (items: SidebarNode[]) => {
@@ -205,6 +83,60 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     setSearchTerm(newSearchTerm);
   }, []);
 
+  // search state
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchResults, setSearchResults] = useState<SidebarNode[]>([]);
+  const [activeSearchIndex, setActiveSearchIndex] = useState<number>(0);
+  useEffect(() => {
+    let searchTimeout: NodeJS.Timeout;
+    if (searchTerm) {
+      setSearchLoading(true);
+
+      // callback to search the nodes
+      const search = () => {
+        const results = nodesSearch(state.items, searchTerm, "dfs");
+        setSearchResults(results);
+        setSearchLoading(false);
+        setActiveSearchIndex(0);
+      };
+
+      // trigger the search
+      searchTimeout = setTimeout(search, 250);
+    } else {
+      setSearchResults([]);
+      setSearchLoading(false);
+    }
+
+    return () => {
+      // clear the timeout if the user changes the search term
+      clearTimeout(searchTimeout);
+    };
+  }, [searchTerm, state.items]);
+
+  useEffect(() => {
+    // set the active index in the search results range
+    if (activeSearchIndex > searchResults.length - 1) {
+      setActiveSearchIndex(Math.max(0, searchResults.length - 1));
+    }
+  }, [activeSearchIndex, searchResults]);
+
+  const nextSearchResult = useCallback(() => {
+    const nextIndex = Math.min(searchResults.length - 1, activeSearchIndex + 1);
+    if (nextIndex !== activeSearchIndex) {
+      dispatch({ type: SidebarActionType.OPEN_PATH_TO_NODE, nodeId: searchResults[nextIndex].id });
+      setActiveSearchIndex(nextIndex);
+    }
+  }, [searchResults, activeSearchIndex, dispatch]);
+
+  const previousSearchResult = useCallback(() => {
+    const previousIndex = Math.max(0, activeSearchIndex - 1);
+    if (previousIndex !== activeSearchIndex) {
+      dispatch({ type: SidebarActionType.OPEN_PATH_TO_NODE, nodeId: searchResults[previousIndex].id });
+      setActiveSearchIndex(previousIndex);
+    }
+  }, [searchResults, activeSearchIndex, dispatch]);
+
   return (
     <SidebarContext.Provider
       value={{
@@ -215,6 +147,11 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
         togglePin,
         searchTerm,
         changeSearchTerm,
+        searchLoading,
+        searchResults,
+        activeSearchIndex,
+        nextSearchResult,
+        previousSearchResult,
       }}
     >
       {children}
@@ -234,11 +171,16 @@ const useSidebarItemPinned = (nodeId: string): boolean => {
     state.pinnedItems[state.pinnedItems.length - 1].id === nodeId
   );
 };
+const useSidebarIsNodeSearchActive = (nodeId: string): boolean => {
+  const { searchResults, activeSearchIndex } = useSidebar();
+  return searchResults.length > 0 && searchResults[activeSearchIndex].id === nodeId;
+};
 
 export {
   SidebarProvider,
   useSidebar,
   useSidebarNodeState,
   useSidebarItemPinned,
+  useSidebarIsNodeSearchActive
 };
 export type { SidebarState };

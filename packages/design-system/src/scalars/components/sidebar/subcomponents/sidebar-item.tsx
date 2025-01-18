@@ -4,6 +4,7 @@ import type { SidebarNode } from "../types";
 import { cn } from "@/scalars/lib";
 import {
   useSidebar,
+  useSidebarIsNodeSearchActive,
   useSidebarItemPinned,
   useSidebarNodeState,
 } from "./sidebar-provider";
@@ -25,6 +26,7 @@ export const Item: React.FC<ItemProps> = ({
 }) => {
   const { togglePin, searchTerm } = useSidebar();
   const isPinned = useSidebarItemPinned(id);
+  const isSearchActive = useSidebarIsNodeSearchActive(id);
 
   const handleTogglePin = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -36,6 +38,7 @@ export const Item: React.FC<ItemProps> = ({
 
   return (
     <div
+      id={`sidebar-item-${id}`}
       className={cn(
         "group/sidebar-item relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100",
         allowPinning && "hover:pr-6",
@@ -66,7 +69,8 @@ export const Item: React.FC<ItemProps> = ({
               dangerouslySetInnerHTML={{
                 __html: title.replace(
                   new RegExp(searchTerm, "gi"),
-                  (match) => `<span class="bg-gray-300">${match}</span>`,
+                  (match) =>
+                    `<span class="${isSearchActive ? "bg-yellow-300" : "bg-gray-300"}">${match}</span>`,
                 ),
               }}
             />
