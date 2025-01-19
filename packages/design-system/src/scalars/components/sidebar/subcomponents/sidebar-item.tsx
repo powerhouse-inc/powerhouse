@@ -42,6 +42,7 @@ export const Item: React.FC<ItemProps> = ({
       className={cn(
         "group/sidebar-item relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100",
         allowPinning && "hover:pr-6",
+        isPinned && "pr-6",
         // line between pinned items
         pinnedMode &&
           "after:absolute after:-top-2.5 after:left-3.5 after:h-4 after:w-px after:bg-gray-300 first:after:hidden",

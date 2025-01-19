@@ -3,7 +3,6 @@ import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
 import { SidebarHeader } from "./subcomponents/sidebar-header";
 import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
 import { SidebarSearch } from "./subcomponents/sidebar-search";
-import { SidebarSeparator } from "./subcomponents/sidebar-separator";
 import { SidebarNode } from "./types";
 import { useSidebar } from "./subcomponents/sidebar-provider";
 import { useSidebarResize } from "./use-sidebar-resize";
@@ -91,12 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         sidebarIcon={sidebarIcon}
         enableMacros={enableMacros}
       />
-      {allowPinning && pinnedItems.length > 0 && (
-        <>
-          <SidebarPinningArea />
-          <SidebarSeparator />
-        </>
-      )}
+
+      {allowPinning && pinnedItems.length > 0 && <SidebarPinningArea />}
       <SidebarContentArea allowPinning={allowPinning} />
       {showSearchBar && <SidebarSearch />}
 
