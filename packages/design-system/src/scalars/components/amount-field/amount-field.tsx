@@ -153,7 +153,6 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               }
               id={id}
               maxValue={maxValue}
-              trailingZeros={trailingZeros}
               precision={precision}
               minValue={minValue}
               onChange={handleOnChangeInput}

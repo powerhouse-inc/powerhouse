@@ -15,7 +15,9 @@ export const castFunctions: Record<ValueCast, (value: any) => any> = {
     if (typeof value === "object" && "currency" in value) {
       return {
         ...value,
+
         amount: value.amount !== undefined ? Number(value.amount) : null,
+        currency: value.currency !== "" ? value.currency : null,
       };
     }
     return Number(value);
@@ -25,7 +27,9 @@ export const castFunctions: Record<ValueCast, (value: any) => any> = {
     if (typeof value === "object" && "currency" in value) {
       return {
         ...value,
-        amount: value.amount !== undefined ? BigInt(value.amount) : undefined,
+
+        amount: value.amount !== undefined ? BigInt(value.amount) : null,
+        currency: value.currency !== "" ? value.currency : null,
       };
     }
   },

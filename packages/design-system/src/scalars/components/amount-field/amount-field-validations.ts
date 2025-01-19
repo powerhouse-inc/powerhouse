@@ -33,12 +33,15 @@ const getAmount = (
     isAmountCurrencyCrypto(type) ||
     isAmountCurrencyUniversal(type)
   ) {
+    if (!value) return undefined;
     return (
-      value as
-        | AmountCurrencyFiat
-        | AmountCurrencyCrypto
-        | AmountCurrencyUniversal
-    ).amount;
+      (
+        value as
+          | AmountCurrencyFiat
+          | AmountCurrencyCrypto
+          | AmountCurrencyUniversal
+      ).amount ?? undefined
+    );
   }
   return value as number;
 };
