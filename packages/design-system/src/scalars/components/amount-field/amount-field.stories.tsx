@@ -177,6 +177,7 @@ export const Default: Story = {
     label: "Enter Amount and Select Currency",
     name: "amount",
     step: 0,
+    placeholderSelect: "CUR",
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
     currencyPosition: "right",
@@ -193,6 +194,7 @@ export const TokenIcon: Story = {
     label: "Enter Amount and Select Currency",
     name: "amount",
     type: "AmountCurrencyCrypto",
+    placeholderSelect: "CUR",
     allowedTokens: ["BTC", "ETH"],
     tokenIcons: {
       BTC: IconComponent("Briefcase"),
@@ -213,6 +215,7 @@ export const Token: Story = {
     name: "amount",
     step: 0,
     type: "AmountCurrencyCrypto",
+    placeholderSelect: "CUR",
     allowedTokens: ["BTC", "ETH", "USDT"],
     currencyPosition: "right",
     value: {
@@ -225,6 +228,7 @@ export const Amount: Story = {
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount ",
+
     name: "amount",
     type: "Amount",
     value: 345,
@@ -248,6 +252,7 @@ export const UniversalAmountCurrency: Story = {
     label: "Label",
     placeholder: "Enter Amount",
     type: "AmountCurrencyUniversal",
+    placeholderSelect: "CUR",
     currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
 
