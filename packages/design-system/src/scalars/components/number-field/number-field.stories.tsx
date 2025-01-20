@@ -96,7 +96,6 @@ export const Default: Story = {
     name: "Label",
     label: "Label",
     placeholder: "Enter a number",
-    step: 0,
     value: 1234,
   },
 };
@@ -106,7 +105,6 @@ export const Active: Story = {
     label: "Label",
     autoFocus: true,
     value: 45,
-    step: 0,
     placeholder: "Enter a number",
   },
   parameters: {
@@ -119,7 +117,6 @@ export const Disable: Story = {
     label: "Label",
     value: 1234,
     disabled: true,
-    step: 0,
   },
 };
 export const Required: Story = {
@@ -128,7 +125,6 @@ export const Required: Story = {
     label: "Label",
     value: 345,
     required: true,
-    step: 0,
     placeholder: "A number is required",
   },
 };
@@ -137,7 +133,6 @@ export const WithWarning: Story = {
     name: "Label",
     label: "Label",
     value: 23,
-    step: 0,
     warnings: ["Warning message"],
     placeholder: "Enter  number",
   },
@@ -147,7 +142,6 @@ export const WithError: Story = {
     name: "Label",
     label: "Label",
     value: 23,
-    step: 0,
     errors: ["Error message"],
     placeholder: "Enter a number",
   },
@@ -157,7 +151,6 @@ export const WithMultipleErrors: Story = {
     name: "Label",
     label: "Label",
     value: 23,
-    step: 0,
     errors: [
       "Error message number 1",
       "Error message number 2",
@@ -170,7 +163,6 @@ export const WithMultipleErrors: Story = {
 
 export const WithValue: Story = {
   args: {
-    step: 0,
     name: "Label",
     label: "Label",
     value: 23,
@@ -180,7 +172,6 @@ export const WithValue: Story = {
 
 export const WithDescription: Story = {
   args: {
-    step: 0,
     name: "Label",
     label: "Label",
     value: 0,
@@ -192,7 +183,6 @@ export const WithDescription: Story = {
 // Float Stories
 export const WithFloatNumber: Story = {
   args: {
-    step: 0,
     label: "Label",
     name: "Label",
     value: 0.0,
@@ -208,7 +198,7 @@ export const WithBigInt: Story = {
     label: "Label",
     value: 99992342343299,
     numericType: "BigInt",
-    step: 0,
+
     placeholder: "Enter a large number",
   },
 };
