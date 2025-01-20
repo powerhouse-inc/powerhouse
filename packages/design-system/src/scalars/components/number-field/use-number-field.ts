@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { isNotSafeValue } from "../amount-field/utils";
 import { NumericType } from "./types";
 import { getDisplayValue } from "./utils";
@@ -25,6 +26,8 @@ export const useNumberField = ({
   trailingZeros = false,
   precision = 0,
 }: UseNumberFieldProps) => {
+  const [isFocus, setIsFocus] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const canIncrement =
     maxValue !== undefined &&
     (typeof value === "bigint"
@@ -37,7 +40,7 @@ export const useNumberField = ({
       ? value <= BigInt(minValue)
       : Number(value) <= minValue);
 
-  const showSteps = step !== 0;
+  const showSteps = isFocus;
 
   // Boolean to no convert float values to BigInt
   const isBigInt = numericType && numericType === "BigInt";
@@ -85,8 +88,6 @@ export const useNumberField = ({
     e: React.MouseEvent<HTMLButtonElement>,
     operation: "increment" | "decrement",
   ) => {
-    e.preventDefault();
-
     let newValue: number | bigint;
 
     if (isBigInt) {
@@ -120,6 +121,7 @@ export const useNumberField = ({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocus(false);
     const inputValue = e.target.value;
 
     // If the value is not a number, not an empty string, or is empty, show the error message or keep it empty
@@ -171,6 +173,11 @@ export const useNumberField = ({
     onBlur?.(e);
   };
 
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setIsFocus(true);
+  };
+
   return {
     canIncrement,
     canDecrement,
@@ -181,5 +188,8 @@ export const useNumberField = ({
     preventLetterInput,
     isBigInt,
     handleBlur,
+    handleFocus,
+    isFocus,
+    buttonRef,
   };
 };

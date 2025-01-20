@@ -56,6 +56,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       preventLetterInput,
       isBigInt,
       handleBlur,
+
+      handleFocus,
+      buttonRef,
     } = useNumberField({
       value,
       maxValue,
@@ -84,8 +87,10 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         <div className="relative flex items-center">
           <Input
             id={id}
+            onFocus={handleFocus}
             name={name}
-            className={cn(className, showSteps && "pr-8")}
+            // className={cn(className, showSteps && "pr-8")}
+            className={cn(className)}
             pattern={isBigInt ? regex.toString() : pattern?.toString()}
             type="text"
             inputMode="numeric"
@@ -111,9 +116,17 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           {showSteps && (
             <div className="absolute inset-y-2 right-3 flex flex-col justify-center">
               <button
+                aria-label="Increment"
                 disabled={canIncrement}
+                onMouseDown={(e) => e.preventDefault()}
                 type="button"
-                onClick={(e) => stepValueHandler(e, "increment")}
+                onClick={(e) => {
+                  console.log("buttonRef", buttonRef.current);
+                  stepValueHandler(e, "increment");
+                  if (buttonRef.current) {
+                    buttonRef.current.focus();
+                  }
+                }}
               >
                 <Icon
                   size={10}
@@ -125,9 +138,16 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                 />
               </button>
               <button
+                aria-label="Decrement"
+                onMouseDown={(e) => e.preventDefault()}
                 disabled={canDecrement}
                 type="button"
-                onClick={(e) => stepValueHandler(e, "decrement")}
+                onClick={(e) => {
+                  stepValueHandler(e, "decrement");
+                  if (buttonRef.current) {
+                    buttonRef.current.focus();
+                  }
+                }}
               >
                 <Icon
                   size={10}
