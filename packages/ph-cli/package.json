@@ -1,6 +1,6 @@
 {
-  "name": "ph-cmd",
-  "version": "0.20.0",
+  "name": "@powerhousedao/ph-cli",
+  "version": "0.15.6",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -10,7 +10,7 @@
     "access": "public"
   },
   "bin": {
-    "ph": "dist/cli.js"
+    "ph-cli": "dist/cli.js"
   },
   "exports": {
     ".": "./dist/index.js",
