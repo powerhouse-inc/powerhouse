@@ -254,7 +254,7 @@ describe("NumberField", () => {
       />,
     );
     const input = screen.getByRole("spinbutton");
-    await user.click(input); // Simulate click on the input
+    await user.click(input);
     // Ensure that the input has focus
     expect(input).toHaveFocus();
 
@@ -284,7 +284,7 @@ describe("NumberField", () => {
       />,
     );
     const input = screen.getByRole("spinbutton");
-    await user.click(input); // Simulate click on the input
+    await user.click(input);
     // Ensure that the input has focus
     expect(input).toHaveFocus();
 
@@ -312,7 +312,7 @@ describe("NumberField", () => {
       />,
     );
     const input = screen.getByRole("spinbutton");
-    await user.click(input); // Simulate click on the input
+    await user.click(input);
     // Ensure that the input has focus
     expect(input).toHaveFocus();
 

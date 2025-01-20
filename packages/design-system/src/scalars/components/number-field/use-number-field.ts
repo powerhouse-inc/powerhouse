@@ -13,6 +13,7 @@ interface UseNumberFieldProps {
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   trailingZeros?: boolean;
   precision?: number;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 export const useNumberField = ({
@@ -25,6 +26,7 @@ export const useNumberField = ({
   onBlur,
   trailingZeros = false,
   precision = 0,
+  onFocus,
 }: UseNumberFieldProps) => {
   const [isFocus, setIsFocus] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -88,6 +90,7 @@ export const useNumberField = ({
     e: React.MouseEvent<HTMLButtonElement>,
     operation: "increment" | "decrement",
   ) => {
+    e.preventDefault();
     let newValue: number | bigint;
 
     if (isBigInt) {
@@ -176,6 +179,7 @@ export const useNumberField = ({
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     e.preventDefault();
     setIsFocus(true);
+    onFocus?.(e);
   };
 
   return {

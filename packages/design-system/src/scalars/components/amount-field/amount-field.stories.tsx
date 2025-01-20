@@ -160,10 +160,6 @@ const meta = {
   },
 
   args: {
-    errors: [],
-    warnings: [],
-    allowedTokens: [],
-    allowedCurrencies: [],
     name: "amount-field",
   },
 } satisfies Meta<typeof AmountField>;
@@ -180,10 +176,8 @@ export const Default: Story = {
     placeholder: "0",
     label: "Enter Amount and Select Currency",
     name: "amount",
-    step: 0,
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
-    currencyPosition: "right",
     value: {
       amount: undefined,
       currency: "USD",
@@ -196,10 +190,8 @@ export const WithValue: Story = {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
-    step: 0,
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
-    currencyPosition: "right",
     value: {
       currency: "USD",
       amount: 100,
@@ -213,7 +205,6 @@ export const WithAmount: Story = {
     name: "amount",
     type: "Amount",
     value: 345,
-    step: 0,
   },
 };
 export const CurrencyIcon: Story = {
@@ -228,7 +219,6 @@ export const CurrencyIcon: Story = {
       BTC: IconComponent("Briefcase"),
       ETH: IconComponent("Briefcase"),
     },
-    currencyPosition: "right",
     value: {
       amount: 3454564564 as unknown as bigint,
       currency: "BTC",
@@ -241,10 +231,9 @@ export const WithToken: Story = {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     name: "amount",
-    step: 0,
+
     type: "AmountCurrencyCrypto",
     allowedTokens: ["BTC", "ETH", "USDT"],
-    currencyPosition: "right",
     value: {
       amount: 12321312 as unknown as bigint,
       currency: "BTC",
@@ -259,7 +248,6 @@ export const WithValuePercent: Story = {
     name: "amount",
     type: "AmountPercentage",
     value: 9,
-    step: 0,
   },
 };
 export const Disable: Story = {
@@ -274,7 +262,6 @@ export const Disable: Story = {
       amount: 9,
       currency: "USD",
     },
-    step: 0,
   },
 };
 
@@ -284,13 +271,11 @@ export const WithValueUniversalAmountCurrency: Story = {
     label: "Label",
     placeholder: "Enter Amount",
     type: "AmountCurrencyUniversal",
-    currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
 
     value: {
       amount: 2324234,
       currency: "USD",
     },
-    step: 0,
   },
 };

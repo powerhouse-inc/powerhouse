@@ -18,6 +18,7 @@ export interface NumberFieldProps extends InputNumberProps {
   defaultValue?: number | bigint;
   className?: string;
   pattern?: RegExp;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   (
@@ -40,6 +41,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       trailingZeros = false,
       numericType = "Float",
       precision = 0,
+      onFocus,
       ...props
     },
     ref,
@@ -69,6 +71,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       onBlur,
       trailingZeros,
       precision,
+      onFocus,
     });
 
     return (
@@ -89,8 +92,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
             id={id}
             onFocus={handleFocus}
             name={name}
-            // className={cn(className, showSteps && "pr-8")}
-            className={cn(className)}
+            className={cn("pr-8", className)}
             pattern={isBigInt ? regex.toString() : pattern?.toString()}
             type="text"
             inputMode="numeric"
@@ -121,7 +123,6 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                 onMouseDown={(e) => e.preventDefault()}
                 type="button"
                 onClick={(e) => {
-                  console.log("buttonRef", buttonRef.current);
                   stepValueHandler(e, "increment");
                   if (buttonRef.current) {
                     buttonRef.current.focus();
