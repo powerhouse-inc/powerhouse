@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { SidebarItem } from "./sidebar-item";
 import { useSidebar } from "./sidebar-provider";
+import { cn } from "@/scalars/lib";
+import { Icon } from "@/powerhouse";
 
 interface SidebarContentAreaProps {
   allowPinning?: boolean;
@@ -11,10 +13,10 @@ export const SidebarContentArea = ({
 }: SidebarContentAreaProps) => {
   const { state, searchResults, activeSearchIndex } = useSidebar();
   const contentAreaRef = useRef<HTMLDivElement>(null);
-  const items =
-    state.pinnedItems.length > 0
-      ? (state.pinnedItems[state.pinnedItems.length - 1].childrens ?? [])
-      : state.items;
+  const hasPinnedItems = state.pinnedItems.length > 0 && allowPinning;
+  const items = hasPinnedItems
+    ? (state.pinnedItems[state.pinnedItems.length - 1].childrens ?? [])
+    : state.items;
 
   // scroll into view when navigating between search results
   useEffect(() => {
@@ -38,17 +40,27 @@ export const SidebarContentArea = ({
   return (
     <div
       ref={contentAreaRef}
-      className="flex flex-1 flex-col gap-1 overflow-y-auto p-2"
+      className={cn(
+        "flex flex-1 flex-col gap-1 overflow-y-auto p-2",
+        hasPinnedItems && "pt-0.5",
+      )}
     >
-      {items.map((item) => (
-        <SidebarItem
-          key={item.id}
-          id={item.id}
-          title={item.title}
-          childrens={item.childrens}
-          allowPinning={allowPinning}
-        />
-      ))}
+      {items.length === 0 ? (
+        <div className="flex max-w-full items-center gap-2 p-2 text-sm leading-5 text-gray-400">
+          <Icon name="TreeViewSlash" size={16} className="min-w-4" />
+          <span className="truncate">This node is empty</span>
+        </div>
+      ) : (
+        items.map((item) => (
+          <SidebarItem
+            key={item.id}
+            id={item.id}
+            title={item.title}
+            childrens={item.childrens}
+            allowPinning={allowPinning}
+          />
+        ))
+      )}
     </div>
   );
 };
