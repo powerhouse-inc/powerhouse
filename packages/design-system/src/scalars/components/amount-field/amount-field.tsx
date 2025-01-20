@@ -90,6 +90,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
       isBigInt,
       handleIsInputFocused,
       isAmount,
+      inputFocused,
     } = useAmountField({
       value,
       defaultValue,
@@ -176,7 +177,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               ref={ref}
               {...(numberProps || {})}
             />
-            {isPercent && step === 0 && (
+            {isPercent && !inputFocused && (
               <span
                 className={cn(
                   "pointer-events-none absolute inset-y-0 right-2 ml-2 flex items-center",

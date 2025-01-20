@@ -8,6 +8,8 @@ export * from "./fragments";
 export * from "./id-field";
 export * from "./number-field";
 export * from "./phid-field";
+export * from "./sidebar";
+export * from "./sidebar/subcomponents/sidebar-provider";
 export * from "./string-field";
 export * from "./types";
 export * from "./url-field";

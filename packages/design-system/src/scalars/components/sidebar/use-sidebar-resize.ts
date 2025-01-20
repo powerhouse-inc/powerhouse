@@ -15,9 +15,18 @@ export const useSidebarResize = ({
   const [sidebarWidth, setSidebarWidth] = useState(defaultWidth);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
+  // collapse/expand sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarOpen(!isSidebarOpen);
+  }, [isSidebarOpen]);
+
+  // resize sidebar
   const startResizing = useCallback(() => {
-    setIsResizing(true);
-  }, []);
+    if (isSidebarOpen) {
+      setIsResizing(true);
+    }
+  }, [isSidebarOpen]);
 
   const stopResizing = useCallback(() => {
     setIsResizing(false);
@@ -51,5 +60,7 @@ export const useSidebarResize = ({
     sidebarWidth,
     startResizing,
     isResizing,
+    isSidebarOpen,
+    handleToggleSidebar,
   };
 };

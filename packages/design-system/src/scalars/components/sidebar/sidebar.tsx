@@ -3,11 +3,11 @@ import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
 import { SidebarHeader } from "./subcomponents/sidebar-header";
 import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
 import { SidebarSearch } from "./subcomponents/sidebar-search";
-import { SidebarSeparator } from "./subcomponents/sidebar-separator";
 import { SidebarNode } from "./types";
 import { useSidebar } from "./subcomponents/sidebar-provider";
 import { useSidebarResize } from "./use-sidebar-resize";
 import { cn } from "@/scalars/lib";
+import { Icon } from "@/powerhouse";
 
 export interface SidebarProps {
   value: string; // TODO: define the type
@@ -58,17 +58,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   resizable = true,
   showSearchBar = true,
 }) => {
-  const { sidebarRef, sidebarWidth, startResizing, isResizing } =
-    useSidebarResize({
-      defaultWidth: 300,
-      minWidth: 100,
-      maxWidth: 650,
-    });
+  const {
+    sidebarRef,
+    sidebarWidth,
+    startResizing,
+    isResizing,
+    isSidebarOpen,
+    handleToggleSidebar,
+  } = useSidebarResize({
+    defaultWidth: 300,
+    minWidth: 100,
+    maxWidth: 650,
+  });
 
   const {
     state: { pinnedItems },
     setItems,
   } = useSidebar();
+  // sync param nodes with provider state if privided
   useEffect(() => {
     if (nodes) {
       setItems(nodes);
@@ -78,36 +85,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       ref={sidebarRef}
-      // TODO: move the variable somewhere else where it fits better
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      style={{ "--system-sidebar-width": `${sidebarWidth}px` }}
+      style={{
+        // TODO: move the variable somewhere else where it fits better
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        "--system-sidebar-width": `${isSidebarOpen ? sidebarWidth : 8}px`,
+      }}
       className={cn(
-        "group peer relative flex h-svh max-h-screen w-[--system-sidebar-width] flex-col bg-gray-50 shadow-lg",
+        "group peer relative flex h-svh max-h-screen w-[--system-sidebar-width] flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear",
       )}
     >
-      <SidebarHeader
-        sidebarTitle={sidebarTitle}
-        sidebarIcon={sidebarIcon}
-        enableMacros={enableMacros}
-      />
-      {allowPinning && pinnedItems.length > 0 && (
+      {isSidebarOpen && (
         <>
-          <SidebarPinningArea />
-          <SidebarSeparator />
+          <SidebarHeader
+            sidebarTitle={sidebarTitle}
+            sidebarIcon={sidebarIcon}
+            enableMacros={enableMacros}
+          />
+
+          {allowPinning && pinnedItems.length > 0 && <SidebarPinningArea />}
+          <SidebarContentArea allowPinning={allowPinning} />
+          {showSearchBar && <SidebarSearch />}
         </>
       )}
-      <SidebarContentArea allowPinning={allowPinning} />
-      {showSearchBar && <SidebarSearch />}
 
       {resizable && (
         <div
           className={cn(
-            "absolute right-0 top-0 h-full w-px cursor-ew-resize select-none transition-colors hover:bg-gray-500",
+            "group/sidebar-resizer absolute right-0 top-0 h-full w-px cursor-ew-resize select-none transition-colors hover:bg-gray-500",
             isResizing && "bg-blue-500",
+            !isSidebarOpen && "bg-gray-300",
           )}
           onMouseDown={startResizing}
-        />
+        >
+          <button
+            type="button"
+            className={cn(
+              "absolute right-0 top-14 size-4 translate-x-1/2 rounded-full bg-gray-500",
+              "opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100",
+            )}
+            onClick={handleToggleSidebar}
+          >
+            <Icon
+              name="Caret"
+              size={16}
+              className={cn("text-gray-50", {
+                "-rotate-180": isSidebarOpen,
+              })}
+            />
+          </button>
+        </div>
       )}
     </aside>
   );
