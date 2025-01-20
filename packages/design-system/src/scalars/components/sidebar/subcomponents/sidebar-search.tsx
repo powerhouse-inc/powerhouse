@@ -2,14 +2,34 @@ import { Icon } from "@/index";
 import { Input } from "../../fragments";
 import { useCallback, useRef } from "react";
 import { useSidebar } from "./sidebar-provider";
+import { cn } from "@/scalars/lib/utils";
 
 export const SidebarSearch = () => {
-  const { changeSearchTerm, searchTerm } = useSidebar();
+  const {
+    changeSearchTerm,
+    searchTerm,
+    searchLoading,
+    searchResults,
+    activeSearchIndex,
+    nextSearchResult,
+    previousSearchResult,
+  } = useSidebar();
   const ref = useRef<HTMLDivElement>(null);
 
   const handleReset = useCallback(() => {
     changeSearchTerm("");
   }, [changeSearchTerm]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "ArrowDown") {
+        nextSearchResult();
+      } else if (e.key === "ArrowUp") {
+        previousSearchResult();
+      }
+    },
+    [nextSearchResult, previousSearchResult],
+  );
 
   return (
     <div className="w-full border-t border-gray-300 p-2">
@@ -17,6 +37,7 @@ export const SidebarSearch = () => {
         <Input
           value={searchTerm}
           onChange={(e) => changeSearchTerm(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Search"
           className="w-full pl-8"
           style={{
@@ -31,15 +52,35 @@ export const SidebarSearch = () => {
         {searchTerm && (
           <div
             ref={ref}
-            className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-2"
+            className="absolute right-2 top-1/2 flex -translate-y-1/2 select-none items-center gap-2"
           >
-            <div className="text-xs">
-              <span className="text-gray-700">12</span>
-              <span className="text-gray-500">/16</span>
-            </div>
+            {searchLoading ? (
+              <div className="h-4 w-6 animate-pulse rounded-sm bg-gray-200" />
+            ) : (
+              <div className="text-xs">
+                {searchResults.length > 0 ? (
+                  <>
+                    <span className="text-gray-700">
+                      {activeSearchIndex + 1}
+                    </span>
+                    <span className="text-gray-500">
+                      /{searchResults.length}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-gray-500">0/0</span>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col text-gray-500">
-              <div className="cursor-pointer px-1 py-0.5 hover:text-gray-700">
+              <div
+                className={cn(
+                  "cursor-pointer px-1 py-0.5 hover:text-gray-700",
+                  activeSearchIndex === 0 && "cursor-not-allowed text-gray-200",
+                )}
+                onClick={previousSearchResult}
+              >
                 <svg
                   width="8"
                   height="6"
@@ -55,7 +96,14 @@ export const SidebarSearch = () => {
                 </svg>
               </div>
 
-              <div className="cursor-pointer px-1 py-0.5 hover:text-gray-700">
+              <div
+                className={cn(
+                  "cursor-pointer px-1 py-0.5 hover:text-gray-700",
+                  activeSearchIndex === searchResults.length - 1 &&
+                    "cursor-not-allowed text-gray-200",
+                )}
+                onClick={nextSearchResult}
+              >
                 <svg
                   width="8"
                   height="6"
