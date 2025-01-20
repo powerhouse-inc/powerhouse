@@ -62,7 +62,9 @@ export const useAmountField = ({
         ? (currentValue as AmountCurrencyFiat).currency
         : type === "AmountCurrencyCrypto"
           ? (currentValue as AmountCurrencyCrypto).currency
-          : undefined;
+          : type === "AmountCurrencyUniversal"
+            ? (currentValue as AmountCurrencyUniversal).currency
+            : undefined;
 
   const isBigInt =
     type === "AmountCurrencyCrypto" ||
