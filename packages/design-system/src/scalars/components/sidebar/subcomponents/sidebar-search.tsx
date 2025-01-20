@@ -31,12 +31,19 @@ export const SidebarSearch = () => {
     [nextSearchResult, previousSearchResult],
   );
 
+  const handleSeachTermChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      changeSearchTerm(e.target.value);
+    },
+    [changeSearchTerm],
+  );
+
   return (
     <div className="w-full border-t border-gray-300 p-2">
       <div className="relative">
         <Input
           value={searchTerm}
-          onChange={(e) => changeSearchTerm(e.target.value)}
+          onChange={handleSeachTermChange}
           onKeyDown={handleKeyDown}
           placeholder="Search"
           className="w-full pl-8"
