@@ -129,7 +129,7 @@ export function forwardPHCommand(
   }
 
   execSync(execCommand, {
-    stdio: "inherit",
+    stdio: ["ignore", "inherit", "ignore"],
     ...commandOptions,
   });
 }
