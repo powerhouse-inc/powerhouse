@@ -15,18 +15,22 @@ export const POWERHOUSE_GLOBAL_DIR = path.join(
 export const packageManagers = {
   bun: {
     execCommand: `bun ${PH_BIN} {{arguments}}`,
+    execScript: `bun {{arguments}}`,
     lockfile: "bun.lock",
   },
   pnpm: {
     execCommand: `pnpm exec ${PH_BIN} {{arguments}}`,
+    execScript: `pnpm {{arguments}}`,
     lockfile: "pnpm-lock.yaml",
   },
   yarn: {
     execCommand: `yarn ${PH_BIN} {{arguments}}`,
+    execScript: `yarn {{arguments}}`,
     lockfile: "yarn.lock",
   },
   npm: {
     execCommand: `npx ${PH_BIN} {{arguments}}`,
+    execScript: `npm run {{arguments}}`,
     lockfile: "package-lock.json",
   },
 };
@@ -107,10 +111,13 @@ export function forwardPHCommand(
   packageManager: PackageManager,
   projectPath: string,
   args: string,
+  isPackageScript: boolean,
   debug?: boolean,
 ) {
   const manager = packageManagers[packageManager];
-  const execCommand = manager.execCommand.replace("{{arguments}}", args);
+  const command = isPackageScript ? manager.execScript : manager.execCommand;
+
+  const execCommand = command.replace("{{arguments}}", args);
 
   const commandOptions = { cwd: projectPath };
 
