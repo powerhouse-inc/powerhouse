@@ -1,3 +1,14 @@
+## 1.10.0 (2025-01-21)
+
+### 🚀 Features
+
+- update ph-cli connect ver ([#884](https://github.com/powerhouse-inc/powerhouse/pull/884))
+- **ph-cli:** added configFile support ([#883](https://github.com/powerhouse-inc/powerhouse/pull/883))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.9.0 (2025-01-21)
 
 ### 🚀 Features
