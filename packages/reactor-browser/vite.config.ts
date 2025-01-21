@@ -11,7 +11,7 @@ const dependenciesRegex = dependencies.map(
   (dep) => new RegExp(`^${dep}(?:/.+)?$`),
 );
 const devDependencies = Object.keys(pkg.devDependencies);
-const devDependenciessRegex = devDependencies.map(
+const devDependenciesRegex = devDependencies.map(
   (dep) => new RegExp(`^${dep}(?:/.+)?$`),
 );
 
@@ -62,10 +62,10 @@ export default defineConfig(() => {
           // throw error if dev dependency is included in the bundle
           if (
             devDependencies.includes(id) ||
-            devDependenciessRegex.some((depMatcher) => depMatcher.test(id))
+            devDependenciesRegex.some((depMatcher) => depMatcher.test(id))
           ) {
             console.error(
-              `\x1b[31m\n\nDev dependency is being added to the bundle: ${id}\nMove it to dependencies or peerDependecies\n\n`,
+              `\x1b[31m\n\nDev dependency is being added to the bundle: ${id}\nMove it to dependencies.\n\n`,
             );
             process.exit(1);
           }

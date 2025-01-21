@@ -37,9 +37,6 @@
     "clean": "rimraf dist/",
     "clean:node_modules": "rimraf node_modules"
   },
-  "peerDependencies": {
-    "document-model": "workspace:*"
-  },
   "devDependencies": {
     "document-model": "workspace:*"
   }

@@ -28,10 +28,6 @@
     "graphql": "^16.9.0",
     "zod": "^3.23.8"
   },
-  "peerDependencies": {
-    "graphql": "^16.9.0",
-    "zod": "^3.23.8"
-  },
   "exports": {
     ".": {
       "types": "./dist/types/src/index.d.ts",
