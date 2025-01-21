@@ -12,6 +12,7 @@ import {
   getTokens,
   isNotSafeValue,
   isValidBigInt,
+  isValidNumberGreaterThanMaxSafeInteger,
 } from "./utils";
 import { isValidNumber } from "../number-field/number-field-validations";
 import { useMemo, useState } from "react";
@@ -70,21 +71,40 @@ export const useAmountField = ({
   const isBigInt =
     type === "AmountCurrencyCrypto" ||
     (type === "AmountCurrencyUniversal" &&
-      isValidBigInt(baseValue?.toString()));
+      isValidNumberGreaterThanMaxSafeInteger(baseValue?.toString()));
+
   const [inputFocused, setInputFocused] = useState(false);
 
   const rawAmountState = baseValue?.toString() ?? "";
-
-  // Get the value to display
   const displayValueAmountState = useMemo(() => {
     if (inputFocused) {
       return rawAmountState;
     }
-    // Check if baseValue is a valid number before formatting
-    if (!isValidNumber(baseValue)) {
-      // Return the value without formatting if not valid
-      return baseValue?.toString() ?? "";
+
+    if (
+      type === "Amount" ||
+      type === "AmountPercentage" ||
+      type === "AmountCurrencyFiat"
+    ) {
+      if (!isValidNumber(rawAmountState) || isNotSafeValue(rawAmountState)) {
+        // Return the value without formatting if not valid
+        return baseValue?.toString() ?? "";
+      }
     }
+    if (type === "AmountCurrencyCrypto") {
+      return baseValue?.toString();
+    }
+    if (type === "AmountCurrencyUniversal") {
+      if (isValidNumberGreaterThanMaxSafeInteger(rawAmountState)) {
+        //   // Return the value without formatting if not valid
+        return baseValue?.toString() ?? "";
+      }
+      if (!isValidNumber(rawAmountState) || isNotSafeValue(rawAmountState)) {
+        // Return the value without formatting if not valid
+        return baseValue?.toString() ?? "";
+      }
+    }
+    // Here its safe to format the value
     return displayValueAmount(
       baseValue?.toString() ?? "",
       precision,
@@ -93,11 +113,12 @@ export const useAmountField = ({
     );
   }, [
     inputFocused,
-    rawAmountState,
+    type,
     baseValue,
     precision,
     viewPrecision,
     trailingZeros,
+    rawAmountState,
   ]);
 
   const isPercent = type === "AmountPercentage";
@@ -173,20 +194,13 @@ export const useAmountField = ({
 
     if (type === "Amount" || type === "AmountPercentage") {
       const amountValue = inputValue === "" ? undefined : inputValue;
-      const newAmountValue =
-        amountValue === ""
-          ? undefined
-          : !isValidNumber(inputValue) || isNotSafeValue(inputValue)
-            ? inputValue
-            : Number(inputValue);
-
       // Create the event
       const nativeEvent = new Event("change", {
         bubbles: true,
         cancelable: true,
       });
       Object.defineProperty(nativeEvent, "target", {
-        value: { value: newAmountValue },
+        value: { value: amountValue },
         writable: false,
       });
       onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
@@ -271,12 +285,7 @@ export const useAmountField = ({
         onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
         return;
       }
-      const formatValue = displayValueAmount(
-        inputValue,
-        precision,
-        viewPrecision,
-        trailingZeros,
-      );
+
       // Avoid transformation if the value is not a number
       if (isNotSafeValue(inputValue)) {
         const newValue = {
@@ -286,7 +295,12 @@ export const useAmountField = ({
         onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
         return;
       }
-
+      const formatValue = displayValueAmount(
+        inputValue,
+        precision,
+        viewPrecision,
+        trailingZeros,
+      );
       // Update the state with the formatted value
       const newValue = {
         ...value,
@@ -296,6 +310,22 @@ export const useAmountField = ({
     }
 
     if (type === "AmountCurrencyCrypto" && typeof value === "object") {
+      if (!isValidBigInt(inputValue) || isNotSafeValue(inputValue)) {
+        const newValue = {
+          ...value,
+          amount: inputValue,
+        };
+        const nativeEvent = new Event("onBlur", {
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(nativeEvent, "target", {
+          value: { value: newValue },
+          writable: false,
+        });
+        onBlur?.(nativeEvent as unknown as React.FocusEvent<HTMLInputElement>);
+        return;
+      }
       const newValue = {
         ...value,
         amount: inputValue,
@@ -317,18 +347,28 @@ export const useAmountField = ({
         onBlur?.(nativeEvent as unknown as React.FocusEvent<HTMLInputElement>);
         return;
       }
+
+      // Avoid transformation if the value is not a number
+      if (isNotSafeValue(inputValue)) {
+        const newValue = inputValue;
+        const nativeEvent = new Event("onBlur", {
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(nativeEvent, "target", {
+          value: { value: newValue },
+          writable: false,
+        });
+
+        onBlur?.(nativeEvent as unknown as React.FocusEvent<HTMLInputElement>);
+        return;
+      }
       const formatValue = displayValueAmount(
         inputValue,
         precision,
         viewPrecision,
         trailingZeros,
       );
-      // Avoid transformation if the value is not a number
-      if (isNotSafeValue(inputValue)) {
-        const newValue = inputValue;
-        onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
-        return;
-      }
       const nativeEvent = new Event("onBlur", {
         bubbles: true,
         cancelable: true,
@@ -344,7 +384,10 @@ export const useAmountField = ({
 
     // Handle the blur event for AmountCurrencyUniversal
     if (type === "AmountCurrencyUniversal" && typeof value === "object") {
-      if (isValidBigInt(inputValue)) {
+      if (
+        isValidBigInt(inputValue) &&
+        isValidNumberGreaterThanMaxSafeInteger(inputValue)
+      ) {
         const formatValue = inputValue;
         const nativeEvent = new Event("onBlur", {
           bubbles: true,
@@ -371,7 +414,6 @@ export const useAmountField = ({
           value: { value: newValue },
           writable: false,
         });
-
         onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
         return;
       }

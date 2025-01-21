@@ -6,11 +6,9 @@ import {
   AmountCurrencyUniversal,
   AmountValue,
 } from "./types";
-import {
-  isInteger,
-  isValidNumber,
-} from "../number-field/number-field-validations";
+import { isValidNumber } from "../number-field/number-field-validations";
 import { ValidatorResult } from "@/scalars";
+import { isValidBigInt } from "./utils";
 
 const isAmountCurrencyFiat = (
   type: AmountFieldPropsGeneric["type"],
@@ -63,14 +61,14 @@ export const validateAmount =
       }
       return true;
     }
-    if (!isValidNumber(amount)) {
+    if (!isValidNumber(amount) && type !== "AmountCurrencyUniversal") {
       return "Value is not a valid number";
     }
     if (!allowNegative && amount < 0) {
       return "Value must be positive";
     }
     if (type === "AmountCurrencyCrypto") {
-      if (!isInteger(amount)) {
+      if (!isValidBigInt(amount.toString())) {
         return "Value is not an bigint";
       }
       return true;
