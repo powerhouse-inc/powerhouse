@@ -206,13 +206,14 @@ export class DriveSubgraph extends Subgraph {
         const dms = this.reactor.getDocumentModels();
         const dm = dms.find(
           ({ documentModel }: { documentModel: DocumentModelState }) =>
-            documentModel.id === document.documentType,
+            documentModel.id.replaceAll(" ", "") ===
+            document.documentType.replaceAll(" ", ""),
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
         const response = {
           ...document,
-          id,
+          id: id.replaceAll(" ", ""),
           revision: document.revision.global,
           state: document.state.global,
           operations: document.operations.global.map((op: Operation) => ({
@@ -223,7 +224,7 @@ export class DriveSubgraph extends Subgraph {
                 : JSON.stringify(op.input),
           })),
           initialState: document.initialState.state.global,
-          __typename: dm?.documentModel.name,
+          __typename: dm?.documentModel.name.replaceAll(" ", ""),
         };
         return response;
       },

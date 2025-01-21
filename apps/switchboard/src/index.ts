@@ -2,12 +2,13 @@ import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
+import { AtlasFeedbackIssues } from "@powerhousedao/atlas-feedback-issues/document-models";
 import { SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
 import { PrismaClient } from "@prisma/client";
 import { DocumentDriveServer } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorage } from "document-drive/storage/prisma";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+import * as DocumentDrivLib from "document-model-libs/document-drive";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
@@ -20,7 +21,7 @@ dotenv.config();
 // start document drive server with all available document models
 
 // Create a monolith express app for all subgraphs
-const app = express({});
+const app = express();
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 const main = async () => {
@@ -40,7 +41,8 @@ const main = async () => {
     const driveServer = new DocumentDriveServer(
       [
         DocumentModelLib,
-        ...Object.values(DocumentModelsLibs),
+        DocumentDrivLib,
+        AtlasFeedbackIssues,
       ] as DocumentModel[],
       storage,
       redisCache,
