@@ -1,3 +1,10 @@
+# [1.0.0-dev.188](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.187...v1.0.0-dev.188) (2025-01-21)
+
+
+### Features
+
+* fix load empty packages ([#643](https://github.com/powerhouse-inc/document-model-electron/issues/643)) ([c1300b3](https://github.com/powerhouse-inc/document-model-electron/commit/c1300b3b7ca8f876844bfa455184146bd4d3c702))
+
 # [1.0.0-dev.187](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.186...v1.0.0-dev.187) (2025-01-21)
 
 
