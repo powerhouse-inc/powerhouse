@@ -1,7 +1,6 @@
 import { PowerhouseConfig } from '@powerhousedao/config/powerhouse';
 import { Command } from 'commander';
 import fs from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { startServer, StartServerOptions } from './server';
 
@@ -11,7 +10,6 @@ export type Project = {
 };
 
 const IMPORT_SCRIPT_FILE = 'projects-import.js';
-const POWERHOUSE_GLOBAL_DIR = join(homedir(), '.ph');
 const projectRoot = process.cwd();
 
 const readJsonFile = (filePath: string): PowerhouseConfig | null => {
@@ -25,30 +23,21 @@ const readJsonFile = (filePath: string): PowerhouseConfig | null => {
     }
 };
 
-function mapProjects(projects: PowerhouseConfig['projects']): Project[] {
-    if (!projects) {
+function mapProjects(packages: PowerhouseConfig['packages']): Project[] {
+    if (!packages) {
         return [];
     }
 
-    return projects.map(project => ({
-        name: project.packageName,
-        path: project.global
-            ? join(
-                  POWERHOUSE_GLOBAL_DIR,
-                  'node_modules',
-                  project.packageName,
-                  'dist',
-                  'es',
-                  'index.js',
-              )
-            : join(
-                  projectRoot,
-                  'node_modules',
-                  project.packageName,
-                  'dist',
-                  'es',
-                  'index.js',
-              ),
+    return packages.map(pkg => ({
+        name: pkg.packageName,
+        path: join(
+            projectRoot,
+            'node_modules',
+            pkg.packageName,
+            'dist',
+            'es',
+            'index.js',
+        ),
     }));
 }
 
@@ -114,9 +103,9 @@ export function startConnectStudio(options: ConnectStudioOptions) {
 
         const configFileDir = dirname(options.configFile);
 
-        if (config.projects && config.projects.length > 0) {
-            const projects = mapProjects(config.projects);
-            generateImportSctipt(configFileDir, projects);
+        if (config.packages && config.packages.length > 0) {
+            const packages = mapProjects(config.packages);
+            generateImportSctipt(configFileDir, packages);
             process.env.LOAD_EXTERNAL_PROJECTS = 'true';
 
             serverOptions = {

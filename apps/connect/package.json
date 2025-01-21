@@ -70,7 +70,7 @@
         "@electron-forge/publisher-electron-release-server": "^6.2.1",
         "@electron-forge/publisher-github": "^7.2.0",
         "@playwright/test": "^1.41.2",
-        "@powerhousedao/config": "^1.7.0",
+        "@powerhousedao/config": "^1.9.0",
         "@powerhousedao/design-system": "^1.19.0",
         "@powerhousedao/scalars": "^1.16.0",
         "@semantic-release/changelog": "^6.0.3",
