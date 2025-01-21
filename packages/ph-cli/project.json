@@ -1,9 +1,0 @@
-{
-  "targets": {
-    "nx-release-publish": {
-      "options": {
-        "tag": "dev"
-      }
-    }
-  }
-}
