@@ -1,3 +1,10 @@
+# [1.0.0-dev.189](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.188...v1.0.0-dev.189) (2025-01-21)
+
+
+### Features
+
+* fix dynamic loading packages with npm ([#644](https://github.com/powerhouse-inc/document-model-electron/issues/644)) ([a9fe762](https://github.com/powerhouse-inc/document-model-electron/commit/a9fe762e043dc350d6bc500b7aacee78d411eeeb))
+
 # [1.0.0-dev.188](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.187...v1.0.0-dev.188) (2025-01-21)
 
 
