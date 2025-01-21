@@ -1,7 +1,6 @@
 import { Argument, Command } from "commander";
-import { exec, execSync, spawn } from "node:child_process";
+import { execSync } from "node:child_process";
 import { CommandActionType } from "../types.js";
-import pm2 from "pm2";
 const actions = ["start", "stop", "status", "list", "install", "save"];
 const services = ["reactor", "connect", "all"];
 
@@ -16,7 +15,7 @@ export const manageService: CommandActionType<[string, string]> = async (
 
     return;
   } else {
-    const app = service ? `--only  ${service}` : "";
+    const app = service !== "all" ? `--only  ${service}` : "";
     const response = execSync(
       `pm2 ${action} ${
         ["start", "stop", "list"].includes(action)
