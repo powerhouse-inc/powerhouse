@@ -1,3 +1,13 @@
+## 1.9.0 (2025-01-21)
+
+### 🚀 Features
+
+- update install command ([#881](https://github.com/powerhouse-inc/powerhouse/pull/881))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.8.0 (2025-01-21)
 
 ### 🚀 Features
