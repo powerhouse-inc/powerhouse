@@ -8,9 +8,15 @@ export type PowerhouseConfig = {
   interactive?: boolean;
   skipFormat?: boolean;
   watch?: boolean;
-  projects?: {
+  reactor?: {
+    port?: number;
+  };
+  studio?: {
+    port?: number;
+    openBrowser?: boolean;
+  };
+  packages?: {
     packageName: string;
-    global: boolean;
   }[];
 };
 

@@ -7,29 +7,9 @@ import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 
 import { CommandActionType } from "../types.js";
 
-const PH_BIN = "ph";
 const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 const SUPPORTED_PACKAGE_MANAGERS = ["npm", "yarn", "pnpm", "bun"];
 const POWERHOUSE_GLOBAL_DIR = path.join(homedir(), ".ph");
-const GLOBAL_CONFIG_PATH = path.join(
-  POWERHOUSE_GLOBAL_DIR,
-  POWERHOUSE_CONFIG_FILE,
-);
-const GLOBAL_PACKAGE_JSON_PATH = path.join(
-  POWERHOUSE_GLOBAL_DIR,
-  "package.json",
-);
-
-const defaultPackageJson = {
-  name: "global-powerhouse-env",
-  version: "1.0.0",
-  description: "",
-  author: "powerhouse",
-  license: "ISC",
-  dependencies: {
-    "document-model": "^2.15.0",
-  },
-};
 
 const packageManagers = {
   bun: {
@@ -95,17 +75,6 @@ export function findNodeProjectRoot(
   return findNodeProjectRoot(parentDir, pathValidation);
 }
 
-export function findGlobalPhPath() {
-  const command =
-    process.platform === "win32" ? `where ${PH_BIN}` : `which ${PH_BIN}`;
-
-  try {
-    return execSync(command, { encoding: "utf-8" }).trim();
-  } catch {
-    return null;
-  }
-}
-
 export function getPackageManagerFromPath(dir: string): PackageManager {
   const lowerCasePath = dir.toLowerCase();
 
@@ -142,14 +111,6 @@ export function getProjectInfo(debug?: boolean): ProjectInfo {
   const projectPath = findNodeProjectRoot(currentPath, isPowerhouseProject);
 
   if (!projectPath) {
-    const globalPath = findGlobalPhPath();
-
-    if (!globalPath) {
-      throw new Error(
-        "❌ Could not find a powerhouse project or a global ph-cmd installation",
-      );
-    }
-
     return {
       isGlobal: true,
       path: POWERHOUSE_GLOBAL_DIR,
@@ -165,12 +126,11 @@ export function getProjectInfo(debug?: boolean): ProjectInfo {
 export function installDependency(
   packageManager: PackageManager,
   dependencies: string[],
-  global = false,
-  projectPath?: string,
+  projectPath: string,
   workspace?: boolean,
 ) {
-  if (!global && !projectPath) {
-    console.error("Project path is required for local installations");
+  if (!fs.existsSync(projectPath)) {
+    throw new Error(`Project path not found: ${projectPath}`);
   }
 
   const manager = packageManagers[packageManager];
@@ -192,73 +152,28 @@ export function installDependency(
   });
 }
 
-export function createGlobalPHProject(debug = false) {
-  if (!fs.existsSync(POWERHOUSE_GLOBAL_DIR)) {
-    if (debug) {
-      console.log(">>> Creating a new global powerhouse project");
-    }
-    fs.mkdirSync(POWERHOUSE_GLOBAL_DIR, { recursive: true });
-  }
+export function updateConfigFile(dependencies: string[], projectPath: string) {
+  const configPath = path.join(projectPath, POWERHOUSE_CONFIG_FILE);
 
-  if (!fs.existsSync(GLOBAL_PACKAGE_JSON_PATH)) {
-    if (debug) {
-      console.log(">>> Creating a new global package.json file");
-    }
-    fs.writeFileSync(
-      GLOBAL_PACKAGE_JSON_PATH,
-      JSON.stringify(defaultPackageJson, null, 2),
-    );
-  }
-
-  if (!fs.existsSync(GLOBAL_CONFIG_PATH)) {
-    if (debug) {
-      console.log(">>> Creating a new global config file");
-    }
-    fs.writeFileSync(GLOBAL_CONFIG_PATH, "{}");
-  }
-}
-
-export function updateConfigFile(
-  dependencies: string[],
-  global: boolean,
-  projectPath: string,
-  debug?: boolean,
-) {
-  const configPath = global
-    ? GLOBAL_CONFIG_PATH
-    : path.join(projectPath, POWERHOUSE_CONFIG_FILE);
-
-  if (!global && !fs.existsSync(configPath)) {
+  if (!fs.existsSync(configPath)) {
     throw new Error(
-      `powerhouse.config.json file not found. global: ${global}; projectPath: ${projectPath}`,
+      `powerhouse.config.json file not found. projectPath: ${projectPath}`,
     );
-  }
-
-  // Create an empty config file if it doesn't exist (only for global)
-  if (global && !fs.existsSync(configPath)) {
-    if (debug) {
-      console.log(">>> Creating a new global config file: ", configPath);
-    }
-
-    // create empty json config file in config path and create missing directories
-    fs.mkdirSync(path.dirname(configPath), { recursive: true });
-    fs.writeFileSync(configPath, "{}");
   }
 
   const config = JSON.parse(
     fs.readFileSync(configPath, "utf-8"),
   ) as PowerhouseConfig;
 
-  const mappedProjects: PowerhouseConfig["projects"] = dependencies.map(
+  const mappedPackages: PowerhouseConfig["packages"] = dependencies.map(
     (dep) => ({
       packageName: dep,
-      global,
     }),
   );
 
   const updatedConfig: PowerhouseConfig = {
     ...config,
-    projects: [...(config.projects ?? []), ...mappedProjects],
+    packages: [...(config.packages || []), ...mappedPackages],
   };
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
@@ -299,16 +214,8 @@ export const install: CommandActionType<
   }
 
   const isGlobal = options.global || projectInfo.isGlobal;
-  const getPackageManager = isGlobal
-    ? getPackageManagerFromPath
-    : getPackageManagerFromLockfile;
-
   const packageManager =
-    options.packageManager || getPackageManager(projectInfo.path);
-
-  if (isGlobal) {
-    createGlobalPHProject(options.debug);
-  }
+    options.packageManager || getPackageManagerFromLockfile(projectInfo.path);
 
   if (options.debug) {
     console.log("\n>>> installDependency arguments:");
@@ -324,7 +231,6 @@ export const install: CommandActionType<
     installDependency(
       packageManager as PackageManager,
       dependencies,
-      isGlobal,
       projectInfo.path,
       options.workspace,
     );
@@ -337,13 +243,12 @@ export const install: CommandActionType<
   if (options.debug) {
     console.log("\n>>> updateConfigFile arguments:");
     console.log(">>> dependencies", dependencies);
-    console.log(">>> isGlobal", isGlobal);
     console.log(">>> projectPath", projectInfo.path);
   }
 
   try {
     console.log("⚙️ Updating powerhouse config file...");
-    updateConfigFile(dependencies, isGlobal, projectInfo.path, options.debug);
+    updateConfigFile(dependencies, projectInfo.path);
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");
