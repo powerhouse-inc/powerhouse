@@ -1,3 +1,10 @@
+# [1.0.0-dev.186](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.185...v1.0.0-dev.186) (2025-01-21)
+
+
+### Features
+
+* update dynamic loading packages ([#641](https://github.com/powerhouse-inc/document-model-electron/issues/641)) ([3b964b2](https://github.com/powerhouse-inc/document-model-electron/commit/3b964b26b60297a3167a712db27692a88c6d7719))
+
 # [1.0.0-dev.185](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.184...v1.0.0-dev.185) (2025-01-14)
 
 
