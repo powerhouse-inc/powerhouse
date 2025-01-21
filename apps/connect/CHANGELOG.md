@@ -1,3 +1,10 @@
+# [1.0.0-dev.187](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.186...v1.0.0-dev.187) (2025-01-21)
+
+
+### Features
+
+* read port and openBrowser from config file ([#642](https://github.com/powerhouse-inc/document-model-electron/issues/642)) ([11439fc](https://github.com/powerhouse-inc/document-model-electron/commit/11439fc527be0270744a6e33c6f30d6bc5b26744))
+
 # [1.0.0-dev.186](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.185...v1.0.0-dev.186) (2025-01-21)
 
 
