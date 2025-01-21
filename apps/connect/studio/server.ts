@@ -108,6 +108,7 @@ export async function startServer(options: StartServerOptions = {}) {
         },
         resolve: {
             alias: {
+                jszip: 'jszip/dist/jszip.min.js',
                 // Resolve to the node_modules in the project root
                 '@powerhousedao/design-system/scalars': join(
                     projectRoot,
