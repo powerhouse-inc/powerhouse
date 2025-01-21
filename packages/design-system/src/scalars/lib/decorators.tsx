@@ -16,11 +16,17 @@ function _isValidRegex(pattern: unknown): boolean {
   }
 }
 
+interface StoryFormParameters {
+  form?: {
+    defaultValues?: Record<string, any>;
+  };
+}
+
 export const withForm: Decorator = (Story, context) => {
   const formRef = useRef<UseFormReturn>(null);
   const [showFormButtons, setShowFormButtons] = useState<boolean>(false);
   const checkboxId = useId();
-  const { viewMode } = context;
+  const { viewMode, parameters } = context;
   const isDocs = viewMode === "docs";
 
   const onSubmit = useCallback((data: any) => {
@@ -46,11 +52,12 @@ export const withForm: Decorator = (Story, context) => {
     const defaultValues = Object.fromEntries(
       Object.keys(formRef.current?.control._fields ?? {}).map((fieldName) => [
         fieldName,
-        "",
+        (parameters as StoryFormParameters).form?.defaultValues?.[fieldName] ??
+          "",
       ]),
     );
     formRef.current?.reset(defaultValues);
-  }, []);
+  }, [parameters]);
 
   const onShowFormButtonsChange = useCallback((checked: boolean) => {
     setShowFormButtons(checked);
