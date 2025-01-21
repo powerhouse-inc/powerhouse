@@ -1,3 +1,10 @@
+# [1.0.0-dev.190](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.189...v1.0.0-dev.190) (2025-01-21)
+
+
+### Bug Fixes
+
+* listen on all network interfaces ([06d7e90](https://github.com/powerhouse-inc/document-model-electron/commit/06d7e9041ecd5650bf3183f01ef7754f83dc5194))
+
 # [1.0.0-dev.189](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.188...v1.0.0-dev.189) (2025-01-21)
 
 
