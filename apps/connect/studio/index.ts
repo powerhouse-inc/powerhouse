@@ -109,8 +109,12 @@ export function startConnectStudio(options: ConnectStudioOptions) {
             process.env.LOAD_EXTERNAL_PROJECTS = 'true';
 
             serverOptions = {
+                enableExternalProjects: true,
                 projectsImportPath: resolve(configFileDir, IMPORT_SCRIPT_FILE),
             };
+        } else {
+            process.env.LOAD_EXTERNAL_PROJECTS = 'false';
+            serverOptions = { enableExternalProjects: false };
         }
 
         if (config.documentModelsDir) {
