@@ -5,7 +5,15 @@ import { fileURLToPath } from 'node:url';
 import { createLogger, createServer, InlineConfig, Plugin } from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { backupIndexHtml, removeBase64EnvValues } from './helpers';
-import { getStudioConfig, viteConnectDevStudioPlugin } from './vite-plugin';
+import {
+    getStudioConfig,
+    viteConnectDevStudioPlugin,
+    viteLoadExternalProjects,
+} from './vite-plugin';
+
+export type StartServerOptions = {
+    projectsImportPath?: string;
+};
 
 const studioDirname = fileURLToPath(new URL('.', import.meta.url));
 const appPath = join(studioDirname, '..');
@@ -64,7 +72,7 @@ function runShellScriptPlugin(scriptPath: string): Plugin {
     };
 }
 
-export async function startServer() {
+export async function startServer(options: StartServerOptions = {}) {
     // exits if node version is not compatible
     ensureNodeVersion();
 
@@ -124,6 +132,7 @@ export async function startServer() {
         },
         plugins: [
             viteConnectDevStudioPlugin(true),
+            viteLoadExternalProjects(true, options.projectsImportPath),
             viteEnvs({
                 declarationFile: join(studioDirname, '../.env'),
                 computedEnv: studioConfig,

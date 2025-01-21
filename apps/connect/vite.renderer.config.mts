@@ -9,7 +9,11 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 import pkg from './package.json';
-import { externalIds, viteConnectDevStudioPlugin } from './studio/vite-plugin';
+import {
+    externalIds,
+    viteConnectDevStudioPlugin,
+    viteLoadExternalProjects,
+} from './studio/vite-plugin';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
 const buildStudioExternals = isBuildStudio
@@ -65,6 +69,7 @@ export default defineConfig(({ mode }) => {
 
     const plugins: PluginOption[] = [
         viteConnectDevStudioPlugin(false, env),
+        viteLoadExternalProjects(),
         react({
             include: 'src/**/*.tsx',
             babel: {

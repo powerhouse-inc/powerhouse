@@ -1,12 +1,18 @@
+import { PowerhouseConfig } from '@powerhousedao/config/powerhouse';
 import { Command } from 'commander';
 import fs from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { startServer } from './server';
+import { startServer, StartServerOptions } from './server';
 
-type PowerhouseConfig = {
-    documentModelsDir?: string;
-    editorsDir?: string;
+export type Project = {
+    name: string;
+    path: string;
 };
+
+const IMPORT_SCRIPT_FILE = 'projects-import.js';
+const POWERHOUSE_GLOBAL_DIR = join(homedir(), '.ph');
+const projectRoot = process.cwd();
 
 const readJsonFile = (filePath: string): PowerhouseConfig | null => {
     try {
@@ -19,6 +25,33 @@ const readJsonFile = (filePath: string): PowerhouseConfig | null => {
     }
 };
 
+function mapProjects(projects: PowerhouseConfig['projects']): Project[] {
+    if (!projects) {
+        return [];
+    }
+
+    return projects.map(project => ({
+        name: project.packageName,
+        path: project.global
+            ? join(
+                  POWERHOUSE_GLOBAL_DIR,
+                  'node_modules',
+                  project.packageName,
+                  'dist',
+                  'es',
+                  'index.js',
+              )
+            : join(
+                  projectRoot,
+                  'node_modules',
+                  project.packageName,
+                  'dist',
+                  'es',
+                  'index.js',
+              ),
+    }));
+}
+
 export type ConnectStudioOptions = {
     port?: string;
     host?: boolean;
@@ -27,7 +60,46 @@ export type ConnectStudioOptions = {
     localDocuments?: string;
 };
 
+export function generateImportSctipt(outputPath: string, projects: Project[]) {
+    const importScriptFilePath = join(outputPath, IMPORT_SCRIPT_FILE);
+
+    // create file if it doesn't exist, also create path if it doesn't exist (recursive)
+    if (!fs.existsSync(outputPath)) {
+        fs.mkdirSync(outputPath, { recursive: true });
+    }
+
+    if (!fs.existsSync(importScriptFilePath)) {
+        fs.writeFileSync(importScriptFilePath, '');
+    }
+
+    const imports: string[] = [];
+    const moduleNames: string[] = [];
+    let counter = 0;
+
+    for (const project of projects) {
+        // check if file path exists first
+        if (fs.existsSync(project.path)) {
+            const moduleName = `module${counter}`;
+            moduleNames.push(moduleName);
+            imports.push(`import * as ${moduleName} from '${project.path}';`);
+            counter++;
+        } else {
+            console.error(
+                `Can not import project: ${project.name}, file not found: ${project.path}. Did you build the project or install it?`,
+            );
+        }
+    }
+
+    const exportStatement = `export default [${moduleNames.join(', ')}];`;
+
+    const fileContent = `${imports.join('\n')}\n\n${exportStatement}`;
+
+    fs.writeFileSync(importScriptFilePath, fileContent);
+}
+
 export function startConnectStudio(options: ConnectStudioOptions) {
+    let serverOptions: StartServerOptions = {};
+
     if (options.port) {
         process.env.PORT = options.port;
     }
@@ -41,6 +113,16 @@ export function startConnectStudio(options: ConnectStudioOptions) {
         if (!config) return;
 
         const configFileDir = dirname(options.configFile);
+
+        if (config.projects && config.projects.length > 0) {
+            const projects = mapProjects(config.projects);
+            generateImportSctipt(configFileDir, projects);
+            process.env.LOAD_EXTERNAL_PROJECTS = 'true';
+
+            serverOptions = {
+                projectsImportPath: resolve(configFileDir, IMPORT_SCRIPT_FILE),
+            };
+        }
 
         if (config.documentModelsDir) {
             process.env.LOCAL_DOCUMENT_MODELS = isAbsolute(
@@ -65,7 +147,7 @@ export function startConnectStudio(options: ConnectStudioOptions) {
         process.env.LOCAL_DOCUMENT_MODELS = options.localDocuments;
     }
 
-    return startServer().catch(error => {
+    return startServer(serverOptions).catch(error => {
         throw error;
     });
 }

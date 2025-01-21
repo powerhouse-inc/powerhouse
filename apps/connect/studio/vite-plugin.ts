@@ -179,6 +179,7 @@ export function viteConnectDevStudioPlugin(
     env?: Record<string, string>,
 ): PluginOption[] {
     const studioConfig = getStudioConfig(env);
+
     const importKeys = [
         LOCAL_DOCUMENT_MODELS_IMPORT,
         LOCAL_DOCUMENT_EDITORS_IMPORT,
@@ -257,3 +258,68 @@ export function viteConnectDevStudioPlugin(
         },
     ];
 }
+
+export const viteLoadExternalProjects = (
+    enabled = false,
+    _projectsImportPath?: string,
+): PluginOption[] => {
+    const moduleName = 'EXTERNAL_PROJECTS';
+    const importKeys = [moduleName];
+
+    const projectsImportPath = normalizePath(_projectsImportPath || '');
+
+    return [
+        {
+            name: 'vite-load-projects',
+            enforce: 'pre',
+            config(config) {
+                if (!enabled) return;
+
+                if (!projectsImportPath || projectsImportPath === '') {
+                    return;
+                }
+
+                // adds the provided paths to be resolved by vite
+                const resolve = config.resolve ?? {};
+                const alias = resolve.alias;
+                let resolvedAlias: AliasOptions | undefined;
+                if (Array.isArray(alias)) {
+                    const arrayAlias = [...(alias as Alias[])];
+
+                    arrayAlias.push({
+                        find: moduleName,
+                        replacement: projectsImportPath,
+                    });
+
+                    resolvedAlias = arrayAlias;
+                } else if (typeof alias === 'object') {
+                    resolvedAlias = {
+                        ...alias,
+                        [moduleName]: projectsImportPath,
+                    };
+                } else if (typeof alias === 'undefined') {
+                    resolvedAlias = { [moduleName]: projectsImportPath };
+                } else {
+                    console.error('resolve.alias was not recognized');
+                }
+
+                if (resolvedAlias) {
+                    resolve.alias = resolvedAlias;
+                    config.resolve = resolve;
+                }
+
+                console.log('resolvedAlias', config.resolve?.alias);
+            },
+            resolveId: id => {
+                // if the path was not provided then declares the local
+                // imports as external so that vite ignores them
+                if (importKeys.includes(id)) {
+                    return {
+                        id,
+                        external: true,
+                    };
+                }
+            },
+        },
+    ];
+};

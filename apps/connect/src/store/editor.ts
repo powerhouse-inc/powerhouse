@@ -2,14 +2,25 @@ import type { ExtendedEditor } from 'document-model-libs';
 import { atom, useAtomValue } from 'jotai';
 import { unwrap } from 'jotai/utils';
 import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
+import { ExternalProjectModule, loadPackages } from './document-model';
 
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
+const LOAD_EXTERNAL_PROJECTS = import.meta.env.LOAD_EXTERNAL_PROJECTS;
 
 async function loadEditors() {
     const baseEditorsModules = (await import(
         'document-model-libs/editors'
     )) as Record<string, ExtendedEditor>;
-    const baseEditors = Object.values(baseEditorsModules);
+    let baseEditors = Object.values(baseEditorsModules);
+
+    if (LOAD_EXTERNAL_PROJECTS === 'true') {
+        const externalEditors = (await loadPackages())
+            .filter(module => !!module.documentModels)
+            .map(module => (module as Required<ExternalProjectModule>).editors)
+            .reduce((acc, val) => acc.concat(val), []);
+
+        baseEditors = baseEditors.concat(externalEditors);
+    }
 
     if (!LOCAL_DOCUMENT_EDITORS) {
         return baseEditors;
