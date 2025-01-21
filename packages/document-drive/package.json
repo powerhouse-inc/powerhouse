@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.13.5",
+  "version": "1.13.2",
   "license": "AGPL-3.0-only",
   "type": "module",
   "module": "./src/index.ts",
@@ -35,18 +35,6 @@
     "test:watch": "vitest watch",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
-  },
-  "peerDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
-    "change-case": "^5.4.4",
-    "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
-    "graphql": "^16.9.0",
-    "graphql-request": "^6.1.0",
-    "json-stringify-deterministic": "^1.0.12",
-    "nanoevents": "^9.0.0",
-    "prisma": "^5.18.0",
-    "sanitize-filename": "^1.6.3"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
