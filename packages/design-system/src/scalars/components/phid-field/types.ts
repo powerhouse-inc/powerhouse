@@ -1,17 +1,24 @@
 import React from "react";
 
 export interface PHIDProps {
-  onChange?: React.ChangeEventHandler<HTMLInputElement>;
-  autoComplete?: React.HTMLInputAutoCompleteAttribute;
+  onChange?: (value: string) => void;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
   placeholder?: string;
   defaultBranch?: string;
   defaultScope?: string;
   allowedScopes?: string[];
   allowedDocumentTypes?: string[];
   allowUris?: boolean;
-  enableAutoComplete?: boolean;
+  autoComplete?: boolean;
   allowDataObjectReference?: boolean;
-  selectedOptionVariant?: "withPHID" | "withTitle" | "withTitleAndDescription";
+  variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
   minLength?: number;
   maxLength?: number;
+}
+
+export interface PHIDListItemProps {
+  title?: string;
+  path?: string;
+  phid: string;
+  description?: string;
 }
