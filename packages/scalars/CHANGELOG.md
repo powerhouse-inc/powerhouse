@@ -1,3 +1,23 @@
+## 1.17.0 (2025-01-21)
+
+### 🚀 Features
+
+- split ph-cmd ([#876](https://github.com/powerhouse-inc/powerhouse/pull/876))
+- **ph-cli:** added connect command ([dd20da14](https://github.com/powerhouse-inc/powerhouse/commit/dd20da14))
+- **design-system:** merge dspot into main ([bef482f9](https://github.com/powerhouse-inc/powerhouse/commit/bef482f9))
+- **react-reactor:** updated build config ([#759](https://github.com/powerhouse-inc/powerhouse/pull/759))
+
+### 🩹 Fixes
+
+- **codegen:** readded config dependency ([289bdaf4](https://github.com/powerhouse-inc/powerhouse/commit/289bdaf4))
+- **codegen:** fixed create-lib build ([d5523d1e](https://github.com/powerhouse-inc/powerhouse/commit/d5523d1e))
+- **codegen:** added prettier dependency ([b104d473](https://github.com/powerhouse-inc/powerhouse/commit/b104d473))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.16.0 (2025-01-06)
 
 ### 🚀 Features

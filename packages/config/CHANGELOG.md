@@ -1,3 +1,13 @@
+## 1.8.0 (2025-01-21)
+
+### 🚀 Features
+
+- split ph-cmd ([#876](https://github.com/powerhouse-inc/powerhouse/pull/876))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.7.0 (2025-01-17)
 
 ### 🚀 Features
