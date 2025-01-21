@@ -33,12 +33,15 @@ const getAmount = (
     isAmountCurrencyCrypto(type) ||
     isAmountCurrencyUniversal(type)
   ) {
+    if (!value) return undefined;
     return (
-      value as
-        | AmountCurrencyFiat
-        | AmountCurrencyCrypto
-        | AmountCurrencyUniversal
-    ).amount;
+      (
+        value as
+          | AmountCurrencyFiat
+          | AmountCurrencyCrypto
+          | AmountCurrencyUniversal
+      ).amount ?? undefined
+    );
   }
   return value as number;
 };
@@ -48,6 +51,12 @@ export const validateAmount =
   (value: unknown): ValidatorResult => {
     const amount = getAmount(value as AmountValue, type);
     if (value === "") return true;
+    if (amount?.toString() === "") {
+      if (required) {
+        return "This field is required";
+      }
+      return true;
+    }
     if (amount === undefined) {
       if (required) {
         return "This field is required";
