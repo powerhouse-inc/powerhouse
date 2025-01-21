@@ -14,7 +14,7 @@ import {
   isValidBigInt,
 } from "./utils";
 import { isValidNumber } from "../number-field/number-field-validations";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 interface UseAmountFieldProps {
   value?: AmountValue;
@@ -25,6 +25,7 @@ interface UseAmountFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   tokenIcons?: TokenIcons;
+
   precision?: number;
   viewPrecision?: number;
   trailingZeros?: boolean;
@@ -45,14 +46,15 @@ export const useAmountField = ({
 }: UseAmountFieldProps) => {
   const currentValue = value ?? defaultValue;
 
-  const baseValue =
-    currentValue === undefined
+  const baseValue = useMemo(() => {
+    return currentValue === undefined
       ? undefined
       : type === "Amount" || type === "AmountPercentage"
         ? (currentValue as number | undefined)
         : type === "AmountCurrencyUniversal"
           ? (currentValue as AmountCurrencyUniversal).amount
           : (currentValue as AmountCurrencyFiat | AmountCurrencyCrypto).amount;
+  }, [currentValue, type]);
 
   const valueSelect =
     currentValue === undefined
@@ -71,24 +73,32 @@ export const useAmountField = ({
       isValidBigInt(baseValue?.toString()));
   const [inputFocused, setInputFocused] = useState(false);
 
-  // // Handle the complete value
-  const [rawAmountState, setRawAmountState] = useState(
-    baseValue?.toString() ?? "",
-  );
+  const rawAmountState = baseValue?.toString() ?? "";
 
-  // Handle the formatted value
-  const [formattedAmountState, setFormattedAmountState] = useState(
-    baseValue?.toString() ?? "",
-  );
-  // Funciona para datos compuestos
-  useEffect(() => {
-    setRawAmountState(baseValue === undefined ? "" : baseValue.toString());
-    setFormattedAmountState(
-      baseValue === undefined ? "" : baseValue.toString(),
+  // Get the value to display
+  const displayValueAmountState = useMemo(() => {
+    if (inputFocused) {
+      return rawAmountState;
+    }
+    // Check if baseValue is a valid number before formatting
+    if (!isValidNumber(baseValue)) {
+      // Return the value without formatting if not valid
+      return baseValue?.toString() ?? "";
+    }
+    return displayValueAmount(
+      baseValue?.toString() ?? "",
+      precision,
+      viewPrecision,
+      trailingZeros,
     );
-  }, [baseValue, type]);
-  // const formattedAmountState = baseValue?.toString() ?? "";
-  // const rawAmountState = baseValue?.toString() ?? "";
+  }, [
+    inputFocused,
+    rawAmountState,
+    baseValue,
+    precision,
+    viewPrecision,
+    trailingZeros,
+  ]);
 
   const isPercent = type === "AmountPercentage";
   const isAmount = type === "Amount";
@@ -278,7 +288,6 @@ export const useAmountField = ({
       }
 
       // Update the state with the formatted value
-      // setFormattedAmountState(formatValue as unknown as string);
       const newValue = {
         ...value,
         amount: formatValue,
@@ -320,7 +329,6 @@ export const useAmountField = ({
         onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
         return;
       }
-      // setFormattedAmountState(formatValue as unknown as string);
       const nativeEvent = new Event("onBlur", {
         bubbles: true,
         cancelable: true,
@@ -383,7 +391,6 @@ export const useAmountField = ({
         onBlur?.(newValue as unknown as React.FocusEvent<HTMLInputElement>);
         return;
       }
-      // Update the state with the formatted value
       const newValue = {
         ...value,
         amount: formatValue,
@@ -394,15 +401,13 @@ export const useAmountField = ({
 
   const handleIsInputFocused = () => {
     setInputFocused(true);
-    setFormattedAmountState(rawAmountState);
   };
 
   return {
     isPercent,
     isShowSelect,
     options,
-    valueInput: formattedAmountState,
-    rawInput: rawAmountState,
+    valueInput: displayValueAmountState,
     valueSelect,
     handleOnChangeInput,
     handleOnChangeSelect,
