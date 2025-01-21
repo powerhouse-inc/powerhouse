@@ -1,5 +1,5 @@
 import { Argument, Command } from "commander";
-import { exec } from "node:child_process";
+import { exec, execSync, spawn } from "node:child_process";
 import { CommandActionType } from "../types.js";
 import pm2 from "pm2";
 const actions = ["start", "stop", "status", "list", "install", "save"];
@@ -7,16 +7,26 @@ const services = ["reactor", "connect", "all"];
 
 export const manageService: CommandActionType<[string, string]> = async (
   action,
-  service
+  service,
 ) => {
-  // TODO: Add error handling
-  // TODO: Add service selection
-  exec(
-    `pm2 ${action} powerhouse-services.config.json`,
-    (error, stdout, stderr) => {
-      console.log(stdout);
-    }
-  );
+  if (action === "install") {
+    const result = execSync(`pm2 startup | tail -n 1`);
+    const result2 = execSync(result.toString());
+    console.log(result2.toString());
+
+    return;
+  } else {
+    const app = service ? `--only  ${service}` : "";
+    const response = execSync(
+      `pm2 ${action} ${
+        ["start", "stop", "list"].includes(action)
+          ? `powerhouse-services.config.json ${app}`
+          : ""
+      }`,
+    );
+    execSync(`pm2 save`);
+    console.log(response.toString());
+  }
 };
 
 export function serviceCommand(program: Command) {
@@ -25,7 +35,7 @@ export function serviceCommand(program: Command) {
     .description("Manage services")
     .addArgument(new Argument("action").choices(actions).default("list"))
     .addArgument(
-      new Argument("service").choices(services).argOptional().default("all")
+      new Argument("service").choices(services).argOptional().default("all"),
     )
     .action(manageService);
 }
