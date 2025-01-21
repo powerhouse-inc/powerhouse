@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 
-export const PH_BIN = "ph";
+export const PH_BIN = "ph-cli";
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const HOME_DIR = homedir();
 export const PH_GLOBAL_PROJECT_NAME = ".ph";
