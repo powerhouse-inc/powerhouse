@@ -1,3 +1,5 @@
+"use client";
+
 import { Icon } from "@/index";
 import React, { KeyboardEventHandler, useCallback } from "react";
 import type { SidebarNode } from "../types";

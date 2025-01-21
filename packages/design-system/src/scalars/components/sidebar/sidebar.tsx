@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from "react";
 import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
 import { SidebarHeader } from "./subcomponents/sidebar-header";

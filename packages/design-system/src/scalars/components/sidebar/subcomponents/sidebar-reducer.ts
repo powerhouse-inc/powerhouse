@@ -1,3 +1,5 @@
+"use client";
+
 import type { SidebarNode } from "../types";
 import { getNodePath, getOpenLevels } from "../utils";
 
