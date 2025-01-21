@@ -126,6 +126,14 @@ export function startConnectStudio(options: ConnectStudioOptions) {
                 ? config.editorsDir
                 : join(configFileDir, config.editorsDir);
         }
+
+        if (config.studio?.port) {
+            process.env.PORT = config.studio.port.toString();
+        }
+
+        if (typeof config.studio?.openBrowser === 'boolean') {
+            process.env.OPEN_BROWSER = config.studio.openBrowser.toString();
+        }
     }
 
     if (options.localEditors) {
