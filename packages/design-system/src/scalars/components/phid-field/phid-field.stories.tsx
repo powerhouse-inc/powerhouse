@@ -76,9 +76,9 @@ const meta: Meta<typeof PHIDField> = {
       },
     },
 
-    enableAutoComplete: {
+    autoComplete: {
       control: "boolean",
-      description: "enableAutoComplete",
+      description: "autoComplete",
       table: {
         type: { summary: "boolean" },
         defaultValue: { summary: "true" },
@@ -96,15 +96,15 @@ const meta: Meta<typeof PHIDField> = {
       },
     },
 
-    selectedOptionVariant: {
+    variant: {
       control: "radio",
-      options: ["withPHID", "withTitle", "withTitleAndDescription"],
-      description: "selectedOptionVariant",
+      options: ["withId", "withIdAndTitle", "withIdTitleAndDescription"],
+      description: "variant",
       table: {
         type: {
-          summary: '"withPHID" | "withTitle" | "withTitleAndDescription"',
+          summary: '"withId" | "withIdAndTitle" | "withIdTitleAndDescription"',
         },
-        defaultValue: { summary: "withPHID" },
+        defaultValue: { summary: "withId" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -113,8 +113,6 @@ const meta: Meta<typeof PHIDField> = {
   },
   args: {
     name: "phid-field",
-    errors: [],
-    warnings: [],
   },
 } satisfies Meta<typeof PHIDField>;
 
