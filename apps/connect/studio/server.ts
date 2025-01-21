@@ -83,6 +83,7 @@ export async function startServer(options: StartServerOptions = {}) {
     backupIndexHtml(true);
 
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+    const HOST = process.env.HOST ? process.env.HOST : "0.0.0.0";
 
     const OPEN_BROWSER =
         typeof process.env.OPEN_BROWSER === 'string'
@@ -104,7 +105,7 @@ export async function startServer(options: StartServerOptions = {}) {
         server: {
             port: PORT,
             open: OPEN_BROWSER,
-            host: Boolean(process.env.HOST),
+            host: HOST,
         },
         resolve: {
             alias: {
