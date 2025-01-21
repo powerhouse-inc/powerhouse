@@ -15,6 +15,14 @@ const meta = {
   decorators: [withForm],
   parameters: {
     layout: "centered",
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: undefined,
+          currency: "",
+        },
+      },
+    },
   },
   tags: ["autodocs"],
   argTypes: {
@@ -175,12 +183,12 @@ export const Default: Story = {
   args: {
     placeholder: "0",
     label: "Enter Amount and Select Currency",
-    name: "amount",
+    placeholderSelect: "CUR",
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: undefined,
-      currency: "USD",
+      currency: "",
     },
   },
 };
@@ -188,8 +196,8 @@ export const Default: Story = {
 export const WithValue: Story = {
   args: {
     placeholder: "Enter Amount",
+    placeholderSelect: "CUR",
     label: "Enter Amount and Select Currency",
-    name: "amount",
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
     value: {
@@ -199,20 +207,24 @@ export const WithValue: Story = {
   },
 };
 export const WithAmount: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": "",
+      },
+    },
+  },
   args: {
     placeholder: "Enter Amount",
     label: "EnterAmout ",
-    name: "amount",
     type: "Amount",
     value: 345,
   },
 };
 export const CurrencyIcon: Story = {
-  name: "Currency Icon",
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    name: "amount",
     type: "AmountCurrencyCrypto",
     placeholderSelect: "CUR",
     allowedTokens: ["BTC", "ETH"],
@@ -228,26 +240,40 @@ export const CurrencyIcon: Story = {
 };
 
 export const WithToken: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: "",
+          currency: "BTC",
+        },
+      },
+    },
+  },
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    name: "amount",
-
     type: "AmountCurrencyCrypto",
     placeholderSelect: "CUR",
     allowedTokens: ["BTC", "ETH", "USDT"],
     value: {
-      amount: 12321312 as unknown as bigint,
+      amount: 123 as unknown as bigint,
       currency: "BTC",
     },
   },
 };
 
 export const WithValuePercent: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": "",
+      },
+    },
+  },
   args: {
     label: "Enter Percentage ",
     placeholder: "Enter Amount",
-    name: "amount",
     type: "AmountPercentage",
     value: 9,
   },
@@ -256,7 +282,6 @@ export const Disable: Story = {
   args: {
     label: "Enter Amount ",
     placeholder: "Enter Amount",
-    name: "amount",
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
     disabled: true,
@@ -268,15 +293,23 @@ export const Disable: Story = {
 };
 
 export const WithValueUniversalAmountCurrency: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: 123,
+          currency: "USD",
+        },
+      },
+    },
+  },
   args: {
-    name: "amount",
     label: "Label",
     placeholder: "Enter Amount",
     type: "AmountCurrencyUniversal",
     allowedCurrencies: ["USD", "EUR"],
-
     value: {
-      amount: 2324234,
+      amount: 123,
       currency: "USD",
     },
   },

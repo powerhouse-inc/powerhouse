@@ -51,6 +51,12 @@ export const validateAmount =
   (value: unknown): ValidatorResult => {
     const amount = getAmount(value as AmountValue, type);
     if (value === "") return true;
+    if (amount?.toString() === "") {
+      if (required) {
+        return "This field is required";
+      }
+      return true;
+    }
     if (amount === undefined) {
       if (required) {
         return "This field is required";
