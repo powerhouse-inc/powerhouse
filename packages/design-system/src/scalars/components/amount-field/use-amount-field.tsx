@@ -24,7 +24,6 @@ interface UseAmountFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   tokenIcons?: TokenIcons;
-
   precision?: number;
   viewPrecision?: number;
   trailingZeros?: boolean;
@@ -56,15 +55,8 @@ export const useAmountField = ({
       isValidBigInt(baseValue?.toString()));
   const [inputFocused, setInputFocused] = useState(false);
 
-  // Handle the complete value
-  const [rawAmountState, setRawAmountState] = useState(
-    baseValue?.toString() ?? "",
-  );
-
-  // Handle the formatted value
-  const [formattedAmountState, setFormattedAmountState] = useState(
-    baseValue?.toString() ?? "",
-  );
+  const formattedAmountState = baseValue?.toString() ?? "";
+  const rawAmountState = baseValue?.toString() ?? "";
 
   const isPercent = type === "AmountPercentage";
   const isAmount = type === "Amount";
@@ -106,8 +98,6 @@ export const useAmountField = ({
   // Handle the change of the input
   const handleOnChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    setRawAmountState(inputValue);
-    setFormattedAmountState(inputValue);
 
     if (type === "AmountCurrencyFiat" && typeof value === "object") {
       const newValue = {
@@ -247,7 +237,6 @@ export const useAmountField = ({
       }
 
       // Update the state with the formatted value
-      setFormattedAmountState(formatValue);
       const newValue = {
         ...value,
         amount: formatValue,
@@ -300,7 +289,6 @@ export const useAmountField = ({
         return;
       }
       // Update the state with the formatted value
-      setFormattedAmountState(formatValue);
       const newValue = {
         ...value,
         amount: formatValue,
@@ -311,7 +299,6 @@ export const useAmountField = ({
 
   const handleIsInputFocused = () => {
     setInputFocused(true);
-    setFormattedAmountState(rawAmountState);
   };
 
   return {

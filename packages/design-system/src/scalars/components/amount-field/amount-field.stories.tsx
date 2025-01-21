@@ -15,6 +15,14 @@ const meta = {
   decorators: [withForm],
   parameters: {
     layout: "centered",
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: 100,
+          currency: "USD",
+        },
+      },
+    },
   },
   tags: ["autodocs"],
   argTypes: {
@@ -160,10 +168,6 @@ const meta = {
   },
 
   args: {
-    errors: [],
-    warnings: [],
-    allowedTokens: [],
-    allowedCurrencies: [],
     name: "amount-field",
   },
 } satisfies Meta<typeof AmountField>;
@@ -177,32 +181,54 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    placeholder: "Enter Amount",
+    placeholder: "0",
     label: "Enter Amount and Select Currency",
-    name: "amount",
-    step: 0,
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
-    currencyPosition: "right",
     value: {
-      amount: 345,
+      amount: undefined,
       currency: "USD",
     },
   },
 };
-export const TokenIcon: Story = {
-  name: "Token Icon",
+
+export const WithValue: Story = {
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    name: "amount",
+    type: "AmountCurrencyFiat",
+    allowedCurrencies: ["USD", "EUR"],
+    value: {
+      currency: "USD",
+      amount: 100,
+    },
+  },
+};
+export const WithAmount: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": "",
+      },
+    },
+  },
+  args: {
+    placeholder: "Enter Amount",
+    label: "EnterAmout ",
+    type: "Amount",
+    value: 345,
+  },
+};
+export const CurrencyIcon: Story = {
+  args: {
+    placeholder: "Enter Amount",
+    label: "Enter Amount and Select Currency",
     type: "AmountCurrencyCrypto",
     allowedTokens: ["BTC", "ETH"],
     tokenIcons: {
       BTC: IconComponent("Briefcase"),
       ETH: IconComponent("Briefcase"),
     },
-    currencyPosition: "right",
     value: {
       amount: 3454564564 as unknown as bigint,
       currency: "BTC",
@@ -210,55 +236,77 @@ export const TokenIcon: Story = {
   },
 };
 
-export const Token: Story = {
+export const WithToken: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: "",
+          currency: "BTC",
+        },
+      },
+    },
+  },
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    name: "amount",
-    step: 0,
     type: "AmountCurrencyCrypto",
     allowedTokens: ["BTC", "ETH", "USDT"],
-    currencyPosition: "right",
     value: {
-      amount: 12321312 as unknown as bigint,
+      amount: 123 as unknown as bigint,
       currency: "BTC",
     },
   },
 };
-export const Amount: Story = {
-  args: {
-    placeholder: "Enter Amount",
-    label: "Enter Amount ",
-    name: "amount",
-    type: "Amount",
-    value: 345,
-    step: 0,
+
+export const WithValuePercent: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": "",
+      },
+    },
   },
-};
-export const Percent: Story = {
   args: {
     label: "Enter Percentage ",
     placeholder: "Enter Amount",
-    name: "amount",
     type: "AmountPercentage",
     value: 9,
-    step: 0,
+  },
+};
+export const Disable: Story = {
+  args: {
+    label: "Enter Amount ",
+    placeholder: "Enter Amount",
+    type: "AmountCurrencyFiat",
+    allowedCurrencies: ["USD", "EUR"],
+    disabled: true,
+    value: {
+      amount: 9,
+      currency: "USD",
+    },
   },
 };
 
-export const UniversalAmountCurrency: Story = {
+export const WithValueUniversalAmountCurrency: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: 123,
+          currency: "USD",
+        },
+      },
+    },
+  },
   args: {
-    name: "amount",
     label: "Label",
     placeholder: "Enter Amount",
     type: "AmountCurrencyUniversal",
-    currencyPosition: "right",
     allowedCurrencies: ["USD", "EUR"],
-
     value: {
-      amount: 2324234,
+      amount: 123,
       currency: "USD",
     },
-    step: 0,
   },
 };

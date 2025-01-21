@@ -29,26 +29,6 @@ exports[`NumberField > should match snapshot 1`] = `
           type="text"
           value="345"
         />
-        <div
-          class="absolute inset-y-2 right-3 flex flex-col justify-center"
-        >
-          <button
-            type="button"
-          >
-            <div
-              data-testid="icon-fallback"
-              style="width: 10px; height: 10px;"
-            />
-          </button>
-          <button
-            type="button"
-          >
-            <div
-              data-testid="icon-fallback"
-              style="width: 10px; height: 10px;"
-            />
-          </button>
-        </div>
       </div>
     </div>
   </form>

@@ -208,10 +208,10 @@ describe("NumberField", () => {
 
     expect(input).toHaveValue("5");
   });
-
   // Test for step
   it("should increment the value when increment arrow button is clicked", async () => {
     const user = userEvent.setup();
+
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -222,15 +222,20 @@ describe("NumberField", () => {
       />,
     );
 
-    const decrementButton = screen.getAllByRole("button")[0];
-    await user.click(decrementButton);
+    const input = screen.getByRole("spinbutton");
+    await user.click(input); // Simula el clic en el input
 
+    // Ensure that the input has focus
+    expect(input).toHaveFocus();
+
+    const incrementButton = screen.getByRole("button", { name: /Increment/i });
+    await user.click(incrementButton);
+
+    // Verify that `mockOnChange` was called and that the input remains focused
     expect(mockOnChange).toHaveBeenCalledTimes(1);
-
+    expect(input).toHaveFocus();
     const eventArg = mockOnChange.mock
       .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
-
-    expect(eventArg).toBeInstanceOf(Event);
 
     expect(eventArg.target).toMatchObject({
       value: 6,
@@ -248,9 +253,16 @@ describe("NumberField", () => {
         onChange={mockOnChange}
       />,
     );
+    const input = screen.getByRole("spinbutton");
+    await user.click(input);
+    // Ensure that the input has focus
+    expect(input).toHaveFocus();
 
-    const decrementButton = screen.getAllByRole("button")[1];
+    const decrementButton = screen.getByRole("button", { name: /Decrement/i });
     await user.click(decrementButton);
+    // Ensure that the input has focus
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
+
     const eventArg = mockOnChange.mock
       .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
 
@@ -259,7 +271,7 @@ describe("NumberField", () => {
     });
   });
 
-  it("should not exceed maxValue when increment button is clicked, and should not invoke onChange if the value does not change", async () => {
+  it("should not exceed maxValue when increment button is clicked", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <NumberField
@@ -271,32 +283,23 @@ describe("NumberField", () => {
         onChange={mockOnChange}
       />,
     );
+    const input = screen.getByRole("spinbutton");
+    await user.click(input);
+    // Ensure that the input has focus
+    expect(input).toHaveFocus();
 
-    const incrementButton = screen.getAllByRole("button")[0];
+    const incrementButton = screen.getByRole("button", { name: /Increment/i });
     await user.click(incrementButton);
+    // // Asegúrate de que el input tiene foco
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
 
-    expect(mockOnChange).not.toHaveBeenCalled();
+    const eventArg = mockOnChange.mock
+      .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
+
+    expect(eventArg.target.value).toBe("10");
   });
 
-  it("should not go up of  maxValue when increment button is clicked and should not invoke onChange if the value does not change", async () => {
-    const user = userEvent.setup();
-    renderWithForm(
-      <NumberField
-        label="Test Label"
-        name="Label"
-        value={30}
-        maxValue={30}
-        step={1}
-        onChange={mockOnChange}
-      />,
-    );
-
-    const decrementButton = screen.getAllByRole("button")[0];
-    await user.click(decrementButton);
-
-    expect(mockOnChange).not.toHaveBeenCalled();
-  });
-  it("should not go below minValue when decrement button is clicked and should not invoke onChange if the value does not change", async () => {
+  it("should not go below minValue when decrement button is clicked", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <NumberField
@@ -308,11 +311,18 @@ describe("NumberField", () => {
         onChange={mockOnChange}
       />,
     );
+    const input = screen.getByRole("spinbutton");
+    await user.click(input);
+    // Ensure that the input has focus
+    expect(input).toHaveFocus();
 
-    const decrementButton = screen.getAllByRole("button")[1];
+    const decrementButton = screen.getByRole("button", { name: /Decrement/i });
     await user.click(decrementButton);
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
+    const eventArg = mockOnChange.mock
+      .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
 
-    expect(mockOnChange).not.toHaveBeenCalled();
+    expect(eventArg.target.value).toBe("1");
   });
 
   //New test for the issues

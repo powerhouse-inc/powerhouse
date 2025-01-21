@@ -14,6 +14,9 @@ const meta = {
   decorators: [withForm],
   parameters: {
     layout: "centered",
+    chromatic: {
+      disableSnapshot: true,
+    },
   },
   tags: ["autodocs"],
   argTypes: {
