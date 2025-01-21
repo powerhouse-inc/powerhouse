@@ -988,8 +988,8 @@ importers:
         specifier: workspace:*
         version: link:../config
       '@powerhousedao/connect':
-        specifier: 1.0.0-dev.187
-        version: 1.0.0-dev.187(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)
+        specifier: 1.0.0-dev.188
+        version: 1.0.0-dev.188(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
@@ -4499,8 +4499,8 @@ packages:
   '@powerhousedao/analytics-engine-pg@0.3.0':
     resolution: {integrity: sha512-0N90CJzgrjZONA7VzEQKq5ne0DuzGpjTj3ZeZyjoaOq4gKopVdX+6j7zHmbfFKx15bkY6/T/+VoIKt9WN+We0Q==}
 
-  '@powerhousedao/connect@1.0.0-dev.187':
-    resolution: {integrity: sha512-fE68HptpigNzSlo0MfUHNmOQ3RpXJznpQQwgAtTYBccQBI7cLHjwJ3vR+SykU7pEBunrKQt4yYnN9fkWjgIS6A==}
+  '@powerhousedao/connect@1.0.0-dev.188':
+    resolution: {integrity: sha512-LMnIZ3J8de97U+UF5x3GEMEpJTL+ALHynxyc1jrcE/gCcmKv1P3ZS53UkMTKlUrSwsuc2Tam+3gbFVD8wOCzMg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
@@ -18048,7 +18048,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/connect@1.0.0-dev.187(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)':
+  '@powerhousedao/connect@1.0.0-dev.188(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)':
     dependencies:
       '@powerhousedao/design-system': link:packages/design-system
       '@powerhousedao/scalars': link:packages/scalars
