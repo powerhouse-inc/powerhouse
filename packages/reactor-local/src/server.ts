@@ -23,6 +23,9 @@ import dotenv from "dotenv";
 import path from "node:path";
 import { access } from "node:fs/promises";
 import { createServer as createViteServer, ViteDevServer } from "vite";
+import { loadModuleSpecifier, requireGlobal } from "./utils/dynamic-modules";
+import DocumentModel_Module from "../../document-model/dist/browser/src/document-model/gen/module/object";
+import { cmd } from "./utils/cmd";
 
 type FSError = {
   errno: number;
@@ -41,6 +44,10 @@ export type StartServerOptions = {
   storagePath?: string;
   dbPath?: string;
   drive?: DriveInput;
+  projects?: {
+    packageName: string;
+    global: boolean;
+  }[];
 };
 
 export const DefaultStartServerOptions = {
@@ -77,7 +84,7 @@ export type LocalReactor = {
     },
   ) => Promise<InternalTransmitter>;
 };
-
+declare let window: any;
 const baseDocumentModels = [
   DocumentModelLib,
   ...Object.values(DocumentModelsLibs),
@@ -93,9 +100,36 @@ const startServer = async (
   };
   const serverPort = Number(process.env.PORT ?? port);
 
+  // loaded from projects
+  const rootDir = await cmd("npm root");
+  const loadedModules: Record<string, DocumentModel> = {};
+  if (options?.projects) {
+    for (const project of options.projects) {
+      const modulePath = path.join(
+        rootDir,
+        project.packageName,
+        "dist",
+        "es",
+        "documentModels.js",
+      );
+      const modules = (await loadModuleSpecifier(modulePath)) as Record<
+        string,
+        any
+      >;
+      const modulesKey = Object.keys(modules);
+      for (const modulesEntry of modulesKey) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        loadedModules[modulesEntry] = modules[modulesEntry]!;
+      }
+    }
+  }
+
+  console.log("base", baseDocumentModels);
+  console.log("loaded", Object.values(loadedModules));
   // start document drive server with all available document models & filesystem storage
+
   const driveServer = new DocumentDriveServer(
-    baseDocumentModels,
+    [...baseDocumentModels, ...Object.values(loadedModules)],
     new FilesystemStorage(storagePath),
   );
 

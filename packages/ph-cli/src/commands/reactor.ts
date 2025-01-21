@@ -22,7 +22,11 @@ export const DefaultReactorOptions = {
 
 async function startLocalReactor(reactorOptions: ReactorOptions) {
   const baseConfig = getConfig();
-  const options = { ...DefaultReactorOptions, ...reactorOptions };
+  const options = {
+    ...DefaultReactorOptions,
+    ...reactorOptions,
+    ...baseConfig,
+  };
   const reactor = await startServer(options);
 
   if (options.generate) {

@@ -1,0 +1,10 @@
+{
+    "documentModelsDir": null,
+    "editorsDir": null,
+    "projects": [
+        {
+            "packageName": "@powerhousedao/atlas-feedback-issues",
+            "global": true
+        }
+    ]
+}

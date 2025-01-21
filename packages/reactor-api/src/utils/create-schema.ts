@@ -23,33 +23,34 @@ export const getDocumentModelTypeDefs = (
   typeDefs: DocumentNode,
 ) => {
   const documentModels = documentDriveServer.getDocumentModels();
-  let dmSchema = "";
+  const dmSchema = "";
   documentModels.forEach(({ documentModel }) => {
-    dmSchema += `
+    const dmName = documentModel.name.replaceAll(" ", "");
+    const dmSchemaTmp = `
           ${documentModel.specifications
             .map((specification) =>
               specification.state.global.schema
-                .replaceAll(" Account ", ` ${documentModel.name}Account `)
-                .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-                .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+                .replaceAll(" Account ", ` ${dmName}Account `)
+                .replaceAll(`: Account`, `: ${dmName}Account`)
+                .replaceAll(`[Account!]!`, `[${dmName}Account!]!`)
                 .replaceAll("scalar DateTime", "")
                 .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
             )
-            .join("\n")};
+            .join("\n")}
   
           ${documentModel.specifications
             .map((specification) =>
               specification.state.local.schema
-                .replaceAll(" Account ", ` ${documentModel.name}Account `)
-                .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-                .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+                .replaceAll(" Account ", ` ${dmName}Account `)
+                .replaceAll(`: Account`, `: ${dmName}Account`)
+                .replaceAll(`[Account!]!`, `[${dmName}Account!]!`)
                 .replaceAll("scalar DateTime", "")
                 .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
                 .replaceAll("type AccountSnapshotLocalState", "")
                 .replaceAll("type BudgetStatementLocalState", "")
                 .replaceAll("type ScopeFrameworkLocalState", ""),
             )
-            .join("\n")};
+            .join("\n")}
 
     type ${documentModel.name.replaceAll(" ", "")} implements IDocument {
               id: String!

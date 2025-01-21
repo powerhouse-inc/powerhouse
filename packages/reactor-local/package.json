@@ -20,6 +20,7 @@
     "@apollo/subgraph": "^2.9.2",
     "@electric-sql/pglite": "^0.2.12",
     "@libsql/client": "^0.14.0",
+    "@powerhousedao/config": "^1.7.0",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "change-case": "^5.4.4",
