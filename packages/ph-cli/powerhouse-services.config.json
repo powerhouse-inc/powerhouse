@@ -2,11 +2,11 @@
   "apps": [
     {
       "name": "reactor",
-      "script": "dist/cli.js reactor"
+      "script": "ph reactor"
     },
     {
       "name": "connect",
-      "script": "dist/cli.js connect"
+      "script": "ph connect"
     }
   ]
 }
