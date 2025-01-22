@@ -6,6 +6,7 @@ import type { SidebarNode } from "../types";
 import { cn } from "@/scalars/lib";
 import {
   useSidebar,
+  useSidebarIsNodeActive,
   useSidebarIsNodeSearchActive,
   useSidebarItemPinned,
   useSidebarNodeState,
@@ -26,9 +27,10 @@ export const Item: React.FC<ItemProps> = ({
   pinnedMode,
   allowPinning,
 }) => {
-  const { togglePin, searchTerm } = useSidebar();
+  const { togglePin, searchTerm, handleActiveNodeChange } = useSidebar();
   const isPinned = useSidebarItemPinned(id);
   const isSearchActive = useSidebarIsNodeSearchActive(id);
+  const isActive = useSidebarIsNodeActive(id);
 
   const handleTogglePin = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -37,6 +39,10 @@ export const Item: React.FC<ItemProps> = ({
     },
     [togglePin, id],
   );
+
+  const handleClick = useCallback(() => {
+    handleActiveNodeChange(id);
+  }, [handleActiveNodeChange, id]);
 
   return (
     <div
@@ -48,7 +54,9 @@ export const Item: React.FC<ItemProps> = ({
         // line between pinned items
         pinnedMode &&
           "after:absolute after:-top-2.5 after:left-3.5 after:h-4 after:w-px after:bg-gray-300 first:after:hidden",
+        isActive && "font-medium text-gray-900",
       )}
+      onClick={handleClick}
     >
       <div className="flex max-w-full items-center gap-2">
         {!pinnedMode && (

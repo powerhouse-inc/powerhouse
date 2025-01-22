@@ -4,6 +4,7 @@ import type { SidebarNode } from "../types";
 import { getNodePath, getOpenLevels } from "../utils";
 
 export interface SidebarState {
+  activeNodeId?: string;
   items: Array<SidebarNode>;
   itemsState: { [nodeId: string]: boolean };
   pinnedItems: Array<SidebarNode>;
@@ -15,6 +16,7 @@ export enum SidebarActionType {
   OPEN_LEVEL = "OPEN_LEVEL",
   TOGGLE_PIN = "TOGGLE_PIN",
   OPEN_PATH_TO_NODE = "OPEN_PATH_TO_NODE",
+  SET_ACTIVE_NODE_ID = "SET_ACTIVE_NODE_ID",
 }
 
 export type SidebarAction =
@@ -38,6 +40,10 @@ export type SidebarAction =
   | {
       type: SidebarActionType.OPEN_PATH_TO_NODE;
       nodeId: string;
+    }
+  | {
+      type: SidebarActionType.SET_ACTIVE_NODE_ID;
+      nodeId?: string;
     };
 
 export const sidebarReducer = (
@@ -50,6 +56,7 @@ export const sidebarReducer = (
         items: action.items,
         itemsState: getOpenLevels(action.items, action.defaultLevel ?? -1),
         pinnedItems: [],
+        activeNodeId: undefined,
       };
     case SidebarActionType.TOGGLE_ITEM:
       return {
@@ -90,6 +97,15 @@ export const sidebarReducer = (
         itemsState,
       };
     }
+    case SidebarActionType.SET_ACTIVE_NODE_ID:
+      return {
+        ...state,
+        itemsState: {
+          ...state.itemsState,
+          [action.nodeId ?? ""]: true,
+        },
+        activeNodeId: action.nodeId,
+      };
     default:
       return state;
   }

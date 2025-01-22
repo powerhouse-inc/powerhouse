@@ -12,7 +12,14 @@ import { cn } from "@/scalars/lib";
 import { Icon } from "@/powerhouse";
 
 export interface SidebarProps {
-  value: string; // TODO: define the type
+  /**
+   * The ID of the currently active node
+   */
+  activeNodeId?: string;
+  /**
+   * Callback function to update the active node ID
+   */
+  onActiveNodeChange?: (newActiveNodeId: string) => void;
   /**
    * The nodes to be displayed in the sidebar
    */
@@ -52,6 +59,8 @@ export interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
+  activeNodeId,
+  onActiveNodeChange,
   nodes,
   sidebarIcon,
   sidebarTitle,
@@ -76,13 +85,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const {
     state: { pinnedItems },
     setItems,
+    setActiveNodeId,
+    setActiveNodeChangeCallback,
   } = useSidebar();
+
   // sync param nodes with provider state if privided
   useEffect(() => {
     if (nodes) {
       setItems(nodes);
     }
   }, [nodes, setItems]);
+
+  // sync activeNodeId and onActiveNodeChange with provider state
+  useEffect(() => {
+    setActiveNodeId(activeNodeId);
+  }, [activeNodeId, setActiveNodeId]);
+  useEffect(() => {
+    if (onActiveNodeChange) {
+      setActiveNodeChangeCallback(onActiveNodeChange);
+    }
+  }, [onActiveNodeChange, setActiveNodeChangeCallback]);
 
   return (
     <aside
