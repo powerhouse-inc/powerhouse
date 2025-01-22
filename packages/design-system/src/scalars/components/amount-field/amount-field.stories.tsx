@@ -18,8 +18,8 @@ const meta = {
     form: {
       defaultValues: {
         "amount-field": {
-          amount: 100,
-          currency: "USD",
+          amount: undefined,
+          currency: "",
         },
       },
     },
@@ -183,11 +183,12 @@ export const Default: Story = {
   args: {
     placeholder: "0",
     label: "Enter Amount and Select Currency",
+    placeholderSelect: "CUR",
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: undefined,
-      currency: "USD",
+      currency: "",
     },
   },
 };
@@ -195,6 +196,7 @@ export const Default: Story = {
 export const WithValue: Story = {
   args: {
     placeholder: "Enter Amount",
+    placeholderSelect: "CUR",
     label: "Enter Amount and Select Currency",
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
@@ -224,6 +226,7 @@ export const CurrencyIcon: Story = {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     type: "AmountCurrencyCrypto",
+    placeholderSelect: "CUR",
     allowedTokens: ["BTC", "ETH"],
     tokenIcons: {
       BTC: IconComponent("Briefcase"),
@@ -242,7 +245,7 @@ export const WithToken: Story = {
       defaultValues: {
         "amount-field": {
           amount: "",
-          currency: "BTC",
+          currency: "",
         },
       },
     },
@@ -251,6 +254,7 @@ export const WithToken: Story = {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     type: "AmountCurrencyCrypto",
+    placeholderSelect: "CUR",
     allowedTokens: ["BTC", "ETH", "USDT"],
     value: {
       amount: 123 as unknown as bigint,

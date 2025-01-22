@@ -6,11 +6,9 @@ import {
   AmountCurrencyUniversal,
   AmountValue,
 } from "./types";
-import {
-  isInteger,
-  isValidNumber,
-} from "../number-field/number-field-validations";
+import { isValidNumber } from "../number-field/number-field-validations";
 import { ValidatorResult } from "@/scalars";
+import { isValidBigInt } from "./utils";
 
 const isAmountCurrencyFiat = (
   type: AmountFieldPropsGeneric["type"],
@@ -33,12 +31,15 @@ const getAmount = (
     isAmountCurrencyCrypto(type) ||
     isAmountCurrencyUniversal(type)
   ) {
+    if (!value) return undefined;
     return (
-      value as
-        | AmountCurrencyFiat
-        | AmountCurrencyCrypto
-        | AmountCurrencyUniversal
-    ).amount;
+      (
+        value as
+          | AmountCurrencyFiat
+          | AmountCurrencyCrypto
+          | AmountCurrencyUniversal
+      ).amount ?? undefined
+    );
   }
   return value as number;
 };
@@ -48,20 +49,26 @@ export const validateAmount =
   (value: unknown): ValidatorResult => {
     const amount = getAmount(value as AmountValue, type);
     if (value === "") return true;
+    if (amount?.toString() === "") {
+      if (required) {
+        return "This field is required";
+      }
+      return true;
+    }
     if (amount === undefined) {
       if (required) {
         return "This field is required";
       }
       return true;
     }
-    if (!isValidNumber(amount)) {
+    if (!isValidNumber(amount) && type !== "AmountCurrencyUniversal") {
       return "Value is not a valid number";
     }
     if (!allowNegative && amount < 0) {
       return "Value must be positive";
     }
     if (type === "AmountCurrencyCrypto") {
-      if (!isInteger(amount)) {
+      if (!isValidBigInt(amount.toString())) {
         return "Value is not an bigint";
       }
       return true;

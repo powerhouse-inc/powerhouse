@@ -1,3 +1,5 @@
+"use client";
+
 import { Icon } from "@/index";
 import { Input } from "../../fragments";
 import { useCallback, useRef } from "react";

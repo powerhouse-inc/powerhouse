@@ -26,7 +26,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     className?: string;
     name: string;
     numberProps?: Omit<NumberFieldProps, "name">;
-    selectProps?: SelectFieldProps;
+    selectProps?: Omit<SelectFieldProps, "placeholder" | "selectionIcon">;
     allowedCurrencies?: string[];
     allowedTokens?: string[];
     defaultValue?: AmountValue;
@@ -39,6 +39,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     // handle precision
     viewPrecision?: number;
     precision?: number;
+    placeholderSelect?: string;
   };
 
 export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
@@ -71,6 +72,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
       viewPrecision,
       precision,
       placeholder,
+      placeholderSelect,
     },
     ref,
   ) => {
@@ -127,6 +129,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               <SelectFieldRaw
                 selectionIcon="checkmark"
                 value={valueSelect}
+                placeholder={placeholderSelect}
                 required={required}
                 options={options}
                 disabled={disabled}
@@ -154,7 +157,6 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               }
               id={id}
               maxValue={maxValue}
-              trailingZeros={trailingZeros}
               precision={precision}
               minValue={minValue}
               onChange={handleOnChangeInput}
@@ -193,6 +195,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                 value={valueSelect}
                 required={required}
                 disabled={disabled}
+                placeholder={placeholderSelect}
                 onChange={handleOnChangeSelect}
                 options={options}
                 className={cn(

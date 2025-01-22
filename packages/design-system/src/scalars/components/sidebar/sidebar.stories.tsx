@@ -19,6 +19,10 @@ const meta: Meta<typeof Sidebar> = {
     layout: "fullscreen",
   },
   argTypes: {
+    activeNodeId: {
+      control: "text",
+      description: "The id of the node that is currently active.",
+    },
     nodes: {
       control: "object",
       table: {
@@ -64,6 +68,9 @@ const meta: Meta<typeof Sidebar> = {
       </div>
     ),
     enableMacros: 4,
+    onActiveNodeChange: (nodeId) => {
+      console.log("onActiveNodeChange", nodeId);
+    },
   },
 };
 
