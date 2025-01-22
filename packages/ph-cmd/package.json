@@ -26,7 +26,8 @@
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix"
+    "lint:fix": "eslint --fix",
+    "postinstall": "node -e \"if (process.env.npm_config_global === 'true') import('./dist/postinstall.js');\""
   },
   "keywords": [],
   "author": "",
