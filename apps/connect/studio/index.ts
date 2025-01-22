@@ -138,6 +138,13 @@ export function startConnectStudio(options: ConnectStudioOptions) {
         if (typeof config.studio?.openBrowser === 'boolean') {
             process.env.OPEN_BROWSER = config.studio.openBrowser.toString();
         }
+
+        if (config.studio?.host) {
+            process.env.HOST = config.studio.host;
+        }
+    } else {
+        process.env.LOAD_EXTERNAL_PROJECTS = 'false';
+        serverOptions = { enableExternalProjects: false };
     }
 
     if (options.localEditors) {
