@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import type { PHIDProps, PHIDListItemProps } from "./types";
-import { mockFetchPHIDOptions } from "./utils";
+import { fetchPHIDOptions } from "./utils";
 
 interface UsePHIDFieldProps {
   onChange?: PHIDProps["onChange"];
@@ -20,15 +20,16 @@ export function usePHIDField({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [options, setOptions] = useState<PHIDListItemProps[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [haveFetchError, setHaveFetchError] = useState(false);
 
   useEffect(() => {
     const fetchOptions = async () => {
       setIsLoading(true);
       try {
-        const options = await mockFetchPHIDOptions();
+        const options = await fetchPHIDOptions();
         setOptions(options);
-      } catch (error) {
-        console.error("Error fetching PHID options:", error);
+      } catch {
+        setHaveFetchError(true);
       } finally {
         setIsLoading(false);
       }
@@ -91,6 +92,7 @@ export function usePHIDField({
     commandListRef,
     options,
     isLoading,
+    haveFetchError,
     toggleOption,
     handleClear,
     handleOpenChange,

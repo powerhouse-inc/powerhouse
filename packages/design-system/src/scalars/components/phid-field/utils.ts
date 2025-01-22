@@ -4,7 +4,7 @@ interface FetchPHIDOptionsParams {
   delay?: number;
 }
 
-export const mockFetchPHIDOptions = async ({
+export const fetchPHIDOptions = async ({
   delay = 1000,
 }: FetchPHIDOptionsParams = {}): Promise<PHIDListItemProps[]> => {
   // Simulate network delay
