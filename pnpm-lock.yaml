@@ -914,7 +914,7 @@ importers:
         version: 1.0.1(document-model@packages+document-model)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.4.7(bufferutil@4.0.9)(prettier@3.4.2)(utf-8-validate@5.0.10))
       dspot-powerhouse-components:
         specifier: ^1.1.0
-        version: 1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.127.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.127.1(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       graphql:
         specifier: ^16.9.0
         version: 16.10.0
@@ -1066,10 +1066,19 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.2.12
         version: 0.2.15
+      '@powerhousedao/analytics-engine-browser':
+        specifier: ^0.4.0
+        version: 0.4.0(pg@8.13.1)(sqlite3@5.1.7)
       '@powerhousedao/analytics-engine-core':
         specifier: ^0.3.0
         version: 0.3.0
+      '@powerhousedao/analytics-engine-graphql':
+        specifier: ^0.2.2
+        version: 0.2.2
       '@powerhousedao/analytics-engine-knex':
+        specifier: ^0.4.0
+        version: 0.4.0(sqlite3@5.1.7)
+      '@powerhousedao/analytics-engine-pg':
         specifier: ^0.4.0
         version: 0.4.0(sqlite3@5.1.7)
       body-parser:
@@ -1130,9 +1139,6 @@ importers:
         specifier: ^3.24.1
         version: 3.24.1
     devDependencies:
-      '@powerhousedao/analytics-engine-graphql':
-        specifier: ^0.2.1
-        version: 0.2.1
       '@powerhousedao/scalars':
         specifier: workspace:*
         version: link:../scalars
@@ -1254,6 +1260,9 @@ importers:
       json-stringify-deterministic:
         specifier: ^1.0.12
         version: 1.0.12
+      luxon:
+        specifier: ^3.5.0
+        version: 3.5.0
       ms:
         specifier: ^2.1.3
         version: 2.1.3
@@ -1279,6 +1288,9 @@ importers:
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.0
+      '@types/luxon':
+        specifier: ^3.4.2
+        version: 3.4.2
       '@types/ms':
         specifier: ^0.7.34
         version: 0.7.34
@@ -4504,11 +4516,17 @@ packages:
   '@popperjs/core@2.11.8':
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
 
+  '@powerhousedao/analytics-engine-browser@0.4.0':
+    resolution: {integrity: sha512-+CtNpIjTZp0V6K4L+QmcInxTXZSPQD5ahT4mzLCqqwnCwX10q6gA0x2mxkB9N7V3xBWOkPo48wCLuXOj5TolYA==}
+
   '@powerhousedao/analytics-engine-core@0.3.0':
     resolution: {integrity: sha512-8Rl8U2P3u5Y+O8iXqEmN+Vjezal32SQ/ce05IgsZqOvtIpuiUmX44wdyufXw8qObxWFPdc7cyFXTHJ3yYUWlzw==}
 
   '@powerhousedao/analytics-engine-graphql@0.2.1':
     resolution: {integrity: sha512-NoDV1+xbuxZCR0ZwjBXlRu4da9ZR+0UdwFBZrrnNCIF5C3YSfoBkON/u6SgINhiO8l5/GF4XVPAloN5PLJ2sRg==}
+
+  '@powerhousedao/analytics-engine-graphql@0.2.2':
+    resolution: {integrity: sha512-XKlnnrwptdXi3BsxZBsCXLRBEz3QRi1ziZ2hb3TA4TxYMDb9M8KGR/qJ2YqWHAFVBgSKDmCK+cauYxItuJu0zw==}
 
   '@powerhousedao/analytics-engine-knex@0.3.0':
     resolution: {integrity: sha512-a0diLxFy6ID0LJfjpyr8Xrgrc2xFEHnnLBDHY+P1fdvJMFHs3FnHrMmFvF2/VF9hZja+PhndgI4nGHZ4kynGLQ==}
@@ -4518,6 +4536,9 @@ packages:
 
   '@powerhousedao/analytics-engine-pg@0.3.0':
     resolution: {integrity: sha512-0N90CJzgrjZONA7VzEQKq5ne0DuzGpjTj3ZeZyjoaOq4gKopVdX+6j7zHmbfFKx15bkY6/T/+VoIKt9WN+We0Q==}
+
+  '@powerhousedao/analytics-engine-pg@0.4.0':
+    resolution: {integrity: sha512-Io/8qZU1jBuCNJoD9zaekT8Vesy7nhGIAiqQCal1O31cs3zkn62/vUjbtwMFSvEPMKFF8xeod8jkBJ3c7DWTaA==}
 
   '@powerhousedao/connect@1.0.0-dev.189':
     resolution: {integrity: sha512-iR9OcZz+XUJiDu7gt419MgJu9j+u9MxVT9bzQiQ37bF+etITNEZFCdL8dHyC4VwNmokYvXJ5EKHlfYGF+ub4Eg==}
@@ -7908,8 +7929,8 @@ packages:
       react-dom: ^18.2.0
       storybook: ^7.0.17
 
-  document-model-libs@1.127.0:
-    resolution: {integrity: sha512-nPzEf0frRdeIqI7hdRK65vff8Ep7+oiojvJtd9oMqInKem+YoluWfX7hqGH3vJd5rkKmFzsMBu0uoQQ33T4b3A==}
+  document-model-libs@1.127.1:
+    resolution: {integrity: sha512-lqxQx96JnwjkBAexigF5Y1ArDZ2q4LW38LgLSZucyFs9LSbKdlb+RAkie8BJcWYBKb6XeamOWlrZvqHj/xlh2Q==}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -18225,11 +18246,36 @@ snapshots:
 
   '@popperjs/core@2.11.8': {}
 
+  '@powerhousedao/analytics-engine-browser@0.4.0(pg@8.13.1)(sqlite3@5.1.7)':
+    dependencies:
+      '@electric-sql/pglite': 0.2.15
+      '@powerhousedao/analytics-engine-core': 0.3.0
+      '@powerhousedao/analytics-engine-knex': 0.4.0(sqlite3@5.1.7)
+      date-fns: 3.6.0
+      events: 3.3.0
+      knex: 3.1.0(pg@8.13.1)(sqlite3@5.1.7)
+      luxon: 3.5.0
+      util: 0.12.5
+    transitivePeerDependencies:
+      - better-sqlite3
+      - mysql
+      - mysql2
+      - pg
+      - pg-native
+      - sqlite3
+      - supports-color
+      - tedious
+
   '@powerhousedao/analytics-engine-core@0.3.0':
     dependencies:
       date-fns: 3.6.0
 
   '@powerhousedao/analytics-engine-graphql@0.2.1':
+    dependencies:
+      '@powerhousedao/analytics-engine-core': 0.3.0
+      luxon: 3.5.0
+
+  '@powerhousedao/analytics-engine-graphql@0.2.2':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.3.0
       luxon: 3.5.0
@@ -18276,6 +18322,23 @@ snapshots:
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.3.0
       '@powerhousedao/analytics-engine-knex': 0.3.0
+      date-fns: 3.6.0
+      knex: 3.1.0(pg@8.13.1)(sqlite3@5.1.7)
+      luxon: 3.5.0
+      pg: 8.13.1
+    transitivePeerDependencies:
+      - better-sqlite3
+      - mysql
+      - mysql2
+      - pg-native
+      - sqlite3
+      - supports-color
+      - tedious
+
+  '@powerhousedao/analytics-engine-pg@0.4.0(sqlite3@5.1.7)':
+    dependencies:
+      '@powerhousedao/analytics-engine-core': 0.3.0
+      '@powerhousedao/analytics-engine-knex': 0.4.0(sqlite3@5.1.7)
       date-fns: 3.6.0
       knex: 3.1.0(pg@8.13.1)(sqlite3@5.1.7)
       luxon: 3.5.0
@@ -20016,7 +20079,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 20.17.11
+      '@types/node': 22.10.3
     optional: true
 
   '@typescript-eslint/eslint-plugin@8.19.0(@typescript-eslint/parser@8.19.0(eslint@9.17.0(jiti@2.4.2))(typescript@5.7.2))(eslint@9.17.0(jiti@2.4.2))(typescript@5.7.2)':
@@ -22595,7 +22658,7 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       storybook: 8.4.7(bufferutil@4.0.9)(prettier@3.4.2)(utf-8-validate@5.0.10)
 
-  document-model-libs@1.127.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  document-model-libs@1.127.1(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@codemirror/lang-json': 6.0.1
       '@codemirror/search': 6.5.8
@@ -22696,12 +22759,12 @@ snapshots:
 
   dset@3.1.4: {}
 
-  dspot-powerhouse-components@1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.127.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  dspot-powerhouse-components@1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.127.1(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@emotion/react': 11.14.0(@types/react@18.3.18)(react@18.3.1)
       '@emotion/styled': 11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1)
       '@mui/material': 5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      document-model-libs: 1.127.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      document-model-libs: 1.127.1(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
@@ -29646,7 +29709,7 @@ snapshots:
 
   wkx@0.5.0:
     dependencies:
-      '@types/node': 20.17.11
+      '@types/node': 22.10.3
     optional: true
 
   word-wrap@1.2.5: {}
