@@ -245,7 +245,7 @@ export const WithToken: Story = {
       defaultValues: {
         "amount-field": {
           amount: "",
-          currency: "BTC",
+          currency: "",
         },
       },
     },

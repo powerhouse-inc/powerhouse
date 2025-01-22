@@ -27,17 +27,25 @@ export const getTokens = (
 
   return options;
 };
-
 export const isValidBigInt = (value: string | undefined): boolean => {
   if (!value) {
     return false;
   }
-  if (!/^\d+$/.test(value)) {
+  // Ensure the value contains only digits (no decimal points)
+  const bigintRegex = /^\d+$/;
+  return bigintRegex.test(value);
+};
+
+export const isValidNumberGreaterThanMaxSafeInteger = (
+  value: string | undefined,
+) => {
+  if (!value) {
     return false;
   }
-
-  const numValue = Number(value);
-  return Math.abs(numValue) >= Number.MAX_SAFE_INTEGER;
+  const isValidBigIntValue = isValidBigInt(value);
+  return (
+    isValidBigIntValue && Math.abs(Number(value)) > Number.MAX_SAFE_INTEGER
+  );
 };
 
 export const isNotSafeValue = (value: string) => {
