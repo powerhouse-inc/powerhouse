@@ -90,16 +90,22 @@ export const dev: CommandActionType<
       generate?: boolean;
       watch?: boolean;
       reactorPort?: number;
+      configFile?: string;
     },
   ]
-> = async ({ generate, watch, reactorPort = DefaultReactorOptions.port }) => {
+> = async ({
+  generate,
+  watch,
+  reactorPort = DefaultReactorOptions.port,
+  configFile,
+}) => {
   try {
     const { driveUrl } = await spawnLocalReactor({
       generate,
       port: reactorPort,
       watch,
     });
-    await spawnConnect(undefined, driveUrl);
+    await spawnConnect({ configFile }, driveUrl);
   } catch (error) {
     console.error(error);
   }
@@ -111,6 +117,10 @@ export function devCommand(program: Command) {
     .description("Starts dev environment")
     .option("--generate", "generate code when document model is updated")
     .option("--reactor-port <port>", "port to use for the reactor")
+    .option(
+      "--config-file <configFile>",
+      "Path to the powerhouse.config.js file",
+    )
     .option(
       "-w, --watch",
       "if the reactor should watch for local changes to document models and processors",

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.1.281",
+  "version": "2.1.323",
   "main": "index.js",
   "scripts": {
     "build": "tsup",

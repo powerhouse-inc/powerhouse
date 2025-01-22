@@ -15,7 +15,7 @@ export async function startConnect(connectOptions: ConnectOptions) {
 
 export function connectCommand(program: Command) {
   program
-    .name("connect")
+    .command("connect")
     .description("Starts Connect Studio")
     .option("-p, --port <port>", "Port to run the server on", "3000")
     .option("-h, --host", "Expose the server to the network")

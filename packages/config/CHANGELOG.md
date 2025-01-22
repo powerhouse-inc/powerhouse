@@ -1,3 +1,78 @@
+## 1.11.0 (2025-01-22)
+
+### 🚀 Features
+
+- **config:** added host in ph config ([#899](https://github.com/powerhouse-inc/powerhouse/pull/899))
+- **ph-cmd:** add scalars as dep ([#897](https://github.com/powerhouse-inc/powerhouse/pull/897))
+- **ph-cli:** added pm2 process manager ([7866ce9d](https://github.com/powerhouse-inc/powerhouse/commit/7866ce9d))
+- **ph-cli:** updated connect ver ([#886](https://github.com/powerhouse-inc/powerhouse/pull/886))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 1.10.0 (2025-01-21)
+
+### 🚀 Features
+
+- update ph-cli connect ver ([#884](https://github.com/powerhouse-inc/powerhouse/pull/884))
+- **ph-cli:** added configFile support ([#883](https://github.com/powerhouse-inc/powerhouse/pull/883))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 1.9.0 (2025-01-21)
+
+### 🚀 Features
+
+- update install command ([#881](https://github.com/powerhouse-inc/powerhouse/pull/881))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 1.8.0 (2025-01-21)
+
+### 🚀 Features
+
+- split ph-cmd ([#876](https://github.com/powerhouse-inc/powerhouse/pull/876))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 1.7.0 (2025-01-17)
+
+### 🚀 Features
+
+- **ph-cli:** default to root project when installing a dep globally ([#840](https://github.com/powerhouse-inc/powerhouse/pull/840))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval
+
+## 1.6.0 (2025-01-16)
+
+### 🚀 Features
+
+- **ph-cli:** added install command ([#831](https://github.com/powerhouse-inc/powerhouse/pull/831))
+- **ph-cli:** added connect command ([dd20da14](https://github.com/powerhouse-inc/powerhouse/commit/dd20da14))
+- **design-system:** merge dspot into main ([bef482f9](https://github.com/powerhouse-inc/powerhouse/commit/bef482f9))
+- **react-reactor:** updated build config ([#759](https://github.com/powerhouse-inc/powerhouse/pull/759))
+
+### 🩹 Fixes
+
+- **codegen:** readded config dependency ([289bdaf4](https://github.com/powerhouse-inc/powerhouse/commit/289bdaf4))
+- **codegen:** fixed create-lib build ([d5523d1e](https://github.com/powerhouse-inc/powerhouse/commit/d5523d1e))
+- **codegen:** added prettier dependency ([b104d473](https://github.com/powerhouse-inc/powerhouse/commit/b104d473))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval
+
 ## 1.5.0 (2025-01-06)
 
 ### 🚀 Features

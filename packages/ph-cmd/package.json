@@ -1,0 +1,39 @@
+{
+  "name": "ph-cmd",
+  "version": "0.27.1",
+  "description": "",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "ph": "dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli.js",
+    "./utils": "./dist/utils.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/cli.ts",
+    "prepublishOnly": "npm run build",
+    "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
+    "lint:fix": "eslint --fix"
+  },
+  "keywords": [],
+  "author": "",
+  "devDependencies": {},
+  "dependencies": {
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
+    "commander": "^12.1.0"
+  }
+}

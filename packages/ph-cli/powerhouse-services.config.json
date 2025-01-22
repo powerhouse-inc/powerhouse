@@ -1,0 +1,12 @@
+{
+  "apps": [
+    {
+      "name": "reactor",
+      "script": "ph reactor"
+    },
+    {
+      "name": "connect",
+      "script": "ph connect"
+    }
+  ]
+}

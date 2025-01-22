@@ -1,6 +1,11 @@
 import { Command } from "commander";
 import { createProject, parseVersion } from "@powerhousedao/codegen";
 import { CommandActionType } from "../types.js";
+import {
+  HOME_DIR,
+  POWERHOUSE_GLOBAL_DIR,
+  PH_GLOBAL_PROJECT_NAME,
+} from "../utils.js";
 
 export const init: CommandActionType<
   [
@@ -14,22 +19,28 @@ export const init: CommandActionType<
     },
   ]
 > = async (projectName, options) => {
-  console.log("Initializing a new project...");
+  console.log("📦 Initializing global project...");
+
+  process.chdir(HOME_DIR);
 
   try {
     await createProject({
-      name: options.project ?? projectName,
-      interactive: options.interactive ?? false,
+      name: PH_GLOBAL_PROJECT_NAME,
+      interactive: false,
       version: parseVersion(options),
     });
+
+    console.log(
+      `🚀 Global project initialized successfully: ${POWERHOUSE_GLOBAL_DIR}`,
+    );
   } catch (error) {
-    console.error("Failed to initialize the project", error);
+    console.error("❌ Failed to initialize the global project", error);
   }
 };
 
-export function initCommand(program: Command) {
+export function setupGlobalsCommand(program: Command) {
   program
-    .command("init")
+    .command("setup-globals")
     .description("Initialize a new project")
     .argument("[project-name]", "Name of the project")
     .option("-p, --project", "Name of the project")

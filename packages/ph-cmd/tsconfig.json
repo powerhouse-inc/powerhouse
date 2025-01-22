@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
+    "lib": ["es2017"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "strict": true,
     "outDir": "./dist",
     "composite": false,
@@ -9,13 +10,14 @@
     "forceConsistentCasingInFileNames": true,
     "inlineSources": false,
     "isolatedModules": true,
-    "moduleResolution": "node",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "preserveWatchOutput": true,
     "skipLibCheck": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "declaration": false,
+    "resolveJsonModule": true
   },
-  "include": ["./*.ts"]
+  "include": ["src/**/*.ts", "reset.d.ts", "*.config.ts"],
+  "exclude": ["**/*.esm.t"]
 }
