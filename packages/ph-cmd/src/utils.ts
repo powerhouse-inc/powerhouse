@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 
+export const PH_BIN_PATH = process.argv[1];
 export const PH_BIN = "ph-cli";
 export const PH_CLI_COMMANDS = [
   "init",
@@ -27,23 +28,26 @@ export const packageManagers = {
     execCommand: `bun ${PH_BIN} {{arguments}}`,
     execScript: `bun {{arguments}}`,
     lockfile: "bun.lock",
+    globalPathRegexp: /[\\/].bun[\\/]/,
   },
   pnpm: {
     execCommand: `pnpm exec ${PH_BIN} {{arguments}}`,
     execScript: `pnpm {{arguments}}`,
     lockfile: "pnpm-lock.yaml",
+    globalPathRegexp: /[\\/]pnpm[\\/]/,
   },
   yarn: {
     execCommand: `yarn ${PH_BIN} {{arguments}}`,
     execScript: `yarn {{arguments}}`,
     lockfile: "yarn.lock",
+    globalPathRegexp: /[\\/]yarn[\\/]/,
   },
   npm: {
     execCommand: `npx ${PH_BIN} {{arguments}}`,
     execScript: `npm run {{arguments}}`,
     lockfile: "package-lock.json",
   },
-};
+} as const;
 
 export type ProjectInfo = {
   isGlobal: boolean;
@@ -81,6 +85,20 @@ export function findNodeProjectRoot(
   }
 
   return findNodeProjectRoot(parentDir, pathValidation);
+}
+
+export function getPackageManagerFromPath(dir: string): PackageManager {
+  const lowerCasePath = dir.toLowerCase();
+
+  if (packageManagers.bun.globalPathRegexp.test(lowerCasePath)) {
+    return "bun";
+  } else if (packageManagers.pnpm.globalPathRegexp.test(lowerCasePath)) {
+    return "pnpm";
+  } else if (packageManagers.yarn.globalPathRegexp.test(lowerCasePath)) {
+    return "yarn";
+  }
+
+  return "npm";
 }
 
 export function getPackageManagerFromLockfile(dir: string): PackageManager {
