@@ -1,3 +1,5 @@
+"use client";
+
 import { Item } from "./sidebar-item";
 import { useSidebar } from "./sidebar-provider";
 

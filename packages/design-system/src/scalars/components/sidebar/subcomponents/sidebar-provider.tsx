@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable prettier/prettier */
 import React, {
   createContext,
@@ -24,6 +26,28 @@ type SidebarContextType = {
   activeSearchIndex: number;
   nextSearchResult: () => void;
   previousSearchResult: () => void;
+  /**
+   * To set the active node id in the provider state. This is intended to be used internally by the sidebar
+   * component to sync the active node id with the provider state.
+   * 
+   * @param nodeId The id of the node to be set as active.
+   */
+  setActiveNodeId: (nodeId?: string) => void;
+  /**
+   * To set the callback internally in the provider to create the actual callback wrapper that
+   * is going to be invoked safely by the sidebar. This callback should be wrapped in a useCallback
+   * to avoid unnecessary re-renders.
+   * 
+   * @param callback The callback to be invoked when the active node changes.
+   */
+  setActiveNodeChangeCallback: (callback: (nodeId: string) => void) => void;
+  /**
+   * To handle the active node change from the sidebar. This is invoked by the sidebar items every time
+   * they are clicked/touched.
+   * 
+   * @param nodeId The id of the node that is being clicked/touched.
+   */
+  handleActiveNodeChange: (nodeId: string) => void;
 };
 
 const SidebarContext = createContext<SidebarContextType>({
@@ -39,6 +63,9 @@ const SidebarContext = createContext<SidebarContextType>({
   activeSearchIndex: 0,
   nextSearchResult: () => null,
   previousSearchResult: () => null,
+  setActiveNodeId: () => null,
+  setActiveNodeChangeCallback: () => null,
+  handleActiveNodeChange: () => null,
 });
 
 interface SidebarProviderProps extends React.PropsWithChildren {
@@ -53,6 +80,7 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     items: nodes || [],
     itemsState: {},
     pinnedItems: [],
+    activeNodeId: undefined,
   });
 
   const setItems = useCallback(
@@ -83,6 +111,7 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     setSearchTerm(newSearchTerm);
   }, []);
 
+  // TODO: move search logic to the reducer
   // search state
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
@@ -137,6 +166,21 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     }
   }, [searchResults, activeSearchIndex, dispatch]);
 
+  const setActiveNodeId = useCallback((nodeId?: string) => {
+    dispatch({ type: SidebarActionType.SET_ACTIVE_NODE_ID, nodeId });
+  }, [dispatch]);
+
+  const [onActiveNodeChangeCallback, setOnActiveNodeChangeCallback] = useState<((nodeId: string) => void) | null>(null);
+  const setActiveNodeChangeCallback = useCallback((callback: (nodeId: string) => void) => {
+    setOnActiveNodeChangeCallback(() => callback);
+  }, [setOnActiveNodeChangeCallback]);
+
+  const handleActiveNodeChange = useCallback((nodeId: string) => {
+    // we don't change the active node id here, it should be changed by the callback, triggering a re-render
+    // when the new updated id is passed to the sidebar component and the sidebar update the provider state.
+    onActiveNodeChangeCallback?.(nodeId);
+  }, [onActiveNodeChangeCallback]);
+
   return (
     <SidebarContext.Provider
       value={{
@@ -152,6 +196,9 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
         activeSearchIndex,
         nextSearchResult,
         previousSearchResult,
+        setActiveNodeId,
+        setActiveNodeChangeCallback,
+        handleActiveNodeChange,
       }}
     >
       {children}
@@ -176,11 +223,17 @@ const useSidebarIsNodeSearchActive = (nodeId: string): boolean => {
   return searchResults.length > 0 && searchResults[activeSearchIndex].id === nodeId;
 };
 
+const useSidebarIsNodeActive = (nodeId: string): boolean => {
+  const { state } = useSidebar();
+  return state.activeNodeId === nodeId;
+};
+
 export {
   SidebarProvider,
   useSidebar,
   useSidebarNodeState,
   useSidebarItemPinned,
-  useSidebarIsNodeSearchActive
+  useSidebarIsNodeSearchActive,
+  useSidebarIsNodeActive,
 };
 export type { SidebarState };
