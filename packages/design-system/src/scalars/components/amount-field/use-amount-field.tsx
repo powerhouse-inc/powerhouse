@@ -444,13 +444,15 @@ export const useAmountField = ({
   const handleIsInputFocused = () => {
     setInputFocused(true);
   };
-
+  //Put the placeholder in case that value its not in the options
+  const selectValueIsNotInOptions =
+    options.find((option) => option.value === valueSelect)?.value ?? "";
   return {
     isPercent,
     isShowSelect,
     options,
     valueInput: displayValueAmountState,
-    valueSelect,
+    valueSelect: selectValueIsNotInOptions,
     handleOnChangeInput,
     handleOnChangeSelect,
     handleBlur,
