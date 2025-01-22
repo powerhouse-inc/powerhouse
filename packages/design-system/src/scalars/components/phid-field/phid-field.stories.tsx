@@ -107,6 +107,7 @@ const meta: Meta<typeof PHIDField> = {
         defaultValue: { summary: "withId" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
+      if: { arg: "autoComplete", neq: false },
     },
 
     ...getValidationArgTypes(),

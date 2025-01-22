@@ -1,6 +1,6 @@
 import React from "react";
 
-export interface PHIDProps {
+export interface PHIDBaseProps {
   onChange?: (value: string) => void;
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   placeholder?: string;
@@ -9,12 +9,19 @@ export interface PHIDProps {
   allowedScopes?: string[];
   allowedDocumentTypes?: string[];
   allowUris?: boolean;
-  autoComplete?: boolean;
   allowDataObjectReference?: boolean;
-  variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
   minLength?: number;
   maxLength?: number;
 }
+
+export type PHIDProps = PHIDBaseProps &
+  (
+    | { autoComplete?: false; variant: undefined }
+    | {
+        autoComplete: true;
+        variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
+      }
+  );
 
 export interface PHIDListItemProps {
   title?: string;

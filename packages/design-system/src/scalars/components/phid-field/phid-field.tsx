@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useCallback } from "react";
+import React, { useId } from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { Command } from "@/scalars/components/fragments/command";
 import { Input } from "@/scalars/components/fragments/input";
@@ -85,7 +85,9 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       handleClear,
       handleOpenChange,
       handleSelectedValueChange,
+      onTriggerBlur,
     } = usePHIDField({
+      autoComplete,
       defaultValue,
       value,
       onChange,
@@ -93,15 +95,6 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
     });
 
     const selectedOption = options.find((opt) => opt.phid === selectedValue);
-
-    const onTriggerBlur = useCallback(
-      (event: any) => {
-        if (!isPopoverOpen) {
-          onBlur?.(event as React.FocusEvent<HTMLInputElement>);
-        }
-      },
-      [onBlur, isPopoverOpen],
-    );
 
     return (
       <FormGroup>
@@ -122,7 +115,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
         <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
           <Command shouldFilter={false}>
             <PopoverAnchor asChild={true}>
-              <div>
+              <div className="relative">
                 <CommandPrimitive.Input asChild>
                   <Input
                     id={id}
@@ -143,15 +136,24 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                     }}
                     onBlur={onTriggerBlur}
                     onClick={(e) => {
-                      e.preventDefault();
+                      const input = e.target as HTMLInputElement;
                       if (
                         autoComplete &&
-                        (e.target as HTMLInputElement).value !== ""
+                        !options.some((opt) => opt.phid === input.value) &&
+                        input.value !== ""
                       ) {
                         handleOpenChange(true);
                       }
-                      (e.target as HTMLInputElement).select();
                       props.onClick?.(e);
+                    }}
+                    onMouseDown={(e) => {
+                      const input = e.target as HTMLInputElement;
+                      if (!input.contains(document.activeElement)) {
+                        // wait for the next tick to ensure the focus occurs first
+                        requestAnimationFrame(() => {
+                          input.select();
+                        });
+                      }
                     }}
                     placeholder={placeholder}
                     aria-invalid={hasError}
@@ -163,17 +165,19 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                   />
                 </CommandPrimitive.Input>
                 {selectedOption !== undefined && variant !== "withId" && (
-                  <PHIDListItem
-                    variant="withIdTitleAndDescription"
-                    title={selectedOption.title}
-                    path={selectedOption.path}
-                    phid=""
-                    description={
-                      variant === "withIdTitleAndDescription"
-                        ? selectedOption.description
-                        : ""
-                    }
-                  />
+                  <div className="absolute inset-x-0 top-full mt-2">
+                    <PHIDListItem
+                      variant="withIdTitleAndDescription"
+                      title={selectedOption.title}
+                      path={selectedOption.path}
+                      phid=""
+                      description={
+                        variant === "withIdTitleAndDescription"
+                          ? selectedOption.description
+                          : ""
+                      }
+                    />
+                  </div>
                 )}
               </div>
             </PopoverAnchor>
@@ -235,7 +239,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         const isValidURIFormat = URIFormats.some((format) =>
           new RegExp(format).test(value),
         );
-        if (!allowUris) {
+        if (allowUris === false) {
           return "URIs are not allowed, please use a URL instead.";
         }
         if (!isValidURIFormat) {
