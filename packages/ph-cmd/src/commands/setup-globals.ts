@@ -38,9 +38,9 @@ export const init: CommandActionType<
   }
 };
 
-export function initCommand(program: Command) {
+export function setupGlobalsCommand(program: Command) {
   program
-    .command("init")
+    .command("setup-globals")
     .description("Initialize a new project")
     .argument("[project-name]", "Name of the project")
     .option("-p, --project", "Name of the project")
