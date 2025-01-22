@@ -216,7 +216,7 @@ export const WithAmount: Story = {
   },
   args: {
     placeholder: "Enter Amount",
-    label: "EnterAmout ",
+    label: "Enter Amout ",
     type: "Amount",
     value: 345,
   },
@@ -283,6 +283,7 @@ export const Disable: Story = {
     label: "Enter Amount ",
     placeholder: "Enter Amount",
     type: "AmountCurrencyFiat",
+    placeholderSelect: "CUR",
     allowedCurrencies: ["USD", "EUR"],
     disabled: true,
     value: {
@@ -306,6 +307,7 @@ export const WithValueUniversalAmountCurrency: Story = {
   args: {
     label: "Label",
     placeholder: "Enter Amount",
+    placeholderSelect: "CUR",
     type: "AmountCurrencyUniversal",
     allowedCurrencies: ["USD", "EUR"],
     value: {

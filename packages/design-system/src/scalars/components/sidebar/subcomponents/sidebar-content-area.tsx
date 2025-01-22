@@ -32,7 +32,7 @@ export const SidebarContentArea = ({
       const nodeElement = document.getElementById(`sidebar-item-${node.id}`);
       if (nodeElement && contentAreaRef.current) {
         contentAreaRef.current.scrollTo({
-          top: nodeElement.offsetTop - 100,
+          top: nodeElement.offsetTop - contentAreaRef.current.offsetTop,
           behavior: "smooth",
         });
       }

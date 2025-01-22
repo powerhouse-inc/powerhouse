@@ -15,7 +15,7 @@ import {
   isValidNumberGreaterThanMaxSafeInteger,
 } from "./utils";
 import { isValidNumber } from "../number-field/number-field-validations";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface UseAmountFieldProps {
   value?: AmountValue;
@@ -48,6 +48,14 @@ export const useAmountField = ({
   const currentValue = value ?? defaultValue;
 
   const baseValue = useMemo(() => {
+    // Check if the value is an object and the type is Amount or AmountPercentage
+    if (
+      (type === "Amount" || type === "AmountPercentage") &&
+      typeof currentValue === "object"
+    ) {
+      return currentValue.amount;
+    }
+
     return currentValue === undefined
       ? undefined
       : type === "Amount" || type === "AmountPercentage"
@@ -56,6 +64,66 @@ export const useAmountField = ({
           ? (currentValue as AmountCurrencyUniversal).amount
           : (currentValue as AmountCurrencyFiat | AmountCurrencyCrypto).amount;
   }, [currentValue, type]);
+  useEffect(() => {
+    if (type === "Amount" || type === "AmountPercentage") {
+      if (typeof currentValue === "object") {
+        const newValue =
+          (currentValue.amount as unknown) === ""
+            ? ""
+            : (currentValue.amount as unknown) === undefined
+              ? ""
+              : currentValue.amount;
+        const nativeEvent = new Event("change", {
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(nativeEvent, "target", {
+          value: { value: newValue },
+          writable: false,
+        });
+        onChange?.(newValue as unknown as React.ChangeEvent<HTMLInputElement>);
+        return;
+      }
+      if (
+        typeof currentValue === "number" ||
+        typeof currentValue === "string" ||
+        typeof currentValue === "bigint" ||
+        typeof currentValue === "undefined"
+      ) {
+        const nativeEvent = new Event("change", {
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(nativeEvent, "target", {
+          value: { value: currentValue },
+          writable: false,
+        });
+        onChange?.(
+          nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>,
+        );
+      }
+    }
+    if (
+      (type === "AmountCurrencyFiat" ||
+        type === "AmountCurrencyCrypto" ||
+        type === "AmountCurrencyUniversal") &&
+      (typeof currentValue === "number" || typeof currentValue === "string")
+    ) {
+      const newValue = {
+        amount: currentValue,
+        currency: "",
+      } as AmountCurrencyFiat;
+      const nativeEvent = new Event("change", {
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(nativeEvent, "target", {
+        value: { value: newValue },
+        writable: false,
+      });
+      onChange?.(nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>);
+    }
+  }, [currentValue, onChange, type]);
 
   const valueSelect =
     currentValue === undefined
@@ -151,6 +219,7 @@ export const useAmountField = ({
           type === "AmountCurrencyUniversal"
           ? optionsForUniversal
           : [];
+
   // Handle the change of the input
   const handleOnChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;

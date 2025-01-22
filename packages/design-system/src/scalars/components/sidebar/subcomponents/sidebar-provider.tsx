@@ -124,7 +124,8 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
 
       // callback to search the nodes
       const search = () => {
-        const results = nodesSearch(state.items, searchTerm, "dfs");
+        const nodesToSearch = state.pinnedItems.length > 0 ? state.pinnedItems[state.pinnedItems.length - 1].childrens ?? [] : state.items;
+        const results = nodesSearch(nodesToSearch, searchTerm, "dfs");
         setSearchResults(results);
         setSearchLoading(false);
         setActiveSearchIndex(0);
@@ -141,7 +142,7 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
       // clear the timeout if the user changes the search term
       clearTimeout(searchTimeout);
     };
-  }, [searchTerm, state.items]);
+  }, [searchTerm, state.items, state.pinnedItems]);
 
   useEffect(() => {
     // set the active index in the search results range
@@ -206,6 +207,7 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
   );
 };
 
+// TODO: move hooks to separate file
 const useSidebar = () => useContext(SidebarContext);
 const useSidebarNodeState = (nodeId: string): boolean => {
   const { state } = useSidebar();
