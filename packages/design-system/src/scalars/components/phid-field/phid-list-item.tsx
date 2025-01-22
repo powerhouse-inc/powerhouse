@@ -5,14 +5,7 @@ import type { PHIDProps, PHIDListItemProps } from "./types";
 
 export const PHIDListItem: React.FC<
   { variant?: PHIDProps["variant"]; className?: string } & PHIDListItemProps
-> = ({
-  variant = "withId",
-  title = "Title",
-  path = "path/to/document",
-  phid,
-  description = "Description",
-  className,
-}) => {
+> = ({ variant = "withId", title, path, phid, description, className }) => {
   const renderWithId = () => (
     <div className={cn("flex w-full items-center gap-2")}>
       <span className={cn("truncate text-sm text-gray-600")}>{phid}</span>
@@ -52,14 +45,18 @@ export const PHIDListItem: React.FC<
           <span className={cn("text-sm text-gray-500")}>{path}</span>
         </div>
       </div>
-      <div className={cn("flex max-w-full items-center gap-2")}>
-        <span className={cn("truncate text-sm text-gray-600")}>{phid}</span>
-      </div>
-      <div className={cn("flex flex-col gap-1")}>
-        <p className={cn("text-sm text-gray-700 dark:text-gray-300")}>
-          {description}
-        </p>
-      </div>
+      {!!phid && (
+        <div className={cn("flex max-w-full items-center gap-2")}>
+          <span className={cn("truncate text-sm text-gray-600")}>{phid}</span>
+        </div>
+      )}
+      {!!description && (
+        <div className={cn("flex flex-col gap-1")}>
+          <p className={cn("text-sm text-gray-700 dark:text-gray-300")}>
+            {description}
+          </p>
+        </div>
+      )}
     </div>
   );
 
