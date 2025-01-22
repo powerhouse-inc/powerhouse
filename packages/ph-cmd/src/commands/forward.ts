@@ -9,6 +9,10 @@ type ForwardPHCommandOptions = {
   isPackageScript?: boolean;
 };
 
+type FSError = {
+  code: string;
+};
+
 export const forwardCommand = (
   args: string,
   options: ForwardPHCommandOptions,
@@ -43,6 +47,10 @@ export const forwardCommand = (
     );
   } catch (error) {
     console.error("❌ Failed to forward command");
+    if ((error as FSError).code === "ENOENT") {
+      console.error("Have you run `ph setup-globals` or `ph init`?");
+    }
+
     throw error;
   }
 };

@@ -5,6 +5,8 @@ import {
   HOME_DIR,
   POWERHOUSE_GLOBAL_DIR,
   PH_GLOBAL_PROJECT_NAME,
+  getPackageManagerFromPath,
+  PH_BIN_PATH,
 } from "../utils.js";
 
 export const init: CommandActionType<
@@ -29,7 +31,8 @@ export const init: CommandActionType<
       name: PH_GLOBAL_PROJECT_NAME,
       interactive: false,
       version: parseVersion(options),
-      packageManager: options.packageManager,
+      packageManager:
+        options.packageManager ?? getPackageManagerFromPath(PH_BIN_PATH),
     });
 
     console.log(
