@@ -1,3 +1,17 @@
+## 1.11.0 (2025-01-22)
+
+### 🚀 Features
+
+- **config:** added host in ph config ([#899](https://github.com/powerhouse-inc/powerhouse/pull/899))
+- **ph-cmd:** add scalars as dep ([#897](https://github.com/powerhouse-inc/powerhouse/pull/897))
+- **ph-cli:** added pm2 process manager ([7866ce9d](https://github.com/powerhouse-inc/powerhouse/commit/7866ce9d))
+- **ph-cli:** updated connect ver ([#886](https://github.com/powerhouse-inc/powerhouse/pull/886))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.10.0 (2025-01-21)
 
 ### 🚀 Features
