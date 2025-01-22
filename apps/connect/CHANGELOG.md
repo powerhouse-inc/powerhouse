@@ -1,3 +1,10 @@
+# [1.0.0-dev.191](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.190...v1.0.0-dev.191) (2025-01-22)
+
+
+### Features
+
+* update readme ([6191550](https://github.com/powerhouse-inc/document-model-electron/commit/6191550f596ff26143d2e918190bb14a037949bf))
+
 # [1.0.0-dev.190](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.189...v1.0.0-dev.190) (2025-01-21)
 
 
