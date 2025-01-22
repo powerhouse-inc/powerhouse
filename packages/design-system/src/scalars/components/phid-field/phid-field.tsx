@@ -75,17 +75,12 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
     const hasWarning = Array.isArray(warnings) && warnings.length > 0;
     const hasError = Array.isArray(errors) && errors.length > 0;
 
-    // Temporary
-    const options = [
-      { phid: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea7", title: "PHID 1" },
-      { phid: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8", title: "PHID 2" },
-      { phid: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc5efc9", title: "PHID 3" },
-    ];
-
     const {
       selectedValue,
       isPopoverOpen,
       commandListRef,
+      options,
+      isLoading,
       toggleOption,
       handleClear,
       handleOpenChange,
@@ -97,7 +92,6 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onBlur,
     });
 
-    // Temporary
     const selectedOption = options.find((opt) => opt.phid === selectedValue);
 
     const onTriggerBlur = useCallback(
@@ -128,25 +122,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
         <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
           <Command shouldFilter={false}>
             <PopoverAnchor asChild={true}>
-              {/* Temporary */}
-              {selectedOption !== undefined && variant !== "withId" ? (
-                <div
-                  onClick={() => {
-                    handleClear();
-                  }}
-                  className={cn(
-                    "dark:border-charcoal-700 dark:bg-charcoal-900 cursor-pointer rounded-md border border-gray-300 bg-white",
-                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white",
-                    "dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 dark:focus:bg-charcoal-900 focus:bg-gray-50",
-                  )}
-                >
-                  <PHIDListItem
-                    variant={variant}
-                    title={selectedOption.title}
-                    phid={selectedOption.phid}
-                  />
-                </div>
-              ) : (
+              <div>
                 <CommandPrimitive.Input asChild>
                   <Input
                     id={id}
@@ -167,14 +143,14 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                     }}
                     onBlur={onTriggerBlur}
                     onClick={(e) => {
-                      if (selectedOption !== undefined) {
-                        handleClear();
-                      } else if (
+                      e.preventDefault();
+                      if (
                         autoComplete &&
                         (e.target as HTMLInputElement).value !== ""
                       ) {
                         handleOpenChange(true);
                       }
+                      (e.target as HTMLInputElement).select();
                       props.onClick?.(e);
                     }}
                     placeholder={placeholder}
@@ -186,7 +162,20 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                     ref={ref}
                   />
                 </CommandPrimitive.Input>
-              )}
+                {selectedOption !== undefined && variant !== "withId" && (
+                  <PHIDListItem
+                    variant="withIdTitleAndDescription"
+                    title={selectedOption.title}
+                    path={selectedOption.path}
+                    phid=""
+                    description={
+                      variant === "withIdTitleAndDescription"
+                        ? selectedOption.description
+                        : ""
+                    }
+                  />
+                )}
+              </div>
             </PopoverAnchor>
             <PopoverContent
               align="start"
