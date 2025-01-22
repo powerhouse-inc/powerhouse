@@ -11,6 +11,7 @@ export const init: CommandActionType<
       version?: string;
       dev?: boolean;
       staging?: boolean;
+      packageManager?: string;
     },
   ]
 > = async (projectName, options) => {
@@ -21,6 +22,7 @@ export const init: CommandActionType<
       name: options.project ?? projectName,
       interactive: options.interactive ?? false,
       version: parseVersion(options),
+      packageManager: options.packageManager,
     });
   } catch (error) {
     console.error("Failed to initialize the project", error);
@@ -40,5 +42,9 @@ export function initCommand(program: Command) {
     )
     .option("--dev", 'Use "development" version of the boilerplate')
     .option("--staging", 'Use "development" version of the boilerplate')
+    .option(
+      "--package-manager <packageManager>",
+      "force package manager to use",
+    )
     .action(init);
 }

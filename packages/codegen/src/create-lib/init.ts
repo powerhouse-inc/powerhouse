@@ -9,8 +9,7 @@ import { getPackageManager } from "./utils";
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
 
-const packageManager = getPackageManager(process.env.npm_config_user_agent);
-const isNpm = packageManager === "npm";
+const envPackageManager = getPackageManager(process.env.npm_config_user_agent);
 
 const defaultDirectories = {
   documentModelsDir: "./document-models",
@@ -26,12 +25,14 @@ export const createCommandSpec = {
   "--staging": Boolean,
   "-p": "--name",
   "-v": "--version",
+  "--package-manager": String,
 } as const;
 
 export interface ICreateProjectOptions {
   name: string | undefined;
   version: string;
   interactive: boolean;
+  packageManager?: string;
 }
 
 const { prompt } = enquirer;
@@ -176,7 +177,13 @@ export async function init(options: ICreateProjectOptions) {
     process.exit(1);
   }
 
-  createProject(projectName, documentModelsDir, editorsDir, options.version);
+  createProject(
+    projectName,
+    documentModelsDir,
+    editorsDir,
+    options.version,
+    options.packageManager,
+  );
 }
 
 function createProject(
@@ -184,7 +191,10 @@ function createProject(
   documentModelsDir: string,
   editorsDir: string,
   version = "main",
+  packageManager?: string,
 ) {
+  packageManager = packageManager ?? envPackageManager;
+
   try {
     console.log("\x1b[33m", "Downloading the project structure...", "\x1b[0m");
     runCmd(
@@ -194,11 +204,15 @@ function createProject(
     const appPath = path.join(process.cwd(), projectName);
     process.chdir(appPath);
 
-    console.log("\x1b[34m", "Installing dependencies...", "\x1b[0m");
-    runCmd(`${packageManager} install`);
+    console.log(
+      "\x1b[34m",
+      `Installing dependencies with ${packageManager}...`,
+      "\x1b[0m",
+    );
+    runCmd(`${packageManager} install --loglevel error`);
 
     fs.rmSync(path.join(appPath, "./.git"), { recursive: true });
-    runCmd("git init");
+    runCmd(`git init -b ${version}`);
 
     try {
       fs.mkdirSync(path.join(appPath, documentModelsDir));
@@ -216,13 +230,6 @@ function createProject(
 
     console.log("\x1b[32m", "The installation is done!", "\x1b[0m");
     console.log();
-
-    console.log("\x1b[34m", "You can start by typing:");
-    console.log(`    cd ${projectName}`);
-    console.log(
-      isNpm ? "    npm run generate" : `    ${packageManager} generate`,
-      "\x1b[0m",
-    );
   } catch (error) {
     console.log(error);
   }
