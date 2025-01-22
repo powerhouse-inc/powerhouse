@@ -6,6 +6,7 @@ import {
 
 type ForwardPHCommandOptions = {
   debug?: boolean;
+  isPackageScript?: boolean;
 };
 
 export const forwardCommand = (
@@ -25,52 +26,21 @@ export const forwardCommand = (
   const packageManager = getPackageManagerFromLockfile(projectInfo.path);
 
   if (options.debug) {
-    console.log("\n>>> forwardScriptCommand arguments:");
+    console.log("\n>>> forwardCommand arguments:");
     console.log(">>> packageManager:", packageManager);
     console.log(">>> projectPath:", projectInfo.path);
     console.log(">>> args:", args);
-    console.log(">>> isPackageScript:", true);
+    console.log(">>> isPackageScript:", options.isPackageScript ?? false);
   }
-
-  let packageScriptExecuted = false;
 
   try {
     forwardPHCommand(
       packageManager,
       projectInfo.path,
       args,
-      true,
+      options.isPackageScript ?? false,
       options.debug,
     );
-
-    packageScriptExecuted = true;
-  } catch (error) {
-    if (options.debug) {
-      console.log(
-        ">>> failed to forward command as package script, trying as ph command...",
-        error,
-      );
-    }
-  }
-
-  if (options.debug) {
-    console.log("\n>>> forwardCommand arguments:");
-    console.log(">>> packageManager:", packageManager);
-    console.log(">>> projectPath:", projectInfo.path);
-    console.log(">>> args:", args);
-    console.log(">>> isPackageScript:", false);
-  }
-
-  try {
-    if (!packageScriptExecuted) {
-      forwardPHCommand(
-        packageManager,
-        projectInfo.path,
-        args,
-        false,
-        options.debug,
-      );
-    }
   } catch (error) {
     console.error("❌ Failed to forward command");
     throw error;

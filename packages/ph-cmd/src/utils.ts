@@ -4,6 +4,16 @@ import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 
 export const PH_BIN = "ph-cli";
+export const PH_CLI_COMMANDS = [
+  "init",
+  "dev",
+  "connect",
+  "generate",
+  "reactor",
+  "help",
+  "install",
+  "service",
+];
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const HOME_DIR = homedir();
 export const PH_GLOBAL_PROJECT_NAME = ".ph";
@@ -129,7 +139,7 @@ export function forwardPHCommand(
   }
 
   execSync(execCommand, {
-    stdio: ["ignore", "inherit", "ignore"],
+    stdio: "inherit",
     ...commandOptions,
   });
 }

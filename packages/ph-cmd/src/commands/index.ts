@@ -1,10 +1,10 @@
 import { Command } from "commander";
-import { initCommand } from "./init.js";
+import { setupGlobalsCommand } from "./setup-globals.js";
 
-export const commands = [initCommand];
+export const commands = [setupGlobalsCommand];
 
 export default function registerCommands(program: Command) {
   commands.forEach((command) => command(program));
 }
 
-export * from "./init.js";
+export * from "./setup-globals.js";

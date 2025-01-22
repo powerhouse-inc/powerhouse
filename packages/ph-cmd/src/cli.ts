@@ -3,6 +3,7 @@ import { Command } from "commander";
 import registerCommands from "./commands/index.js";
 import { forwardCommand } from "./commands/forward.js";
 import { CommandActionType } from "./types.js";
+import { PH_CLI_COMMANDS } from "./utils.js";
 
 const program = new Command();
 
@@ -11,9 +12,12 @@ const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = (
 ) => {
   const allArgs = process.argv.slice(2);
   const filteredArgs = allArgs.filter((arg) => arg !== "--verbose");
+  const command = filteredArgs.at(0);
+
+  const isPackageScript = !PH_CLI_COMMANDS.includes(command ?? "");
   const args = filteredArgs.join(" ");
 
-  forwardCommand(args, { debug: !!options.verbose });
+  forwardCommand(args, { debug: !!options.verbose, isPackageScript });
 };
 
 program
