@@ -36,6 +36,7 @@ npm run make:linux # Create package for Linux
 npm run make:windows # Create package for Windows
 ```
 
+
 ## Troubleshooting
 
 - For a complete list of *Electron Forge* options and requirements, visit the [official docs](https://github.com/electron-userland/electron-forge#usage).
