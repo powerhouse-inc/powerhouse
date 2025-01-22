@@ -13,6 +13,7 @@ export type PowerhouseConfig = {
   };
   studio?: {
     port?: number;
+    host?: string;
     openBrowser?: boolean;
   };
   packages?: {
