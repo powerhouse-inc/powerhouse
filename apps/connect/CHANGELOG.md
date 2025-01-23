@@ -1,3 +1,10 @@
+# [1.0.0-dev.192](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.191...v1.0.0-dev.192) (2025-01-23)
+
+
+### Features
+
+* allows running studio on https with self-certificate ([8407dcf](https://github.com/powerhouse-inc/document-model-electron/commit/8407dcffb9e9713bc0b16445ef4c10ee26a35b6a))
+
 # [1.0.0-dev.191](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.190...v1.0.0-dev.191) (2025-01-22)
 
 
