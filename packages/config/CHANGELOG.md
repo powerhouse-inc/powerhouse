@@ -1,3 +1,15 @@
+## 1.12.0 (2025-01-23)
+
+### 🚀 Features
+
+- **ph-cli:** added https support for connect ([a9335a4d](https://github.com/powerhouse-inc/powerhouse/commit/a9335a4d))
+- **ph-cli:** update connect ver ([#901](https://github.com/powerhouse-inc/powerhouse/pull/901))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente Sandoval
+
 ## 1.11.0 (2025-01-22)
 
 ### 🚀 Features
