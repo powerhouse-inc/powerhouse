@@ -27,7 +27,7 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "lint:fix": "eslint --fix",
-    "postinstall": "node -e \"const fs = require('fs'); if (!fs.existsSync('./.skippostinstall')) import('./dist/postinstall.js');\""
+    "postinstall": "npx shx test -f ./.skippostinstall || ph setup-globals"
   },
   "keywords": [],
   "author": "",
