@@ -1,3 +1,20 @@
+## 0.14.0 (2025-01-23)
+
+### 🚀 Features
+
+- push release ([642449fb](https://github.com/powerhouse-inc/powerhouse/commit/642449fb))
+- **ph-cli:** added https support for connect ([a9335a4d](https://github.com/powerhouse-inc/powerhouse/commit/a9335a4d))
+- **ph-cli:** update connect ver ([#901](https://github.com/powerhouse-inc/powerhouse/pull/901))
+- **ph-cmd:** add scalars as dep ([#897](https://github.com/powerhouse-inc/powerhouse/pull/897))
+- **ph-cli:** added pm2 process manager ([7866ce9d](https://github.com/powerhouse-inc/powerhouse/commit/7866ce9d))
+- **ph-cli:** updated connect ver ([#886](https://github.com/powerhouse-inc/powerhouse/pull/886))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank @froid1911
+- Guillermo Puente Sandoval @gpuente
+
 ## 0.13.0 (2025-01-21)
 
 ### 🚀 Features

@@ -1,3 +1,15 @@
+## 1.20.0 (2025-01-23)
+
+### 🚀 Features
+
+- push release ([642449fb](https://github.com/powerhouse-inc/powerhouse/commit/642449fb))
+- **ph-cli:** added https support for connect ([a9335a4d](https://github.com/powerhouse-inc/powerhouse/commit/a9335a4d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank @froid1911
+
 ## 1.19.0 (2025-01-22)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 1.13.0 (2025-01-23)
+
+### 🚀 Features
+
+- push release ([642449fb](https://github.com/powerhouse-inc/powerhouse/commit/642449fb))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 1.12.0 (2025-01-23)
 
 ### 🚀 Features
