@@ -1,3 +1,10 @@
+# [1.0.0-dev.193](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.192...v1.0.0-dev.193) (2025-01-23)
+
+
+### Features
+
+* add open option to studio ([#650](https://github.com/powerhouse-inc/document-model-electron/issues/650)) ([218ff77](https://github.com/powerhouse-inc/document-model-electron/commit/218ff770515b0097022a945580ecd66a23aa92d8))
+
 # [1.0.0-dev.192](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.191...v1.0.0-dev.192) (2025-01-23)
 
 
