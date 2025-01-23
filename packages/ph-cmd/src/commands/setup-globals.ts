@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { createProject, parseVersion } from "@powerhousedao/codegen";
+import fs from "node:fs";
 import { CommandActionType } from "../types.js";
 import {
   HOME_DIR,
@@ -22,8 +23,17 @@ export const init: CommandActionType<
     },
   ]
 > = async (projectName, options) => {
-  console.log("📦 Initializing global project...");
+  // check if the global project already exists
+  const globalProjectExists = fs.existsSync(POWERHOUSE_GLOBAL_DIR);
 
+  if (globalProjectExists) {
+    console.log(
+      `📦 Global project already exists at: ${POWERHOUSE_GLOBAL_DIR}`,
+    );
+    return;
+  }
+
+  console.log("📦 Initializing global project...");
   process.chdir(HOME_DIR);
 
   try {
