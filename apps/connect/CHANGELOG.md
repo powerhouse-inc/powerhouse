@@ -1,3 +1,10 @@
+# [1.0.0-dev.194](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.193...v1.0.0-dev.194) (2025-01-23)
+
+
+### Features
+
+* enable packages option ([#651](https://github.com/powerhouse-inc/document-model-electron/issues/651)) ([78cfc7a](https://github.com/powerhouse-inc/document-model-electron/commit/78cfc7a00323ed06603f2ae17d1666bc1d959df7))
+
 # [1.0.0-dev.193](https://github.com/powerhouse-inc/document-model-electron/compare/v1.0.0-dev.192...v1.0.0-dev.193) (2025-01-23)
 
 
