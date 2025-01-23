@@ -49,6 +49,7 @@ export type ConnectStudioOptions = {
     localEditors?: string;
     localDocuments?: string;
     open?: boolean;
+    packages?: { packageName: string }[];
 };
 
 export function generateImportSctipt(outputPath: string, projects: Project[]) {
@@ -89,7 +90,7 @@ export function generateImportSctipt(outputPath: string, projects: Project[]) {
 }
 
 export function startConnectStudio(options: ConnectStudioOptions) {
-    let serverOptions: StartServerOptions = {};
+    const serverOptions: StartServerOptions = {};
 
     if (options.port) {
         process.env.PORT = options.port;
@@ -152,6 +153,18 @@ export function startConnectStudio(options: ConnectStudioOptions) {
     } else {
         process.env.LOAD_EXTERNAL_PROJECTS = 'false';
         serverOptions.enableExternalProjects = false;
+    }
+
+    if (options.packages && options.packages.length > 0) {
+        const packages = mapProjects(options.packages);
+        generateImportSctipt(projectRoot, packages);
+        process.env.LOAD_EXTERNAL_PROJECTS = 'true';
+
+        serverOptions.enableExternalProjects = true;
+        serverOptions.projectsImportPath = resolve(
+            projectRoot,
+            IMPORT_SCRIPT_FILE,
+        );
     }
 
     if (options.localEditors) {
