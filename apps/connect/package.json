@@ -49,6 +49,7 @@
         "build:service-worker": "tsc --build ./tsconfig.sw.json"
     },
     "dependencies": {
+        "@vitejs/plugin-basic-ssl": "^1.2.0",
         "commander": "^12.1.0",
         "vite": "^5.4.8",
         "vite-envs": "^4.4.5"

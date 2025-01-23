@@ -1,3 +1,4 @@
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { exec } from 'node:child_process';
 import fs from 'node:fs';
 import { join } from 'node:path';
@@ -14,6 +15,7 @@ import {
 export type StartServerOptions = {
     projectsImportPath?: string;
     enableExternalProjects?: boolean;
+    https?: boolean;
 };
 
 const studioDirname = fileURLToPath(new URL('.', import.meta.url));
@@ -83,7 +85,7 @@ export async function startServer(options: StartServerOptions = {}) {
     backupIndexHtml(true);
 
     const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
-    const HOST = process.env.HOST ? process.env.HOST : "0.0.0.0";
+    const HOST = process.env.HOST ? process.env.HOST : '0.0.0.0';
 
     const OPEN_BROWSER =
         typeof process.env.OPEN_BROWSER === 'string'
@@ -151,6 +153,10 @@ export async function startServer(options: StartServerOptions = {}) {
                 computedEnv: studioConfig,
             }),
             runShellScriptPlugin(viteEnvsScript),
+            options.https &&
+                basicSsl({
+                    name: 'Powerhouse Connect Studio',
+                }),
         ],
         build: {
             rollupOptions: {

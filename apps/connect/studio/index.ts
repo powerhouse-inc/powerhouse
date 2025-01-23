@@ -44,6 +44,7 @@ function mapProjects(packages: PowerhouseConfig['packages']): Project[] {
 export type ConnectStudioOptions = {
     port?: string;
     host?: boolean;
+    https?: boolean;
     configFile?: string;
     localEditors?: string;
     localDocuments?: string;
@@ -155,6 +156,10 @@ export function startConnectStudio(options: ConnectStudioOptions) {
         process.env.LOCAL_DOCUMENT_MODELS = options.localDocuments;
     }
 
+    if (options.https) {
+        serverOptions.https = options.https;
+    }
+
     return startServer(serverOptions).catch(error => {
         throw error;
     });
@@ -167,6 +172,7 @@ program
     .description('Connect Studio CLI')
     .option('-p, --port <port>', 'Port to run the server on', '3000')
     .option('-h, --host', 'Expose the server to the network')
+    .option('--https', 'Enable HTTPS')
     .option(
         '--config-file <configFile>',
         'Path to the powerhouse.config.js file',
