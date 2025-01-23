@@ -1,3 +1,4 @@
+#!/bin/bash
 sudo systemctl stop pm2-$USER
 sudo systemctl disable pm2-$USER
 OUTPUT=$(pm2 unstartup | tail -n 1)
