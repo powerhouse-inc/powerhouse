@@ -14,6 +14,7 @@ export type PowerhouseConfig = {
   studio?: {
     port?: number;
     host?: string;
+    https: boolean;
     openBrowser?: boolean;
   };
   packages?: {

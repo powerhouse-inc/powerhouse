@@ -19,6 +19,7 @@ export function connectCommand(program: Command) {
     .description("Starts Connect Studio")
     .option("-p, --port <port>", "Port to run the server on", "3000")
     .option("-h, --host", "Expose the server to the network")
+    .option("--https", "Enable HTTPS")
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
