@@ -31,10 +31,10 @@
   },
   "keywords": [],
   "author": "",
-  "devDependencies": {},
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "read-package-up": "^11.0.0"
   }
 }
