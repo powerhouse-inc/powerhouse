@@ -48,6 +48,7 @@ export type ConnectStudioOptions = {
     configFile?: string;
     localEditors?: string;
     localDocuments?: string;
+    open?: boolean;
 };
 
 export function generateImportSctipt(outputPath: string, projects: Project[]) {
@@ -98,6 +99,10 @@ export function startConnectStudio(options: ConnectStudioOptions) {
         process.env.HOST = options.host.toString();
     }
 
+    if (typeof options.open === 'boolean') {
+        serverOptions.open = options.open;
+    }
+
     if (options.configFile) {
         const config = readJsonFile(options.configFile);
         if (!config) return;
@@ -109,13 +114,14 @@ export function startConnectStudio(options: ConnectStudioOptions) {
             generateImportSctipt(configFileDir, packages);
             process.env.LOAD_EXTERNAL_PROJECTS = 'true';
 
-            serverOptions = {
-                enableExternalProjects: true,
-                projectsImportPath: resolve(configFileDir, IMPORT_SCRIPT_FILE),
-            };
+            serverOptions.enableExternalProjects = true;
+            serverOptions.projectsImportPath = resolve(
+                configFileDir,
+                IMPORT_SCRIPT_FILE,
+            );
         } else {
             process.env.LOAD_EXTERNAL_PROJECTS = 'false';
-            serverOptions = { enableExternalProjects: false };
+            serverOptions.enableExternalProjects = false;
         }
 
         if (config.documentModelsDir) {
@@ -145,7 +151,7 @@ export function startConnectStudio(options: ConnectStudioOptions) {
         }
     } else {
         process.env.LOAD_EXTERNAL_PROJECTS = 'false';
-        serverOptions = { enableExternalProjects: false };
+        serverOptions.enableExternalProjects = false;
     }
 
     if (options.localEditors) {
@@ -173,6 +179,7 @@ program
     .option('-p, --port <port>', 'Port to run the server on', '3000')
     .option('-h, --host', 'Expose the server to the network')
     .option('--https', 'Enable HTTPS')
+    .option('--open', 'Open the browser on start')
     .option(
         '--config-file <configFile>',
         'Path to the powerhouse.config.js file',
