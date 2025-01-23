@@ -3,17 +3,19 @@ import type { PHIDProps, PHIDListItemProps } from "./types";
 import { fetchPHIDOptions } from "./utils";
 
 interface UsePHIDFieldProps {
-  onChange?: PHIDProps["onChange"];
-  onBlur?: PHIDProps["onBlur"];
+  autoComplete: boolean;
   defaultValue?: string;
   value?: string;
+  onChange?: PHIDProps["onChange"];
+  onBlur?: PHIDProps["onBlur"];
 }
 
 export function usePHIDField({
-  onChange,
-  onBlur,
+  autoComplete,
   defaultValue,
   value,
+  onChange,
+  onBlur,
 }: UsePHIDFieldProps) {
   const isInternalChange = useRef(false);
   const commandListRef = useRef<HTMLDivElement>(null);
@@ -22,25 +24,37 @@ export function usePHIDField({
   const [isLoading, setIsLoading] = useState(false);
   const [haveFetchError, setHaveFetchError] = useState(false);
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      setIsLoading(true);
-      try {
-        const options = await fetchPHIDOptions();
-        setOptions(options);
-      } catch {
-        setHaveFetchError(true);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchOptions = useCallback(async () => {
+    setIsLoading(true);
+    setHaveFetchError(false);
+    try {
+      const options = await fetchPHIDOptions();
+      setOptions(options);
+    } catch {
+      setHaveFetchError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
+  // TODO: Waiting for PH's feedback
+  useEffect(() => {
     void fetchOptions();
   }, []);
 
-  const [selectedValue, setSelectedValue] = useState<string>(
+  const [selectedValue, setSelectedValue] = useState(
     value ?? defaultValue ?? "",
   );
+
+  useEffect(() => {
+    if (autoComplete && selectedValue !== "") {
+      void fetchOptions();
+      setIsPopoverOpen(true);
+    }
+    if (!autoComplete) {
+      setIsPopoverOpen(false);
+    }
+  }, [autoComplete]);
 
   useEffect(() => {
     if (isInternalChange.current) {
@@ -61,10 +75,9 @@ export function usePHIDField({
   const toggleOption = useCallback(
     (optionValue: string) => {
       isInternalChange.current = true;
-      const newValue = selectedValue === optionValue ? "" : optionValue;
-      setSelectedValue(newValue);
+      setSelectedValue(optionValue);
       setIsPopoverOpen(false);
-      onChange?.(newValue);
+      onChange?.(optionValue);
     },
     [selectedValue, onChange],
   );
@@ -74,6 +87,15 @@ export function usePHIDField({
     setSelectedValue("");
     onChange?.("");
   }, [onChange]);
+
+  const onTriggerBlur = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      if (!isPopoverOpen) {
+        onBlur?.(e);
+      }
+    },
+    [onBlur, isPopoverOpen],
+  );
 
   const [haveBeenOpened, setHaveBeenOpened] = useState<boolean>(false);
   useEffect(() => {
@@ -97,5 +119,6 @@ export function usePHIDField({
     handleClear,
     handleOpenChange,
     handleSelectedValueChange,
+    onTriggerBlur,
   };
 }
