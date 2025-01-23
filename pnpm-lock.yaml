@@ -988,8 +988,8 @@ importers:
         specifier: workspace:*
         version: link:../config
       '@powerhousedao/connect':
-        specifier: 1.0.0-dev.194
-        version: 1.0.0-dev.194(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)
+        specifier: 1.0.0-dev.195
+        version: 1.0.0-dev.195(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
@@ -4519,14 +4519,14 @@ packages:
   '@powerhousedao/analytics-engine-pg@0.3.0':
     resolution: {integrity: sha512-0N90CJzgrjZONA7VzEQKq5ne0DuzGpjTj3ZeZyjoaOq4gKopVdX+6j7zHmbfFKx15bkY6/T/+VoIKt9WN+We0Q==}
 
-  '@powerhousedao/connect@1.0.0-dev.194':
-    resolution: {integrity: sha512-l3FBwupVl4dp56C9deabAScxWbCfTKyo6R3RT5hng0aQGJzQDNDXLC8YASlL/BdTri9klQ0wtsmM7idGOfRfQA==}
+  '@powerhousedao/connect@1.0.0-dev.195':
+    resolution: {integrity: sha512-oSUh06jINOek3te+8aQyW6fAb0tfCM/esqA1BmFIaS99oVJNstRnsND1IK+13wsZhNKhrxbxyoEJxN3mc2GqTw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
-      '@powerhousedao/design-system': ^1.21.2
-      '@powerhousedao/scalars': ^1.19.0
-      document-model-libs: ^1.127.2
+      '@powerhousedao/design-system': ^1.22.0
+      '@powerhousedao/scalars': ^1.20.0
+      document-model-libs: ^1.128.0
 
   '@preact/preset-vite@2.9.3':
     resolution: {integrity: sha512-uVDSKsFnPa/bmRTAcPiYpTvC04T1lhIH2ho3CJZLYibwcwliElS/i64iyATZkgR4DJxSc/JwOCSQS4IF/a03OQ==}
@@ -18295,7 +18295,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/connect@1.0.0-dev.194(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)':
+  '@powerhousedao/connect@1.0.0-dev.195(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)':
     dependencies:
       '@powerhousedao/design-system': link:packages/design-system
       '@powerhousedao/scalars': link:packages/scalars
