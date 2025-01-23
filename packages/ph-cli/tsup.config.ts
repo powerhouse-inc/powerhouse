@@ -10,6 +10,7 @@ export default defineConfig({
   bundle: false,
   platform: "node",
   target: "node20",
+  onSuccess: "cp -R scripts dist",
   cjsInterop: true,
   dts: true,
 });
