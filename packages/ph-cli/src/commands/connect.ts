@@ -20,6 +20,7 @@ export function connectCommand(program: Command) {
     .option("-p, --port <port>", "Port to run the server on", "3000")
     .option("-h, --host", "Expose the server to the network")
     .option("--https", "Enable HTTPS")
+    .option("--open", "Open the browser")
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
@@ -33,7 +34,17 @@ export function connectCommand(program: Command) {
       "Link local documents path",
     )
     .action(async (...args: [ConnectOptions]) => {
-      await startConnectStudio(...args);
+      const connectOptions = args.at(0) || {};
+      const { documentModelsDir, editorsDir, packages, studio } = getConfig();
+
+      await startConnectStudio({
+        port: studio?.port?.toString() || undefined,
+        packages,
+        localDocuments: documentModelsDir || undefined,
+        localEditors: editorsDir || undefined,
+        open: studio?.openBrowser,
+        ...connectOptions,
+      });
     });
 }
 
