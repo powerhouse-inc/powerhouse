@@ -1,4 +1,4 @@
-# Powerhouse Monorepo
+# Powerhouse Monorepo 
 
 This repository uses pnpm workspaces and Nx to manage a monorepo with multiple projects and packages.
 
