@@ -5,6 +5,8 @@ import { ProcessorClass } from "./processors/processor";
 import { SubgraphManager } from "./subgraphs/manager";
 import { Db } from "./utils/db";
 import { IAnalyticsStore } from "./processors/analytics-processor";
+import http from "http";
+import https from "https";
 
 export type { Db } from "./utils/db";
 
@@ -16,6 +18,7 @@ export type API = {
   app: Express;
   subgraphManager: SubgraphManager;
   processorManager: IProcessorManager;
+  server: http.Server | https.Server;
 };
 
 export type ProcessorType = "analytics" | "operational";

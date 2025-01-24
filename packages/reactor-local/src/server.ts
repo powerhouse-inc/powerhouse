@@ -41,11 +41,13 @@ type Packages = {
 
 export type StartServerOptions = {
   dev?: boolean;
-  port?: string | number;
   storagePath?: string;
   dbPath?: string;
   drive?: DriveInput;
   packages?: Packages;
+  port?: number | string;
+  host?: string;
+  https?: boolean;
 };
 
 export const DefaultStartServerOptions = {
@@ -140,11 +142,14 @@ const startServer = async (
 
   try {
     // start api
+    const host = options?.host ?? "localhost";
     const api = await startAPI(driveServer, {
       port: serverPort,
       dbPath,
+      host,
+      https: options?.https ?? false,
     });
-    driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
+    driveUrl = `${options?.https ? "https" : "http"}://${host}:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
     console.log(`  ➜  Reactor:   ${driveUrl}`);
 
     if (dev) {

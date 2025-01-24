@@ -4,7 +4,8 @@ import { startServer } from "./server.js";
 
 type ReactorLocalOptions = {
   port?: string;
-  host?: boolean;
+  host?: string;
+  https?: boolean;
   configFile?: string;
   localEditors?: string;
   localDocuments?: string;

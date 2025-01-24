@@ -6,6 +6,8 @@ import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
 import { getDbClient } from "./utils/db";
+import http from "http";
+import https from "https";
 import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
@@ -14,6 +16,8 @@ import {
 type Options = {
   express?: Express;
   port?: number;
+  host?: string;
+  https?: boolean;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
 };
@@ -41,6 +45,11 @@ export async function startAPI(
   await subgraphManager.init();
   const processorManager = new ProcessorManager(reactor, db, analyticsStore);
 
-  app.listen(port);
-  return { app, subgraphManager, processorManager };
+  let server: http.Server | https.Server;
+  if (options.https) {
+    server = https.createServer(app).listen(port);
+  } else {
+    server = http.createServer(app).listen(port);
+  }
+  return { app, subgraphManager, processorManager, server };
 }
