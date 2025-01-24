@@ -35,10 +35,10 @@ export const DEFAULT_CONFIG: PowerhouseConfig = {
   skipFormat: false,
 };
 
-export function getConfig() {
+export function getConfig(path = "./powerhouse.config.json") {
   let config: PowerhouseConfig = { ...DEFAULT_CONFIG };
   try {
-    const configStr = readFileSync("./powerhouse.config.json", "utf-8");
+    const configStr = readFileSync(path, "utf-8");
     const userConfig = JSON.parse(configStr) as PowerhouseConfig;
     config = { ...config, ...userConfig };
   } catch {
@@ -47,6 +47,9 @@ export function getConfig() {
   return config;
 }
 
-export function writeConfig(config: PowerhouseConfig) {
-  writeFileSync("./powerhouse.config.json", JSON.stringify(config, null, 4));
+export function writeConfig(
+  config: PowerhouseConfig,
+  path = "./powerhouse.config.json",
+) {
+  writeFileSync(path, JSON.stringify(config, null, 4));
 }

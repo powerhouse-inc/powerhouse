@@ -35,12 +35,17 @@ const dirname = process.cwd();
 
 dotenv.config();
 
+type Packages = {
+  packageName: string;
+}[];
+
 export type StartServerOptions = {
   dev?: boolean;
   port?: string | number;
   storagePath?: string;
   dbPath?: string;
   drive?: DriveInput;
+  packages?: Packages;
 };
 
 export const DefaultStartServerOptions = {
@@ -87,7 +92,7 @@ const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   process.setMaxListeners(0);
-  const { port, storagePath, drive, dev, dbPath } = {
+  const { port, storagePath, drive, dev, dbPath, packages } = {
     ...DefaultStartServerOptions,
     ...options,
   };
@@ -119,6 +124,17 @@ const startServer = async (
       }
     } else {
       throw e;
+    }
+  }
+
+  if (packages?.length) {
+    try {
+      const documentModels = await loadPackages(packages);
+      driveServer.setDocumentModels(
+        joinDocumentModels(driveServer.getDocumentModels(), documentModels),
+      );
+    } catch (e) {
+      console.error("Error loading packages", e);
     }
   }
 
@@ -156,7 +172,7 @@ const startServer = async (
   };
 };
 
-const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
+async function startDevMode(api: API, driveServer: IDocumentDriveServer) {
   const vite = await createViteServer({
     server: { middlewareMode: true, watch: null },
     appType: "custom",
@@ -183,7 +199,28 @@ const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
   /**
    * TODO: watch code changes on processors and document models
    */
-};
+}
+
+async function loadPackages(packages: Packages) {
+  const loadedPackages: DocumentModel[] = [];
+  for (const pkg of packages) {
+    try {
+      console.log("> Loading package", pkg.packageName);
+      const pkgModule = (await import(
+        `${pkg.packageName}/document-models`
+      )) as unknown as { [key: string]: DocumentModel } | undefined;
+      if (pkgModule) {
+        console.log(`  ➜  Loaded package: ${pkg.packageName}`);
+        loadedPackages.push(...Object.values(pkgModule));
+      } else {
+        console.warn(`  ➜  No package found: ${pkg.packageName}`);
+      }
+    } catch (e) {
+      console.error("Error loading package", pkg.packageName, e);
+    }
+  }
+  return loadedPackages;
+}
 
 async function loadDocumentModels(
   path: string,
@@ -197,10 +234,10 @@ async function loadDocumentModels(
       string,
       DocumentModel
     >;
-    driveServer.setDocumentModels([
-      ...baseDocumentModels,
-      ...Object.values(localDMs),
-    ]);
+    const localDocumentModels = Object.values(localDMs);
+    driveServer.setDocumentModels(
+      joinDocumentModels(driveServer.getDocumentModels(), localDocumentModels),
+    );
   } catch (e) {
     if ((e as FSError).code === "ENOENT") {
       console.warn("No local document models found");
@@ -258,6 +295,19 @@ async function loadSubgraphs(
       console.error("Error loading subgraphs", e);
     }
   }
+}
+
+function joinDocumentModels(...documentModels: DocumentModel[][]) {
+  return documentModels
+    .flat()
+    .toReversed()
+    .reduce<DocumentModel[]>(
+      (acc, curr) =>
+        acc.find((dm) => dm.documentModel.id === curr.documentModel.id)
+          ? acc
+          : [...acc, curr],
+      [],
+    );
 }
 
 export { startServer };

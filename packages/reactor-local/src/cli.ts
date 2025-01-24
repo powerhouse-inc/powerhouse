@@ -13,19 +13,7 @@ type ReactorLocalOptions = {
 type ReactorLocalAction = (options: ReactorLocalOptions) => void;
 
 const reactorLocalAction: ReactorLocalAction = (options) => {
-  if (options.port) {
-    process.env.PORT = options.port;
-  }
-
-  if (options.localEditors) {
-    process.env.LOCAL_DOCUMENT_EDITORS = options.localEditors;
-  }
-
-  if (options.localDocuments) {
-    process.env.LOCAL_DOCUMENT_MODELS = options.localDocuments;
-  }
-
-  startServer().catch((error: unknown) => {
+  startServer(options).catch((error: unknown) => {
     throw error;
   });
 };
