@@ -5,14 +5,15 @@ import pm2, { StartOptions } from "pm2";
 import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 
 const actions = ["start", "stop", "status", "list", "install", "save"];
-const services = ["reactor", "connect", "all"];
+const services = ["reactor", "connect"];
 
 let reactorPort = 8442;
 let connectPort = 8443;
-export const manageService: CommandActionType<[string, string]> = async (
-  action,
-  service,
-) => {
+let https = false;
+let host = false;
+export const manageService: CommandActionType<
+  [string, string, { port?: string; host?: boolean; https?: boolean }]
+> = async (action, service, args) => {
   try {
     const config = getConfig();
     if (config.reactor?.port) {
@@ -20,6 +21,19 @@ export const manageService: CommandActionType<[string, string]> = async (
     }
     if (config.studio?.port) {
       connectPort = config.studio.port;
+    }
+    if (args.port) {
+      if (service === "reactor") {
+        reactorPort = parseInt(args.port);
+      } else if (service === "connect") {
+        connectPort = parseInt(args.port);
+      }
+    }
+    if (args.https) {
+      https = args.https;
+    }
+    if (args.host) {
+      host = args.host;
     }
 
     pm2.connect((err) => {
@@ -46,8 +60,14 @@ export function serviceCommand(program: Command) {
     .description("Manage services")
     .addArgument(new Argument("action").choices(actions).default("list"))
     .addArgument(
-      new Argument("service").choices(services).argOptional().default("all"),
+      new Argument("service")
+        .choices(services)
+        .argOptional()
+        .default("reactor"),
     )
+    .option("-p, --port <port>", "Port to run the server on", "3000")
+    .option("-h, --host", "Expose the server to the network")
+    .option("--https", "Enable HTTPS")
     .action(manageService);
 }
 
@@ -56,6 +76,14 @@ function startServices(service: string) {
     const reactorOptions: StartOptions = {
       name: "reactor",
       script: "npx ph-cli reactor",
+      args: [
+        "--port",
+        reactorPort.toString(),
+        "--host",
+        host.toString() ?? "localhost",
+        "--https",
+        https.toString(),
+      ],
     };
     console.log("Starting reactor...");
     pm2.start(reactorOptions, (err) => {
@@ -73,7 +101,14 @@ function startServices(service: string) {
     const connectOptions: StartOptions = {
       name: "connect",
       script: "npx ph-cli connect",
-      args: ["--port", connectPort.toString()],
+      args: [
+        "--port",
+        connectPort.toString(),
+        "--host",
+        host.toString() ?? "localhost",
+        "--https",
+        https.toString(),
+      ],
     };
     console.log("Starting connect...");
     pm2.start(connectOptions, (err) => {
