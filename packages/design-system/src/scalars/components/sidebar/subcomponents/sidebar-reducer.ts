@@ -1,7 +1,7 @@
 "use client";
 
 import type { SidebarNode } from "../types";
-import { getNodePath, getOpenLevels } from "../utils";
+import { getNodePath, getOpenLevels, isOpenLevel } from "../utils";
 
 export interface SidebarState {
   activeNodeId?: string;
@@ -66,11 +66,29 @@ export const sidebarReducer = (
           [action.nodeId]: !state.itemsState[action.nodeId],
         },
       };
-    case SidebarActionType.OPEN_LEVEL:
+    case SidebarActionType.OPEN_LEVEL: {
+      const targetLevel = action.level; // it comes from the UI, so it is 1-indexed
+      const isTargetLevelOpen = isOpenLevel(
+        state.items,
+        state.itemsState,
+        targetLevel - 1,
+      );
+      // debugger;
+
+      if (isTargetLevelOpen) {
+        // if it is open, then we close all levels
+        return {
+          ...state,
+          itemsState: {},
+        };
+      }
+
+      // if it is not open, then we open all levels
       return {
         ...state,
         itemsState: getOpenLevels(state.items, action.level),
       };
+    }
     case SidebarActionType.TOGGLE_PIN: {
       const isPinned =
         state.pinnedItems.length > 0 &&

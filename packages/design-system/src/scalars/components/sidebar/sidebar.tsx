@@ -117,6 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }}
       className={cn(
         "group peer relative flex h-svh max-h-screen w-[--system-sidebar-width] flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear",
+        isResizing && "transition-none",
       )}
     >
       {isSidebarOpen && (
@@ -137,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div
           className={cn(
             "group/sidebar-resizer absolute right-0 top-0 h-full w-px cursor-ew-resize select-none transition-colors hover:bg-gray-500",
-            isResizing && "bg-blue-500",
+            isResizing && "cursor-default bg-blue-500",
             !isSidebarOpen && "bg-gray-300",
           )}
           onMouseDown={startResizing}
