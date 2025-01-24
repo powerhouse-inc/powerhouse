@@ -75,15 +75,7 @@ function startServices(service: string) {
   if (service === "reactor" || service === "all") {
     const reactorOptions: StartOptions = {
       name: "reactor",
-      script: "npx ph-cli reactor",
-      args: [
-        "--port",
-        reactorPort.toString(),
-        "--host",
-        host.toString() ?? "localhost",
-        "--https",
-        https.toString(),
-      ],
+      script: `pnpm dev reactor --port ${reactorPort} --host ${host} --https ${https}`,
     };
     console.log("Starting reactor...");
     pm2.start(reactorOptions, (err) => {

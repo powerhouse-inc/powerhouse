@@ -24,8 +24,8 @@ export const DefaultReactorOptions = {
 async function startLocalReactor(reactorOptions: ReactorOptions) {
   const baseConfig = getConfig(reactorOptions.configFile);
   const options = {
-    ...DefaultReactorOptions,
     packages: baseConfig.packages,
+    ...DefaultReactorOptions,
     ...reactorOptions,
   };
 
@@ -83,7 +83,9 @@ export function reactorCommand(program: Command) {
   program
     .command("reactor")
     .description("Starts local reactor")
-    .option("--port <PORT>", "port to host the api", "4001")
+    .option("-p, --port <port>", "Port to run the server on", "4001")
+    .option("-h, --host", "Expose the server to the network")
+    .option("--https", "Enable HTTPS")
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
@@ -95,7 +97,8 @@ export function reactorCommand(program: Command) {
       "if the reactor should watch for local changes to document models and processors",
     )
     .action(async (...args: [ReactorOptions]) => {
-      await reactor(...args);
+      console.log("args", args);
+      await reactor(args[0]);
     });
 }
 
