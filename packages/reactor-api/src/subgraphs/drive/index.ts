@@ -13,7 +13,7 @@ import {
   ListenerFilter,
   TransmitterType,
 } from "document-model-libs/document-drive";
-import { Asset } from "document-model-libs/real-world-assets";
+import { Asset } from "./temp-hack-rwa-type-defs";
 import { BaseAction, Document, Operation } from "document-model/document";
 import {
   DocumentModelInput,
