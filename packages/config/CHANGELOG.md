@@ -1,3 +1,23 @@
+## 1.14.0 (2025-01-24)
+
+### 🚀 Features
+
+- **reactor-local:** load document models from installed packages ([3d434fd7](https://github.com/powerhouse-inc/powerhouse/commit/3d434fd7))
+- **config:** allow passing path to read config ([f3923c01](https://github.com/powerhouse-inc/powerhouse/commit/f3923c01))
+- **ph-cli:** use getConfig in connect command ([#917](https://github.com/powerhouse-inc/powerhouse/pull/917))
+- **ph-cli:** trigger release ([6624a561](https://github.com/powerhouse-inc/powerhouse/commit/6624a561))
+
+### 🩹 Fixes
+
+- **ph-cmd:** read version from package.json ([#920](https://github.com/powerhouse-inc/powerhouse/pull/920))
+- **ph-cli:** update connect dep ([#919](https://github.com/powerhouse-inc/powerhouse/pull/919))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank @froid1911
+- Guillermo Puente Sandoval
+
 ## 1.13.0 (2025-01-23)
 
 ### 🚀 Features
