@@ -7,9 +7,10 @@ import {
 } from "@powerhousedao/reactor-local";
 import { generateFromFile } from "@powerhousedao/codegen";
 import { CommandActionType } from "../types.js";
-import { getConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 
 export type ReactorOptions = StartServerOptions & {
+  configFile?: string;
   generate?: boolean;
   watch?: boolean;
   dbPath?: string;
@@ -21,42 +22,54 @@ export const DefaultReactorOptions = {
 };
 
 async function startLocalReactor(reactorOptions: ReactorOptions) {
-  const baseConfig = getConfig();
-  const options = { ...DefaultReactorOptions, ...reactorOptions };
+  const baseConfig = getConfig(reactorOptions.configFile);
+  const options = {
+    ...DefaultReactorOptions,
+    packages: baseConfig.packages,
+    ...reactorOptions,
+  };
+
   const reactor = await startServer(options);
 
   if (options.generate) {
-    const generateTransmitter = await reactor.addListener(
-      "powerhouse",
-      {
-        onStrands: async function (strands) {
-          const documentPaths = new Set<string>();
-          for (const strand of strands) {
-            documentPaths.add(
-              reactor.getDocumentPath(strand.driveId, strand.documentId),
-            );
-          }
-          for (const path of documentPaths) {
-            await generateFromFile(path, baseConfig);
-          }
-          return Promise.resolve();
-        },
-        onDisconnect: () => Promise.resolve(),
-      },
-      {
-        filter: {
-          documentType: ["powerhouse/document-model"],
-          scope: ["global"],
-          branch: ["*"],
-          documentId: ["*"],
-        },
-        block: false,
-        listenerId: "reactor-local-document-model-generator",
-        label: "reactor-local-document-model-generator",
-      },
-    );
+    await addGenerateTransmitter(reactor, baseConfig);
   }
   return reactor;
+}
+
+async function addGenerateTransmitter(
+  reactor: LocalReactor,
+  config: PowerhouseConfig,
+) {
+  return reactor.addListener(
+    "powerhouse",
+    {
+      onStrands: async function (strands) {
+        const documentPaths = new Set<string>();
+        for (const strand of strands) {
+          documentPaths.add(
+            reactor.getDocumentPath(strand.driveId, strand.documentId),
+          );
+        }
+        for (const path of documentPaths) {
+          await generateFromFile(path, config);
+        }
+        return Promise.resolve();
+      },
+      onDisconnect: () => Promise.resolve(),
+    },
+    {
+      filter: {
+        documentType: ["powerhouse/document-model"],
+        scope: ["global"],
+        branch: ["*"],
+        documentId: ["*"],
+      },
+      block: false,
+      listenerId: "reactor-local-document-model-generator",
+      label: "reactor-local-document-model-generator",
+    },
+  );
 }
 
 export const reactor: CommandActionType<
@@ -71,6 +84,10 @@ export function reactorCommand(program: Command) {
     .command("reactor")
     .description("Starts local reactor")
     .option("--port <PORT>", "port to host the api", "4001")
+    .option(
+      "--config-file <configFile>",
+      "Path to the powerhouse.config.js file",
+    )
     .option("--generate", "generate code when document model is updated")
     .option("--db-path <DB_PATH>", "path to the database")
     .option(
