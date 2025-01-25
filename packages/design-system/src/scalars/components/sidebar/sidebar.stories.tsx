@@ -3,6 +3,7 @@ import { Sidebar } from "./sidebar";
 import { Icon } from "@/powerhouse";
 import { SidebarProvider } from "./subcomponents/sidebar-provider";
 import mockedTree from "./mocked_tree.json";
+import { useState } from "react";
 
 const meta: Meta<typeof Sidebar> = {
   title: "Document Engineering/Complex Components/Sidebar",
@@ -78,3 +79,28 @@ export default meta;
 type Story = StoryObj<typeof Sidebar>;
 
 export const Default: Story = {};
+
+export const WithinLayoutAndContent: Story = {
+  render: (args) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [activeNode, setActiveNode] = useState<string>(
+      "4281ab93-ef4f-4974-988d-7dad149a693d",
+    );
+    return (
+      <div className="flex h-svh w-full">
+        <Sidebar
+          {...args}
+          onActiveNodeChange={setActiveNode}
+          activeNodeId={activeNode}
+        />
+        <div
+          style={{ width: "calc(100% - var(--sidebar-width))" }}
+          className="flex-1 border-4 border-green-200 bg-gray-50 p-4"
+        >
+          <h1 className="text-2xl font-bold">Content Area</h1>
+          <p className="text-sm text-gray-500">Active Node: {activeNode}</p>
+        </div>
+      </div>
+    );
+  },
+};

@@ -23,6 +23,13 @@ export const useSidebarResize = ({
     setIsSidebarOpen(!isSidebarOpen);
   }, [isSidebarOpen]);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      `${isSidebarOpen ? sidebarWidth : 8}px`,
+    );
+  }, [isSidebarOpen, sidebarWidth]);
+
   // resize sidebar
   const startResizing = useCallback(() => {
     if (isSidebarOpen) {
@@ -59,7 +66,6 @@ export const useSidebarResize = ({
 
   return {
     sidebarRef,
-    sidebarWidth,
     startResizing,
     isResizing,
     isSidebarOpen,

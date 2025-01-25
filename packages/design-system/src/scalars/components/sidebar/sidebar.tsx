@@ -71,14 +71,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const {
     sidebarRef,
-    sidebarWidth,
     startResizing,
     isResizing,
     isSidebarOpen,
     handleToggleSidebar,
   } = useSidebarResize({
     defaultWidth: 300,
-    minWidth: 100,
+    minWidth: 220,
     maxWidth: 650,
   });
 
@@ -109,14 +108,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       ref={sidebarRef}
-      style={{
-        // TODO: move the variable somewhere else where it fits better
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        "--system-sidebar-width": `${isSidebarOpen ? sidebarWidth : 8}px`,
-      }}
       className={cn(
-        "group peer relative flex h-svh max-h-screen w-[--system-sidebar-width] flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear",
+        "group peer relative flex h-svh max-h-screen w-[--sidebar-width] flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear",
         isResizing && "transition-none",
       )}
     >
