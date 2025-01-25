@@ -76,8 +76,6 @@ export const Item: React.FC<ItemProps> = ({
               />
             )}
             <Icon name="File" size={16} className="min-w-4" />
-            {/* TODO: truncate should only be present if the sidebar is resizable */}
-            {/* TODO: if the title is truncated, add a tooltip */}
             <div ref={textRef} className="truncate text-sm leading-5">
               {title.toLowerCase().includes(searchTerm.toLowerCase()) &&
               !pinnedMode ? (
