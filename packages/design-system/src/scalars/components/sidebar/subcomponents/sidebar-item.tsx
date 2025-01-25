@@ -1,7 +1,8 @@
+/* eslint-disable react/jsx-max-depth */
 "use client";
 
 import { Icon } from "@/index";
-import React, { KeyboardEventHandler, useCallback } from "react";
+import React, { KeyboardEventHandler, useCallback, useRef } from "react";
 import type { SidebarNode } from "../types";
 import { cn } from "@/scalars/lib";
 import {
@@ -11,6 +12,7 @@ import {
   useSidebarItemPinned,
   useSidebarNodeState,
 } from "./sidebar-provider";
+import { Tooltip, TooltipProvider } from "../../fragments";
 
 interface ItemProps {
   id: string;
@@ -27,6 +29,7 @@ export const Item: React.FC<ItemProps> = ({
   pinnedMode,
   allowPinning,
 }) => {
+  const textRef = useRef<HTMLDivElement>(null);
   const { togglePin, searchTerm, handleActiveNodeChange } = useSidebar();
   const isPinned = useSidebarItemPinned(id);
   const isSearchActive = useSidebarIsNodeSearchActive(id);
@@ -45,66 +48,70 @@ export const Item: React.FC<ItemProps> = ({
   }, [handleActiveNodeChange, id]);
 
   return (
-    <div
-      id={`sidebar-item-${id}`}
-      className={cn(
-        "group/sidebar-item relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100",
-        allowPinning && "hover:pr-6",
-        isPinned && "pr-6",
-        // line between pinned items
-        pinnedMode &&
-          "after:absolute after:-top-2.5 after:left-3.5 after:h-4 after:w-px after:bg-gray-300 first:after:hidden",
-        isActive && "font-medium text-gray-900",
-      )}
-      onClick={handleClick}
-    >
-      <div className="flex max-w-full items-center gap-2">
-        {!pinnedMode && (
-          <Icon
-            name="ChevronDown"
-            size={16}
-            className={cn(
-              "min-w-4 transition-all duration-300 ease-in-out",
-              open ? "" : "-rotate-90",
-              open === undefined ? "text-gray-300" : "text-gray-700",
-            )}
-          />
-        )}
-        <Icon name="File" size={16} className="min-w-4" />
-        {/* TODO: truncate should only be present if the sidebar is resizable */}
-        {/* TODO: if the title is truncated, add a tooltip */}
-        <div className="truncate text-sm leading-5">
-          {title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !pinnedMode ? (
-            <span
-              dangerouslySetInnerHTML={{
-                __html: title.replace(
-                  new RegExp(searchTerm, "gi"),
-                  (match) =>
-                    `<span class="${isSearchActive ? "bg-yellow-300" : "bg-gray-300"}">${match}</span>`,
-                ),
-              }}
-            />
-          ) : (
-            title
-          )}
-        </div>
-      </div>
-
-      {allowPinning && (!pinnedMode || isPinned) && (
+    <TooltipProvider>
+      <Tooltip content={title} triggerAsChild side="bottom" delayDuration={700}>
         <div
+          id={`sidebar-item-${id}`}
           className={cn(
-            "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
-            isPinned
-              ? "text-gray-700"
-              : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible",
+            "group/sidebar-item relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100",
+            allowPinning && "hover:pr-6",
+            isPinned && "pr-6",
+            // line between pinned items
+            pinnedMode &&
+              "after:absolute after:-top-2.5 after:left-3.5 after:h-4 after:w-px after:bg-gray-300 first:after:hidden",
+            isActive && "font-medium text-gray-900",
           )}
-          onClick={handleTogglePin}
+          onClick={handleClick}
         >
-          <Icon name="Pin" size={16} />
+          <div className="flex max-w-full items-center gap-2">
+            {!pinnedMode && (
+              <Icon
+                name="ChevronDown"
+                size={16}
+                className={cn(
+                  "min-w-4 transition-all duration-300 ease-in-out",
+                  open ? "" : "-rotate-90",
+                  open === undefined ? "text-gray-300" : "text-gray-700",
+                )}
+              />
+            )}
+            <Icon name="File" size={16} className="min-w-4" />
+            {/* TODO: truncate should only be present if the sidebar is resizable */}
+            {/* TODO: if the title is truncated, add a tooltip */}
+            <div ref={textRef} className="truncate text-sm leading-5">
+              {title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+              !pinnedMode ? (
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: title.replace(
+                      new RegExp(searchTerm, "gi"),
+                      (match) =>
+                        `<span class="${isSearchActive ? "bg-yellow-300" : "bg-gray-300"}">${match}</span>`,
+                    ),
+                  }}
+                />
+              ) : (
+                title
+              )}
+            </div>
+          </div>
+
+          {allowPinning && (!pinnedMode || isPinned) && (
+            <div
+              className={cn(
+                "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
+                isPinned
+                  ? "text-gray-700"
+                  : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible",
+              )}
+              onClick={handleTogglePin}
+            >
+              <Icon name="Pin" size={16} />
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
