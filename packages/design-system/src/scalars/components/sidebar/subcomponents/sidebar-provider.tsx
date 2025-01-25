@@ -126,6 +126,9 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
         const results = nodesSearch(nodesToSearch, searchTerm, "dfs");
         setSearchResults(results);
         setActiveSearchIndex(0);
+        if (results.length > 0) {
+          dispatch({ type: SidebarActionType.OPEN_PATH_TO_NODE, nodeId: results[0].id });
+        }
       };
 
       // trigger the search
