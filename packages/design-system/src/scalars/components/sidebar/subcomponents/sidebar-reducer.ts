@@ -73,7 +73,6 @@ export const sidebarReducer = (
         state.itemsState,
         targetLevel - 1,
       );
-      // debugger;
 
       if (isTargetLevelOpen) {
         // if it is open, then we close all levels
