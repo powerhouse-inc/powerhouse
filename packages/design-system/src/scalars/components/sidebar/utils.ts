@@ -56,7 +56,7 @@ export const getOpenLevels = (
 
   function traverse(nodes: SidebarNode[], currentLevel: number) {
     for (const node of nodes) {
-      if (currentLevel <= level) {
+      if (currentLevel < level) {
         result[node.id] = true;
       }
       if (node.childrens) {
@@ -67,6 +67,37 @@ export const getOpenLevels = (
 
   traverse(items, 1); // Start from level 1
   return result;
+};
+
+export const isOpenLevel = (
+  items: SidebarNode[],
+  itemsState: Record<string, boolean>,
+  level: number,
+): boolean => {
+  // it is open if all levels up to the target level are open
+  const queue: SidebarNode[] = [...items];
+  for (let i = 0; i < level; i++) {
+    const nextLevelQueue: SidebarNode[] = [];
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (current && !itemsState[current.id]) {
+        return false;
+      } else if (current?.childrens) {
+        nextLevelQueue.push(...current.childrens);
+      }
+    }
+    queue.push(...nextLevelQueue);
+  }
+
+  // now we check if there's something open one level deeper, if so, then it is not open
+  // the following level is now in the queue (unless it is the last level)
+  for (const node of queue) {
+    if (itemsState[node.id]) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 export const getNodePath = (

@@ -41,7 +41,7 @@ export const SidebarSearch = () => {
   );
 
   return (
-    <div className="w-full border-t border-gray-300 p-2">
+    <div className="w-full border-t border-gray-300 p-2 dark:border-gray-800">
       <div className="relative">
         <Input
           value={searchTerm}
@@ -56,7 +56,7 @@ export const SidebarSearch = () => {
         <Icon
           name="Search"
           size={16}
-          className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-700"
+          className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-700 dark:text-gray-50"
         />
         {searchTerm && (
           <div
@@ -64,29 +64,30 @@ export const SidebarSearch = () => {
             className="absolute right-2 top-1/2 flex -translate-y-1/2 select-none items-center gap-2"
           >
             {searchLoading ? (
-              <div className="h-4 w-6 animate-pulse rounded-sm bg-gray-200" />
+              <div className="h-4 w-6 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800" />
             ) : (
               <div className="text-xs">
                 {searchResults.length > 0 ? (
                   <>
-                    <span className="text-gray-700">
+                    <span className="text-gray-700 dark:text-gray-50">
                       {activeSearchIndex + 1}
                     </span>
-                    <span className="text-gray-500">
+                    <span className="text-gray-500 dark:text-gray-700">
                       /{searchResults.length}
                     </span>
                   </>
                 ) : (
-                  <span className="text-gray-500">0/0</span>
+                  <span className="text-gray-500 dark:text-gray-700">0/0</span>
                 )}
               </div>
             )}
 
-            <div className="flex flex-col text-gray-500">
+            <div className="flex flex-col text-gray-500 dark:text-gray-700">
               <div
                 className={cn(
-                  "cursor-pointer px-1 py-0.5 hover:text-gray-700",
-                  activeSearchIndex === 0 && "cursor-not-allowed text-gray-200",
+                  "cursor-pointer px-1 py-0.5 hover:text-gray-700 dark:hover:text-gray-300",
+                  activeSearchIndex === 0 &&
+                    "cursor-not-allowed text-gray-200 dark:text-gray-900",
                 )}
                 onClick={previousSearchResult}
               >
@@ -107,9 +108,9 @@ export const SidebarSearch = () => {
 
               <div
                 className={cn(
-                  "cursor-pointer px-1 py-0.5 hover:text-gray-700",
+                  "cursor-pointer px-1 py-0.5 hover:text-gray-700 dark:hover:text-gray-300",
                   activeSearchIndex === searchResults.length - 1 &&
-                    "cursor-not-allowed text-gray-200",
+                    "cursor-not-allowed text-gray-200 dark:text-gray-900",
                 )}
                 onClick={nextSearchResult}
               >
@@ -133,7 +134,7 @@ export const SidebarSearch = () => {
               onClick={handleReset}
               name="CrossCircle"
               size={16}
-              className="cursor-pointer text-gray-500 hover:text-gray-700 active:text-gray-900"
+              className="cursor-pointer text-gray-500 hover:text-gray-700 active:text-gray-900 dark:text-gray-700 dark:hover:text-gray-600 dark:active:text-gray-300"
             />
           </div>
         )}

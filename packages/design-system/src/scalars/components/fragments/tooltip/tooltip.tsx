@@ -55,6 +55,7 @@ const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
   triggerAsChild = false,
+  delayDuration = 0,
   ...props
 }) => {
   const { open, defaultOpen, onOpenChange, ...rest } = props;
@@ -62,7 +63,7 @@ const Tooltip: React.FC<TooltipProps> = ({
   return (
     <Root
       defaultOpen={defaultOpen}
-      delayDuration={0}
+      delayDuration={delayDuration}
       onOpenChange={onOpenChange}
       open={open}
     >

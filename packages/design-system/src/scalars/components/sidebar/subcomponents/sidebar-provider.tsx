@@ -8,6 +8,7 @@ import React, {
   useCallback,
   useState,
   useEffect,
+  useTransition,
 } from "react";
 import { SidebarNode } from "../types";
 import { SidebarActionType, sidebarReducer, SidebarState } from "./sidebar-reducer";
@@ -111,37 +112,30 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     setSearchTerm(newSearchTerm);
   }, []);
 
-  // TODO: move search logic to the reducer
   // search state
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [searchLoading, setSearchLoading] = useState<boolean>(false);
   const [searchResults, setSearchResults] = useState<SidebarNode[]>([]);
   const [activeSearchIndex, setActiveSearchIndex] = useState<number>(0);
-  useEffect(() => {
-    let searchTimeout: NodeJS.Timeout;
-    if (searchTerm) {
-      setSearchLoading(true);
+  const [searchLoading, startSearch] = useTransition();
 
+  useEffect(() => {
+    if (searchTerm) {
       // callback to search the nodes
-      const search = () => {
+      const searchAction = () => {
         const nodesToSearch = state.pinnedItems.length > 0 ? state.pinnedItems[state.pinnedItems.length - 1].childrens ?? [] : state.items;
         const results = nodesSearch(nodesToSearch, searchTerm, "dfs");
         setSearchResults(results);
-        setSearchLoading(false);
         setActiveSearchIndex(0);
+        if (results.length > 0) {
+          dispatch({ type: SidebarActionType.OPEN_PATH_TO_NODE, nodeId: results[0].id });
+        }
       };
 
       // trigger the search
-      searchTimeout = setTimeout(search, 250);
+      startSearch(searchAction);
     } else {
       setSearchResults([]);
-      setSearchLoading(false);
     }
-
-    return () => {
-      // clear the timeout if the user changes the search term
-      clearTimeout(searchTimeout);
-    };
   }, [searchTerm, state.items, state.pinnedItems]);
 
   useEffect(() => {
@@ -224,7 +218,6 @@ const useSidebarIsNodeSearchActive = (nodeId: string): boolean => {
   const { searchResults, activeSearchIndex } = useSidebar();
   return searchResults.length > 0 && searchResults[activeSearchIndex].id === nodeId;
 };
-
 const useSidebarIsNodeActive = (nodeId: string): boolean => {
   const { state } = useSidebar();
   return state.activeNodeId === nodeId;
