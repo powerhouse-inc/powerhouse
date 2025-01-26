@@ -53,13 +53,13 @@ export const Item: React.FC<ItemProps> = ({
         <div
           id={`sidebar-item-${id}`}
           className={cn(
-            "group/sidebar-item relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100",
+            "group/sidebar-item dark:hover:bg-charcoal-900 relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-400",
             allowPinning && "hover:pr-6",
             isPinned && "pr-6",
             // line between pinned items
             pinnedMode &&
               "after:absolute after:-top-2.5 after:left-3.5 after:h-4 after:w-px after:bg-gray-300 first:after:hidden",
-            isActive && "font-medium text-gray-900",
+            isActive && "font-medium text-gray-900 dark:text-gray-50",
           )}
           onClick={handleClick}
         >
@@ -71,7 +71,9 @@ export const Item: React.FC<ItemProps> = ({
                 className={cn(
                   "min-w-4 transition-all duration-300 ease-in-out",
                   open ? "" : "-rotate-90",
-                  open === undefined ? "text-gray-300" : "text-gray-700",
+                  open === undefined
+                    ? "text-gray-300 dark:text-gray-700"
+                    : "text-gray-700 dark:text-gray-400",
                 )}
               />
             )}
@@ -84,7 +86,7 @@ export const Item: React.FC<ItemProps> = ({
                     __html: title.replace(
                       new RegExp(searchTerm, "gi"),
                       (match) =>
-                        `<span class="${isSearchActive ? "bg-yellow-300" : "bg-gray-300"}">${match}</span>`,
+                        `<span class="${isSearchActive ? "bg-yellow-300 dark:bg-[#604B00]" : "bg-gray-300 dark:bg-charcoal-800"}">${match}</span>`,
                     ),
                   }}
                 />
@@ -99,12 +101,12 @@ export const Item: React.FC<ItemProps> = ({
               className={cn(
                 "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
                 isPinned
-                  ? "text-gray-700"
-                  : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible",
+                  ? "text-gray-700 dark:text-gray-50"
+                  : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
               )}
               onClick={handleTogglePin}
             >
-              <Icon name="Pin" size={16} />
+              <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
             </div>
           )}
         </div>

@@ -95,10 +95,14 @@ export const WithinLayoutAndContent: Story = {
         />
         <div
           style={{ width: "calc(100% - var(--sidebar-width))" }}
-          className="flex-1 border-4 border-green-200 bg-gray-50 p-4"
+          className="flex-1 bg-gray-50 p-4 dark:bg-slate-800"
         >
-          <h1 className="text-2xl font-bold">Content Area</h1>
-          <p className="text-sm text-gray-500">Active Node: {activeNode}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">
+            Content Area
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Active Node: {activeNode}
+          </p>
         </div>
       </div>
     );

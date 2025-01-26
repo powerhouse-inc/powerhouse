@@ -109,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       ref={sidebarRef}
       className={cn(
-        "group peer relative flex h-svh max-h-screen w-[--sidebar-width] flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear",
+        "group peer relative flex h-svh max-h-screen w-[--sidebar-width] flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600",
         isResizing && "transition-none",
       )}
     >
@@ -130,16 +130,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {resizable && (
         <div
           className={cn(
-            "group/sidebar-resizer absolute right-0 top-0 h-full w-px cursor-ew-resize select-none transition-colors hover:bg-gray-500",
+            "group/sidebar-resizer absolute right-0 top-0 h-full w-px cursor-ew-resize select-none transition-colors hover:bg-gray-500 dark:hover:bg-gray-600",
             isResizing && "cursor-default bg-blue-500",
-            !isSidebarOpen && "bg-gray-300",
+            !isSidebarOpen && "bg-gray-300 dark:bg-gray-600",
           )}
           onMouseDown={startResizing}
         >
           <button
             type="button"
             className={cn(
-              "absolute right-0 top-14 size-4 translate-x-1/2 rounded-full bg-gray-500",
+              "absolute right-0 top-14 size-4 translate-x-1/2 rounded-full bg-gray-500 dark:bg-gray-900",
               "opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100",
             )}
             onClick={handleToggleSidebar}
@@ -147,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Icon
               name="Caret"
               size={16}
-              className={cn("text-gray-50", {
+              className={cn("min-w-4 text-gray-50 dark:text-gray-500", {
                 "-rotate-180": isSidebarOpen,
               })}
             />
