@@ -5,7 +5,7 @@ import { generateCommand } from "./generate.js";
 import { helpCommand } from "./help.js";
 import { initCommand } from "./init.js";
 import { installCommand } from "./install.js";
-import { reactorCommand } from "./reactor.js";
+import { reactorCommand } from "./switchboard.js";
 
 import { serviceCommand } from "./service.js";
 export const commands = [
@@ -27,5 +27,5 @@ export * from "./dev.js";
 export * from "./generate.js";
 export * from "./help.js";
 export * from "./init.js";
-export * from "./reactor.js";
+export * from "./switchboard.js";
 export * from "./service.js";

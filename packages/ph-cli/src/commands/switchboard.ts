@@ -9,24 +9,24 @@ import { generateFromFile } from "@powerhousedao/codegen";
 import { CommandActionType } from "../types.js";
 import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 
-export type ReactorOptions = StartServerOptions & {
+export type SwitchboardOptions = StartServerOptions & {
   configFile?: string;
   generate?: boolean;
   watch?: boolean;
   dbPath?: string;
 };
 
-export const DefaultReactorOptions = {
+export const DefaultSwitchboardOptions = {
   ...DefaultStartServerOptions,
   dev: true,
 };
 
-async function startLocalReactor(reactorOptions: ReactorOptions) {
-  const baseConfig = getConfig(reactorOptions.configFile);
+async function startLocalSwitchboard(switchboardOptions: SwitchboardOptions) {
+  const baseConfig = getConfig(switchboardOptions.configFile);
   const options = {
-    ...DefaultReactorOptions,
+    ...DefaultSwitchboardOptions,
     packages: baseConfig.packages,
-    ...reactorOptions,
+    ...switchboardOptions,
   };
 
   const reactor = await startServer(options);
@@ -72,17 +72,17 @@ async function addGenerateTransmitter(
   );
 }
 
-export const reactor: CommandActionType<
-  [ReactorOptions],
+export const switchboard: CommandActionType<
+  [SwitchboardOptions],
   Promise<LocalReactor>
 > = (options) => {
-  return startLocalReactor(options);
+  return startLocalSwitchboard(options);
 };
 
 export function reactorCommand(program: Command) {
   program
-    .command("reactor")
-    .description("Starts local reactor")
+    .command("switchboard")
+    .description("Starts local switchboard")
     .option("--port <PORT>", "port to host the api", "4001")
     .option(
       "--config-file <configFile>",
@@ -94,17 +94,19 @@ export function reactorCommand(program: Command) {
       "-w, --watch",
       "if the reactor should watch for local changes to document models and processors",
     )
-    .action(async (...args: [ReactorOptions]) => {
-      await reactor(...args);
+    .action(async (...args: [SwitchboardOptions]) => {
+      await switchboard(...args);
     });
 }
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg ? (JSON.parse(optionsArg) as ReactorOptions) : {};
-  startLocalReactor(options)
-    .then((reactor) => {
-      process.send?.(`driveUrl:${reactor.driveUrl}`);
+  const options = optionsArg
+    ? (JSON.parse(optionsArg) as SwitchboardOptions)
+    : {};
+  startLocalSwitchboard(options)
+    .then((switchboard) => {
+      process.send?.(`driveUrl:${switchboard.driveUrl}`);
     })
     .catch((e: unknown) => {
       throw e;

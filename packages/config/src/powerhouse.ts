@@ -8,7 +8,7 @@ export type PowerhouseConfig = {
   interactive?: boolean;
   skipFormat?: boolean;
   watch?: boolean;
-  reactor?: {
+  switchboard?: {
     port?: number;
   };
   studio?: {

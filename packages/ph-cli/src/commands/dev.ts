@@ -1,18 +1,21 @@
+import { blue, green, red } from "colorette";
+import { Command } from "commander";
+import { ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { fork, ChildProcessWithoutNullStreams } from "node:child_process";
-import { Command } from "commander";
-import { blue, green, red } from "colorette";
 import { CommandActionType } from "../types.js";
-import { DefaultReactorOptions, type ReactorOptions } from "./reactor.js";
 import { type ConnectOptions } from "./connect.js";
+import {
+  DefaultSwitchboardOptions,
+  SwitchboardOptions,
+} from "./switchboard.js";
 
 const __dirname =
   import.meta.dirname || dirname(fileURLToPath(import.meta.url));
 
-function spawnLocalReactor(options?: ReactorOptions) {
+function spawnLocalSwitchboard(options?: SwitchboardOptions) {
   const child = fork(
-    path.join(__dirname, "reactor.js"),
+    path.join(__dirname, "switchboard.js"),
     ["spawn", JSON.stringify(options)],
     { silent: true },
   ) as ChildProcessWithoutNullStreams;
@@ -32,19 +35,19 @@ function spawnLocalReactor(options?: ReactorOptions) {
       const message = data.toString();
       const lines = message.split("\n").filter((line) => line.trim().length);
       for (const line of lines) {
-        process.stdout.write(blue(`[Reactor]: ${line}\n`));
+        process.stdout.write(blue(`[Switchboard]: ${line}\n`));
       }
     });
 
     child.stderr.on("error", (data: Buffer) => {
-      process.stderr.write(red(`[Reactor]: ${data.toString()}`));
+      process.stderr.write(red(`[Switchboard]: ${data.toString()}`));
     });
     child.on("error", (err) => {
-      process.stderr.write(red(`[Reactor]: ${err}`));
+      process.stderr.write(red(`[Switchboard]: ${err}`));
     });
 
     child.on("exit", (code) => {
-      console.log(`Reactor process exited with code ${code}`);
+      console.log(`Switchboard process exited with code ${code}`);
     });
   });
 }
@@ -89,20 +92,20 @@ export const dev: CommandActionType<
     {
       generate?: boolean;
       watch?: boolean;
-      reactorPort?: number;
+      switchboardPort?: number;
       configFile?: string;
     },
   ]
 > = async ({
   generate,
   watch,
-  reactorPort = DefaultReactorOptions.port,
+  switchboardPort = DefaultSwitchboardOptions.port,
   configFile,
 }) => {
   try {
-    const { driveUrl } = await spawnLocalReactor({
+    const { driveUrl } = await spawnLocalSwitchboard({
       generate,
-      port: reactorPort,
+      port: switchboardPort,
       watch,
     });
     await spawnConnect({ configFile }, driveUrl);
@@ -116,14 +119,14 @@ export function devCommand(program: Command) {
     .command("dev")
     .description("Starts dev environment")
     .option("--generate", "generate code when document model is updated")
-    .option("--reactor-port <port>", "port to use for the reactor")
+    .option("--switchboard-port <port>", "port to use for the switchboard")
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
     )
     .option(
       "-w, --watch",
-      "if the reactor should watch for local changes to document models and processors",
+      "if the switchboard should watch for local changes to document models and processors",
     )
     .action(dev);
 }
