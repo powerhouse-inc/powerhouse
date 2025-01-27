@@ -1,13 +1,10 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { readPackageUpSync } from "read-package-up";
 
 import registerCommands from "./commands/index.js";
 import { forwardCommand } from "./commands/forward.js";
 import { CommandActionType } from "./types.js";
 import { PH_CLI_COMMANDS } from "./utils.js";
-
-const pkg = readPackageUpSync();
 
 const program = new Command();
 
@@ -34,7 +31,7 @@ program
   .option("--verbose", "Enable debug mode")
   .option("--script", "Run the command as a package.json script")
   .action(defaultCommand)
-  .version(pkg?.packageJson.version ?? "1.0.0");
+  .version(process.env.APP_VERSION ?? "1.0.0");
 
 registerCommands(program);
 
