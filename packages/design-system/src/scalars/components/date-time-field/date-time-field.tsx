@@ -5,13 +5,11 @@ import TimePickerField from "../time-picker-field/time-picker-field";
 interface DateTimeFieldProps {
   showDateSelect?: boolean;
   showTimeSelect?: boolean;
-  name: string;
 }
 
 export const DateTimeField: React.FC<DateTimeFieldProps> = ({
   showDateSelect = true,
   showTimeSelect = true,
-  name,
 }) => {
   if (!showDateSelect && !showTimeSelect) {
     return <DatePickerField />;
