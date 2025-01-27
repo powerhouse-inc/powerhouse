@@ -28,7 +28,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
       </div>
 
       {enableMacros > 0 && (
-        <div className="flex items-center gap-2">
+        <div className="flex select-none items-center gap-2">
           {Array.from({ length: Math.min(enableMacros, 4) }).map((_, index) => (
             <div
               // eslint-disable-next-line react/no-array-index-key
