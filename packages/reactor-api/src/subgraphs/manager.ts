@@ -35,7 +35,7 @@ export class SubgraphManager {
   }
 
   async init() {
-    console.log(`Initializing ReactorRouterManager...`);
+    console.log(`Initializing Subgraph Manager...`);
     const models = this.reactor.getDocumentModels();
     const driveModel = models.find(
       (it) => it.documentModel.name === "DocumentDrive",

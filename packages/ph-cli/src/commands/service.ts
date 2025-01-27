@@ -1,13 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { getConfig } from "@powerhousedao/config/powerhouse";
 import { Argument, Command } from "commander";
-import { execSync, spawn } from "node:child_process";
-import { CommandActionType } from "../types.js";
 import pm2, { StartOptions } from "pm2";
-import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { CommandActionType } from "../types.js";
 
 const actions = ["start", "stop", "status", "list", "install", "save"];
-const services = ["reactor", "connect", "all"];
+const services = ["switchboard", "connect", "all"];
 
-let reactorPort = 8442;
+let switchboardPort = 8442;
 let connectPort = 8443;
 export const manageService: CommandActionType<[string, string]> = async (
   action,
@@ -15,8 +16,8 @@ export const manageService: CommandActionType<[string, string]> = async (
 ) => {
   try {
     const config = getConfig();
-    if (config.reactor?.port) {
-      reactorPort = config.reactor.port;
+    if (config.switchboard?.port) {
+      switchboardPort = config.switchboard.port;
     }
     if (config.studio?.port) {
       connectPort = config.studio.port;
@@ -52,13 +53,13 @@ export function serviceCommand(program: Command) {
 }
 
 function startServices(service: string) {
-  if (service === "reactor" || service === "all") {
-    const reactorOptions: StartOptions = {
-      name: "reactor",
-      script: "npx ph-cli reactor",
+  if (service === "switchboard" || service === "all") {
+    const switchboardOptions: StartOptions = {
+      name: "switchboard",
+      script: "npx ph-cli switchboard",
     };
-    console.log("Starting reactor...");
-    pm2.start(reactorOptions, (err) => {
+    console.log("Starting Switchboard...");
+    pm2.start(switchboardOptions, (err) => {
       if (err) {
         console.log(err.name);
         // throw new Error(err.message);
@@ -66,7 +67,7 @@ function startServices(service: string) {
 
       dumpServices();
     });
-    console.log("Reactor started");
+    console.log("Switchboard started");
   }
 
   if (service === "connect" || service === "all") {
@@ -107,8 +108,8 @@ function stopServices(service: string) {
       dumpServices();
     });
   }
-  if (service === "all" || service === "reactor") {
-    pm2.stop("reactor", (err) => {
+  if (service === "all" || service === "switchboard") {
+    pm2.stop("switchboard", (err) => {
       if (err) {
         throw new Error(err.message);
       }
