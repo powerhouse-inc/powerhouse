@@ -46,6 +46,10 @@ export type StartServerOptions = {
   dbPath?: string;
   drive?: DriveInput;
   packages?: Packages;
+  ssl?: {
+    keyPath: string;
+    certPath: string;
+  };
 };
 
 export const DefaultStartServerOptions = {
@@ -143,6 +147,7 @@ const startServer = async (
     const api = await startAPI(driveServer, {
       port: serverPort,
       dbPath,
+      ssl: options?.ssl,
     });
     driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
     console.log(`  ➜  Reactor:   ${driveUrl}`);
