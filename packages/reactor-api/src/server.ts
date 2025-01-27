@@ -10,12 +10,18 @@ import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
+import https from "https";
+import fs from "fs";
 
 type Options = {
   express?: Express;
   port?: number;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
+  ssl?: {
+    keyPath: string;
+    certPath: string;
+  };
 };
 
 const DEFAULT_PORT = 4000;
@@ -41,6 +47,17 @@ export async function startAPI(
   await subgraphManager.init();
   const processorManager = new ProcessorManager(reactor, db, analyticsStore);
 
-  app.listen(port);
+  if (options.ssl) {
+    const server = https.createServer(
+      {
+        key: fs.readFileSync(options.ssl.keyPath),
+        cert: fs.readFileSync(options.ssl.certPath),
+      },
+      app,
+    );
+    server.listen(port);
+  } else {
+    app.listen(port);
+  }
   return { app, subgraphManager, processorManager };
 }
