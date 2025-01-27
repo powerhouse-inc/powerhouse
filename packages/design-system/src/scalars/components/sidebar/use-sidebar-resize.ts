@@ -11,7 +11,7 @@ interface SidebarResizeProps {
 export const useSidebarResize = ({
   defaultWidth = 300,
   minWidth = 100,
-  maxWidth = 400,
+  maxWidth,
 }: SidebarResizeProps) => {
   const [isResizing, setIsResizing] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(defaultWidth);
@@ -47,7 +47,10 @@ export const useSidebarResize = ({
         const newWidth =
           mouseMoveEvent.clientX -
           sidebarRef.current.getBoundingClientRect().left;
-        if (newWidth >= minWidth && newWidth <= maxWidth) {
+        if (
+          newWidth >= minWidth &&
+          (maxWidth !== undefined ? newWidth <= maxWidth : true)
+        ) {
           setSidebarWidth(newWidth);
         }
       }

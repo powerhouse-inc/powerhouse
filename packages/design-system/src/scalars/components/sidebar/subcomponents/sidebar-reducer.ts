@@ -119,7 +119,6 @@ export const sidebarReducer = (
         ...state,
         itemsState: {
           ...state.itemsState,
-          [action.nodeId ?? ""]: true,
         },
         activeNodeId: action.nodeId,
       };
