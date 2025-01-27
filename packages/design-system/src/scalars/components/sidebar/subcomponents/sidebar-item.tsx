@@ -116,14 +116,14 @@ export const Item: React.FC<ItemProps> = ({
 export interface SidebarItemProps {
   id: string;
   title: string;
-  childrens?: SidebarNode[];
+  children?: SidebarNode[];
   allowPinning?: boolean;
 }
 
 export const SidebarItem: React.FC<SidebarItemProps> = ({
   id,
   title,
-  childrens,
+  children,
   allowPinning,
 }) => {
   const open = useSidebarNodeState(id);
@@ -139,7 +139,7 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
     [toggleOpen],
   );
 
-  if (!childrens || (Array.isArray(childrens) && childrens.length === 0)) {
+  if (!children || (Array.isArray(children) && children.length === 0)) {
     return <Item id={id} title={title} allowPinning={allowPinning} />;
   }
 
@@ -164,12 +164,12 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
       >
         {open && (
           <div className="flex flex-col gap-1 overflow-hidden pl-6">
-            {childrens.map((child) => (
+            {children.map((child) => (
               <SidebarItem
                 key={child.id}
                 id={child.id}
                 title={child.title}
-                childrens={child.childrens}
+                children={child.children}
                 allowPinning={allowPinning}
               />
             ))}

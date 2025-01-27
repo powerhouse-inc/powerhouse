@@ -17,7 +17,7 @@ export const SidebarContentArea = ({
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const hasPinnedItems = state.pinnedItems.length > 0 && allowPinning;
   const items = hasPinnedItems
-    ? (state.pinnedItems[state.pinnedItems.length - 1].childrens ?? [])
+    ? (state.pinnedItems[state.pinnedItems.length - 1].children ?? [])
     : state.items;
 
   // scroll into view when navigating between search results
@@ -58,7 +58,7 @@ export const SidebarContentArea = ({
             key={item.id}
             id={item.id}
             title={item.title}
-            childrens={item.childrens}
+            children={item.children}
             allowPinning={allowPinning}
           />
         ))
