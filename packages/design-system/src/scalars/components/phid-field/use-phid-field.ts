@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import type { PHIDProps, PHIDListItemProps } from "./types";
 import { fetchPHIDOptions } from "./utils";
 
@@ -7,7 +7,7 @@ interface UsePHIDFieldProps {
   defaultValue?: string;
   value?: string;
   onChange?: PHIDProps["onChange"];
-  onBlur?: PHIDProps["onBlur"];
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
 }
 
 export function usePHIDField({
@@ -25,11 +25,12 @@ export function usePHIDField({
   const [haveFetchError, setHaveFetchError] = useState(false);
 
   const fetchOptions = useCallback(async () => {
+    setOptions([]);
     setIsLoading(true);
     setHaveFetchError(false);
     try {
-      const options = await fetchPHIDOptions();
-      setOptions(options);
+      const newOptions = await fetchPHIDOptions();
+      setOptions(newOptions);
     } catch {
       setHaveFetchError(true);
     } finally {
