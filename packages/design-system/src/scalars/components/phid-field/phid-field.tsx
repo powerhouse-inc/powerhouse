@@ -55,6 +55,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       warnings,
       onChange,
       onBlur,
+      onClick,
       defaultBranch = "main",
       defaultScope = "public",
       allowedScopes,
@@ -95,6 +96,8 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
     });
 
     const selectedOption = options.find((opt) => opt.phid === selectedValue);
+    const asCard =
+      variant === "withIdAndTitle" || variant === "withIdTitleAndDescription";
 
     return (
       <FormGroup>
@@ -113,80 +116,89 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
           </FormLabel>
         )}
         <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
-          <Command shouldFilter={false}>
+          <Command
+            shouldFilter={false}
+            className={cn(
+              asCard && [
+                "group rounded-md",
+                "dark:focus-within:ring-charcoal-300 focus-within:ring-1 focus-within:ring-gray-900 focus-within:ring-offset-0",
+              ],
+            )}
+          >
             <PopoverAnchor asChild={true}>
-              <div className="relative">
-                <CommandPrimitive.Input asChild>
-                  <Input
-                    id={id}
-                    name={name}
-                    value={selectedValue}
-                    className={className}
-                    disabled={disabled}
-                    onChange={(e) => {
-                      handleSelectedValueChange(e.target.value);
-                      if (options.some((opt) => opt.phid === e.target.value)) {
-                        handleOpenChange(false);
-                      } else if (autoComplete && e.target.value !== "") {
-                        handleOpenChange(true);
-                      } else {
-                        handleOpenChange(false);
-                      }
-                      onChange?.(e.target.value);
-                    }}
-                    onBlur={onTriggerBlur}
-                    onClick={(e) => {
-                      const input = e.target as HTMLInputElement;
-                      if (
-                        autoComplete &&
-                        !options.some((opt) => opt.phid === input.value) &&
-                        input.value !== ""
-                      ) {
-                        handleOpenChange(true);
-                      }
-                      props.onClick?.(e);
-                    }}
-                    onMouseDown={(e) => {
-                      const input = e.target as HTMLInputElement;
-                      if (!input.contains(document.activeElement)) {
-                        // wait for the next tick to ensure the focus occurs first
-                        requestAnimationFrame(() => {
-                          input.select();
-                        });
-                      }
-                    }}
-                    placeholder={placeholder}
-                    aria-invalid={hasError}
-                    aria-label={!label ? "PHID field" : undefined}
-                    aria-required={required}
-                    aria-expanded={isPopoverOpen}
-                    {...props}
-                    ref={ref}
-                  />
-                </CommandPrimitive.Input>
-                {selectedOption !== undefined && variant !== "withId" && (
-                  <div className="absolute inset-x-0 top-full mt-2">
-                    <PHIDListItem
-                      variant="withIdTitleAndDescription"
-                      title={selectedOption.title}
-                      path={selectedOption.path}
-                      phid=""
-                      description={
-                        variant === "withIdTitleAndDescription"
-                          ? selectedOption.description
-                          : ""
-                      }
-                    />
-                  </div>
-                )}
-              </div>
+              <CommandPrimitive.Input asChild>
+                <Input
+                  id={id}
+                  name={name}
+                  value={selectedValue}
+                  className={cn(
+                    asCard && "rounded-b-none border-b-0 focus-visible:ring-0",
+                    className,
+                  )}
+                  disabled={disabled}
+                  onChange={(e) => {
+                    handleSelectedValueChange(e.target.value);
+                    if (options.some((opt) => opt.phid === e.target.value)) {
+                      handleOpenChange(false);
+                    } else if (autoComplete && e.target.value !== "") {
+                      handleOpenChange(true);
+                    } else {
+                      handleOpenChange(false);
+                    }
+                    onChange?.(e.target.value);
+                  }}
+                  onBlur={onTriggerBlur}
+                  onClick={(e) => {
+                    const input = e.target as HTMLInputElement;
+                    if (
+                      autoComplete &&
+                      !options.some((opt) => opt.phid === input.value) &&
+                      input.value !== ""
+                    ) {
+                      handleOpenChange(true);
+                    }
+                    onClick?.(e);
+                  }}
+                  onMouseDown={(e) => {
+                    const input = e.target as HTMLInputElement;
+                    if (!input.contains(document.activeElement)) {
+                      // wait for the next tick to ensure the focus occurs first
+                      requestAnimationFrame(() => {
+                        input.select();
+                      });
+                    }
+                  }}
+                  placeholder={placeholder}
+                  aria-invalid={hasError}
+                  aria-label={!label ? "PHID field" : undefined}
+                  aria-required={required}
+                  aria-expanded={isPopoverOpen}
+                  {...props}
+                  ref={ref}
+                />
+              </CommandPrimitive.Input>
             </PopoverAnchor>
+            {asCard && (
+              <PHIDListItem
+                variant={variant}
+                title={selectedOption?.title}
+                path={selectedOption?.path}
+                phid=""
+                description={selectedOption?.description}
+                asPlaceholder={selectedOption === undefined}
+                className={cn(
+                  "rounded-t-none border border-gray-300 border-t-transparent bg-gray-100 pt-2",
+                  "dark:border-charcoal-700 dark:border-t-transparent dark:bg-slate-600",
+                  "dark:group-focus-within:border-t-charcoal-700 group-focus-within:border-t-gray-300",
+                )}
+              />
+            )}
             <PopoverContent
               align="start"
               className={cn(
                 "w-[--radix-popover-trigger-width] p-0",
-                "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-700",
-                "rounded shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
+                "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
+                "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
               )}
               onOpenAutoFocus={(e) => e.preventDefault()}
               onInteractOutside={(e) => {
@@ -222,6 +234,10 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
           return true;
         }
 
+        if (allowUris === false) {
+          return "URI format is not allowed, please use a URL instead.";
+        }
+
         // URI regex patterns
         const uuidPattern =
           "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}";
@@ -239,11 +255,8 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         const isValidURIFormat = URIFormats.some((format) =>
           new RegExp(format).test(value),
         );
-        if (allowUris === false) {
-          return "URIs are not allowed, please use a URL instead.";
-        }
         if (!isValidURIFormat) {
-          return "Invalid PHID format. Please use one of the following formats: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
+          return "Invalid URI format. Please use one of the following variants: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
         }
 
         // Validate scope if present

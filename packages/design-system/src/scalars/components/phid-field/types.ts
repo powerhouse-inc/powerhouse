@@ -1,8 +1,5 @@
-import React from "react";
-
 export interface PHIDBaseProps {
   onChange?: (value: string) => void;
-  onBlur?: React.FocusEventHandler<HTMLInputElement>;
   placeholder?: string;
   defaultBranch?: string;
   defaultScope?: string;
@@ -28,4 +25,5 @@ export interface PHIDListItemProps {
   path?: string;
   phid: string;
   description?: string;
+  asPlaceholder?: boolean;
 }

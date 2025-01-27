@@ -124,6 +124,6 @@ type Story = StoryObj<typeof PHIDField>;
 export const Default: Story = {
   args: {
     label: "PHID field",
-    placeholder: "phd:baefc2a4-f9a0-4...",
+    placeholder: "phd:",
   },
 };
