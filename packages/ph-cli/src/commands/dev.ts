@@ -94,6 +94,8 @@ export const dev: CommandActionType<
       watch?: boolean;
       switchboardPort?: number;
       configFile?: string;
+      httpsKeyFile?: string;
+      httpsCertFile?: string;
     },
   ]
 > = async ({
@@ -101,12 +103,22 @@ export const dev: CommandActionType<
   watch,
   switchboardPort = DefaultSwitchboardOptions.port,
   configFile,
+  httpsKeyFile,
+  httpsCertFile,
 }) => {
   try {
+    const https =
+      httpsKeyFile && httpsCertFile
+        ? {
+            keyPath: httpsKeyFile,
+            certPath: httpsCertFile,
+          }
+        : undefined;
     const { driveUrl } = await spawnLocalSwitchboard({
       generate,
       port: switchboardPort,
       watch,
+      https,
     });
     await spawnConnect({ configFile }, driveUrl);
   } catch (error) {
@@ -120,6 +132,8 @@ export function devCommand(program: Command) {
     .description("Starts dev environment")
     .option("--generate", "generate code when document model is updated")
     .option("--switchboard-port <port>", "port to use for the switchboard")
+    .option("--https-key-file <SSL_KEY_FILE>", "path to the ssl key file")
+    .option("--https-cert-file <SSL_CERT_FILE>", "path to the ssl cert file")
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",

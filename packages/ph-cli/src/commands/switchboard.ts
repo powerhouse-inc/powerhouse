@@ -14,6 +14,8 @@ export type SwitchboardOptions = StartServerOptions & {
   generate?: boolean;
   watch?: boolean;
   dbPath?: string;
+  httpsKeyFile?: string;
+  httpsCertFile?: string;
 };
 
 export const DefaultSwitchboardOptions = {
@@ -29,7 +31,15 @@ async function startLocalSwitchboard(switchboardOptions: SwitchboardOptions) {
     ...switchboardOptions,
   };
 
-  const reactor = await startServer(options);
+  const https =
+    switchboardOptions.httpsKeyFile && switchboardOptions.httpsCertFile
+      ? {
+          keyPath: switchboardOptions.httpsKeyFile,
+          certPath: switchboardOptions.httpsCertFile,
+        }
+      : undefined;
+
+  const reactor = await startServer({ ...options, https });
 
   if (options.generate) {
     await addGenerateTransmitter(reactor, baseConfig);
@@ -90,6 +100,8 @@ export function reactorCommand(program: Command) {
     )
     .option("--generate", "generate code when document model is updated")
     .option("--db-path <DB_PATH>", "path to the database")
+    .option("--ssl-key-file <SSL_KEY_FILE>", "path to the ssl key file")
+    .option("--ssl-cert-file <SSL_CERT_FILE>", "path to the ssl cert file")
     .option(
       "-w, --watch",
       "if the reactor should watch for local changes to document models and processors",
