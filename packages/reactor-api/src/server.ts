@@ -1,24 +1,24 @@
 import { PGlite } from "@electric-sql/pglite";
+import {
+  KnexAnalyticsStore,
+  KnexQueryExecutor,
+} from "@powerhousedao/analytics-engine-knex";
 import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
+import fs from "node:fs";
+import https from "node:https";
 import { Pool } from "pg";
 import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
 import { getDbClient } from "./utils/db";
-import {
-  KnexAnalyticsStore,
-  KnexQueryExecutor,
-} from "@powerhousedao/analytics-engine-knex";
-import https from "https";
-import fs from "fs";
 
 type Options = {
   express?: Express;
   port?: number;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
-  ssl?: {
+  https?: {
     keyPath: string;
     certPath: string;
   };
@@ -47,11 +47,11 @@ export async function startAPI(
   await subgraphManager.init();
   const processorManager = new ProcessorManager(reactor, db, analyticsStore);
 
-  if (options.ssl) {
+  if (options.https) {
     const server = https.createServer(
       {
-        key: fs.readFileSync(options.ssl.keyPath),
-        cert: fs.readFileSync(options.ssl.certPath),
+        key: fs.readFileSync(options.https.keyPath),
+        cert: fs.readFileSync(options.https.certPath),
       },
       app,
     );

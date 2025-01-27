@@ -2,10 +2,11 @@ import {
   API,
   IProcessorManager,
   isProcessorClass,
+  isSubgraphClass,
   startAPI,
+  SubgraphClass,
   SubgraphManager,
 } from "@powerhousedao/reactor-api";
-import { isSubgraphClass, SubgraphClass } from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
@@ -20,8 +21,8 @@ import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
-import path from "node:path";
 import { access } from "node:fs/promises";
+import path from "node:path";
 import { createServer as createViteServer, ViteDevServer } from "vite";
 
 type FSError = {
@@ -46,7 +47,7 @@ export type StartServerOptions = {
   dbPath?: string;
   drive?: DriveInput;
   packages?: Packages;
-  ssl?: {
+  https?: {
     keyPath: string;
     certPath: string;
   };
@@ -147,7 +148,7 @@ const startServer = async (
     const api = await startAPI(driveServer, {
       port: serverPort,
       dbPath,
-      ssl: options?.ssl,
+      https: options?.https,
     });
     driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
     console.log(`  ➜  Reactor:   ${driveUrl}`);
