@@ -132,8 +132,8 @@ export function devCommand(program: Command) {
     .description("Starts dev environment")
     .option("--generate", "generate code when document model is updated")
     .option("--switchboard-port <port>", "port to use for the switchboard")
-    .option("--https-key-file <SSL_KEY_FILE>", "path to the ssl key file")
-    .option("--https-cert-file <SSL_CERT_FILE>", "path to the ssl cert file")
+    .option("--https-key-file <HTTPS_KEY_FILE>", "path to the ssl key file")
+    .option("--https-cert-file <HTTPS_CERT_FILE>", "path to the ssl cert file")
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
