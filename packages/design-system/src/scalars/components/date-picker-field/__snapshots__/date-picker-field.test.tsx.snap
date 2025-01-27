@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DatePickerField > should match the snapshot 1`] = `
+<div>
+  <div
+    class="flex flex-col gap-2"
+  >
+    <label
+      class="inline-flex items-center text-sm font-medium leading-4 text-gray-900 dark:text-gray-50 mb-[3px]"
+      for="test-id"
+    >
+      Test Label
+      <span
+        class="ml-1 text-gray-800 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-slate-50"
+      >
+        *
+      </span>
+    </label>
+    <div>
+      <div>
+        Placeholder DatePicker
+      </div>
+    </div>
+  </div>
+</div>
+`;
