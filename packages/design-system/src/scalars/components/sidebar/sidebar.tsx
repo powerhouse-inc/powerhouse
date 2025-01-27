@@ -78,7 +78,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   } = useSidebarResize({
     defaultWidth: 300,
     minWidth: 220,
-    maxWidth: 650,
   });
 
   const {
@@ -88,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setActiveNodeChangeCallback,
   } = useSidebar();
 
-  // sync param nodes with provider state if privided
+  // sync param nodes with provider state if provided
   useEffect(() => {
     if (nodes) {
       setItems(nodes);
