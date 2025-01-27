@@ -12,6 +12,7 @@ import { ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
 import { getDbClient } from "./utils/db";
+import path from "node:path";
 
 type Options = {
   express?: Express;
@@ -48,10 +49,11 @@ export async function startAPI(
   const processorManager = new ProcessorManager(reactor, db, analyticsStore);
 
   if (options.https) {
+    const currentDir = process.cwd();
     const server = https.createServer(
       {
-        key: fs.readFileSync(options.https.keyPath),
-        cert: fs.readFileSync(options.https.certPath),
+        key: fs.readFileSync(path.join(currentDir, options.https.keyPath)),
+        cert: fs.readFileSync(path.join(currentDir, options.https.certPath)),
       },
       app,
     );
