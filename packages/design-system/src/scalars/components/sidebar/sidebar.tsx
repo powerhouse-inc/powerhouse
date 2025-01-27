@@ -128,29 +128,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {resizable && (
         <div
-          className={cn(
-            "group/sidebar-resizer absolute right-0 top-0 h-full w-px cursor-ew-resize select-none transition-colors hover:bg-gray-500 dark:hover:bg-gray-600",
-            isResizing && "cursor-default bg-blue-500",
-            !isSidebarOpen && "bg-gray-300 dark:bg-gray-600",
-          )}
+          className="group/sidebar-resizer absolute right-0 top-0 h-full w-[10px] translate-x-1/2 cursor-ew-resize select-none"
           onMouseDown={startResizing}
         >
-          <button
-            type="button"
+          <div
             className={cn(
-              "absolute right-0 top-14 size-4 translate-x-1/2 rounded-full bg-gray-500 dark:bg-gray-900",
-              "opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100",
+              "relative h-full w-px translate-x-[5px] transition-colors group-hover/sidebar-resizer:bg-gray-500 dark:group-hover/sidebar-resizer:bg-gray-600",
+              isResizing && "cursor-default bg-blue-500",
+              !isSidebarOpen && "bg-gray-300 dark:bg-gray-600",
             )}
-            onClick={handleToggleSidebar}
           >
-            <Icon
-              name="Caret"
-              size={16}
-              className={cn("min-w-4 text-gray-50 dark:text-gray-500", {
-                "-rotate-180": isSidebarOpen,
-              })}
-            />
-          </button>
+            <button
+              type="button"
+              className={cn(
+                "absolute right-0 top-14 size-4 translate-x-1/2 rounded-full bg-gray-500 dark:bg-gray-900",
+                "opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100",
+              )}
+              onClick={handleToggleSidebar}
+            >
+              {/* eslint-disable-next-line react/jsx-max-depth */}
+              <Icon
+                name="Caret"
+                size={16}
+                className={cn("min-w-4 text-gray-50 dark:text-gray-500", {
+                  "-rotate-180": isSidebarOpen,
+                })}
+              />
+            </button>
+          </div>
         </div>
       )}
     </aside>

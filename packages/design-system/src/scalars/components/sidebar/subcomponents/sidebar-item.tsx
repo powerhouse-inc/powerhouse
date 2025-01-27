@@ -96,19 +96,17 @@ export const Item: React.FC<ItemProps> = ({
             </div>
           </div>
 
-          {allowPinning && (!pinnedMode || isPinned) && (
-            <div
-              className={cn(
-                "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
-                isPinned
-                  ? "text-gray-700 dark:text-gray-50"
-                  : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
-              )}
-              onClick={handleTogglePin}
-            >
-              <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
-            </div>
-          )}
+          <div
+            className={cn(
+              "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
+              isPinned
+                ? "text-gray-700 dark:text-gray-50"
+                : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
+            )}
+            onClick={handleTogglePin}
+          >
+            <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
+          </div>
         </div>
       </Tooltip>
     </TooltipProvider>
@@ -118,14 +116,14 @@ export const Item: React.FC<ItemProps> = ({
 export interface SidebarItemProps {
   id: string;
   title: string;
-  childrens?: SidebarNode[];
+  children?: SidebarNode[];
   allowPinning?: boolean;
 }
 
 export const SidebarItem: React.FC<SidebarItemProps> = ({
   id,
   title,
-  childrens,
+  children,
   allowPinning,
 }) => {
   const open = useSidebarNodeState(id);
@@ -141,7 +139,7 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
     [toggleOpen],
   );
 
-  if (!childrens || (Array.isArray(childrens) && childrens.length === 0)) {
+  if (!children || (Array.isArray(children) && children.length === 0)) {
     return <Item id={id} title={title} allowPinning={allowPinning} />;
   }
 
@@ -166,12 +164,12 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
       >
         {open && (
           <div className="flex flex-col gap-1 overflow-hidden pl-6">
-            {childrens.map((child) => (
+            {children.map((child) => (
               <SidebarItem
                 key={child.id}
                 id={child.id}
                 title={child.title}
-                childrens={child.childrens}
+                children={child.children}
                 allowPinning={allowPinning}
               />
             ))}

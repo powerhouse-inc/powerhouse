@@ -15,8 +15,8 @@ export const nodesSearch = (
     }
 
     // Recursively search children if they exist
-    if (node.childrens?.length) {
-      for (const child of node.childrens) {
+    if (node.children?.length) {
+      for (const child of node.children) {
         dfs(child);
       }
     }
@@ -30,8 +30,8 @@ export const nodesSearch = (
         if (current.title.toLowerCase().includes(lowerCaseSearchTerm)) {
           results.push(current);
         }
-        if (current.childrens?.length) {
-          queue.push(...current.childrens);
+        if (current.children?.length) {
+          queue.push(...current.children);
         }
       }
     }
@@ -59,8 +59,8 @@ export const getOpenLevels = (
       if (currentLevel < level) {
         result[node.id] = true;
       }
-      if (node.childrens) {
-        traverse(node.childrens, currentLevel + 1);
+      if (node.children) {
+        traverse(node.children, currentLevel + 1);
       }
     }
   }
@@ -82,8 +82,8 @@ export const isOpenLevel = (
       const current = queue.shift();
       if (current && !itemsState[current.id]) {
         return false;
-      } else if (current?.childrens) {
-        nextLevelQueue.push(...current.childrens);
+      } else if (current?.children) {
+        nextLevelQueue.push(...current.children);
       }
     }
     queue.push(...nextLevelQueue);
@@ -119,8 +119,8 @@ export const getNodePath = (
     }
 
     // Recursively search in the children
-    if (node.childrens) {
-      for (const child of node.childrens) {
+    if (node.children) {
+      for (const child of node.children) {
         const result = findPath(child, id, path);
         if (result) {
           return result;

@@ -122,7 +122,7 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     if (searchTerm) {
       // callback to search the nodes
       const searchAction = () => {
-        const nodesToSearch = state.pinnedItems.length > 0 ? state.pinnedItems[state.pinnedItems.length - 1].childrens ?? [] : state.items;
+        const nodesToSearch = state.pinnedItems.length > 0 ? state.pinnedItems[state.pinnedItems.length - 1].children ?? [] : state.items;
         const results = nodesSearch(nodesToSearch, searchTerm, "dfs");
         setSearchResults(results);
         setActiveSearchIndex(0);

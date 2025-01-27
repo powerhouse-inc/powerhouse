@@ -1,7 +1,7 @@
 export type SidebarNode = {
   title: string;
   id: string;
-  childrens?: SidebarNode[];
+  children?: SidebarNode[];
   icon?: string;
   expanded?: boolean;
 };
