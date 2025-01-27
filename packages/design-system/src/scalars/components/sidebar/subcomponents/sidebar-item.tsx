@@ -96,19 +96,17 @@ export const Item: React.FC<ItemProps> = ({
             </div>
           </div>
 
-          {allowPinning && (!pinnedMode || isPinned) && (
-            <div
-              className={cn(
-                "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
-                isPinned
-                  ? "text-gray-700 dark:text-gray-50"
-                  : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
-              )}
-              onClick={handleTogglePin}
-            >
-              <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
-            </div>
-          )}
+          <div
+            className={cn(
+              "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
+              isPinned
+                ? "text-gray-700 dark:text-gray-50"
+                : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
+            )}
+            onClick={handleTogglePin}
+          >
+            <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
+          </div>
         </div>
       </Tooltip>
     </TooltipProvider>
