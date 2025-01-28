@@ -67,7 +67,12 @@ const Tooltip: React.FC<TooltipProps> = ({
       onOpenChange={onOpenChange}
       open={open}
     >
-      <Trigger asChild={triggerAsChild}>{children}</Trigger>
+      <Trigger
+        asChild={triggerAsChild}
+        type={triggerAsChild ? undefined : "button"} // Prevent form submission when default trigger is clicked
+      >
+        {children}
+      </Trigger>
       <Portal>
         <TooltipContent sideOffset={3} {...rest}>
           {content}

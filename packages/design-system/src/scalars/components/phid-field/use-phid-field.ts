@@ -32,8 +32,8 @@ export function usePHIDField({
     setHaveFetchError(false);
     setIsLoading(true);
     try {
-      // Simulate 33% chance of error
-      if (Math.random() < 0.33) {
+      // Simulate 30% chance of error
+      if (Math.random() < 0.3) {
         throw new Error("Simulated error");
       }
       const newOptions = await fetchPHIDOptions();
@@ -106,13 +106,13 @@ export function usePHIDField({
   // TODO: Debounce
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      console.log("handleChange", e.target.value);
       const newValue = e.target.value;
       setSelectedValue(newValue);
 
       if (autoComplete && newValue !== "") {
         void fetchOptions(newValue);
       } else {
+        setHaveFetchError(false);
         setIsPopoverOpen(false);
       }
 
