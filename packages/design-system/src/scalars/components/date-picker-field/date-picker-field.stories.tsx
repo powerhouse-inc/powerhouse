@@ -31,6 +31,6 @@ export const Default: Story = {
   args: {
     name: "date",
     label: "Pick a date",
-    value: "2025-01-27",
+    placeholder: "2025/01/27",
   },
 };

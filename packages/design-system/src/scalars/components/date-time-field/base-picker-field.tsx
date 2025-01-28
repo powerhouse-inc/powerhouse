@@ -18,8 +18,8 @@ export interface BasePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   disabled?: boolean;
   required?: boolean;
   iconName: IconName;
-  placeholder: string;
-  inputValue: string;
+  placeholder?: string;
+  value?: DateFieldValue;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -40,7 +40,7 @@ const BasePickerField = forwardRef<
       iconName,
       placeholder,
       children,
-      inputValue,
+      value,
       isOpen,
       setIsOpen,
       onInputChange,
@@ -110,7 +110,13 @@ const BasePickerField = forwardRef<
             <Input
               id={id}
               name={name}
-              value={inputValue}
+              value={
+                value && typeof value === "string"
+                  ? value
+                  : typeof value === "object"
+                    ? value?.toISOString()
+                    : ""
+              }
               onChange={onInputChange}
               className={cn(
                 "w-full rounded-l-none border-none text-right placeholder:text-right",

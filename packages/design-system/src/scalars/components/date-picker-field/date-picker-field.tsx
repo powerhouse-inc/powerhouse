@@ -1,10 +1,6 @@
 import React, { forwardRef } from "react";
 import { FieldCommonProps } from "../types";
 import { DateFieldValue } from "./types";
-import { format } from "date-fns";
-import { Calendar } from "../fragments/calendar/calendar";
-import { cn } from "@/scalars/lib/utils";
-// import BasePickerField from "../date-time-field/BasePickerField";
 import { withFieldValidation } from "../fragments/with-field-validation";
 import BasePickerField from "../date-time-field/base-picker-field";
 
@@ -16,6 +12,7 @@ export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   required?: boolean;
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
+  placeholder?: string;
 }
 
 const DatePickerField = forwardRef<HTMLInputElement, DatePickerFieldProps>(
@@ -29,12 +26,14 @@ const DatePickerField = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       required,
       value,
       defaultValue,
+      placeholder,
       ...props
     },
     ref,
   ) => {
+    // TODO: Fix this when selecting date from calendar
     const [date, setDate] = React.useState<DateFieldValue>(
-      value ?? defaultValue ?? new Date(),
+      value ?? defaultValue ?? "",
     );
     const [inputValue, setInputValue] = React.useState("");
     const [isOpen, setIsOpen] = React.useState(false);
@@ -52,13 +51,14 @@ const DatePickerField = forwardRef<HTMLInputElement, DatePickerFieldProps>(
         ref={ref}
         label={label}
         id={id}
+        value={inputValue}
         name={name}
         errors={errors}
         disabled={disabled}
         required={required}
         iconName="CalendarTime"
-        placeholder="DD/MM/YYYY"
-        inputValue={inputValue}
+        placeholder={placeholder}
+        defaultValue={defaultValue}
         isOpen={isOpen}
         setIsOpen={setIsOpen}
         onInputChange={handleInputChange}
