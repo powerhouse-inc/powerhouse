@@ -5,7 +5,7 @@ interface FetchPHIDOptionsParams {
 }
 
 export const fetchPHIDOptions = async ({
-  delay = 1000,
+  delay = 2000,
 }: FetchPHIDOptionsParams = {}): Promise<PHIDListItemProps[]> => {
   // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, delay));
