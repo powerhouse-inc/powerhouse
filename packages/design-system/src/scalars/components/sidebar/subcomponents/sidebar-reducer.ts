@@ -68,8 +68,12 @@ export const sidebarReducer = (
       };
     case SidebarActionType.OPEN_LEVEL: {
       const targetLevel = action.level; // it comes from the UI, so it is 1-indexed
+      const items =
+        state.pinnedItems.length > 0
+          ? (state.pinnedItems[state.pinnedItems.length - 1].children ?? [])
+          : state.items;
       const isTargetLevelOpen = isOpenLevel(
-        state.items,
+        items,
         state.itemsState,
         targetLevel - 1,
       );
@@ -85,7 +89,7 @@ export const sidebarReducer = (
       // if it is not open, then we open all levels
       return {
         ...state,
-        itemsState: getOpenLevels(state.items, action.level),
+        itemsState: getOpenLevels(items, action.level),
       };
     }
     case SidebarActionType.TOGGLE_PIN: {
@@ -119,7 +123,6 @@ export const sidebarReducer = (
         ...state,
         itemsState: {
           ...state.itemsState,
-          [action.nodeId ?? ""]: true,
         },
         activeNodeId: action.nodeId,
       };
