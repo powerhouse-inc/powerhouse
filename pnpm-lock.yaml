@@ -450,6 +450,18 @@ importers:
         specifier: ^3.5.0
         version: 3.5.0
 
+  clis/ph-cmd:
+    dependencies:
+      '@powerhousedao/codegen':
+        specifier: workspace:*
+        version: link:../../packages/codegen
+      '@powerhousedao/scalars':
+        specifier: workspace:*
+        version: link:../../packages/scalars
+      commander:
+        specifier: ^12.1.0
+        version: 12.1.0
+
   packages/codegen:
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema':
@@ -1042,18 +1054,6 @@ importers:
       zod:
         specifier: ^3.22.4
         version: 3.24.1
-
-  packages/ph-cmd:
-    dependencies:
-      '@powerhousedao/codegen':
-        specifier: workspace:*
-        version: link:../codegen
-      '@powerhousedao/scalars':
-        specifier: workspace:*
-        version: link:../scalars
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
 
   packages/reactor-api:
     dependencies:

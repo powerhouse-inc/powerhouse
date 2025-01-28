@@ -10,17 +10,9 @@ const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
 const appVersion = packageJson.version;
 
 export default defineConfig({
-  entry: ["src/**/*.ts"],
-  splitting: false,
-  sourcemap: true,
-  clean: true,
-  format: "esm",
-  treeshake: true,
-  bundle: false,
+  entry: ["src/**/*"],
   platform: "node",
-  target: "node20",
-  cjsInterop: true,
-  dts: true,
+  target: "node22",
   define: {
     "process.env.APP_VERSION": JSON.stringify(appVersion),
   },

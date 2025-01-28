@@ -8,7 +8,7 @@
     "access": "public"
   },
   "bin": {
-    "ph-cli": "dist/cli.js"
+    "ph-cli": "dist/cli.cjs"
   },
   "files": [
     "dist"
