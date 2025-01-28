@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import InMemoryCache from 'document-drive/cache/memory';
 import { BaseQueueManager } from 'document-drive/queue/base';
 import {

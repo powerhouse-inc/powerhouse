@@ -57,7 +57,6 @@ export function FolderView(props: TUiNodes) {
             </ContentSection>
             <ContentSection title={t('folderView.sections.documents.title')}>
                 <div
-                    // eslint-disable-next-line tailwindcss/no-arbitrary-value
                     className={twMerge(
                         'w-full',
                         fileNodes.length > 0 ? 'min-h-[400px]' : 'min-h-14',

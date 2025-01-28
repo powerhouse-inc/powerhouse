@@ -188,7 +188,7 @@ const electronApi = {
             ipcRenderer.invoke('documentDrive:getSyncStatus', drive),
         on: (event, cb) => {
             function listener(_event: IpcRendererEvent, arg: any) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                // eslint-disable-next-line
                 Array.isArray(arg) ? cb(...arg) : cb(arg);
             }
             ipcRenderer.on(`documentDrive:event:${event}`, listener);

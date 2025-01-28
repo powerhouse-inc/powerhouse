@@ -1,4 +1,3 @@
-/* eslint-disable tailwindcss/no-arbitrary-value */
 import { ConnectSidebar, Icon } from '@powerhousedao/design-system';
 import { useAtom } from 'jotai';
 import { ErrorBoundary } from 'react-error-boundary';

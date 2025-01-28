@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import connectConfig from 'connect-config';
 import { ServiceWorkerMessage } from 'src/service-worker';
 

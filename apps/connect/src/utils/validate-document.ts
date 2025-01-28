@@ -49,7 +49,7 @@ export const validateDocument = (document: Document) => {
                     specs.state[scope].schema,
                     // @ts-expect-error - Document model should know that name can be defined in global state
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-                    document.name || document.state.global?.name || "",
+                    document.name || document.state.global?.name || '',
                     !isGlobalScope ? scope : '',
                     !isGlobalScope,
                 )

@@ -6,11 +6,12 @@ type ExtendedDocumentDriveState = DocumentDriveState & { remoteUrl?: string };
 export function useDocumentDriveById(driveId: string | undefined) {
     const { documentDrives } = useDocumentDriveServer();
 
-    if (!driveId) return {
-        drive: null,
-        remoteUrl: null,
-        isRemoteDrive: false,
-    };
+    if (!driveId)
+        return {
+            drive: null,
+            remoteUrl: null,
+            isRemoteDrive: false,
+        };
 
     const drive = documentDrives.find(
         drive => drive.state.global.id === driveId,

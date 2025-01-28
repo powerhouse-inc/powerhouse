@@ -142,6 +142,7 @@ export function useUiNodes() {
                 driveNode.nodeMap[node.id] = node;
             }
 
+            // eslint-disable-next-line @typescript-eslint/await-thenable
             for await (const node of nodes) {
                 if (node.kind === FILE) {
                     const fileSyncStatus = !isReadDrive

@@ -58,7 +58,6 @@ export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
 export function useDocumentDrives() {
     const reactor = useUnwrappedReactor();
     const [documentDrives, setDocumentDrives] = useAtom(
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         useMemo(readWriteDocumentDrivesAtom(reactor), [reactor]),
     );
 

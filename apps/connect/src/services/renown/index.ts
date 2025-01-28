@@ -29,6 +29,7 @@ export class Renown {
     }
 
     #updateUser(user: User | undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         user ? this.#store.set('user', user) : this.#store.delete('user');
         this.#eventEmitter.emit('user', user);
     }

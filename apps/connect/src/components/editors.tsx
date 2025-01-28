@@ -236,45 +236,41 @@ export function DocumentEditor(props: EditorProps) {
                     </div>
                 </div>
             )}
-            <>
-                {showRevisionHistory ? (
-                    <RevisionHistory
-                        documentTitle={document.name}
-                        documentId={selectedNode.id}
-                        globalOperations={document.operations.global}
-                        localOperations={document.operations.local}
-                        onClose={() => setShowRevisionHistory(false)}
+            {showRevisionHistory ? (
+                <RevisionHistory
+                    documentTitle={document.name}
+                    documentId={selectedNode.id}
+                    globalOperations={document.operations.global}
+                    localOperations={document.operations.local}
+                    onClose={() => setShowRevisionHistory(false)}
+                />
+            ) : (
+                <Suspense fallback={<EditorLoader />}>
+                    <EditorComponent
+                        error={error}
+                        context={context}
+                        document={document}
+                        documentNodeName={selectedNode.name}
+                        dispatch={dispatch}
+                        onClose={onClose}
+                        onExport={onExport}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                        undo={undo}
+                        redo={redo}
+                        onSwitchboardLinkClick={onOpenSwitchboardLink}
+                        onShowRevisionHistory={() =>
+                            setShowRevisionHistory(true)
+                        }
+                        isAllowedToCreateDocuments={
+                            userPermissions?.isAllowedToCreateDocuments ?? false
+                        }
+                        isAllowedToEditDocuments={
+                            userPermissions?.isAllowedToEditDocuments ?? false
+                        }
                     />
-                ) : (
-                    <Suspense fallback={<EditorLoader />}>
-                        <EditorComponent
-                            error={error}
-                            context={context}
-                            document={document}
-                            documentNodeName={selectedNode.name}
-                            dispatch={dispatch}
-                            onClose={onClose}
-                            onExport={onExport}
-                            canUndo={canUndo}
-                            canRedo={canRedo}
-                            undo={undo}
-                            redo={redo}
-                            onSwitchboardLinkClick={onOpenSwitchboardLink}
-                            onShowRevisionHistory={() =>
-                                setShowRevisionHistory(true)
-                            }
-                            isAllowedToCreateDocuments={
-                                userPermissions?.isAllowedToCreateDocuments ??
-                                false
-                            }
-                            isAllowedToEditDocuments={
-                                userPermissions?.isAllowedToEditDocuments ??
-                                false
-                            }
-                        />
-                    </Suspense>
-                )}
-            </>
+                </Suspense>
+            )}
         </div>
     );
 }

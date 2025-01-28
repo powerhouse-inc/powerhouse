@@ -8,7 +8,7 @@ const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({
         <button
             className={twMerge(
                 'rounded-md bg-gray-500/20 px-4 py-1.5 text-gray-500 shadow-button hover:bg-slate-100 hover:shadow-none',
-                className
+                className,
             )}
             {...props}
         />

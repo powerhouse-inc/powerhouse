@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { ModalPropsMapping, ModalType, modals } from './modals';
 
@@ -59,7 +58,6 @@ export const ModalManager: React.FC<{ children?: React.ReactNode }> = props => {
             {children}
             {ModalComponent && (
                 <ModalComponent
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     {...(modalProps as any)}
                     open={open}
                     onClose={closeModal}

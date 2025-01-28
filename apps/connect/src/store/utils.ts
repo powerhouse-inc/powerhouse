@@ -1,5 +1,5 @@
 import connectConfig from 'connect-config';
-// eslint-disable-next-line no-restricted-imports
+
 import { atomWithStorage as _atomWithStorage } from 'jotai/utils';
 import type { SyncStorage } from 'jotai/vanilla/utils/atomWithStorage';
 

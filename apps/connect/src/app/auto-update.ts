@@ -2,7 +2,7 @@ import { autoUpdater, dialog } from 'electron';
 
 export function enableAutoUpdates(
     app: Electron.App,
-    options: { interval?: number }
+    options: { interval?: number },
 ) {
     const server = process.env.AUTO_UPDATE_SERVER;
     const url = `${server}/update/${process.platform}/${app.getVersion()}`;
@@ -28,6 +28,7 @@ export function enableAutoUpdates(
     });
 
     // Handle creating/removing shortcuts on Windows when installing/uninstalling.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     if (require('electron-squirrel-startup')) {
         app.quit();
     }

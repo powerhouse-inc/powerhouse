@@ -54,11 +54,13 @@ async function initApp() {
         });
 
         ipcMain.handle('renown:login', (_e, did: string) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             Sentry.setUser({ id: did });
             return renown.login(did);
         });
 
         ipcMain.handle('renown:logout', () => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             Sentry.setUser(null);
             return renown.logout();
         });
@@ -389,7 +391,6 @@ const createWindow = async (options?: {
         options?.onReady?.(mainWindow);
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const menu = Menu.buildFromTemplate(template as any);
     Menu.setApplicationMenu(menu);
 

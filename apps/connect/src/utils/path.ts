@@ -6,16 +6,16 @@ export const sanitizePath = (path: string) =>
 export const getLastIndexFromPath = (
     nodes: Array<Node>,
     name: string,
-    parentFolder?: string
+    parentFolder?: string,
 ): number | null => {
     const regexp = new RegExp(`^${name}(\\s\\d+)?$`, 'i');
 
     const filteredNodes = nodes
         .filter(
-            node => node.parentFolder == parentFolder && regexp.test(node.name)
+            node => node.parentFolder == parentFolder && regexp.test(node.name),
         )
         .map(node => {
-            const index = node.name.match(/(\d+)?$/i);
+            const index = /(\d+)?$/i.exec(node.name);
             if (index) return Number(index[0]);
             return 0;
         })

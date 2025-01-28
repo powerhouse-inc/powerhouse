@@ -1,4 +1,3 @@
-/* eslint-disable tailwindcss/no-arbitrary-value */
 /* eslint-disable tailwindcss/no-unnecessary-arbitrary-value */
 import {
     CookieInput,

@@ -54,7 +54,6 @@ export function watchLocalFiles(
     documentModelsPath?: string,
     editorsPath?: string,
 ) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const debounce = (callback: () => unknown, delay = 100) => {
         let timeout: NodeJS.Timeout | undefined;
         return function () {

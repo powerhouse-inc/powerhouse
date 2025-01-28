@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { captureException } from '@sentry/react';
 import { ILogger, setLogger } from 'document-drive/logger';
 
