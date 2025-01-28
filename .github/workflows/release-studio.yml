@@ -1,14 +1,14 @@
-name: Release Connect
+name: Release Studio to NPM
 
 on:
   workflow_dispatch:
 
 env:
-  HUSKY: 0
+  NX_ISOLATE_PLUGINS: false
 
 jobs:
   test:
-    name: Build and Release Connect
+    name: Build and Publish Package
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,25 +23,26 @@ jobs:
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
+          version: 9
           run_install: false
 
-      - name: Install Node
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
+          cache: 'pnpm'
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install
         shell: bash
 
-      - name: Build selected package
-        run: npx nx build:web @powerhousedao/connect
+      - name: Build packages and studio
+        run: pnpm nx run-many --target='build,build:studio' --all
         shell: bash
 
       - name: Print Environment Info
-        run: npx nx report
+        run: pnpm nx report
         shell: bash
 
       - name: git config
@@ -51,8 +52,15 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: npx nx release --projects=@powerhousedao/connect --skip-publish
+        run: pnpm nx release --projects='apps/connect,packages/*' --skip-publish
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Publish to npm
+        run: pnpm nx release publish --projects='apps/connect,packages/*'
+        shell: bash
+        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

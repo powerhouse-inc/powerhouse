@@ -53,6 +53,20 @@
         "^noTests"
       ]
     },
+    "build:studio": {
+      "cache": true,
+      "dependsOn": ["^build", "generate"],
+      "inputs": [
+        "noMarkdown",
+        "^noMarkdown",
+        "noStories",
+        "^noStories",
+        "noLicenses",
+        "^noLicenses",
+        "noTests",
+        "^noTests"
+      ]
+    },
     "@nx/js:tsc": {
       "cache": true,
       "dependsOn": ["^build"],
@@ -60,7 +74,7 @@
     }
   },
   "release": {
-    "projects": ["packages/*"],
+    "projects": ["packages/*", "apps/connect"],
     "projectsRelationship": "independent",
     "version": {
       "conventionalCommits": true,
