@@ -1,0 +1,32 @@
+name: Deploy Connect to Sky Atlas Staging
+
+on:
+  push:
+    branches: [deployments/sky-atlas-staging]
+
+env:
+  HUSKY: 0
+
+jobs:
+  build:
+    environment: Sky Atlas Staging
+    runs-on: ubuntu-latest
+    steps:
+      # Check-out your repository.
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
+      - name: Build, Push and Release APP to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          docker_options: >-
+            --build-arg BASE_PATH=/sky-atlas/staging/connect
+            --build-arg PH_CONNECT_BASE_HREF=/sky-atlas/staging/connect
+            --build-arg PH_CONNECT_ROUTER_BASENAME=/sky-atlas/staging/connect
+            --build-arg PH_CONNECT_SEARCH_BAR_ENABLED=false
+            --build-arg PH_CONNECT_DEFAULT_DRIVES_URL=https://apps.powerhouse.io/sky-atlas/staging/switchboard/d/sky-atlas
+          process_type: web
