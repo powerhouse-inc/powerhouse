@@ -3,6 +3,7 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId } from "react";
 import { Command as CommandPrimitive } from "cmdk";
+import { Icon } from "@/powerhouse/components/icon";
 import { Command } from "@/scalars/components/fragments/command";
 import { Input } from "@/scalars/components/fragments/input";
 import {
@@ -82,11 +83,11 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       commandListRef,
       options,
       isLoading,
+      haveFetchError,
       toggleOption,
-      handleClear,
       handleOpenChange,
-      handleSelectedValueChange,
       onTriggerBlur,
+      handleChange,
     } = usePHIDField({
       autoComplete,
       defaultValue,
@@ -115,7 +116,10 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             {label}
           </FormLabel>
         )}
-        <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
+        <Popover
+          open={!haveFetchError && isPopoverOpen}
+          onOpenChange={handleOpenChange}
+        >
           <Command
             shouldFilter={false}
             className={cn(
@@ -126,57 +130,63 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             )}
           >
             <PopoverAnchor asChild={true}>
-              <CommandPrimitive.Input asChild>
-                <Input
-                  id={id}
-                  name={name}
-                  value={selectedValue}
-                  className={cn(
-                    asCard && "rounded-b-none border-b-0 focus-visible:ring-0",
-                    className,
-                  )}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    handleSelectedValueChange(e.target.value);
-                    if (options.some((opt) => opt.phid === e.target.value)) {
-                      handleOpenChange(false);
-                    } else if (autoComplete && e.target.value !== "") {
-                      handleOpenChange(true);
-                    } else {
-                      handleOpenChange(false);
-                    }
-                    onChange?.(e.target.value);
-                  }}
-                  onBlur={onTriggerBlur}
-                  onClick={(e) => {
-                    const input = e.target as HTMLInputElement;
-                    if (
-                      autoComplete &&
-                      !options.some((opt) => opt.phid === input.value) &&
-                      input.value !== ""
-                    ) {
-                      handleOpenChange(true);
-                    }
-                    onClick?.(e);
-                  }}
-                  onMouseDown={(e) => {
-                    const input = e.target as HTMLInputElement;
-                    if (!input.contains(document.activeElement)) {
-                      // wait for the next tick to ensure the focus occurs first
-                      requestAnimationFrame(() => {
-                        input.select();
-                      });
-                    }
-                  }}
-                  placeholder={placeholder}
-                  aria-invalid={hasError}
-                  aria-label={!label ? "PHID field" : undefined}
-                  aria-required={required}
-                  aria-expanded={isPopoverOpen}
-                  {...props}
-                  ref={ref}
-                />
-              </CommandPrimitive.Input>
+              <div className="relative">
+                <CommandPrimitive.Input asChild>
+                  <Input
+                    id={id}
+                    name={name}
+                    value={selectedValue}
+                    className={cn(
+                      asCard &&
+                        "rounded-b-none border-b-0 focus-visible:ring-0",
+                      haveFetchError && "pr-9",
+                      className,
+                    )}
+                    disabled={disabled}
+                    onChange={handleChange}
+                    onBlur={onTriggerBlur}
+                    onClick={(e) => {
+                      const input = e.target as HTMLInputElement;
+                      if (
+                        !options.some((opt) => opt.phid === input.value) &&
+                        input.value !== ""
+                      ) {
+                        handleOpenChange(true);
+                      }
+                      onClick?.(e);
+                    }}
+                    onMouseDown={(e) => {
+                      const input = e.target as HTMLInputElement;
+                      if (!input.contains(document.activeElement)) {
+                        // wait for the next tick to ensure the focus occurs first
+                        requestAnimationFrame(() => {
+                          input.select();
+                        });
+                      }
+                    }}
+                    placeholder={placeholder}
+                    aria-invalid={hasError}
+                    aria-label={!label ? "PHID field" : undefined}
+                    aria-required={required}
+                    aria-expanded={isPopoverOpen}
+                    {...props}
+                    ref={ref}
+                  />
+                </CommandPrimitive.Input>
+                {haveFetchError && (
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute inset-y-0 right-3 flex items-center",
+                    )}
+                  >
+                    <Icon
+                      name="Error"
+                      size={16}
+                      className={cn("text-red-900")}
+                    />
+                  </div>
+                )}
+              </div>
             </PopoverAnchor>
             {asCard && (
               <PHIDListItem
@@ -213,6 +223,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                 selectedValue={selectedValue}
                 options={options}
                 toggleOption={toggleOption}
+                isLoading={isLoading}
               />
             </PopoverContent>
           </Command>

@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import {
   CommandList,
+  CommandLoading,
   CommandEmpty,
   CommandGroup,
   CommandItem,
@@ -16,6 +17,7 @@ interface PHIDListProps {
   selectedValue: string;
   options?: PHIDListItemProps[];
   toggleOption: (value: string) => void;
+  isLoading: boolean;
 }
 
 export const PHIDList: React.FC<PHIDListProps> = ({
@@ -24,6 +26,7 @@ export const PHIDList: React.FC<PHIDListProps> = ({
   selectedValue,
   options = [],
   toggleOption,
+  isLoading,
 }) => {
   const cmdkSearch = useCommandState((state) => state.search) as string;
 
@@ -33,13 +36,26 @@ export const PHIDList: React.FC<PHIDListProps> = ({
 
   return (
     <CommandList ref={commandListRef}>
-      <CommandEmpty
-        className={cn(
-          "p-4 text-center text-[14px] font-normal leading-5 text-gray-700 dark:text-gray-400",
-        )}
-      >
-        No results found.
-      </CommandEmpty>
+      {isLoading && (
+        <CommandLoading
+          className={cn(
+            "flex min-h-32 items-center justify-center",
+            "text-[14px] leading-5 text-gray-700 dark:text-gray-400",
+          )}
+        >
+          Loading...
+        </CommandLoading>
+      )}
+      {!isLoading && (
+        <CommandEmpty
+          className={cn(
+            "flex min-h-32 items-center justify-center",
+            "text-[14px] leading-5 text-gray-700 dark:text-gray-400",
+          )}
+        >
+          No results found.
+        </CommandEmpty>
+      )}
       <CommandGroup>
         {options.map((opt) => {
           const isSelected = selectedValue === opt.phid;
