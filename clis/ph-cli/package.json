@@ -4,18 +4,11 @@
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "publishConfig": {
     "access": "public"
   },
   "bin": {
     "ph-cli": "dist/cli.js"
-  },
-  "exports": {
-    ".": "./dist/index.js",
-    "./cli": "./dist/cli.js",
-    "./utils": "./dist/utils.js"
   },
   "files": [
     "dist"
