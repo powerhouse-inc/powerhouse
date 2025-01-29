@@ -5,6 +5,7 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
 import tailwind from "eslint-plugin-tailwindcss";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import importPlugin from 'eslint-plugin-import';
 
 const reactRuleOverrides = {
   disabled: {
@@ -111,6 +112,8 @@ export default tseslint.config(
   },
   {
     languageOptions: {
+      sourceType: "module",
+      ecmaVersion: "latest",
       globals: {
         ...globals.browser,
       },
@@ -165,5 +168,9 @@ export default tseslint.config(
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,
     },
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [importPlugin.flatConfigs.recommended, importPlugin.flatConfigs.typescript],
   }
 );
