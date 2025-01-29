@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/scalars",
-  "version": "1.16.0-canary.48",
+  "version": "1.16.0-canary.49",
   "license": "AGPL-3.0-only",
   "publishConfig": {
     "access": "public"
