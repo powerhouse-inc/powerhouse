@@ -6,6 +6,8 @@ import { withFieldValidation } from "../fragments/with-field-validation";
 import { BasePickerField } from "../date-time-field/base-picker-field";
 import { FormGroup } from "../fragments/form-group";
 import { FormLabel } from "../fragments/form-label";
+import { FormMessageList } from "../fragments/form-message";
+import { FormDescription } from "../fragments/form-description";
 
 export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   label?: string;
@@ -30,6 +32,8 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       value,
       defaultValue,
       placeholder,
+      description,
+      warnings,
       ...props
     },
     ref,
@@ -79,8 +83,12 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           onInputChange={handleInputChange}
           {...props}
         >
+          <div>Placeholder DatePicker</div>
           {/* TODO: Add calendar */}
         </BasePickerField>
+        {description && <FormDescription>{description}</FormDescription>}
+        {warnings && <FormMessageList messages={warnings} type="warning" />}
+        {errors && <FormMessageList messages={errors} type="error" />}
       </FormGroup>
     );
   },

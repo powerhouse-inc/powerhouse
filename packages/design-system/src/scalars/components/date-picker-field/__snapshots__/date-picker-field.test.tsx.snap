@@ -28,8 +28,12 @@ exports[`DatePickerField > should match the snapshot 1`] = `
             data-state="closed"
             type="button"
           >
-            <div>
-              Icon
+            <div
+              class="size-4 hover:none text-gray-700 dark:text-gray-50"
+              data-testid="mock-icon-CalendarTime"
+            >
+              Mock Icon: 
+              CalendarTime
             </div>
           </button>
           <input

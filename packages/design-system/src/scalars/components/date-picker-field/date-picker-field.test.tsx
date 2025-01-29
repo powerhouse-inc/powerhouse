@@ -2,6 +2,13 @@ import { renderWithForm } from "@/scalars/lib/testing";
 import { screen } from "@testing-library/react";
 import { DatePickerField } from "./date-picker-field";
 
+vi.mock("@/powerhouse/components/icon/icon", () => ({
+  Icon: ({ name, className }: { name: string; className?: string }) => (
+    <div data-testid={`mock-icon-${name}`} className={className}>
+      Mock Icon: {name}
+    </div>
+  ),
+}));
 describe("DatePickerField", () => {
   it("should match the snapshot", () => {
     const { container } = renderWithForm(
