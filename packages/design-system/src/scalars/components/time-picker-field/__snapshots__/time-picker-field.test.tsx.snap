@@ -24,7 +24,7 @@ exports[`TimePickerField > should match the snapshot 1`] = `
         class="flex flex-col space-y-2"
       >
         <div
-          class="flex w-[275px] rounded-md text-sm focus-within:ring-ring focus-within:ring-1 focus-within:ring-offset-0 ring-gray-900 dark:ring-charcoal-300 dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white hover:border-gray-300 hover:bg-gray-100 dark:hover:bg-charcoal-800 dark:hover:border-charcoal-700 [&:hover_.input-field]:bg-transparent [&:hover_.button-ghost]:bg-transparent focus:[&_.input-field]:bg-transparent focus-within:hover:bg-transparent focus-within:hover:cursor-default"
+          class="flex w-[275px] rounded-md text-sm focus-within:ring-ring focus-within:ring-1 focus-within:ring-offset-0 ring-gray-900 dark:ring-charcoal-300 dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white hover:border-gray-300 hover:bg-gray-100 dark:hover:bg-charcoal-800 dark:hover:border-charcoal-700 [&:hover_.input-field]:bg-transparent [&:hover_.button-ghost]:bg-transparent focus:[&_.input-field]:bg-transparent focus-within:hover:bg-white dark:focus-within:hover:bg-charcoal-900 focus-within:hover:cursor-default"
         >
           <button
             aria-controls="radix-:r1:"
