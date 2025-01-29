@@ -1,13 +1,14 @@
 "use client";
 
 import type { SidebarNode } from "../types";
-import { getNodePath, getOpenLevels, isOpenLevel } from "../utils";
+import { getMaxDepth, getNodePath, getOpenLevels, isOpenLevel } from "../utils";
 
 export interface SidebarState {
   activeNodeId?: string;
   items: Array<SidebarNode>;
   itemsState: { [nodeId: string]: boolean };
   pinnedItems: Array<SidebarNode>;
+  maxDepth: number;
 }
 
 export enum SidebarActionType {
@@ -57,6 +58,7 @@ export const sidebarReducer = (
         itemsState: getOpenLevels(action.items, action.defaultLevel ?? -1),
         pinnedItems: [],
         activeNodeId: undefined,
+        maxDepth: getMaxDepth(action.items),
       };
     case SidebarActionType.TOGGLE_ITEM:
       return {
@@ -96,11 +98,18 @@ export const sidebarReducer = (
       const isPinned =
         state.pinnedItems.length > 0 &&
         state.pinnedItems[state.pinnedItems.length - 1].id === action.nodeId;
+
+      const nodePath = isPinned
+        ? [] // unpin
+        : (getNodePath(state.items, action.nodeId) ?? []);
+
+      const maxDepth = getMaxDepth(
+        isPinned ? state.items : (nodePath[nodePath.length - 1].children ?? []),
+      );
       return {
         ...state,
-        pinnedItems: isPinned
-          ? [] // unpin
-          : (getNodePath(state.items, action.nodeId) ?? []),
+        pinnedItems: nodePath,
+        maxDepth,
       };
     }
     case SidebarActionType.OPEN_PATH_TO_NODE: {

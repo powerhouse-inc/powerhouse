@@ -144,3 +144,28 @@ export const getNodePath = (
   // Return an empty array if no path is found
   return null;
 };
+
+export const getMaxDepth = (items: SidebarNode[]): number => {
+  let maxDepth = 0;
+
+  function traverse(node: SidebarNode, depth: number) {
+    // Update maxDepth if the current depth is greater
+    if (depth > maxDepth) {
+      maxDepth = depth;
+    }
+
+    // Traverse children recursively
+    if (node.children) {
+      for (const child of node.children) {
+        traverse(child, depth + 1);
+      }
+    }
+  }
+
+  // Start traversal from the root of each item
+  for (const item of items) {
+    traverse(item, 1); // Start with depth 1 for the root node
+  }
+
+  return maxDepth;
+};
