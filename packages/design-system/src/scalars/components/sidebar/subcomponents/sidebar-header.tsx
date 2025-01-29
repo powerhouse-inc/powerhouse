@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/scalars/lib";
 import { useSidebar } from "./sidebar-provider";
 
 interface SidebarHeaderProps {
@@ -13,7 +14,10 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   sidebarIcon,
   enableMacros = 0,
 }) => {
-  const { openLevel } = useSidebar();
+  const {
+    openLevel,
+    state: { maxDepth },
+  } = useSidebar();
   if (!sidebarTitle && !sidebarIcon && !enableMacros) {
     return null;
   }
@@ -29,17 +33,27 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
 
       {enableMacros > 0 && (
         <div className="flex select-none items-center gap-2">
-          {Array.from({ length: Math.min(enableMacros, 4) }).map((_, index) => (
-            <div
-              // eslint-disable-next-line react/no-array-index-key
-              key={`macro-${index}`}
-              role="button"
-              className="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 hover:bg-slate-100 hover:text-slate-200 dark:bg-gray-900 dark:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50"
-              onClick={() => openLevel(index + 1)}
-            >
-              {index + 1}
-            </div>
-          ))}
+          {Array.from({ length: Math.min(enableMacros, 4) }).map((_, index) => {
+            const isDisabled = index + 1 > maxDepth;
+
+            return (
+              <div
+                // eslint-disable-next-line react/no-array-index-key
+                key={`macro-${index}`}
+                role="button"
+                className={cn(
+                  "w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200",
+                  !isDisabled &&
+                    "hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50",
+                  isDisabled &&
+                    "cursor-not-allowed bg-gray-100 text-[#E2E4E7] dark:bg-[#252728] dark:text-slate-500",
+                )}
+                onClick={() => !isDisabled && openLevel(index + 1)}
+              >
+                {index + 1}
+              </div>
+            );
+          })}
         </div>
       )}
     </header>
