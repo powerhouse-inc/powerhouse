@@ -7,6 +7,7 @@ import { Button } from "../fragments/button/button";
 import { DateFieldValue } from "../date-picker-field/types";
 import { Popover, PopoverContent } from "../fragments/popover/popover";
 import { PopoverTrigger } from "../fragments/popover/popover";
+import { Icon } from "@/powerhouse";
 
 export interface BasePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   id?: string;
@@ -31,8 +32,6 @@ export const BasePickerField = React.forwardRef<
       name,
       disabled,
       required,
-      // Add the icon when fix the error
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       iconName,
       placeholder,
       children,
@@ -73,12 +72,10 @@ export const BasePickerField = React.forwardRef<
                 )}
                 onClick={() => !disabled && setIsOpen(isOpen)}
               >
-                <div>Icon</div>
-                {/* WIP add the icon */}
-                {/* <Icon
+                <Icon
                   name={iconName}
                   className="size-4 hover:none text-gray-700 dark:text-gray-50"
-                /> */}
+                />
               </Button>
             </PopoverTrigger>
             <PopoverContent
