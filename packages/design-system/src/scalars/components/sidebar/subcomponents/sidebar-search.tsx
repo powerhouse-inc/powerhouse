@@ -24,7 +24,7 @@ export const SidebarSearch = () => {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown" || e.key === "Enter") {
         nextSearchResult();
       } else if (e.key === "ArrowUp") {
         previousSearchResult();
@@ -33,7 +33,7 @@ export const SidebarSearch = () => {
     [nextSearchResult, previousSearchResult],
   );
 
-  const handleSeachTermChange = useCallback(
+  const handleSearchTermChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       changeSearchTerm(e.target.value);
     },
@@ -45,7 +45,7 @@ export const SidebarSearch = () => {
       <div className="relative">
         <Input
           value={searchTerm}
-          onChange={handleSeachTermChange}
+          onChange={handleSearchTermChange}
           onKeyDown={handleKeyDown}
           placeholder="Search"
           className="w-full pl-8"
