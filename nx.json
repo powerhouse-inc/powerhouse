@@ -76,6 +76,9 @@
   "release": {
     "projects": ["packages/*", "apps/connect"],
     "projectsRelationship": "independent",
+    "tags": {
+      "apps/connect": "dev"
+    },
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
