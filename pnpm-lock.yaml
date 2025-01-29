@@ -610,6 +610,82 @@ importers:
         specifier: ^2.1.8
         version: 2.1.8(@types/node@22.10.3)(terser@5.37.0)
 
+  clis/ph-cli:
+    dependencies:
+      '@powerhousedao/codegen':
+        specifier: workspace:*
+        version: link:../../packages/codegen
+      '@powerhousedao/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@powerhousedao/connect':
+        specifier: 1.0.0-dev.195
+        version: 1.0.0-dev.195(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)(terser@5.37.0)
+      '@powerhousedao/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
+      '@powerhousedao/reactor-local':
+        specifier: workspace:*
+        version: link:../../packages/reactor-local
+      '@powerhousedao/scalars':
+        specifier: workspace:*
+        version: link:../../packages/scalars
+      colorette:
+        specifier: ^2.0.20
+        version: 2.0.20
+      commander:
+        specifier: ^12.1.0
+        version: 12.1.0
+      document-model-libs:
+        specifier: workspace:*
+        version: link:../../packages/document-model-libs
+      graphql:
+        specifier: ^16.9.0
+        version: 16.10.0
+      pm2:
+        specifier: ^5.4.3
+        version: 5.4.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@powerhousedao/analytics-engine-core':
+        specifier: ^0.3.0
+        version: 0.3.0
+      '@powerhousedao/analytics-engine-graphql':
+        specifier: ^0.2.1
+        version: 0.2.1
+      '@powerhousedao/analytics-engine-pg':
+        specifier: ^0.3.0
+        version: 0.3.0
+      document-drive:
+        specifier: workspace:*
+        version: link:../../packages/document-drive
+      graphql-tag:
+        specifier: ^2.12.6
+        version: 2.12.6(graphql@16.10.0)
+      knex:
+        specifier: ^3.1.0
+        version: 3.1.0(pg@8.13.1)(sqlite3@5.1.7)
+      luxon:
+        specifier: ^3.5.0
+        version: 3.5.0
+
+  clis/ph-cmd:
+    dependencies:
+      '@powerhousedao/codegen':
+        specifier: workspace:*
+        version: link:../../packages/codegen
+      '@powerhousedao/scalars':
+        specifier: workspace:*
+        version: link:../../packages/scalars
+      commander:
+        specifier: ^12.1.0
+        version: 12.1.0
+
   packages/codegen:
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema':
@@ -1138,7 +1214,7 @@ importers:
         version: 1.0.1(document-model@packages+document-model)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.4.7(bufferutil@4.0.9)(prettier@3.4.2)(utf-8-validate@5.0.10))
       dspot-powerhouse-components:
         specifier: ^1.1.0
-        version: 1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.129.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.130.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       graphql:
         specifier: ^16.9.0
         version: 16.10.0
@@ -1202,82 +1278,6 @@ importers:
       zod:
         specifier: ^3.22.4
         version: 3.24.1
-
-  packages/ph-cli:
-    dependencies:
-      '@powerhousedao/codegen':
-        specifier: workspace:*
-        version: link:../codegen
-      '@powerhousedao/config':
-        specifier: workspace:*
-        version: link:../config
-      '@powerhousedao/connect':
-        specifier: 1.0.0-dev.195
-        version: 1.0.0-dev.195(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.10.3)(document-model-libs@packages+document-model-libs)(terser@5.37.0)
-      '@powerhousedao/design-system':
-        specifier: workspace:*
-        version: link:../design-system
-      '@powerhousedao/reactor-local':
-        specifier: workspace:*
-        version: link:../reactor-local
-      '@powerhousedao/scalars':
-        specifier: workspace:*
-        version: link:../scalars
-      colorette:
-        specifier: ^2.0.20
-        version: 2.0.20
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
-      document-model-libs:
-        specifier: workspace:*
-        version: link:../document-model-libs
-      graphql:
-        specifier: ^16.9.0
-        version: 16.10.0
-      pm2:
-        specifier: ^5.4.3
-        version: 5.4.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
-    devDependencies:
-      '@powerhousedao/analytics-engine-core':
-        specifier: ^0.3.0
-        version: 0.3.0
-      '@powerhousedao/analytics-engine-graphql':
-        specifier: ^0.2.1
-        version: 0.2.1
-      '@powerhousedao/analytics-engine-pg':
-        specifier: ^0.3.0
-        version: 0.3.0
-      document-drive:
-        specifier: workspace:*
-        version: link:../document-drive
-      graphql-tag:
-        specifier: ^2.12.6
-        version: 2.12.6(graphql@16.10.0)
-      knex:
-        specifier: ^3.1.0
-        version: 3.1.0(pg@8.13.1)(sqlite3@5.1.7)
-      luxon:
-        specifier: ^3.5.0
-        version: 3.5.0
-
-  packages/ph-cmd:
-    dependencies:
-      '@powerhousedao/codegen':
-        specifier: workspace:*
-        version: link:../codegen
-      '@powerhousedao/scalars':
-        specifier: workspace:*
-        version: link:../scalars
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
 
   packages/reactor-api:
     dependencies:
@@ -9032,8 +9032,8 @@ packages:
       react-dom: ^18.2.0
       storybook: ^7.0.17
 
-  document-model-libs@1.129.0:
-    resolution: {integrity: sha512-Zj3ggEA9zXEOegX2PbPEtkVPLEfNaO9Wfz+TqF4hDL3XDCjicdjMlwu86/Re/jNSM60f6aH5kODmtHbrC6wmxg==}
+  document-model-libs@1.130.0:
+    resolution: {integrity: sha512-kBGIkfw3ZTOup0+/R6WreC4FYVYLgdFRu70vgu+9+rADWbodGGQ8nGAZMJK2m4Dg2lJRcbg557E/lotNP+mmQg==}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -26018,7 +26018,7 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       storybook: 8.4.7(bufferutil@4.0.9)(prettier@3.4.2)(utf-8-validate@5.0.10)
 
-  document-model-libs@1.129.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  document-model-libs@1.130.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@codemirror/lang-json': 6.0.1
       '@codemirror/search': 6.5.8
@@ -26141,12 +26141,12 @@ snapshots:
 
   dset@3.1.4: {}
 
-  dspot-powerhouse-components@1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.129.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  dspot-powerhouse-components@1.1.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@mui/material@5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(document-model-libs@1.130.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@emotion/react': 11.14.0(@types/react@18.3.18)(react@18.3.1)
       '@emotion/styled': 11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1)
       '@mui/material': 5.16.13(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      document-model-libs: 1.129.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      document-model-libs: 1.130.0(@codemirror/language@6.10.8)(@codemirror/state@6.5.0)(@codemirror/view@6.36.1)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 

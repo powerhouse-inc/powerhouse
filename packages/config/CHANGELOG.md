@@ -1,3 +1,21 @@
+## 1.15.0 (2025-01-29)
+
+### 🚀 Features
+
+- **monorepo:** move ph-cmd to clis directory ([8182595c](https://github.com/powerhouse-inc/powerhouse/commit/8182595c))
+- **monorepo:** move ph cli to clis directory ([5b677ebd](https://github.com/powerhouse-inc/powerhouse/commit/5b677ebd))
+- **ph-cli:** rename reactor to switchboard ([#947](https://github.com/powerhouse-inc/powerhouse/pull/947))
+
+### 🩹 Fixes
+
+- **ph-cmd:** inject ph-cmd version in build time ([#934](https://github.com/powerhouse-inc/powerhouse/pull/934))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+- Guillermo Puente Sandoval
+- ryanwolhuter
+
 ## 1.14.0 (2025-01-24)
 
 ### 🚀 Features

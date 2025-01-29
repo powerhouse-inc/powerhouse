@@ -18,7 +18,7 @@
     "build:all": "pnpm nx run-many --target=build --all",
     "test:all": "pnpm nx run-many --target=test --all",
     "storybook:all": "pnpm nx run-many --target=build-storybook --all",
-    "check:all": "pnpm nx run-many --target=build,lint:nx,check-types,test,build-storybook --all",
+    "check:all": "pnpm i && pnpm nx run-many --target=build,lint:nx,check-types,test,build-storybook --all",
     "check:all:ci": "pnpm check:all --exclude=document-drive"
   },
   "devDependencies": {
