@@ -66,6 +66,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
           </span>
           <button
             data-state="closed"
+            type="button"
           >
             <div
               data-testid="icon-fallback"
@@ -137,6 +138,7 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
           </span>
           <button
             data-state="closed"
+            type="button"
           >
             <div
               data-testid="icon-fallback"

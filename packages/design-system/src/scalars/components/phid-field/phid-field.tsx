@@ -13,6 +13,10 @@ import {
 } from "@/scalars/components/fragments/popover";
 import { FormGroup } from "@/scalars/components/fragments/form-group";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
+import {
+  Tooltip,
+  TooltipProvider,
+} from "@/scalars/components/fragments/tooltip";
 import { FormDescription } from "@/scalars/components/fragments/form-description";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
@@ -176,14 +180,18 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                 {haveFetchError && (
                   <div
                     className={cn(
-                      "pointer-events-none absolute inset-y-0 right-3 flex items-center",
+                      "absolute right-3 top-1/2 flex -translate-y-1/2 items-center",
                     )}
                   >
-                    <Icon
-                      name="Error"
-                      size={16}
-                      className={cn("text-red-900")}
-                    />
+                    <TooltipProvider>
+                      <Tooltip content="Network error">
+                        <Icon
+                          name="Error"
+                          size={16}
+                          className={cn("text-red-900")}
+                        />
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 )}
               </div>
@@ -245,13 +253,27 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
           return true;
         }
 
-        if (allowUris === false) {
-          return "URI format is not allowed, please use a URL instead.";
-        }
-
-        // URI regex patterns
+        // URL pattern
+        // Domain segments can start/end with alphanumeric and contain hyphens
+        // Multiple segments separated by dots are allowed (e.g., sub.domain.com)
+        const domainSegment = "[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?";
+        const domain = `${domainSegment}(?:\\.${domainSegment})*`;
         const uuidPattern =
           "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}";
+        const URLFormat = `^phd://${domain}/${uuidPattern}$`;
+
+        // Validate URL format first
+        const isValidURLFormat = new RegExp(URLFormat).test(value);
+        if (isValidURLFormat) {
+          return true;
+        }
+
+        // If it's not a URL and URIs are not allowed, return error
+        if (allowUris === false) {
+          return "Please use a URL format: phd://<domain>/<documentID>";
+        }
+
+        // URI patterns
         const branchPattern = "[a-zA-Z0-9][a-zA-Z0-9-/]*[a-zA-Z0-9]"; // Until PH defines the pattern to be used
         const scopePattern = "[a-zA-Z0-9][a-zA-Z0-9-/]*[a-zA-Z0-9]"; // Until PH defines the pattern to be used
 
@@ -267,7 +289,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
           new RegExp(format).test(value),
         );
         if (!isValidURIFormat) {
-          return "Invalid URI format. Please use one of the following variants: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
+          return "Invalid format. Please use either: URL format: phd://<domain>/<documentID> or URI format: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
         }
 
         // Validate scope if present
