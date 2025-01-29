@@ -16,6 +16,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "",
+        outline:
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
       },
     },
     defaultVariants: {

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
-import DatePickerField from "./date-picker-field";
+import { DatePickerField } from "./date-picker-field";
 import { getDefaultArgTypes } from "@/scalars/lib/storybook-arg-types";
 
 const meta: Meta<typeof DatePickerField> = {
@@ -19,8 +19,6 @@ const meta: Meta<typeof DatePickerField> = {
   },
   args: {
     name: "date-picker-field",
-    errors: [],
-    warnings: [],
   },
 };
 
@@ -31,6 +29,15 @@ export const Default: Story = {
   args: {
     name: "date",
     label: "Pick a date",
-    value: "2025-01-27",
+    placeholder: "2025/01/27",
+  },
+};
+
+export const Disabled: Story = {
+  args: {
+    name: "date",
+    label: "Pick a date",
+    placeholder: "2025/01/27",
+    disabled: true,
   },
 };
