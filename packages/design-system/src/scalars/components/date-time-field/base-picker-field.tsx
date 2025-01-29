@@ -54,9 +54,9 @@ export const BasePickerField = React.forwardRef<
             "[&:hover_.input-field]:bg-transparent [&:hover_.button-ghost]:bg-transparent",
             // focus
             "focus:[&_.input-field]:bg-transparent",
-            "focus-within:hover:bg-transparent focus-within:hover:cursor-default",
+            "focus-within:hover:bg-white dark:focus-within:hover:bg-charcoal-900 focus-within:hover:cursor-default",
             disabled &&
-              "bg-white cursor-not-allowed  hover:bg-transparent dark:bg-charcoal-900 dark:hover:bg-charcoal-900",
+              "dark:bg-charcoal-900 dark:hover:bg-charcoal-900 cursor-not-allowed bg-white hover:bg-transparent",
           )}
         >
           <Popover open={isOpen} onOpenChange={setIsOpen}>
