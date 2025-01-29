@@ -37,8 +37,8 @@ jobs:
         run: pnpm install
         shell: bash
 
-      - name: Build packages
-        run: pnpm nx run-many -t build -p packages/*
+      - name: Build packages and studio
+        run: pnpm nx run-many --target='build,build:studio' --all
         shell: bash
 
       - name: Print Environment Info
@@ -52,7 +52,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: pnpm nx release --projects='packages/*' --skip-publish
+        run: pnpm nx release --projects='apps/connect,packages/*' --skip-publish
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -60,7 +60,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish to npm
-        run: pnpm nx release publish --projects='packages/*'
+        run: pnpm nx release publish --projects='apps/connect,packages/*'
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
