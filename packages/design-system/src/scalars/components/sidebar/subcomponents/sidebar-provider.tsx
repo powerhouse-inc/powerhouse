@@ -12,7 +12,7 @@ import React, {
 } from "react";
 import { SidebarNode } from "../types";
 import { SidebarActionType, sidebarReducer, SidebarState } from "./sidebar-reducer";
-import { nodesSearch } from "../utils";
+import { getMaxDepth, nodesSearch } from "../utils";
 
 type SidebarContextType = {
   state: SidebarState;
@@ -52,7 +52,7 @@ type SidebarContextType = {
 };
 
 const SidebarContext = createContext<SidebarContextType>({
-  state: { items: [], itemsState: {}, pinnedItems: [] },
+  state: { items: [], itemsState: {}, pinnedItems: [], maxDepth: 0 },
   searchTerm: "",
   searchLoading: false,
   searchResults: [],
@@ -82,6 +82,7 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     itemsState: {},
     pinnedItems: [],
     activeNodeId: undefined,
+    maxDepth: getMaxDepth(nodes || []),
   });
 
   const setItems = useCallback(

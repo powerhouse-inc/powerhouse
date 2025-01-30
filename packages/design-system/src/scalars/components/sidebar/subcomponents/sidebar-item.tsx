@@ -56,6 +56,7 @@ export const Item: React.FC<ItemProps> = ({
             "group/sidebar-item dark:hover:bg-charcoal-900 relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-400",
             allowPinning && "hover:pr-6",
             isPinned && "pr-6",
+            isSearchActive && "bg-yellow-100 dark:bg-[#604B0033]",
             // line between pinned items
             pinnedMode &&
               "after:absolute after:-top-2.5 after:left-3.5 after:h-4 after:w-px after:bg-gray-300 first:after:hidden",
@@ -100,7 +101,7 @@ export const Item: React.FC<ItemProps> = ({
             className={cn(
               "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
               isPinned
-                ? "text-gray-700 dark:text-gray-50"
+                ? "text-gray-700 hover:text-blue-900 dark:text-gray-50 dark:hover:text-blue-900"
                 : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
             )}
             onClick={handleTogglePin}

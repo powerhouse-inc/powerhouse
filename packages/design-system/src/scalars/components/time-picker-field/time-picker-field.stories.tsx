@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
-import { getDefaultArgTypes } from "@/scalars/lib/storybook-arg-types";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+} from "@/scalars/lib/storybook-arg-types";
 import TimePickerField from "./time-picker-field";
 
 const meta: Meta<typeof TimePickerField> = {
@@ -16,7 +19,9 @@ const meta: Meta<typeof TimePickerField> = {
       valueControlType: "time",
       valueType: "time",
     }),
+    ...getValidationArgTypes(),
   },
+
   args: {
     name: "time-picker-field",
   },
@@ -29,6 +34,6 @@ export const Default: Story = {
   args: {
     name: "time",
     label: "Pick a time",
-    value: "2025-01-27",
+    placeholder: "12:59 PM",
   },
 };
