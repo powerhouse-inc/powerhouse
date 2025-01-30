@@ -28,13 +28,15 @@ export class DriveSubgraph extends Subgraph {
   typeDefs = gql`
     type Query {
       system: System
-      drive: DocumentDriveState
+      drive: DocumentDrive_DocumentDriveState
       document(id: String!): IDocument
       documents: [String!]!
     }
 
     type Mutation {
-      registerPullResponderListener(filter: InputListenerFilter!): Listener
+      registerPullResponderListener(
+        filter: InputListenerFilter!
+      ): DocumentDrive_Listener
       pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
       acknowledge(
         listenerId: String!
