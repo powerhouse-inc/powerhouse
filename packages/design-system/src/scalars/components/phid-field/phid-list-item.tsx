@@ -142,7 +142,8 @@ export const PHIDListItem: React.FC<
   return (
     <div
       className={cn(
-        "max-w-full rounded-md bg-transparent px-3 pb-2 pt-3",
+        "max-w-full rounded-md bg-transparent px-3 pb-2",
+        variant === "withId" ? "pt-2" : "pt-3",
         className,
       )}
     >
