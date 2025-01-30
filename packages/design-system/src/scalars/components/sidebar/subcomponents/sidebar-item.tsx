@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-max-depth */
 "use client";
 
-import { Icon } from "@/index";
+import { Icon, IconName } from "@/index";
 import React, { KeyboardEventHandler, useCallback, useRef } from "react";
 import type { SidebarNode } from "../types";
 import { cn } from "@/scalars/lib";
@@ -20,6 +20,8 @@ interface ItemProps {
   open?: boolean;
   pinnedMode?: boolean;
   allowPinning?: boolean;
+  icon?: IconName;
+  expandedIcon?: IconName;
 }
 
 export const Item: React.FC<ItemProps> = ({
@@ -28,6 +30,8 @@ export const Item: React.FC<ItemProps> = ({
   open,
   pinnedMode,
   allowPinning,
+  icon,
+  expandedIcon,
 }) => {
   const textRef = useRef<HTMLDivElement>(null);
   const { togglePin, searchTerm, handleActiveNodeChange } = useSidebar();
@@ -47,6 +51,9 @@ export const Item: React.FC<ItemProps> = ({
     handleActiveNodeChange(id);
   }, [handleActiveNodeChange, id]);
 
+  const iconName: IconName | undefined =
+    open && expandedIcon ? expandedIcon : icon;
+
   return (
     <TooltipProvider>
       <Tooltip content={title} triggerAsChild side="bottom" delayDuration={700}>
@@ -59,16 +66,19 @@ export const Item: React.FC<ItemProps> = ({
             isSearchActive && "bg-yellow-100 dark:bg-[#604B0033]",
             // line between pinned items
             pinnedMode &&
-              "after:absolute after:-top-2.5 after:left-3.5 after:h-4 after:w-px after:bg-gray-300 first:after:hidden",
+              "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:after:hidden",
             isActive && "font-medium text-gray-900 dark:text-gray-50",
           )}
           onClick={handleClick}
         >
           <div className="flex max-w-full items-center gap-2">
             {!pinnedMode && (
-              <Icon
-                name="ChevronDown"
-                size={16}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentcolor"
+                width="16"
+                height="16"
                 className={cn(
                   "min-w-4 transition-all duration-300 ease-in-out",
                   open ? "" : "-rotate-90",
@@ -76,9 +86,40 @@ export const Item: React.FC<ItemProps> = ({
                     ? "text-gray-300 dark:text-gray-700"
                     : "text-gray-700 dark:text-gray-400",
                 )}
-              />
+              >
+                <path
+                  d="M6 9L12 15L18 9"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
             )}
-            <Icon name="File" size={16} className="min-w-4" />
+
+            {iconName ? (
+              <Icon name={iconName} size={16} className="min-w-4" />
+            ) : pinnedMode ? (
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="min-w-4"
+              >
+                <rect width="16" height="16" rx="6.4" fill="transparent" />
+                <path
+                  d="M12 8C12 10.2091 10.2091 12 8 12C5.79086 12 4 10.2091 4 8C4 5.79086 5.79086 4 8 4C10.2091 4 12 5.79086 12 8Z"
+                  fill="currentColor"
+                  className={
+                    isPinned
+                      ? "text-gray-500 dark:text-gray-500"
+                      : "text-gray-300 dark:text-gray-300"
+                  }
+                />
+              </svg>
+            ) : null}
+
             <div ref={textRef} className="truncate text-sm leading-5">
               {title.toLowerCase().includes(searchTerm.toLowerCase()) &&
               !pinnedMode ? (
@@ -119,6 +160,8 @@ export interface SidebarItemProps {
   title: string;
   children?: SidebarNode[];
   allowPinning?: boolean;
+  icon?: IconName;
+  expandedIcon?: IconName;
 }
 
 export const SidebarItem: React.FC<SidebarItemProps> = ({
@@ -126,6 +169,8 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
   title,
   children,
   allowPinning,
+  icon,
+  expandedIcon,
 }) => {
   const open = useSidebarNodeState(id);
   const { toggleItem } = useSidebar();
@@ -141,7 +186,15 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
   );
 
   if (!children || (Array.isArray(children) && children.length === 0)) {
-    return <Item id={id} title={title} allowPinning={allowPinning} />;
+    return (
+      <Item
+        id={id}
+        title={title}
+        allowPinning={allowPinning}
+        icon={icon}
+        expandedIcon={expandedIcon}
+      />
+    );
   }
 
   return (
@@ -154,7 +207,14 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
         data-open={open}
         onKeyDown={handleKeyDown}
       >
-        <Item id={id} title={title} open={open} allowPinning={allowPinning} />
+        <Item
+          id={id}
+          title={title}
+          open={open}
+          allowPinning={allowPinning}
+          icon={icon}
+          expandedIcon={expandedIcon}
+        />
       </div>
       <div
         role="region"
@@ -172,6 +232,8 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
                 title={child.title}
                 children={child.children}
                 allowPinning={allowPinning}
+                icon={child.icon}
+                expandedIcon={child.expandedIcon}
               />
             ))}
           </div>
