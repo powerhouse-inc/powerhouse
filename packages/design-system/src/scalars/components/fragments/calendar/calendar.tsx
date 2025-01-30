@@ -1,6 +1,5 @@
 "use client";
 
-// import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/scalars/lib/utils";
 import { differenceInCalendarDays } from "date-fns";
 import * as React from "react";
@@ -8,8 +7,6 @@ import {
   DayPicker,
   labelNext,
   labelPrevious,
-  OnSelectHandler,
-  PropsSingle,
   useDayPicker,
   type DayPickerProps,
 } from "react-day-picker";
@@ -202,8 +199,7 @@ function Calendar({
         hidden: _hiddenClassName,
       }}
       components={{
-        Chevron: ({ orientation }) => {
-          // const Icon = orientation === "left" ? ChevronLeft : ChevronRight;
+        Chevron: () => {
           return <Icon className="size-4" name="ArrowLeft" />;
         },
         Nav: ({ className }) => {

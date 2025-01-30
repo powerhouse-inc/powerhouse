@@ -87,10 +87,7 @@ export const BasePickerField = React.forwardRef<
                 "shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
                 "mt-[14px]",
                 // custom styles
-                "pt-3", // padding-top: 12px
-                "pr-4", // padding-right: 16px
-                "pb-6", // padding-bottom: 24px
-                "pl-4", // padding-left: 16px
+                "pt-3 pr-4 pb-6 pl-4",
               )}
             >
               {children}
