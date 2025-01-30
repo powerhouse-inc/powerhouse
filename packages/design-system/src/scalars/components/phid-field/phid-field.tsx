@@ -69,7 +69,6 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       autoComplete = true,
       allowDataObjectReference = false,
       variant = "withId",
-      minLength,
       maxLength,
       ...props
     },
@@ -88,10 +87,12 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       options,
       isLoading,
       haveFetchError,
+      commandValue,
       toggleOption,
       handleOpenChange,
       onTriggerBlur,
       handleChange,
+      handleCommandValue,
     } = usePHIDField({
       autoComplete,
       defaultValue,
@@ -120,12 +121,11 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             {label}
           </FormLabel>
         )}
-        <Popover
-          open={!haveFetchError && isPopoverOpen}
-          onOpenChange={handleOpenChange}
-        >
+        <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
           <Command
             shouldFilter={false}
+            value={commandValue}
+            onValueChange={handleCommandValue}
             className={cn(
               asCard && [
                 "group rounded-md",
@@ -231,7 +231,6 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                 selectedValue={selectedValue}
                 options={options}
                 toggleOption={toggleOption}
-                isLoading={isLoading}
               />
             </PopoverContent>
           </Command>

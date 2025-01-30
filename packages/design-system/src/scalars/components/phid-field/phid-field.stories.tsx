@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
+import { Command } from "@/scalars/components/fragments/command";
+import { cn } from "@/scalars/lib/utils";
 import { PHIDField } from "./phid-field";
+import { PHIDList } from "./phid-list";
+import { mockedOptions } from "./utils";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -26,12 +30,11 @@ const meta: Meta<typeof PHIDField> = {
   argTypes: {
     ...getDefaultArgTypes(),
     ...PrebuiltArgTypes.placeholder,
-    ...PrebuiltArgTypes.minLength,
     ...PrebuiltArgTypes.maxLength,
 
     defaultBranch: {
       control: "text",
-      description: "defaultBranch",
+      description: "Specifies the default branch to use when none is provided.",
       table: {
         type: { summary: "string" },
         defaultValue: { summary: "main" },
@@ -41,7 +44,7 @@ const meta: Meta<typeof PHIDField> = {
 
     defaultScope: {
       control: "text",
-      description: "defaultScope",
+      description: "Specifies the default scope to use when none is provided.",
       table: {
         type: { summary: "string" },
         defaultValue: { summary: "public" },
@@ -51,7 +54,7 @@ const meta: Meta<typeof PHIDField> = {
 
     allowedScopes: {
       control: "object",
-      description: "allowedScopes",
+      description: "List of allowed scopes.",
       table: {
         type: { summary: "string[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
@@ -60,7 +63,7 @@ const meta: Meta<typeof PHIDField> = {
 
     allowedDocumentTypes: {
       control: "object",
-      description: "allowedDocumentTypes",
+      description: "Defines which document types can be referenced.",
       table: {
         type: { summary: "string[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
@@ -69,7 +72,7 @@ const meta: Meta<typeof PHIDField> = {
 
     allowUris: {
       control: "boolean",
-      description: "allowUris",
+      description: "Enables URI format as valid input in the field",
       table: {
         type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
@@ -78,7 +81,8 @@ const meta: Meta<typeof PHIDField> = {
 
     autoComplete: {
       control: "boolean",
-      description: "autoComplete",
+      description:
+        "Enables autocomplete functionality to suggest PHIDs while typing",
       table: {
         type: { summary: "boolean" },
         defaultValue: { summary: "true" },
@@ -88,7 +92,7 @@ const meta: Meta<typeof PHIDField> = {
 
     allowDataObjectReference: {
       control: "boolean",
-      description: "allowDataObjectReference",
+      description: "Allows direct referencing of data objects in the field",
       table: {
         type: { summary: "boolean" },
         defaultValue: { summary: "false" },
@@ -99,7 +103,8 @@ const meta: Meta<typeof PHIDField> = {
     variant: {
       control: "radio",
       options: ["withId", "withIdAndTitle", "withIdTitleAndDescription"],
-      description: "variant",
+      description:
+        "Controls the amount of information displayed for each PHID: ID only, ID with title, or ID with title and description",
       table: {
         type: {
           summary: '"withId" | "withIdAndTitle" | "withIdTitleAndDescription"',
@@ -125,5 +130,46 @@ export const Default: Story = {
   args: {
     label: "PHID field",
     placeholder: "phd:",
+  },
+};
+
+export const PopoverOpenWithResults: Story = {
+  args: {
+    variant: "withIdTitleAndDescription",
+  },
+  render: function Wrapper(args) {
+    return (
+      <Command shouldFilter={false}>
+        <div
+          className={cn(
+            "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
+            "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
+          )}
+        >
+          <input type="text" className="sr-only" aria-hidden="true" autoFocus />
+          <PHIDList variant={args.variant} options={mockedOptions} />
+        </div>
+      </Command>
+    );
+  },
+};
+
+export const PopoverOpenWithNoResults: Story = {
+  args: {
+    variant: "withIdTitleAndDescription",
+  },
+  render: function Wrapper(args) {
+    return (
+      <Command shouldFilter={false}>
+        <div
+          className={cn(
+            "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
+            "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
+          )}
+        >
+          <PHIDList variant={args.variant} options={[]} />
+        </div>
+      </Command>
+    );
   },
 };
