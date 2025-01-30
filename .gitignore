@@ -6,3 +6,4 @@ node_modules/
 *.tsbuildinfo
 dev.db
 **/vite.config.ts.timestamp-*.mjs
+.DS_Store
