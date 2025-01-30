@@ -3,7 +3,6 @@ import { pascalCase } from "change-case";
 import {
   generateUUID,
   ListenerRevision,
-  PullResponderTransmitter,
   StrandUpdateGraphQL,
 } from "document-drive";
 import {
@@ -19,7 +18,12 @@ import {
   DocumentModelState,
 } from "document-model/document-model";
 import { gql } from "graphql-tag";
-import { InternalStrandUpdate, pushUpdate } from "src/sync/utils";
+import {
+  InternalStrandUpdate,
+  processAcknowledge,
+  processGetStrands,
+  processPushUpdate,
+} from "src/sync/utils";
 import { Subgraph } from "../base";
 import { Context } from "../types";
 import { Asset } from "./temp-hack-rwa-type-defs";
@@ -298,11 +302,10 @@ export class DriveSubgraph extends Subgraph {
           };
         });
 
-        const listenerRevisions: ListenerRevision[] = await Promise.all(
-          strands.map((strand) => pushUpdate(this.reactor, strand)),
+        // return a list of listener revisions
+        return await Promise.all(
+          strands.map((strand) => processPushUpdate(this.reactor, strand)),
         );
-
-        return listenerRevisions;
       },
       acknowledge: async (
         _: unknown,
@@ -314,6 +317,8 @@ export class DriveSubgraph extends Subgraph {
       ) => {
         if (!listenerId || !revisions) return false;
         if (!ctx.driveId) throw new Error("Drive ID is required");
+
+        // translate data types
         const validEntries = revisions
           .filter((r) => r !== null)
           .map((e) => ({
@@ -325,17 +330,13 @@ export class DriveSubgraph extends Subgraph {
             status: e.status,
           }));
 
-        const transmitter = (await this.reactor.getTransmitter(
+        // return a boolean indicating if the acknowledge was successful
+        return await processAcknowledge(
+          this.reactor,
           ctx.driveId,
-          listenerId,
-        )) as PullResponderTransmitter;
-        const result = await transmitter.processAcknowledge(
-          ctx.driveId ?? "1",
           listenerId,
           validEntries,
         );
-
-        return result;
       },
     },
     System: {},
@@ -349,26 +350,31 @@ export class DriveSubgraph extends Subgraph {
         ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const listener = (await this.reactor.getTransmitter(
+
+        // get the requested strand updates
+        const strands = await processGetStrands(
+          this.reactor,
           ctx.driveId,
           listenerId,
-        )) as PullResponderTransmitter;
-        const strands = await listener.getStrands({ since });
-        return strands.map((e) => ({
-          driveId: e.driveId,
-          documentId: e.documentId,
-          scope: e.scope,
-          branch: e.branch,
-          operations: e.operations.map((o) => ({
-            index: o.index,
-            skip: o.skip,
-            name: o.type,
-            input: JSON.stringify(o.input),
-            hash: o.hash,
-            timestamp: o.timestamp,
-            type: o.type,
-            context: o.context,
-            id: o.id,
+          since,
+        );
+
+        // translate data types
+        return strands.map((update) => ({
+          driveId: update.driveId,
+          documentId: update.documentId,
+          scope: update.scope,
+          branch: update.branch,
+          operations: update.operations.map((op) => ({
+            index: op.index,
+            skip: op.skip,
+            name: op.type,
+            input: JSON.stringify(op.input),
+            hash: op.hash,
+            timestamp: op.timestamp,
+            type: op.type,
+            context: op.context,
+            id: op.id,
           })),
         }));
       },
