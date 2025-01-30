@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import {
   CommandList,
-  CommandLoading,
   CommandEmpty,
   CommandGroup,
   CommandItem,
@@ -13,11 +12,10 @@ import type { PHIDProps, PHIDListItemProps } from "./types";
 
 interface PHIDListProps {
   variant?: PHIDProps["variant"];
-  commandListRef: React.RefObject<HTMLDivElement>;
-  selectedValue: string;
+  commandListRef?: React.RefObject<HTMLDivElement>;
+  selectedValue?: string;
   options?: PHIDListItemProps[];
-  toggleOption: (value: string) => void;
-  isLoading: boolean;
+  toggleOption?: (value: string) => void;
 }
 
 export const PHIDList: React.FC<PHIDListProps> = ({
@@ -26,37 +24,24 @@ export const PHIDList: React.FC<PHIDListProps> = ({
   selectedValue,
   options = [],
   toggleOption,
-  isLoading,
 }) => {
   const cmdkSearch = useCommandState((state) => state.search) as string;
 
   useEffect(() => {
-    commandListRef.current?.scrollTo({ top: 0, behavior: "instant" });
+    commandListRef?.current?.scrollTo({ top: 0, behavior: "instant" });
   }, [commandListRef, cmdkSearch]);
 
   return (
     <CommandList ref={commandListRef}>
-      {isLoading && (
-        <CommandLoading
-          className={cn(
-            "flex min-h-32 items-center justify-center",
-            "text-[14px] leading-5 text-gray-700 dark:text-gray-400",
-          )}
-        >
-          Loading...
-        </CommandLoading>
-      )}
-      {!isLoading && (
-        <CommandEmpty
-          className={cn(
-            "flex min-h-32 items-center justify-center",
-            "text-[14px] leading-5 text-gray-700 dark:text-gray-400",
-          )}
-        >
-          No results found.
-        </CommandEmpty>
-      )}
-      <CommandGroup>
+      <CommandEmpty className={cn("h-full p-1")}>
+        <PHIDListItem
+          variant={variant}
+          phid="phd:"
+          asPlaceholder
+          className={cn("pb-0")}
+        />
+      </CommandEmpty>
+      <CommandGroup className={cn("px-1")}>
         {options.map((opt) => {
           const isSelected = selectedValue === opt.phid;
 
@@ -64,9 +49,9 @@ export const PHIDList: React.FC<PHIDListProps> = ({
             <CommandItem
               key={opt.phid}
               value={opt.phid}
-              onSelect={() => toggleOption(opt.phid)}
+              onSelect={() => toggleOption?.(opt.phid)}
               className={cn(
-                "h-full cursor-pointer",
+                "h-full cursor-pointer p-0",
                 "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
               )}
               role="option"
