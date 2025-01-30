@@ -56,7 +56,6 @@ export const getDocumentModelTypeDefs = (
         .replaceAll("union ", "")
         .trim(),
     );
-    // console.log(trimmedFound);
     trimmedFound?.forEach((f) => {
       // Create a regex that matches the type name with proper boundaries
       const typeRegex = new RegExp(
