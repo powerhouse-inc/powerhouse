@@ -204,5 +204,5 @@ export async function generateImportScript(
   name: string,
   config: PowerhouseConfig,
 ) {
-  return _generateImportScript(name, config.subgraphsDir, config);
+  return _generateImportScript(name, config.importScriptsDir, config);
 }
