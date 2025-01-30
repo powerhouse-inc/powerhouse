@@ -27,7 +27,7 @@ const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
 const DEFAULT_EDITORS_DIR = "./editors";
 const DEFAULT_PROCESSORS_DIR = "./processors";
 const DEFAULT_SUBGRAPHS_DIR = "./subgraphs";
-const DEFAULT_IMPORT_SCRIPTS_DIR = "./import-scripts";
+const DEFAULT_IMPORT_SCRIPTS_DIR = "./scripts";
 
 export const DEFAULT_CONFIG: PowerhouseConfig = {
   documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,
