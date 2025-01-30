@@ -3320,10 +3320,6 @@ packages:
     engines: {node: '>=18'}
     dev: true
 
-  /@date-fns/tz@1.2.0:
-    resolution: {integrity: sha512-LBrd7MiJZ9McsOgxqWX7AaxrDjcFVjWH/tIKJd7pnR7McaslGYOP1QmmiBXdJH/H/yLCT+rcQ7FaPBUxRGUtrg==}
-    dev: false
-
   /@discoveryjs/json-ext@0.5.7:
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
     engines: {node: '>=10.0.0'}
@@ -22445,17 +22441,6 @@ packages:
       react: 18.3.1
       tween-functions: 1.2.0
     dev: true
-
-  /react-day-picker@9.4.3(react@18.3.1):
-    resolution: {integrity: sha512-kQmn7lBR6fHCjaDhW6ByzTMeZUgsBSvIKJLaUKq5xTuJcg2UqHiFAjrPLk/owQS/NzsnSgyGL/bhoi0Z7g+r3w==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      react: '>=16.8.0'
-    dependencies:
-      '@date-fns/tz': 1.2.0
-      date-fns: 4.1.0
-      react: 18.3.1
-    dev: false
 
   /react-docgen-typescript@2.2.2(typescript@5.7.3):
     resolution: {integrity: sha512-tvg2ZtOpOi6QDwsb3GZhOjDkkX0h8Z2gipvTg6OVMUyoYoURhEiRNePT8NZItTVCDh39JJHnLdfCOkzoLbFnTg==}
