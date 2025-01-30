@@ -30,9 +30,6 @@ export const fetchPHIDOptions = async ({
   signal,
   delay = 2000,
 }: FetchPHIDOptionsParams = {}): Promise<PHIDListItemProps[]> => {
-  // const response = await fetch("/api/phid", { signal });
-  // return response.json();
-
   // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, delay));
   return mockedOptions;
