@@ -8,6 +8,8 @@ import { FormGroup } from "../fragments/form-group";
 import { FormLabel } from "../fragments/form-label";
 import { FormMessageList } from "../fragments/form-message";
 import { FormDescription } from "../fragments/form-description";
+import { Calendar } from "../fragments/calendar/calendar";
+import { cn } from "@/scalars/lib/utils";
 
 export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   label?: string;
@@ -83,8 +85,28 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           onInputChange={handleInputChange}
           {...props}
         >
-          <div>Placeholder DatePicker</div>
-          {/* TODO: Add calendar */}
+          <Calendar
+            className={cn("w-full", "p-0")}
+            weekdaysClassName={cn("h-[34px]")}
+            monthGridClassName={cn("w-full")}
+            dayClassName={cn(
+              "w-[34px] hover:bg-gray-200 hover:rounded-[4px] cursor-pointer",
+            )}
+            buttonPreviousClassName={cn(
+              "border border-gray-200 dark:border-gray-900",
+              "hover:bg-gray-200 dark:hover:bg-gray-900",
+            )}
+            buttonNextClassName={cn(
+              "border border-gray-200 dark:border-gray-900",
+              "hover:bg-gray-200 dark:hover:bg-gray-900",
+            )}
+            todayClassName={cn("rounded-[4px]", "bg-gray-100")}
+            selectedClassName={cn(
+              "rounded-[4px]",
+              "bg-gray-900 text-white",
+              "hover:bg-gray-900 hover:text-white",
+            )}
+          />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}
         {warnings && <FormMessageList messages={warnings} type="warning" />}
