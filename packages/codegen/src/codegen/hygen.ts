@@ -192,3 +192,24 @@ export async function generateSubgraph(
     { skipFormat },
   );
 }
+
+export async function generateImportScript(
+  name: string,
+  dir: string,
+  { skipFormat = false } = {},
+) {
+  // Generate the singular files for the document model logic
+  await run(
+    [
+      "powerhouse",
+      `generate-import-script`,
+      "--name",
+      name,
+      "--pascalName",
+      pascalCase(name),
+      "--root-dir",
+      dir,
+    ],
+    { skipFormat },
+  );
+}

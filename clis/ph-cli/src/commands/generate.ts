@@ -2,6 +2,7 @@ import {
   generate as generateCode,
   generateEditor,
   generateFromFile,
+  generateImportScript,
   generateProcessor,
   generateSubgraph,
   promptDirectories,
@@ -25,11 +26,12 @@ export const generate: CommandActionType<
       documentTypes?: string;
       processorType?: "analytics" | "operational";
       subgraph?: string;
+      importScript?: string;
     },
   ]
 > = async (filePath, options) => {
   const baseConfig = getConfig();
-
+  console.log(options);
   const config = {
     ...baseConfig,
     ...{
@@ -53,6 +55,8 @@ export const generate: CommandActionType<
     processorType: options.processorType,
     subgraph: !!options.subgraph,
     subgraphName: options.subgraph,
+    importScript: !!options.importScript,
+    importScriptName: options.importScript,
   };
 
   if (config.interactive) {
@@ -90,6 +94,12 @@ export const generate: CommandActionType<
     return;
   }
 
+  if (command.importScript && command.importScriptName) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    await generateImportScript(command.importScriptName, config);
+    return;
+  }
+
   if (filePath) {
     await generateFromFile(filePath, config);
     return;
@@ -112,6 +122,7 @@ export function generateCommand(program: Command) {
     .option("-s, --subgraph <type>", "Subgraph Name")
     .option("--document-models <type>", "Path to the document models directory")
     .option("--document-types <type>", "Supported document types by the editor")
+    .option("-is, --import-script <type>", "Import Script Name")
     .option("-sf, --skip-format", "Skip formatting the generated code")
     .option("-w, --watch", "Watch the generated code")
     .action(generate);

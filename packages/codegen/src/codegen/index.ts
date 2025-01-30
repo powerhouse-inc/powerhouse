@@ -7,6 +7,7 @@ import {
   generateProcessor as _generateProcessor,
   generateDocumentModel,
   generateSubgraph as _generateSubgraph,
+  generateImportScript as _generateImportScript,
 } from "./hygen";
 import { generateSchemas, generateSchema } from "./graphql";
 import fs from "node:fs";
@@ -197,4 +198,11 @@ export async function generateProcessor(
 
 export async function generateSubgraph(name: string, config: PowerhouseConfig) {
   return _generateSubgraph(name, config.subgraphsDir, config);
+}
+
+export async function generateImportScript(
+  name: string,
+  config: PowerhouseConfig,
+) {
+  return _generateImportScript(name, config.subgraphsDir, config);
 }
