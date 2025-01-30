@@ -7,7 +7,6 @@ export interface PHIDBaseProps {
   allowedDocumentTypes?: string[];
   allowUris?: boolean;
   allowDataObjectReference?: boolean;
-  minLength?: number;
   maxLength?: number;
 }
 
