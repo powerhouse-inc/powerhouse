@@ -26,8 +26,9 @@ export interface SidebarProps {
   nodes?: SidebarNode[];
   /**
    * Which level should be shown by default (i.e., level 1).
+   * @default 1 It is 1-indexed.
    */
-  defaultLevel?: number; // default to 0
+  defaultLevel?: number;
   /**
    * Enables the vertical resizing of the sidebar
    * @default true
@@ -64,6 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   nodes,
   sidebarIcon,
   sidebarTitle,
+  defaultLevel = 1,
   enableMacros = 0,
   allowPinning = true,
   resizable = true,
@@ -85,6 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setItems,
     setActiveNodeId,
     setActiveNodeChangeCallback,
+    openLevel,
   } = useSidebar();
 
   // sync param nodes with provider state if provided
@@ -93,6 +96,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setItems(nodes);
     }
   }, [nodes, setItems]);
+
+  // open levels on mount
+  useEffect(() => {
+    if (defaultLevel > 1) {
+      openLevel(defaultLevel);
+    }
+  }, [defaultLevel, openLevel]);
 
   // sync activeNodeId and onActiveNodeChange with provider state
   useEffect(() => {

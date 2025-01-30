@@ -60,6 +60,8 @@ export const SidebarContentArea = ({
             title={item.title}
             children={item.children}
             allowPinning={allowPinning}
+            icon={item.icon}
+            expandedIcon={item.expandedIcon}
           />
         ))
       )}
