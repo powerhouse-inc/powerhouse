@@ -7,21 +7,21 @@ import {
 } from "document-drive";
 import {
   actions,
-  DocumentDriveAction,
   FileNode,
   Listener,
   ListenerFilter,
   TransmitterType,
 } from "document-model-libs/document-drive";
-import { Asset } from "./temp-hack-rwa-type-defs";
-import { BaseAction, Document, Operation } from "document-model/document";
+import { Document, Operation } from "document-model/document";
 import {
   DocumentModelInput,
   DocumentModelState,
 } from "document-model/document-model";
 import { gql } from "graphql-tag";
-import { Context } from "../types";
+import { InternalStrandUpdate, pushUpdate } from "src/sync/utils";
 import { Subgraph } from "../base";
+import { Context } from "../types";
+import { Asset } from "./temp-hack-rwa-type-defs";
 
 export class DriveSubgraph extends Subgraph {
   name = "d/:drive";
@@ -181,7 +181,7 @@ export class DriveSubgraph extends Subgraph {
       operations: async (
         obj: Document,
         { first, skip }: { first: number; skip: number },
-        ctx: Context,
+        ctx: Context
       ) => {
         const limit = first ?? 0;
         const start = skip ?? 0;
@@ -206,7 +206,7 @@ export class DriveSubgraph extends Subgraph {
         const dms = this.reactor.getDocumentModels();
         const dm = dms.find(
           ({ documentModel }: { documentModel: DocumentModelState }) =>
-            documentModel.id === document.documentType,
+            documentModel.id === document.documentType
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
@@ -233,7 +233,7 @@ export class DriveSubgraph extends Subgraph {
       registerPullResponderListener: async (
         _: unknown,
         { filter }: { filter: ListenerFilter },
-        ctx: Context,
+        ctx: Context
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const uuid = generateUUID();
@@ -257,12 +257,12 @@ export class DriveSubgraph extends Subgraph {
 
         const result = await this.reactor.queueDriveAction(
           ctx.driveId,
-          actions.addListener({ listener }),
+          actions.addListener({ listener })
         );
 
         if (result.status !== "SUCCESS" && result.error) {
           throw new Error(
-            `Listener couldn't be registered: ${result.error.message}`,
+            `Listener couldn't be registered: ${result.error.message}`
           );
         }
 
@@ -270,55 +270,30 @@ export class DriveSubgraph extends Subgraph {
       },
       pushUpdates: async (
         _: unknown,
-        { strands }: { strands: StrandUpdateGraphQL[] },
-        ctx: Context,
+        { strands: strandsGql }: { strands: StrandUpdateGraphQL[] },
+        ctx: Context
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
+
+        // translate data types
+        const strands: InternalStrandUpdate[] = strandsGql.map((strandGql) => {
+          return {
+            operations: strandGql.operations.map((op) => ({
+              ...op,
+              input: JSON.parse(op.input) as DocumentModelInput,
+              skip: op.skip ?? 0,
+              scope: strandGql.scope,
+              branch: "main",
+            })) as Operation[],
+            documentId: strandGql.documentId,
+            driveId: strandGql.driveId,
+            scope: strandGql.scope,
+            branch: strandGql.branch,
+          };
+        });
+
         const listenerRevisions: ListenerRevision[] = await Promise.all(
-          strands.map(async (s) => {
-            const operations =
-              s.operations.map((o) => ({
-                ...o,
-                input: JSON.parse(o.input) as DocumentModelInput,
-                skip: o.skip ?? 0,
-                scope: s.scope,
-                branch: "main",
-              })) ?? [];
-
-            const result = await (s.documentId !== undefined
-              ? this.reactor.queueOperations(
-                  s.driveId,
-                  s.documentId,
-                  operations,
-                )
-              : this.reactor.queueDriveOperations(
-                  s.driveId,
-                  operations as Operation<DocumentDriveAction | BaseAction>[],
-                ));
-
-            const scopeOperations = result.document?.operations[s.scope] ?? [];
-            if (scopeOperations.length === 0) {
-              return {
-                revision: -1,
-                branch: s.branch,
-                documentId: s.documentId ?? "",
-                driveId: s.driveId,
-                scope: s.scope,
-                status: result.status,
-              };
-            }
-
-            const revision = scopeOperations.slice().pop()?.index ?? -1;
-            return {
-              revision,
-              branch: s.branch,
-              documentId: s.documentId ?? "",
-              driveId: s.driveId,
-              scope: s.scope,
-              status: result.status,
-              error: result.error?.message || undefined,
-            };
-          }),
+          strands.map((strand) => pushUpdate(this.reactor, strand))
         );
 
         return listenerRevisions;
@@ -329,7 +304,7 @@ export class DriveSubgraph extends Subgraph {
           listenerId,
           revisions,
         }: { listenerId: string; revisions: ListenerRevision[] },
-        ctx: Context,
+        ctx: Context
       ) => {
         if (!listenerId || !revisions) return false;
         if (!ctx.driveId) throw new Error("Drive ID is required");
@@ -346,12 +321,12 @@ export class DriveSubgraph extends Subgraph {
 
         const transmitter = (await this.reactor.getTransmitter(
           ctx.driveId,
-          listenerId,
+          listenerId
         )) as PullResponderTransmitter;
         const result = await transmitter.processAcknowledge(
           ctx.driveId ?? "1",
           listenerId,
-          validEntries,
+          validEntries
         );
 
         return result;
@@ -365,12 +340,12 @@ export class DriveSubgraph extends Subgraph {
           listenerId,
           since,
         }: { listenerId: string; since: string | undefined },
-        ctx: Context,
+        ctx: Context
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const listener = (await this.reactor.getTransmitter(
           ctx.driveId,
-          listenerId,
+          listenerId
         )) as PullResponderTransmitter;
         const strands = await listener.getStrands({ since });
         return strands.map((e) => ({
