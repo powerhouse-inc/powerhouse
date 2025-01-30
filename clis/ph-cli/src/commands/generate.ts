@@ -31,7 +31,7 @@ export const generate: CommandActionType<
   ]
 > = async (filePath, options) => {
   const baseConfig = getConfig();
-  console.log(options);
+
   const config = {
     ...baseConfig,
     ...{
@@ -95,7 +95,6 @@ export const generate: CommandActionType<
   }
 
   if (command.importScript && command.importScriptName) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     await generateImportScript(command.importScriptName, config);
     return;
   }
