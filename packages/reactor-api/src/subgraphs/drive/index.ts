@@ -8,18 +8,18 @@ import {
 } from "document-drive";
 import {
   actions,
-  DocumentDriveAction,
   FileNode,
   Listener,
   ListenerFilter,
   TransmitterType,
 } from "document-model-libs/document-drive";
-import { BaseAction, Document, Operation } from "document-model/document";
+import { Document, Operation } from "document-model/document";
 import {
   DocumentModelInput,
   DocumentModelState,
 } from "document-model/document-model";
 import { gql } from "graphql-tag";
+import { InternalStrandUpdate, pushUpdate } from "src/sync/utils";
 import { Subgraph } from "../base";
 import { Context } from "../types";
 import { Asset } from "./temp-hack-rwa-type-defs";
@@ -276,55 +276,30 @@ export class DriveSubgraph extends Subgraph {
       },
       pushUpdates: async (
         _: unknown,
-        { strands }: { strands: StrandUpdateGraphQL[] },
+        { strands: strandsGql }: { strands: StrandUpdateGraphQL[] },
         ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
+
+        // translate data types
+        const strands: InternalStrandUpdate[] = strandsGql.map((strandGql) => {
+          return {
+            operations: strandGql.operations.map((op) => ({
+              ...op,
+              input: JSON.parse(op.input) as DocumentModelInput,
+              skip: op.skip ?? 0,
+              scope: strandGql.scope,
+              branch: "main",
+            })) as Operation[],
+            documentId: strandGql.documentId,
+            driveId: strandGql.driveId,
+            scope: strandGql.scope,
+            branch: strandGql.branch,
+          };
+        });
+
         const listenerRevisions: ListenerRevision[] = await Promise.all(
-          strands.map(async (s) => {
-            const operations =
-              s.operations.map((o) => ({
-                ...o,
-                input: JSON.parse(o.input) as DocumentModelInput,
-                skip: o.skip ?? 0,
-                scope: s.scope,
-                branch: "main",
-              })) ?? [];
-
-            const result = await (s.documentId !== undefined
-              ? this.reactor.queueOperations(
-                  s.driveId,
-                  s.documentId,
-                  operations,
-                )
-              : this.reactor.queueDriveOperations(
-                  s.driveId,
-                  operations as Operation<DocumentDriveAction | BaseAction>[],
-                ));
-
-            const scopeOperations = result.document?.operations[s.scope] ?? [];
-            if (scopeOperations.length === 0) {
-              return {
-                revision: -1,
-                branch: s.branch,
-                documentId: s.documentId ?? "",
-                driveId: s.driveId,
-                scope: s.scope,
-                status: result.status,
-              };
-            }
-
-            const revision = scopeOperations.slice().pop()?.index ?? -1;
-            return {
-              revision,
-              branch: s.branch,
-              documentId: s.documentId ?? "",
-              driveId: s.driveId,
-              scope: s.scope,
-              status: result.status,
-              error: result.error?.message || undefined,
-            };
-          }),
+          strands.map((strand) => pushUpdate(this.reactor, strand)),
         );
 
         return listenerRevisions;
