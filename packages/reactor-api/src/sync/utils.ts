@@ -1,4 +1,9 @@
-import { IDocumentDriveServer, ListenerRevision } from "document-drive";
+import {
+  IDocumentDriveServer,
+  ListenerRevision,
+  PullResponderTransmitter,
+  StrandUpdate,
+} from "document-drive";
 import { DocumentDriveAction } from "document-model-libs/document-drive";
 import { BaseAction, Operation, OperationScope } from "document-model/document";
 
@@ -12,7 +17,7 @@ export type InternalStrandUpdate = {
 };
 
 // processes a strand update and returns a listener revision
-export const pushUpdate = async (
+export const processPushUpdate = async (
   reactor: IDocumentDriveServer,
   strand: InternalStrandUpdate
 ): Promise<ListenerRevision> => {
@@ -49,4 +54,32 @@ export const pushUpdate = async (
     status: result.status,
     error: result.error?.message || undefined,
   };
+};
+
+// processes an acknowledge request and returns a boolean
+export const processAcknowledge = async (
+  reactor: IDocumentDriveServer,
+  driveId: string,
+  listenerId: string,
+  revisions: ListenerRevision[]
+): Promise<boolean> => {
+  const transmitter = (await reactor.getTransmitter(
+    driveId,
+    listenerId
+  )) as PullResponderTransmitter;
+  return transmitter.processAcknowledge(driveId, listenerId, revisions);
+};
+
+// processes a get strands request and returns a list of strand updates
+export const processGetStrands = async (
+  reactor: IDocumentDriveServer,
+  driveId: string,
+  listenerId: string,
+  since: string | undefined
+): Promise<StrandUpdate[]> => {
+  const transmitter = (await reactor.getTransmitter(
+    driveId,
+    listenerId
+  )) as PullResponderTransmitter;
+  return transmitter.getStrands({ since });
 };
