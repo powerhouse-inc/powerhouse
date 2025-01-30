@@ -1,10 +1,14 @@
 FROM node:20-alpine AS build
 
 WORKDIR /app
+# Install system dependencies required by node-gyp
+RUN apk add --no-cache python3 make g++ py3-setuptools && \
+    ln -sf /usr/bin/python3 /usr/bin/python
+
 RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || echo "Link already exists"
 RUN npm install --global pnpm
 COPY . .
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 RUN pnpm build:all
 RUN pnpm --filter "@powerhousedao/connect" build:web
 RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned
