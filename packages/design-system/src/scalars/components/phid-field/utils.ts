@@ -1,8 +1,15 @@
-import { PHIDListItemProps } from "./types";
+import { PHIDProps, PHIDListItemProps } from "./types";
 
 interface FetchPHIDOptionsParams {
+  phidFragment: string; // input value
+  allowedScopes: PHIDProps["allowedScopes"];
+  allowedDocumentTypes: PHIDProps["allowedDocumentTypes"];
   signal?: AbortSignal;
-  delay?: number;
+}
+
+interface FetchSelectedOptionParams {
+  phid: string; // full phid of the selected option
+  signal?: AbortSignal;
 }
 
 export const mockedOptions: PHIDListItemProps[] = [
@@ -27,10 +34,37 @@ export const mockedOptions: PHIDListItemProps[] = [
 ];
 
 export const fetchPHIDOptions = async ({
+  phidFragment,
+  allowedScopes,
+  allowedDocumentTypes,
   signal,
-  delay = 2000,
-}: FetchPHIDOptionsParams = {}): Promise<PHIDListItemProps[]> => {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, delay));
+}: FetchPHIDOptionsParams): Promise<PHIDListItemProps[]> => {
+  // TODO: Implement actual API call
+  // Example implementation:
+  // const params = new URLSearchParams({
+  //   phidFragment,
+  //   allowedScopes: JSON.stringify(allowedScopes),
+  //   allowedDocumentTypes: JSON.stringify(allowedDocumentTypes),
+  // });
+  // if URLSearchParams is to long, maybe a POST request will be better
+  // const response = await fetch(`/api/phid/search?${params}`, { signal });
+  // return response.json();
+
+  // Simulate 2s network delay
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   return mockedOptions;
+};
+
+export const fetchSelectedOption = async ({
+  phid,
+  signal,
+}: FetchSelectedOptionParams): Promise<PHIDListItemProps | undefined> => {
+  // TODO: Implement actual API call
+  // Example implementation:
+  // const response = await fetch(`/api/phid/${phid}`, { signal });
+  // return response.json();
+
+  // Simulate 2s network delay
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  return mockedOptions.find((option) => option.phid === phid);
 };

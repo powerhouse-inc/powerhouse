@@ -20,13 +20,13 @@ interface TooltipProps
   triggerAsChild?: boolean;
 }
 
-const TooltipContent = ({
-  children,
-  className,
-  ...props
-}: TooltipContentProps) => {
+const TooltipContent = React.forwardRef<
+  React.ElementRef<typeof Content>,
+  TooltipContentProps
+>(({ children, className, ...props }, ref) => {
   return (
     <Content
+      ref={ref}
       {...props}
       className={cn(
         // Base styles
@@ -49,7 +49,7 @@ const TooltipContent = ({
       {children}
     </Content>
   );
-};
+});
 
 const Tooltip: React.FC<TooltipProps> = ({
   content,

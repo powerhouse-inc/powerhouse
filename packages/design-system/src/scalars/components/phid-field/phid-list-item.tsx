@@ -5,7 +5,7 @@ import { cn } from "@/scalars/lib/utils";
 import type { PHIDProps, PHIDListItemProps } from "./types";
 
 export const PHIDListItem: React.FC<
-  { variant?: PHIDProps["variant"]; className?: string } & PHIDListItemProps
+  { variant: PHIDProps["variant"]; className?: string } & PHIDListItemProps
 > = ({
   variant = "withId",
   title = "Title Unavailable",
