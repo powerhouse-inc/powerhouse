@@ -10,9 +10,7 @@
     "build": "tsup",
     "test": "vitest run",
     "lint": "eslint",
-    "build:bench": "tsup --config tsup.bench.config.ts",
-    "benchmark:node": "pnpm build:bench && node dist/benchmark/runner.cli.js",
-    "benchmark:bun": "bun run test/benchmark/runner.cli.ts"
+    "bench": "vitest bench"
   },
   "publishConfig": {
     "access": "public"
