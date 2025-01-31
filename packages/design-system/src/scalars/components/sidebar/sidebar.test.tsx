@@ -52,35 +52,35 @@ describe("Sidebar Component", () => {
     expect(screen.getByTestId("sidebar-icon")).toBeInTheDocument();
   });
 
-    it("should render search bar by default", () => {
-      renderSidebar();
-      expect(screen.getByRole("searchbox")).toBeInTheDocument();
+  it("should render search bar by default", () => {
+    renderSidebar();
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+  });
+
+  it("should not render search bar when showSearchBar is false", () => {
+    renderSidebar({ showSearchBar: false });
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+  });
+
+  it("should render extra footer content when provided", () => {
+    renderSidebar({
+      extraFooterContent: <div>Extra Footer Content</div>,
+    });
+    expect(screen.getByText("Extra Footer Content")).toBeInTheDocument();
+  });
+
+  it("should render pinning area when there are pinned items", () => {
+    renderSidebar({
+      allowPinning: true,
     });
 
-    it("should not render search bar when showSearchBar is false", () => {
-      renderSidebar({ showSearchBar: false });
-      expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
-    });
+    // Initially pinning area should not be visible
+    expect(screen.queryByTestId("pinning-area")).not.toBeInTheDocument();
+  });
 
-    it("should render extra footer content when provided", () => {
-      renderSidebar({
-        extraFooterContent: <div>Extra Footer Content</div>,
-      });
-      expect(screen.getByText("Extra Footer Content")).toBeInTheDocument();
-    });
-
-    it("should render pinning area when there are pinned items", () => {
-      renderSidebar({
-        allowPinning: true,
-      });
-
-      // Initially pinning area should not be visible
-      expect(screen.queryByTestId("pinning-area")).not.toBeInTheDocument();
-    });
-
-    it("should open to default level on mount", () => {
-      renderSidebar({ defaultLevel: 2 });
-      // With defaultLevel 2, child nodes should be visible
-      expect(screen.getByText("Node 1.1")).toBeInTheDocument();
-    });
+  it("should open to default level on mount", () => {
+    renderSidebar({ defaultLevel: 2 });
+    // With defaultLevel 2, child nodes should be visible
+    expect(screen.getByText("Node 1.1")).toBeInTheDocument();
+  });
 });
