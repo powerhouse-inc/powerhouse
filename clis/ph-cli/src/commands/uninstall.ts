@@ -4,15 +4,15 @@ import { Command } from "commander";
 
 import { CommandActionType } from "../types.js";
 import {
-  PackageManager,
-  packageManagers,
-  SUPPORTED_PACKAGE_MANAGERS,
   getProjectInfo,
   getPackageManagerFromLockfile,
+  PackageManager,
+  packageManagers,
   updateConfigFile,
+  SUPPORTED_PACKAGE_MANAGERS,
 } from "../utils.js";
 
-export function installDependency(
+export function uninstallDependency(
   packageManager: PackageManager,
   dependencies: string[],
   projectPath: string,
@@ -24,24 +24,24 @@ export function installDependency(
 
   const manager = packageManagers[packageManager];
 
-  let installCommand = manager.installCommand.replace(
+  let uninstallCommand = manager.uninstallCommand.replace(
     "{{dependency}}",
     dependencies.join(" "),
   );
 
   if (workspace) {
-    installCommand += ` ${manager.workspaceOption}`;
+    uninstallCommand += ` ${manager.workspaceOption}`;
   }
 
   const commandOptions = { cwd: projectPath };
 
-  execSync(installCommand, {
+  execSync(uninstallCommand, {
     stdio: "inherit",
     ...commandOptions,
   });
 }
 
-export const install: CommandActionType<
+export const uninstall: CommandActionType<
   [
     string[] | undefined,
     {
@@ -80,7 +80,7 @@ export const install: CommandActionType<
     options.packageManager || getPackageManagerFromLockfile(projectInfo.path);
 
   if (options.debug) {
-    console.log("\n>>> installDependency arguments:");
+    console.log("\n>>> uninstallDependency arguments:");
     console.log(">>> packageManager", packageManager);
     console.log(">>> dependencies", dependencies);
     console.log(">>> isGlobal", isGlobal);
@@ -89,16 +89,16 @@ export const install: CommandActionType<
   }
 
   try {
-    console.log("installing dependencies 📦 ...");
-    installDependency(
+    console.log("Uninstalling dependencies 📦 ...");
+    uninstallDependency(
       packageManager as PackageManager,
       dependencies,
       projectInfo.path,
       options.workspace,
     );
-    console.log("Dependency installed successfully 🎉");
+    console.log("Dependency uninstalled successfully 🎉");
   } catch (error) {
-    console.error("❌ Failed to install dependencies");
+    console.error("❌ Failed to uninstall dependencies");
     throw error;
   }
 
@@ -106,11 +106,12 @@ export const install: CommandActionType<
     console.log("\n>>> updateConfigFile arguments:");
     console.log(">>> dependencies", dependencies);
     console.log(">>> projectPath", projectInfo.path);
+    console.log(">>> task", "uninstall");
   }
 
   try {
     console.log("⚙️ Updating powerhouse config file...");
-    updateConfigFile(dependencies, projectInfo.path, "install");
+    updateConfigFile(dependencies, projectInfo.path, "uninstall");
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");
@@ -118,20 +119,20 @@ export const install: CommandActionType<
   }
 };
 
-export function installCommand(program: Command) {
+export function uninstallCommand(program: Command) {
   program
-    .command("install")
-    .description("Install a powerhouse dependency")
-    .argument("[dependencies...]", "Names of the dependencies to install")
-    .option("-g, --global", "Install the dependency globally")
+    .command("remove")
+    .description("Uninstall a powerhouse dependency")
+    .argument("[dependencies...]", "Names of the dependencies to remove")
+    .option("-g, --global", "Remove the dependency globally")
     .option("--debug", "Show additional logs")
     .option(
       "-w, --workspace",
-      "Install the dependency in the workspace (use this option for monorepos)",
+      "Remove the dependency in the workspace (use this option for monorepos)",
     )
     .option(
       "--package-manager <packageManager>",
       "force package manager to use",
     )
-    .action(install);
+    .action(uninstall);
 }
