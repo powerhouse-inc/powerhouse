@@ -59,6 +59,7 @@ export const Item: React.FC<ItemProps> = ({
       <Tooltip content={title} triggerAsChild side="bottom" delayDuration={700}>
         <div
           id={`sidebar-item-${id}`}
+          tabIndex={0}
           className={cn(
             "group/sidebar-item dark:hover:bg-charcoal-900 relative flex cursor-pointer select-none items-center justify-between gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-400",
             allowPinning && "hover:pr-6",
@@ -89,9 +90,9 @@ export const Item: React.FC<ItemProps> = ({
               >
                 <path
                   d="M6 9L12 15L18 9"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
             )}
