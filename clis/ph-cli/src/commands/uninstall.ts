@@ -89,16 +89,16 @@ export const uninstall: CommandActionType<
   }
 
   try {
-    console.log("installing dependencies 📦 ...");
+    console.log("Uninstalling dependencies 📦 ...");
     uninstallDependency(
       packageManager as PackageManager,
       dependencies,
       projectInfo.path,
       options.workspace,
     );
-    console.log("Dependency installed successfully 🎉");
+    console.log("Dependency uninstalled successfully 🎉");
   } catch (error) {
-    console.error("❌ Failed to install dependencies");
+    console.error("❌ Failed to uninstall dependencies");
     throw error;
   }
 
