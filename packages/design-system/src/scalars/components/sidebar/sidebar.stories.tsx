@@ -4,6 +4,7 @@ import { Icon } from "@/powerhouse";
 import { SidebarProvider } from "./subcomponents/sidebar-provider";
 import mockedTree from "./mocked_tree.json";
 import { useState } from "react";
+import { SidebarNode } from "./types";
 
 const meta: Meta<typeof Sidebar> = {
   title: "Document Engineering/Complex Components/Sidebar",
@@ -11,7 +12,7 @@ const meta: Meta<typeof Sidebar> = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <SidebarProvider nodes={mockedTree}>
+      <SidebarProvider nodes={mockedTree as SidebarNode[]}>
         <Story />
       </SidebarProvider>
     ),
@@ -42,6 +43,13 @@ const meta: Meta<typeof Sidebar> = {
         readonly: true,
       },
       description: "The icon of the sidebar.",
+    },
+    defaultLevel: {
+      control: "number",
+      description: "The level to be opened by default.",
+      table: {
+        defaultValue: { summary: "1" },
+      },
     },
     enableMacros: {
       control: "number",

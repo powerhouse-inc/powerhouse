@@ -15,6 +15,8 @@ export const SidebarPinningArea = () => {
           title={node.title}
           pinnedMode={true}
           allowPinning={true}
+          icon={node.icon}
+          expandedIcon={node.expandedIcon}
         />
       ))}
     </div>

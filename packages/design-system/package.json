@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.18.0-canary.53",
+  "version": "1.18.0-canary.56",
   "description": "",
   "files": [
     "/dist"
@@ -115,6 +115,7 @@
     "nanoid": "^5.0.9",
     "natural-orderby": "^4.0.0",
     "react-circle-flags": "^0.0.22",
+    "react-day-picker": "9.4.3",
     "react-hook-form": "^7.53.0",
     "react-multi-select-component": "^4.3.4",
     "react-number-format": "^5.4.2",

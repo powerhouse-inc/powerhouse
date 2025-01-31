@@ -37,3 +37,11 @@ export const Default: Story = {
     placeholder: "12:59 PM",
   },
 };
+export const Disabled: Story = {
+  args: {
+    name: "date",
+    label: "Pick a date",
+    placeholder: "12:59 PM",
+    disabled: true,
+  },
+};
