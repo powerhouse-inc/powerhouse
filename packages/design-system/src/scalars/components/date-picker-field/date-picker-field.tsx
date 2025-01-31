@@ -10,6 +10,8 @@ import { FormMessageList } from "../fragments/form-message";
 import { FormDescription } from "../fragments/form-description";
 import { Calendar } from "../fragments/calendar/calendar";
 import { cn } from "@/scalars/lib/utils";
+import { format } from "date-fns";
+import { useDatePickerField } from "./use-date-picker-field";
 
 export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   label?: string;
@@ -40,21 +42,18 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
     },
     ref,
   ) => {
-    // TODO: Fix this when selecting date from calendar
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [date, setDate] = React.useState<DateFieldValue>(
-      value ?? defaultValue ?? "",
-    );
-    const [inputValue, setInputValue] = React.useState("");
-    const [isOpen, setIsOpen] = React.useState(false);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setInputValue(e.target.value);
-      const parsedDate = new Date(e.target.value);
-      if (!isNaN(parsedDate.getTime())) {
-        setDate(parsedDate);
-      }
-    };
+    const {
+      date,
+      inputValue,
+      handleDateSelect,
+      handleInputChange,
+      isOpen,
+      setIsOpen,
+      formatDate,
+    } = useDatePickerField({
+      value,
+      defaultValue,
+    });
 
     return (
       <FormGroup>
@@ -72,23 +71,26 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           ref={ref}
           label={label}
           id={id}
-          value={inputValue}
+          value={formatDate(inputValue)}
           name={name}
           errors={errors}
           disabled={disabled}
           required={required}
           iconName="CalendarTime"
           placeholder={placeholder}
-          defaultValue={defaultValue}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
           onInputChange={handleInputChange}
           {...props}
         >
           <Calendar
+            mode="single"
+            required={true}
+            selected={date}
+            onSelect={handleDateSelect}
             className={cn("w-full", "p-0")}
-            weekdaysClassName={cn("h-[34px]")}
-            monthGridClassName={cn("w-full")}
+            weekdaysClassName={cn("h-[34px]", "gap-x-[3px]")}
+            monthGridClassName={cn("w-full", "pr-[5.5px] pl-[5.5px]")}
             dayClassName={cn(
               "w-[34px] hover:bg-gray-200 hover:rounded-[4px] cursor-pointer",
             )}
@@ -98,7 +100,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
             )}
             buttonNextClassName={cn(
               "border border-gray-200 dark:border-gray-900",
-              "hover:bg-gray-200 dark:hover:bg-gray-900",
+              "hover:bg-gray-200 dark:hover:bg-gray-900 ",
             )}
             todayClassName={cn("rounded-[4px]", "bg-gray-100")}
             selectedClassName={cn(
@@ -106,6 +108,8 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
               "bg-gray-900 text-white",
               "hover:bg-gray-900 hover:text-white",
             )}
+            weekClassName={cn("w-full")}
+            {...props}
           />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}

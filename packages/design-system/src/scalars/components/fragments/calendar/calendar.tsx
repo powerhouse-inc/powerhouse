@@ -97,6 +97,7 @@ function Calendar({
   const _monthClassName = cn("w-full", props.monthClassName);
   const _captionClassName = cn(
     "relative flex items-center justify-center pt-1",
+    "w-full",
     props.captionClassName,
   );
   const _captionLabelClassName = cn(
@@ -171,9 +172,6 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       numberOfMonths={columnsDisplayed}
       className={cn("p-3 w-auto", className)}
-      style={{
-        width: 248.8 * (columnsDisplayed ?? 1) + "px",
-      }}
       classNames={{
         months: _monthsClassName,
         month_caption: _monthCaptionClassName,
