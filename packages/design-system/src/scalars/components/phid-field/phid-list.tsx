@@ -11,7 +11,7 @@ import { PHIDListItem } from "./phid-list-item";
 import type { PHIDProps, PHIDListItemProps } from "./types";
 
 interface PHIDListProps {
-  variant?: PHIDProps["variant"];
+  variant: PHIDProps["variant"];
   commandListRef?: React.RefObject<HTMLDivElement>;
   selectedValue?: string;
   options?: PHIDListItemProps[];

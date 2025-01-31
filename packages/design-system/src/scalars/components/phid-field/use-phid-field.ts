@@ -1,11 +1,14 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
+import { useDebounceCallback } from "usehooks-ts";
 import type { PHIDProps, PHIDListItemProps } from "./types";
 import { fetchPHIDOptions } from "./utils";
 
 interface UsePHIDFieldProps {
-  autoComplete: boolean;
+  autoComplete: PHIDProps["autoComplete"];
   defaultValue?: string;
   value?: string;
+  allowedScopes: PHIDProps["allowedScopes"];
+  allowedDocumentTypes: PHIDProps["allowedDocumentTypes"];
   onChange?: PHIDProps["onChange"];
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
 }
@@ -14,6 +17,8 @@ export function usePHIDField({
   autoComplete,
   defaultValue,
   value,
+  allowedScopes,
+  allowedDocumentTypes,
   onChange,
   onBlur,
 }: UsePHIDFieldProps) {
@@ -40,50 +45,55 @@ export function usePHIDField({
     setOptions([]);
   }, []);
 
-  const fetchOptions = useCallback(
-    async (newValue: string) => {
-      if (newValue === "") {
-        clear();
-        return;
-      }
-
-      abortControllerRef.current?.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      setHaveFetchError(false);
-      setIsLoading(true);
-
-      try {
-        // Simulate 30% chance of error
-        if (Math.random() < 0.3) {
-          throw new Error("Simulated error");
-        }
-
-        const newOptions = await fetchPHIDOptions({
-          signal: controller.signal,
-        });
-
-        if (!controller.signal.aborted) {
-          setOptions(newOptions);
-          const hasMatch = newOptions.some((opt) => opt.phid === newValue);
-          setIsPopoverOpen(!hasMatch);
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
+  const debouncedFetchOptions = useDebounceCallback(
+    useCallback(
+      async (newValue: string) => {
+        if (newValue === "") {
+          clear();
           return;
         }
 
-        if (!controller.signal.aborted) {
-          setHaveFetchError(true);
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        setHaveFetchError(false);
+        setIsLoading(true);
+
+        try {
+          // Simulate 30% chance of error
+          if (Math.random() < 0.3) {
+            throw new Error("Simulated error");
+          }
+
+          const newOptions = await fetchPHIDOptions({
+            phidFragment: newValue,
+            allowedScopes,
+            allowedDocumentTypes,
+            signal: controller.signal,
+          });
+
+          if (!controller.signal.aborted) {
+            setOptions(newOptions);
+            const hasMatch = newOptions.some((opt) => opt.phid === newValue);
+            setIsPopoverOpen(!hasMatch);
+          }
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") {
+            return;
+          }
+
+          if (!controller.signal.aborted) {
+            setHaveFetchError(true);
+          }
+        } finally {
+          if (!controller.signal.aborted) {
+            setIsLoading(false);
+          }
         }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    },
-    [clear],
+      },
+      [clear],
+    ),
   );
 
   const handleOpenChange = useCallback(
@@ -110,16 +120,9 @@ export function usePHIDField({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
       setSelectedValue(newValue);
-
-      if (autoComplete) {
-        void fetchOptions(newValue);
-      } else {
-        clear();
-      }
-
       onChange?.(newValue);
     },
-    [autoComplete, onChange, fetchOptions, clear],
+    [onChange],
   );
 
   const handleCommandValue = useCallback((value: string) => {
@@ -136,13 +139,12 @@ export function usePHIDField({
   );
 
   useEffect(() => {
-    if (autoComplete && selectedValue !== "") {
-      void fetchOptions(selectedValue);
-    }
-    if (!autoComplete) {
+    if (autoComplete) {
+      void debouncedFetchOptions(selectedValue);
+    } else {
       clear();
     }
-  }, [autoComplete, selectedValue, fetchOptions, clear]);
+  }, [autoComplete, selectedValue, debouncedFetchOptions, clear]);
 
   useEffect(() => {
     if (isInternalChange.current) {
