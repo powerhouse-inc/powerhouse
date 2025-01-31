@@ -51,6 +51,7 @@
     "dependencies": {
         "@vitejs/plugin-basic-ssl": "^1.2.0",
         "commander": "^12.1.0",
+        "magic-string": "^0.30.17",
         "vite": "^5.4.8",
         "vite-envs": "^4.4.5"
     },
@@ -99,6 +100,7 @@
         "graphql": "^16.8.1",
         "i18next": "^23.7.6",
         "jotai": "^2.1.0",
+        "jotai-effect": "^1.1.6",
         "localforage": "^1.10.0",
         "lz-string": "^1.5.0",
         "playwright": "^1.41.2",
