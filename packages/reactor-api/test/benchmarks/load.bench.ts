@@ -17,10 +17,10 @@ import {
   utils,
 } from "document-model/document-model";
 import { AddFileAction } from "node_modules/document-model-libs/dist/document-models/document-drive/gen";
-import { Bench } from "tinybench";
 
-const documentModels = Object.values(documentModelsMap) as DocumentModel[];
+import { beforeAll, bench, describe } from "vitest";
 
+let documentModels: DocumentModel[];
 let document: Document<
   DocumentModelState,
   DocumentModelAction,
@@ -30,43 +30,14 @@ let server: IDocumentDriveServer | null = null;
 let drive: DocumentDriveDocument | null = null;
 let action: AddFileAction | null = null;
 
-async function beforeEach() {
-  server = new DocumentDriveServer(documentModels, new MemoryStorage());
-  await server.initialize();
+beforeAll(async () => {
+  documentModels = Object.values(documentModelsMap) as DocumentModel[];
 
-  drive = await server.addDrive({
-    global: {
-      id: generateUUID(),
-      name: "Test Drive",
-      icon: null,
-      slug: null,
-    },
-    local: {
-      availableOffline: false,
-      sharingType: "PRIVATE",
-      listeners: [],
-      triggers: [],
-    },
-  });
-
-  action = generateAddNodeAction(
-    drive.state.global,
-    {
-      id: generateUUID(),
-      name: "Imported Document",
-      documentType: document!.documentType,
-      document: document,
-    },
-    ["global"]
-  );
-}
-
-export default async function load() {
   document = await utils.loadFromFile("test/data/BlocktowerAndromeda.zip");
+});
 
-  const bench = new Bench();
-
-  bench.add(
+describe("Document Drive", () => {
+  bench(
     "Load PHDM into Document Drive",
     async () => {
       const result = await server!.addDriveAction(
@@ -79,11 +50,36 @@ export default async function load() {
       }
     },
     {
-      beforeEach: async () => await beforeEach(),
+      setup: async () => {
+        server = new DocumentDriveServer(documentModels, new MemoryStorage());
+        await server.initialize();
+
+        drive = await server.addDrive({
+          global: {
+            id: generateUUID(),
+            name: "Test Drive",
+            icon: null,
+            slug: null,
+          },
+          local: {
+            availableOffline: false,
+            sharingType: "PRIVATE",
+            listeners: [],
+            triggers: [],
+          },
+        });
+
+        action = generateAddNodeAction(
+          drive.state.global,
+          {
+            id: generateUUID(),
+            name: "Imported Document",
+            documentType: document!.documentType,
+            document: document,
+          },
+          ["global"]
+        );
+      },
     }
   );
-
-  await bench.run();
-
-  console.table(bench.table());
-}
+});
