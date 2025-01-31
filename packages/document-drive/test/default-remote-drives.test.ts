@@ -102,43 +102,47 @@ const getDefaultRemoteDriveInput = (
   },
 });
 
-vi.mock("graphql-request", () => ({
-  GraphQLClient: vi
-    .fn()
-    .mockImplementation((driveUrl: keyof typeof driveMetadataByUrl) => {
-      // console.log('driveUrl', driveUrl);
-      return {
-        request: vi.fn().mockImplementation((query: string) => {
-          if (query.includes("query getDrive")) {
-            return Promise.resolve({
-              drive: driveMetadataByUrl[driveUrl],
-            });
-          }
+vi.mock(import("graphql-request"), async () => {
+  const originalModule = await vi.importActual("graphql-request");
 
-          if (query.includes("query strands")) {
-            return Promise.resolve({
-              system: {
-                sync: {
-                  strands: [],
+  return {
+    ...originalModule,
+    GraphQLClient: vi
+      .fn()
+      .mockImplementation((driveUrl: keyof typeof driveMetadataByUrl) => {
+        return {
+          request: vi.fn().mockImplementation((query: string) => {
+            if (query.includes("query getDrive")) {
+              return Promise.resolve({
+                drive: driveMetadataByUrl[driveUrl],
+              });
+            }
+
+            if (query.includes("query strands")) {
+              return Promise.resolve({
+                system: {
+                  sync: {
+                    strands: [],
+                  },
                 },
-              },
-            });
-          }
+              });
+            }
 
-          if (query.includes("mutation registerPullResponderListener")) {
-            return Promise.resolve({
-              registerPullResponderListener: {
-                listenerId: generateUUID(),
-              },
-            });
-          }
+            if (query.includes("mutation registerPullResponderListener")) {
+              return Promise.resolve({
+                registerPullResponderListener: {
+                  listenerId: generateUUID(),
+                },
+              });
+            }
 
-          return Promise.resolve({});
-        }),
-      };
-    }),
-  gql: vi.fn().mockImplementation((...args) => args.join("")),
-}));
+            return Promise.resolve({});
+          }),
+        };
+      }),
+    gql: vi.fn().mockImplementation((...args) => args.join("")),
+  };
+});
 
 const documentModels = [
   DocumentModelLib,
