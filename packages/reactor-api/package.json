@@ -9,7 +9,10 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:bench": "tsup --config tsup.bench.config.ts",
+    "benchmark": "node dist/benchmark/load.js",
+    "benchmark-bun": "bun run dist/benchmark/load.js"
   },
   "publishConfig": {
     "access": "public"

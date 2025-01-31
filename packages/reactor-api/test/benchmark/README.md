@@ -13,7 +13,16 @@ This benchmarks the import of a fairly large document into a document drive serv
 - In the upper right, click `Export` to download a zip.
 - Move the zip to `/test/data/BlocktowerAndromeda.zip`.
 
-#### Run
+#### Run with Node
+
+From the `packages/reactor-api` working directory:
+
+```
+npm run build:bench
+npm run bench
+```
+
+#### Run with Bun
 
 With `bun` (which is not indicative of client performance), from the `packages/reactor-api` working directory:
 
