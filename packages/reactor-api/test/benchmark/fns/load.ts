@@ -17,7 +17,6 @@ import {
   utils,
 } from "document-model/document-model";
 import { AddFileAction } from "node_modules/document-model-libs/dist/document-models/document-drive/gen";
-import { exit } from "process";
 import { Bench } from "tinybench";
 
 const documentModels = Object.values(documentModelsMap) as DocumentModel[];
@@ -62,7 +61,7 @@ async function beforeEach() {
   );
 }
 
-async function main() {
+export default async function load() {
   document = await utils.loadFromFile("test/data/BlocktowerAndromeda.zip");
 
   const bench = new Bench();
@@ -88,7 +87,3 @@ async function main() {
 
   console.table(bench.table());
 }
-
-main()
-  .catch(console.error)
-  .finally(() => exit(0));
