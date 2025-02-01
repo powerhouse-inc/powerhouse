@@ -21,15 +21,18 @@ export const useDatePickerField = ({
     setInputValue(e.target.value);
   };
 
-  function handleDateSelect(date?: Date) {
-    setDate(date);
-    if (date) {
-      setInputValue(format(date, "MM/dd/yyyy"));
-    } else {
-      setInputValue("");
-    }
-  }
-  const formatDate = (value: DateFieldValue): string => {
+  const handleDateSelect = React.useCallback(
+    (date?: Date) => {
+      setDate(date);
+      if (date) {
+        setInputValue(format(date, "MM/dd/yyyy"));
+      } else {
+        setInputValue("");
+      }
+    },
+    [setDate, setInputValue],
+  );
+  const formatDate = React.useCallback((value: DateFieldValue): string => {
     if (!value) return "";
 
     if (typeof value === "string") {
@@ -40,7 +43,7 @@ export const useDatePickerField = ({
       return format(value, "dd/MM/yyyy");
     }
     return "";
-  };
+  }, []);
 
   return {
     date,
