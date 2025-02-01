@@ -83,12 +83,13 @@ export const BasePickerField = React.forwardRef<
               align="start"
               className={cn(
                 "relative w-[275px]",
-                "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-700",
+                "border-gray-300 bg-white dark:bg-slate-600 dark:border-gray-900",
                 "rounded-lg",
-                "shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
+                "shadow-[0px_2px_4px_0px_rgba(0,0,0,0.08),0px_3px_10px_0px_rgba(0,0,0,0.10)]",
                 "mt-[14px]",
                 // custom styles
                 "pt-3 pr-4 pb-6 pl-4",
+                "dark:shadow-[1px_4px_15.3px_0px_#141921]",
               )}
             >
               {children}

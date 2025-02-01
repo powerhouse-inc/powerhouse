@@ -58,14 +58,14 @@ export type CalendarProps = DayPickerProps & {
  * @default yearRange 12
  * @returns
  */
-function Calendar({
+const Calendar = ({
   className,
   showOutsideDays = true,
   showYearSwitcher = true,
   yearRange = 12,
   numberOfMonths,
   ...props
-}: CalendarProps) {
+}: CalendarProps) => {
   const [navView, setNavView] = React.useState<"days" | "years">("days");
   const [displayYears, setDisplayYears] = React.useState<{
     from: number;
@@ -171,7 +171,10 @@ function Calendar({
       mode="single"
       showOutsideDays={showOutsideDays}
       numberOfMonths={columnsDisplayed}
-      className={cn("p-3 w-auto", className)}
+      className={cn(
+        "p-3 w-auto dark:bg-slate-600 dark:border-gray-900",
+        className,
+      )}
       classNames={{
         months: _monthsClassName,
         month_caption: _monthCaptionClassName,
@@ -279,7 +282,7 @@ function Calendar({
             onNextClick?.(nextMonth);
           }, [goToMonth, nextMonth]);
           return (
-            <nav className={cn("flex items-center", className)}>
+            <nav className={cn("flex items-center ", className)}>
               <Button
                 variant="outline"
                 className={cn(
@@ -405,7 +408,7 @@ function Calendar({
       {...props}
     />
   );
-}
+};
 Calendar.displayName = "Calendar";
 
 export { Calendar };
