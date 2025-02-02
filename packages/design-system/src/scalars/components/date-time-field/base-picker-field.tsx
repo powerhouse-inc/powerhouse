@@ -4,19 +4,19 @@ import { Input } from "../fragments";
 import { cn } from "@/scalars/lib/utils";
 import { IconName } from "@/powerhouse";
 import { Button } from "../fragments/button/button";
-import { DateFieldValue } from "../date-picker-field/types";
 import { Popover, PopoverContent } from "../fragments/popover/popover";
 import { PopoverTrigger } from "../fragments/popover/popover";
 import { Icon } from "@/powerhouse";
 
-export interface BasePickerFieldProps extends FieldCommonProps<DateFieldValue> {
+export interface BasePickerFieldProps extends FieldCommonProps<string> {
   id?: string;
   name: string;
   disabled?: boolean;
   required?: boolean;
   iconName: IconName;
   placeholder?: string;
-  value?: DateFieldValue;
+  value?: string;
+  defaultValue?: string;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -36,6 +36,7 @@ export const BasePickerField = React.forwardRef<
       placeholder,
       children,
       value,
+      defaultValue,
       isOpen,
       setIsOpen,
       onInputChange,
@@ -96,14 +97,9 @@ export const BasePickerField = React.forwardRef<
           <Input
             id={id}
             name={name}
-            value={
-              value && typeof value === "string"
-                ? value
-                : typeof value === "object"
-                  ? value?.toISOString()
-                  : ""
-            }
+            value={value}
             onChange={onInputChange}
+            defaultValue={defaultValue}
             className={cn(
               "w-full rounded-l-none border-none text-right placeholder:text-right",
               // focus
