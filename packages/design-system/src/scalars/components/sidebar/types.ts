@@ -1,7 +1,9 @@
+import { IconName } from "@/powerhouse";
+
 export type SidebarNode = {
   title: string;
   id: string;
   children?: SidebarNode[];
-  icon?: string;
-  expanded?: boolean;
+  icon?: IconName;
+  expandedIcon?: IconName;
 };

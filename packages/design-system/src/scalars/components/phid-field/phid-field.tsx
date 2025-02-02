@@ -97,6 +97,8 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       autoComplete,
       defaultValue,
       value,
+      allowedScopes,
+      allowedDocumentTypes,
       onChange,
       onBlur,
     });
@@ -152,7 +154,8 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                     onClick={(e) => {
                       const input = e.target as HTMLInputElement;
                       if (
-                        !options.some((opt) => opt.phid === input.value) &&
+                        !(haveFetchError && options.length === 0) &&
+                        !selectedOption &&
                         input.value !== ""
                       ) {
                         handleOpenChange(true);
