@@ -2,10 +2,7 @@
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId } from "react";
-import { Command as CommandPrimitive } from "cmdk";
-import { Icon } from "@/powerhouse/components/icon";
 import { Command } from "@/scalars/components/fragments/command";
-import { Input } from "@/scalars/components/fragments/input";
 import {
   Popover,
   PopoverContent,
@@ -13,10 +10,6 @@ import {
 } from "@/scalars/components/fragments/popover";
 import { FormGroup } from "@/scalars/components/fragments/form-group";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
-import {
-  Tooltip,
-  TooltipProvider,
-} from "@/scalars/components/fragments/tooltip";
 import { FormDescription } from "@/scalars/components/fragments/form-description";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
@@ -27,6 +20,7 @@ import type {
 } from "@/scalars/components/types";
 import type { PHIDProps } from "./types";
 import { usePHIDField } from "./use-phid-field";
+import { PHIDInputContainer } from "./phid-input-container";
 import { PHIDList } from "./phid-list";
 import { PHIDListItem } from "./phid-list-item";
 
@@ -61,6 +55,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onChange,
       onBlur,
       onClick,
+      onMouseDown,
       defaultBranch = "main",
       defaultScope = "public",
       allowedScopes,
@@ -86,6 +81,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       commandListRef,
       options,
       isLoading,
+      isLoadingSelectedOption,
       haveFetchError,
       commandValue,
       toggleOption,
@@ -93,6 +89,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onTriggerBlur,
       handleChange,
       handleCommandValue,
+      handleFetchSelectedOption,
     } = usePHIDField({
       autoComplete,
       defaultValue,
@@ -136,77 +133,42 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             )}
           >
             <PopoverAnchor asChild={true}>
-              <div className="relative">
-                <CommandPrimitive.Input asChild>
-                  <Input
-                    id={id}
-                    name={name}
-                    value={selectedValue}
-                    className={cn(
-                      asCard &&
-                        "rounded-b-none border-b-0 focus-visible:ring-0",
-                      haveFetchError && "pr-9",
-                      className,
-                    )}
-                    disabled={disabled}
-                    onChange={handleChange}
-                    onBlur={onTriggerBlur}
-                    onClick={(e) => {
-                      const input = e.target as HTMLInputElement;
-                      if (
-                        !(haveFetchError && options.length === 0) &&
-                        !selectedOption &&
-                        input.value !== ""
-                      ) {
-                        handleOpenChange(true);
-                      }
-                      onClick?.(e);
-                    }}
-                    onMouseDown={(e) => {
-                      const input = e.target as HTMLInputElement;
-                      if (!input.contains(document.activeElement)) {
-                        // wait for the next tick to ensure the focus occurs first
-                        requestAnimationFrame(() => {
-                          input.select();
-                        });
-                      }
-                    }}
-                    placeholder={placeholder}
-                    aria-invalid={hasError}
-                    aria-label={!label ? "PHID field" : undefined}
-                    aria-required={required}
-                    aria-expanded={isPopoverOpen}
-                    {...props}
-                    ref={ref}
-                  />
-                </CommandPrimitive.Input>
-                {haveFetchError && (
-                  <div
-                    className={cn(
-                      "absolute right-3 top-1/2 flex -translate-y-1/2 items-center",
-                    )}
-                  >
-                    <TooltipProvider>
-                      <Tooltip content="Network error">
-                        <Icon
-                          name="Error"
-                          size={16}
-                          className={cn("text-red-900")}
-                        />
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                )}
-              </div>
+              <PHIDInputContainer
+                id={id}
+                name={name}
+                value={selectedValue}
+                className={className}
+                asCard={asCard}
+                isLoading={isLoading}
+                haveFetchError={haveFetchError}
+                disabled={disabled}
+                onChange={handleChange}
+                onBlur={onTriggerBlur}
+                onClick={onClick}
+                options={options}
+                selectedOption={selectedOption}
+                handleOpenChange={handleOpenChange}
+                onMouseDown={onMouseDown}
+                placeholder={placeholder}
+                hasError={hasError}
+                label={label}
+                required={required}
+                isPopoverOpen={isPopoverOpen}
+                {...props}
+                ref={ref}
+              />
             </PopoverAnchor>
             {asCard && (
               <PHIDListItem
                 variant={variant}
                 title={selectedOption?.title}
                 path={selectedOption?.path}
-                phid=""
+                phid={selectedOption?.phid ?? ""}
                 description={selectedOption?.description}
                 asPlaceholder={selectedOption === undefined}
+                showPHID={false}
+                isLoadingSelectedOption={isLoadingSelectedOption}
+                handleFetchSelectedOption={handleFetchSelectedOption}
                 className={cn(
                   "rounded-t-none border border-gray-300 border-t-transparent bg-gray-100 pt-2",
                   "dark:border-charcoal-700 dark:border-t-transparent dark:bg-slate-600",

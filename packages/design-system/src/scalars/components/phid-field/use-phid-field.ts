@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDebounceCallback } from "usehooks-ts";
 import type { PHIDProps, PHIDListItemProps } from "./types";
-import { fetchPHIDOptions } from "./utils";
+import { fetchPHIDOptions, fetchSelectedOption } from "./utils";
 
 interface UsePHIDFieldProps {
   autoComplete: PHIDProps["autoComplete"];
@@ -23,12 +23,14 @@ export function usePHIDField({
   onBlur,
 }: UsePHIDFieldProps) {
   const isInternalChange = useRef(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const optionsAbortControllerRef = useRef<AbortController | null>(null);
+  const selectedOptionAbortControllerRef = useRef<AbortController | null>(null);
   const commandListRef = useRef<HTMLDivElement>(null);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [options, setOptions] = useState<PHIDListItemProps[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSelectedOption, setIsLoadingSelectedOption] = useState(false);
   const [haveFetchError, setHaveFetchError] = useState(false);
   const [selectedValue, setSelectedValue] = useState(
     value ?? defaultValue ?? "",
@@ -37,12 +39,14 @@ export function usePHIDField({
   const [haveBeenOpened, setHaveBeenOpened] = useState(false);
 
   const clear = useCallback(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
+    optionsAbortControllerRef.current?.abort();
+    selectedOptionAbortControllerRef.current?.abort();
+    optionsAbortControllerRef.current = null;
+    selectedOptionAbortControllerRef.current = null;
     setHaveFetchError(false);
     setIsLoading(false);
+    setIsLoadingSelectedOption(false);
     setIsPopoverOpen(false);
-    setOptions([]);
   }, []);
 
   const debouncedFetchOptions = useDebounceCallback(
@@ -50,28 +54,30 @@ export function usePHIDField({
       async (newValue: string) => {
         if (newValue === "") {
           clear();
+          setOptions([]);
+          setSelectedValue("");
           return;
         }
 
-        abortControllerRef.current?.abort();
+        optionsAbortControllerRef.current?.abort();
         const controller = new AbortController();
-        abortControllerRef.current = controller;
+        optionsAbortControllerRef.current = controller;
 
         setHaveFetchError(false);
         setIsLoading(true);
 
         try {
-          // Simulate 30% chance of error
-          if (Math.random() < 0.3) {
-            throw new Error("Simulated error");
-          }
-
           const newOptions = await fetchPHIDOptions({
             phidFragment: newValue,
             allowedScopes,
             allowedDocumentTypes,
             signal: controller.signal,
           });
+
+          // Simulate 30% chance of error
+          if (Math.random() < 0.3) {
+            throw new Error("Simulated error");
+          }
 
           if (!controller.signal.aborted) {
             setOptions(newOptions);
@@ -92,8 +98,52 @@ export function usePHIDField({
           }
         }
       },
-      [clear],
+      [clear, allowedScopes, allowedDocumentTypes],
     ),
+  );
+
+  const handleFetchSelectedOption = useCallback(
+    async (phid: string) => {
+      selectedOptionAbortControllerRef.current?.abort();
+      const controller = new AbortController();
+      selectedOptionAbortControllerRef.current = controller;
+
+      setIsLoadingSelectedOption(true);
+
+      try {
+        const selectedOption = await fetchSelectedOption({
+          phid,
+          signal: controller.signal,
+        });
+
+        if (!controller.signal.aborted) {
+          if (selectedOption) {
+            setOptions((prevOptions) => {
+              const optionIndex = prevOptions.findIndex(
+                (opt) => opt.phid === phid,
+              );
+              if (optionIndex !== -1) {
+                const newOptions = [...prevOptions];
+                newOptions[optionIndex] = selectedOption;
+                return newOptions;
+              }
+              return prevOptions;
+            });
+          } else {
+            clear();
+            setOptions([]);
+            setSelectedValue("");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch selected option: ", error);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingSelectedOption(false);
+        }
+      }
+    },
+    [clear],
   );
 
   const handleOpenChange = useCallback(
@@ -110,10 +160,10 @@ export function usePHIDField({
     (optionValue: string) => {
       isInternalChange.current = true;
       setSelectedValue(optionValue);
-      setIsPopoverOpen(false);
+      clear();
       onChange?.(optionValue);
     },
-    [onChange],
+    [onChange, clear],
   );
 
   const handleChange = useCallback(
@@ -139,15 +189,24 @@ export function usePHIDField({
   );
 
   useEffect(() => {
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
     if (autoComplete) {
-      void debouncedFetchOptions(selectedValue);
+      debouncedFetchOptions(selectedValue)?.catch((error) => {
+        console.error("Failed to fetch options: ", error);
+      });
     } else {
       clear();
+      setOptions([]);
+      setSelectedValue("");
     }
   }, [autoComplete, selectedValue, debouncedFetchOptions, clear]);
 
   useEffect(() => {
     if (isInternalChange.current) {
+      console.log("isInternalChange.current", isInternalChange.current);
       isInternalChange.current = false;
       return;
     }
@@ -166,7 +225,8 @@ export function usePHIDField({
 
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      optionsAbortControllerRef.current?.abort();
+      selectedOptionAbortControllerRef.current?.abort();
     };
   }, []);
 
@@ -176,6 +236,7 @@ export function usePHIDField({
     commandListRef,
     options,
     isLoading,
+    isLoadingSelectedOption,
     haveFetchError,
     commandValue,
     toggleOption,
@@ -183,5 +244,6 @@ export function usePHIDField({
     onTriggerBlur,
     handleChange,
     handleCommandValue,
+    handleFetchSelectedOption,
   };
 }
