@@ -206,7 +206,6 @@ export function usePHIDField({
 
   useEffect(() => {
     if (isInternalChange.current) {
-      console.log("isInternalChange.current", isInternalChange.current);
       isInternalChange.current = false;
       return;
     }
