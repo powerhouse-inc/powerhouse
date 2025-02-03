@@ -24,5 +24,4 @@ export interface PHIDListItemProps {
   path?: string;
   phid: string;
   description?: string;
-  asPlaceholder?: boolean;
 }

@@ -3,7 +3,9 @@ import { withForm } from "@/scalars/lib/decorators";
 import { Command } from "@/scalars/components/fragments/command";
 import { cn } from "@/scalars/lib/utils";
 import { PHIDField } from "./phid-field";
+import { PHIDInputContainer } from "./phid-input-container";
 import { PHIDList } from "./phid-list";
+import { PHIDListItem } from "./phid-list-item";
 import { mockedOptions } from "./utils";
 import {
   getDefaultArgTypes,
@@ -169,6 +171,60 @@ export const PopoverOpenWithNoResults: Story = {
         >
           <PHIDList variant={args.variant} options={[]} />
         </div>
+      </Command>
+    );
+  },
+};
+
+export const Filled: Story = {
+  args: {
+    variant: "withIdTitleAndDescription",
+  },
+  render: function Wrapper(args) {
+    const asCard =
+      args.variant === "withIdAndTitle" ||
+      args.variant === "withIdTitleAndDescription";
+    return (
+      <Command
+        shouldFilter={false}
+        className={cn(
+          asCard && [
+            "group rounded-md",
+            "dark:focus-within:ring-charcoal-300 focus-within:ring-1 focus-within:ring-gray-900 focus-within:ring-offset-0",
+          ],
+        )}
+      >
+        <PHIDInputContainer
+          id="phid-field"
+          name="phid-field"
+          value={mockedOptions[0].phid}
+          asCard={asCard}
+          isLoading={false}
+          haveFetchError={false}
+          options={[]}
+          selectedOption={mockedOptions[0]}
+          handleOpenChange={() => {}}
+          placeholder="phd:"
+          hasError={false}
+          label="PHID field"
+          isPopoverOpen={false}
+        />
+        {asCard && (
+          <PHIDListItem
+            variant={args.variant}
+            title={mockedOptions[0].title}
+            path={mockedOptions[0].path}
+            phid={mockedOptions[0].phid}
+            description={mockedOptions[0].description}
+            asPlaceholder={false}
+            showPHID={false}
+            className={cn(
+              "rounded-t-none border border-gray-300 border-t-transparent bg-gray-100 pt-2",
+              "dark:border-charcoal-700 dark:border-t-transparent dark:bg-slate-600",
+              "dark:group-focus-within:border-t-charcoal-700 group-focus-within:border-t-gray-300",
+            )}
+          />
+        )}
       </Command>
     );
   },
