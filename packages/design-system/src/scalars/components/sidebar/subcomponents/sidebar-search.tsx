@@ -44,9 +44,11 @@ export const SidebarSearch = () => {
     <div className="w-full border-t border-gray-300 p-2 dark:border-gray-800">
       <div className="relative">
         <Input
+          type="search"
           value={searchTerm}
           onChange={handleSearchTermChange}
           onKeyDown={handleKeyDown}
+          tabIndex={1}
           placeholder="Search"
           className="w-full pl-8"
           style={{

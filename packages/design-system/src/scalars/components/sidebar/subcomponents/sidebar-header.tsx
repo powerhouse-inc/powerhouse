@@ -41,6 +41,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                 // eslint-disable-next-line react/no-array-index-key
                 key={`macro-${index}`}
                 role="button"
+                tabIndex={2}
                 className={cn(
                   "w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200",
                   !isDisabled &&

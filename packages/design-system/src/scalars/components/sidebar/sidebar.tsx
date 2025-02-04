@@ -57,6 +57,10 @@ export interface SidebarProps {
    * An optional icon that can be displayed next to the sidebar title or at the top of the sidebar.
    */
   sidebarIcon?: React.ReactNode;
+  /**
+   * An optional footer content that can be displayed at the bottom of the sidebar.
+   */
+  extraFooterContent?: React.ReactNode;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -70,6 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   allowPinning = true,
   resizable = true,
   showSearchBar = true,
+  extraFooterContent,
 }) => {
   const {
     sidebarRef,
@@ -117,8 +122,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       ref={sidebarRef}
+      style={{ width: "min(100%, var(--sidebar-width))" }}
       className={cn(
-        "group peer relative flex h-svh max-h-screen w-[--sidebar-width] flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600",
+        "group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600",
         isResizing && "transition-none",
       )}
     >
@@ -132,6 +138,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {allowPinning && pinnedItems.length > 0 && <SidebarPinningArea />}
           <SidebarContentArea allowPinning={allowPinning} />
+          {extraFooterContent && (
+            <div className="w-full border-t border-gray-300 p-2 dark:border-gray-800">
+              {extraFooterContent}
+            </div>
+          )}
           {showSearchBar && <SidebarSearch />}
         </>
       )}
