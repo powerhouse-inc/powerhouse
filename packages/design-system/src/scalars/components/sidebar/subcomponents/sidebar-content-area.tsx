@@ -25,8 +25,6 @@ export const SidebarContentArea = ({
     activeNodeId,
     onActiveNodeChange,
   } = useSidebar();
-  // TODO: is the content area ref needed?
-  const contentAreaRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<List>(null);
   const hasPinnedItems = allowPinning && pinnedNodePath.length > 0;
 
@@ -74,7 +72,6 @@ export const SidebarContentArea = ({
 
   return (
     <div
-      ref={contentAreaRef}
       className={cn(
         "flex flex-1 flex-col gap-1 overflow-y-auto",
         hasPinnedItems && "pt-0.5",

@@ -37,8 +37,9 @@ export const SidebarItem = ({
   const paddingLeft = node.depth * 24;
   const isSearchActive =
     searchResults.length > 0 && searchResults[activeSearchIndex].id === node.id;
-  // const iconName = node.isExpanded ? (node.expandedIcon ?? node.icon) : node.icon;
-  const iconName = "File";
+  const iconName = node.isExpanded
+    ? (node.expandedIcon ?? node.icon)
+    : node.icon;
 
   const handleClick = useCallback(() => {
     onChange?.(node.id);
