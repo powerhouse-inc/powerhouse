@@ -10,7 +10,6 @@ import { FormMessageList } from "../fragments/form-message";
 import { FormDescription } from "../fragments/form-description";
 import { Calendar } from "../fragments/calendar/calendar";
 import { cn } from "@/scalars/lib/utils";
-import { format } from "date-fns";
 import { useDatePickerField } from "./use-date-picker-field";
 
 export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
