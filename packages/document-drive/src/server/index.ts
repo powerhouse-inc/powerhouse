@@ -76,6 +76,7 @@ import {
   ITransmitter,
   PullResponderTransmitter,
   StrandUpdateSource,
+  SwitchboardPushTransmitter,
 } from "./listener/transmitter";
 import {
   AbstractDocumentDriveServer,
@@ -87,6 +88,7 @@ import {
   GetStrandsOptions,
   IBaseDocumentDriveServer,
   IOperationResult,
+  Listener,
   ListenerState,
   RemoteDriveAccessLevel,
   RemoteDriveOptions,
@@ -627,6 +629,24 @@ export class BaseDocumentDriveServer
     return errors.length === 0 ? null : errors;
   }
 
+  private newTransmitter(transmitterType: string, listener: Listener) {
+    switch (listener.callInfo?.transmitterType) {
+      case "SwitchboardPush": {
+        return new SwitchboardPushTransmitter(listener, this);
+      }
+      case "Internal": {
+        return new InternalTransmitter(listener, this);
+      }
+      default: {
+        return new PullResponderTransmitter(
+          listener,
+          this,
+          this.listenerStateManager,
+        );
+      }
+    }
+  }
+
   private async _initializeDrive(driveId: string) {
     const drive = await this.getDrive(driveId);
     await this.initializeDriveSyncStatus(driveId, drive);
@@ -635,21 +655,29 @@ export class BaseDocumentDriveServer
       await this.startSyncRemoteDrive(driveId);
     }
 
-    for (const listener of drive.state.local.listeners) {
-      await this.listenerStateManager.addListener({
-        block: listener.block,
-        driveId: drive.state.global.id,
-        filter: {
-          branch: listener.filter.branch ?? [],
-          documentId: listener.filter.documentId ?? [],
-          documentType: listener.filter.documentType,
-          scope: listener.filter.scope ?? [],
+    for (const zodListener of drive.state.local.listeners) {
+      const transmitter = this.newTransmitter(
+        zodListener.callInfo?.transmitterType ?? "",
+        zodListener as any,
+      );
+
+      await this.listenerStateManager.addListener(
+        {
+          block: zodListener.block,
+          driveId: drive.state.global.id,
+          filter: {
+            branch: zodListener.filter.branch ?? [],
+            documentId: zodListener.filter.documentId ?? [],
+            documentType: zodListener.filter.documentType,
+            scope: zodListener.filter.scope ?? [],
+          },
+          listenerId: zodListener.listenerId,
+          system: zodListener.system,
+          callInfo: zodListener.callInfo ?? undefined,
+          label: zodListener.label ?? "",
         },
-        listenerId: listener.listenerId,
-        system: listener.system,
-        callInfo: listener.callInfo ?? undefined,
-        label: listener.label ?? "",
-      });
+        transmitter,
+      );
     }
   }
 
@@ -2280,24 +2308,34 @@ export class BaseDocumentDriveServer
     driveId: string,
     operation: Operation<Action<"ADD_LISTENER", AddListenerInput>>,
   ) {
-    const { listener } = operation.input;
-    await this.listenerStateManager.addListener({
-      ...listener,
-      driveId,
-      label: listener.label ?? "",
-      system: listener.system ?? false,
-      filter: {
-        branch: listener.filter.branch ?? [],
-        documentId: listener.filter.documentId ?? [],
-        documentType: listener.filter.documentType ?? [],
-        scope: listener.filter.scope ?? [],
+    const { listener: zodListener } = operation.input;
+
+    const transmitter = this.newTransmitter(
+      zodListener.callInfo?.transmitterType ?? "",
+      zodListener as any,
+    );
+
+    await this.listenerStateManager.addListener(
+      {
+        ...zodListener,
+        driveId,
+        label: zodListener.label ?? "",
+        system: zodListener.system ?? false,
+        filter: {
+          branch: zodListener.filter.branch ?? [],
+          documentId: zodListener.filter.documentId ?? [],
+          documentType: zodListener.filter.documentType ?? [],
+          scope: zodListener.filter.scope ?? [],
+        },
+        callInfo: {
+          data: zodListener.callInfo?.data ?? "",
+          name: zodListener.callInfo?.name ?? "PullResponder",
+          transmitterType:
+            zodListener.callInfo?.transmitterType ?? "PullResponder",
+        },
       },
-      callInfo: {
-        data: listener.callInfo?.data ?? "",
-        name: listener.callInfo?.name ?? "PullResponder",
-        transmitterType: listener.callInfo?.transmitterType ?? "PullResponder",
-      },
-    });
+      transmitter,
+    );
   }
 
   private async removeListener(
