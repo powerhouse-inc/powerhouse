@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
 import { SidebarHeader } from "./subcomponents/sidebar-header";
 import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
 import { SidebarSearch } from "./subcomponents/sidebar-search";
 import { SidebarNode } from "./types";
 import { useSidebar } from "./subcomponents/sidebar-provider";
 import { useSidebarResize } from "./use-sidebar-resize";
+import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
+import { useEffect } from "react";
 import { cn } from "@/scalars/lib";
 import { Icon } from "@/powerhouse";
 
@@ -88,19 +88,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   const {
-    state: { pinnedItems },
-    setItems,
-    setActiveNodeId,
-    setActiveNodeChangeCallback,
+    pinnedNodePath,
+    setNodes,
     openLevel,
+    syncActiveNodeId,
+    setActiveNodeChangeCallback,
   } = useSidebar();
 
   // sync param nodes with provider state if provided
   useEffect(() => {
     if (nodes) {
-      setItems(nodes);
+      setNodes(nodes);
     }
-  }, [nodes, setItems]);
+  }, [nodes, setNodes]);
 
   // open levels on mount
   useEffect(() => {
@@ -111,8 +111,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // sync activeNodeId and onActiveNodeChange with provider state
   useEffect(() => {
-    setActiveNodeId(activeNodeId);
-  }, [activeNodeId, setActiveNodeId]);
+    syncActiveNodeId(activeNodeId);
+  }, [activeNodeId, syncActiveNodeId]);
   useEffect(() => {
     if (onActiveNodeChange) {
       setActiveNodeChangeCallback(onActiveNodeChange);
@@ -136,14 +136,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             enableMacros={enableMacros}
           />
 
-          {allowPinning && pinnedItems.length > 0 && <SidebarPinningArea />}
+          {allowPinning && pinnedNodePath.length > 0 && <SidebarPinningArea />}
           <SidebarContentArea allowPinning={allowPinning} />
+          {showSearchBar && <SidebarSearch />}
           {extraFooterContent && (
             <div className="w-full border-t border-gray-300 p-2 dark:border-gray-800">
               {extraFooterContent}
             </div>
           )}
-          {showSearchBar && <SidebarSearch />}
         </>
       )}
 

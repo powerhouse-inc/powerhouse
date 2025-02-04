@@ -7,3 +7,8 @@ export type SidebarNode = {
   icon?: IconName;
   expandedIcon?: IconName;
 };
+
+export interface FlattenedNode extends SidebarNode {
+  depth: number;
+  isExpanded: boolean;
+}
