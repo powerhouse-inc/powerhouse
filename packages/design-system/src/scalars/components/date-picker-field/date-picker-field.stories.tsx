@@ -45,3 +45,11 @@ export const Disabled: Story = {
     disabled: true,
   },
 };
+
+export const Filled: Story = {
+  args: {
+    name: "date",
+    label: "Pick a date",
+    value: "2025/01/27",
+  },
+};
