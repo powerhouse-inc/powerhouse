@@ -32,8 +32,7 @@
     "lint:nx": "eslint . --fix --quiet",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
-    "test:watch": "vitest watch",
-    "test:watch-me": "vitest watch test/queue.test.ts",
+    "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "migrate": "prisma generate && prisma db push"
