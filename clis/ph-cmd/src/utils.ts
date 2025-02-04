@@ -11,8 +11,13 @@ export const PH_CLI_COMMANDS = [
   "connect",
   "generate",
   "reactor",
+  "switchboard",
   "help",
   "install",
+  "add",
+  "i",
+  "remove",
+  "uninstall",
   "service",
 ];
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
