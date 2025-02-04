@@ -544,7 +544,6 @@ export type IDocumentDriveServer = IBaseDocumentDriveServer &
   IReadModeDriveServer;
 
 export interface IListenerManager {
-  initDrive(drive: DocumentDriveDocument): Promise<void>;
   removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
   addListener(listener: Listener): Promise<ITransmitter>;
