@@ -187,18 +187,12 @@ export const Filled: Story = {
     return (
       <Command
         shouldFilter={false}
-        className={cn(
-          asCard && [
-            "group rounded-md",
-            "dark:focus-within:ring-charcoal-300 focus-within:ring-1 focus-within:ring-gray-900 focus-within:ring-offset-0",
-          ],
-        )}
+        className={cn("dark:bg-charcoal-900 rounded-md bg-white")}
       >
         <PHIDInputContainer
           id="phid-field"
           name="phid-field"
           value={mockedOptions[0].phid}
-          asCard={asCard}
           isLoading={false}
           haveFetchError={false}
           options={[]}
@@ -208,6 +202,7 @@ export const Filled: Story = {
           hasError={false}
           label="PHID field"
           isPopoverOpen={false}
+          autoComplete={true}
         />
         {asCard && (
           <PHIDListItem
@@ -218,11 +213,7 @@ export const Filled: Story = {
             description={mockedOptions[0].description}
             asPlaceholder={false}
             showPHID={false}
-            className={cn(
-              "rounded-t-none border border-gray-300 border-t-transparent bg-gray-100 pt-2",
-              "dark:border-charcoal-700 dark:border-t-transparent dark:bg-slate-600",
-              "dark:group-focus-within:border-t-charcoal-700 group-focus-within:border-t-gray-300",
-            )}
+            className={cn("dark:bg-charcoal-900 rounded-t-none bg-white pt-2")}
           />
         )}
       </Command>

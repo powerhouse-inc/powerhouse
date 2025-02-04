@@ -14,7 +14,7 @@ const ReloadButton: React.FC<{
       disabled={isLoadingSelectedOption}
       onClick={() => {
         if (!isLoadingSelectedOption) {
-          handleFetchSelectedOption?.(phid);
+          void handleFetchSelectedOption?.(phid);
         }
       }}
       className={cn(
@@ -75,6 +75,7 @@ export const PHIDListItem: React.FC<
           name="PowerhouseLogoSmall"
           size={24}
           className={cn(
+            "shrink-0",
             asPlaceholder
               ? "text-gray-400 dark:text-gray-700"
               : "text-gray-900 dark:text-gray-300",
@@ -82,7 +83,7 @@ export const PHIDListItem: React.FC<
         />
         <span
           className={cn(
-            "grow text-sm font-bold leading-5",
+            "grow truncate text-sm font-bold leading-5",
             asPlaceholder
               ? "text-gray-400 dark:text-gray-700"
               : "text-gray-900 dark:text-gray-300",
@@ -119,15 +120,16 @@ export const PHIDListItem: React.FC<
           name="PowerhouseLogoSmall"
           size={24}
           className={cn(
+            "shrink-0",
             asPlaceholder
               ? "text-gray-400 dark:text-gray-700"
               : "text-gray-900 dark:text-gray-300",
           )}
         />
-        <div className={cn("flex grow flex-col gap-[-2px]")}>
+        <div className={cn("flex min-w-0 grow flex-col gap-[-2px]")}>
           <span
             className={cn(
-              "text-sm font-bold leading-5",
+              "truncate text-sm font-bold leading-5",
               asPlaceholder
                 ? "text-gray-400 dark:text-gray-700"
                 : "text-gray-900 dark:text-gray-300",
@@ -137,7 +139,7 @@ export const PHIDListItem: React.FC<
           </span>
           <span
             className={cn(
-              "text-xs leading-5",
+              "truncate text-xs leading-5",
               asPlaceholder
                 ? "text-gray-400 dark:text-gray-700"
                 : "text-gray-500 dark:text-gray-600",
@@ -168,7 +170,7 @@ export const PHIDListItem: React.FC<
       <div className={cn("flex flex-col")}>
         <p
           className={cn(
-            "text-xs leading-5",
+            "line-clamp-2 text-xs leading-5",
             asPlaceholder
               ? "text-gray-400 dark:text-gray-700"
               : "text-gray-900 dark:text-gray-300",
