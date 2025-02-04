@@ -13,15 +13,15 @@ import {
   ListenerFilter,
   TransmitterType,
 } from "document-model-libs/document-drive";
-import { Asset } from "./temp-hack-rwa-type-defs";
 import { BaseAction, Document, Operation } from "document-model/document";
 import {
   DocumentModelInput,
   DocumentModelState,
 } from "document-model/document-model";
 import { gql } from "graphql-tag";
-import { Context } from "../types";
 import { Subgraph } from "../base";
+import { Context } from "../types";
+import { Asset } from "./temp-hack-rwa-type-defs";
 
 export class DriveSubgraph extends Subgraph {
   name = "d/:drive";

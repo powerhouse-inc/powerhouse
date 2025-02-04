@@ -1,5 +1,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
+export type PowerhousePackage = {
+  packageName: string;
+};
+
 export type PowerhouseConfig = {
   documentModelsDir: string;
   editorsDir: string;
@@ -18,9 +22,7 @@ export type PowerhouseConfig = {
     https: boolean;
     openBrowser?: boolean;
   };
-  packages?: {
-    packageName: string;
-  }[];
+  packages?: PowerhousePackage[];
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
