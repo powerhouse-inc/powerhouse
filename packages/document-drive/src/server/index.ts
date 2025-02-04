@@ -635,7 +635,22 @@ export class BaseDocumentDriveServer
       await this.startSyncRemoteDrive(driveId);
     }
 
-    await this.listenerStateManager.initDrive(drive);
+    for (const listener of drive.state.local.listeners) {
+      await this.listenerStateManager.addListener({
+        block: listener.block,
+        driveId: drive.state.global.id,
+        filter: {
+          branch: listener.filter.branch ?? [],
+          documentId: listener.filter.documentId ?? [],
+          documentType: listener.filter.documentType,
+          scope: listener.filter.scope ?? [],
+        },
+        listenerId: listener.listenerId,
+        system: listener.system,
+        callInfo: listener.callInfo ?? undefined,
+        label: listener.label ?? "",
+      });
+    }
   }
 
   public async getSynchronizationUnits(

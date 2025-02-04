@@ -430,31 +430,6 @@ export class ListenerManager implements IListenerManager {
     );
   }
 
-  async initDrive(drive: DocumentDriveDocument) {
-    const {
-      state: {
-        local: { listeners },
-      },
-    } = drive;
-
-    for (const listener of listeners) {
-      await this.addListener({
-        block: listener.block,
-        driveId: drive.state.global.id,
-        filter: {
-          branch: listener.filter.branch ?? [],
-          documentId: listener.filter.documentId ?? [],
-          documentType: listener.filter.documentType,
-          scope: listener.filter.scope ?? [],
-        },
-        listenerId: listener.listenerId,
-        system: listener.system,
-        callInfo: listener.callInfo ?? undefined,
-        label: listener.label ?? "",
-      });
-    }
-  }
-
   async removeDrive(driveId: string): Promise<void> {
     this.listenerState.delete(driveId);
     const transmitters = this.transmitters[driveId];
