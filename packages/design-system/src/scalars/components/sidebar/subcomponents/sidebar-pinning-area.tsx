@@ -1,22 +1,31 @@
 "use client";
 
-import { Item } from "./sidebar-item";
+import { SidebarItem } from "./sidebar-item";
 import { useSidebar } from "./sidebar-provider";
 
 export const SidebarPinningArea = () => {
-  const { state } = useSidebar();
+  const { pinnedNodePath, togglePin, activeNodeId, onActiveNodeChange } =
+    useSidebar();
 
   return (
     <div className="flex flex-col gap-1 border-b border-gray-300 bg-gray-100 px-2 pb-0.5 pt-2 dark:border-gray-800 dark:bg-slate-700">
-      {state.pinnedItems.map((node) => (
-        <Item
+      {pinnedNodePath.map((node, index) => (
+        <SidebarItem
           key={node.id}
-          id={node.id}
-          title={node.title}
-          pinnedMode={true}
+          node={{
+            ...node,
+            depth: 0,
+            isExpanded: false,
+          }}
+          togglePin={togglePin}
+          searchTerm={""}
+          searchResults={[]}
+          activeSearchIndex={0}
           allowPinning={true}
-          icon={node.icon}
-          expandedIcon={node.expandedIcon}
+          pinnedMode={true}
+          isPinned={index === pinnedNodePath.length - 1}
+          isActive={activeNodeId === node.id}
+          onChange={onActiveNodeChange}
         />
       ))}
     </div>

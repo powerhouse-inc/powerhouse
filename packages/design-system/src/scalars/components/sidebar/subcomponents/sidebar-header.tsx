@@ -14,10 +14,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   sidebarIcon,
   enableMacros = 0,
 }) => {
-  const {
-    openLevel,
-    state: { maxDepth },
-  } = useSidebar();
+  const { maxDepth, openLevel } = useSidebar();
   if (!sidebarTitle && !sidebarIcon && !enableMacros) {
     return null;
   }
@@ -38,7 +35,6 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
 
             return (
               <div
-                // eslint-disable-next-line react/no-array-index-key
                 key={`macro-${index}`}
                 role="button"
                 tabIndex={2}

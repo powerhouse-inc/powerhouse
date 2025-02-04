@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { SidebarItem } from "./sidebar-item";
 import { useSidebar } from "./sidebar-provider";
+import { AutoSizer, List } from "react-virtualized";
+import { SidebarItem } from "./sidebar-item";
 import { cn } from "@/scalars/lib";
 import { Icon } from "@/powerhouse";
 
@@ -13,12 +14,21 @@ interface SidebarContentAreaProps {
 export const SidebarContentArea = ({
   allowPinning,
 }: SidebarContentAreaProps) => {
-  const { state, searchResults, activeSearchIndex } = useSidebar();
+  const {
+    flattenedNodes,
+    toggleNode,
+    togglePin,
+    searchTerm,
+    searchResults,
+    activeSearchIndex,
+    pinnedNodePath,
+    activeNodeId,
+    onActiveNodeChange,
+  } = useSidebar();
+  // TODO: is the content area ref needed?
   const contentAreaRef = useRef<HTMLDivElement>(null);
-  const hasPinnedItems = state.pinnedItems.length > 0 && allowPinning;
-  const items = hasPinnedItems
-    ? (state.pinnedItems[state.pinnedItems.length - 1].children ?? [])
-    : state.items;
+  const listRef = useRef<List>(null);
+  const hasPinnedItems = allowPinning && pinnedNodePath.length > 0;
 
   // scroll into view when navigating between search results
   useEffect(() => {
@@ -27,43 +37,71 @@ export const SidebarContentArea = ({
       activeSearchIndex >= 0 &&
       activeSearchIndex < searchResults.length
     ) {
-      const node = searchResults[activeSearchIndex];
+      const { id } = searchResults[activeSearchIndex];
       // scroll into view
-      const nodeElement = document.getElementById(`sidebar-item-${node.id}`);
-      if (nodeElement && contentAreaRef.current) {
-        contentAreaRef.current.scrollTo({
-          top: nodeElement.offsetTop - contentAreaRef.current.offsetTop,
-          behavior: "smooth",
-        });
+      for (let i = 0; i < flattenedNodes.length; i++) {
+        if (flattenedNodes[i].id === id) {
+          listRef.current?.scrollToRow(i);
+        }
       }
     }
-  }, [activeSearchIndex, searchResults]);
+  }, [activeSearchIndex, flattenedNodes, searchResults]);
+
+  const renderNode = ({
+    index,
+    style,
+  }: {
+    index: number;
+    style: React.CSSProperties;
+  }) => {
+    const node = flattenedNodes[index];
+
+    return (
+      <SidebarItem
+        node={node}
+        toggleNode={toggleNode}
+        togglePin={togglePin}
+        searchTerm={searchTerm}
+        searchResults={searchResults}
+        activeSearchIndex={activeSearchIndex}
+        allowPinning={allowPinning ?? false}
+        isActive={activeNodeId === node.id}
+        onChange={onActiveNodeChange}
+        style={style}
+      />
+    );
+  };
 
   return (
     <div
       ref={contentAreaRef}
       className={cn(
-        "flex flex-1 flex-col gap-1 overflow-y-auto p-2",
+        "flex flex-1 flex-col gap-1 overflow-y-auto",
         hasPinnedItems && "pt-0.5",
+        "",
       )}
     >
-      {items.length === 0 ? (
+      {flattenedNodes.length === 0 ? (
         <div className="flex max-w-full items-center gap-2 p-2 text-sm leading-5 text-gray-400 dark:text-gray-400">
           <Icon name="TreeViewSlash" size={16} className="min-w-4" />
           <span className="truncate">This node is empty</span>
         </div>
       ) : (
-        items.map((item) => (
-          <SidebarItem
-            key={item.id}
-            id={item.id}
-            title={item.title}
-            children={item.children}
-            allowPinning={allowPinning}
-            icon={item.icon}
-            expandedIcon={item.expandedIcon}
-          />
-        ))
+        <div className="flex-1 overflow-y-hidden">
+          <AutoSizer>
+            {({ width, height }) => (
+              <List
+                ref={listRef}
+                className="p-2"
+                width={width}
+                height={height}
+                rowCount={flattenedNodes.length}
+                rowHeight={32 + 8}
+                rowRenderer={renderNode}
+              />
+            )}
+          </AutoSizer>
+        </div>
       )}
     </div>
   );
