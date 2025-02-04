@@ -1,15 +1,15 @@
-import fs from "node:fs";
-import { execSync } from "node:child_process";
 import { Command } from "commander";
+import { execSync } from "node:child_process";
+import fs from "node:fs";
 
 import { CommandActionType } from "../types.js";
 import {
-  getProjectInfo,
   getPackageManagerFromLockfile,
+  getProjectInfo,
   PackageManager,
   packageManagers,
-  updateConfigFile,
   SUPPORTED_PACKAGE_MANAGERS,
+  updateConfigFile,
 } from "../utils.js";
 
 export function uninstallDependency(
@@ -121,7 +121,8 @@ export const uninstall: CommandActionType<
 
 export function uninstallCommand(program: Command) {
   program
-    .command("remove")
+    .command("uninstall")
+    .alias("remove")
     .description("Uninstall a powerhouse dependency")
     .argument("[dependencies...]", "Names of the dependencies to remove")
     .option("-g, --global", "Remove the dependency globally")

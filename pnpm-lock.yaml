@@ -625,8 +625,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/config
       '@powerhousedao/connect':
-        specifier: 1.0.0-dev.195
-        version: 1.0.0-dev.195(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.12.0)(document-model-libs@packages+document-model-libs)(terser@5.37.0)
+        specifier: workspace:*
+        version: link:../../apps/connect
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
@@ -1512,6 +1512,9 @@ importers:
       '@powerhousedao/analytics-engine-graphql':
         specifier: ^0.2.2
         version: 0.2.2
+      '@powerhousedao/config':
+        specifier: workspace:*
+        version: link:../config
       '@types/body-parser':
         specifier: ^1.19.5
         version: 1.19.5
@@ -5018,15 +5021,6 @@ packages:
 
   '@powerhousedao/analytics-engine-pg@0.4.0':
     resolution: {integrity: sha512-Io/8qZU1jBuCNJoD9zaekT8Vesy7nhGIAiqQCal1O31cs3zkn62/vUjbtwMFSvEPMKFF8xeod8jkBJ3c7DWTaA==}
-
-  '@powerhousedao/connect@1.0.0-dev.195':
-    resolution: {integrity: sha512-oSUh06jINOek3te+8aQyW6fAb0tfCM/esqA1BmFIaS99oVJNstRnsND1IK+13wsZhNKhrxbxyoEJxN3mc2GqTw==}
-    engines: {node: '>=18.0.0'}
-    hasBin: true
-    peerDependencies:
-      '@powerhousedao/design-system': ^1.22.0
-      '@powerhousedao/scalars': ^1.20.0
-      document-model-libs: ^1.128.0
 
   '@preact/preset-vite@2.10.0':
     resolution: {integrity: sha512-U49rFSfF5h4rL1IYSmtiCe+lHDave9es3JzVnCMKoKF5ZW3Adua34/pkU2bT5vKQ02ek142RUjTwLhwLSgFp6g==}
@@ -20852,28 +20846,6 @@ snapshots:
       - sqlite3
       - supports-color
       - tedious
-
-  '@powerhousedao/connect@1.0.0-dev.195(@powerhousedao/design-system@packages+design-system)(@powerhousedao/scalars@packages+scalars)(@types/node@22.12.0)(document-model-libs@packages+document-model-libs)(terser@5.37.0)':
-    dependencies:
-      '@powerhousedao/design-system': link:packages/design-system
-      '@powerhousedao/scalars': link:packages/scalars
-      '@vitejs/plugin-basic-ssl': 1.2.0(vite@5.4.14(@types/node@22.12.0)(terser@5.37.0))
-      commander: 12.1.0
-      document-model-libs: link:packages/document-model-libs
-      vite: 5.4.14(@types/node@22.12.0)(terser@5.37.0)
-      vite-envs: 4.4.11
-    optionalDependencies:
-      '@esbuild/linux-x64': 0.21.5
-      '@rollup/rollup-linux-x64-musl': 4.14.3
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - terser
 
   '@preact/preset-vite@2.10.0(@babel/core@7.26.7)(preact@10.25.4)(vite@5.4.14(@types/node@22.12.0)(terser@5.37.0))':
     dependencies:

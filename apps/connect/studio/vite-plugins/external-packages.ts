@@ -54,15 +54,8 @@ export const viteLoadExternalPackages = (
         hmr && {
             name: 'vite-plugin-studio-external-packages',
             handleHotUpdate({ file, server, modules }) {
-                console.log(
-                    `[HMR] File changed: ${file}`,
-                    modules.map(m => m.id),
-                );
-
                 if (file.endsWith('powerhouse.config.json')) {
-                    console.log(
-                        'External packages file changed, triggering reload...',
-                    );
+                    console.log('External packages file changed, reloading...');
                     const config = getConfig();
                     generateImportScript(
                         config.packages?.map(p => p.packageName) ?? [],
@@ -71,18 +64,10 @@ export const viteLoadExternalPackages = (
                         server.moduleGraph.getModuleById(IMPORT_SCRIPT_FILE);
 
                     if (module) {
-                        // server.ws.send({ type: 'full-reload' });
                         server.moduleGraph.invalidateModule(module);
                         return [module].concat(...module.importers.values());
-                        // module.importers.forEach(importer => {
-                        //     console.log('Invalidating', importer.id);
-                        //     server.moduleGraph.invalidateModule(importer);
-                        // });
-                        // server.moduleGraph.invalidateModule(module);
                     }
-                    // return [module, module?.importers]; // Returning an empty array prevents HMR for this file
                 } else if (file === IMPORT_SCRIPT_FILE) {
-                    console.log('Ignore HMR', IMPORT_SCRIPT_FILE);
                     modules
                         .filter(module => module.id === IMPORT_SCRIPT_FILE)
                         .forEach(module => {
