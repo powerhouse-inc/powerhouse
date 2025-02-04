@@ -1,10 +1,10 @@
 import type { ExtendedEditor } from 'document-model-libs';
-import { useAtomValue } from 'jotai';
+import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
 import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
 import { DocumentModelsModule } from 'src/utils/types';
-import { getExternalPackages } from './external-packages';
+import { externalPackagesAtom } from './external-packages';
 
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 
@@ -36,23 +36,18 @@ async function loadDynamicEditors() {
     }
 }
 
-let editors: ExtendedEditor[] | undefined = undefined;
+const baseEditorsAtom = atomWithLazy(loadBaseEditors);
+const dynamicEditorsAtom = atomWithLazy(loadDynamicEditors);
 
-async function loadEditors() {
-    if (editors) {
-        return editors;
-    }
-
-    const baseEditors = await loadBaseEditors();
-    const dynamicEditors = await loadDynamicEditors();
-    const externalModules = await getExternalPackages();
+export const editorsAtom = atom(async get => {
+    const baseEditors = await get(baseEditorsAtom);
+    const dynamicEditors = await get(dynamicEditorsAtom);
+    const externalModules = await get(externalPackagesAtom);
     const externalEditors = getEditorsFromModules(externalModules);
 
-    editors = dynamicEditors.concat(externalEditors, baseEditors);
-    return editors;
-}
+    return dynamicEditors.concat(externalEditors, baseEditors);
+});
 
-const editorsAtom = atomWithLazy(loadEditors);
 const unwrappedEditorsAtom = unwrap(editorsAtom);
 const loadableEditorsAtom = loadable(editorsAtom);
 

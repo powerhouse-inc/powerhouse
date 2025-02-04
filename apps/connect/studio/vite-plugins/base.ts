@@ -1,14 +1,6 @@
 import MagicString from 'magic-string';
-import fs from 'node:fs';
 import path from 'node:path';
-import {
-    Alias,
-    AliasOptions,
-    Plugin,
-    PluginOption,
-    ViteDevServer,
-    normalizePath,
-} from 'vite';
+import { Alias, AliasOptions, Plugin, PluginOption, normalizePath } from 'vite';
 
 // matches react, react-dom, and all it's sub-imports like react-dom/client
 export const externalIds = /^react(-dom)?(\/.*)?$/;
@@ -17,10 +9,12 @@ export const externalImports = /react(-dom)?/;
 
 export const LOCAL_DOCUMENT_MODELS_IMPORT = 'LOCAL_DOCUMENT_MODELS';
 export const LOCAL_DOCUMENT_EDITORS_IMPORT = 'LOCAL_DOCUMENT_EDITORS';
+export const HMR_MODULE_IMPORT = 'PH:HMR_MODULE';
 
 export const STUDIO_IMPORTS = [
     LOCAL_DOCUMENT_MODELS_IMPORT,
     LOCAL_DOCUMENT_EDITORS_IMPORT,
+    HMR_MODULE_IMPORT,
 ] as const;
 
 export function getStudioConfig(env?: Record<string, string>): {
@@ -57,75 +51,6 @@ export function getStudioConfig(env?: Record<string, string>): {
     }
 
     return config;
-}
-
-export function watchLocalFiles(
-    server: ViteDevServer,
-    documentModelsPath?: string,
-    editorsPath?: string,
-) {
-    const debounce = (callback: () => unknown, delay = 100) => {
-        let timeout: NodeJS.Timeout | undefined;
-        return function () {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                callback();
-            }, delay);
-        };
-    };
-
-    const refreshModelsWithDebounce = debounce(() => {
-        console.log(`Local document models changed, reloading Connect...`);
-        server.ws.send({
-            type: 'full-reload',
-            path: '*',
-        });
-    });
-
-    const refreshEditorsWithDebounce = debounce(() => {
-        console.log(`Local document editors changed, reloading Connect...`);
-        server.ws.send({
-            type: 'full-reload',
-            path: '*',
-        });
-    });
-
-    if (documentModelsPath) {
-        // Use fs to watch the file and trigger a server reload when it changes
-        console.log(
-            `Watching local document models at '${documentModelsPath}'...`,
-        );
-        try {
-            fs.watch(
-                documentModelsPath,
-                {
-                    recursive: true,
-                },
-                (event, filename) => {
-                    refreshModelsWithDebounce();
-                },
-            );
-        } catch (e) {
-            console.error('Error watching local document models', e);
-        }
-    }
-
-    if (editorsPath) {
-        console.log(`Watching local document editors at '${editorsPath}'...`);
-        try {
-            fs.watch(
-                editorsPath,
-                {
-                    recursive: true,
-                },
-                (event, filename) => {
-                    refreshEditorsWithDebounce();
-                },
-            );
-        } catch (e) {
-            console.error('Error watching local document models', e);
-        }
-    }
 }
 
 // https://github.com/vitejs/vite/issues/6393#issuecomment-1006819717
@@ -199,7 +124,9 @@ export function viteIgnoreStaticImport(
     };
 }
 
-export function replaceImports(imports: Record<string, string>): PluginOption {
+export function viteReplaceImports(
+    imports: Record<string, string>,
+): PluginOption {
     const importKeys = Object.keys(imports);
     return {
         name: 'vite-plugin-connect-replace-imports',
@@ -247,70 +174,4 @@ export function replaceImports(imports: Record<string, string>): PluginOption {
             }
         },
     };
-}
-
-export function viteConnectDevStudioPlugin(
-    enabled = false,
-    env?: Record<string, string>,
-): PluginOption[] {
-    const studioConfig = getStudioConfig(env);
-    const localDocumentModelsPath = studioConfig[LOCAL_DOCUMENT_MODELS_IMPORT];
-    const localDocumentEditorsPath =
-        studioConfig[LOCAL_DOCUMENT_EDITORS_IMPORT];
-
-    return [
-        enabled &&
-            viteIgnoreStaticImport([
-                'react',
-                'react-dom',
-                '@powerhousedao/scalars',
-                '@powerhousedao/design-system',
-            ]),
-        localDocumentModelsPath
-            ? replaceImports({
-                  [LOCAL_DOCUMENT_MODELS_IMPORT]: localDocumentModelsPath,
-              })
-            : viteIgnoreStaticImport([LOCAL_DOCUMENT_MODELS_IMPORT]),
-        localDocumentEditorsPath
-            ? replaceImports({
-                  [LOCAL_DOCUMENT_EDITORS_IMPORT]: localDocumentEditorsPath,
-              })
-            : viteIgnoreStaticImport([LOCAL_DOCUMENT_EDITORS_IMPORT]),
-        {
-            name: 'vite-plugin-connect-dev-studio',
-            enforce: 'pre',
-            config(config) {
-                if (!config.build) {
-                    config.build = {};
-                }
-                if (!config.build.rollupOptions) {
-                    config.build.rollupOptions = {};
-                }
-                if (!Array.isArray(config.build.rollupOptions.external)) {
-                    config.build.rollupOptions.external = [];
-                }
-
-                const buildStudioExternals = enabled
-                    ? [
-                          externalIds,
-                          ...STUDIO_IMPORTS,
-                          '@powerhousedao/studio',
-                          '@powerhousedao/design-system',
-                          'document-model-libs',
-                      ]
-                    : [externalIds, ...STUDIO_IMPORTS];
-
-                config.build.rollupOptions.external.push(
-                    ...buildStudioExternals,
-                );
-            },
-            configureServer(server) {
-                watchLocalFiles(
-                    server,
-                    localDocumentModelsPath,
-                    localDocumentEditorsPath,
-                );
-            },
-        },
-    ];
 }

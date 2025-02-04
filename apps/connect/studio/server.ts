@@ -5,11 +5,13 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createLogger, createServer, InlineConfig, Plugin } from 'vite';
 import { viteEnvs } from 'vite-envs';
-import { viteLoadExternalPackages } from './external-packages';
 import { backupIndexHtml, removeBase64EnvValues } from './helpers';
-import { getStudioConfig, viteConnectDevStudioPlugin } from './vite-plugin';
+import { getStudioConfig } from './vite-plugins/base';
+import { viteLoadExternalPackages } from './vite-plugins/external-packages';
+import { viteConnectDevStudioPlugin } from './vite-plugins/studio';
 
 export type StartServerOptions = {
+    configFile?: string;
     packages?: string[];
     https?: boolean;
     open?: boolean;
@@ -139,7 +141,7 @@ export async function startServer(options: StartServerOptions = {}) {
         },
         plugins: [
             viteConnectDevStudioPlugin(true),
-            viteLoadExternalPackages(options.packages),
+            viteLoadExternalPackages(options.packages, true),
             viteEnvs({
                 declarationFile: join(studioDirname, '../.env'),
                 computedEnv: studioConfig,

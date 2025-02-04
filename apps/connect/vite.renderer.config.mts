@@ -9,8 +9,8 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 import pkg from './package.json';
-import { viteLoadExternalPackages } from './studio/external-packages';
-import { viteConnectDevStudioPlugin } from './studio/vite-plugin';
+import { viteLoadExternalPackages } from './studio/vite-plugins/external-packages';
+import { viteConnectDevStudioPlugin } from './studio/vite-plugins/studio';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
 

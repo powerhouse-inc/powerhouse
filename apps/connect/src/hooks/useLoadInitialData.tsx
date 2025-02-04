@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { ReloadConnectToast } from 'src/components/toast/reload-connect-toast';
 import { useReadModeContext } from 'src/context/read-mode';
 import { useUiNodes } from 'src/hooks/useUiNodes';
-import { useUnwrappedReactor } from 'src/store/reactor';
+import { useAsyncReactor } from 'src/store/reactor';
 import { useClientErrorHandler } from './useClientErrorHandler';
 import { useConnectConfig } from './useConnectConfig';
 import { useDocumentDrives } from './useDocumentDrives';
@@ -33,7 +33,7 @@ export const useLoadInitialData = () => {
     const [, , serverSubscribeUpdates] = useDocumentDrives();
     const { readDrives } = useReadModeContext();
     const clientErrorHandler = useClientErrorHandler();
-    const reactor = useUnwrappedReactor();
+    const reactor = useAsyncReactor();
     const [connectConfig] = useConnectConfig();
 
     async function checkLatestVersion() {

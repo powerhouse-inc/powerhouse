@@ -23,6 +23,7 @@
             "@/assets": ["assets"],
             "connect-config": ["src/connect.config.ts"],
             "PH:EXTERNAL_PACKAGES": ["custom.d.ts"],
+            "PH:HMR_MODULE": ["studio/hmr.ts"],
             "LOCAL_DOCUMENT_MODELS": ["custom.d.ts"],
             "LOCAL_DOCUMENT_EDITORS": ["custom.d.ts"]
         },
@@ -43,5 +44,6 @@
         "custom.d.ts",
         "reset.d.ts",
         "esbuild.studio.config.mjs"
-    ]
+    ],
+    "files": ["studio/hmr.d.ts"]
 }

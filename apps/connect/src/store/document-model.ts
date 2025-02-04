@@ -1,12 +1,12 @@
 import { module as DocumentDrive } from 'document-model-libs/document-drive';
 import { Action, DocumentModel } from 'document-model/document';
-import { useAtomValue } from 'jotai';
+import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { atomWithLazy, unwrap } from 'jotai/utils';
 import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
 import { DocumentModelsModule } from 'src/utils/types';
 import { atomStore } from '.';
-import { getExternalPackages } from './external-packages';
+import { externalPackagesAtom } from './external-packages';
 
 export const LOCAL_DOCUMENT_MODELS = import.meta.env.LOCAL_DOCUMENT_MODELS;
 
@@ -49,14 +49,11 @@ async function loadDynamicModels() {
     }
 }
 
-let documentModels: DocumentModel[] | undefined = undefined;
+const dynamicDocumentModelsAtom = atomWithLazy(loadDynamicModels);
 
-async function getDocumentModels() {
-    if (documentModels) {
-        return documentModels;
-    }
-    const dynamicDocumentModels = await loadDynamicModels();
-    const externalModules = await getExternalPackages();
+export const documentModelsAtom = atom(async get => {
+    const dynamicDocumentModels = await get(dynamicDocumentModelsAtom);
+    const externalModules = await get(externalPackagesAtom);
     const externalDocumentModels =
         getDocumentModelsFromModules(externalModules);
 
@@ -65,11 +62,8 @@ async function getDocumentModels() {
         externalDocumentModels,
         dynamicDocumentModels,
     );
-    documentModels = result;
     return result;
-}
-
-export const documentModelsAtom = atomWithLazy(getDocumentModels);
+});
 
 // blocks rendering until document models are loaded.
 export const useDocumentModels = () => useAtomValue(documentModelsAtom);
@@ -79,8 +73,6 @@ const unrappedDocumentModelsAtom = unwrap(documentModelsAtom);
 // will return undefined until document models are initialized. Does not block rendering.
 export const useUnwrappedDocumentModels = () =>
     useAtomValue(unrappedDocumentModelsAtom);
-
-export const useDocumentModelsAsync = () => getDocumentModels();
 
 export const subscribeDocumentModels = function (
     listener: (documentModels: DocumentModel[]) => void,
@@ -96,6 +88,7 @@ export const subscribeDocumentModels = function (
     // Clean up the effect
     return () => unobserve();
 };
+
 function getDocumentModel<S = unknown, A extends Action = Action>(
     documentType: string,
     documentModels: DocumentModel[] | undefined,

@@ -2,7 +2,7 @@ import connectConfig from 'connect-config';
 import { type IDocumentDriveServer } from 'document-drive';
 import { utils } from 'document-model/document';
 import { atom, useAtomValue } from 'jotai';
-import { unwrap } from 'jotai/utils';
+import { atomWithLazy, unwrap } from 'jotai/utils';
 import { logger } from 'src/services/logger';
 import {
     documentModelsAtom,
@@ -39,7 +39,8 @@ async function initReactor(reactor: IDocumentDriveServer) {
     }
 }
 
-const reactor = (async () => {
+async function createReactor() {
+    // waits for document models to be loaded
     const documentModels = await atomStore.get(documentModelsAtom);
     const server =
         (window.electronAPI?.documentDrive as unknown as
@@ -51,9 +52,9 @@ const reactor = (async () => {
         );
     await initReactor(server);
     return server;
-})();
+}
 
-const reactorAtom = atom<Promise<IDocumentDriveServer>>(reactor);
+const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(createReactor);
 const unwrappedReactor = unwrap(reactorAtom);
 
 // blocks rendering until reactor is initialized.
@@ -62,13 +63,37 @@ export const useReactor = () => useAtomValue(reactorAtom);
 // will return undefined until reactor is initialized. Does not block rendering.
 export const useUnwrappedReactor = () => useAtomValue(unwrappedReactor);
 
-// returns promise that will resolve when reactor is initialized.
-export const useReactorAsync = () => {
-    return reactor;
+// will return undefined until reactor is initialized. Does not block rendering or trigger the reactor to be initialized.
+export const useAsyncReactor = () => useAtomValue(reactorAsyncAtom);
+
+const reactorAsyncAtom = atom<IDocumentDriveServer | undefined>(undefined);
+reactorAsyncAtom.onMount = setAtom => {
+    const baseOnMount = reactorAtom.onMount;
+    reactorAtom.onMount = setReactorAtom => {
+        setReactorAtom(reactorPromise => {
+            reactorPromise
+                .then(reactor => setAtom(reactor))
+                .catch(console.error);
+            return reactorPromise;
+        });
+        return baseOnMount?.(setReactorAtom);
+    };
 };
 
-// updates reactor document models when they change.
-subscribeDocumentModels(async documentModels => {
-    const reactor = await atomStore.get(reactorAtom);
-    reactor.setDocumentModels(documentModels);
-});
+// updates the reactor when the available document models change
+let documentModelsSubscripion: (() => void) | undefined;
+reactorAtom.onMount = setAtom => {
+    if (documentModelsSubscripion) return;
+    setAtom(async prevReactor => {
+        const reactor = await prevReactor;
+
+        if (!documentModelsSubscripion) {
+            documentModelsSubscripion = subscribeDocumentModels(
+                documentModels => {
+                    reactor.setDocumentModels(documentModels);
+                },
+            );
+        }
+        return reactor;
+    });
+};
