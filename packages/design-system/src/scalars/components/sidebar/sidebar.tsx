@@ -87,13 +87,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     minWidth: 220,
   });
 
-  const { 
-    pinnedNodePath, 
-    setNodes, 
+  const {
+    pinnedNodePath,
+    setNodes,
     openLevel,
     syncActiveNodeId,
     setActiveNodeChangeCallback,
-  } = useSidebar()
+  } = useSidebar();
 
   // sync param nodes with provider state if provided
   useEffect(() => {
