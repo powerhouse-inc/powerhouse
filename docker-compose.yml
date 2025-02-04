@@ -1,6 +1,15 @@
 name: powerhouse
 
 services:
+  connect:
+    build:
+      context: .
+      dockerfile: ./apps/connect/Dockerfile
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      - REDIS_TLS_URL=redis://redis:6379
+    ports:
+      - '127.0.0.1:8080:80'
   switchboard:
     build:
       context: .
@@ -9,7 +18,11 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
       - REDIS_TLS_URL=redis://redis:6379
     ports:
+<<<<<<< HEAD
       - '127.0.0.1:8080:3000'
+=======
+      - '127.0.0.1:8081:3000'
+>>>>>>> main
   redis:
     image: redis:7.2.1
     ports:

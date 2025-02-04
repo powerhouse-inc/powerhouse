@@ -2,10 +2,11 @@ import {
   API,
   IProcessorManager,
   isProcessorClass,
+  isSubgraphClass,
   startAPI,
+  SubgraphClass,
   SubgraphManager,
 } from "@powerhousedao/reactor-api";
-import { isSubgraphClass, SubgraphClass } from "@powerhousedao/reactor-api";
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
@@ -20,12 +21,24 @@ import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
+import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, ViteDevServer } from "vite";
+
+type FSError = {
+  errno: number;
+  code: string;
+  syscall: string;
+  path: string;
+};
 
 const dirname = process.cwd();
 
 dotenv.config();
+
+type Packages = {
+  packageName: string;
+}[];
 
 export type StartServerOptions = {
   dev?: boolean;
@@ -33,6 +46,11 @@ export type StartServerOptions = {
   storagePath?: string;
   dbPath?: string;
   drive?: DriveInput;
+  packages?: Packages;
+  https?: {
+    keyPath: string;
+    certPath: string;
+  };
 };
 
 export const DefaultStartServerOptions = {
@@ -79,7 +97,7 @@ const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   process.setMaxListeners(0);
-  const { port, storagePath, drive, dev, dbPath } = {
+  const { port, storagePath, drive, dev, dbPath, packages } = {
     ...DefaultStartServerOptions,
     ...options,
   };
@@ -114,11 +132,23 @@ const startServer = async (
     }
   }
 
+  if (packages?.length) {
+    try {
+      const documentModels = await loadPackages(packages);
+      driveServer.setDocumentModels(
+        joinDocumentModels(driveServer.getDocumentModels(), documentModels),
+      );
+    } catch (e) {
+      console.error("Error loading packages", e);
+    }
+  }
+
   try {
     // start api
     const api = await startAPI(driveServer, {
       port: serverPort,
       dbPath,
+      https: options?.https,
     });
     driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
     console.log(`  ➜  Reactor:   ${driveUrl}`);
@@ -148,7 +178,7 @@ const startServer = async (
   };
 };
 
-const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
+async function startDevMode(api: API, driveServer: IDocumentDriveServer) {
   const vite = await createViteServer({
     server: { middlewareMode: true, watch: null },
     appType: "custom",
@@ -175,7 +205,28 @@ const startDevMode = async (api: API, driveServer: IDocumentDriveServer) => {
   /**
    * TODO: watch code changes on processors and document models
    */
-};
+}
+
+async function loadPackages(packages: Packages) {
+  const loadedPackages: DocumentModel[] = [];
+  for (const pkg of packages) {
+    try {
+      console.log("> Loading package", pkg.packageName);
+      const pkgModule = (await import(
+        `${pkg.packageName}/document-models`
+      )) as unknown as { [key: string]: DocumentModel } | undefined;
+      if (pkgModule) {
+        console.log(`  ➜  Loaded package: ${pkg.packageName}`);
+        loadedPackages.push(...Object.values(pkgModule));
+      } else {
+        console.warn(`  ➜  No package found: ${pkg.packageName}`);
+      }
+    } catch (e) {
+      console.error("Error loading package", pkg.packageName, e);
+    }
+  }
+  return loadedPackages;
+}
 
 async function loadDocumentModels(
   path: string,
@@ -184,16 +235,21 @@ async function loadDocumentModels(
 ) {
   try {
     console.log("> Loading document models from", path);
+    await access(path);
     const localDMs = (await vite.ssrLoadModule(path)) as Record<
       string,
       DocumentModel
     >;
-    driveServer.setDocumentModels([
-      ...baseDocumentModels,
-      ...Object.values(localDMs),
-    ]);
+    const localDocumentModels = Object.values(localDMs);
+    driveServer.setDocumentModels(
+      joinDocumentModels(driveServer.getDocumentModels(), localDocumentModels),
+    );
   } catch (e) {
-    console.error("Error loading document models", e);
+    if ((e as FSError).code === "ENOENT") {
+      console.warn("No local document models found");
+    } else {
+      console.error("Error loading document models", e);
+    }
   }
 }
 
@@ -204,6 +260,7 @@ async function loadProcessors(
 ) {
   try {
     console.log("> Loading processors from", path);
+    await access(path);
     const localProcessors = await vite.ssrLoadModule(path);
     for (const [name, processor] of Object.entries(localProcessors)) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
@@ -213,7 +270,11 @@ async function loadProcessors(
       }
     }
   } catch (e) {
-    console.error("Error loading processors", e);
+    if ((e as FSError).code === "ENOENT") {
+      console.warn("No local document models found");
+    } else {
+      console.error("Error loading processors", e);
+    }
   }
 }
 
@@ -224,6 +285,7 @@ async function loadSubgraphs(
 ) {
   try {
     console.log("> Loading subgraphs from", path);
+    await access(path);
     const localSubgraphs = await vite.ssrLoadModule(path);
     for (const [name, subgraph] of Object.entries(localSubgraphs)) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -233,8 +295,25 @@ async function loadSubgraphs(
       }
     }
   } catch (e) {
-    console.error("Error loading subgraphs", e);
+    if ((e as FSError).code === "ENOENT") {
+      console.warn("No local document models found");
+    } else {
+      console.error("Error loading subgraphs", e);
+    }
   }
+}
+
+function joinDocumentModels(...documentModels: DocumentModel[][]) {
+  return documentModels
+    .flat()
+    .toReversed()
+    .reduce<DocumentModel[]>(
+      (acc, curr) =>
+        acc.find((dm) => dm.documentModel.id === curr.documentModel.id)
+          ? acc
+          : [...acc, curr],
+      [],
+    );
 }
 
 export { startServer };

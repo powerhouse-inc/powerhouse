@@ -186,9 +186,30 @@ export const Default: Story = {
     placeholderSelect: "CUR",
     type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
+    currencyPosition: "right",
     value: {
       amount: undefined,
       currency: "",
+    },
+  },
+};
+export const TokenIcon: Story = {
+  name: "Token Icon",
+  args: {
+    selectName: "currency",
+    label: "Enter Amount and Select Currency",
+    name: "amount",
+    step: 0,
+    type: "AmountToken",
+    allowedTokens: ["BTC", "ETH"],
+    tokenIcons: {
+      BTC: IconComponent("Briefcase"),
+      ETH: IconComponent("Briefcase"),
+    },
+    currencyPosition: "right",
+    value: {
+      amount: 3454564564 as unknown as bigint,
+      token: "BTC",
     },
   },
 };
@@ -219,6 +240,7 @@ export const WithAmount: Story = {
     label: "Enter Amout ",
     type: "Amount",
     value: 345,
+    step: 0,
   },
 };
 export const CurrencyIcon: Story = {
@@ -276,6 +298,7 @@ export const WithValuePercent: Story = {
     placeholder: "Enter Amount",
     type: "AmountPercentage",
     value: 9,
+    step: 0,
   },
 };
 export const Disable: Story = {

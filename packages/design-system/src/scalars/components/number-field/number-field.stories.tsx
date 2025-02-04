@@ -198,7 +198,6 @@ export const WithBigInt: Story = {
     label: "Label",
     value: 99992342343299,
     numericType: "BigInt",
-
     placeholder: "Enter a large number",
   },
 };

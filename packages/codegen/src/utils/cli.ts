@@ -28,7 +28,13 @@ export function parseArgs<T extends arg.Spec>(argv: string[], spec: T) {
 }
 
 export function parseConfig(argv: string[]) {
-  const config: Partial<PowerhouseConfig> = {};
+  const config: Partial<{
+    documentModelsDir?: string;
+    editorsDir?: string;
+    skipFormat?: boolean;
+    interactive?: boolean;
+    watch?: boolean;
+  }> = {};
   const args = parseArgs(argv, configSpec);
 
   if ("--document-models" in args) {
@@ -52,21 +58,24 @@ export function parseConfig(argv: string[]) {
   return config;
 }
 
-export async function promptDirectories(
-  config: PowerhouseConfig = DEFAULT_CONFIG,
-) {
-  return prompt<Pick<PowerhouseConfig, "documentModelsDir" | "editorsDir">>([
+type DefaultDirectories = {
+  documentModelsDir: string;
+  editorsDir: string;
+};
+
+export async function promptDirectories(defaultDirs: DefaultDirectories) {
+  return prompt<DefaultDirectories>([
     {
       type: "input",
       name: "documentModelsDir",
       message: "Where to place the Document Models?",
-      initial: config.documentModelsDir,
+      initial: defaultDirs.documentModelsDir,
     },
     {
       type: "input",
       name: "editorsDir",
       message: "Where to place the Editors?",
-      initial: config.editorsDir,
+      initial: defaultDirs.editorsDir,
     },
   ]);
 }

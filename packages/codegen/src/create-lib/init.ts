@@ -3,17 +3,37 @@ import { execSync } from "child_process";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
-import { configSpec, parseArgs, promptDirectories } from "../utils/cli";
-import { getPackageManager } from "./command";
-// eslint-disable-next-line
-// @ts-ignore-error
-import { DEFAULT_CONFIG } from "@powerhousedao/config/powerhouse";
+import { parseArgs, promptDirectories } from "../utils/cli";
+import { getPackageManager } from "./utils";
 
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
 
-const packageManager = getPackageManager(process.env.npm_config_user_agent);
-const isNpm = packageManager === "npm";
+const envPackageManager = getPackageManager(process.env.npm_config_user_agent);
+
+const defaultDirectories = {
+  documentModelsDir: "./document-models",
+  editorsDir: "./editors",
+};
+
+export const createCommandSpec = {
+  "--name": String,
+  "--project-name": "--name",
+  "--version": String,
+  "--interactive": Boolean,
+  "--dev": Boolean,
+  "--staging": Boolean,
+  "-p": "--name",
+  "-v": "--version",
+  "--package-manager": String,
+} as const;
+
+export interface ICreateProjectOptions {
+  name: string | undefined;
+  version: string;
+  interactive: boolean;
+  packageManager?: string;
+}
 
 const { prompt } = enquirer;
 
@@ -78,11 +98,44 @@ function runCmd(command: string) {
   }
 }
 
-export async function init(_args?: arg.Result<typeof configSpec>) {
-  const args = _args || parseArgs(process.argv.slice(2), configSpec);
+export function parseVersion(args: {
+  version?: string;
+  dev?: boolean;
+  staging?: boolean;
+}) {
+  if (args.version) {
+    return args.version;
+  }
+  if (args.dev) {
+    return "dev";
+  } else if (args.staging) {
+    return "staging";
+  } else {
+    return "main";
+  }
+}
 
+function parseVersionArgs(args: arg.Result<typeof createCommandSpec>) {
+  return parseVersion({
+    version: args["--version"],
+    dev: args["--dev"],
+    staging: args["--staging"],
+  });
+}
+
+export function initCli() {
+  const args = parseArgs(process.argv.slice(2), createCommandSpec);
+  const options: ICreateProjectOptions = {
+    name: args["--name"] ?? args._.shift(),
+    interactive: args["--interactive"] ?? false,
+    version: parseVersionArgs(args),
+  };
+  return init(options);
+}
+
+export async function init(options: ICreateProjectOptions) {
   // checks if a project name was provided
-  let projectName = args._.shift();
+  let projectName = options.name;
   if (!projectName) {
     const result = await prompt<{ projectName: string }>([
       {
@@ -100,10 +153,12 @@ export async function init(_args?: arg.Result<typeof configSpec>) {
     projectName = result.projectName;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const { documentModelsDir, editorsDir } = args["--interactive"]
-    ? await promptDirectories()
-    : DEFAULT_CONFIG;
+  const {
+    documentModelsDir,
+    editorsDir,
+  }: { documentModelsDir: string; editorsDir: string } = options.interactive
+    ? await promptDirectories(defaultDirectories)
+    : defaultDirectories;
 
   const appPath = path.join(process.cwd(), projectName);
 
@@ -122,27 +177,42 @@ export async function init(_args?: arg.Result<typeof configSpec>) {
     process.exit(1);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  createProject(projectName, documentModelsDir, editorsDir);
+  createProject(
+    projectName,
+    documentModelsDir,
+    editorsDir,
+    options.version,
+    options.packageManager,
+  );
 }
 
 function createProject(
   projectName: string,
   documentModelsDir: string,
   editorsDir: string,
+  version = "main",
+  packageManager?: string,
 ) {
+  packageManager = packageManager ?? envPackageManager;
+
   try {
     console.log("\x1b[33m", "Downloading the project structure...", "\x1b[0m");
-    runCmd(`git clone --depth 1 ${BOILERPLATE_REPO} ${projectName}`);
+    runCmd(
+      `git clone --depth 1 -b ${version} ${BOILERPLATE_REPO} ${projectName}`,
+    );
 
     const appPath = path.join(process.cwd(), projectName);
     process.chdir(appPath);
 
-    console.log("\x1b[34m", "Installing dependencies...", "\x1b[0m");
-    runCmd(`${packageManager} install`);
+    console.log(
+      "\x1b[34m",
+      `Installing dependencies with ${packageManager}...`,
+      "\x1b[0m",
+    );
+    runCmd(`${packageManager} install --loglevel error`);
 
     fs.rmSync(path.join(appPath, "./.git"), { recursive: true });
-    runCmd("git init");
+    runCmd(`git init -b ${version}`);
 
     try {
       fs.mkdirSync(path.join(appPath, documentModelsDir));
@@ -160,13 +230,6 @@ function createProject(
 
     console.log("\x1b[32m", "The installation is done!", "\x1b[0m");
     console.log();
-
-    console.log("\x1b[34m", "You can start by typing:");
-    console.log(`    cd ${projectName}`);
-    console.log(
-      isNpm ? "    npm run generate" : `    ${packageManager} generate`,
-      "\x1b[0m",
-    );
   } catch (error) {
     console.log(error);
   }

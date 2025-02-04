@@ -1,4 +1,4 @@
-# Powerhouse Monorepo
+# Powerhouse Monorepo 
 
 This repository uses pnpm workspaces and Nx to manage a monorepo with multiple projects and packages.
 
@@ -146,3 +146,4 @@ Currently, only the `main` branch is enabled in this project, which means all pa
 4. Push your branch to GitHub and open a pull request (PR) against the `main` branch.
 5. Once your PR is approved, merge it.
 6. A GitHub Action will be triggered automatically after you merge your PR. This action will handle versioning and release the new version of the affected packages to NPM. Optionally, you can trigger the deployment of your package [manually](https://github.com/powerhouse-inc/powerhouse/actions/workflows/release-package-manual.yml)
+   

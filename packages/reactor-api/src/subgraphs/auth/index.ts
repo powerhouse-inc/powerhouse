@@ -104,7 +104,6 @@ export class AuthSubgraph extends Subgraph {
         }
 
         const nonce = generateUUID().replace(/-/g, "");
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const message = new SiweMessage({
           address,
           nonce,
@@ -112,7 +111,6 @@ export class AuthSubgraph extends Subgraph {
           domain,
           version: "1",
           chainId: 1,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         }).prepareMessage();
         const textToHex = (textMessage: string) =>
           `0x${Buffer.from(textMessage, "utf8").toString("hex")}`;
@@ -155,7 +153,6 @@ export class AuthSubgraph extends Subgraph {
           }
 
           // verify signature
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
           const parsedMessage = new SiweMessage(challenge.message);
           try {
             await verifySignature(parsedMessage, signature);
@@ -172,7 +169,6 @@ export class AuthSubgraph extends Subgraph {
 
           // create user and session
           const user = await upsertUser(db, {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             address: parsedMessage.address as `0x${string}`,
             networkId: "1",
             chainId: 1,
