@@ -1,15 +1,19 @@
 import {
   DocumentDriveDocument,
+  DocumentDriveState,
   ListenerFilter,
 } from "document-model-libs/document-drive";
 import { OperationScope } from "document-model/document";
 import { logger } from "../../utils/logger";
 import { OperationError } from "../error";
 import {
-  BaseListenerManager,
+  DefaultListenerManagerOptions,
   ErrorStatus,
   GetStrandsOptions,
+  IBaseDocumentDriveServer,
+  IListenerManager,
   Listener,
+  ListenerManagerOptions,
   ListenerState,
   ListenerUpdate,
   OperationUpdate,
@@ -45,8 +49,26 @@ function debounce<T extends unknown[], R>(
     });
   };
 }
-export class ListenerManager extends BaseListenerManager {
+export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
+
+  protected drive: IBaseDocumentDriveServer;
+  protected listenerState = new Map<string, Map<string, ListenerState>>();
+  protected options: ListenerManagerOptions;
+  protected transmitters: Record<
+    DocumentDriveState["id"],
+    Record<Listener["listenerId"], ITransmitter>
+  > = {};
+
+  constructor(
+    drive: IBaseDocumentDriveServer,
+    listenerState = new Map<string, Map<string, ListenerState>>(),
+    options: ListenerManagerOptions = DefaultListenerManagerOptions,
+  ) {
+    this.drive = drive;
+    this.listenerState = listenerState;
+    this.options = { ...DefaultListenerManagerOptions, ...options };
+  }
 
   async getTransmitter(
     driveId: string,

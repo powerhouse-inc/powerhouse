@@ -22,15 +22,15 @@ import type {
 } from "document-model/document";
 import { Unsubscribe } from "nanoevents";
 import { BaseDocumentDriveServer } from ".";
-import {
-  IReceiver as IInternalListener,
-  IInternalTransmitter,
-} from "./listener/transmitter/internal";
 import { IReadModeDriveServer } from "../read-mode/types";
 import { RunAsap } from "../utils";
 import { IDefaultDrivesManager } from "../utils/default-drives-manager";
 import { DriveInfo } from "../utils/graphql";
 import { OperationError, SynchronizationUnitNotFoundError } from "./error";
+import {
+  IReceiver as IInternalListener,
+  IInternalTransmitter,
+} from "./listener/transmitter/internal";
 import {
   ITransmitter,
   PullResponderTrigger,
@@ -543,59 +543,33 @@ export type IDocumentDriveServer = IBaseDocumentDriveServer &
   IDefaultDrivesManager &
   IReadModeDriveServer;
 
-export abstract class BaseListenerManager {
-  protected drive: IBaseDocumentDriveServer;
-  protected listenerState = new Map<string, Map<string, ListenerState>>();
-  protected options: ListenerManagerOptions;
-  protected transmitters: Record<
-    DocumentDriveState["id"],
-    Record<Listener["listenerId"], ITransmitter>
-  > = {};
-
-  constructor(
-    drive: IBaseDocumentDriveServer,
-    listenerState = new Map<string, Map<string, ListenerState>>(),
-    options: ListenerManagerOptions = DefaultListenerManagerOptions,
-  ) {
-    this.drive = drive;
-    this.listenerState = listenerState;
-    this.options = { ...DefaultListenerManagerOptions, ...options };
-  }
-
-  abstract initDrive(drive: DocumentDriveDocument): Promise<void>;
-  abstract removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
-
-  abstract driveHasListeners(driveId: string): boolean;
-  abstract addListener(listener: Listener): Promise<ITransmitter>;
-  abstract removeListener(
-    driveId: string,
-    listenerId: string,
-  ): Promise<boolean>;
-  abstract getListener(
+export interface IListenerManager {
+  initDrive(drive: DocumentDriveDocument): Promise<void>;
+  removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
+  driveHasListeners(driveId: string): boolean;
+  addListener(listener: Listener): Promise<ITransmitter>;
+  removeListener(driveId: string, listenerId: string): Promise<boolean>;
+  getListener(
     driveId: string,
     listenerId: string,
   ): Promise<ListenerState | undefined>;
-
-  abstract getTransmitter(
+  getTransmitter(
     driveId: string,
     listenerId: string,
   ): Promise<ITransmitter | undefined>;
-
-  abstract getStrands(
+  getStrands(
     driveId: string,
     listenerId: string,
     options?: GetStrandsOptions,
   ): Promise<StrandUpdate[]>;
-
-  abstract updateSynchronizationRevisions(
+  updateSynchronizationRevisions(
     driveId: string,
     syncUnits: SynchronizationUnit[],
     source: StrandUpdateSource,
     willUpdate?: (listeners: Listener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
   ): Promise<ListenerUpdate[]>;
-
-  abstract updateListenerRevision(
+  updateListenerRevision(
     listenerId: string,
     driveId: string,
     syncId: string,
