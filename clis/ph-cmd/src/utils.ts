@@ -1,7 +1,7 @@
-import path, { dirname } from "node:path";
-import fs from "node:fs";
 import { execSync } from "node:child_process";
+import fs from "node:fs";
 import { homedir } from "node:os";
+import path, { dirname } from "node:path";
 
 export const PH_BIN_PATH = process.argv[1];
 export const PH_BIN = "ph-cli";
@@ -144,7 +144,6 @@ export function forwardPHCommand(
 ) {
   const manager = packageManagers[packageManager];
   const command = isPackageScript ? manager.execScript : manager.execCommand;
-
   const execCommand = command.replace("{{arguments}}", args);
 
   const commandOptions = { cwd: projectPath };
