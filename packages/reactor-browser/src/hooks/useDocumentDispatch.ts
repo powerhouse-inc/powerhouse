@@ -58,7 +58,9 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
         const newState = documentReducer(_state, action);
         const scope = action.scope ?? "global";
         const operations = newState.operations[scope];
-        const operation = operations[operations.length - 1];
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const operation = operations[operations.length - 1]!;
 
         if (operation.error) {
           const error = new Error(operation.error);
