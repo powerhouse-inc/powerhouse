@@ -125,12 +125,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             shouldFilter={false}
             value={commandValue}
             onValueChange={handleCommandValue}
-            className={cn(
-              asCard && [
-                "group rounded-md",
-                "dark:focus-within:ring-charcoal-300 focus-within:ring-1 focus-within:ring-gray-900 focus-within:ring-offset-0",
-              ],
-            )}
+            className={cn("dark:bg-charcoal-900 rounded-md bg-white")}
           >
             <PopoverAnchor asChild={true}>
               <PHIDInputContainer
@@ -138,7 +133,6 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                 name={name}
                 value={selectedValue}
                 className={className}
-                asCard={asCard}
                 isLoading={isLoading}
                 haveFetchError={haveFetchError}
                 disabled={disabled}
@@ -154,6 +148,8 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                 label={label}
                 required={required}
                 isPopoverOpen={isPopoverOpen}
+                maxLength={maxLength}
+                autoComplete={autoComplete}
                 {...props}
                 ref={ref}
               />
@@ -170,9 +166,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                 isLoadingSelectedOption={isLoadingSelectedOption}
                 handleFetchSelectedOption={handleFetchSelectedOption}
                 className={cn(
-                  "rounded-t-none border border-gray-300 border-t-transparent bg-gray-100 pt-2",
-                  "dark:border-charcoal-700 dark:border-t-transparent dark:bg-slate-600",
-                  "dark:group-focus-within:border-t-charcoal-700 group-focus-within:border-t-gray-300",
+                  "dark:bg-charcoal-900 rounded-t-none bg-white pt-2",
                 )}
               />
             )}
