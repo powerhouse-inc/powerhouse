@@ -20,9 +20,6 @@ import {
   StrandUpdate,
   SynchronizationUnit,
 } from "../types";
-import { PullResponderTransmitter } from "./transmitter";
-import { InternalTransmitter } from "./transmitter/internal";
-import { SwitchboardPushTransmitter } from "./transmitter/switchboard-push";
 import { ITransmitter, StrandUpdateSource } from "./transmitter/types";
 
 function debounce<T extends unknown[], R>(
@@ -81,7 +78,7 @@ export class ListenerManager implements IListenerManager {
     return this.listenerState.has(driveId);
   }
 
-  async addListener(listener: Listener) {
+  async addListener(listener: Listener, transmitter: ITransmitter) {
     const drive = listener.driveId;
 
     if (!this.listenerState.has(drive)) {
@@ -98,28 +95,6 @@ export class ListenerManager implements IListenerManager {
       listenerStatus: "CREATED",
       syncUnits: new Map(),
     });
-
-    let transmitter: ITransmitter | undefined;
-
-    switch (listener.callInfo?.transmitterType) {
-      case "SwitchboardPush": {
-        transmitter = new SwitchboardPushTransmitter(listener, this.drive);
-        break;
-      }
-
-      case "PullResponder": {
-        transmitter = new PullResponderTransmitter(listener, this.drive, this);
-        break;
-      }
-      case "Internal": {
-        transmitter = new InternalTransmitter(listener, this.drive);
-        break;
-      }
-    }
-
-    if (!transmitter) {
-      throw new Error("Transmitter not found");
-    }
 
     const driveTransmitters = this.transmitters[drive] || {};
     driveTransmitters[listener.listenerId] = transmitter;
