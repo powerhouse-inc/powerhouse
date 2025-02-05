@@ -546,19 +546,27 @@ export type IDocumentDriveServer = IBaseDocumentDriveServer &
 export interface IListenerManager {
   removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
-  addListener(
-    listener: Listener,
-    transmitter: ITransmitter,
-  ): Promise<ITransmitter>;
+
+  // listener management
+  addListener(listener: Listener): Promise<void>;
   removeListener(driveId: string, listenerId: string): Promise<boolean>;
   getListener(
     driveId: string,
     listenerId: string,
   ): Promise<ListenerState | undefined>;
+
+  // transmitter management
+  setTransmitter(
+    driveId: string,
+    listenerId: string,
+    transmitter: ITransmitter,
+  ): Promise<void>;
+  removeTransmitter(driveId: string, listenerId: string): Promise<boolean>;
   getTransmitter(
     driveId: string,
     listenerId: string,
   ): Promise<ITransmitter | undefined>;
+
   getStrands(
     driveId: string,
     listenerId: string,
