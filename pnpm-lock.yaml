@@ -653,14 +653,14 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@powerhousedao/analytics-engine-core':
-        specifier: ^0.3.0
+        specifier: ^0.3.2
         version: 0.3.2
       '@powerhousedao/analytics-engine-graphql':
-        specifier: ^0.2.1
+        specifier: ^0.2.2
         version: 0.2.2
       '@powerhousedao/analytics-engine-pg':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.4.0
+        version: 0.4.0
       document-drive:
         specifier: workspace:*
         version: link:../../packages/document-drive
@@ -1303,7 +1303,7 @@ importers:
         specifier: ^0.2.12
         version: 0.2.16
       '@powerhousedao/analytics-engine-core':
-        specifier: ^0.3.0
+        specifier: ^0.3.2
         version: 0.3.2
       '@powerhousedao/analytics-engine-knex':
         specifier: ^0.4.0
@@ -1367,7 +1367,7 @@ importers:
         version: 3.24.1
     devDependencies:
       '@powerhousedao/analytics-engine-graphql':
-        specifier: ^0.2.1
+        specifier: ^0.2.2
         version: 0.2.2
       '@powerhousedao/scalars':
         specifier: workspace:*
@@ -1504,7 +1504,7 @@ importers:
         version: 11.0.5
     devDependencies:
       '@powerhousedao/analytics-engine-graphql':
-        specifier: ^0.2.1
+        specifier: ^0.2.2
         version: 0.2.2
       '@types/body-parser':
         specifier: ^1.19.5
@@ -5007,14 +5007,11 @@ packages:
   '@powerhousedao/analytics-engine-graphql@0.2.2':
     resolution: {integrity: sha512-XKlnnrwptdXi3BsxZBsCXLRBEz3QRi1ziZ2hb3TA4TxYMDb9M8KGR/qJ2YqWHAFVBgSKDmCK+cauYxItuJu0zw==}
 
-  '@powerhousedao/analytics-engine-knex@0.3.0':
-    resolution: {integrity: sha512-a0diLxFy6ID0LJfjpyr8Xrgrc2xFEHnnLBDHY+P1fdvJMFHs3FnHrMmFvF2/VF9hZja+PhndgI4nGHZ4kynGLQ==}
-
   '@powerhousedao/analytics-engine-knex@0.4.0':
     resolution: {integrity: sha512-WzMwRR8K1p/MA8SpkOXv6IR5KUjJv7QRce8Y372H5agjBlZvE8WwDUDgsNRcGEX+1ArD87vverkN/c6j+ui+ag==}
 
-  '@powerhousedao/analytics-engine-pg@0.3.0':
-    resolution: {integrity: sha512-0N90CJzgrjZONA7VzEQKq5ne0DuzGpjTj3ZeZyjoaOq4gKopVdX+6j7zHmbfFKx15bkY6/T/+VoIKt9WN+We0Q==}
+  '@powerhousedao/analytics-engine-pg@0.4.0':
+    resolution: {integrity: sha512-Io/8qZU1jBuCNJoD9zaekT8Vesy7nhGIAiqQCal1O31cs3zkn62/vUjbtwMFSvEPMKFF8xeod8jkBJ3c7DWTaA==}
 
   '@powerhousedao/connect@1.0.0-dev.195':
     resolution: {integrity: sha512-oSUh06jINOek3te+8aQyW6fAb0tfCM/esqA1BmFIaS99oVJNstRnsND1IK+13wsZhNKhrxbxyoEJxN3mc2GqTw==}
@@ -20808,25 +20805,6 @@ snapshots:
       '@powerhousedao/analytics-engine-core': 0.3.2
       luxon: 3.5.0
 
-  '@powerhousedao/analytics-engine-knex@0.3.0':
-    dependencies:
-      '@powerhousedao/analytics-engine-core': 0.3.0
-      '@types/luxon': 3.4.2
-      '@types/node': 22.12.0
-      '@types/pg': 8.11.11
-      date-fns: 3.6.0
-      knex: 3.1.0(pg@8.13.1)(sqlite3@5.1.7)
-      luxon: 3.5.0
-      pg: 8.13.1
-    transitivePeerDependencies:
-      - better-sqlite3
-      - mysql
-      - mysql2
-      - pg-native
-      - sqlite3
-      - supports-color
-      - tedious
-
   '@powerhousedao/analytics-engine-knex@0.4.0(sqlite3@5.1.7)':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.3.0
@@ -20846,10 +20824,10 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/analytics-engine-pg@0.3.0':
+  '@powerhousedao/analytics-engine-pg@0.4.0':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.3.0
-      '@powerhousedao/analytics-engine-knex': 0.3.0
+      '@powerhousedao/analytics-engine-knex': 0.4.0(sqlite3@5.1.7)
       date-fns: 3.6.0
       knex: 3.1.0(pg@8.13.1)(sqlite3@5.1.7)
       luxon: 3.5.0
@@ -27071,7 +27049,7 @@ snapshots:
 
   extension-port-stream@3.0.0:
     dependencies:
-      readable-stream: 3.6.2
+      readable-stream: 4.7.0
       webextension-polyfill: 0.10.0
 
   external-editor@3.1.0:
