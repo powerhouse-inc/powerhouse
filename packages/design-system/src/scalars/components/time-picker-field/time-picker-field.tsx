@@ -4,6 +4,7 @@ import {
   FormGroup,
   FormLabel,
   FormMessageList,
+  withFieldValidation,
 } from "../fragments";
 import { FieldCommonProps } from "../types";
 import { TimeFieldValue } from "./type";
@@ -20,7 +21,7 @@ interface TimePickerFieldProps extends FieldCommonProps<TimeFieldValue> {
   placeholder?: string;
 }
 
-const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
+export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
   // We need to pass the name prop to the TimePicker component
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (
@@ -55,7 +56,6 @@ const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       handleCancel,
       timeZonesOptions,
     } = useTimePickerField(value, defaultValue);
-
     return (
       <FormGroup>
         {label && (
@@ -69,10 +69,10 @@ const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           </FormLabel>
         )}
         <BasePickerField
-          name={name}
           placeholder={placeholder}
           iconName="Clock"
           isOpen={isOpen}
+          name={name}
           value={inputValue}
           setIsOpen={setIsOpen}
           onInputChange={handleInputChange}
@@ -101,4 +101,6 @@ const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
   },
 );
 
-export default TimePickerField;
+export const TimePickerField =
+  withFieldValidation<TimePickerFieldProps>(TimePickerRaw);
+TimePickerField.displayName = "TimePickerField";

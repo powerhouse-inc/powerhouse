@@ -1,11 +1,11 @@
 import * as React from "react";
 
 import { Button } from "../../fragments/button";
-import { SelectField } from "../../fragments/select-field";
 import { TimePeriod } from "../type";
 import { SelectBaseProps } from "../../enum-field/types";
 import TimePeriodSelector from "./time-period-selector";
 import TimeSelector from "./time-selector";
+import { SelectFieldProps, SelectFieldRaw } from "../../fragments/select-field";
 interface TimePickerContentProps {
   onSave?: (time: string) => void;
   onCancel?: () => void;
@@ -18,6 +18,7 @@ interface TimePickerContentProps {
   hours: string[];
   minutes: string[];
   timeZonesOptions: SelectBaseProps["options"];
+  selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
 }
 
 const TimePickerContent: React.FC<TimePickerContentProps> = ({
@@ -32,16 +33,18 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
   hours,
   minutes,
   timeZonesOptions,
+  selectProps,
 }) => {
   return (
     <div className="w-full mx-auto relative">
-      <SelectField
-        name="timeZone"
+      <SelectFieldRaw
+        name=""
         options={timeZonesOptions}
         searchable={true}
         placeholder="Select a timezone"
         className="w-full"
         selectionIcon="checkmark"
+        {...selectProps}
       />
 
       <TimePeriodSelector

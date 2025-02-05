@@ -1,5 +1,5 @@
 import { format, getHours, getMinutes, parse } from "date-fns";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { TimeFieldValue } from "./type";
 
 export const useTimePickerField = (
@@ -11,10 +11,9 @@ export const useTimePickerField = (
   const currentHour = getHours(now);
   const currentMinute = getMinutes(now);
   // Input value format time
-  const [inputValue, setInputValue] = React.useState(
-    value ?? defaultValue ?? "",
-  );
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [inputValue, setInputValue] = useState(value ?? defaultValue ?? "");
+
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
