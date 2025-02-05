@@ -104,6 +104,7 @@ export class AuthSubgraph extends Subgraph {
         }
 
         const nonce = generateUUID().replace(/-/g, "");
+
         const message = new SiweMessage({
           address,
           nonce,
@@ -153,6 +154,7 @@ export class AuthSubgraph extends Subgraph {
           }
 
           // verify signature
+
           const parsedMessage = new SiweMessage(challenge.message);
           try {
             await verifySignature(parsedMessage, signature);
