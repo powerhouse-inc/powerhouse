@@ -41,6 +41,7 @@
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "build:studio": "node studio/esbuild.studio.config.mjs",
+        "build": "npm run build:studio",
         "prebuild:studio": "BUILD_STUDIO=true npm run build:web",
         "postbuild:studio": "tsc -p tsconfig.studio.json",
         "preview:web": "vite preview -c vite.renderer.config.mts",
