@@ -548,7 +548,7 @@ export interface IListenerManager {
   driveHasListeners(driveId: string): boolean;
 
   // listener management
-  addListener(listener: Listener): Promise<void>;
+  setListener(driveId: string, listener: Listener): Promise<void>;
   removeListener(driveId: string, listenerId: string): Promise<boolean>;
   getListener(
     driveId: string,

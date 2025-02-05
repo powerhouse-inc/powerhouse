@@ -79,15 +79,18 @@ export class ListenerManager implements IListenerManager {
     return Promise.resolve(listener);
   }
 
-  async addListener(listener: Listener) {
-    const drive = listener.driveId;
+  async setListener(driveId: string, listener: Listener) {
+    // this is temporary
+    if (driveId !== listener.driveId) {
+      throw new Error("Drive ID mismatch");
+    }
 
-    if (!this.listenerState.has(drive)) {
-      this.listenerState.set(drive, new Map());
+    if (!this.listenerState.has(driveId)) {
+      this.listenerState.set(driveId, new Map());
     }
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const driveMap = this.listenerState.get(drive)!;
+    const driveMap = this.listenerState.get(driveId)!;
     driveMap.set(listener.listenerId, {
       block: listener.block,
       driveId: listener.driveId,
