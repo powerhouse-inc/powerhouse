@@ -17,8 +17,8 @@ interface ContentProps {
   commandListRef: React.RefObject<HTMLDivElement>;
   multiple?: boolean;
   selectedValues: string[];
-  optionsCheckmark: "Auto" | "Checkmark";
-  optionsCheckmarkPosition: "Left" | "Right";
+  selectionIcon: "auto" | "checkmark";
+  selectionIconPosition: "left" | "right";
   options: SelectProps["options"];
   toggleAll: () => void;
   toggleOption: (value: string) => void;
@@ -29,28 +29,20 @@ const renderIcon = (
     | IconName
     | React.ComponentType<{ className?: string }>
     | undefined,
-  disabled?: boolean,
 ) => {
   if (typeof IconComponent === "string") {
     return (
       <Icon
         name={IconComponent}
         size={16}
-        className={cn(
-          "text-gray-700 dark:text-gray-400",
-          disabled && "opacity-75",
-        )}
+        className={cn("text-gray-700 dark:text-gray-400")}
       />
     );
   }
   return (
     IconComponent && (
       <IconComponent
-        className={cn(
-          "size-4",
-          "text-gray-700 dark:text-gray-400",
-          disabled && "opacity-75",
-        )}
+        className={cn("size-4", "text-gray-700 dark:text-gray-400")}
       />
     )
   );
@@ -61,8 +53,8 @@ export const Content: React.FC<ContentProps> = ({
   commandListRef,
   multiple,
   selectedValues,
-  optionsCheckmark,
-  optionsCheckmarkPosition,
+  selectionIcon,
+  selectionIconPosition,
   options = [],
   toggleAll,
   toggleOption,
@@ -73,7 +65,7 @@ export const Content: React.FC<ContentProps> = ({
   const cmdkSearch = useCommandState((state) => state.search) as string;
   // scroll to top when search change
   useEffect(() => {
-    commandListRef.current?.scrollTo?.({ top: 0, behavior: "instant" });
+    commandListRef.current?.scrollTo({ top: 0, behavior: "instant" });
   }, [commandListRef, cmdkSearch]);
 
   return (
@@ -97,15 +89,13 @@ export const Content: React.FC<ContentProps> = ({
               disabled={false}
               className={cn(
                 "cursor-pointer",
-                "hover:not([data-highlighted]):bg-gray-100 dark:hover:not([data-highlighted]):bg-gray-900",
-                "data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-900",
                 "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
               )}
               role="option"
               aria-selected={selectedValues.length === enabledOptions.length}
             >
               <div className="flex w-full items-center gap-2">
-                {optionsCheckmark === "Auto" && (
+                {selectionIcon === "auto" && (
                   <div
                     className={cn(
                       "flex size-4 items-center justify-center rounded border",
@@ -119,10 +109,10 @@ export const Content: React.FC<ContentProps> = ({
                     )}
                   </div>
                 )}
-                {optionsCheckmark === "Checkmark" &&
-                  !(optionsCheckmarkPosition === "Right" && hasAnyIcon) && (
+                {selectionIcon === "checkmark" &&
+                  !(selectionIconPosition === "right" && hasAnyIcon) && (
                     <div className="size-4">
-                      {optionsCheckmarkPosition === "Left" &&
+                      {selectionIconPosition === "left" &&
                         selectedValues.length === enabledOptions.length && (
                           <Icon
                             name="Checkmark"
@@ -137,8 +127,8 @@ export const Content: React.FC<ContentProps> = ({
                     ? "Deselect All"
                     : "Select All"}
                 </span>
-                {optionsCheckmark === "Checkmark" &&
-                  optionsCheckmarkPosition === "Right" && (
+                {selectionIcon === "checkmark" &&
+                  selectionIconPosition === "right" && (
                     <div className="ml-auto size-4">
                       {selectedValues.length === enabledOptions.length && (
                         <Icon
@@ -167,16 +157,14 @@ export const Content: React.FC<ContentProps> = ({
                 disabled={opt.disabled}
                 className={cn(
                   "cursor-pointer",
-                  "hover:not([data-highlighted]):bg-gray-100 dark:hover:not([data-highlighted]):bg-gray-900",
-                  "data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-900",
                   "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
                   opt.disabled &&
-                    "!pointer-events-auto cursor-not-allowed opacity-75 hover:bg-transparent dark:hover:bg-transparent",
+                    "!pointer-events-auto cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent",
                 )}
                 role="option"
                 aria-selected={isSelected}
               >
-                {optionsCheckmark === "Auto" &&
+                {selectionIcon === "auto" &&
                   (multiple ? (
                     <div
                       className={cn(
@@ -184,7 +172,6 @@ export const Content: React.FC<ContentProps> = ({
                         "border-gray-700 dark:border-gray-400",
                         isSelected &&
                           "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black",
-                        opt.disabled && "opacity-75",
                       )}
                     >
                       {isSelected && <Icon name="Checkmark" size={16} />}
@@ -197,7 +184,6 @@ export const Content: React.FC<ContentProps> = ({
                           ? "border-gray-900 dark:border-gray-400"
                           : "border-gray-800 dark:border-gray-400",
                         "bg-transparent dark:bg-transparent",
-                        opt.disabled && "opacity-75",
                       )}
                     >
                       {isSelected && (
@@ -205,10 +191,10 @@ export const Content: React.FC<ContentProps> = ({
                       )}
                     </div>
                   ))}
-                {optionsCheckmark === "Checkmark" &&
-                  !(optionsCheckmarkPosition === "Right" && hasAnyIcon) && (
+                {selectionIcon === "checkmark" &&
+                  !(selectionIconPosition === "right" && hasAnyIcon) && (
                     <div className="size-4">
-                      {optionsCheckmarkPosition === "Left" && isSelected && (
+                      {selectionIconPosition === "left" && isSelected && (
                         <Icon
                           name="Checkmark"
                           size={16}
@@ -217,7 +203,7 @@ export const Content: React.FC<ContentProps> = ({
                       )}
                     </div>
                   )}
-                {renderIcon(opt.icon, opt.disabled)}
+                {renderIcon(opt.icon)}
                 <span
                   className={cn(
                     "flex-1 truncate text-[14px] font-medium leading-4",
@@ -227,8 +213,8 @@ export const Content: React.FC<ContentProps> = ({
                 >
                   {opt.label}
                 </span>
-                {optionsCheckmark === "Checkmark" &&
-                  optionsCheckmarkPosition === "Right" && (
+                {selectionIcon === "checkmark" &&
+                  selectionIconPosition === "right" && (
                     <div className="size-4">
                       {isSelected && (
                         <Icon

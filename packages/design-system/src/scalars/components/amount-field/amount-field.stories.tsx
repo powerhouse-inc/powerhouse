@@ -15,23 +15,105 @@ const meta = {
   decorators: [withForm],
   parameters: {
     layout: "centered",
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: undefined,
+          currency: "",
+        },
+      },
+    },
   },
   tags: ["autodocs"],
   argTypes: {
     allowedCurrencies: {
       control: "object",
       description:
-        "Array of custom error messages. These errors are going to be added to the internal validation errors if there's any.",
+        "Array of strings — List of accepted fiat currency codes (e.g., ['USD', 'EUR', 'GBP']).",
+      table: {
+        type: { summary: "string[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: {
+        arg: "type",
+        neq: ["Amount", "AmountPercentage"],
+      },
+    },
+    allowedTokens: {
+      control: "object",
+      description:
+        "Array of strings — List of accepted cryptocurrency codes (e.g., ['BTC', 'ETH', 'USDT']).",
       table: {
         type: { summary: "string[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    selectName: {
+    tokenIcons: {
       control: "object",
-      description: "Add the label for the select",
+      description:
+        "Mapping of token identifiers to icon references (e.g., { 'BTC': 'icon-btc', 'ETH': 'icon-eth' }).",
       table: {
+        type: { summary: "object" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    step: {
+      control: "number",
+      description: "The step value for the amount field",
+      table: {
+        defaultValue: { summary: "1" },
+        type: { summary: "number" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    currencyPosition: {
+      control: "select",
+      options: ["left", "right"],
+      description:
+        "Determines the position of the currency select dropdown relative to the amount input field.",
+      table: {
+        defaultValue: { summary: "right" },
         type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    trailingZeros: {
+      control: "boolean",
+      description:
+        "When precision is set, for example to 2, determines if the the trailing zeros should be preserved ( for example: 25.00,7.50, etc.) or not ( for example: 25, 7.5).",
+      if: {
+        arg: "type",
+        neq: "AmountToken",
+      },
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.VALIDATION,
+      },
+    },
+    viewPrecision: {
+      control: "number",
+      description: "Number of decimal places viewed",
+      table: {
+        type: { summary: "number" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    precision: {
+      control: "number",
+      description: "Number of decimal places viewed",
+      table: {
+        type: { summary: "number" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    allowNegative: {
+      control: "boolean",
+      description: "Whether negative values are allowed (true or false).",
+      table: {
+        defaultValue: { summary: "false" },
+        type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -53,20 +135,39 @@ const meta = {
       },
     },
     // TODO:Improve the AmountType descriptions for the value
-    ...getDefaultArgTypes({
-      valueControlType: "object",
-      valueType: "object",
-    }),
+    ...getDefaultArgTypes(),
+
+    value: {
+      control: "object",
+      description:
+        "The value of the amount field. Can be a number, an object with currency, or undefined. Examples: { amount: 100, currency: 'USD' }, 200, undefined.",
+      table: {
+        type: { summary: "object | number | undefined" },
+        category: StorybookControlCategory.DEFAULT,
+      },
+    },
     ...PrebuiltArgTypes.placeholder,
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minValue,
     ...PrebuiltArgTypes.maxValue,
-    ...PrebuiltArgTypes.precision,
-    ...PrebuiltArgTypes.trailingZeros,
+    type: {
+      control: "select",
+      options: [
+        "Amount",
+        "AmountCurrencyFiat",
+        "AmountPercentage",
+        "AmountCurrencyCrypto",
+        "AmountCurrencyUniversal",
+      ],
+      description: "The type of amount field.",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
+
   args: {
-    errors: [],
-    warnings: [],
     name: "amount-field",
   },
 } satisfies Meta<typeof AmountField>;
@@ -78,225 +179,140 @@ const IconComponent = (name: IconName) => {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Currency: Story = {
+export const Default: Story = {
   args: {
-    selectName: "currency",
+    placeholder: "0",
     label: "Enter Amount and Select Currency",
-    name: "amount",
-    step: 0,
-    type: "AmountCurrency",
+    placeholderSelect: "CUR",
+    type: "AmountCurrencyFiat",
     allowedCurrencies: ["USD", "EUR"],
-    currencyPosition: "right",
     value: {
-      amount: 345,
-      currency: "USD",
+      amount: undefined,
+      currency: "",
     },
   },
 };
-export const TokenIcon: Story = {
-  name: "Token Icon",
+
+export const WithValue: Story = {
   args: {
-    selectName: "currency",
+    placeholder: "Enter Amount",
+    placeholderSelect: "CUR",
     label: "Enter Amount and Select Currency",
-    name: "amount",
-    step: 0,
-    type: "AmountToken",
+    type: "AmountCurrencyFiat",
+    allowedCurrencies: ["USD", "EUR"],
+    value: {
+      currency: "USD",
+      amount: 100,
+    },
+  },
+};
+export const WithAmount: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": "",
+      },
+    },
+  },
+  args: {
+    placeholder: "Enter Amount",
+    label: "Enter Amout ",
+    type: "Amount",
+    value: 345,
+  },
+};
+export const CurrencyIcon: Story = {
+  args: {
+    placeholder: "Enter Amount",
+    label: "Enter Amount and Select Currency",
+    type: "AmountCurrencyCrypto",
+    placeholderSelect: "CUR",
     allowedTokens: ["BTC", "ETH"],
     tokenIcons: {
       BTC: IconComponent("Briefcase"),
       ETH: IconComponent("Briefcase"),
     },
-    currencyPosition: "right",
     value: {
       amount: 3454564564 as unknown as bigint,
-      token: "BTC",
+      currency: "BTC",
     },
   },
 };
 
-export const Token: Story = {
+export const WithToken: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: "",
+          currency: "",
+        },
+      },
+    },
+  },
   args: {
-    selectName: "currency",
+    placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    name: "amount",
-    step: 0,
-    type: "AmountToken",
+    type: "AmountCurrencyCrypto",
+    placeholderSelect: "CUR",
     allowedTokens: ["BTC", "ETH", "USDT"],
-    currencyPosition: "right",
     value: {
-      amount: 12321312 as unknown as bigint,
-      token: "BTC",
+      amount: 123 as unknown as bigint,
+      currency: "BTC",
     },
   },
 };
 
-export const CurrencyLeft: Story = {
-  name: "Currency Left",
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    step: 0,
-    type: "AmountCurrency",
-    allowedCurrencies: ["USD", "EUR"],
-    currencyPosition: "left",
-    value: {
-      amount: 345,
-      currency: "USD",
+export const WithValuePercent: Story = {
+  parameters: {
+    form: {
+      defaultValues: {
+        "amount-field": "",
+      },
     },
   },
-};
-export const Default: Story = {
   args: {
-    selectName: "currency",
-    label: "Enter Amount ",
-    name: "amount",
-    type: "Amount",
-    value: 345,
-    step: 0,
-  },
-};
-export const Percent: Story = {
-  args: {
-    selectName: "currency",
     label: "Enter Percentage ",
-    name: "amount",
+    placeholder: "Enter Amount",
     type: "AmountPercentage",
     value: 9,
-    step: 0,
   },
 };
-
-export const PercentWithActive: Story = {
+export const Disable: Story = {
   args: {
-    selectName: "currency",
-    label: "Enter Percentage ",
-    name: "amount",
-    type: "AmountPercentage",
-    value: 345,
-    step: 0,
-    numberProps: {
-      autoFocus: true,
-    },
-  },
-  parameters: {
-    pseudo: { focus: true },
-  },
-};
-export const PercentWithDisable: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Percentage ",
-    name: "amount",
-    type: "AmountPercentage",
-    defaultValue: 345,
-    step: 0,
-  },
-};
-
-export const CurrencyWithDisable: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
+    label: "Enter Amount ",
+    placeholder: "Enter Amount",
+    type: "AmountCurrencyFiat",
+    placeholderSelect: "CUR",
     allowedCurrencies: ["USD", "EUR"],
-    type: "AmountCurrency",
-    currencyPosition: "right",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
     disabled: true,
-    step: 0,
+    value: {
+      amount: 9,
+      currency: "USD",
+    },
   },
 };
 
-export const HoverWithCurrency: Story = {
-  args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    currencyPosition: "right",
-    type: "AmountCurrency",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    step: 0,
-  },
+export const WithValueUniversalAmountCurrency: Story = {
   parameters: {
-    pseudo: {
-      hover: true,
+    form: {
+      defaultValues: {
+        "amount-field": {
+          amount: 123,
+          currency: "USD",
+        },
+      },
     },
   },
-};
-export const Required: Story = {
   args: {
-    selectName: "currency",
-    label: "Enter Amount and Select Currency",
-    name: "amount",
-    allowedCurrencies: ["USD", "EUR"],
-    required: true,
-    currencyPosition: "right",
-    type: "AmountCurrency",
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    step: 0,
-  },
-};
-export const WithWarning: Story = {
-  args: {
-    selectName: "currency",
-    name: "Label",
     label: "Label",
-    type: "AmountCurrency",
-    currencyPosition: "right",
+    placeholder: "Enter Amount",
+    placeholderSelect: "CUR",
+    type: "AmountCurrencyUniversal",
     allowedCurrencies: ["USD", "EUR"],
     value: {
-      amount: 345,
+      amount: 123,
       currency: "USD",
     },
-    warnings: ["Warning message"],
-    step: 0,
-  },
-};
-export const WithError: Story = {
-  args: {
-    selectName: "currency",
-    name: "Label",
-    label: "Label",
-    type: "AmountCurrency",
-    currencyPosition: "right",
-    allowedCurrencies: ["USD", "EUR"],
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    errors: ["Error message"],
-    step: 0,
-  },
-};
-export const WithMultipleErrors: Story = {
-  args: {
-    selectName: "currency",
-    name: "Label",
-    label: "Label",
-    type: "AmountCurrency",
-    currencyPosition: "right",
-    allowedCurrencies: ["USD", "EUR"],
-    value: {
-      amount: 345,
-      currency: "USD",
-    },
-    errors: [
-      "Error message number 1",
-      "Error message number 2",
-      "Error message number 3",
-      "Error message number 4",
-    ],
-    step: 0,
   },
 };

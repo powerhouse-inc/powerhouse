@@ -9,13 +9,16 @@ const buttonVariants = cva(
     "whitespace-nowrap rounded-md text-sm font-medium",
     "transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-    "disabled:pointer-events-none disabled:opacity-50",
+    "disabled:pointer-events-none",
     "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   ),
   {
     variants: {
       variant: {
         default: "",
+        outline:
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
       },
     },
     defaultVariants: {

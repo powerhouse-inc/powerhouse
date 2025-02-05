@@ -24,9 +24,9 @@
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "@powerhousedao/analytics-engine-core": "^0.3.0",
-    "@powerhousedao/analytics-engine-graphql": "^0.2.1",
-    "@powerhousedao/analytics-engine-pg": "^0.3.0",
+    "@powerhousedao/analytics-engine-core": "^0.3.2",
+    "@powerhousedao/analytics-engine-graphql": "^0.2.2",
+    "@powerhousedao/analytics-engine-pg": "^0.4.0",
     "document-drive": "workspace:*",
     "graphql-tag": "^2.12.6",
     "knex": "^3.1.0",

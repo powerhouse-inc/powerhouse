@@ -66,6 +66,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
           </span>
           <button
             data-state="closed"
+            type="button"
           >
             <div
               data-testid="icon-fallback"
@@ -75,7 +76,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
         </label>
       </div>
       <p
-        class="mb-0 inline-flex items-center text-xs font-medium text-orange-900 dark:text-orange-900"
+        class="mb-0 inline-flex items-center text-xs font-medium text-yellow-900 dark:text-yellow-900"
         data-type="warning"
       >
         Test warning
@@ -137,6 +138,7 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
           </span>
           <button
             data-state="closed"
+            type="button"
           >
             <div
               data-testid="icon-fallback"
@@ -146,7 +148,7 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
         </label>
       </div>
       <p
-        class="mb-0 inline-flex items-center text-xs font-medium text-orange-900 dark:text-orange-900"
+        class="mb-0 inline-flex items-center text-xs font-medium text-yellow-900 dark:text-yellow-900"
         data-type="warning"
       >
         Test warning
