@@ -20,9 +20,7 @@ dotenv.config();
 // start document drive server with all available document models
 
 // Create a monolith express app for all subgraphs
-const app = express({
-
-});
+const app = express({});
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 const main = async () => {

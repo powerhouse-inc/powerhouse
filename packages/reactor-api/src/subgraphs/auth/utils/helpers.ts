@@ -1,16 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { randomUUID } from "crypto";
 import { GraphQLError } from "graphql";
 import jwt from "jsonwebtoken";
 import ms from "ms";
 import wildcard from "wildcard-match";
 import z from "zod";
-import { Session, SessionInput } from "../types";
-import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from "../env";
 import { Db } from "../../../utils/db";
+import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from "../env";
+import { Session, SessionInput } from "../types";
 const jwtSchema = z.object({
   sessionId: z.string(),
   exp: z.optional(z.number()),

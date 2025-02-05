@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "1.3.0",
+  "version": "1.8.3",
   "license": "AGPL-3.0-only",
   "type": "module",
   "publishConfig": {
