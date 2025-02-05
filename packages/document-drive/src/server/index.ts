@@ -617,7 +617,10 @@ export class BaseDocumentDriveServer
     return errors.length === 0 ? null : errors;
   }
 
-  private newTransmitter(transmitterType: string, listener: Listener) {
+  private newTransmitter(
+    transmitterType: string,
+    listener: Listener,
+  ): ITransmitter {
     switch (transmitterType) {
       case "SwitchboardPush": {
         return new SwitchboardPushTransmitter(listener, this);
@@ -658,13 +661,8 @@ export class BaseDocumentDriveServer
         system: zodListener.system,
         callInfo: zodListener.callInfo ?? undefined,
         label: zodListener.label ?? "",
-      });
-
-      await this.listenerManager.setTransmitter(
-        drive.state.global.id,
-        zodListener.listenerId,
         transmitter,
-      );
+      });
     }
   }
 
@@ -2287,13 +2285,8 @@ export class BaseDocumentDriveServer
         transmitterType:
           zodListener.callInfo?.transmitterType ?? "PullResponder",
       },
-    });
-
-    await this.listenerManager.setTransmitter(
-      driveId,
-      zodListener.listenerId,
       transmitter,
-    );
+    });
   }
 
   async addInternalListener(
@@ -2338,18 +2331,32 @@ export class BaseDocumentDriveServer
     await this.listenerManager.removeListener(driveId, listenerId);
   }
 
-  getTransmitter(
+  async getTransmitter(
     driveId: string,
     listenerId: string,
   ): Promise<ITransmitter | undefined> {
-    return this.listenerManager.getTransmitter(driveId, listenerId);
+    const listener = await this.listenerManager.getListenerState(
+      driveId,
+      listenerId,
+    );
+    return listener?.listener.transmitter;
   }
 
   getListener(
     driveId: string,
     listenerId: string,
   ): Promise<ListenerState | undefined> {
-    return this.listenerManager.getListener(driveId, listenerId);
+    let listenerState;
+    try {
+      listenerState = this.listenerManager.getListenerState(
+        driveId,
+        listenerId,
+      );
+    } catch {
+      return Promise.resolve(undefined);
+    }
+
+    return Promise.resolve(listenerState);
   }
 
   getSyncStatus(
