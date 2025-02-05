@@ -8,6 +8,7 @@ import { logger } from "../../utils/logger";
 import { OperationError } from "../error";
 import {
   DefaultListenerManagerOptions,
+  DriveUpdateErrorHandler,
   ErrorStatus,
   GetStrandsOptions,
   IBaseDocumentDriveServer,
@@ -19,6 +20,7 @@ import {
   OperationUpdate,
   StrandUpdate,
   SynchronizationUnit,
+  SynchronizationUnitQuery,
 } from "../types";
 import { ITransmitter, StrandUpdateSource } from "./transmitter/types";
 
@@ -46,10 +48,11 @@ function debounce<T extends unknown[], R>(
     });
   };
 }
+
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
 
-  protected drive: IBaseDocumentDriveServer;
+  protected driveServer: IBaseDocumentDriveServer;
   protected listenerState = new Map<string, Map<string, ListenerState>>();
   protected options: ListenerManagerOptions;
   protected transmitters: Record<
@@ -62,9 +65,21 @@ export class ListenerManager implements IListenerManager {
     listenerState = new Map<string, Map<string, ListenerState>>(),
     options: ListenerManagerOptions = DefaultListenerManagerOptions,
   ) {
-    this.drive = drive;
+    this.driveServer = drive;
     this.listenerState = listenerState;
     this.options = { ...DefaultListenerManagerOptions, ...options };
+  }
+
+  async initialize(handler: DriveUpdateErrorHandler) {
+    // if network connect comes back online
+    // then triggers the listeners update
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => {
+        this.triggerUpdate(false, { type: "local" }, handler).catch((error) => {
+          logger.error("Non handled error updating listeners", error);
+        });
+      });
+    }
   }
 
   driveHasListeners(driveId: string) {
@@ -149,7 +164,7 @@ export class ListenerManager implements IListenerManager {
   async removeSyncUnits(
     driveId: string,
     syncUnits: Pick<SynchronizationUnit, "syncId">[],
-  ) {
+  ): Promise<void> {
     const listeners = this.listenerState.get(driveId);
     if (!listeners) {
       return;
@@ -275,7 +290,7 @@ export class ListenerManager implements IListenerManager {
 
           const opData: OperationUpdate[] = [];
           try {
-            const data = await this.drive.getOperationData(
+            const data = await this.driveServer.getOperationData(
               // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
               driveId,
               syncUnit.syncId,
@@ -413,7 +428,7 @@ export class ListenerManager implements IListenerManager {
       return [];
     }
     const filter = listener.listener.filter;
-    return this.drive.getSynchronizationUnits(
+    return this.driveServer.getSynchronizationUnits(
       driveId,
       filter.documentId ?? ["*"],
       filter.scope ?? ["*"],
@@ -423,13 +438,16 @@ export class ListenerManager implements IListenerManager {
     );
   }
 
-  getListenerSyncUnitIds(driveId: string, listenerId: string) {
+  getListenerSyncUnitIds(
+    driveId: string,
+    listenerId: string,
+  ): Promise<SynchronizationUnitQuery[]> {
     const listener = this.listenerState.get(driveId)?.get(listenerId);
     if (!listener) {
-      return [];
+      return Promise.resolve([]);
     }
     const filter = listener.listener.filter;
-    return this.drive.getSynchronizationUnitsIds(
+    return this.driveServer.getSynchronizationUnitsIds(
       driveId,
       filter.documentId ?? ["*"],
       filter.scope ?? ["*"],
@@ -459,7 +477,7 @@ export class ListenerManager implements IListenerManager {
     // fetch operations from drive  and prepare strands
     const strands: StrandUpdate[] = [];
 
-    const drive = await this.drive.getDrive(driveId);
+    const drive = await this.driveServer.getDrive(driveId);
     const syncUnits = await this.getListenerSyncUnits(
       driveId,
       listenerId,
@@ -484,7 +502,7 @@ export class ListenerManager implements IListenerManager {
 
       const { documentId, driveId, scope, branch } = syncUnit;
       try {
-        const operations = await this.drive.getOperationData(
+        const operations = await this.driveServer.getOperationData(
           // DEAL WITH INVALID SYNC ID ERROR
           driveId,
           syncUnit.syncId,

@@ -543,7 +543,15 @@ export type IDocumentDriveServer = IBaseDocumentDriveServer &
   IDefaultDrivesManager &
   IReadModeDriveServer;
 
+export type DriveUpdateErrorHandler = (
+  error: Error,
+  driveId: string,
+  listener: ListenerState,
+) => void;
+
 export interface IListenerManager {
+  initialize(handler: DriveUpdateErrorHandler): Promise<void>;
+
   removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
 
@@ -578,12 +586,23 @@ export interface IListenerManager {
     source: StrandUpdateSource,
     willUpdate?: (listeners: Listener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
+    forceSync?: boolean,
   ): Promise<ListenerUpdate[]>;
   updateListenerRevision(
     listenerId: string,
     driveId: string,
     syncId: string,
     listenerRev: number,
+  ): Promise<void>;
+
+  // todo: re-evaluate
+  getListenerSyncUnitIds(
+    driveId: string,
+    listenerId: string,
+  ): Promise<SynchronizationUnitQuery[]>;
+  removeSyncUnits(
+    driveId: string,
+    syncUnits: Pick<SynchronizationUnit, "syncId">[],
   ): Promise<void>;
 }
 
