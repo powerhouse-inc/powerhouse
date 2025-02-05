@@ -1,7 +1,7 @@
 import * as BudgetStatement from "document-model-libs/budget-statement";
 import * as DocumentDrive from "document-model-libs/document-drive";
 import * as documentModelsMap from "document-model-libs/document-models";
-import { Document, DocumentModel } from "document-model/document";
+import { Document, DocumentModelModule } from "document-model/document";
 import { beforeEach, describe, it, vi } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 import { DocumentModelNotFoundError } from "../src";
@@ -17,10 +17,10 @@ import { ReadModeService } from "../src/read-mode/service";
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
 
-const documentModels = Object.values(documentModelsMap) as DocumentModel[];
+const documentModels = Object.values(documentModelsMap) as DocumentModelModule[];
 
 function getDocumentModel(id: string) {
-  const documentModel = documentModels.find((d) => d.documentModel.id === id);
+  const documentModel = documentModels.find((d) => d.documentModelState.id === id);
   if (!documentModel) {
     throw new Error(`Document model not found for id: ${id}`);
   }

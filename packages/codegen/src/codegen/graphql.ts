@@ -3,7 +3,7 @@ import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
 import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
 import { readdirSync } from "node:fs";
 import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
-import { formatWithPrettierBeforeWrite } from "./utils";
+import { formatWithPrettierBeforeWrite } from "./utils.js";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })

@@ -4,8 +4,4 @@
     "emitDeclarationOnly": true,
     "outDir": "./dist",
   },
-  "include": [
-    "src/**/*.ts",
-    "*.ts",
-  ]
 }

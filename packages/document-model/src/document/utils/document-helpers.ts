@@ -1,14 +1,16 @@
 import {
-  Operation,
   OperationScope,
-  Action,
   DocumentOperations,
-} from "../types";
+  BaseAction,
+  Operation,
+} from "@document/types.js";
 import stringify from "safe-stable-stringify";
 
 export type OperationIndex = {
   index: number;
   skip: number;
+  id?: string;
+  timestamp?: string;
 };
 
 export enum IntegrityIssueType {
@@ -29,12 +31,12 @@ type IntegrityIssue = {
 
 type Reshuffle = (
   startIndex: OperationIndex,
-  opsA: Operation[],
-  opsB: Operation[],
-) => Operation[];
+  opsA: OperationIndex[],
+  opsB: OperationIndex[],
+) => OperationIndex[];
 
 export function checkCleanedOperationsIntegrity(
-  sortedOperations: Operation[],
+  sortedOperations: OperationIndex[],
 ): IntegrityIssue[] {
   const result: IntegrityIssue[] = [];
 
@@ -90,10 +92,10 @@ export function checkCleanedOperationsIntegrity(
 // 0:0 1:0 2:0 => 0:0 1:0 2:0, removals 0, no issues
 // 0:0 1:0 2:0 => 0:0 1:0 2:0, removals 0, no issues
 
-export function garbageCollect<A extends OperationIndex>(
-  sortedOperations: A[],
-): A[] {
-  const result: A[] = [];
+export function garbageCollect<TOpIndex extends OperationIndex>(
+  sortedOperations: TOpIndex[],
+) {
+  const result: TOpIndex[] = [];
 
   let i = sortedOperations.length - 1;
 
@@ -113,7 +115,9 @@ export function garbageCollect<A extends OperationIndex>(
   return result;
 }
 
-export function addUndo(sortedOperations: Operation[]): Operation[] {
+export function addUndo<TGlobalState, TLocalState, TAction extends BaseAction>(
+  sortedOperations: Operation<TGlobalState, TLocalState, TAction>[],
+): Operation<TGlobalState, TLocalState, TAction>[] {
   const operationsCopy = [...sortedOperations];
   const latestOperation = operationsCopy[operationsCopy.length - 1];
 
@@ -135,7 +139,7 @@ export function addUndo(sortedOperations: Operation[]): Operation[] {
       skip: 1,
       scope: latestOperation.scope,
       hash: latestOperation.hash,
-    });
+    } as Operation<TGlobalState, TLocalState, TAction>);
   }
 
   return operationsCopy;
@@ -143,7 +147,9 @@ export function addUndo(sortedOperations: Operation[]): Operation[] {
 
 // [0:0 2:0 1:0 3:3 3:1] => [0:0 1:0 2:0 3:1 3:3]
 // Sort by index _and_ skip number
-export function sortOperations<A extends OperationIndex>(operations: A[]): A[] {
+export function sortOperations<TOpIndex extends OperationIndex>(
+  operations: TOpIndex[],
+): TOpIndex[] {
   return operations
     .slice()
     .sort((a, b) => a.skip - b.skip)
@@ -155,28 +161,34 @@ export function sortOperations<A extends OperationIndex>(operations: A[]): A[] {
 // Split            => [0:0, 1:0] + [2:0, A3:0, A4:0, A5:0] + [B4:2, B5:0]
 // Reshuffle(6:4)   => [6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
 // merge            => [0:0, 1:0, 6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
-export const reshuffleByTimestamp: Reshuffle = (startIndex, opsA, opsB) => {
+export function reshuffleByTimestamp(
+  startIndex: OperationIndex,
+  opsA: OperationIndex[],
+  opsB: OperationIndex[],
+) {
   return [...opsA, ...opsB]
     .sort(
       (a, b) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        new Date(a.timestamp || "").getTime() -
+        new Date(b.timestamp || "").getTime(),
     )
     .map((op, i) => ({
       ...op,
       index: startIndex.index + i,
       skip: i === 0 ? startIndex.skip : 0,
     }));
-};
+}
 
-export const reshuffleByTimestampAndIndex: Reshuffle = (
-  startIndex,
-  opsA,
-  opsB,
-) => {
+export function reshuffleByTimestampAndIndex(
+  startIndex: OperationIndex,
+  opsA: OperationIndex[],
+  opsB: OperationIndex[],
+) {
   return [...opsA, ...opsB]
     .sort(
       (a, b) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        new Date(a.timestamp || "").getTime() -
+        new Date(b.timestamp || "").getTime(),
     )
     .sort((a, b) => a.index - b.index)
     .map((op, i) => ({
@@ -184,10 +196,10 @@ export const reshuffleByTimestampAndIndex: Reshuffle = (
       index: startIndex.index + i,
       skip: i === 0 ? startIndex.skip : 0,
     }));
-};
+}
 
 // TODO: implement better operation equality function
-export function operationsAreEqual(op1: Operation, op2: Operation) {
+export function operationsAreEqual<TOp>(op1: TOp, op2: TOp): boolean {
   return stringify(op1) === stringify(op2);
 }
 
@@ -200,16 +212,16 @@ export function operationsAreEqual(op1: Operation, op2: Operation) {
 // [T0:0 T1:0 T2:0 T3:0] + [B2:3 B3:0] = [T0:0 T1:0 B2:3 B3:0]
 
 export function attachBranch(
-  trunk: Operation[],
-  newBranch: Operation[],
-): [Operation[], Operation[]] {
+  trunk: Operation<any, any, BaseAction>[],
+  newBranch: Operation<any, any, BaseAction>[],
+): [Operation<any, any, BaseAction>[], Operation<any, any, BaseAction>[]] {
   const trunkCopy = garbageCollect(sortOperations(trunk.slice()));
   const newOperations = garbageCollect(sortOperations(newBranch.slice()));
   if (trunkCopy.length < 1) {
     return [newOperations, []];
   }
 
-  const result: Operation[] = [];
+  const result: Operation<any, any, BaseAction>[] = [];
   let enteredBranch = false;
 
   while (newOperations.length > 0) {
@@ -256,7 +268,7 @@ export function attachBranch(
   return [garbageCollect(result), trunkCopy];
 }
 
-export function precedes(op1: Operation, op2: Operation) {
+export function precedes(op1: OperationIndex, op2: OperationIndex) {
   return (
     op1.index < op2.index ||
     (op1.index === op2.index && op1.id === op2.id && op1.skip < op2.skip)
@@ -264,12 +276,12 @@ export function precedes(op1: Operation, op2: Operation) {
 }
 
 export function split(
-  sortedTargetOperations: Operation[],
-  sortedMergeOperations: Operation[],
-): [Operation[], Operation[], Operation[]] {
-  const commonOperations: Operation[] = [];
-  const targetDiffOperations: Operation[] = [];
-  const mergeDiffOperations: Operation[] = [];
+  sortedTargetOperations: OperationIndex[],
+  sortedMergeOperations: OperationIndex[],
+): [OperationIndex[], OperationIndex[], OperationIndex[]] {
+  const commonOperations: OperationIndex[] = [];
+  const targetDiffOperations: OperationIndex[] = [];
+  const mergeDiffOperations: OperationIndex[] = [];
 
   // get bigger array length
   const maxLength = Math.max(
@@ -309,10 +321,10 @@ export function split(
 // Reshuffle(6:4)   => [6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
 // merge            => [0:0, 1:0, 6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
 export function merge(
-  sortedTargetOperations: Operation[],
-  sortedMergeOperations: Operation[],
+  sortedTargetOperations: OperationIndex[],
+  sortedMergeOperations: OperationIndex[],
   reshuffle: Reshuffle,
-): Operation[] {
+): OperationIndex[] {
   const [_commonOperations, _targetOperations, _mergeOperations] = split(
     garbageCollect(sortedTargetOperations),
     garbageCollect(sortedMergeOperations),
@@ -344,7 +356,7 @@ export function merge(
   return _commonOperations.concat(newOperationHistory);
 }
 
-function getMaxIndex(sortedOperations: Operation[]) {
+function getMaxIndex(sortedOperations: OperationIndex[]) {
   const lastElement = sortedOperations[sortedOperations.length - 1];
   if (!lastElement) {
     return -1;
@@ -368,9 +380,7 @@ function getMaxIndex(sortedOperations: Operation[]) {
 // [0:0 1:1 2:0 3:3] => -1
 // [50:50 100:50 150:50 151:0 152:0 153:0 154:3] => 53
 
-export function nextSkipNumber<A extends OperationIndex>(
-  sortedOperations: A[],
-): number {
+export function nextSkipNumber(sortedOperations: OperationIndex[]) {
   if (sortedOperations.length < 1) {
     return -1;
   }
@@ -390,20 +400,35 @@ export function nextSkipNumber<A extends OperationIndex>(
     : nextSkip;
 }
 
-export const checkOperationsIntegrity = (
-  operations: Operation[],
-): IntegrityIssue[] => {
+export function checkOperationsIntegrity<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+>(operations: TOp[]): IntegrityIssue[] {
   return checkCleanedOperationsIntegrity(
     garbageCollect(sortOperations(operations)),
   );
-};
+}
 
-export type OperationsByScope = Partial<Record<OperationScope, Operation[]>>;
+export type OperationsByScope<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+> = Partial<Record<OperationScope, TOp[]>>;
 
-export const groupOperationsByScope = (
-  operations: Operation[],
-): OperationsByScope => {
-  const result = operations.reduce<OperationsByScope>((acc, operation) => {
+export function groupOperationsByScope<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+>(
+  operations: TOp[],
+): OperationsByScope<TGlobalState, TLocalState, TAction, TOp> {
+  const result = operations.reduce<
+    OperationsByScope<TGlobalState, TLocalState, TAction, TOp>
+  >((acc, operation) => {
     if (!acc[operation.scope]) {
       acc[operation.scope] = [];
     }
@@ -414,20 +439,32 @@ export const groupOperationsByScope = (
   }, {});
 
   return result;
-};
+}
 
-type PrepareOperationsResult = {
-  validOperations: Operation[];
-  invalidOperations: Operation[];
-  duplicatedOperations: Operation[];
+type PrepareOperationsResult<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+> = {
+  validOperations: TOp[];
+  invalidOperations: TOp[];
+  duplicatedOperations: TOp[];
   integrityIssues: IntegrityIssue[];
 };
 
-export const prepareOperations = (
-  operationsHistory: Operation[],
-  newOperations: Operation[],
-): PrepareOperationsResult => {
-  const result: PrepareOperationsResult = {
+export function prepareOperations<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+>(operationsHistory: TOp[], newOperations: TOp[]) {
+  const result: PrepareOperationsResult<
+    TGlobalState,
+    TLocalState,
+    TAction,
+    TOp
+  > = {
     integrityIssues: [],
     validOperations: [],
     invalidOperations: [],
@@ -483,12 +520,14 @@ export const prepareOperations = (
 
   result.integrityIssues.push(...integrityErrors);
   return result;
-};
+}
 
-export function removeExistingOperations(
-  newOperations: Operation[],
-  operationsHistory: Operation[],
-): Operation[] {
+export function removeExistingOperations<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+>(newOperations: TOp[], operationsHistory: TOp[]): TOp[] {
   return newOperations.filter((newOperation) => {
     return !operationsHistory.some((historyOperation) => {
       return (
@@ -515,12 +554,11 @@ export type SkipHeaderOperationIndex = Partial<Pick<OperationIndex, "index">> &
  * @param skipHeaderOperation - The skip header operation index.
  * @returns The remaining operations after skipping header operations.
  */
-export function skipHeaderOperations<A extends OperationIndex>(
-  operations: A[],
+export function skipHeaderOperations<TOpIndex extends OperationIndex>(
+  operations: TOpIndex[],
   skipHeaderOperation: SkipHeaderOperationIndex,
-): A[] {
-  const [lastOperation] = sortOperations(operations).slice(-1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+): TOpIndex[] {
+  const lastOperation = sortOperations(operations).at(-1);
   const lastIndex = lastOperation?.index ?? -1;
   const nextIndex = lastIndex + 1;
 
@@ -539,13 +577,16 @@ export function skipHeaderOperations<A extends OperationIndex>(
     sortOperations([...operations, skipOperationIndex]),
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  return (clearedOperations || []).slice(0, -1) as A[];
+  return (clearedOperations.at(0) ?? []) as TOpIndex[];
 }
 
-export function garbageCollectDocumentOperations<A extends Action>(
-  documentOperations: DocumentOperations<A>,
-): DocumentOperations<A> {
+export function garbageCollectDocumentOperations<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  documentOperations: DocumentOperations<TGlobalState, TLocalState, TAction>,
+): DocumentOperations<TGlobalState, TLocalState, TAction> {
   const clearedOperations = Object.entries(documentOperations).reduce(
     (acc, entry) => {
       const [scope, ops] = entry;
@@ -558,9 +599,11 @@ export function garbageCollectDocumentOperations<A extends Action>(
     {},
   );
 
-  return {
-    ...clearedOperations,
-  } as DocumentOperations<A>;
+  return clearedOperations as DocumentOperations<
+    TGlobalState,
+    TLocalState,
+    TAction
+  >;
 }
 
 /**
@@ -571,10 +614,10 @@ export function garbageCollectDocumentOperations<A extends Action>(
  * @param sourceOperations - The array of source operations to compare against.
  * @returns An array of operations with duplicates filtered out.
  */
-export function filterDuplicatedOperations(
-  targetOperations: Operation[],
-  sourceOperations: Operation[],
-): Operation[] {
+export function filterDuplicatedOperations<T extends { id?: string | number }>(
+  targetOperations: T[],
+  sourceOperations: T[],
+): T[] {
   return targetOperations.filter((op) => {
     if (op.id) {
       return !sourceOperations.some((targetOp) => targetOp.id === op.id);
@@ -584,16 +627,20 @@ export function filterDuplicatedOperations(
   });
 }
 
-export function filterDocumentOperationsResultingState<A extends Action>(
-  documentOperations?: DocumentOperations<A>,
-) {
+export function filterDocumentOperationsResultingState<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  documentOperations?: DocumentOperations<TGlobalState, TLocalState, TAction>,
+): DocumentOperations<TGlobalState, TLocalState, TAction> {
   if (!documentOperations) {
-    return {};
+    return {} as DocumentOperations<TGlobalState, TLocalState, TAction>;
   }
 
   const entries = Object.entries(documentOperations);
 
-  return entries.reduce<DocumentOperations<A>>(
+  return entries.reduce(
     (acc, [scope, operations]) => ({
       ...acc,
       [scope]: operations.map((op) => {
@@ -602,7 +649,7 @@ export function filterDocumentOperationsResultingState<A extends Action>(
         return restProps;
       }),
     }),
-    {} as DocumentOperations<A>,
+    {} as DocumentOperations<TGlobalState, TLocalState, TAction>,
   );
 }
 

@@ -1,24 +1,19 @@
 import { z } from "zod";
+import { OperationScope } from "@document/types.js";
 import {
   Action,
   DocumentFile,
-  Load_State,
   LoadStateAction,
   LoadStateActionInput,
   LoadStateActionStateInput,
   Operation,
-  Prune,
   PruneAction,
   PruneActionInput,
-  Redo,
   RedoAction,
-  Set_Name,
   SetNameAction,
   SetNameOperation,
-  Undo,
   UndoAction,
-} from ".";
-import { OperationScope } from "../types";
+} from "./types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;

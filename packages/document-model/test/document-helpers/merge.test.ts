@@ -5,8 +5,8 @@ import {
   merge,
   reshuffleByTimestampAndIndex,
   reshuffleByTimestamp,
-} from "../../src/document/utils/document-helpers";
-import { buildOperations } from "./utils";
+} from "@document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("merge", () => {
   const scenarios = [

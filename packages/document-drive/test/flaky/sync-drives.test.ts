@@ -17,9 +17,8 @@ import {
 } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import {
-  DocumentModel,
-  Operation,
-  OperationScope,
+  DocumentModelModule,
+  Operation
 } from "document-model/document";
 import * as DocumentModelLib from "document-model/document-model";
 import stringify from "json-stringify-deterministic";
@@ -40,7 +39,7 @@ describe("Document Drive Server interaction", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   function setupHandlers(server: DocumentDriveServer) {
     const handlers = [

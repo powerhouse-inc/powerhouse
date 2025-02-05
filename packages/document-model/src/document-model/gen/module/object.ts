@@ -1,5 +1,4 @@
-import { BaseDocument } from "../../../document/object";
-
+import { BaseDocument } from "@document/object.js";
 import {
   AddModuleInput,
   SetModuleNameInput,
@@ -7,17 +6,17 @@ import {
   DeleteModuleInput,
   ReorderModulesInput,
   DocumentModelState,
-  DocumentModelLocalState,
-} from "../types";
+  DocumentModelLocalState
+} from "../schema/types.js";
 import {
   addModule,
   setModuleName,
   setModuleDescription,
   deleteModule,
   reorderModules,
-} from "./creators";
-import { DocumentModelAction } from "../actions";
-import { ReducerOptions } from "../../../document";
+} from "./creators.js";
+import { ReducerOptions } from "@document/types.js";
+import { DocumentModelAction } from "../actions.js";
 
 export default class DocumentModel_Module extends BaseDocument<
   DocumentModelState,

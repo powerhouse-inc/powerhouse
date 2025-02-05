@@ -1,6 +1,6 @@
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel as BaseDocumentModel } from "document-model/document";
+import { DocumentModelModule as BaseDocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {

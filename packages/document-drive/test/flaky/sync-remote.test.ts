@@ -1,6 +1,6 @@
 import { actions, reducer } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
+import { DocumentModelModule } from "document-model/document";
 import {
   actions as DocumentModelActions,
   DocumentModelDocument,
@@ -25,7 +25,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   const storageLayer = new MemoryStorage();
 

@@ -1,10 +1,10 @@
 import { ListenerFilter, Trigger } from "document-model-libs/document-drive";
 import { Operation, OperationScope } from "document-model/document";
-import { PULL_DRIVE_INTERVAL } from "../..";
-import { generateUUID } from "../../../utils";
-import { gql, requestGraphql } from "../../../utils/graphql";
-import { logger as defaultLogger } from "../../../utils/logger";
-import { OperationError } from "../../error";
+import { PULL_DRIVE_INTERVAL } from "../../index.js";
+import { generateUUID } from "../../../utils/index.js";
+import { gql, requestGraphql } from "../../../utils/graphql.js";
+import { logger as defaultLogger } from "../../../utils/logger.js";
+import { OperationError } from "../../error.js";
 import {
   GetStrandsOptions,
   IBaseDocumentDriveServer,

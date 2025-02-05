@@ -17,16 +17,16 @@ import {
   utils as baseUtils,
   Document,
   DocumentHeader,
-  DocumentModel,
+  DocumentModelModule,
   utils as DocumentUtils,
   Operation,
   OperationScope,
 } from "document-model/document";
 import { ClientError } from "graphql-request";
 import { createNanoEvents, Unsubscribe } from "nanoevents";
-import { ICache } from "../cache";
-import InMemoryCache from "../cache/memory";
-import { BaseQueueManager } from "../queue/base";
+import { ICache } from "../cache/index.js";
+import InMemoryCache from "../cache/memory.js";
+import { BaseQueueManager } from "../queue/base.js";
 import {
   ActionJob,
   IQueueManager,
@@ -34,22 +34,16 @@ import {
   isOperationJob,
   Job,
   OperationJob,
-} from "../queue/types";
-import { ReadModeServer } from "../read-mode";
-import { MemoryStorage } from "../storage/memory";
+} from "../queue/types.js";
+import { ReadModeServer } from "../read-mode/index.js";
+import { MemoryStorage } from "../storage/memory.js";
 import type {
   DocumentDriveStorage,
   DocumentStorage,
   IDriveStorage,
-} from "../storage/types";
-import {
-  generateUUID,
-  isBefore,
-  isDocumentDrive,
-  RunAsap,
-  runAsapAsync,
-} from "../utils";
-import { DefaultDrivesManager } from "../utils/default-drives-manager";
+} from "../storage/types.js";
+import { generateUUID, isBefore, isDocumentDrive, runAsapAsync } from "../utils/index.js";
+import { DefaultDrivesManager } from "../utils/default-drives-manager.js";
 import {
   attachBranch,
   garbageCollect,
@@ -59,16 +53,16 @@ import {
   removeExistingOperations,
   reshuffleByTimestamp,
   sortOperations,
-} from "../utils/document-helpers";
-import { requestPublicDrive } from "../utils/graphql";
-import { logger } from "../utils/logger";
+} from "../utils/document-helpers.js";
+import { requestPublicDrive } from "../utils/graphql.js";
+import { logger } from "../utils/logger.js";
 import {
   ConflictOperationError,
   DriveAlreadyExistsError,
   OperationError,
   SynchronizationUnitNotFoundError,
-} from "./error";
-import { ListenerManager } from "./listener/manager";
+} from "./error.js";
+import { ListenerManager } from "./listener/manager.js";
 import {
   CancelPullLoop,
   InternalTransmitter,
@@ -76,7 +70,7 @@ import {
   ITransmitter,
   PullResponderTransmitter,
   StrandUpdateSource,
-} from "./listener/transmitter";
+} from "./listener/transmitter/index.js";
 import {
   AbstractDocumentDriveServer,
   AddOperationOptions,
@@ -99,13 +93,14 @@ import {
   type OperationUpdate,
   type SignalResult,
   type SynchronizationUnit,
-} from "./types";
-import { filterOperationsByRevision, isAtRevision } from "./utils";
+} from "./types.js";
+import { filterOperationsByRevision, isAtRevision } from "./utils.js";
+import { RunAsap } from "../utils/run-asap.js";
 
-export * from "./listener";
-export type * from "./types";
+export * from "./listener/index.js";
+export type * from "./types.js";
 
-export * from "../read-mode";
+export * from "../read-mode/index.js";
 
 export const PULL_DRIVE_INTERVAL = 5000;
 
@@ -115,7 +110,7 @@ export class BaseDocumentDriveServer
 {
   private emitter = createNanoEvents<DriveEvents>();
   private cache: ICache;
-  private documentModels: DocumentModel[];
+  private documentModels: DocumentModelModule[];
   private storage: IDriveStorage;
   private listenerStateManager: ListenerManager;
   private triggerMap = new Map<
@@ -132,7 +127,7 @@ export class BaseDocumentDriveServer
   protected options: Required<DocumentDriveServerOptions>;
 
   constructor(
-    documentModels: DocumentModel[],
+    documentModels: DocumentModelModule[],
     storage: IDriveStorage = new MemoryStorage(),
     cache: ICache = new InMemoryCache(),
     queueManager: IQueueManager = new BaseQueueManager(),
@@ -184,7 +179,7 @@ export class BaseDocumentDriveServer
     this.initializePromise = this._initialize();
   }
 
-  setDocumentModels(models: DocumentModel[]): void {
+  setDocumentModels(models: DocumentModelModule[]): void {
     this.documentModels = [...models];
     this.emit("documentModels", [...models]);
   }
@@ -832,8 +827,8 @@ export class BaseDocumentDriveServer
       driveId,
       documentId,
       documentType,
-      lastUpdated: lastOperation?.timestamp ?? document.lastModified,
-      revision: lastOperation?.index ?? 0,
+      lastUpdated: lastOperation.timestamp ?? document.lastModified,
+      revision: lastOperation.index ?? 0,
     };
   }
 
@@ -887,7 +882,7 @@ export class BaseDocumentDriveServer
 
   protected getDocumentModel(documentType: string) {
     const documentModel = this.documentModels.find(
-      (model) => model.documentModel.id === documentType,
+      (model) => model.documentModelState.id === documentType,
     );
     if (!documentModel) {
       throw new Error(`Document type ${documentType} not supported`);
@@ -1191,7 +1186,7 @@ export class BaseDocumentDriveServer
           : merge(trunk, invertedTrunk, reshuffleByTimestamp);
 
       const newOperations = newHistory.filter(
-        (op) => trunk.length < 1 || precedes(trunk[trunk.length - 1]!, op),
+        (op) => trunk.length < 1 || precedes(trunk[trunk.length - 1], op),
       );
 
       for (const nextOperation of newOperations) {

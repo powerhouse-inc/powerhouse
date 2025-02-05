@@ -1,19 +1,4 @@
-import { BaseDocument } from "../../../document/object";
-
-import {
-  AddOperationInput,
-  SetOperationNameInput,
-  SetOperationSchemaInput,
-  SetOperationDescriptionInput,
-  SetOperationTemplateInput,
-  SetOperationReducerInput,
-  MoveOperationInput,
-  DeleteOperationInput,
-  ReorderModuleOperationsInput,
-  DocumentModelState,
-  SetOperationScopeInput,
-  DocumentModelLocalState,
-} from "../types";
+import { BaseDocument } from "@document/object.js";
 import {
   addOperation,
   setOperationName,
@@ -25,9 +10,11 @@ import {
   deleteOperation,
   reorderModuleOperations,
   setOperationScope,
-} from "./creators";
-import { DocumentModelAction } from "../actions";
-import { ReducerOptions } from "../../../document";
+} from "./creators.js";
+import { DocumentModelAction } from "../actions.js";
+import { ReducerOptions } from "@document/types.js";
+import { AddOperationInput, SetOperationNameInput, SetOperationScopeInput, SetOperationSchemaInput, SetOperationDescriptionInput, SetOperationTemplateInput, SetOperationReducerInput, MoveOperationInput, DeleteOperationInput, ReorderModuleOperationsInput, DocumentModelState } from "../schema/types.js";
+import { DocumentModelLocalState } from "../types.js";
 
 export default class DocumentModel_Operation extends BaseDocument<
   DocumentModelState,

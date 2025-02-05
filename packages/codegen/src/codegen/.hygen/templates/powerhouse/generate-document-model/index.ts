@@ -1,5 +1,5 @@
 import { paramCase } from "change-case";
-import { DocumentModelState, ScopeState } from "document-model/document-model";
+import { DocumentModelState, ScopeState } from "document-model";
 
 function documentModelToString(documentModel: DocumentModelState) {
   return JSON.stringify(

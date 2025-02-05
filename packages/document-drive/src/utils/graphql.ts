@@ -4,7 +4,7 @@ import {
   FileNode,
   FolderNode,
 } from "document-model-libs/document-drive";
-import { Document, DocumentModel, Operation } from "document-model/document";
+import { Document, DocumentModelModule, Operation } from "document-model/document";
 import { DocumentModelState } from "document-model/document-model";
 import {
   BuildSchemaOptions,
@@ -193,7 +193,7 @@ export type DocumentGraphQLResult<D extends Document> = Pick<
 export async function fetchDocument<D extends Document>(
   url: string,
   documentId: string,
-  documentModelLib: DocumentModel<
+  documentModelLib: DocumentModelModule<
     InferDocumentState<D>,
     InferDocumentOperation<D>,
     InferDocumentLocalState<D>
@@ -207,7 +207,7 @@ export async function fetchDocument<D extends Document>(
     >;
   }>
 > {
-  const { documentModel, utils } = documentModelLib;
+  const { documentModelState: documentModel, utils } = documentModelLib;
   const stateFields = generateDocumentStateQueryFields(documentModel);
   const name = pascalCase(documentModel.name);
   const result = await requestGraphql<{

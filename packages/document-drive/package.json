@@ -3,50 +3,37 @@
   "version": "1.16.1",
   "license": "AGPL-3.0-only",
   "type": "module",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./server": "./src/server/index.ts",
-    "./storage": "./src/storage/index.ts",
-    "./storage/browser": "./src/storage/browser.ts",
-    "./storage/filesystem": "./src/storage/filesystem.ts",
-    "./storage/memory": "./src/storage/memory.ts",
-    "./storage/prisma": "./src/storage/prisma.ts",
-    "./cache/redis": "./src/cache/redis.ts",
-    "./cache/memory": "./src/cache/memory.ts",
-    "./queue/redis": "./src/queue/redis.ts",
-    "./queue/base": "./src/queue/base.ts",
-    "./utils": "./src/utils/index.ts",
-    "./utils/graphql": "./src/utils/graphql.ts",
-    "./utils/migrations": "./src/utils/migrations.ts",
-    "./logger": "./src/utils/logger.ts"
+    ".": "./dist/src/index.ts",
+    "./server": "./dist/src/server/index.ts",
+    "./storage": "./dist/src/storage/index.ts",
+    "./storage/browser": "./dist/src/storage/browser.ts",
+    "./storage/filesystem": "./dist/src/storage/filesystem.ts",
+    "./storage/memory": "./dist/src/storage/memory.ts",
+    "./storage/prisma": "./dist/src/storage/prisma.ts",
+    "./cache/redis": "./dist/src/cache/redis.ts",
+    "./cache/memory": "./dist/src/cache/memory.ts",
+    "./queue/redis": "./dist/src/queue/redis.ts",
+    "./queue/base": "./dist/src/queue/base.ts",
+    "./utils": "./dist/src/utils/index.ts",
+    "./utils/graphql": "./dist/src/utils/graphql.ts",
+    "./utils/migrations": "./dist/src/utils/migrations.ts",
+    "./logger": "./dist/src/utils/logger.ts"
   },
   "files": [
-    "./src"
+    "./dist"
   ],
   "scripts": {
-    "check-types": "tsc --build",
+    "check-types": "tsc --noEmit",
     "postlint": "npm run check-types",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
+    "build": "tsc --build",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:watch": "vitest watch",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
-  },
-  "peerDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
-    "change-case": "^5.4.4",
-    "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
-    "graphql": "^16.9.0",
-    "graphql-request": "^6.1.0",
-    "json-stringify-deterministic": "^1.0.12",
-    "nanoevents": "^9.0.0",
-    "prisma": "^5.18.0",
-    "sanitize-filename": "^1.6.3"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
@@ -57,7 +44,8 @@
     "sequelize": "^6.37.3",
     "sqlite3": "^5.1.7"
   },
-  "devDependencies": {
+  "dependencies": {
+    "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",

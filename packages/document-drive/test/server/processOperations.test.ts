@@ -2,7 +2,7 @@ import * as DocumentDrive from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import {
   Action,
-  DocumentModel as BaseDocumentModel,
+  DocumentModelModule as BaseDocumentModel,
   Operation,
 } from "document-model/document";
 import {

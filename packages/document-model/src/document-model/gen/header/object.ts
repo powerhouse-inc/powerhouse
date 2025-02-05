@@ -1,15 +1,10 @@
-import { BaseDocument } from "../../../document/object";
-
+import { BaseDocument } from "@document/object.js";
 import {
-  SetModelNameInput,
-  SetModelIdInput,
-  SetModelExtensionInput,
-  SetModelDescriptionInput,
-  SetAuthorNameInput,
-  SetAuthorWebsiteInput,
+
   DocumentModelState,
   DocumentModelLocalState,
-} from "../types";
+  DocumentModelAction,
+} from "@document-model/gen/types.js";
 import {
   setModelName,
   setModelId,
@@ -17,9 +12,9 @@ import {
   setModelDescription,
   setAuthorName,
   setAuthorWebsite,
-} from "./creators";
-import { DocumentModelAction } from "../actions";
-import { ReducerOptions } from "../../../document";
+} from "./creators.js";
+import { ReducerOptions } from "@document/types.js";
+import { SetModelNameInput, SetModelIdInput, SetModelExtensionInput, SetModelDescriptionInput, SetAuthorNameInput, SetAuthorWebsiteInput } from "../schema/types.js";
 
 export default class DocumentModel_Header extends BaseDocument<
   DocumentModelState,

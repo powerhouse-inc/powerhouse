@@ -2,7 +2,7 @@ import {
   DocumentDriveDocument,
   ListenerFilter,
 } from "document-model-libs/document-drive";
-import { Action, Document, DocumentModel } from "document-model/document";
+import { Action, Document, DocumentModelModule } from "document-model/document";
 import { DocumentDriveServerMixin, RemoteDriveOptions } from "../server";
 import { DocumentModelNotFoundError } from "../server/error";
 import { DriveInfo } from "../utils/graphql";
@@ -86,7 +86,7 @@ export interface IReadModeDriveService {
   fetchDocument<D extends Document>(
     driveId: string,
     documentId: string,
-    documentType: DocumentModel<
+    documentType: DocumentModelModule<
       InferDocumentState<D>,
       InferDocumentOperation<D>,
       InferDocumentLocalState<D>
@@ -105,4 +105,4 @@ export interface IReadModeDriveService {
   deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined>;
 }
 
-export type GetDocumentModel = (documentType: string) => DocumentModel;
+export type GetDocumentModel = (documentType: string) => DocumentModelModule;

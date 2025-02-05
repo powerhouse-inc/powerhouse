@@ -6,7 +6,7 @@ import {
   reducer,
 } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel, Operation } from "document-model/document";
+import { DocumentModelModule, Operation } from "document-model/document";
 import {
   actions as DocumentModelActions,
   DocumentModelDocument,
@@ -39,7 +39,7 @@ describe("Document Drive Server with %s", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   const prismaClient = new PrismaClient();
   const storageLayer = new MemoryStorage();

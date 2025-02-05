@@ -1,8 +1,8 @@
-import { Document, OperationScope } from "./types";
+import { BaseAction, BaseDocument, OperationScope } from "./types.js";
 
-export interface ISignal<T extends string = string, I = unknown> {
-  type: T;
-  input: I;
+export interface ISignal<TType extends string, TInput> {
+  type: TType;
+  input: TInput;
 }
 
 export type SynchronizationUnit = {
@@ -11,16 +11,24 @@ export type SynchronizationUnit = {
   branch: string;
 };
 
-export type CreateChildDocumentInput = {
+export type CreateChildDocumentInput<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+> = {
   id: string;
   documentType: string;
-  document?: Document;
+  document?: BaseDocument<TGlobalState, TLocalState, TAction>;
   synchronizationUnits: SynchronizationUnit[];
 };
 
-export type CreateChildDocumentSignal = ISignal<
+export type CreateChildDocumentSignal<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+> = ISignal<
   "CREATE_CHILD_DOCUMENT",
-  CreateChildDocumentInput
+  CreateChildDocumentInput<TGlobalState, TLocalState, TAction>
 >;
 
 export type DeleteChildDocumentInput = {
@@ -43,9 +51,13 @@ export type CopyChildDocumentSignal = ISignal<
   CopyChildDocumentInput
 >;
 
-export type Signal =
-  | CreateChildDocumentSignal
+export type Signal<TGlobalState, TLocalState, TAction extends BaseAction> =
+  | CreateChildDocumentSignal<TGlobalState, TLocalState, TAction>
   | DeleteChildDocumentSignal
   | CopyChildDocumentSignal;
 
-export type SignalDispatch = (signal: Signal) => void;
+export type SignalDispatch<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+> = (signal: Signal<TGlobalState, TLocalState, TAction>) => void;

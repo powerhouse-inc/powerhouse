@@ -3,8 +3,8 @@ import {
   ListenerFilter,
 } from "document-model-libs/document-drive";
 import { OperationScope } from "document-model/document";
-import { logger } from "../../utils/logger";
-import { OperationError } from "../error";
+import { logger } from "../../utils/logger.js";
+import { OperationError } from "../error.js";
 import {
   BaseListenerManager,
   ErrorStatus,
@@ -15,11 +15,11 @@ import {
   OperationUpdate,
   StrandUpdate,
   SynchronizationUnit,
-} from "../types";
-import { PullResponderTransmitter } from "./transmitter";
-import { InternalTransmitter } from "./transmitter/internal";
-import { SwitchboardPushTransmitter } from "./transmitter/switchboard-push";
-import { ITransmitter, StrandUpdateSource } from "./transmitter/types";
+} from "../types.js";
+import { PullResponderTransmitter } from "./transmitter/index.js";
+import { InternalTransmitter } from "./transmitter/internal.js";
+import { SwitchboardPushTransmitter } from "./transmitter/switchboard-push.js";
+import { ITransmitter, StrandUpdateSource } from "./transmitter/types.js";
 
 function debounce<T extends unknown[], R>(
   func: (...args: T) => Promise<R>,

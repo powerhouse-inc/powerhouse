@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { split } from "../../src/document/utils/document-helpers";
-import { buildOperations, buildOperation } from "./utils";
-import { Operation } from "../../src/document";
+import { split } from "@document/utils/document-helpers.js";
+import { buildOperations, buildOperation } from "./utils.js";
 
 describe("split", () => {
   const scenarios = [
@@ -100,7 +99,7 @@ describe("split", () => {
       ...testInput.targetOperations,
     ];
 
-    let commonOperationsShuffled: Operation[] = [];
+    let commonOperationsShuffled = [];
     if (testInput.shuffleProperties) {
       commonOperationsShuffled = testInput.commonOperations.map((op) =>
         buildOperation(

@@ -1,8 +1,8 @@
 // Command = action => should process the action and asign the index, timestamp, and hash
 // Event = operation => should keep the same operation information but execute the action input against the document
 import { describe, it, expect, beforeAll, vi } from "vitest";
-import { createDocument } from "../../src/document/utils";
-import { emptyReducer, wrappedEmptyReducer } from "../helpers";
+import { wrappedEmptyReducer } from "../helpers.js";
+import { baseCreateDocument } from "@document/utils/base.js";
 
 describe("Event", () => {
   beforeAll(() => {
@@ -10,15 +10,15 @@ describe("Event", () => {
   });
 
   it("should not re-assing index to an event", () => {
-    let document = createDocument();
+    let document = baseCreateDocument();
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "global",
     });
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_2",
       input: {},
       scope: "global",
@@ -56,21 +56,21 @@ describe("Event", () => {
   });
 
   it("should remove skipped operations", () => {
-    let document = createDocument();
+    let document = baseCreateDocument();
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "global",
     });
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_2",
       input: {},
       scope: "global",
     });
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_3",
       input: {},
       scope: "global",
@@ -108,15 +108,15 @@ describe("Event", () => {
   });
 
   it("should continue with next index after an operation", () => {
-    let document = createDocument();
+    let document = baseCreateDocument();
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "global",
     });
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_2",
       input: {},
       scope: "global",
@@ -135,7 +135,7 @@ describe("Event", () => {
       { skip: 1 },
     );
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_5",
       input: {},
       scope: "global",
@@ -164,15 +164,15 @@ describe("Event", () => {
   });
 
   it("should calculate the right document revision when last action is an event", () => {
-    let document = createDocument();
+    let document = baseCreateDocument();
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "global",
     });
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_2",
       input: {},
       scope: "global",

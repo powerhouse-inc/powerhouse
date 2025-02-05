@@ -1,2 +1,2 @@
-export * from "./manager";
-export * from "./transmitter";
+export * from "./manager.js";
+export * from "./transmitter/index.js";

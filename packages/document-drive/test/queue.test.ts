@@ -6,7 +6,7 @@ import {
   reducer,
 } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
+import { DocumentModelModule } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
@@ -24,7 +24,7 @@ const REDIS_TLS_URL = process.env.REDIS_TLS_URL;
 const documentModels = [
   DocumentModelLib,
   ...Object.values(DocumentModelsLibs),
-] as DocumentModel[];
+] as DocumentModelModule[];
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
   ["Memory Queue", () => Promise.resolve(new BaseQueueManager())],

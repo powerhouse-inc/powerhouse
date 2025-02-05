@@ -1,13 +1,11 @@
 {
   "extends": "../../tsconfig.options.json",
-    "compilerOptions": {
-        "types": ["node", "vitest/globals", "jest"],
-        "outDir": "./dist",
-    "emitDeclarationOnly": true,
+  "compilerOptions": {
+    "types": ["node", "vitest/globals", "jest"],
+    "outDir": "./dist",
+    "paths": {
+      "@document/*": ["./src/document/*"],
+      "@document-model/*": ["./src/document-model/*"]
+    }
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "*.ts",
-  ]
 }

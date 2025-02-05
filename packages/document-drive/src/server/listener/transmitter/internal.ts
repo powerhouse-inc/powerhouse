@@ -1,14 +1,14 @@
 import { Document, Operation, OperationScope } from "document-model/document";
-import { logger } from "../../../utils/logger";
+import { logger } from "../../../utils/logger.js";
 import {
   GetDocumentOptions,
   IBaseDocumentDriveServer,
   Listener,
   ListenerRevision,
   StrandUpdate,
-} from "../../types";
-import { ITransmitter, StrandUpdateSource } from "./types";
-import { InferDocumentOperation } from "../../../read-mode/types";
+} from "../../types.js";
+import { ITransmitter, StrandUpdateSource } from "./types.js";
+import { InferDocumentOperation } from "../../../read-mode/types.js";
 
 export interface IReceiver<
   T extends Document = Document,

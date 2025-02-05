@@ -9,7 +9,7 @@ import * as DocumentModelsLibs from "document-model-libs/document-models";
 import {
   ActionContext,
   Document,
-  DocumentModel,
+  DocumentModelModule,
 } from "document-model/document";
 import {
   actions as DocumentModelActions,
@@ -33,7 +33,7 @@ import { expectUUID } from "./utils";
 const documentModels = [
   DocumentModelLib,
   ...Object.values(DocumentModelsLibs),
-] as DocumentModel[];
+] as DocumentModelModule[];
 
 const FileStorageDir = path.join(__dirname, "./file-storage");
 const prismaClient = new PrismaClient();

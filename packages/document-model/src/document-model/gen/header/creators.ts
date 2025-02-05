@@ -1,13 +1,6 @@
-import { createAction } from "../../../document/utils";
 
-import {
-  SetModelNameInput,
-  SetModelIdInput,
-  SetModelExtensionInput,
-  SetModelDescriptionInput,
-  SetAuthorNameInput,
-  SetAuthorWebsiteInput,
-} from "../types";
+import { createAction } from "@document/utils/base.js";
+
 import {
   SetModelNameAction,
   SetModelIdAction,
@@ -15,7 +8,8 @@ import {
   SetModelDescriptionAction,
   SetAuthorNameAction,
   SetAuthorWebsiteAction,
-} from "./actions";
+} from "./actions.js";
+import { SetModelNameInput, SetModelIdInput, SetModelExtensionInput, SetModelDescriptionInput, SetAuthorNameInput, SetAuthorWebsiteInput } from "../schema/types.js";
 
 export const setModelName = (input: SetModelNameInput) =>
   createAction<SetModelNameAction>("SET_MODEL_NAME", { ...input });

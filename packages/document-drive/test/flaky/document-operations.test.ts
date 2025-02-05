@@ -1,6 +1,6 @@
 import * as DocumentDrive from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { BaseAction, DocumentModel } from "document-model/document";
+import { BaseAction, DocumentModelModule } from "document-model/document";
 import {
   DocumentModelAction,
   DocumentModelDocument,
@@ -16,7 +16,7 @@ describe("Document operations", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   let server = new DocumentDriveServer(documentModels);
   beforeEach(async () => {

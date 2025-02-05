@@ -1,66 +1,43 @@
-import { castDraft, create } from "mutative";
+import { castDraft, create, Draft } from "mutative";
 import {
-  Action,
-  Document,
+  BaseDocument,
   ImmutableStateReducer,
-  Operation,
-  PruneAction,
-  RedoAction,
-  State,
-  UndoAction,
-  UndoRedoProcessResult,
-} from "../types";
-import { hashDocument, replayOperations } from "../utils/base";
-import { loadState, noop } from "./creators";
-import { documentHelpers } from "../utils";
+  BaseState,
+  BaseAction,
+} from "@document/types.js";
+import { loadState, noop } from "./creators.js";
+import {
+  replayOperations,
+  hashDocumentStateForScope,
+} from "@document/utils/base.js";
+import {
+  sortOperations,
+  nextSkipNumber,
+} from "@document/utils/document-helpers.js";
+import { PruneAction } from "./types.js";
 
 // updates the name of the document
-export function setNameOperation<T>(document: T, name: string): T {
+export function setNameOperation<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(document: BaseDocument<TGlobalState, TLocalState, TAction>, name: string) {
   return { ...document, name };
 }
 
-export function noopOperation<T, A extends Action, L>(
-  document: Document<T, A, L>,
-  action: Partial<Operation>,
+export function undoOperation<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+  action: TAction,
   skip: number,
 ) {
-  const defaultValues = {
-    skip,
-    document,
-  };
-
-  const { scope } = action;
-
-  if (!scope) return defaultValues;
-  if (action.skip === undefined) return defaultValues;
-
-  return create(defaultValues, (draft) => {
-    const lastOperation = draft.document.operations[scope].at(-1);
-
-    if (action.skip && action.skip > 0) {
-      draft.skip = action.skip;
-    }
-
-    if (
-      lastOperation &&
-      lastOperation.type === "NOOP" &&
-      action.index === lastOperation.index &&
-      draft.skip > lastOperation.skip
-    ) {
-      draft.document.operations[scope].pop();
-    }
-  });
-}
-
-export function undoOperation<T, A extends Action, L>(
-  document: Document<T, A, L>,
-  action: UndoAction,
-  skip: number,
-): UndoRedoProcessResult<T, A, L> {
   // const scope = action.scope;
   const { scope, input } = action;
 
-  const defaultResult: UndoRedoProcessResult<T, A, L> = {
+  const defaultResult = {
     document,
     action,
     skip,
@@ -69,9 +46,9 @@ export function undoOperation<T, A extends Action, L>(
 
   return create(defaultResult, (draft) => {
     const operations = [...document.operations[scope]];
-    const sortedOperations = documentHelpers.sortOperations(operations);
+    const sortedOperations = sortOperations(operations);
 
-    draft.action = noop(scope);
+    draft.action = noop(scope) as Draft<TAction>;
 
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
@@ -88,7 +65,7 @@ export function undoOperation<T, A extends Action, L>(
       ? [...sortedOperations, { index: nextIndex, skip: 0 }]
       : sortedOperations;
 
-    draft.skip = documentHelpers.nextSkipNumber(nextOperationHistory);
+    draft.skip = nextSkipNumber(nextOperationHistory);
 
     if (lastOperation && draft.skip > lastOperation.skip + 1) {
       // there's an overlap with a previous skip operation
@@ -104,14 +81,18 @@ export function undoOperation<T, A extends Action, L>(
   });
 }
 
-export function redoOperation<T, A extends Action, L>(
-  document: Document<T, A, L>,
-  action: RedoAction,
+export function redoOperation<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+  action: TAction,
   skip: number,
-): UndoRedoProcessResult<T, A, L> {
+) {
   const { scope, input } = action;
 
-  const defaultResult: UndoRedoProcessResult<T, A, L> = {
+  const defaultResult = {
     document,
     action,
     skip,
@@ -125,11 +106,11 @@ export function redoOperation<T, A extends Action, L>(
       );
     }
 
-    if (input > 1) {
+    if (typeof input !== "number" || input > 1) {
       throw new Error(`Cannot redo: you can only redo one operation at a time`);
     }
 
-    if (input < 1) {
+    if (typeof input !== "number" || input < 1) {
       throw new Error(`Invalid REDO action: invalid redo input value`);
     }
 
@@ -152,15 +133,19 @@ export function redoOperation<T, A extends Action, L>(
       type: operation.type,
       scope: operation.scope,
       input: operation.input,
-    } as A);
+    } as TAction);
   });
 }
 
-export function pruneOperation<T, A extends Action, L>(
-  document: Document<T, A, L>,
+export function pruneOperation<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  document: BaseDocument<TGlobalState, TLocalState, TAction>,
   action: PruneAction,
-  wrappedReducer: ImmutableStateReducer<T, A, L>,
-): Document<T, A, L> {
+  wrappedReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
+) {
   const { scope } = action;
   const operations = document.operations[scope];
 
@@ -209,7 +194,7 @@ export function pruneOperation<T, A extends Action, L>(
           ...loadState({ name, state: newState }, actionsToPrune.length),
           timestamp: loadStateTimestamp,
           index: loadStateIndex,
-          hash: hashDocument({ state: newState }, "global"),
+          hash: hashDocumentStateForScope({ state: newState }, "global"),
         },
         ...actionsToKeepEnd
           // updates the index for all the following operations
@@ -223,15 +208,19 @@ export function pruneOperation<T, A extends Action, L>(
   );
 }
 
-export function loadStateOperation<T, A extends Action, L>(
-  oldDocument: Document<T, A, L>,
-  newDocument: { name: string; state?: State<T, L> },
-): Document<T, A, L> {
+export function loadStateOperation<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  oldDocument: BaseDocument<TGlobalState, TLocalState, TAction>,
+  newDocument: { name: string; state?: BaseState<TGlobalState, TLocalState> },
+): BaseDocument<TGlobalState, TLocalState, TAction> {
   return {
     ...oldDocument,
     name: newDocument.name,
-    state: newDocument.state ?? ({ global: {}, local: {} } as State<T, L>),
+    state:
+      newDocument.state ??
+      ({ global: {}, local: {} } as BaseState<TGlobalState, TLocalState>),
   };
 }
-
-export * from "./creators";

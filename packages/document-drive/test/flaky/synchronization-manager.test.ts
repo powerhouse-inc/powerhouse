@@ -1,7 +1,7 @@
 import { Operation, PrismaClient } from "@prisma/client";
 import * as DocumentDrive from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
+import { DocumentModelModule } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -23,7 +23,7 @@ describe("Synchronization Units", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   beforeEach(() => {
     vi.useFakeTimers().setSystemTime(new Date("2024-01-01"));

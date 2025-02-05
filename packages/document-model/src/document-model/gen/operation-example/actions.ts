@@ -1,24 +1,20 @@
-import { Action } from "../../../document";
-import {
-  AddOperationExampleInput,
-  UpdateOperationExampleInput,
-  DeleteOperationExampleInput,
-  ReorderOperationExamplesInput,
-} from "../types";
+import { BaseAction } from "@document/types.js";
+import { AddOperationExampleInput, UpdateOperationExampleInput, DeleteOperationExampleInput, ReorderOperationExamplesInput } from "../schema/types.js";
 
-export type AddOperationExampleAction = Action<
+
+export type AddOperationExampleAction = BaseAction<
   "ADD_OPERATION_EXAMPLE",
   AddOperationExampleInput
 >;
-export type UpdateOperationExampleAction = Action<
+export type UpdateOperationExampleAction = BaseAction<
   "UPDATE_OPERATION_EXAMPLE",
   UpdateOperationExampleInput
 >;
-export type DeleteOperationExampleAction = Action<
+export type DeleteOperationExampleAction = BaseAction<
   "DELETE_OPERATION_EXAMPLE",
   DeleteOperationExampleInput
 >;
-export type ReorderOperationExamplesAction = Action<
+export type ReorderOperationExamplesAction = BaseAction<
   "REORDER_OPERATION_EXAMPLES",
   ReorderOperationExamplesInput
 >;

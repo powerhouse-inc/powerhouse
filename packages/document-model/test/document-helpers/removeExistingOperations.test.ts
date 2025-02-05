@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { Operation } from "../../src/document";
-import { removeExistingOperations } from "../../src/document/utils/document-helpers";
-import { buildOperations } from "./utils";
+import { removeExistingOperations } from "@document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
+import { BaseAction, Operation } from "@document/types.js";
 
 describe("removeExistingOperations", () => {
   const scenarios = [
@@ -121,7 +121,7 @@ describe("removeExistingOperations", () => {
         hash: "5XOFEY2NKrHVyOA3c3oXDibrjwM=",
         skip: 0,
       },
-    ] as Operation[];
+    ] as Operation<unknown, unknown, BaseAction>[];
 
     const operationsHistory = [
       {
@@ -151,7 +151,7 @@ describe("removeExistingOperations", () => {
         hash: "5XOFEY2NKrHVyOA3c3oXDibrjwM=",
         skip: 0,
       },
-    ] as Operation[];
+    ] as Operation<unknown, unknown, BaseAction>[];
 
     const result = removeExistingOperations(
       existingOperations,

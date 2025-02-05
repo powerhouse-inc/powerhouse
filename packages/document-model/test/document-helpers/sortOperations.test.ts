@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { sortOperations } from "../../src/document/utils/document-helpers";
-import { buildOperations } from "./utils";
+import { sortOperations } from "@document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("sortOperations", () => {
   const scenarios = [

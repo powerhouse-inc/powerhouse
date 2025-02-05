@@ -4,18 +4,20 @@ import {
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
   buildSignedOperation,
-  createDocument,
-  hashDocument,
   hex2ab,
   verifyOperationSignature,
-} from "../../src/document/utils";
+} from "@document/utils/crypto.js";
 import {
   CountAction,
   CountLocalState,
   countReducer,
   CountState,
   increment,
-} from "../helpers";
+} from "../helpers.js";
+import {
+  baseCreateDocument,
+  hashDocumentStateForScope,
+} from "@document/utils/base.js";
 
 describe("Crypto utils", () => {
   beforeAll(() => {
@@ -27,7 +29,11 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with empty previousState", () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<
+      CountState,
+      CountLocalState,
+      CountAction
+    >({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -65,13 +71,15 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with previousState", () => {
-    let document = createDocument<CountState, CountAction, CountLocalState>({
-      documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
+      {
+        documentType: "powerhouse/counter",
+        state: { global: { count: 0 }, local: { name: "" } },
+      },
+    );
 
     document = countReducer(document, increment());
-    const hash = hashDocument(document, "global");
+    const hash = hashDocumentStateForScope(document, "global");
 
     const action = {
       ...increment(),
@@ -122,7 +130,11 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<
+      CountState,
+      CountLocalState,
+      CountAction
+    >({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -186,7 +198,11 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<
+      CountState,
+      CountLocalState,
+      CountAction
+    >({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -247,7 +263,11 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<
+      CountState,
+      CountLocalState,
+      CountAction
+    >({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

@@ -1,39 +1,49 @@
-import { SignalDispatch } from "../src/document";
+import { DocumentAction } from "@document/actions/types.js";
+import { SignalDispatch } from "@document/signal.js";
 import {
-  Document,
-  Action,
+  BaseDocument,
   BaseAction,
   ImmutableStateReducer,
-  Operation,
   OperationScope,
   ReducerOptions,
-} from "../src/document/types";
-import { createAction, createReducer } from "../src/document/utils";
+  Operation,
+} from "@document/types.js";
+import { createReducer, createAction } from "@document/utils/base.js";
 // Empty reducer that supports base actions
-export const emptyReducer = createReducer((state) => state);
+export const emptyReducer = <
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  state: BaseDocument<TGlobalState, TLocalState, TAction>,
+) => state;
 
-export const wrappedEmptyReducer = (
-  state: Document<unknown, Action>,
-  action: Action | BaseAction | Operation,
-  dispatch?: SignalDispatch,
+export const wrappedEmptyReducer = <
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  state: BaseDocument<TGlobalState, TLocalState, TAction>,
+  action: TAction | Operation<TGlobalState, TLocalState, TAction>,
+  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
   options?: ReducerOptions,
 ) => {
-  return emptyReducer(state, action, dispatch, options);
+  return emptyReducer(state);
 };
 
 // Counter reducer that supports increment/decrement actions
-export interface IncrementAction extends Action {
+export interface IncrementAction extends BaseAction {
   type: "INCREMENT";
 }
-export interface DecrementAction extends Action {
+export interface DecrementAction extends BaseAction {
   type: "DECREMENT";
 }
 
-export interface ErrorAction extends Action {
+export interface ErrorAction extends BaseAction {
   type: "ERROR";
 }
 
-export interface SetLocalNameAction extends Action {
+export interface SetLocalNameAction extends BaseAction {
   type: "SET_LOCAL_NAME";
   input: string;
 }
@@ -41,7 +51,8 @@ export type CountAction =
   | IncrementAction
   | DecrementAction
   | SetLocalNameAction
-  | ErrorAction;
+  | ErrorAction
+  | DocumentAction;
 
 export type CountState = { count: number };
 
@@ -64,8 +75,8 @@ export const setLocalName = (name: string) =>
 
 export const baseCountReducer: ImmutableStateReducer<
   CountState,
-  CountAction,
-  CountLocalState
+  CountLocalState,
+  CountAction
 > = (state, action) => {
   switch (action.type) {
     case "INCREMENT":
@@ -86,8 +97,8 @@ export const baseCountReducer: ImmutableStateReducer<
 
 export const mutableCountReducer: ImmutableStateReducer<
   CountState,
-  CountAction,
-  CountLocalState
+  CountLocalState,
+  CountAction
 > = (state, action) => {
   switch (action.type) {
     case "INCREMENT":
@@ -114,11 +125,17 @@ export const mutableCountReducer: ImmutableStateReducer<
 
 export const countReducer = createReducer<
   CountState,
-  CountAction,
-  CountLocalState
+  CountLocalState,
+  CountAction
 >(baseCountReducer);
 
-export const mapOperations = (operations: Operation[]) => {
+export const mapOperations = <
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  operations: Operation<TGlobalState, TLocalState, TAction>[],
+) => {
   return operations.map(({ input, type, index, scope, skip }) => ({
     input,
     type,
@@ -128,7 +145,11 @@ export const mapOperations = (operations: Operation[]) => {
   }));
 };
 
-export const createFakeOperation = (
+export const createFakeOperation = <
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
   index = 0,
   skip = 0,
   scope: OperationScope = "global",
@@ -141,4 +162,4 @@ export const createFakeOperation = (
     index,
     timestamp: new Date().toISOString(),
     hash: `${index}`,
-  }) as Operation;
+  }) as Operation<TGlobalState, TLocalState, TAction>;

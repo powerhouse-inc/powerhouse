@@ -1,6 +1,6 @@
 import type { DocumentDriveDocument } from "document-model-libs/document-drive";
 import * as DocumentDrive from "document-model-libs/document-drive";
-import { Document, DocumentModel } from "document-model/document";
+import { Document, DocumentModelModule } from "document-model/document";
 import { GraphQLError } from "graphql";
 import { DocumentModelNotFoundError } from "../server/error";
 import { fetchDocument, requestPublicDrive } from "../utils/graphql";
@@ -84,11 +84,11 @@ export class ReadModeService implements IReadModeDriveService {
   async fetchDocument<D extends Document>(
     driveId: string,
     documentId: string,
-    documentType: DocumentModel<
+    documentType: DocumentModelModule<
       InferDocumentState<D>,
       InferDocumentOperation<D>,
       InferDocumentLocalState<D>
-    >["documentModel"]["id"],
+    >["documentModelState"]["id"],
   ): Promise<
     | Document<
         InferDocumentState<D>,
@@ -105,7 +105,7 @@ export class ReadModeService implements IReadModeDriveService {
     }
 
     let documentModel:
-      | DocumentModel<
+      | DocumentModelModule<
           InferDocumentState<D>,
           InferDocumentOperation<D>,
           InferDocumentLocalState<D>
@@ -114,7 +114,7 @@ export class ReadModeService implements IReadModeDriveService {
     try {
       documentModel = this.#getDocumentModel(
         documentType,
-      ) as unknown as DocumentModel<
+      ) as unknown as DocumentModelModule<
         InferDocumentState<D>,
         InferDocumentOperation<D>,
         InferDocumentLocalState<D>

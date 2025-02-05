@@ -13,7 +13,7 @@ import type {
   BaseAction,
   CreateChildDocumentInput,
   Document,
-  DocumentModel,
+  DocumentModelModule,
   Operation,
   OperationScope,
   ReducerOptions,
@@ -205,7 +205,7 @@ export interface DriveEvents {
     status: number,
     errorMessage: string,
   ) => void;
-  documentModels: (documentModels: DocumentModel[]) => void;
+  documentModels: (documentModels: DocumentModelModule[]) => void;
   driveAdded: (drive: DocumentDriveDocument) => void;
   driveDeleted: (driveId: string) => void;
 }
@@ -320,7 +320,7 @@ export type GetStrandsOptions = {
 export abstract class AbstractDocumentDriveServer {
   /** Public methods **/
   abstract initialize(): Promise<Error[] | null>;
-  abstract setDocumentModels(models: DocumentModel[]): void;
+  abstract setDocumentModels(models: DocumentModelModule[]): void;
   abstract getDrives(): Promise<string[]>;
   abstract addDrive(drive: DriveInput): Promise<DocumentDriveDocument>;
   abstract addRemoteDrive(
@@ -496,8 +496,8 @@ export abstract class AbstractDocumentDriveServer {
   ): Promise<Document>;
   protected abstract deleteDocument(drive: string, id: string): Promise<void>;
 
-  protected abstract getDocumentModel(documentType: string): DocumentModel;
-  abstract getDocumentModels(): DocumentModel[];
+  protected abstract getDocumentModel(documentType: string): DocumentModelModule;
+  abstract getDocumentModels(): DocumentModelModule[];
 
   /** Event methods **/
   protected abstract emit<K extends keyof DriveEvents>(

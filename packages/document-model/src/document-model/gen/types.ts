@@ -1,16 +1,17 @@
-import type { Document, ExtendedState } from "../../document/types";
+import type { BaseDocument, ExtendedState } from "@document/types.js";
 import type {
+    DocumentModelState,
+    DocumentModelLocalState,
+} from "./schema/types.js";
+import type { DocumentModelAction } from "./actions.js";
+
+export type ExtendedDocumentModelState = ExtendedState<
+  DocumentModelState,
+  DocumentModelLocalState
+>;
+export type DocumentModelDocument = BaseDocument<
   DocumentModelState,
   DocumentModelLocalState,
-} from "./schema/types";
-import type { DocumentModelAction } from "./actions";
-
-export { z } from "./schema";
-export type * from "./schema/types";
-export type ExtendedDocumentModelState = ExtendedState<DocumentModelState>;
-export type DocumentModelDocument = Document<
-  DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
+  DocumentModelAction
 >;
 export { DocumentModelState, DocumentModelAction, DocumentModelLocalState };

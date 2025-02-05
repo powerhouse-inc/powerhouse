@@ -5,7 +5,7 @@ import {
   Operation,
   OperationScope,
 } from "document-model/document";
-import { DocumentStorage } from "../storage/types";
+import { DocumentStorage } from "../storage/types.js";
 
 export function migrateDocumentOperationSigatures<D extends Document>(
   document: DocumentStorage<D>,

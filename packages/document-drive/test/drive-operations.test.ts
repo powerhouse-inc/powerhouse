@@ -5,7 +5,7 @@ import {
   reducer,
 } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { BaseAction, DocumentModel, Operation } from "document-model/document";
+import { BaseAction, DocumentModelModule, Operation } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DocumentDriveServer } from "../src";
@@ -37,7 +37,7 @@ describe("Drive operations", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   let server = new DocumentDriveServer(documentModels);
 

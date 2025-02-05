@@ -3,7 +3,7 @@ import {
   utils,
 } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
+import { DocumentModelModule } from "document-model/document";
 import * as DocumentModelLib from "document-model/document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import {
@@ -17,7 +17,7 @@ describe("Internal Listener", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   async function buildServer(receiver: IReceiver) {
     const server = new DocumentDriveServer(documentModels);

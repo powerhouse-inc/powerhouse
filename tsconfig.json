@@ -1,5 +1,5 @@
 {
-  "include": ["vitest.workspace.ts"],
+  "include": ["vitest.workspace.ts", "scripts"],
   "extends": "./tsconfig.options.json",
   "references": [
     {

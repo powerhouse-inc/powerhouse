@@ -3,22 +3,15 @@
   "version": "0.32.1",
   "license": "AGPL-3.0-only",
   "private": false,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "type": "module",
-  "bin": {
-    "powerhouse": "./dist/cli.js",
-    "create-document-model-lib": "./dist/create-lib/index.js"
-  },
   "files": [
     "/dist"
   ],
   "exports": {
-    ".": "./dist/index.js",
-    "./graphql": "./dist/codegen/graphql.js",
-    "./hygen": "./dist/codegen/hygen.js",
-    "./create-lib": "./dist/create-lib/index.js",
-    "./utils": "./dist/utils/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
     "check-types": "tsc --build",
@@ -27,7 +20,7 @@
     "lint:nx": "eslint . --fix --quiet",
     "clean": "rimraf dist/",
     "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
-    "build": "tsup",
+    "build": "tsc --build",
     "prepublishOnly": "npm run build",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",

@@ -1,26 +1,29 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { noop, undo, redo } from "../../src/document/actions";
-import { createDocument, createExtendedState } from "../../src/document/utils";
-import { processUndoRedo } from "../../src/document/reducer";
-import { Document, Operation } from "../../src/document/types";
+import { BaseDocument } from "@document/types.js";
 import {
   CountState,
   CountAction,
   CountLocalState,
   countReducer,
   increment,
-} from "../helpers";
+} from "../helpers.js";
+import { undo, noop, redo } from "@document/actions/creators.js";
+import {
+  baseCreateExtendedState,
+  baseCreateDocument,
+} from "@document/utils/base.js";
+import { processUndoRedo } from "@document/reducer.js";
 
 describe("UNDO/REDO", () => {
-  let document: Document<CountState, CountAction, CountLocalState>;
+  let document: BaseDocument<CountState, CountLocalState, CountAction>;
 
   beforeEach(() => {
-    const initialState = createExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
 
-    document = createDocument<CountState, CountAction, CountLocalState>(
+    document = baseCreateDocument<CountState, CountLocalState, CountAction>(
       initialState,
     );
 
@@ -89,12 +92,14 @@ describe("UNDO/REDO", () => {
     });
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
-      const initialState = createExtendedState<CountState, CountLocalState>({
-        documentType: "powerhouse/counter",
-        state: { global: { count: 0 }, local: {} },
-      });
+      const initialState = baseCreateExtendedState<CountState, CountLocalState>(
+        {
+          documentType: "powerhouse/counter",
+          state: { global: { count: 0 }, local: {} },
+        },
+      );
 
-      document = createDocument<CountState, CountAction, CountLocalState>(
+      document = baseCreateDocument<CountState, CountLocalState, CountAction>(
         initialState,
       );
 
@@ -110,12 +115,14 @@ describe("UNDO/REDO", () => {
 
   describe("processUndoRedo -> REDO", () => {
     it("should throw an error when there's no operation to redo in the clipboard", () => {
-      const initialState = createExtendedState<CountState, CountLocalState>({
-        documentType: "powerhouse/counter",
-        state: { global: { count: 0 }, local: {} },
-      });
+      const initialState = baseCreateExtendedState<CountState, CountLocalState>(
+        {
+          documentType: "powerhouse/counter",
+          state: { global: { count: 0 }, local: {} },
+        },
+      );
 
-      document = createDocument<CountState, CountAction, CountLocalState>(
+      document = baseCreateDocument<CountState, CountLocalState, CountAction>(
         initialState,
       );
 
@@ -395,7 +402,7 @@ describe("UNDO/REDO", () => {
 
   describe("NOOP operations", () => {
     it("should apply NOOP operations", () => {
-      const op: Operation = {
+      const op = {
         input: undefined,
         type: "NOOP",
         skip: 1,
@@ -420,7 +427,7 @@ describe("UNDO/REDO", () => {
     });
 
     it("should replace previous noop operation and update skip number when a new noop is dispatched after another one", () => {
-      const baseOperation: Operation = {
+      const baseOperation = {
         input: undefined,
         type: "NOOP",
         skip: 0,
@@ -449,7 +456,7 @@ describe("UNDO/REDO", () => {
     });
 
     it("NOOP operation should not add skipped operation to the clipboard", () => {
-      const op: Operation = {
+      const op = {
         input: undefined,
         type: "NOOP",
         skip: 1,

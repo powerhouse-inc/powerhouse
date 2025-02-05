@@ -1,22 +1,27 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
-import { Action, CreateChildDocumentInput, utils } from "../../src/document";
-import { setName } from "../../src/document/actions/creators";
-import { SET_NAME } from "../../src/document/actions/types";
+
+import { setName } from "@document/actions/creators.js";
+import { SET_NAME } from "@document/actions/types.js";
+
 import {
-  createAction,
-  createDocument,
-  createExtendedState,
-  createReducer,
-} from "../../src/document/utils";
-import { emptyReducer, wrappedEmptyReducer } from "../helpers";
-import {
+  emptyReducer,
+  wrappedEmptyReducer,
   CountState,
   CountAction,
   CountLocalState,
   countReducer,
   increment,
   error,
-} from "../helpers";
+} from "../helpers.js";
+import { CreateChildDocumentInput } from "@document/signal.js";
+import { BaseAction } from "@document/types.js";
+import {
+  baseCreateDocument,
+  createAction,
+  createReducer,
+  baseCreateExtendedState,
+  hashKey,
+} from "@document/utils/base.js";
 
 describe("Base reducer", () => {
   beforeAll(() => {
@@ -24,8 +29,8 @@ describe("Base reducer", () => {
   });
 
   it("should update revision", async () => {
-    const document = createDocument();
-    const newDocument = emptyReducer(document, {
+    const document = baseCreateDocument();
+    const newDocument = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "global",
@@ -35,12 +40,12 @@ describe("Base reducer", () => {
 
   it("should update lastModified", async () => {
     vi.useFakeTimers();
-    const document = createDocument();
+    const document = baseCreateDocument();
     await new Promise((r) => {
       setTimeout(r, 100);
       vi.runOnlyPendingTimers();
     });
-    const newDocument = emptyReducer(document, {
+    const newDocument = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "global",
@@ -51,8 +56,8 @@ describe("Base reducer", () => {
 
   it("should update global operations list", async () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
-    const document = createDocument();
-    const newDocument = emptyReducer(document, {
+    const document = baseCreateDocument();
+    const newDocument = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "global",
@@ -95,15 +100,15 @@ describe("Base reducer", () => {
   });
 
   it("should set document name", async () => {
-    const document = createDocument();
-    const newDocument = emptyReducer(document, setName("Document"));
+    const document = baseCreateDocument();
+    const newDocument = wrappedEmptyReducer(document, setName("Document"));
     expect(newDocument.name).toBe("Document");
   });
 
   it("should throw error on invalid base action", async () => {
-    const document = createDocument();
+    const document = baseCreateDocument();
     expect(() =>
-      emptyReducer(document, {
+      wrappedEmptyReducer(document, {
         type: "SET_NAME",
         input: 0 as unknown as string,
         scope: "global",
@@ -113,9 +118,9 @@ describe("Base reducer", () => {
 
   it("should dispatch trigger action", async () => {
     expect.assertions(4);
-    const document = createDocument();
+    const document = baseCreateDocument();
 
-    const id = utils.hashKey();
+    const id = hashKey();
     const reducer = createReducer((_state, action, dispatch) => {
       if (action.type === "CREATE_DOCUMENT") {
         // @ts-expect-error TODO add synchronization units to fix type error
@@ -124,7 +129,7 @@ describe("Base reducer", () => {
           input: {
             id,
             documentType: "test",
-            document: createDocument({
+            document: baseCreateDocument({
               state: { global: { value: "test" }, local: {} },
             }),
           },
@@ -134,7 +139,7 @@ describe("Base reducer", () => {
       return _state;
     });
 
-    const triggerAction: Action = {
+    const triggerAction: BaseAction = {
       type: "CREATE_DOCUMENT",
       input: "",
       scope: "global",
@@ -142,7 +147,11 @@ describe("Base reducer", () => {
 
     reducer(document, triggerAction, (action) => {
       expect(action.type).toBe("CREATE_CHILD_DOCUMENT");
-      const input = action.input as CreateChildDocumentInput;
+      const input = action.input as CreateChildDocumentInput<
+        unknown,
+        unknown,
+        BaseAction
+      >;
       expect(input.id).toBe(id);
       expect(input.documentType).toBe("test");
       expect(input.document?.initialState.state.global).toStrictEqual({
@@ -152,14 +161,14 @@ describe("Base reducer", () => {
   });
 
   it("should throw an error when there is a missing index operation", () => {
-    let document = createDocument();
-    document = emptyReducer(document, {
+    let document = baseCreateDocument();
+    document = wrappedEmptyReducer(document, {
       type: "TEST_0",
       input: {},
       scope: "global",
     });
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_1",
       input: {},
       scope: "global",
@@ -178,14 +187,14 @@ describe("Base reducer", () => {
   });
 
   it("should throw an error when there is a missing index operation + skip", () => {
-    let document = createDocument();
-    document = emptyReducer(document, {
+    let document = baseCreateDocument();
+    document = wrappedEmptyReducer(document, {
       type: "TEST_0",
       input: {},
       scope: "global",
     });
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_1",
       input: {},
       scope: "global",
@@ -209,14 +218,14 @@ describe("Base reducer", () => {
   });
 
   it("should not throw an error when there is a valid index operation + skip", () => {
-    let document = createDocument();
-    document = emptyReducer(document, {
+    let document = baseCreateDocument();
+    document = wrappedEmptyReducer(document, {
       type: "TEST_0",
       input: {},
       scope: "global",
     });
 
-    document = emptyReducer(document, {
+    document = wrappedEmptyReducer(document, {
       type: "TEST_1",
       input: {},
       scope: "global",
@@ -252,12 +261,12 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer", () => {
-    const initialState = createExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
 
-    let document = createDocument<CountState, CountAction, CountLocalState>(
+    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
       initialState,
     );
 
@@ -270,12 +279,12 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
-    const initialState = createExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
 
-    let document = createDocument<CountState, CountAction, CountLocalState>(
+    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
       initialState,
     );
 
@@ -288,12 +297,12 @@ describe("Base reducer", () => {
   });
 
   it("should include error message into error operation prop", () => {
-    const initialState = createExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
 
-    let document = createDocument<CountState, CountAction, CountLocalState>(
+    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
       initialState,
     );
 
@@ -327,12 +336,12 @@ describe("Base reducer", () => {
   });
 
   it("should not include error message in successful operations", () => {
-    const initialState = createExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
 
-    let document = createDocument<CountState, CountAction, CountLocalState>(
+    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
       initialState,
     );
 

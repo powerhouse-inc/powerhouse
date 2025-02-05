@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { actions } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
+import { DocumentModelModule } from "document-model/document";
 import { beforeAll, describe, it } from "vitest";
 import { DocumentDriveServer } from "../../src";
 import { PrismaStorage } from "../../src/storage/prisma";
@@ -11,7 +11,7 @@ const prismaClient = new PrismaClient();
 describe("Document operations", () => {
   const documentModels = [
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   const storage = new PrismaStorage(prismaClient);
   let server: DocumentDriveServer;

@@ -6,8 +6,8 @@ import {
   precedes,
   reshuffleByTimestamp,
   checkCleanedOperationsIntegrity,
-} from "../../src/document/utils/document-helpers";
-import { buildOperations } from "./utils";
+} from "@document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("Conflict resolution", () => {
   it("should not include duplicated operations when resolving a merge conflict", () => {

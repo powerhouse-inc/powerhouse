@@ -12,10 +12,10 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     // we should definitely enable this, but it's a breaking change
-    // "isolatedModules": true,
+    "isolatedModules": true,
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "forceConsistentCasingInFileNames": true,
     "allowJs": true
   }
