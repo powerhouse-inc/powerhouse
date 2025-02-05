@@ -1,8 +1,8 @@
 import React from "react";
-import TimePickerField from "../time-picker-field/time-picker-field";
 import { FieldCommonProps } from "../types";
 import { DateFieldValue } from "../date-picker-field/types";
 import { DatePickerField } from "../date-picker-field/date-picker-field";
+import { TimePickerField } from "../time-picker-field";
 interface DateTimeFieldProps extends FieldCommonProps<DateFieldValue> {
   showDateSelect?: boolean;
   showTimeSelect?: boolean;
