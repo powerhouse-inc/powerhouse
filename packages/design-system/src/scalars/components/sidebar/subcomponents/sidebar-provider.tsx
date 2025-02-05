@@ -36,8 +36,8 @@ type SidebarContextType = {
   previousSearchResult: () => void;
   setNodes: (newNodes: SidebarNode[]) => void;
   syncActiveNodeId: (nodeId?: string) => void;
-  onActiveNodeChange: (nodeId: string) => void;
-  setActiveNodeChangeCallback: (callback: (nodeId: string) => void) => void;
+  onActiveNodeChange: (node: SidebarNode) => void;
+  setActiveNodeChangeCallback: (callback: (node: SidebarNode) => void) => void;
 };
 
 const SidebarContext = createContext<SidebarContextType>({
@@ -75,7 +75,7 @@ const SidebarProvider = ({
   const [pinnedNodePath, setPinnedNodePath] = useState<SidebarNode[]>([]);
   const [activeNodeId, setActiveNodeId] = useState<string | undefined>();
   const [onActiveNodeChange, setOnActiveNodeChange] = useState<
-    (nodeId: string) => void
+    (nodeId: SidebarNode) => void
   >(() => () => undefined);
 
   const currentRoots = useMemo(() => {
@@ -86,7 +86,7 @@ const SidebarProvider = ({
   }, [nodes, pinnedNodePath]);
 
   const setActiveNodeChangeCallback = useCallback(
-    (callback: (nodeId: string) => void) => {
+    (callback: (node: SidebarNode) => void) => {
       setOnActiveNodeChange(() => callback);
     },
     [],
