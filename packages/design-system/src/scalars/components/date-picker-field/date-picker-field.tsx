@@ -11,6 +11,7 @@ import { FormDescription } from "../fragments/form-description";
 import { Calendar } from "./subcomponents/calendar/calendar";
 import { cn } from "@/scalars/lib/utils";
 import { useDatePickerField } from "./use-date-picker-field";
+import { InputProps } from "../fragments";
 
 export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   label?: string;
@@ -21,6 +22,8 @@ export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
   placeholder?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
 }
 
 export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
@@ -37,6 +40,8 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       placeholder,
       description,
       warnings,
+      onChange,
+      inputProps,
       ...props
     },
     ref,
@@ -52,6 +57,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
     } = useDatePickerField({
       value,
       defaultValue,
+      onChange,
     });
 
     return (
@@ -80,7 +86,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           isOpen={isOpen}
           setIsOpen={setIsOpen}
           onInputChange={handleInputChange}
-          {...props}
+          inputProps={inputProps}
         >
           <Calendar
             mode="single"
