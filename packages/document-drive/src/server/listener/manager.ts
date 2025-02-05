@@ -67,18 +67,19 @@ export class ListenerManager implements IListenerManager {
     this.options = { ...DefaultListenerManagerOptions, ...options };
   }
 
-  async getTransmitter(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ITransmitter | undefined> {
-    return Promise.resolve(this.transmitters[driveId]?.[listenerId]);
-  }
-
   driveHasListeners(driveId: string) {
     return this.listenerState.has(driveId);
   }
 
-  async addListener(listener: Listener, transmitter: ITransmitter) {
+  getListener(driveId: string, listenerId: string): Promise<ListenerState> {
+    const drive = this.listenerState.get(driveId);
+    if (!drive) throw new Error("Drive not found");
+    const listener = drive.get(listenerId);
+    if (!listener) throw new Error("Listener not found");
+    return Promise.resolve(listener);
+  }
+
+  async addListener(listener: Listener) {
     const drive = listener.driveId;
 
     if (!this.listenerState.has(drive)) {
@@ -96,12 +97,7 @@ export class ListenerManager implements IListenerManager {
       syncUnits: new Map(),
     });
 
-    const driveTransmitters = this.transmitters[drive] || {};
-    driveTransmitters[listener.listenerId] = transmitter;
-    this.transmitters[drive] = driveTransmitters;
-
     this.triggerUpdate(true, { type: "local" });
-    return Promise.resolve(transmitter);
   }
 
   async removeListener(driveId: string, listenerId: string) {
@@ -111,6 +107,40 @@ export class ListenerManager implements IListenerManager {
     }
 
     return Promise.resolve(driveMap.delete(listenerId));
+  }
+
+  async setTransmitter(
+    driveId: string,
+    listenerId: string,
+    transmitter: ITransmitter,
+  ) {
+    const driveTransmitters = this.transmitters[driveId] || {};
+    driveTransmitters[listenerId] = transmitter;
+    this.transmitters[driveId] = driveTransmitters;
+
+    this.triggerUpdate(true, { type: "local" });
+  }
+
+  async removeTransmitter(driveId: string, listenerId: string) {
+    const driveTransmitters = this.transmitters[driveId];
+    if (!driveTransmitters) {
+      return false;
+    }
+
+    if (delete driveTransmitters[listenerId]) {
+      this.transmitters[driveId] = driveTransmitters;
+
+      return true;
+    }
+
+    return false;
+  }
+
+  async getTransmitter(
+    driveId: string,
+    listenerId: string,
+  ): Promise<ITransmitter | undefined> {
+    return Promise.resolve(this.transmitters[driveId]?.[listenerId]);
   }
 
   async removeSyncUnits(
@@ -413,14 +443,6 @@ export class ListenerManager implements IListenerManager {
         Object.values(transmitters).map((t) => t.disconnect?.()),
       );
     }
-  }
-
-  getListener(driveId: string, listenerId: string): Promise<ListenerState> {
-    const drive = this.listenerState.get(driveId);
-    if (!drive) throw new Error("Drive not found");
-    const listener = drive.get(listenerId);
-    if (!listener) throw new Error("Listener not found");
-    return Promise.resolve(listener);
   }
 
   async getStrands(
