@@ -3,16 +3,16 @@
  * Delete the file and run the code generator again to have it reset
  */
 
-import { actions as BaseActions, DocumentModel } from "document-model/document";
+import { actions as BaseActions, DocumentModel } from "document-model";
 import { actions as ScopeFrameworkActions, ScopeFramework } from "./gen";
 import { reducer } from "./gen/reducer";
 import { documentModel } from "./gen/document-model";
 import genUtils from "./gen/utils";
 import * as customUtils from "./src/utils";
 import {
-  ScopeFrameworkState,
-  ScopeFrameworkAction,
-  ScopeFrameworkLocalState,
+    ScopeFrameworkState,
+    ScopeFrameworkAction,
+    ScopeFrameworkLocalState,
 } from "./gen/types";
 
 const Document = ScopeFramework;

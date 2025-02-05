@@ -1,8 +1,8 @@
-import { Document } from "document-model/document";
+import { Document } from "document-model";
 import {
-  DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState,
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState,
 } from "document-model/document-model";
 
 export type Scope = "global" | "local";

@@ -1,17 +1,17 @@
 import {
-  BaseDocument,
-  ExtendedState,
-  PartialState,
-  applyMixins,
-  SignalDispatch,
-} from "document-model/document";
-import { AccountSnapshotState, AccountSnapshotLocalState } from "./types";
-import { AccountSnapshotAction } from "./actions";
-import { reducer } from "./reducer";
-import utils from "./utils";
-import AccountSnapshot_Snapshot from "./snapshot/object";
+    BaseDocument,
+    ExtendedState,
+    PartialState,
+    applyMixins,
+    SignalDispatch,
+} from "document-model";
+  import { AccountSnapshotState, AccountSnapshotLocalState } from "./types.js";
+import { AccountSnapshotAction } from "./actions.js";
+import { reducer } from "./reducer.js";
+import utils from "./utils.js";
+import AccountSnapshot_Snapshot from "./snapshot/object.js";
 
-export * from "./snapshot/object";
+export * from "./snapshot/object.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface AccountSnapshot extends AccountSnapshot_Snapshot {}

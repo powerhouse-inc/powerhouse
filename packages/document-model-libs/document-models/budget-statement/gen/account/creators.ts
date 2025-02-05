@@ -1,26 +1,21 @@
-import { utils } from "document-model/document";
-import {
-  z,
-  AddAccountInput,
-  UpdateAccountInput,
-  DeleteAccountInput,
-  SortAccountsInput,
-} from "../types";
+
+import { createAction } from "document-model";
+import { AddAccountInput, UpdateAccountInput, DeleteAccountInput, SortAccountsInput } from "../schema/types.js";
+import { AddAccountInputSchema, UpdateAccountInputSchema, DeleteAccountInputSchema, SortAccountsInputSchema } from "../schema/zod.js";
 import {
   AddAccountAction,
   UpdateAccountAction,
   DeleteAccountAction,
   SortAccountsAction,
-} from "./actions";
+} from "./actions.js";
 
-const { createAction } = utils;
 
 export const addAccount = (input: AddAccountInput) =>
   createAction<AddAccountAction>(
     "ADD_ACCOUNT",
     { ...input },
     undefined,
-    z.AddAccountInputSchema,
+    AddAccountInputSchema,
     "global",
   );
 
@@ -29,7 +24,7 @@ export const updateAccount = (input: UpdateAccountInput) =>
     "UPDATE_ACCOUNT",
     { ...input },
     undefined,
-    z.UpdateAccountInputSchema,
+    UpdateAccountInputSchema,
     "global",
   );
 
@@ -38,7 +33,7 @@ export const deleteAccount = (input: DeleteAccountInput) =>
     "DELETE_ACCOUNT",
     { ...input },
     undefined,
-    z.DeleteAccountInputSchema,
+    DeleteAccountInputSchema,
     "global",
   );
 
@@ -47,6 +42,6 @@ export const sortAccounts = (input: SortAccountsInput) =>
     "SORT_ACCOUNTS",
     { ...input },
     undefined,
-    z.SortAccountsInputSchema,
+    SortAccountsInputSchema,
     "global",
   );

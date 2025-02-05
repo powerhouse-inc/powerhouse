@@ -1,14 +1,7 @@
-import { BaseDocument } from "document-model/document";
-import {
-  SetOwnerInput,
-  SetMonthInput,
-  SetFtesInput,
-  SetQuoteCurrencyInput,
-  BudgetStatementState,
-  BudgetStatementLocalState,
-} from "../types";
-import { setOwner, setMonth, setFtes, setQuoteCurrency } from "./creators";
-import { BudgetStatementAction } from "../actions";
+import { BudgetStatementAction } from "../actions.js";
+import { SetOwnerInput, SetMonthInput, SetFtesInput, SetQuoteCurrencyInput } from "../schema/types.js";
+import { BudgetStatementState, BudgetStatementLocalState } from "../types.js";
+import { setOwner, setMonth, setFtes, setQuoteCurrency } from "./creators.js";
 
 export default class BudgetStatement_Base extends BaseDocument<
   BudgetStatementState,

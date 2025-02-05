@@ -7,7 +7,6 @@ import { generateMock } from "@powerhousedao/codegen";
 
 import * as creators from "../../gen/main/creators";
 import { reducer } from "../../gen/reducer";
-import { z } from "../../gen/schema";
 import { ScopeFrameworkDocument } from "../../gen/types";
 import utils from "../../gen/utils";
 
@@ -29,7 +28,7 @@ describe("Main Operations", () => {
   });
 
   it("should handle addElement operation", () => {
-    const input = generateMock(z.AddElementInputSchema());
+    const input = generateMock(AddElementInputSchema());
     const document = utils.createDocument({
       state: {
         global: {
@@ -47,7 +46,7 @@ describe("Main Operations", () => {
   });
 
   it("should handle updateElementType operation", () => {
-    const input = generateMock(z.UpdateElementTypeInputSchema());
+    const input = generateMock(UpdateElementTypeInputSchema());
     const updatedDocument = reducer(
       document,
       creators.updateElementType(input),
@@ -62,7 +61,7 @@ describe("Main Operations", () => {
   });
 
   it("should handle updateElementName operation", () => {
-    const input = generateMock(z.UpdateElementNameInputSchema());
+    const input = generateMock(UpdateElementNameInputSchema());
     const updatedDocument = reducer(
       document,
       creators.updateElementName(input),
@@ -77,7 +76,7 @@ describe("Main Operations", () => {
   });
 
   it("should handle updateElementComponents operation", () => {
-    const input = generateMock(z.UpdateElementComponentsInputSchema());
+    const input = generateMock(UpdateElementComponentsInputSchema());
     const updatedDocument = reducer(
       document,
       creators.updateElementComponents(input),
@@ -92,7 +91,7 @@ describe("Main Operations", () => {
   });
 
   it("should handle removeElement operation", () => {
-    const input = generateMock(z.RemoveElementInputSchema());
+    const input = generateMock(RemoveElementInputSchema());
     const updatedDocument = reducer(document, creators.removeElement(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -102,7 +101,7 @@ describe("Main Operations", () => {
   });
 
   it.skip("should handle reorderElements operation", () => {
-    const input = generateMock(z.ReorderElementsInputSchema());
+    const input = generateMock(ReorderElementsInputSchema());
     const updatedDocument = reducer(document, creators.reorderElements(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -112,7 +111,7 @@ describe("Main Operations", () => {
   });
 
   it.skip("should handle moveElement operation", () => {
-    const input = generateMock(z.MoveElementInputSchema());
+    const input = generateMock(MoveElementInputSchema());
     const updatedDocument = reducer(document, creators.moveElement(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);

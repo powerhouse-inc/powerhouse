@@ -2,7 +2,6 @@ import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
 import { SignalDispatch } from "./signal.js";
 import { FileInput } from "./utils/file.js";
-import { fileExtension } from "@document-model/gen/constants.js";
 export type { FileInput };
 export type { Immutable };
 export type { SignalDispatch };
@@ -52,7 +51,7 @@ export type BaseAction<
   context?: ActionContext;
 };
 
-export type ActionWithAttachment<
+export type BaseActionWithAttachment<
   TType extends string,
   TInput,
   TScope extends OperationScope,
@@ -381,7 +380,7 @@ export type DocumentModelUtils<
   TLocalState,
   TAction extends BaseAction,
 > = {
-  fileExtension: typeof fileExtension;
+  fileExtension: string;
   createState: CreateState<TGlobalState, TLocalState>;
   createExtendedState: CreateExtendedState<TGlobalState, TLocalState>;
   createDocument: CreateDocument<TGlobalState, TLocalState, TAction>;
@@ -429,11 +428,21 @@ export type EditorProps<
   documentNodeName?: string;
 };
 
-export type TEditor<TGlobalState, TLocalState, TAction extends BaseAction> = {
-  Component: FC<EditorProps<TGlobalState, TLocalState, TAction>>;
+export type EditorModule<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+  TAction extends BaseAction = BaseAction,
+  TCustomProps = unknown,
+  TEditorConfig extends Record<string, unknown> = Record<string, unknown>,
+> = {
+  Component: FC<
+    EditorProps<TGlobalState, TLocalState, TAction> &
+      TCustomProps &
+      Record<string, unknown>
+  >;
   documentTypes: string[];
+  config?: Partial<TEditorConfig>;
 };
-
 export type UndoRedoProcessResult<
   TGlobalState,
   TLocalState,
@@ -446,3 +455,14 @@ export type UndoRedoProcessResult<
 };
 
 export type ValidationError = { message: string; details: object };
+
+export type DocumentModelModule<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+  TAction extends BaseAction = BaseAction,
+> = {
+  reducer: Reducer<TGlobalState, TLocalState, TAction>;
+  actions: Record<string, ActionCreator<TAction>>;
+  utils: DocumentModelUtils<TGlobalState, TLocalState, TAction>;
+  initialGlobalState: TGlobalState;
+};

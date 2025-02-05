@@ -10,5 +10,10 @@
       "@editors/*": ["./editors/*"],
       "@utils/*": ["./editors/utils/*"]
     }
-  }
+  },
+  "references": [
+    {
+      "path": "../document-model"
+    }
+  ]
 }

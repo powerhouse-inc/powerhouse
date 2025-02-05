@@ -1,17 +1,17 @@
 import { useEffect, useRef, useMemo, useCallback } from "react";
 import {
-  compareStringsWithoutWhitespace,
-  initializeModelSchema,
-  makeOperationInitialDoc,
-  Scope,
+    compareStringsWithoutWhitespace,
+    initializeModelSchema,
+    makeOperationInitialDoc,
+    Scope,
 } from ".";
 import {
-  DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState,
-  actions,
+    DocumentModelState,
+    DocumentModelAction,
+    DocumentModelLocalState,
+    actions,
 } from "document-model/document-model";
-import { EditorProps, utils } from "document-model/document";
+import { EditorProps, utils } from "document-model";
 import { ModelMetadata } from "./components/model-metadata-form";
 import { SchemaContextProvider } from "./context/schema-context";
 import { Divider } from "./components/divider";

@@ -1,12 +1,12 @@
 import type {
-  Action,
-  BaseAction,
-  Document,
-  ExtendedState,
-  PartialState,
-  Reducer,
-  ActionErrorCallback,
-} from "document-model/document";
+    Action,
+    BaseAction,
+    Document,
+    ExtendedState,
+    PartialState,
+    Reducer,
+    ActionErrorCallback,
+} from "document-model";
 import { useState } from "react";
 
 export function wrapReducer<State, A extends Action, LocalState>(

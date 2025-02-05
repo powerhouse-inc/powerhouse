@@ -1,32 +1,30 @@
-import { utils } from "document-model/document";
 import {
-  z,
-  AddFileInput,
-  AddFolderInput,
-  DeleteNodeInput,
-  UpdateFileInput,
-  UpdateNodeInput,
-  CopyNodeInput,
-  MoveNodeInput,
-} from "../types";
+    AddFileInput,
+    AddFolderInput,
+    DeleteNodeInput,
+    UpdateFileInput,
+    UpdateNodeInput,
+    CopyNodeInput,
+    MoveNodeInput
+} from "../types.js";
 import {
-  AddFileAction,
-  AddFolderAction,
-  DeleteNodeAction,
-  UpdateFileAction,
-  UpdateNodeAction,
-  CopyNodeAction,
-  MoveNodeAction,
-} from "./actions";
+    AddFileAction,
+    AddFolderAction,
+    DeleteNodeAction,
+    UpdateFileAction,
+    UpdateNodeAction,
+    CopyNodeAction,
+    MoveNodeAction,
+} from "./actions.js";
 
-const { createAction } = utils;
+
 
 export const addFile = (input: AddFileInput) =>
   createAction<AddFileAction>(
     "ADD_FILE",
     { ...input },
     undefined,
-    z.AddFileInputSchema,
+    AddFileInputSchema,
     "global",
   );
 
@@ -35,7 +33,7 @@ export const addFolder = (input: AddFolderInput) =>
     "ADD_FOLDER",
     { ...input },
     undefined,
-    z.AddFolderInputSchema,
+    AddFolderInputSchema,
     "global",
   );
 
@@ -44,7 +42,7 @@ export const deleteNode = (input: DeleteNodeInput) =>
     "DELETE_NODE",
     { ...input },
     undefined,
-    z.DeleteNodeInputSchema,
+    DeleteNodeInputSchema,
     "global",
   );
 
@@ -53,7 +51,7 @@ export const updateFile = (input: UpdateFileInput) =>
     "UPDATE_FILE",
     { ...input },
     undefined,
-    z.UpdateFileInputSchema,
+    UpdateFileInputSchema,
     "global",
   );
 
@@ -62,7 +60,7 @@ export const updateNode = (input: UpdateNodeInput) =>
     "UPDATE_NODE",
     { ...input },
     undefined,
-    z.UpdateNodeInputSchema,
+    UpdateNodeInputSchema,
     "global",
   );
 
@@ -71,7 +69,7 @@ export const copyNode = (input: CopyNodeInput) =>
     "COPY_NODE",
     { ...input },
     undefined,
-    z.CopyNodeInputSchema,
+    CopyNodeInputSchema,
     "global",
   );
 
@@ -80,6 +78,6 @@ export const moveNode = (input: MoveNodeInput) =>
     "MOVE_NODE",
     { ...input },
     undefined,
-    z.MoveNodeInputSchema,
+    MoveNodeInputSchema,
     "global",
   );

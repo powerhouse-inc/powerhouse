@@ -7,7 +7,6 @@ import { generateMock } from "@powerhousedao/codegen";
 
 import * as creators from "../../gen/creators";
 import { reducer } from "../../gen/reducer";
-import { z } from "../../gen/schema";
 import { BudgetStatementDocument } from "../../gen/types";
 import utils from "../../gen/utils";
 
@@ -233,7 +232,7 @@ describe("Budget Statement vesting reducer", () => {
   });
 
   it("should handle addVesting operation", () => {
-    const input = generateMock(z.AddVestingInputSchema());
+    const input = generateMock(AddVestingInputSchema());
     const updatedDocument = reducer(document, creators.addVesting(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -243,7 +242,7 @@ describe("Budget Statement vesting reducer", () => {
   });
 
   it("should handle updateVesting operation", () => {
-    const input = generateMock(z.UpdateVestingInputSchema());
+    const input = generateMock(UpdateVestingInputSchema());
     const updatedDocument = reducer(document, creators.updateVesting(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -253,7 +252,7 @@ describe("Budget Statement vesting reducer", () => {
   });
 
   it("should handle deleteVesting operation", () => {
-    const input = generateMock(z.DeleteVestingInputSchema());
+    const input = generateMock(DeleteVestingInputSchema());
     const updatedDocument = reducer(document, creators.deleteVesting(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);

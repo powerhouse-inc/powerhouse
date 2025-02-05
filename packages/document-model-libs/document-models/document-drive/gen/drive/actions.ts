@@ -1,47 +1,46 @@
-import { Action } from "document-model/document";
 import {
-  SetDriveNameInput,
-  SetDriveIconInput,
-  SetSharingTypeInput,
-  SetAvailableOfflineInput,
-  AddListenerInput,
-  RemoveListenerInput,
-  AddTriggerInput,
-  RemoveTriggerInput,
-} from "../types";
+    SetDriveNameInput,
+    SetDriveIconInput,
+    SetSharingTypeInput,
+    SetAvailableOfflineInput,
+    AddListenerInput,
+    RemoveListenerInput,
+    AddTriggerInput,
+    RemoveTriggerInput,
+} from "../types.js";
 
-export type SetDriveNameAction = Action<
+export type SetDriveNameAction = BaseAction<
   "SET_DRIVE_NAME",
   SetDriveNameInput,
   "global"
 >;
-export type SetDriveIconAction = Action<
+export type SetDriveIconAction = BaseAction<
   "SET_DRIVE_ICON",
   SetDriveIconInput,
   "global"
 >;
-export type SetSharingTypeAction = Action<
+export type SetSharingTypeAction = BaseAction<
   "SET_SHARING_TYPE",
   SetSharingTypeInput,
   "local"
 >;
-export type SetAvailableOfflineAction = Action<
+export type SetAvailableOfflineAction = BaseAction<
   "SET_AVAILABLE_OFFLINE",
   SetAvailableOfflineInput,
   "local"
 >;
-export type AddListenerAction = Action<
+export type AddListenerAction = BaseAction<
   "ADD_LISTENER",
   AddListenerInput,
   "local"
 >;
-export type RemoveListenerAction = Action<
+export type RemoveListenerAction = BaseAction<
   "REMOVE_LISTENER",
   RemoveListenerInput,
   "local"
 >;
-export type AddTriggerAction = Action<"ADD_TRIGGER", AddTriggerInput, "local">;
-export type RemoveTriggerAction = Action<
+export type AddTriggerAction = BaseAction<"ADD_TRIGGER", AddTriggerInput, "local">;
+export type RemoveTriggerAction = BaseAction<
   "REMOVE_TRIGGER",
   RemoveTriggerInput,
   "local"

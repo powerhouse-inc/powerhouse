@@ -1,24 +1,15 @@
-import { utils } from "document-model/document";
-import {
-  z,
-  AddCommentInput,
-  UpdateCommentInput,
-  DeleteCommentInput,
-} from "../types";
-import {
-  AddCommentAction,
-  UpdateCommentAction,
-  DeleteCommentAction,
-} from "./actions";
+import { createAction } from "document-model";
+import { AddCommentInput, UpdateCommentInput, DeleteCommentInput } from "../schema/types.js";
+import { AddCommentInputSchema, UpdateCommentInputSchema, DeleteCommentInputSchema } from "../schema/zod.js";
+import { AddCommentAction, UpdateCommentAction, DeleteCommentAction } from "./actions.js";
 
-const { createAction } = utils;
 
 export const addComment = (input: AddCommentInput) =>
   createAction<AddCommentAction>(
     "ADD_COMMENT",
     { ...input },
     undefined,
-    z.AddCommentInputSchema,
+    AddCommentInputSchema,
     "global",
   );
 
@@ -27,7 +18,7 @@ export const updateComment = (input: UpdateCommentInput) =>
     "UPDATE_COMMENT",
     { ...input },
     undefined,
-    z.UpdateCommentInputSchema,
+    UpdateCommentInputSchema,
     "global",
   );
 
@@ -36,6 +27,6 @@ export const deleteComment = (input: DeleteCommentInput) =>
     "DELETE_COMMENT",
     { ...input },
     undefined,
-    z.DeleteCommentInputSchema,
+    DeleteCommentInputSchema,
     "global",
   );

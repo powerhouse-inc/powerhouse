@@ -1,11 +1,11 @@
-import { DocumentModelUtils, utils as base } from "document-model/document";
-import {
-  AccountSnapshotAction,
-  AccountSnapshotState,
-  AccountSnapshotLocalState,
-} from "./types";
-import { reducer } from "./reducer";
+import { baseCreateDocument, baseCreateExtendedState, baseLoadFromFile, baseLoadFromInput, baseSaveToFile, baseSaveToFileHandle } from "document-model";
+import { reducer } from "../index.js";
+import { AccountSnapshotAction } from "./actions.js";
+import { AccountSnapshotState, AccountSnapshotLocalState } from "./types.js";
+import { documentType, fileExtension } from "./constants.js";
+import { CreateState, CreateExtendedState, CreateDocument, SaveToFile, SaveToFileHandle, LoadFromFile, LoadFromInput } from "document-model";
 
+ 
 export const initialGlobalState: AccountSnapshotState = {
   id: "",
   ownerId: "",
@@ -18,42 +18,75 @@ export const initialGlobalState: AccountSnapshotState = {
 };
 export const initialLocalState: AccountSnapshotLocalState = {};
 
-const utils: DocumentModelUtils<
+export const createState: CreateState<
   AccountSnapshotState,
-  AccountSnapshotAction,
   AccountSnapshotLocalState
-> = {
-  fileExtension: "phas",
-  createState(state) {
-    return {
-      global: { ...initialGlobalState, ...state?.global },
-      local: { ...initialLocalState, ...state?.local },
-    };
-  },
-  createExtendedState(extendedState) {
-    return base.createExtendedState(
-      { ...extendedState, documentType: "powerhouse/account-snapshot" },
-      utils.createState,
-    );
-  },
-  createDocument(state) {
-    return base.createDocument(
-      utils.createExtendedState(state),
-      utils.createState,
-    );
-  },
-  saveToFile(document, path, name) {
-    return base.saveToFile(document, path, "phas", name);
-  },
-  saveToFileHandle(document, input) {
-    return base.saveToFileHandle(document, input);
-  },
-  loadFromFile(path) {
-    return base.loadFromFile(path, reducer);
-  },
-  loadFromInput(input) {
-    return base.loadFromInput(input, reducer);
-  },
+> = (state) => {
+  return {
+    global: { ...initialGlobalState, ...state?.global },
+    local: { ...initialLocalState, ...state?.local },
+  };
 };
 
-export default utils;
+export const createExtendedState: CreateExtendedState<
+  AccountSnapshotState,
+  AccountSnapshotLocalState
+> = (extendedState) => {
+  return baseCreateExtendedState(
+    { ...extendedState, documentType },
+    createState
+  );
+};
+
+export const createDocument: CreateDocument<
+  AccountSnapshotState,
+  AccountSnapshotLocalState,
+  AccountSnapshotAction
+> = (state) => {
+  return baseCreateDocument(createExtendedState(state), createState);
+};
+
+export const saveToFile: SaveToFile<
+  AccountSnapshotState,
+  AccountSnapshotLocalState,
+  AccountSnapshotAction
+> = (document, path, name) => {
+  return baseSaveToFile(document, path, fileExtension, name);
+};
+
+export const saveToFileHandle: SaveToFileHandle<
+  AccountSnapshotState,
+  AccountSnapshotLocalState,
+  AccountSnapshotAction
+> = (document, input) => {
+  return baseSaveToFileHandle(document, input);
+};
+
+export const loadFromFile: LoadFromFile<
+  AccountSnapshotState,
+  AccountSnapshotLocalState,
+  AccountSnapshotAction
+> = (path) => {
+  return baseLoadFromFile(path, reducer);
+};
+
+export const loadFromInput: LoadFromInput<
+  AccountSnapshotState,
+  AccountSnapshotLocalState,
+  AccountSnapshotAction
+> = (input) => {
+  return baseLoadFromInput(input, reducer);
+};
+
+export const utils = {
+  fileExtension,
+  createState,
+  createExtendedState,
+  createDocument,
+  saveToFile,
+  saveToFileHandle,
+  loadFromFile,
+  loadFromInput,
+};
+
+

@@ -1,26 +1,26 @@
-import { ImmutableStateReducer, utils } from "document-model/document";
-import { AccountSnapshotState, AccountSnapshotLocalState, z } from "./types";
-import { AccountSnapshotAction } from "./actions";
-
-import { reducer as SnapshotReducer } from "../src/reducers/snapshot";
+import { createReducer, ImmutableStateReducer, isDocumentAction, Reducer } from "document-model";
+import { AccountSnapshotState, AccountSnapshotLocalState } from "./types.js";
+import { AccountSnapshotAction } from "./actions.js";
+import { reducer as SnapshotReducer } from "@document-models/account-snapshot/src/reducers/snapshot.js";
+import { SetEndInputSchema, SetIdInputSchema, SetOwnerIdInputSchema, SetOwnerTypeInputSchema, SetPeriodInputSchema, SetStartInputSchema } from "./schema/zod.js";
 
 const stateReducer: ImmutableStateReducer<
   AccountSnapshotState,
-  AccountSnapshotAction,
-  AccountSnapshotLocalState
+  AccountSnapshotLocalState,
+  AccountSnapshotAction
 > = (state, action, dispatch) => {
-  if (utils.isBaseAction(action)) {
+  if (isDocumentAction(action)) {
     return state;
   }
 
   switch (action.type) {
     case "SET_ID":
-      z.SetIdInputSchema().parse(action.input);
+      SetIdInputSchema().parse(action.input);
       SnapshotReducer.setIdOperation(state[action.scope], action, dispatch);
       break;
 
     case "SET_OWNER_ID":
-      z.SetOwnerIdInputSchema().parse(action.input);
+      SetOwnerIdInputSchema().parse(action.input);
       SnapshotReducer.setOwnerIdOperation(
         state[action.scope],
         action,
@@ -29,7 +29,7 @@ const stateReducer: ImmutableStateReducer<
       break;
 
     case "SET_OWNER_TYPE":
-      z.SetOwnerTypeInputSchema().parse(action.input);
+      SetOwnerTypeInputSchema().parse(action.input);
       SnapshotReducer.setOwnerTypeOperation(
         state[action.scope],
         action,
@@ -38,17 +38,17 @@ const stateReducer: ImmutableStateReducer<
       break;
 
     case "SET_PERIOD":
-      z.SetPeriodInputSchema().parse(action.input);
+      SetPeriodInputSchema().parse(action.input);
       SnapshotReducer.setPeriodOperation(state[action.scope], action, dispatch);
       break;
 
     case "SET_START":
-      z.SetStartInputSchema().parse(action.input);
+      SetStartInputSchema().parse(action.input);
       SnapshotReducer.setStartOperation(state[action.scope], action, dispatch);
       break;
 
     case "SET_END":
-      z.SetEndInputSchema().parse(action.input);
+      SetEndInputSchema().parse(action.input);
       SnapshotReducer.setEndOperation(state[action.scope], action, dispatch);
       break;
 
@@ -57,8 +57,8 @@ const stateReducer: ImmutableStateReducer<
   }
 };
 
-export const reducer = utils.createReducer<
-  AccountSnapshotState,
-  AccountSnapshotAction,
-  AccountSnapshotLocalState
->(stateReducer);
+export const reducer: Reducer<
+AccountSnapshotState,
+AccountSnapshotLocalState,
+AccountSnapshotAction
+> = createReducer(stateReducer);

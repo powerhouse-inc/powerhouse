@@ -1,6 +1,6 @@
 import { AddonPanel } from "@storybook/components";
 import { addons, types } from "@storybook/manager-api";
-import { Document } from "document-model/document";
+import { Document } from "document-model";
 import React from "react";
 
 const ADDON_ID = "Operations";

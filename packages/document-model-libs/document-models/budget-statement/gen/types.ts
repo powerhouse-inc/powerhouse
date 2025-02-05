@@ -1,7 +1,7 @@
-import type { Document, ExtendedState } from "document-model/document";
+import type { Document, ExtendedState } from "document-model";
 import type { BudgetStatementState } from "./schema/types";
 import type { BudgetStatementLocalState } from "./schema/types";
-import type { BudgetStatementAction } from "./actions";
+import type { BudgetStatementAction } from "./actions.js";
 
 export { z } from "./schema";
 export type * from "./schema/types";

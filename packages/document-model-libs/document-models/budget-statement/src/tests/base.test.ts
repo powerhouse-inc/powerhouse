@@ -6,7 +6,6 @@
 import { generateMock } from "@powerhousedao/codegen";
 
 import utils from "../../gen/utils";
-import { z } from "../../gen/schema";
 import { reducer } from "../../gen/reducer";
 import * as creators from "../../gen/base/creators";
 import { BudgetStatementDocument } from "../../gen/types";
@@ -19,7 +18,7 @@ describe("Base Operations", () => {
   });
 
   it("should handle setOwner operation", () => {
-    const input = generateMock(z.SetOwnerInputSchema());
+    const input = generateMock(SetOwnerInputSchema());
     const updatedDocument = reducer(document, creators.setOwner(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -29,7 +28,7 @@ describe("Base Operations", () => {
   });
 
   it("should handle setMonth operation", () => {
-    const input = generateMock(z.SetMonthInputSchema());
+    const input = generateMock(SetMonthInputSchema());
     const updatedDocument = reducer(document, creators.setMonth(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -39,7 +38,7 @@ describe("Base Operations", () => {
   });
 
   it("should handle setFtes operation", () => {
-    const input = generateMock(z.SetFtesInputSchema());
+    const input = generateMock(SetFtesInputSchema());
     const updatedDocument = reducer(document, creators.setFtes(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -49,7 +48,7 @@ describe("Base Operations", () => {
   });
 
   it("should handle setQuoteCurrency operation", () => {
-    const input = generateMock(z.SetQuoteCurrencyInputSchema());
+    const input = generateMock(SetQuoteCurrencyInputSchema());
     const updatedDocument = reducer(document, creators.setQuoteCurrency(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);

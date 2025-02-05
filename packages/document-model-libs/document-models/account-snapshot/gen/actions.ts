@@ -1,5 +1,5 @@
-import { AccountSnapshotSnapshotAction } from "./snapshot/actions";
+import { AccountSnapshotSnapshotAction } from "./snapshot/actions.js";
 
-export * from "./snapshot/actions";
+export * from "./snapshot/actions.js";
 
 export type AccountSnapshotAction = AccountSnapshotSnapshotAction;

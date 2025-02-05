@@ -1,29 +1,28 @@
-import { Action } from "document-model/document";
 import {
-  AddMessageInput,
-  AddEmojiReactionInput,
-  RemoveEmojiReactionInput,
-  EditChatNameInput,
-  EditChatDescriptionInput,
-} from "../types";
+    AddMessageInput,
+    AddEmojiReactionInput,
+    RemoveEmojiReactionInput,
+    EditChatNameInput,
+    EditChatDescriptionInput,
+} from "../types.js";
 
-export type AddMessageAction = Action<"ADD_MESSAGE", AddMessageInput, "global">;
-export type AddEmojiReactionAction = Action<
+export type AddMessageAction = BaseAction<"ADD_MESSAGE", AddMessageInput, "global">;
+export type AddEmojiReactionAction = BaseAction<
   "ADD_EMOJI_REACTION",
   AddEmojiReactionInput,
   "global"
 >;
-export type RemoveEmojiReactionAction = Action<
+export type RemoveEmojiReactionAction = BaseAction<
   "REMOVE_EMOJI_REACTION",
   RemoveEmojiReactionInput,
   "global"
 >;
-export type EditChatNameAction = Action<
+export type EditChatNameAction = BaseAction<
   "EDIT_CHAT_NAME",
   EditChatNameInput,
   "global"
 >;
-export type EditChatDescriptionAction = Action<
+export type EditChatDescriptionAction = BaseAction<
   "EDIT_CHAT_DESCRIPTION",
   EditChatDescriptionInput,
   "global"

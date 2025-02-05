@@ -1,7 +1,7 @@
-import type { Document, ExtendedState } from "document-model/document";
+import type { Document, ExtendedState } from "document-model";
 import type { DocumentDriveState } from "./schema/types";
 import type { DocumentDriveLocalState } from "./schema/types";
-import type { DocumentDriveAction } from "./actions";
+import type { DocumentDriveAction } from "./actions.js";
 
 export { z } from "./schema";
 export type * from "./schema/types";

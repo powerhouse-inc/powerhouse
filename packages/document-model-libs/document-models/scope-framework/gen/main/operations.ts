@@ -1,15 +1,15 @@
-import { SignalDispatch } from "document-model/document";
+import { SignalDispatch } from "document-model";
 import {
-  SetRootPathAction,
-  AddElementAction,
-  UpdateElementTypeAction,
-  UpdateElementNameAction,
-  UpdateElementComponentsAction,
-  RemoveElementAction,
-  ReorderElementsAction,
-  MoveElementAction,
-} from "./actions";
-import { ScopeFrameworkState } from "../types";
+    SetRootPathAction,
+    AddElementAction,
+    UpdateElementTypeAction,
+    UpdateElementNameAction,
+    UpdateElementComponentsAction,
+    RemoveElementAction,
+    ReorderElementsAction,
+    MoveElementAction,
+} from "./actions.js";
+import { ScopeFrameworkState } from "../types.js";
 
 export interface ScopeFrameworkMainOperations {
   setRootPathOperation: (

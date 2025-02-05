@@ -1,11 +1,11 @@
-import { Action, EditorProps, actions } from "document-model/document";
+import { Action, EditorProps, actions } from "document-model";
 import { useEffect, useState } from "react";
 import {
-  DocumentEditor,
-  EditorToolbar,
-  ToolbarButton,
-  EditorWorksheet,
-  TextInput,
+    DocumentEditor,
+    EditorToolbar,
+    ToolbarButton,
+    EditorWorksheet,
+    TextInput,
 } from "document-model-libs/utils";
 import JSONEditor from "../common/json-editor";
 

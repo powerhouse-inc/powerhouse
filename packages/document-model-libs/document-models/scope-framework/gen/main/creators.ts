@@ -1,34 +1,32 @@
-import { utils } from "document-model/document";
 import {
-  z,
-  SetRootPathInput,
-  AddElementInput,
-  UpdateElementTypeInput,
-  UpdateElementNameInput,
-  UpdateElementComponentsInput,
-  RemoveElementInput,
-  ReorderElementsInput,
-  MoveElementInput,
-} from "../types";
+    SetRootPathInput,
+    AddElementInput,
+    UpdateElementTypeInput,
+    UpdateElementNameInput,
+    UpdateElementComponentsInput,
+    RemoveElementInput,
+    ReorderElementsInput,
+    MoveElementInput
+} from "../types.js";
 import {
-  SetRootPathAction,
-  AddElementAction,
-  UpdateElementTypeAction,
-  UpdateElementNameAction,
-  UpdateElementComponentsAction,
-  RemoveElementAction,
-  ReorderElementsAction,
-  MoveElementAction,
-} from "./actions";
+    SetRootPathAction,
+    AddElementAction,
+    UpdateElementTypeAction,
+    UpdateElementNameAction,
+    UpdateElementComponentsAction,
+    RemoveElementAction,
+    ReorderElementsAction,
+    MoveElementAction,
+} from "./actions.js";
 
-const { createAction } = utils;
+
 
 export const setRootPath = (input: SetRootPathInput) =>
   createAction<SetRootPathAction>(
     "SET_ROOT_PATH",
     { ...input },
     undefined,
-    z.SetRootPathInputSchema,
+    SetRootPathInputSchema,
     "global",
   );
 
@@ -37,7 +35,7 @@ export const addElement = (input: AddElementInput) =>
     "ADD_ELEMENT",
     { ...input },
     undefined,
-    z.AddElementInputSchema,
+    AddElementInputSchema,
     "global",
   );
 
@@ -46,7 +44,7 @@ export const updateElementType = (input: UpdateElementTypeInput) =>
     "UPDATE_ELEMENT_TYPE",
     { ...input },
     undefined,
-    z.UpdateElementTypeInputSchema,
+    UpdateElementTypeInputSchema,
     "global",
   );
 
@@ -55,7 +53,7 @@ export const updateElementName = (input: UpdateElementNameInput) =>
     "UPDATE_ELEMENT_NAME",
     { ...input },
     undefined,
-    z.UpdateElementNameInputSchema,
+    UpdateElementNameInputSchema,
     "global",
   );
 
@@ -64,7 +62,7 @@ export const updateElementComponents = (input: UpdateElementComponentsInput) =>
     "UPDATE_ELEMENT_COMPONENTS",
     { ...input },
     undefined,
-    z.UpdateElementComponentsInputSchema,
+    UpdateElementComponentsInputSchema,
     "global",
   );
 
@@ -73,7 +71,7 @@ export const removeElement = (input: RemoveElementInput) =>
     "REMOVE_ELEMENT",
     { ...input },
     undefined,
-    z.RemoveElementInputSchema,
+    RemoveElementInputSchema,
     "global",
   );
 
@@ -82,7 +80,7 @@ export const reorderElements = (input: ReorderElementsInput) =>
     "REORDER_ELEMENTS",
     { ...input },
     undefined,
-    z.ReorderElementsInputSchema,
+    ReorderElementsInputSchema,
     "global",
   );
 
@@ -91,6 +89,6 @@ export const moveElement = (input: MoveElementInput) =>
     "MOVE_ELEMENT",
     { ...input },
     undefined,
-    z.MoveElementInputSchema,
+    MoveElementInputSchema,
     "global",
   );

@@ -26,8 +26,8 @@
       "import": "./dist/index.js"
     },
     "./document-model": {
-      "types": "./dist/document-model/index.d.ts",
-      "import": "./dist/document-model/index.js"
+      "types": "./dist/src/document-model/index.d.ts",
+      "import": "./dist/src/document-model/index.js"
     }
   },
   "devDependencies": {

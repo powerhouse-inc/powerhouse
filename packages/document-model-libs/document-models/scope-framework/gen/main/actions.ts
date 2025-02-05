@@ -1,47 +1,46 @@
-import { Action } from "document-model/document";
 import {
-  SetRootPathInput,
-  AddElementInput,
-  UpdateElementTypeInput,
-  UpdateElementNameInput,
-  UpdateElementComponentsInput,
-  RemoveElementInput,
-  ReorderElementsInput,
-  MoveElementInput,
-} from "../types";
+    SetRootPathInput,
+    AddElementInput,
+    UpdateElementTypeInput,
+    UpdateElementNameInput,
+    UpdateElementComponentsInput,
+    RemoveElementInput,
+    ReorderElementsInput,
+    MoveElementInput,
+} from "../types.js";
 
-export type SetRootPathAction = Action<
+export type SetRootPathAction = BaseAction<
   "SET_ROOT_PATH",
   SetRootPathInput,
   "global"
 >;
-export type AddElementAction = Action<"ADD_ELEMENT", AddElementInput, "global">;
-export type UpdateElementTypeAction = Action<
+export type AddElementAction = BaseAction<"ADD_ELEMENT", AddElementInput, "global">;
+export type UpdateElementTypeAction = BaseAction<
   "UPDATE_ELEMENT_TYPE",
   UpdateElementTypeInput,
   "global"
 >;
-export type UpdateElementNameAction = Action<
+export type UpdateElementNameAction = BaseAction<
   "UPDATE_ELEMENT_NAME",
   UpdateElementNameInput,
   "global"
 >;
-export type UpdateElementComponentsAction = Action<
+export type UpdateElementComponentsAction = BaseAction<
   "UPDATE_ELEMENT_COMPONENTS",
   UpdateElementComponentsInput,
   "global"
 >;
-export type RemoveElementAction = Action<
+export type RemoveElementAction = BaseAction<
   "REMOVE_ELEMENT",
   RemoveElementInput,
   "global"
 >;
-export type ReorderElementsAction = Action<
+export type ReorderElementsAction = BaseAction<
   "REORDER_ELEMENTS",
   ReorderElementsInput,
   "global"
 >;
-export type MoveElementAction = Action<
+export type MoveElementAction = BaseAction<
   "MOVE_ELEMENT",
   MoveElementInput,
   "global"

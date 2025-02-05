@@ -1,34 +1,32 @@
-import { utils } from "document-model/document";
 import {
-  z,
-  SetDriveNameInput,
-  SetDriveIconInput,
-  SetSharingTypeInput,
-  SetAvailableOfflineInput,
-  AddListenerInput,
-  RemoveListenerInput,
-  AddTriggerInput,
-  RemoveTriggerInput,
-} from "../types";
+    SetDriveNameInput,
+    SetDriveIconInput,
+    SetSharingTypeInput,
+    SetAvailableOfflineInput,
+    AddListenerInput,
+    RemoveListenerInput,
+    AddTriggerInput,
+    RemoveTriggerInput
+} from "../types.js";
 import {
-  SetDriveNameAction,
-  SetDriveIconAction,
-  SetSharingTypeAction,
-  SetAvailableOfflineAction,
-  AddListenerAction,
-  RemoveListenerAction,
-  AddTriggerAction,
-  RemoveTriggerAction,
-} from "./actions";
+    SetDriveNameAction,
+    SetDriveIconAction,
+    SetSharingTypeAction,
+    SetAvailableOfflineAction,
+    AddListenerAction,
+    RemoveListenerAction,
+    AddTriggerAction,
+    RemoveTriggerAction,
+} from "./actions.js";
 
-const { createAction } = utils;
+
 
 export const setDriveName = (input: SetDriveNameInput) =>
   createAction<SetDriveNameAction>(
     "SET_DRIVE_NAME",
     { ...input },
     undefined,
-    z.SetDriveNameInputSchema,
+    SetDriveNameInputSchema,
     "global",
   );
 
@@ -37,7 +35,7 @@ export const setDriveIcon = (input: SetDriveIconInput) =>
     "SET_DRIVE_ICON",
     { ...input },
     undefined,
-    z.SetDriveIconInputSchema,
+    SetDriveIconInputSchema,
     "global",
   );
 
@@ -46,7 +44,7 @@ export const setSharingType = (input: SetSharingTypeInput) =>
     "SET_SHARING_TYPE",
     { ...input },
     undefined,
-    z.SetSharingTypeInputSchema,
+    SetSharingTypeInputSchema,
     "local",
   );
 
@@ -55,7 +53,7 @@ export const setAvailableOffline = (input: SetAvailableOfflineInput) =>
     "SET_AVAILABLE_OFFLINE",
     { ...input },
     undefined,
-    z.SetAvailableOfflineInputSchema,
+    SetAvailableOfflineInputSchema,
     "local",
   );
 
@@ -64,7 +62,7 @@ export const addListener = (input: AddListenerInput) =>
     "ADD_LISTENER",
     { ...input },
     undefined,
-    z.AddListenerInputSchema,
+    AddListenerInputSchema,
     "local",
   );
 
@@ -73,7 +71,7 @@ export const removeListener = (input: RemoveListenerInput) =>
     "REMOVE_LISTENER",
     { ...input },
     undefined,
-    z.RemoveListenerInputSchema,
+    RemoveListenerInputSchema,
     "local",
   );
 
@@ -82,7 +80,7 @@ export const addTrigger = (input: AddTriggerInput) =>
     "ADD_TRIGGER",
     { ...input },
     undefined,
-    z.AddTriggerInputSchema,
+    AddTriggerInputSchema,
     "local",
   );
 
@@ -91,6 +89,6 @@ export const removeTrigger = (input: RemoveTriggerInput) =>
     "REMOVE_TRIGGER",
     { ...input },
     undefined,
-    z.RemoveTriggerInputSchema,
+    RemoveTriggerInputSchema,
     "local",
   );

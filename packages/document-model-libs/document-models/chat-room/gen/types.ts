@@ -1,6 +1,6 @@
-import type { Document, ExtendedState } from "document-model/document";
+import type { Document, ExtendedState } from "document-model";
 import type { ChatRoomState } from "./schema/types";
-import type { ChatRoomAction } from "./actions";
+import type { ChatRoomAction } from "./actions.js";
 
 export { z } from "./schema";
 export type * from "./schema/types";

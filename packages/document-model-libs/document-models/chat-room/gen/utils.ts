@@ -1,4 +1,4 @@
-import { DocumentModelUtils, utils as base } from "document-model/document";
+import { DocumentModelUtils } from "document-model";
 import { ChatRoomAction, ChatRoomState, ChatRoomLocalState } from "./types";
 import { reducer } from "./reducer";
 
@@ -12,7 +12,7 @@ export const initialGlobalState: ChatRoomState = {
 };
 export const initialLocalState: ChatRoomLocalState = {};
 
-const utils: DocumentModelUtils<
+export const utils: DocumentModelUtils<
   ChatRoomState,
   ChatRoomAction,
   ChatRoomLocalState
@@ -25,29 +25,29 @@ const utils: DocumentModelUtils<
     };
   },
   createExtendedState(extendedState) {
-    return base.createExtendedState(
+    return baseCreateExtendedState(
       { ...extendedState, documentType: "powerhouse/chat-room" },
       utils.createState,
     );
   },
   createDocument(state) {
-    return base.createDocument(
+    return baseCreateDocument(
       utils.createExtendedState(state),
       utils.createState,
     );
   },
   saveToFile(document, path, name) {
-    return base.saveToFile(document, path, ".phdm", name);
+    return baseSaveToFile(document, path, ".phdm", name);
   },
   saveToFileHandle(document, input) {
-    return base.saveToFileHandle(document, input);
+    return baseSaveToFileHandle(document, input);
   },
   loadFromFile(path) {
-    return base.loadFromFile(path, reducer);
+    return baseLoadFromFile(path, reducer);
   },
   loadFromInput(input) {
-    return base.loadFromInput(input, reducer);
+    return baseLoadFromInput(input, reducer);
   },
 };
 
-export default utils;
+

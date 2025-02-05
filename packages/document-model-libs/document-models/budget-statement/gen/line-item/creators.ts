@@ -1,26 +1,24 @@
-import { utils } from "document-model/document";
 import {
-  z,
-  AddLineItemInput,
-  UpdateLineItemInput,
-  DeleteLineItemInput,
-  SortLineItemsInput,
-} from "../types";
+    AddLineItemInput,
+    UpdateLineItemInput,
+    DeleteLineItemInput,
+    SortLineItemsInput
+} from "../types.js";
 import {
-  AddLineItemAction,
-  UpdateLineItemAction,
-  DeleteLineItemAction,
-  SortLineItemsAction,
-} from "./actions";
+    AddLineItemAction,
+    UpdateLineItemAction,
+    DeleteLineItemAction,
+    SortLineItemsAction,
+} from "./actions.js";
 
-const { createAction } = utils;
+
 
 export const addLineItem = (input: AddLineItemInput) =>
   createAction<AddLineItemAction>(
     "ADD_LINE_ITEM",
     { ...input },
     undefined,
-    z.AddLineItemInputSchema,
+    AddLineItemInputSchema,
     "global",
   );
 
@@ -29,7 +27,7 @@ export const updateLineItem = (input: UpdateLineItemInput) =>
     "UPDATE_LINE_ITEM",
     { ...input },
     undefined,
-    z.UpdateLineItemInputSchema,
+    UpdateLineItemInputSchema,
     "global",
   );
 
@@ -38,7 +36,7 @@ export const deleteLineItem = (input: DeleteLineItemInput) =>
     "DELETE_LINE_ITEM",
     { ...input },
     undefined,
-    z.DeleteLineItemInputSchema,
+    DeleteLineItemInputSchema,
     "global",
   );
 
@@ -47,6 +45,6 @@ export const sortLineItems = (input: SortLineItemsInput) =>
     "SORT_LINE_ITEMS",
     { ...input },
     undefined,
-    z.SortLineItemsInputSchema,
+    SortLineItemsInputSchema,
     "global",
   );

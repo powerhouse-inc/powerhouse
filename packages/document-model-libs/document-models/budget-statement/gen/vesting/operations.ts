@@ -1,10 +1,10 @@
-import { SignalDispatch } from "document-model/document";
+import { SignalDispatch } from "document-model";
 import {
-  AddVestingAction,
-  UpdateVestingAction,
-  DeleteVestingAction,
-} from "./actions";
-import { BudgetStatementState } from "../types";
+    AddVestingAction,
+    UpdateVestingAction,
+    DeleteVestingAction,
+} from "./actions.js";
+import { BudgetStatementState } from "../types.js";
 
 export interface BudgetStatementVestingOperations {
   addVestingOperation: (

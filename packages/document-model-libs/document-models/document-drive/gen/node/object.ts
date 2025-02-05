@@ -1,23 +1,23 @@
-import { BaseDocument } from "document-model/document";
+import { BaseDocument } from "document-model";
 import {
-  AddFileInput,
-  AddFolderInput,
-  DeleteNodeInput,
-  UpdateFileInput,
-  UpdateNodeInput,
-  CopyNodeInput,
-  MoveNodeInput,
-  DocumentDriveState,
-  DocumentDriveLocalState,
-} from "../types";
+    AddFileInput,
+    AddFolderInput,
+    DeleteNodeInput,
+    UpdateFileInput,
+    UpdateNodeInput,
+    CopyNodeInput,
+    MoveNodeInput,
+    DocumentDriveState,
+    DocumentDriveLocalState,
+} from "../types.js";
 import {
-  addFile,
-  addFolder,
-  deleteNode,
-  updateFile,
-  updateNode,
-  copyNode,
-  moveNode,
+    addFile,
+    addFolder,
+    deleteNode,
+    updateFile,
+    updateNode,
+    copyNode,
+    moveNode,
 } from "./creators";
 import { DocumentDriveAction } from "../actions";
 

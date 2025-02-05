@@ -1,11 +1,3 @@
-import { ExtendedEditor } from "../types";
-import {
-  BudgetStatementAction,
-  BudgetStatementLocalState,
-  BudgetStatementState,
-} from "../../document-models/budget-statement";
-import { lazyWithPreload } from "document-model-libs/utils";
-
 export const module: ExtendedEditor<
   BudgetStatementState,
   BudgetStatementAction,

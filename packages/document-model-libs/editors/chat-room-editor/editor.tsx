@@ -1,13 +1,13 @@
 /* eslint-disable react/jsx-no-bind */
-import { EditorProps } from "document-model/document";
+import { EditorProps } from "document-model";
 import {
-  ChatRoomState,
-  ChatRoomAction,
-  ChatRoomLocalState,
-  ReactionType,
-  actions,
+    ChatRoomState,
+    ChatRoomAction,
+    ChatRoomLocalState,
+    ReactionType,
+    actions,
 } from "../../document-models/chat-room";
-import { utils as documentModelUtils } from "document-model/document";
+import { utils as documentModelUtils } from "document-model";
 import { ChatRoom, ChatRoomProps, MessageProps } from "./components";
 import { reactionKeyToReactionType, mapReactions } from "./utils";
 

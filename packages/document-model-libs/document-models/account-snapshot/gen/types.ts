@@ -1,18 +1,17 @@
-import type { Document, ExtendedState } from "document-model/document";
-import type { AccountSnapshotState } from "./schema/types";
-import type { AccountSnapshotLocalState } from "./schema/types";
-import type { AccountSnapshotAction } from "./actions";
+import type { BaseDocument, ExtendedState } from "document-model";
+import type { AccountSnapshotState } from "./schema/types.js";
+import type { AccountSnapshotLocalState } from "./schema/types.js";
+import type { AccountSnapshotAction } from "./actions.js";
 
-export { z } from "./schema";
-export type * from "./schema/types";
+export type * from "./schema/types.js";
 export type ExtendedAccountSnapshotState = ExtendedState<
   AccountSnapshotState,
   AccountSnapshotLocalState
 >;
-export type AccountSnapshotDocument = Document<
+export type AccountSnapshotDocument = BaseDocument<
   AccountSnapshotState,
-  AccountSnapshotAction,
-  AccountSnapshotLocalState
+  AccountSnapshotLocalState,
+  AccountSnapshotAction
 >;
 export {
   AccountSnapshotState,

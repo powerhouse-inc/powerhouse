@@ -6,7 +6,6 @@
 import { generateMock } from "@powerhousedao/codegen";
 
 import utils from "../../gen/utils";
-import { z } from "../../gen/schema";
 import { reducer } from "../../gen/reducer";
 import * as creators from "../../gen/drive/creators";
 import { DocumentDriveDocument } from "../../gen/types";
@@ -19,7 +18,7 @@ describe("Drive Operations", () => {
   });
 
   it("should handle setDriveName operation", () => {
-    const input = generateMock(z.SetDriveNameInputSchema());
+    const input = generateMock(SetDriveNameInputSchema());
     const updatedDocument = reducer(document, creators.setDriveName(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -29,7 +28,7 @@ describe("Drive Operations", () => {
   });
 
   it("should handle setSharingType operation", () => {
-    const input = generateMock(z.SetSharingTypeInputSchema());
+    const input = generateMock(SetSharingTypeInputSchema());
     const updatedDocument = reducer(document, creators.setSharingType(input));
 
     expect(updatedDocument.operations.local).toHaveLength(1);
@@ -39,7 +38,7 @@ describe("Drive Operations", () => {
   });
 
   it("should handle setAvailableOffline operation", () => {
-    const input = generateMock(z.SetAvailableOfflineInputSchema());
+    const input = generateMock(SetAvailableOfflineInputSchema());
     const updatedDocument = reducer(
       document,
       creators.setAvailableOffline(input),

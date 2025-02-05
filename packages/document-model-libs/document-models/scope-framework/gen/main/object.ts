@@ -1,25 +1,25 @@
-import { BaseDocument } from "document-model/document";
+import { BaseDocument } from "document-model";
 import {
-  SetRootPathInput,
-  AddElementInput,
-  UpdateElementTypeInput,
-  UpdateElementNameInput,
-  UpdateElementComponentsInput,
-  RemoveElementInput,
-  ReorderElementsInput,
-  MoveElementInput,
-  ScopeFrameworkState,
-  ScopeFrameworkLocalState,
-} from "../types";
+    SetRootPathInput,
+    AddElementInput,
+    UpdateElementTypeInput,
+    UpdateElementNameInput,
+    UpdateElementComponentsInput,
+    RemoveElementInput,
+    ReorderElementsInput,
+    MoveElementInput,
+    ScopeFrameworkState,
+    ScopeFrameworkLocalState,
+} from "../types.js";
 import {
-  setRootPath,
-  addElement,
-  updateElementType,
-  updateElementName,
-  updateElementComponents,
-  removeElement,
-  reorderElements,
-  moveElement,
+    setRootPath,
+    addElement,
+    updateElementType,
+    updateElementName,
+    updateElementComponents,
+    removeElement,
+    reorderElements,
+    moveElement,
 } from "./creators";
 import { ScopeFrameworkAction } from "../actions";
 

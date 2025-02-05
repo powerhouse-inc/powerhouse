@@ -1,15 +1,15 @@
 import { v4 as generateUUID } from "uuid";
 
 import {
-  AddFileInput,
-  CopyNodeInput,
-  DocumentDriveState,
-  FileNode,
-  FolderNode,
-  Node,
+    AddFileInput,
+    CopyNodeInput,
+    DocumentDriveState,
+    FileNode,
+    FolderNode,
+    Node,
 } from "..";
 
-import { OperationScope, SynchronizationUnit } from "document-model/document";
+import { OperationScope, SynchronizationUnit } from "document-model";
 import { AddFileAction, CopyNodeAction } from "../gen/node/actions";
 import { addFile, copyNode } from "../gen/node/creators";
 

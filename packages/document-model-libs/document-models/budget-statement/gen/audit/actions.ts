@@ -1,12 +1,13 @@
-import { Action, ActionWithAttachment } from "document-model/document";
-import { AddAuditReportInput, DeleteAuditReportInput } from "../types";
+import { BaseAction, BaseActionWithAttachment } from "document-model";
+import { AddAuditReportInput, DeleteAuditReportInput } from "../schema/types.js";
 
-export type AddAuditReportAction = ActionWithAttachment<
+
+export type AddAuditReportAction = BaseActionWithAttachment<
   "ADD_AUDIT_REPORT",
   AddAuditReportInput,
   "global"
 >;
-export type DeleteAuditReportAction = Action<
+export type DeleteAuditReportAction = BaseAction<
   "DELETE_AUDIT_REPORT",
   DeleteAuditReportInput,
   "global"

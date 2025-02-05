@@ -3,35 +3,26 @@
  * Delete the file and run the code generator again to have it reset
  */
 
-import { actions as BaseActions, DocumentModel } from "document-model/document";
-import { actions as AccountSnapshotActions, AccountSnapshot } from "./gen";
-import { reducer } from "./gen/reducer";
-import { documentModel } from "./gen/document-model";
-import genUtils from "./gen/utils";
-import * as customUtils from "./src/utils";
+import { DocumentModelModule } from "document-model";
+import { AccountSnapshotAction } from "./gen/actions.js";
+import { actions } from "./gen/index.js";
+import { reducer } from "./gen/reducer.js";
 import {
   AccountSnapshotState,
-  AccountSnapshotAction,
   AccountSnapshotLocalState,
-} from "./gen/types";
+} from "./gen/types.js";
+import * as customUtils from "./src/utils.js";
+import * as genUtils from "./gen/utils.js";
+import { fileExtension } from "./gen/constants.js";
+import { initialGlobalState } from "./gen/utils.js";
 
-const Document = AccountSnapshot;
-const utils = { ...genUtils, ...customUtils };
-const actions = { ...BaseActions, ...AccountSnapshotActions };
-
-export const module: DocumentModel<
+export const module: DocumentModelModule<
   AccountSnapshotState,
-  AccountSnapshotAction,
-  AccountSnapshotLocalState
+  AccountSnapshotLocalState,
+  AccountSnapshotAction
 > = {
-  Document,
   reducer,
   actions,
-  utils,
-  documentModel,
+  initialGlobalState,
+  utils: { ...genUtils, ...customUtils, fileExtension },
 };
-
-export { AccountSnapshot, Document, reducer, actions, utils, documentModel };
-
-export * from "./gen/types";
-export * from "./src/utils";

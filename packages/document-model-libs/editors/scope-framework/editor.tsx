@@ -1,19 +1,19 @@
 import {
-  DocumentEditor,
-  EditorToolbar,
-  EditorWorksheet,
-  TextInput,
-  ToolbarButton,
+    DocumentEditor,
+    EditorToolbar,
+    EditorWorksheet,
+    TextInput,
+    ToolbarButton,
 } from "document-model-libs/utils";
-import { EditorProps } from "document-model/document";
+import { EditorProps } from "document-model";
 import { useEffect } from "react";
 import {
-  ExtendedScopeFrameworkState,
-  ScopeFrameworkAction,
-  ScopeFrameworkElementType,
-  ScopeFrameworkLocalState,
-  ScopeFrameworkState,
-  actions,
+    ExtendedScopeFrameworkState,
+    ScopeFrameworkAction,
+    ScopeFrameworkElementType,
+    ScopeFrameworkLocalState,
+    ScopeFrameworkState,
+    actions,
 } from "../../document-models/scope-framework";
 import AtlasElement from "./components/atlasElement";
 import "./style.css";

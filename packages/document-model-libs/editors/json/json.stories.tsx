@@ -1,10 +1,10 @@
 import { createDocumentStory } from "document-model-libs/utils";
 import {
-  SignalDispatch,
-  baseReducer,
-  utils,
-  type Document,
-} from "document-model/document";
+    SignalDispatch,
+    baseReducer,
+    utils,
+    type Document,
+} from "document-model";
 import Editor from "./editor";
 import { Meta } from "@storybook/react";
 

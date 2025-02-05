@@ -1,14 +1,14 @@
-import { SignalDispatch } from "document-model/document";
+import { SignalDispatch } from "document-model";
 import {
-  AddFileAction,
-  AddFolderAction,
-  DeleteNodeAction,
-  UpdateFileAction,
-  UpdateNodeAction,
-  CopyNodeAction,
-  MoveNodeAction,
-} from "./actions";
-import { DocumentDriveState } from "../types";
+    AddFileAction,
+    AddFolderAction,
+    DeleteNodeAction,
+    UpdateFileAction,
+    UpdateNodeAction,
+    CopyNodeAction,
+    MoveNodeAction,
+} from "./actions.js";
+import { DocumentDriveState } from "../types.js";
 
 export interface DocumentDriveNodeOperations {
   addFileOperation: (

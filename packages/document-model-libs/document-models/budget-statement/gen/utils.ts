@@ -1,8 +1,8 @@
-import { DocumentModelUtils, utils as base } from "document-model/document";
+import { DocumentModelUtils } from "document-model";
 import {
-  BudgetStatementAction,
-  BudgetStatementState,
-  BudgetStatementLocalState,
+    BudgetStatementAction,
+    BudgetStatementState,
+    BudgetStatementLocalState,
 } from "./types";
 import { reducer } from "./reducer";
 
@@ -22,7 +22,7 @@ export const initialGlobalState: BudgetStatementState = {
 };
 export const initialLocalState: BudgetStatementLocalState = {};
 
-const utils: DocumentModelUtils<
+export const utils: DocumentModelUtils<
   BudgetStatementState,
   BudgetStatementAction,
   BudgetStatementLocalState
@@ -35,29 +35,29 @@ const utils: DocumentModelUtils<
     };
   },
   createExtendedState(extendedState) {
-    return base.createExtendedState(
+    return baseCreateExtendedState(
       { ...extendedState, documentType: "powerhouse/budget-statement" },
       utils.createState,
     );
   },
   createDocument(state) {
-    return base.createDocument(
+    return baseCreateDocument(
       utils.createExtendedState(state),
       utils.createState,
     );
   },
   saveToFile(document, path, name) {
-    return base.saveToFile(document, path, "phbs", name);
+    return baseSaveToFile(document, path, "phbs", name);
   },
   saveToFileHandle(document, input) {
-    return base.saveToFileHandle(document, input);
+    return baseSaveToFileHandle(document, input);
   },
   loadFromFile(path) {
-    return base.loadFromFile(path, reducer);
+    return baseLoadFromFile(path, reducer);
   },
   loadFromInput(input) {
-    return base.loadFromInput(input, reducer);
+    return baseLoadFromInput(input, reducer);
   },
 };
 
-export default utils;
+

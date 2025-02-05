@@ -1,12 +1,12 @@
-import { SignalDispatch } from "document-model/document";
+import { SignalDispatch } from "document-model";
 import {
-  AddMessageAction,
-  AddEmojiReactionAction,
-  RemoveEmojiReactionAction,
-  EditChatNameAction,
-  EditChatDescriptionAction,
-} from "./actions";
-import { ChatRoomState } from "../types";
+    AddMessageAction,
+    AddEmojiReactionAction,
+    RemoveEmojiReactionAction,
+    EditChatNameAction,
+    EditChatDescriptionAction,
+} from "./actions.js";
+import { ChatRoomState } from "../types.js";
 
 export interface ChatRoomGeneralOperationsOperations {
   addMessageOperation: (

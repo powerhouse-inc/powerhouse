@@ -1,12 +1,12 @@
 import {
-  BaseDocument,
-  ExtendedState,
-  PartialState,
-  applyMixins,
-  SignalDispatch,
-} from "document-model/document";
+    BaseDocument,
+    ExtendedState,
+    PartialState,
+    applyMixins,
+    SignalDispatch,
+} from "document-model";
 import { DocumentDriveState, DocumentDriveLocalState } from "./types";
-import { DocumentDriveAction } from "./actions";
+import { DocumentDriveAction } from "./actions.js";
 import { reducer } from "./reducer";
 import utils from "./utils";
 import DocumentDrive_Node from "./node/object";

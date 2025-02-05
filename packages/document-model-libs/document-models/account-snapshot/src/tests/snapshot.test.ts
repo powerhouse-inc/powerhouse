@@ -5,21 +5,28 @@
 
 import { generateMock } from "@powerhousedao/codegen";
 
-import utils from "../../gen/utils";
-import { z } from "../../gen/schema";
-import { reducer } from "../../gen/reducer";
-import * as creators from "../../gen/snapshot/creators";
-import { AccountSnapshotDocument } from "../../gen/types";
+import { reducer } from "@document-models/account-snapshot/gen/reducer.js";
+import * as creators from "@document-models/account-snapshot/gen/snapshot/creators.js";
+import { AccountSnapshotDocument } from "@document-models/account-snapshot/gen/types.js";
+import {
+  SetIdInputSchema,
+  SetOwnerIdInputSchema,
+  SetOwnerTypeInputSchema,
+  SetPeriodInputSchema,
+  SetStartInputSchema,
+  SetEndInputSchema,
+} from "@document-models/account-snapshot/gen/schema/zod.js";
+import { createDocument } from "@document-models/account-snapshot/gen/utils.js";
 
 describe("Snapshot Operations", () => {
   let document: AccountSnapshotDocument;
 
   beforeEach(() => {
-    document = utils.createDocument();
+    document = createDocument();
   });
 
   it("should handle setId operation", () => {
-    const input = generateMock(z.SetIdInputSchema());
+    const input = generateMock(SetIdInputSchema());
     const updatedDocument = reducer(document, creators.setId(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -29,7 +36,7 @@ describe("Snapshot Operations", () => {
   });
 
   it("should handle setOwnerId operation", () => {
-    const input = generateMock(z.SetOwnerIdInputSchema());
+    const input = generateMock(SetOwnerIdInputSchema());
     const updatedDocument = reducer(document, creators.setOwnerId(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -39,7 +46,7 @@ describe("Snapshot Operations", () => {
   });
 
   it("should handle setOwnerType operation", () => {
-    const input = generateMock(z.SetOwnerTypeInputSchema());
+    const input = generateMock(SetOwnerTypeInputSchema());
     const updatedDocument = reducer(document, creators.setOwnerType(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -49,7 +56,7 @@ describe("Snapshot Operations", () => {
   });
 
   it("should handle setPeriod operation", () => {
-    const input = generateMock(z.SetPeriodInputSchema());
+    const input = generateMock(SetPeriodInputSchema());
     const updatedDocument = reducer(document, creators.setPeriod(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -59,7 +66,7 @@ describe("Snapshot Operations", () => {
   });
 
   it("should handle setStart operation", () => {
-    const input = generateMock(z.SetStartInputSchema());
+    const input = generateMock(SetStartInputSchema());
     const updatedDocument = reducer(document, creators.setStart(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -69,7 +76,7 @@ describe("Snapshot Operations", () => {
   });
 
   it("should handle setEnd operation", () => {
-    const input = generateMock(z.SetEndInputSchema());
+    const input = generateMock(SetEndInputSchema());
     const updatedDocument = reducer(document, creators.setEnd(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -82,14 +89,14 @@ describe("Snapshot Operations", () => {
 describe("Account Snapshot Document Model", () => {
   describe("Document Creation", () => {
     it("should create an Account Snapshot document", async () => {
-      const document = utils.createDocument();
+      const document = createDocument();
 
       expect(document).toBeDefined();
       expect(document.documentType).toBe("powerhouse/account-snapshot");
     });
 
     it("should create an empty document state", async () => {
-      const document = utils.createDocument();
+      const document = createDocument();
       expect(document.state).toStrictEqual({
         global: {
           id: "",
@@ -110,7 +117,7 @@ describe("Account Snapshot Document Model", () => {
     let document: AccountSnapshotDocument;
 
     beforeEach(() => {
-      document = utils.createDocument();
+      document = createDocument();
     });
 
     it("should set document id", () => {

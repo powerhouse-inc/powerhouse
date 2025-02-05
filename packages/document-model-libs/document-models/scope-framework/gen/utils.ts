@@ -1,8 +1,8 @@
-import { DocumentModelUtils, utils as base } from "document-model/document";
+import { DocumentModelUtils } from "document-model";
 import {
-  ScopeFrameworkAction,
-  ScopeFrameworkState,
-  ScopeFrameworkLocalState,
+    ScopeFrameworkAction,
+    ScopeFrameworkState,
+    ScopeFrameworkLocalState,
 } from "./types";
 import { reducer } from "./reducer";
 
@@ -23,7 +23,7 @@ export const initialGlobalState: ScopeFrameworkState = {
 };
 export const initialLocalState: ScopeFrameworkLocalState = {};
 
-const utils: DocumentModelUtils<
+export const utils: DocumentModelUtils<
   ScopeFrameworkState,
   ScopeFrameworkAction,
   ScopeFrameworkLocalState
@@ -36,29 +36,29 @@ const utils: DocumentModelUtils<
     };
   },
   createExtendedState(extendedState) {
-    return base.createExtendedState(
+    return baseCreateExtendedState(
       { ...extendedState, documentType: "makerdao/scope-framework" },
       utils.createState,
     );
   },
   createDocument(state) {
-    return base.createDocument(
+    return baseCreateDocument(
       utils.createExtendedState(state),
       utils.createState,
     );
   },
   saveToFile(document, path, name) {
-    return base.saveToFile(document, path, "mdsf", name);
+    return baseSaveToFile(document, path, "mdsf", name);
   },
   saveToFileHandle(document, input) {
-    return base.saveToFileHandle(document, input);
+    return baseSaveToFileHandle(document, input);
   },
   loadFromFile(path) {
-    return base.loadFromFile(path, reducer);
+    return baseLoadFromFile(path, reducer);
   },
   loadFromInput(input) {
-    return base.loadFromInput(input, reducer);
+    return baseLoadFromInput(input, reducer);
   },
 };
 
-export default utils;
+

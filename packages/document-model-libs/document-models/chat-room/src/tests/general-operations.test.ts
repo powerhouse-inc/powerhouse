@@ -3,16 +3,15 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { utils as documentModelUtils } from "document-model/document";
+import { utils as documentModelUtils } from "document-model";
 
 import utils from "../../gen/utils";
 import {
-  z,
-  AddMessageInput,
-  AddEmojiReactionInput,
-  RemoveEmojiReactionInput,
-  EditChatNameInput,
-  EditChatDescriptionInput,
+    AddMessageInput,
+    AddEmojiReactionInput,
+    RemoveEmojiReactionInput,
+    EditChatNameInput,
+    EditChatDescriptionInput
 } from "../../gen/schema";
 import { reducer } from "../../gen/reducer";
 import * as creators from "../../gen/general-operations/creators";

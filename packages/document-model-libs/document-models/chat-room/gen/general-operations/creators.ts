@@ -1,28 +1,26 @@
-import { utils } from "document-model/document";
 import {
-  z,
-  AddMessageInput,
-  AddEmojiReactionInput,
-  RemoveEmojiReactionInput,
-  EditChatNameInput,
-  EditChatDescriptionInput,
-} from "../types";
+    AddMessageInput,
+    AddEmojiReactionInput,
+    RemoveEmojiReactionInput,
+    EditChatNameInput,
+    EditChatDescriptionInput
+} from "../types.js";
 import {
-  AddMessageAction,
-  AddEmojiReactionAction,
-  RemoveEmojiReactionAction,
-  EditChatNameAction,
-  EditChatDescriptionAction,
-} from "./actions";
+    AddMessageAction,
+    AddEmojiReactionAction,
+    RemoveEmojiReactionAction,
+    EditChatNameAction,
+    EditChatDescriptionAction,
+} from "./actions.js";
 
-const { createAction } = utils;
+
 
 export const addMessage = (input: AddMessageInput) =>
   createAction<AddMessageAction>(
     "ADD_MESSAGE",
     { ...input },
     undefined,
-    z.AddMessageInputSchema,
+    AddMessageInputSchema,
     "global",
   );
 
@@ -31,7 +29,7 @@ export const addEmojiReaction = (input: AddEmojiReactionInput) =>
     "ADD_EMOJI_REACTION",
     { ...input },
     undefined,
-    z.AddEmojiReactionInputSchema,
+    AddEmojiReactionInputSchema,
     "global",
   );
 
@@ -40,7 +38,7 @@ export const removeEmojiReaction = (input: RemoveEmojiReactionInput) =>
     "REMOVE_EMOJI_REACTION",
     { ...input },
     undefined,
-    z.RemoveEmojiReactionInputSchema,
+    RemoveEmojiReactionInputSchema,
     "global",
   );
 
@@ -49,7 +47,7 @@ export const editChatName = (input: EditChatNameInput) =>
     "EDIT_CHAT_NAME",
     { ...input },
     undefined,
-    z.EditChatNameInputSchema,
+    EditChatNameInputSchema,
     "global",
   );
 
@@ -58,6 +56,6 @@ export const editChatDescription = (input: EditChatDescriptionInput) =>
     "EDIT_CHAT_DESCRIPTION",
     { ...input },
     undefined,
-    z.EditChatDescriptionInputSchema,
+    EditChatDescriptionInputSchema,
     "global",
   );

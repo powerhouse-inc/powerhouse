@@ -4,7 +4,7 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { utils } from "document-model/document";
+import { utils } from "document-model";
 import { BudgetStatementCommentOperations } from "../../gen/comment/operations";
 import { Comment } from "../../gen/schema";
 

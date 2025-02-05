@@ -1,11 +1,11 @@
-import { SignalDispatch } from "document-model/document";
+import { SignalDispatch } from "document-model";
 import {
-  AddLineItemAction,
-  UpdateLineItemAction,
-  DeleteLineItemAction,
-  SortLineItemsAction,
-} from "./actions";
-import { BudgetStatementState } from "../types";
+    AddLineItemAction,
+    UpdateLineItemAction,
+    DeleteLineItemAction,
+    SortLineItemsAction,
+} from "./actions.js";
+import { BudgetStatementState } from "../types.js";
 
 export interface BudgetStatementLineItemOperations {
   addLineItemOperation: (

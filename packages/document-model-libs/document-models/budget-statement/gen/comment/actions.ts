@@ -1,17 +1,17 @@
-import { Action } from "document-model/document";
+import { BaseAction } from "document-model";
 import {
   AddCommentInput,
   UpdateCommentInput,
   DeleteCommentInput,
-} from "../types";
+} from "../schema/types.js";
 
-export type AddCommentAction = Action<"ADD_COMMENT", AddCommentInput, "global">;
-export type UpdateCommentAction = Action<
+export type AddCommentAction = BaseAction<"ADD_COMMENT", AddCommentInput, "global">;
+export type UpdateCommentAction = BaseAction<
   "UPDATE_COMMENT",
   UpdateCommentInput,
   "global"
 >;
-export type DeleteCommentAction = Action<
+export type DeleteCommentAction = BaseAction<
   "DELETE_COMMENT",
   DeleteCommentInput,
   "global"

@@ -1,8 +1,9 @@
-import { utils, AttachmentInput } from "document-model/document";
-import { z, AddAuditReportInput, DeleteAuditReportInput } from "../types";
-import { AddAuditReportAction, DeleteAuditReportAction } from "./actions";
+import { AttachmentInput, createAction } from "document-model";
+import { AddAuditReportInput, DeleteAuditReportInput } from "../schema/types.js";
+import { AddAuditReportInputSchema, DeleteAuditReportInputSchema } from "../schema/zod.js";
+import { AddAuditReportAction, DeleteAuditReportAction } from "./actions.js";
 
-const { createAction } = utils;
+
 
 export const addAuditReport = (
   input: AddAuditReportInput,
@@ -12,7 +13,7 @@ export const addAuditReport = (
     "ADD_AUDIT_REPORT",
     { ...input },
     attachments,
-    z.AddAuditReportInputSchema,
+    AddAuditReportInputSchema,
     "global",
   );
 
@@ -21,6 +22,6 @@ export const deleteAuditReport = (input: DeleteAuditReportInput) =>
     "DELETE_AUDIT_REPORT",
     { ...input },
     undefined,
-    z.DeleteAuditReportInputSchema,
+    DeleteAuditReportInputSchema,
     "global",
   );

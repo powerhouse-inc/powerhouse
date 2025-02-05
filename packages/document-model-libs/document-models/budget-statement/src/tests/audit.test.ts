@@ -4,14 +4,13 @@
  */
 
 import { generateMock } from "@powerhousedao/codegen";
-import { Operation, utils as baseUtils } from "document-model/document";
+import { Operation, utils as baseUtils } from "document-model";
 import fs from "fs";
 import JSZip from "jszip";
 import { utils } from "../..";
 import { AddAuditReportAction } from "../../gen";
 import * as creators from "../../gen/audit/creators";
 import { reducer } from "../../gen/reducer";
-import { z } from "../../gen/schema";
 import { BudgetStatementDocument } from "../../gen/types";
 
 const { createDocument, loadFromFile, saveToFile } = utils;
@@ -45,7 +44,7 @@ describe("Budget Statement Audit Report reducer", () => {
   });
 
   it.skip("should add audit report", async () => {
-    const input = generateMock(z.AddAuditReportInputSchema());
+    const input = generateMock(AddAuditReportInputSchema());
     const file = await getLocalFile(tempFile);
     input.report = file.hash;
     const updatedDocument = reducer(
@@ -69,8 +68,8 @@ describe("Budget Statement Audit Report reducer", () => {
   });
 
   it("should delete audit report", async () => {
-    const initialStateInput = generateMock(z.AddAuditReportInputSchema());
-    const input = generateMock(z.DeleteAuditReportInputSchema());
+    const initialStateInput = generateMock(AddAuditReportInputSchema());
+    const input = generateMock(DeleteAuditReportInputSchema());
     const file = await getLocalFile(tempFile);
     initialStateInput.report = file.hash;
     input.report = file.hash;

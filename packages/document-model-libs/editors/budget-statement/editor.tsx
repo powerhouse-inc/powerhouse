@@ -1,29 +1,32 @@
-import { EditorProps } from "document-model/document";
-import {
-  actions,
-  AddAccountInput,
-  AddLineItemInput,
-  BudgetStatementAction,
-  BudgetStatementLocalState,
-  BudgetStatementState,
-  DeleteLineItemInput,
-} from "../../document-models/budget-statement";
+import type { EditorProps } from "document-model";
+
 import AccountForm from "./components/account-form";
 import AccountsTable from "./components/accounts-table";
 import LineItemForm from "./components/line-item-form";
-
-export type IProps = EditorProps<
+import { actions } from "@document-models/budget-statement/index.js";
+import { BudgetStatementAction } from "@document-models/budget-statement/gen/actions.js";
+import {
+  AddAccountInput,
+  AddLineItemInput,
+  DeleteLineItemInput,
+} from "@document-models/budget-statement/gen/schema/types.js";
+import {
+  BudgetStatementState,
+  BudgetStatementLocalState,
+} from "@document-models/budget-statement/gen/types.js";
+import { addAccount } from "@document-models/budget-statement/gen/actions.js";
+type Props = EditorProps<
   BudgetStatementState,
   BudgetStatementAction,
   BudgetStatementLocalState
 >;
 
-function BudgetStatementEditor({
+export function BudgetStatementEditor({
   document: budgetStatement,
   dispatch,
-}: IProps) {
+}: Props) {
   function addAccount(account: AddAccountInput) {
-    dispatch(actions.addAccount(account));
+    dispatch(addAccount(account));
   }
 
   function addLineItem(lineItem: AddLineItemInput) {
@@ -58,5 +61,3 @@ function BudgetStatementEditor({
     </div>
   );
 }
-
-export default BudgetStatementEditor;

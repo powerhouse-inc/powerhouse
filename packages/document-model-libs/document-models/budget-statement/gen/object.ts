@@ -1,12 +1,12 @@
 import {
-  BaseDocument,
-  ExtendedState,
-  PartialState,
-  applyMixins,
-  SignalDispatch,
-} from "document-model/document";
+    BaseDocument,
+    ExtendedState,
+    PartialState,
+    applyMixins,
+    SignalDispatch,
+} from "document-model";
 import { BudgetStatementState, BudgetStatementLocalState } from "./types";
-import { BudgetStatementAction } from "./actions";
+import { BudgetStatementAction } from "./actions.js";
 import { reducer } from "./reducer";
 import utils from "./utils";
 import BudgetStatement_Account from "./account/object";

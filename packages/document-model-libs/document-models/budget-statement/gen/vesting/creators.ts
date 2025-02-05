@@ -1,24 +1,22 @@
-import { utils } from "document-model/document";
 import {
-  z,
-  AddVestingInput,
-  UpdateVestingInput,
-  DeleteVestingInput,
-} from "../types";
+    AddVestingInput,
+    UpdateVestingInput,
+    DeleteVestingInput
+} from "../types.js";
 import {
-  AddVestingAction,
-  UpdateVestingAction,
-  DeleteVestingAction,
-} from "./actions";
+    AddVestingAction,
+    UpdateVestingAction,
+    DeleteVestingAction,
+} from "./actions.js";
 
-const { createAction } = utils;
+
 
 export const addVesting = (input: AddVestingInput) =>
   createAction<AddVestingAction>(
     "ADD_VESTING",
     { ...input },
     undefined,
-    z.AddVestingInputSchema,
+    AddVestingInputSchema,
     "global",
   );
 
@@ -27,7 +25,7 @@ export const updateVesting = (input: UpdateVestingInput) =>
     "UPDATE_VESTING",
     { ...input },
     undefined,
-    z.UpdateVestingInputSchema,
+    UpdateVestingInputSchema,
     "global",
   );
 
@@ -36,6 +34,6 @@ export const deleteVesting = (input: DeleteVestingInput) =>
     "DELETE_VESTING",
     { ...input },
     undefined,
-    z.DeleteVestingInputSchema,
+    DeleteVestingInputSchema,
     "global",
   );

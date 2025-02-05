@@ -1,17 +1,17 @@
-import { BaseDocument } from "document-model/document";
+import { BaseDocument } from "document-model";
 import {
-  AddAccountInput,
-  UpdateAccountInput,
-  DeleteAccountInput,
-  SortAccountsInput,
-  BudgetStatementState,
-  BudgetStatementLocalState,
-} from "../types";
+    AddAccountInput,
+    UpdateAccountInput,
+    DeleteAccountInput,
+    SortAccountsInput,
+    BudgetStatementState,
+    BudgetStatementLocalState,
+} from "../types.js";
 import {
-  addAccount,
-  updateAccount,
-  deleteAccount,
-  sortAccounts,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    sortAccounts,
 } from "./creators";
 import { BudgetStatementAction } from "../actions";
 

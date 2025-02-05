@@ -1,4 +1,4 @@
-import type { DocumentModelState } from "document-model/document-model";
+import { DocumentModelState } from "document-model/document-model";
 
 export const documentModel: DocumentModelState = {
   id: "powerhouse/account-snapshot",

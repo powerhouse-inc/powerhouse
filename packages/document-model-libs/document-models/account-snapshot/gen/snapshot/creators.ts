@@ -1,30 +1,14 @@
-import { utils } from "document-model/document";
-import {
-  z,
-  SetIdInput,
-  SetOwnerIdInput,
-  SetOwnerTypeInput,
-  SetPeriodInput,
-  SetStartInput,
-  SetEndInput,
-} from "../types";
-import {
-  SetIdAction,
-  SetOwnerIdAction,
-  SetOwnerTypeAction,
-  SetPeriodAction,
-  SetStartAction,
-  SetEndAction,
-} from "./actions";
-
-const { createAction } = utils;
+import { createAction } from "document-model";
+import { SetIdInput, SetOwnerIdInput, SetOwnerTypeInput, SetPeriodInput, SetStartInput, SetEndInput } from "../schema/types.js";
+import { SetIdInputSchema, SetOwnerIdInputSchema, SetOwnerTypeInputSchema, SetPeriodInputSchema, SetStartInputSchema, SetEndInputSchema } from "../schema/zod.js";
+import { SetIdAction, SetOwnerIdAction, SetOwnerTypeAction, SetPeriodAction, SetStartAction, SetEndAction } from "./actions.js";
 
 export const setId = (input: SetIdInput) =>
   createAction<SetIdAction>(
     "SET_ID",
     { ...input },
     undefined,
-    z.SetIdInputSchema,
+    SetIdInputSchema,
     "global",
   );
 
@@ -33,7 +17,7 @@ export const setOwnerId = (input: SetOwnerIdInput) =>
     "SET_OWNER_ID",
     { ...input },
     undefined,
-    z.SetOwnerIdInputSchema,
+    SetOwnerIdInputSchema,
     "global",
   );
 
@@ -42,7 +26,7 @@ export const setOwnerType = (input: SetOwnerTypeInput) =>
     "SET_OWNER_TYPE",
     { ...input },
     undefined,
-    z.SetOwnerTypeInputSchema,
+    SetOwnerTypeInputSchema,
     "global",
   );
 
@@ -51,7 +35,7 @@ export const setPeriod = (input: SetPeriodInput) =>
     "SET_PERIOD",
     { ...input },
     undefined,
-    z.SetPeriodInputSchema,
+    SetPeriodInputSchema,
     "global",
   );
 
@@ -60,7 +44,7 @@ export const setStart = (input: SetStartInput) =>
     "SET_START",
     { ...input },
     undefined,
-    z.SetStartInputSchema,
+    SetStartInputSchema,
     "global",
   );
 
@@ -69,6 +53,6 @@ export const setEnd = (input: SetEndInput) =>
     "SET_END",
     { ...input },
     undefined,
-    z.SetEndInputSchema,
+    SetEndInputSchema,
     "global",
   );

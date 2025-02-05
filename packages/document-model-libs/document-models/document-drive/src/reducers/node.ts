@@ -5,15 +5,15 @@
  */
 
 import {
-  CreateChildDocumentInput,
-  SynchronizationUnit,
-} from "document-model/document";
+    CreateChildDocumentInput,
+    SynchronizationUnit,
+} from "document-model";
 import {
-  FileNode,
-  getDescendants,
-  handleTargetNameCollisions,
-  isFileNode,
-  isFolderNode,
+    FileNode,
+    getDescendants,
+    handleTargetNameCollisions,
+    isFileNode,
+    isFolderNode,
 } from "../..";
 import { DocumentDriveNodeOperations } from "../../gen/node/operations";
 

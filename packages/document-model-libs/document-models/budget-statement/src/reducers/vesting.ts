@@ -3,7 +3,7 @@
  * - modify it by implementing the reducer functions
  * - delete the file and run the code generator again to have it reset
  */
-import { utils } from "document-model/document";
+import { utils } from "document-model";
 import { Vesting } from "../../gen/schema/types";
 import { BudgetStatementVestingOperations } from "../../gen/vesting/operations";
 

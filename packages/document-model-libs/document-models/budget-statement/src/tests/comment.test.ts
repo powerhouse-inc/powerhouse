@@ -7,7 +7,6 @@ import { generateMock } from "@powerhousedao/codegen";
 
 import * as creators from "../../gen/comment/creators";
 import { reducer } from "../../gen/reducer";
-import { z } from "../../gen/schema";
 import { BudgetStatementDocument } from "../../gen/types";
 import utils from "../../gen/utils";
 
@@ -275,7 +274,7 @@ describe("Budget Statement Comment reducer", () => {
   });
 
   it("should handle addComment operation", () => {
-    const input = generateMock(z.AddCommentInputSchema());
+    const input = generateMock(AddCommentInputSchema());
     const updatedDocument = reducer(document, creators.addComment(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -285,7 +284,7 @@ describe("Budget Statement Comment reducer", () => {
   });
 
   it("should handle updateComment operation", () => {
-    const input = generateMock(z.UpdateCommentInputSchema());
+    const input = generateMock(UpdateCommentInputSchema());
     const updatedDocument = reducer(document, creators.updateComment(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -295,7 +294,7 @@ describe("Budget Statement Comment reducer", () => {
   });
 
   it("should handle deleteComment operation", () => {
-    const input = generateMock(z.DeleteCommentInputSchema());
+    const input = generateMock(DeleteCommentInputSchema());
     const updatedDocument = reducer(document, creators.deleteComment(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);

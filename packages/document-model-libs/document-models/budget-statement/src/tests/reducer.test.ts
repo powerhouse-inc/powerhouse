@@ -1,12 +1,12 @@
 import { AddAccountInput, reducer } from "../..";
 import {
-  addAccount,
-  setMonth,
-  setOwner,
-  setQuoteCurrency,
+    addAccount,
+    setMonth,
+    setOwner,
+    setQuoteCurrency,
 } from "../../gen/creators";
 import utils from "../../gen/utils";
-import { actions } from "document-model/document";
+import { actions } from "document-model";
 
 const { createDocument } = utils;
 

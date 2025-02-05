@@ -1,5 +1,5 @@
-export * from "./actions";
-export * from "./document-model";
-export * from "./object";
-export * from "./types";
-export * as actions from "./creators";
+export * from "./actions.js";
+export * from "./document-model.js";
+export * from "./object.js";
+export * from "./types.js";
+export * as actions from "./creators.js";

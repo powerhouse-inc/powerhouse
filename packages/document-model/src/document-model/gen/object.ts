@@ -1,10 +1,10 @@
-import { DocumentModelLocalState, DocumentModelState } from "./types";
-import { ExtendedState, PartialState, SignalDispatch } from "../../document";
-import { applyMixins, BaseDocument } from "../../document/object";
-import { DocumentModelAction } from "./actions";
-import { reducer } from "./reducer";
-import utils from "./utils";
-import DocumentModel_Header from "./header/object";
+import { DocumentModelLocalState, DocumentModelState } from "./types.js";
+import { ExtendedState, PartialState, SignalDispatch } from "document-model";
+import { applyMixins, BaseDocument } from "document-model";
+import { DocumentModelAction } from "./actions.js";
+import { reducer } from "./reducer.js";
+import utils from "./utils.js";
+import DocumentModel_Header from "./header/object.js";
 import DocumentModel_Versioning from "./versioning/object";
 import DocumentModel_Module from "./module/object";
 import DocumentModel_OperationError from "./operation-error/object";

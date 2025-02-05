@@ -1,6 +1,6 @@
-import { ImmutableStateReducer, utils } from "document-model/document";
-import { ScopeFrameworkState, ScopeFrameworkLocalState, z } from "./types";
-import { ScopeFrameworkAction } from "./actions";
+import { ImmutableStateReducer, utils } from "document-model";
+import { ScopeFrameworkState, ScopeFrameworkLocalState } from "./types";
+import { ScopeFrameworkAction } from "./actions.js";
 
 import { reducer as MainReducer } from "../src/reducers/main";
 
@@ -15,17 +15,17 @@ const stateReducer: ImmutableStateReducer<
 
   switch (action.type) {
     case "SET_ROOT_PATH":
-      z.SetRootPathInputSchema().parse(action.input);
+      SetRootPathInputSchema().parse(action.input);
       MainReducer.setRootPathOperation(state[action.scope], action, dispatch);
       break;
 
     case "ADD_ELEMENT":
-      z.AddElementInputSchema().parse(action.input);
+      AddElementInputSchema().parse(action.input);
       MainReducer.addElementOperation(state[action.scope], action, dispatch);
       break;
 
     case "UPDATE_ELEMENT_TYPE":
-      z.UpdateElementTypeInputSchema().parse(action.input);
+      UpdateElementTypeInputSchema().parse(action.input);
       MainReducer.updateElementTypeOperation(
         state[action.scope],
         action,
@@ -34,7 +34,7 @@ const stateReducer: ImmutableStateReducer<
       break;
 
     case "UPDATE_ELEMENT_NAME":
-      z.UpdateElementNameInputSchema().parse(action.input);
+      UpdateElementNameInputSchema().parse(action.input);
       MainReducer.updateElementNameOperation(
         state[action.scope],
         action,
@@ -43,7 +43,7 @@ const stateReducer: ImmutableStateReducer<
       break;
 
     case "UPDATE_ELEMENT_COMPONENTS":
-      z.UpdateElementComponentsInputSchema().parse(action.input);
+      UpdateElementComponentsInputSchema().parse(action.input);
       MainReducer.updateElementComponentsOperation(
         state[action.scope],
         action,
@@ -52,12 +52,12 @@ const stateReducer: ImmutableStateReducer<
       break;
 
     case "REMOVE_ELEMENT":
-      z.RemoveElementInputSchema().parse(action.input);
+      RemoveElementInputSchema().parse(action.input);
       MainReducer.removeElementOperation(state[action.scope], action, dispatch);
       break;
 
     case "REORDER_ELEMENTS":
-      z.ReorderElementsInputSchema().parse(action.input);
+      ReorderElementsInputSchema().parse(action.input);
       MainReducer.reorderElementsOperation(
         state[action.scope],
         action,
@@ -66,7 +66,7 @@ const stateReducer: ImmutableStateReducer<
       break;
 
     case "MOVE_ELEMENT":
-      z.MoveElementInputSchema().parse(action.input);
+      MoveElementInputSchema().parse(action.input);
       MainReducer.moveElementOperation(state[action.scope], action, dispatch);
       break;
 

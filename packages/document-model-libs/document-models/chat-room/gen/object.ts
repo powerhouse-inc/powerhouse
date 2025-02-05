@@ -1,12 +1,12 @@
 import {
-  BaseDocument,
-  ExtendedState,
-  PartialState,
-  applyMixins,
-  SignalDispatch,
-} from "document-model/document";
+    BaseDocument,
+    ExtendedState,
+    PartialState,
+    applyMixins,
+    SignalDispatch,
+} from "document-model";
 import { ChatRoomState, ChatRoomLocalState } from "./types";
-import { ChatRoomAction } from "./actions";
+import { ChatRoomAction } from "./actions.js";
 import { reducer } from "./reducer";
 import utils from "./utils";
 import ChatRoom_GeneralOperations from "./general-operations/object";

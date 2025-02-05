@@ -1,23 +1,19 @@
-import { Action } from "document-model/document";
-import {
-  AddAccountInput,
-  UpdateAccountInput,
-  DeleteAccountInput,
-  SortAccountsInput,
-} from "../types";
+import { BaseAction } from "document-model";
+import { AddAccountInput, UpdateAccountInput, DeleteAccountInput, SortAccountsInput } from "../schema/types.js";
+;
 
-export type AddAccountAction = Action<"ADD_ACCOUNT", AddAccountInput, "global">;
-export type UpdateAccountAction = Action<
+export type AddAccountAction = BaseAction<"ADD_ACCOUNT", AddAccountInput, "global">;
+export type UpdateAccountAction = BaseAction<
   "UPDATE_ACCOUNT",
   UpdateAccountInput,
   "global"
 >;
-export type DeleteAccountAction = Action<
+export type DeleteAccountAction = BaseAction<
   "DELETE_ACCOUNT",
   DeleteAccountInput,
   "global"
 >;
-export type SortAccountsAction = Action<
+export type SortAccountsAction = BaseAction<
   "SORT_ACCOUNTS",
   SortAccountsInput,
   "global"

@@ -1,26 +1,23 @@
-import { utils } from "document-model/document";
+import { createAction } from "document-model";
 import {
-  z,
   SetOwnerInput,
   SetMonthInput,
   SetFtesInput,
   SetQuoteCurrencyInput,
-} from "../types";
+} from "../schema/types.js";
 import {
-  SetOwnerAction,
-  SetMonthAction,
-  SetFtesAction,
-  SetQuoteCurrencyAction,
-} from "./actions";
-
-const { createAction } = utils;
-
+  SetOwnerInputSchema,
+  SetMonthInputSchema,
+  SetFtesInputSchema,
+  SetQuoteCurrencyInputSchema,
+} from "../schema/zod.js";
+import { SetOwnerAction, SetMonthAction, SetFtesAction, SetQuoteCurrencyAction } from "./actions.js";
 export const setOwner = (input: SetOwnerInput) =>
   createAction<SetOwnerAction>(
     "SET_OWNER",
     { ...input },
     undefined,
-    z.SetOwnerInputSchema,
+    SetOwnerInputSchema,
     "global",
   );
 
@@ -29,7 +26,7 @@ export const setMonth = (input: SetMonthInput) =>
     "SET_MONTH",
     { ...input },
     undefined,
-    z.SetMonthInputSchema,
+    SetMonthInputSchema,
     "global",
   );
 
@@ -38,7 +35,7 @@ export const setFtes = (input: SetFtesInput) =>
     "SET_FTES",
     { ...input },
     undefined,
-    z.SetFtesInputSchema,
+    SetFtesInputSchema,
     "global",
   );
 
@@ -47,6 +44,6 @@ export const setQuoteCurrency = (input: SetQuoteCurrencyInput) =>
     "SET_QUOTE_CURRENCY",
     { ...input },
     undefined,
-    z.SetQuoteCurrencyInputSchema,
+    SetQuoteCurrencyInputSchema,
     "global",
   );

@@ -4,7 +4,7 @@
  */
 
 import "./global.css";
-
+export * from "./types.js";
 export { module as Json } from "./json";
 export { module as BudgetStatement } from "./budget-statement";
 export { module as DocumentModel2 } from "./document-model-2";

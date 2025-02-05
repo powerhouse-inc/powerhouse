@@ -1,19 +1,19 @@
-import { BaseDocument } from "document-model/document";
+import { BaseDocument } from "document-model";
 import {
-  AddMessageInput,
-  AddEmojiReactionInput,
-  RemoveEmojiReactionInput,
-  EditChatNameInput,
-  EditChatDescriptionInput,
-  ChatRoomState,
-  ChatRoomLocalState,
-} from "../types";
+    AddMessageInput,
+    AddEmojiReactionInput,
+    RemoveEmojiReactionInput,
+    EditChatNameInput,
+    EditChatDescriptionInput,
+    ChatRoomState,
+    ChatRoomLocalState,
+} from "../types.js";
 import {
-  addMessage,
-  addEmojiReaction,
-  removeEmojiReaction,
-  editChatName,
-  editChatDescription,
+    addMessage,
+    addEmojiReaction,
+    removeEmojiReaction,
+    editChatName,
+    editChatDescription,
 } from "./creators";
 import { ChatRoomAction } from "../actions";
 

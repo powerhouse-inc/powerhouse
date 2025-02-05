@@ -1,23 +1,7 @@
-import { BaseDocument } from "document-model/document";
-import {
-  SetIdInput,
-  SetOwnerIdInput,
-  SetOwnerTypeInput,
-  SetPeriodInput,
-  SetStartInput,
-  SetEndInput,
-  AccountSnapshotState,
-  AccountSnapshotLocalState,
-} from "../types";
-import {
-  setId,
-  setOwnerId,
-  setOwnerType,
-  setPeriod,
-  setStart,
-  setEnd,
-} from "./creators";
-import { AccountSnapshotAction } from "../actions";
+import { AccountSnapshotAction } from "../actions.js";
+import { SetIdInput, SetOwnerIdInput, SetOwnerTypeInput, SetPeriodInput, SetStartInput, SetEndInput } from "../schema/types.js";
+import { AccountSnapshotState, AccountSnapshotLocalState } from "../types.js";
+import { setId, setOwnerId, setOwnerType, setPeriod, setStart, setEnd } from "./creators.js";
 
 export default class AccountSnapshot_Snapshot extends BaseDocument<
   AccountSnapshotState,

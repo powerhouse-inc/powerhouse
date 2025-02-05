@@ -1,7 +1,7 @@
-import type { Document, ExtendedState } from "document-model/document";
+import type { Document, ExtendedState } from "document-model";
 import type { ScopeFrameworkState } from "./schema/types";
 import type { ScopeFrameworkLocalState } from "./schema/types";
-import type { ScopeFrameworkAction } from "./actions";
+import type { ScopeFrameworkAction } from "./actions.js";
 
 export { z } from "./schema";
 export type * from "./schema/types";

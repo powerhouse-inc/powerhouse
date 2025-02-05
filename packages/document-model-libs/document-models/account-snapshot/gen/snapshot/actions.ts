@@ -1,27 +1,20 @@
-import { Action } from "document-model/document";
-import {
-  SetIdInput,
-  SetOwnerIdInput,
-  SetOwnerTypeInput,
-  SetPeriodInput,
-  SetStartInput,
-  SetEndInput,
-} from "../types";
+import { BaseAction } from "document-model";
+import { SetIdInput, SetOwnerIdInput, SetOwnerTypeInput, SetPeriodInput, SetStartInput, SetEndInput } from "../schema/types.js";
 
-export type SetIdAction = Action<"SET_ID", SetIdInput, "global">;
-export type SetOwnerIdAction = Action<
+export type SetIdAction = BaseAction<"SET_ID", SetIdInput, "global">;
+export type SetOwnerIdAction = BaseAction<
   "SET_OWNER_ID",
   SetOwnerIdInput,
   "global"
 >;
-export type SetOwnerTypeAction = Action<
+export type SetOwnerTypeAction = BaseAction<
   "SET_OWNER_TYPE",
   SetOwnerTypeInput,
   "global"
 >;
-export type SetPeriodAction = Action<"SET_PERIOD", SetPeriodInput, "global">;
-export type SetStartAction = Action<"SET_START", SetStartInput, "global">;
-export type SetEndAction = Action<"SET_END", SetEndInput, "global">;
+export type SetPeriodAction = BaseAction<"SET_PERIOD", SetPeriodInput, "global">;
+export type SetStartAction = BaseAction<"SET_START", SetStartInput, "global">;
+export type SetEndAction = BaseAction<"SET_END", SetEndInput, "global">;
 
 export type AccountSnapshotSnapshotAction =
   | SetIdAction

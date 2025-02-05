@@ -8,7 +8,6 @@ import { generateMock } from "@powerhousedao/codegen";
 import { createLineItem, utils } from "../..";
 import * as creators from "../../gen/creators";
 import { reducer } from "../../gen/reducer";
-import { z } from "../../gen/schema";
 
 const { createDocument } = utils;
 const { addLineItem, addAccount } = creators;
@@ -66,7 +65,7 @@ describe("LineItem Operations", () => {
   });
 
   it("should handle addLineItem operation", () => {
-    const input = generateMock(z.AddLineItemInputSchema());
+    const input = generateMock(AddLineItemInputSchema());
     const document = utils.createDocument({
       state: {
         global: {
@@ -90,7 +89,7 @@ describe("LineItem Operations", () => {
   });
 
   it("should handle updateLineItem operation", () => {
-    const input = generateMock(z.UpdateLineItemInputSchema());
+    const input = generateMock(UpdateLineItemInputSchema());
     const lineItem = createLineItem({
       // @ts-expect-error mock
       category: input.category,
@@ -120,7 +119,7 @@ describe("LineItem Operations", () => {
   });
 
   it("should handle deleteLineItem operation", () => {
-    const input = generateMock(z.DeleteLineItemInputSchema());
+    const input = generateMock(DeleteLineItemInputSchema());
     const lineItem = createLineItem({
       // @ts-expect-error mock
       category: input.category,
@@ -150,7 +149,7 @@ describe("LineItem Operations", () => {
   });
 
   it("should handle sortLineItems operation", () => {
-    const input = generateMock(z.SortLineItemsInputSchema());
+    const input = generateMock(SortLineItemsInputSchema());
     const document = utils.createDocument({
       state: {
         global: {

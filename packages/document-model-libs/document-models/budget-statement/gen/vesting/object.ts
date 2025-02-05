@@ -1,11 +1,11 @@
-import { BaseDocument } from "document-model/document";
+import { BaseDocument } from "document-model";
 import {
-  AddVestingInput,
-  UpdateVestingInput,
-  DeleteVestingInput,
-  BudgetStatementState,
-  BudgetStatementLocalState,
-} from "../types";
+    AddVestingInput,
+    UpdateVestingInput,
+    DeleteVestingInput,
+    BudgetStatementState,
+    BudgetStatementLocalState,
+} from "../types.js";
 import { addVesting, updateVesting, deleteVesting } from "./creators";
 import { BudgetStatementAction } from "../actions";
 

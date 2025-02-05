@@ -1,12 +1,12 @@
 import {
-  BaseDocument,
-  ExtendedState,
-  PartialState,
-  applyMixins,
-  SignalDispatch,
-} from "document-model/document";
+    BaseDocument,
+    ExtendedState,
+    PartialState,
+    applyMixins,
+    SignalDispatch,
+} from "document-model";
 import { ScopeFrameworkState, ScopeFrameworkLocalState } from "./types";
-import { ScopeFrameworkAction } from "./actions";
+import { ScopeFrameworkAction } from "./actions.js";
 import { reducer } from "./reducer";
 import utils from "./utils";
 import ScopeFramework_Main from "./main/object";

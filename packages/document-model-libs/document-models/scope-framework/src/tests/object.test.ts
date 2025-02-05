@@ -1,4 +1,4 @@
-import { utils } from "document-model/document";
+import { utils } from "document-model";
 import { ScopeFramework, SectionComponent } from "../..";
 
 const buildExampleDocument = (): ScopeFramework => {

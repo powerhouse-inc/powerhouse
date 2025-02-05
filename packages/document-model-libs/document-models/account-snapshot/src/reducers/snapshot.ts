@@ -4,7 +4,7 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { AccountSnapshotSnapshotOperations } from "../../gen/snapshot/operations";
+import { AccountSnapshotSnapshotOperations } from "@document-models/account-snapshot/gen/snapshot/operations.js";
 
 export const reducer: AccountSnapshotSnapshotOperations = {
   setIdOperation(state, action) {

@@ -1,16 +1,16 @@
 import { useArgs, useChannel } from "@storybook/preview-api";
 import { Meta, StoryObj } from "@storybook/react";
 import {
-  Action,
-  ActionContext,
-  BaseAction,
-  EditorProps,
-  ExtendedState,
-  Reducer,
-  utils,
-  Document,
-  PartialState,
-} from "document-model/document";
+    Action,
+    ActionContext,
+    BaseAction,
+    EditorProps,
+    ExtendedState,
+    Reducer,
+    utils,
+    Document,
+    PartialState,
+} from "document-model";
 import React, { useState } from "react";
 import { useDocumentReducer } from "../reducer";
 import { useInterval } from "usehooks-ts";

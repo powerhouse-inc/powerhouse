@@ -7,7 +7,6 @@ import { generateMock } from "@powerhousedao/codegen";
 
 import * as creators from "../../gen/account/creators";
 import { reducer } from "../../gen/reducer";
-import { z } from "../../gen/schema";
 import { BudgetStatementDocument } from "../../gen/types";
 import utils from "../../gen/utils";
 import { createAccount } from "../utils";
@@ -20,7 +19,7 @@ describe("Budget Statement account reducer", () => {
   });
 
   it("should add account", () => {
-    const input = generateMock(z.AddAccountInputSchema());
+    const input = generateMock(AddAccountInputSchema());
     const updatedDocument = reducer(document, creators.addAccount(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -32,8 +31,8 @@ describe("Budget Statement account reducer", () => {
   });
 
   it("should update account", () => {
-    const initialInput = generateMock(z.UpdateAccountInputSchema());
-    const inputToUpdate = generateMock(z.UpdateAccountInputSchema());
+    const initialInput = generateMock(UpdateAccountInputSchema());
+    const inputToUpdate = generateMock(UpdateAccountInputSchema());
     inputToUpdate.address = initialInput.address;
 
     const document = utils.createDocument({
@@ -61,8 +60,8 @@ describe("Budget Statement account reducer", () => {
   });
 
   it("should delete account", () => {
-    const initialStateInput = generateMock(z.AddAccountInputSchema());
-    const inputToDelete = generateMock(z.DeleteAccountInputSchema());
+    const initialStateInput = generateMock(AddAccountInputSchema());
+    const inputToDelete = generateMock(DeleteAccountInputSchema());
     inputToDelete.account = initialStateInput.address;
     const document = utils.createDocument({
       state: {
@@ -87,8 +86,8 @@ describe("Budget Statement account reducer", () => {
   });
 
   it("should throw exception if adding account with same address", () => {
-    const input = generateMock(z.AddAccountInputSchema());
-    const inputWithTheSameAddress = generateMock(z.AddAccountInputSchema());
+    const input = generateMock(AddAccountInputSchema());
+    const inputWithTheSameAddress = generateMock(AddAccountInputSchema());
     inputWithTheSameAddress.address = input.address;
     document = reducer(document, creators.addAccount(input));
 

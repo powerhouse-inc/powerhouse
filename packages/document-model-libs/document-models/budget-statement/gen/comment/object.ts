@@ -1,13 +1,7 @@
-import { BaseDocument } from "document-model/document";
-import {
-  AddCommentInput,
-  UpdateCommentInput,
-  DeleteCommentInput,
-  BudgetStatementState,
-  BudgetStatementLocalState,
-} from "../types";
-import { addComment, updateComment, deleteComment } from "./creators";
-import { BudgetStatementAction } from "../actions";
+import { BudgetStatementAction } from "../actions.js";
+import { AddCommentInput, UpdateCommentInput, DeleteCommentInput } from "../schema/types.js";
+import { BudgetStatementState, BudgetStatementLocalState } from "../types.js";
+import { addComment, updateComment, deleteComment } from "./creators.js";
 
 export default class BudgetStatement_Comment extends BaseDocument<
   BudgetStatementState,
