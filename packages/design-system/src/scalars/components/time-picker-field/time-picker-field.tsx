@@ -1,4 +1,4 @@
-import React, { forwardRef } from "react";
+import { forwardRef } from "react";
 import {
   FormDescription,
   FormGroup,
@@ -8,6 +8,8 @@ import {
 import { FieldCommonProps } from "../types";
 import { TimeFieldValue } from "./type";
 import { BasePickerField } from "../date-time-field/base-picker-field";
+import TimePickerContent from "./subcomponents/time-picker-content";
+import { useTimePickerField } from "./use-time-picker-field";
 
 interface TimePickerFieldProps extends FieldCommonProps<TimeFieldValue> {
   label?: string;
@@ -36,14 +38,23 @@ const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
     },
     ref,
   ) => {
-    const [inputValue, setInputValue] = React.useState(
-      value ?? defaultValue ?? "",
-    );
-    const [isOpen, setIsOpen] = React.useState(false);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setInputValue(e.target.value);
-    };
+    const {
+      selectedHour,
+      setSelectedHour,
+      selectedMinute,
+      setSelectedMinute,
+      selectedPeriod,
+      setSelectedPeriod,
+      hours,
+      minutes,
+      isOpen,
+      setIsOpen,
+      inputValue,
+      handleInputChange,
+      handleSave,
+      handleCancel,
+      timeZonesOptions,
+    } = useTimePickerField(value, defaultValue);
 
     return (
       <FormGroup>
@@ -68,7 +79,19 @@ const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           ref={ref}
           {...props}
         >
-          <div>Placeholder TimePicker</div>
+          <TimePickerContent
+            selectedHour={selectedHour}
+            selectedMinute={selectedMinute}
+            selectedPeriod={selectedPeriod}
+            setSelectedHour={setSelectedHour}
+            setSelectedMinute={setSelectedMinute}
+            setSelectedPeriod={setSelectedPeriod}
+            hours={hours}
+            minutes={minutes}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            timeZonesOptions={timeZonesOptions}
+          />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}
         {warnings && <FormMessageList messages={warnings} type="warning" />}
