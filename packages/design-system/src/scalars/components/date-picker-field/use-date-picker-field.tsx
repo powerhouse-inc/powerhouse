@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { DateFieldValue } from "./types";
 import { format, isValid } from "date-fns";
-import { createChangeEvent } from "@/scalars/lib/utils";
+import { createChangeEvent } from "../time-picker-field/utils";
 interface DatePickerFieldProps {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
