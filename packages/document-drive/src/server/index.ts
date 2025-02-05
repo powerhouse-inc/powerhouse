@@ -661,21 +661,24 @@ export class BaseDocumentDriveServer
         zodListener as any,
       );
 
-      await this.listenerStateManager.addListener(
-        {
-          block: zodListener.block,
-          driveId: drive.state.global.id,
-          filter: {
-            branch: zodListener.filter.branch ?? [],
-            documentId: zodListener.filter.documentId ?? [],
-            documentType: zodListener.filter.documentType,
-            scope: zodListener.filter.scope ?? [],
-          },
-          listenerId: zodListener.listenerId,
-          system: zodListener.system,
-          callInfo: zodListener.callInfo ?? undefined,
-          label: zodListener.label ?? "",
+      await this.listenerStateManager.addListener({
+        block: zodListener.block,
+        driveId: drive.state.global.id,
+        filter: {
+          branch: zodListener.filter.branch ?? [],
+          documentId: zodListener.filter.documentId ?? [],
+          documentType: zodListener.filter.documentType,
+          scope: zodListener.filter.scope ?? [],
         },
+        listenerId: zodListener.listenerId,
+        system: zodListener.system,
+        callInfo: zodListener.callInfo ?? undefined,
+        label: zodListener.label ?? "",
+      });
+
+      await this.listenerStateManager.setTransmitter(
+        drive.state.global.id,
+        zodListener.listenerId,
         transmitter,
       );
     }
@@ -2071,7 +2074,13 @@ export class BaseDocumentDriveServer
       for (const operation of operationsApplied) {
         switch (operation.type) {
           case "ADD_LISTENER": {
-            await this.addListener(drive, operation);
+            const zodListener = operation.input.listener;
+            const transmitter = this.newTransmitter(
+              zodListener.callInfo?.transmitterType ?? "",
+              zodListener as any,
+            );
+
+            await this.addListener(drive, transmitter, operation);
             break;
           }
           case "REMOVE_LISTENER": {
@@ -2245,6 +2254,64 @@ export class BaseDocumentDriveServer
     return result;
   }
 
+  async detachDrive(driveId: string) {
+    const documentDrive = await this.getDrive(driveId);
+    const listeners = documentDrive.state.local.listeners || [];
+    const triggers = documentDrive.state.local.triggers || [];
+
+    for (const listener of listeners) {
+      await this.addDriveAction(
+        driveId,
+        actions.removeListener({ listenerId: listener.listenerId }),
+      );
+    }
+
+    for (const trigger of triggers) {
+      await this.addDriveAction(
+        driveId,
+        actions.removeTrigger({ triggerId: trigger.id }),
+      );
+    }
+
+    await this.addDriveAction(
+      driveId,
+      actions.setSharingType({ type: "LOCAL" }),
+    );
+  }
+
+  private async addListener(
+    driveId: string,
+    transmitter: ITransmitter,
+    operation: Operation<Action<"ADD_LISTENER", AddListenerInput>>,
+  ) {
+    const { listener: zodListener } = operation.input;
+
+    await this.listenerStateManager.addListener({
+      ...zodListener,
+      driveId,
+      label: zodListener.label ?? "",
+      system: zodListener.system ?? false,
+      filter: {
+        branch: zodListener.filter.branch ?? [],
+        documentId: zodListener.filter.documentId ?? [],
+        documentType: zodListener.filter.documentType ?? [],
+        scope: zodListener.filter.scope ?? [],
+      },
+      callInfo: {
+        data: zodListener.callInfo?.data ?? "",
+        name: zodListener.callInfo?.name ?? "PullResponder",
+        transmitterType:
+          zodListener.callInfo?.transmitterType ?? "PullResponder",
+      },
+    });
+
+    await this.listenerStateManager.setTransmitter(
+      driveId,
+      zodListener.listenerId,
+      transmitter,
+    );
+  }
+
   async addInternalListener(
     driveId: string,
     receiver: IReceiver,
@@ -2277,65 +2344,6 @@ export class BaseDocumentDriveServer
 
     transmitter.setReceiver(receiver);
     return transmitter;
-  }
-
-  async detachDrive(driveId: string) {
-    const documentDrive = await this.getDrive(driveId);
-    const listeners = documentDrive.state.local.listeners || [];
-    const triggers = documentDrive.state.local.triggers || [];
-
-    for (const listener of listeners) {
-      await this.addDriveAction(
-        driveId,
-        actions.removeListener({ listenerId: listener.listenerId }),
-      );
-    }
-
-    for (const trigger of triggers) {
-      await this.addDriveAction(
-        driveId,
-        actions.removeTrigger({ triggerId: trigger.id }),
-      );
-    }
-
-    await this.addDriveAction(
-      driveId,
-      actions.setSharingType({ type: "LOCAL" }),
-    );
-  }
-
-  private async addListener(
-    driveId: string,
-    operation: Operation<Action<"ADD_LISTENER", AddListenerInput>>,
-  ) {
-    const { listener: zodListener } = operation.input;
-
-    const transmitter = this.newTransmitter(
-      zodListener.callInfo?.transmitterType ?? "",
-      zodListener as any,
-    );
-
-    await this.listenerStateManager.addListener(
-      {
-        ...zodListener,
-        driveId,
-        label: zodListener.label ?? "",
-        system: zodListener.system ?? false,
-        filter: {
-          branch: zodListener.filter.branch ?? [],
-          documentId: zodListener.filter.documentId ?? [],
-          documentType: zodListener.filter.documentType ?? [],
-          scope: zodListener.filter.scope ?? [],
-        },
-        callInfo: {
-          data: zodListener.callInfo?.data ?? "",
-          name: zodListener.callInfo?.name ?? "PullResponder",
-          transmitterType:
-            zodListener.callInfo?.transmitterType ?? "PullResponder",
-        },
-      },
-      transmitter,
-    );
   }
 
   private async removeListener(
