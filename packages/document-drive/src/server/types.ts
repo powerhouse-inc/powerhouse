@@ -105,6 +105,7 @@ export type Listener = {
   system: boolean;
   filter: ListenerFilter;
   callInfo?: ListenerCallInfo;
+  transmitter?: ITransmitter;
 };
 
 export type CreateListenerInput = {
@@ -555,25 +556,9 @@ export interface IListenerManager {
   removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
 
-  // listener management
   setListener(driveId: string, listener: Listener): Promise<void>;
   removeListener(driveId: string, listenerId: string): Promise<boolean>;
-  getListener(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ListenerState | undefined>;
-
-  // transmitter management
-  setTransmitter(
-    driveId: string,
-    listenerId: string,
-    transmitter: ITransmitter,
-  ): Promise<void>;
-  removeTransmitter(driveId: string, listenerId: string): Promise<boolean>;
-  getTransmitter(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ITransmitter | undefined>;
+  getListenerState(driveId: string, listenerId: string): ListenerState;
 
   getStrands(
     driveId: string,
