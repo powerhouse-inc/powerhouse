@@ -661,7 +661,7 @@ export class BaseDocumentDriveServer
         zodListener as any,
       );
 
-      await this.listenerStateManager.addListener({
+      await this.listenerStateManager.setListener(driveId, {
         block: zodListener.block,
         driveId: drive.state.global.id,
         filter: {
@@ -2286,7 +2286,7 @@ export class BaseDocumentDriveServer
   ) {
     const { listener: zodListener } = operation.input;
 
-    await this.listenerStateManager.addListener({
+    await this.listenerStateManager.setListener(driveId, {
       ...zodListener,
       driveId,
       label: zodListener.label ?? "",
