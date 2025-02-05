@@ -8,7 +8,7 @@
     "access": "public"
   },
   "bin": {
-    "ph-cli": "dist/cli.cjs"
+    "ph-cli": "dist/cli.js"
   },
   "files": [
     "dist"
@@ -35,7 +35,7 @@
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/connect": "1.0.0-dev.195",
+    "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",

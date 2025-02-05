@@ -22,8 +22,16 @@
         "paths": {
             "@/assets": ["assets"],
             "connect-config": ["src/connect.config.ts"],
+            "PH:EXTERNAL_PACKAGES": ["custom.d.ts"],
+            "PH:HMR_MODULE": ["studio/hmr.ts"],
+            "LOCAL_DOCUMENT_MODELS": ["custom.d.ts"],
+            "LOCAL_DOCUMENT_EDITORS": ["custom.d.ts"]
         },
-        "types": ["vite/client", "vite-plugin-svgr/client", "@types/wicg-file-system-access"],
+        "types": [
+            "vite/client",
+            "vite-plugin-svgr/client",
+            "@types/wicg-file-system-access"
+        ],
         "experimentalDecorators": true
     },
     "include": [
@@ -33,8 +41,9 @@
         "*.config.ts",
         "*.config.mts",
         "*.config.js",
+        "custom.d.ts",
         "reset.d.ts",
         "esbuild.studio.config.mjs"
     ],
-    "files": ["custom.d.ts"]
+    "files": ["studio/hmr.d.ts"]
 }

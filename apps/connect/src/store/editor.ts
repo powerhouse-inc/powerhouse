@@ -1,48 +1,55 @@
 import type { ExtendedEditor } from 'document-model-libs';
 import { atom, useAtomValue } from 'jotai';
-import { unwrap } from 'jotai/utils';
+import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
+import { useCallback, useEffect, useRef } from 'react';
 import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
-import { ExternalProjectModule, loadPackages } from './document-model';
+import { DocumentModelsModule } from 'src/utils/types';
+import { externalPackagesAtom } from './external-packages';
 
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
-const LOAD_EXTERNAL_PROJECTS = import.meta.env.LOAD_EXTERNAL_PROJECTS;
 
-async function loadEditors() {
-    const baseEditorsModules = (await import(
-        'document-model-libs/editors'
-    )) as Record<string, ExtendedEditor>;
-    let baseEditors = Object.values(baseEditorsModules);
+async function loadBaseEditors() {
+    const JsonEditor = (await import('document-model-libs/editors/json'))
+        .default as unknown as ExtendedEditor;
+    return [JsonEditor as unknown as ExtendedEditor];
+}
 
-    if (LOAD_EXTERNAL_PROJECTS === 'true') {
-        const externalEditors = (await loadPackages())
-            .filter(module => !!module.documentModels)
-            .map(module => (module as Required<ExternalProjectModule>).editors)
-            .reduce((acc, val) => acc.concat(val), []);
+function getEditorsFromModules(modules: DocumentModelsModule[]) {
+    return modules
+        .map(module => module.editors)
+        .reduce((acc, val) => acc.concat(val), []);
+}
 
-        baseEditors = baseEditors.concat(externalEditors);
-    }
-
+async function loadDynamicEditors() {
     if (!LOCAL_DOCUMENT_EDITORS) {
-        return baseEditors;
+        return [];
     }
-
     try {
         const localEditors = (await import(
             'LOCAL_DOCUMENT_EDITORS'
         )) as unknown as Record<string, ExtendedEditor>;
         console.log('Loaded local document editors:', localEditors);
-
-        return Object.values(localEditors).concat(baseEditors);
+        return Object.values(localEditors);
     } catch (e) {
-        console.error('Error loading local document models', e);
-        return baseEditors;
+        console.error('Error loading local document editors', e);
+        return [];
     }
 }
 
-const editorsPromise = loadEditors();
+const baseEditorsAtom = atomWithLazy(loadBaseEditors);
+const dynamicEditorsAtom = atomWithLazy(loadDynamicEditors);
 
-const editorsAtom = atom<Promise<ExtendedEditor[]>>(editorsPromise);
+export const editorsAtom = atom(async get => {
+    const baseEditors = await get(baseEditorsAtom);
+    const dynamicEditors = await get(dynamicEditorsAtom);
+    const externalModules = await get(externalPackagesAtom);
+    const externalEditors = getEditorsFromModules(externalModules);
+
+    return dynamicEditors.concat(externalEditors, baseEditors);
+});
+
 const unwrappedEditorsAtom = unwrap(editorsAtom);
+const loadableEditorsAtom = loadable(editorsAtom);
 
 // suspends the UI while editors are loading
 export const useEditors = () => {
@@ -54,7 +61,37 @@ export const useUnwrappedEditors = () => {
     return useAtomValue(unwrappedEditorsAtom);
 };
 
-export const useEditorsAsync = () => editorsPromise;
+// returns state, data and error, which will cause a rerender when the editors are loaded. Does not suspend the UI
+export const useLoadableEditors = () => {
+    return useAtomValue(loadableEditorsAtom);
+};
+
+export const useEditorsAsync = () => {
+    const editorsPromise = useRef(
+        (() => {
+            let resolveFn!: (value: ExtendedEditor[]) => void;
+            let rejectFn!: (reason?: any) => void;
+
+            const promise = new Promise<ExtendedEditor[]>((resolve, reject) => {
+                resolveFn = resolve;
+                rejectFn = reject;
+            });
+
+            return { promise, resolve: resolveFn, reject: rejectFn };
+        })(),
+    );
+
+    const editors = useLoadableEditors();
+
+    useEffect(() => {
+        if (editors.state === 'hasError') {
+            editorsPromise.current.reject(editors.error);
+        } else if (editors.state === 'hasData') {
+            editorsPromise.current.resolve(editors.data);
+        }
+    }, [editors]);
+    return editorsPromise.current.promise;
+};
 
 const getEditor = (
     documentType: string,
@@ -96,13 +133,19 @@ export const useGetEditor = () => {
 
 export const usePreloadEditor = () => {
     const editorsPromise = useEditorsAsync();
-    return async (documentType: string) => {
-        const editors = await editorsPromise;
-        const editor = getEditor(documentType, editors);
-        if (editor && 'preload' in editor.Component) {
-            await (
-                editor.Component as { preload: () => Promise<void> }
-            ).preload();
-        }
-    };
+    return useCallback(
+        async (documentType: string) => {
+            const editors = await editorsPromise;
+            const editor = getEditor(documentType, editors);
+            if (editor && 'preload' in editor.Component) {
+                console.log(
+                    `Preloading editor for document '${documentType}': ${editor.config?.id}`,
+                );
+                await (
+                    editor.Component as { preload: () => Promise<void> }
+                ).preload();
+            }
+        },
+        [editorsPromise],
+    );
 };

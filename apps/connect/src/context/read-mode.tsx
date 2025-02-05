@@ -27,7 +27,7 @@ import {
 import { drivesToHash } from 'src/hooks/useDocumentDrives';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { logger } from 'src/services/logger';
-import { useReactorAsync } from '../store/reactor';
+import { useAsyncReactor } from '../store/reactor';
 
 export interface IReadModeContext extends IReadModeDriveServer {
     readDrives: ReadDrive[];
@@ -191,19 +191,17 @@ async function getReadDrives(
 export const ReadModeContextProvider: FC<
     ReadModeContextProviderProps
 > = props => {
-    const reactorPromise = useReactorAsync();
+    const reactor = useAsyncReactor();
     const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
     const userPermissions = useUserPermissions();
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
-        reactorPromise
-            .then(reactor => {
-                ReadModeInstance.setDocumentDrive(reactor);
-                setReady(true);
-            })
-            .catch(logger.error);
-    }, [reactorPromise]);
+        if (reactor) {
+            ReadModeInstance.setDocumentDrive(reactor);
+            setReady(true);
+        }
+    }, [reactor]);
 
     // updates drive access level when user permissions change
     const readMode =

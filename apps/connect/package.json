@@ -41,6 +41,7 @@
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "build:studio": "node studio/esbuild.studio.config.mjs",
+        "build": "npm run build:studio",
         "prebuild:studio": "BUILD_STUDIO=true npm run build:web",
         "postbuild:studio": "tsc -p tsconfig.studio.json",
         "preview:web": "vite preview -c vite.renderer.config.mts",
@@ -51,6 +52,7 @@
     "dependencies": {
         "@vitejs/plugin-basic-ssl": "^1.2.0",
         "commander": "^12.1.0",
+        "magic-string": "^0.30.17",
         "vite": "^5.4.8",
         "vite-envs": "^4.4.5"
     },
@@ -99,6 +101,7 @@
         "graphql": "^16.8.1",
         "i18next": "^23.7.6",
         "jotai": "^2.1.0",
+        "jotai-effect": "^1.1.6",
         "localforage": "^1.10.0",
         "lz-string": "^1.5.0",
         "playwright": "^1.41.2",
