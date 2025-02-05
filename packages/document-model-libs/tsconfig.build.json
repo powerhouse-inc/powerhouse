@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["editors/**/*", "document-models.ts"],
+  "exclude": ["**/*.test.ts", "**/*.stories.*"]
+}

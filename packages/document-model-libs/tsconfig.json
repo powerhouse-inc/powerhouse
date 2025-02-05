@@ -5,27 +5,10 @@
     "outDir": "./dist",
     "jsx": "react-jsx",
     "lib": ["ESNext", "dom", "dom.iterable"],
-    "baseUrl": ".",
     "paths": {
-      "document-model-libs/utils": ["./editors/utils"],
-      "document-model-libs/utils/*": ["./editors/utils/*"],
-      "@powerhousedao/design-system": ["../design-system/src"],
-      "@powerhousedao/design-system/*": ["../design-system/src/*"]
+      "@document-models/*": ["./document-models/*"],
+      "@editors/*": ["./editors/*"],
+      "@utils/*": ["./editors/utils/*"]
     }
-  },
-  "include": [
-    ".storybook/**/*.ts",
-    ".storybook/**/*.tsx",
-    "document-models/**/*.ts",
-    "editors/**/*.ts",
-    "editors/**/*.tsx",
-    "scripts/**/*.ts",
-    "*.ts",
-    "*.d.ts"
-  ],
-  "references": [
-    {
-      "path": "../design-system"
-    }
-  ]
+  }
 }

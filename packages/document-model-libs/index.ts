@@ -1,6 +1,5 @@
-import * as documentModelsExports from "./document-models";
-import * as editorsExports from "./editors";
-
-export * from "./editors/types";
-export const documentModels = Object.values(documentModelsExports);
-export const editors = Object.values(editorsExports);
+export * from "./document-models/index.js";
+export * from "./editors/index.js";
+export * as documentModels from "./document-models/index.js";
+export * as editors from "./editors/index.js";
+export * as utils from "./editors/utils/index.js";
