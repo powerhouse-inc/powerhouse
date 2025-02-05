@@ -4,6 +4,8 @@ import {
   FormGroup,
   FormLabel,
   FormMessageList,
+  InputProps,
+  SelectFieldProps,
   withFieldValidation,
 } from "../fragments";
 import { FieldCommonProps } from "../types";
@@ -11,14 +13,19 @@ import { TimeFieldValue } from "./type";
 import { BasePickerField } from "../date-time-field/base-picker-field";
 import TimePickerContent from "./subcomponents/time-picker-content";
 import { useTimePickerField } from "./use-time-picker-field";
+import { InputNumberProps } from "../number-field/types";
 
-interface TimePickerFieldProps extends FieldCommonProps<TimeFieldValue> {
+interface TimePickerFieldProps
+  extends FieldCommonProps<TimeFieldValue>,
+    InputNumberProps {
   label?: string;
   id?: string;
   name: string;
   value?: TimeFieldValue;
   defaultValue?: TimeFieldValue;
   placeholder?: string;
+  inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
+  selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
 }
 
 export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
@@ -32,10 +39,14 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       name,
       placeholder,
       value,
+      onChange,
       defaultValue,
       description,
       warnings,
-      ...props
+      required,
+      disabled,
+      inputProps,
+      selectProps,
     },
     ref,
   ) => {
@@ -55,14 +66,14 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       handleSave,
       handleCancel,
       timeZonesOptions,
-    } = useTimePickerField(value, defaultValue);
+    } = useTimePickerField(value, defaultValue, onChange);
     return (
       <FormGroup>
         {label && (
           <FormLabel
             htmlFor={id}
-            required={props.required}
-            disabled={props.disabled}
+            required={required}
+            disabled={disabled}
             hasError={!!errors?.length}
           >
             {label}
@@ -77,7 +88,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           setIsOpen={setIsOpen}
           onInputChange={handleInputChange}
           ref={ref}
-          {...props}
+          {...inputProps}
         >
           <TimePickerContent
             selectedHour={selectedHour}
@@ -91,6 +102,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
             onSave={handleSave}
             onCancel={handleCancel}
             timeZonesOptions={timeZonesOptions}
+            selectProps={selectProps}
           />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}
