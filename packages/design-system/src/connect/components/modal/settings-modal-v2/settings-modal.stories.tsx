@@ -1,6 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react";
 import { Icon } from "@/powerhouse";
+import type { Meta, StoryObj } from "@storybook/react";
 
+import { PackageManagerWrapper } from "./package-manager/package-manager.stories";
 import { SettingsModal } from "./settings-modal";
 
 const meta: Meta<typeof SettingsModal> = {
@@ -20,17 +21,12 @@ export const Primary: Story = {
         id: "package-manager",
         icon: <Icon name="PackageManager" size={12} />,
         label: "Package Manager",
-        content: (
-          <div>
-            <span>hello</span>
-            <div className="w-7 h-[1200px] bg-gray-200"></div>
-          </div>
-        ),
+        content: PackageManagerWrapper,
       },
       {
         id: "default-editors",
         icon: <Icon name="Edit" size={12} />,
-        label: "Deault Editors",
+        label: "Default Editors",
         content: "Default Editors Content",
       },
       {

@@ -6,7 +6,7 @@ export type SettingsTab = {
   id: string;
   icon?: React.ReactNode;
   label: React.ReactNode;
-  content: React.ReactNode;
+  content: React.ReactNode | (() => React.ReactNode);
 };
 
 export type SettingsModalProps = ComponentPropsWithoutRef<typeof Modal> & {
@@ -59,7 +59,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
       }}
       {...restProps}
     >
-      <div className="flex flex-col text-gray-900 h-screen w-screen max-w-[900px] max-h-[700px]">
+      <div className="flex h-screen max-h-[700px] w-screen max-w-[900px] flex-col text-gray-900">
         <div className="flex justify-between border-b border-slate-50 p-4">
           <h1 className="text-center text-xl font-semibold">{title}</h1>
           <button
@@ -71,10 +71,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
         </div>
         <div className="flex flex-1 overflow-hidden">
           <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
-          <div className="m-6   max-h-full  flex-1">
-            <div className="max-h-full overflow-y-auto rounded-lg border border-slate-50 bg-gray-50 p-3">
-              {selectedTabContent}
-            </div>
+          <div className="m-6 flex max-h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50 bg-gray-50">
+            {typeof selectedTabContent === "function"
+              ? selectedTabContent()
+              : selectedTabContent}
           </div>
         </div>
       </div>
