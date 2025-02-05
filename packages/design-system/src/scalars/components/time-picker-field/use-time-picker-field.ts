@@ -1,10 +1,12 @@
 import { format, getHours, getMinutes, parse } from "date-fns";
 import React, { useMemo, useState } from "react";
 import { TimeFieldValue } from "./type";
+import { createChangeEvent } from "./utils";
 
 export const useTimePickerField = (
   value?: TimeFieldValue,
   defaultValue?: TimeFieldValue,
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void,
 ) => {
   // Get the current hour and minutes
   const now = new Date();
@@ -17,6 +19,7 @@ export const useTimePickerField = (
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
+    onChange?.(e);
   };
 
   // Convert the hour to 12-hour format and determine AM/PM
@@ -52,6 +55,7 @@ export const useTimePickerField = (
 
     setInputValue(formattedTime);
     setIsOpen(false);
+    onChange?.(createChangeEvent(formattedTime));
   };
 
   const handleCancel = () => {
