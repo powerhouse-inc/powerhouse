@@ -1,4 +1,4 @@
-import type { DocumentModelState } from "document-model/document-model";
+import type { DocumentModelState } from "../../../../document-model/dist/src/document-model/module.js";
 
 export const documentModel: DocumentModelState = {
   id: "powerhouse/chat-room",

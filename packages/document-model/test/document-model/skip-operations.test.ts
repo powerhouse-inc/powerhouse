@@ -7,7 +7,7 @@ import {
   setModelId,
 } from "@document-model/gen/creators.js";
 import { reducer, stateReducer } from "@document-model/gen/reducer.js";
-import { createDocument, createExtendedState } from "@document-model/index.js";
+import { createDocument, createExtendedState } from "@document-model/module.js";
 import { replayOperations } from "@document/utils/base.js";
 import { garbageCollectDocumentOperations } from "@document/utils/document-helpers.js";
 

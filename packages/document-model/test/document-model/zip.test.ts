@@ -8,7 +8,7 @@ import {
   createDocument,
   loadFromFile,
   saveToFile,
-} from "@document-model/index.js";
+} from "@document-model/module.js";
 import { undo } from "@document/actions/creators.js";
 import fs from "fs";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";

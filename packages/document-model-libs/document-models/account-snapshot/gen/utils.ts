@@ -1,9 +1,9 @@
 import { baseCreateDocument, baseCreateExtendedState, baseLoadFromFile, baseLoadFromInput, baseSaveToFile, baseSaveToFileHandle } from "document-model";
-import { reducer } from "../index.js";
 import { AccountSnapshotAction } from "./actions.js";
 import { AccountSnapshotState, AccountSnapshotLocalState } from "./types.js";
 import { documentType, fileExtension } from "./constants.js";
 import { CreateState, CreateExtendedState, CreateDocument, SaveToFile, SaveToFileHandle, LoadFromFile, LoadFromInput } from "document-model";
+import { reducer } from "./reducer.js";
 
  
 export const initialGlobalState: AccountSnapshotState = {

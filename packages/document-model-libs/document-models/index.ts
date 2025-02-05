@@ -3,8 +3,8 @@
  * Delete the file and run the code generator again to have it reset
  */
 
-export { module as AccountSnapshot } from "./account-snapshot";
-export { module as BudgetStatement } from "./budget-statement";
-export { module as DocumentDrive } from "./document-drive";
-export { module as ScopeFramework } from "./scope-framework";
-export { module as ChatRoom } from "./chat-room";
+export * from "./account-snapshot/module.js";
+export * from "./budget-statement/index.js";
+export * from "./document-drive/index.js";
+export * from "./scope-framework/index.js";
+export * from "./chat-room/index.js";

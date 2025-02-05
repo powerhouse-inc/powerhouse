@@ -13,7 +13,7 @@ import {
   Module,
   Operation,
 } from "@document-model/gen/schema/types.js";
-import { createDocument } from "@document-model/index.js";
+import { createDocument } from "@document-model/module.js";
 import {
   ExtendedState,
   PartialState,
