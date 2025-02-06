@@ -11,10 +11,10 @@ interface TimePickerContentProps {
   onCancel?: () => void;
   selectedHour: string;
   selectedMinute: string;
-  selectedPeriod: TimePeriod;
+  selectedPeriod?: TimePeriod;
   setSelectedHour: (hour: string) => void;
   setSelectedMinute: (minute: string) => void;
-  setSelectedPeriod: (period: TimePeriod) => void;
+  setSelectedPeriod: (period?: TimePeriod) => void;
   hours: string[];
   minutes: string[];
   timeZonesOptions: SelectBaseProps["options"];

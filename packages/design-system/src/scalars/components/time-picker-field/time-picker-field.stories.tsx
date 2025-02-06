@@ -17,6 +17,13 @@ const meta: Meta<typeof TimePickerField> = {
   argTypes: {
     ...getDefaultArgTypes(),
     ...getValidationArgTypes(),
+    timeFormat: {
+      control: {
+        type: "select",
+      },
+      options: ["hh:mm a", "HH:mm"],
+      defaultValue: { summary: "hh:mm a" },
+    },
   },
 
   args: {

@@ -7,6 +7,7 @@ interface DatePickerFieldProps {
   defaultValue?: DateFieldValue;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  dateFormat?: string;
 }
 
 export const useDatePickerField = ({
@@ -14,6 +15,7 @@ export const useDatePickerField = ({
   defaultValue,
   onChange,
   onBlur,
+  dateFormat = "yyyy-MM-dd",
 }: DatePickerFieldProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -29,8 +31,8 @@ export const useDatePickerField = ({
 
   const handleDateSelect = useCallback(
     (date?: Date) => {
-      if (date) {
-        const formattedDate = format(date, "MM/dd/yyyy");
+      if (date && isValid(date)) {
+        const formattedDate = format(date, dateFormat);
         const changeEvent = createChangeEvent(formattedDate);
         onChange?.(changeEvent);
       } else {
@@ -38,7 +40,7 @@ export const useDatePickerField = ({
         onChange?.(changeEvent);
       }
     },
-    [onChange],
+    [dateFormat, onChange],
   );
 
   const formatDate = React.useCallback(
@@ -50,23 +52,22 @@ export const useDatePickerField = ({
       if (typeof value === "number") {
         const date = new Date(value);
         if (isValid(date)) {
-          const newValue = format(date, "MM/dd/yyyy");
+          const newValue = format(date, dateFormat);
           const changeEvent = createChangeEvent(newValue);
           onChange?.(changeEvent);
         }
       }
       if (typeof value === "object" && isValid(value)) {
-        return format(value, "dd/MM/yyyy");
+        return format(value, dateFormat);
       }
 
       return "";
     },
-    [onChange],
+    [dateFormat, onChange],
   );
   const inputValue = formatDate(value ?? defaultValue ?? "");
-  const parsedDate = parse(inputValue, "MM/dd/yyyy", new Date());
+  const parsedDate = parse(inputValue, dateFormat, new Date());
   const date = isValid(parsedDate) ? parsedDate : undefined;
-
   return {
     date,
     inputValue,
