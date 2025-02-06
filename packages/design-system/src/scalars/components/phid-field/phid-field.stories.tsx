@@ -197,12 +197,10 @@ export const Filled: Story = {
           haveFetchError={false}
           options={[]}
           selectedOption={mockedOptions[0]}
-          handleOpenChange={() => {}}
           placeholder="phd:"
           hasError={false}
           label="PHID field"
           isPopoverOpen={false}
-          autoComplete={true}
         />
         {asCard && (
           <PHIDListItem

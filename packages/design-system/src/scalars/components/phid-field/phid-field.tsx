@@ -12,6 +12,7 @@ import { FormGroup } from "@/scalars/components/fragments/form-group";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormDescription } from "@/scalars/components/fragments/form-description";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
+import { Input } from "@/scalars/components/fragments/input";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import { cn } from "@/scalars/lib/utils";
 import type {
@@ -60,9 +61,9 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       defaultScope = "public",
       allowedScopes,
       allowedDocumentTypes,
-      allowUris,
+      allowUris, // used in field validation
       autoComplete = true,
-      allowDataObjectReference = false,
+      allowDataObjectReference = false, // allways false for now
       variant = "withId",
       maxLength,
       ...props
@@ -90,10 +91,13 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       handleChange,
       handleCommandValue,
       handleFetchSelectedOption,
+      handlePaste,
     } = usePHIDField({
       autoComplete,
       defaultValue,
       value,
+      defaultBranch,
+      defaultScope,
       allowedScopes,
       allowedDocumentTypes,
       onChange,
@@ -120,80 +124,101 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             {label}
           </FormLabel>
         )}
-        <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
-          <Command
-            shouldFilter={false}
-            value={commandValue}
-            onValueChange={handleCommandValue}
-            className={cn("dark:bg-charcoal-900 rounded-md bg-white")}
-          >
-            <PopoverAnchor asChild={true}>
-              <PHIDInputContainer
-                id={id}
-                name={name}
-                value={selectedValue}
-                className={className}
-                isLoading={isLoading}
-                haveFetchError={haveFetchError}
-                disabled={disabled}
-                onChange={handleChange}
-                onBlur={onTriggerBlur}
-                onClick={onClick}
-                options={options}
-                selectedOption={selectedOption}
-                handleOpenChange={handleOpenChange}
-                onMouseDown={onMouseDown}
-                placeholder={placeholder}
-                hasError={hasError}
-                label={label}
-                required={required}
-                isPopoverOpen={isPopoverOpen}
-                maxLength={maxLength}
-                autoComplete={autoComplete}
-                {...props}
-                ref={ref}
-              />
-            </PopoverAnchor>
-            {asCard && (
-              <PHIDListItem
-                variant={variant}
-                title={selectedOption?.title}
-                path={selectedOption?.path}
-                phid={selectedOption?.phid ?? ""}
-                description={selectedOption?.description}
-                asPlaceholder={selectedOption === undefined}
-                showPHID={false}
-                isLoadingSelectedOption={isLoadingSelectedOption}
-                handleFetchSelectedOption={handleFetchSelectedOption}
-                className={cn(
-                  "dark:bg-charcoal-900 rounded-t-none bg-white pt-2",
-                )}
-              />
-            )}
-            <PopoverContent
-              align="start"
-              className={cn(
-                "w-[--radix-popover-trigger-width] p-0",
-                "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
-                "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
-              )}
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onInteractOutside={(e) => {
-                if (e.target instanceof Element && e.target.id === id) {
-                  e.preventDefault();
-                }
-              }}
+        {autoComplete ? (
+          <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
+            <Command
+              shouldFilter={false}
+              value={commandValue}
+              onValueChange={handleCommandValue}
+              className={cn("dark:bg-charcoal-900 rounded-md bg-white")}
             >
-              <PHIDList
-                variant={variant}
-                commandListRef={commandListRef}
-                selectedValue={selectedValue}
-                options={options}
-                toggleOption={toggleOption}
-              />
-            </PopoverContent>
-          </Command>
-        </Popover>
+              <PopoverAnchor asChild={true}>
+                <PHIDInputContainer
+                  id={id}
+                  name={name}
+                  value={selectedValue}
+                  className={className}
+                  isLoading={isLoading}
+                  haveFetchError={haveFetchError}
+                  disabled={disabled}
+                  onChange={handleChange}
+                  onBlur={onTriggerBlur}
+                  onClick={onClick}
+                  options={options}
+                  selectedOption={selectedOption}
+                  handleOpenChange={handleOpenChange}
+                  onMouseDown={onMouseDown}
+                  placeholder={placeholder}
+                  hasError={hasError}
+                  label={label}
+                  required={required}
+                  isPopoverOpen={isPopoverOpen}
+                  maxLength={maxLength}
+                  handlePaste={handlePaste}
+                  {...props}
+                  ref={ref}
+                />
+              </PopoverAnchor>
+              {asCard && (
+                <PHIDListItem
+                  variant={variant}
+                  title={selectedOption?.title}
+                  path={selectedOption?.path}
+                  phid={selectedOption?.phid ?? ""}
+                  description={selectedOption?.description}
+                  asPlaceholder={selectedOption === undefined}
+                  showPHID={false}
+                  isLoadingSelectedOption={isLoadingSelectedOption}
+                  handleFetchSelectedOption={handleFetchSelectedOption}
+                  className={cn(
+                    "dark:bg-charcoal-900 rounded-t-none bg-white pt-2",
+                  )}
+                />
+              )}
+              <PopoverContent
+                align="start"
+                className={cn(
+                  "w-[--radix-popover-trigger-width] p-0",
+                  "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
+                  "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
+                )}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                onInteractOutside={(e) => {
+                  if (e.target instanceof Element && e.target.id === id) {
+                    e.preventDefault();
+                  }
+                }}
+              >
+                <PHIDList
+                  variant={variant}
+                  commandListRef={commandListRef}
+                  selectedValue={selectedValue}
+                  options={options}
+                  toggleOption={toggleOption}
+                />
+              </PopoverContent>
+            </Command>
+          </Popover>
+        ) : (
+          <Input
+            id={id}
+            name={name}
+            value={selectedValue}
+            className={className}
+            disabled={disabled}
+            onChange={handleChange}
+            onBlur={onBlur}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            placeholder={placeholder}
+            aria-invalid={hasError}
+            aria-label={!label ? "PHID field" : undefined}
+            aria-required={required}
+            maxLength={maxLength}
+            {...props}
+            ref={ref}
+          />
+        )}
         {!!description && <FormDescription>{description}</FormDescription>}
         {hasWarning && <FormMessageList messages={warnings} type="warning" />}
         {hasError && <FormMessageList messages={errors} type="error" />}
