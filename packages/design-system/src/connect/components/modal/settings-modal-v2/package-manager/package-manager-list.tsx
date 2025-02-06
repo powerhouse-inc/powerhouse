@@ -1,4 +1,11 @@
-import React, { ComponentPropsWithoutRef, ReactNode, useCallback } from "react";
+import { ConnectDropdownMenu } from "@/connect/components/dropdown-menu";
+import { Icon } from "@/powerhouse/components/icon";
+import React, {
+  ComponentPropsWithoutRef,
+  ReactNode,
+  useCallback,
+  useState,
+} from "react";
 import { twMerge } from "tailwind-merge";
 
 export type PackageDetails = {
@@ -37,16 +44,25 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
   props,
 ) => {
   const {
-    package: { name, description, category, publisher, publisherUrl, modules },
+    package: {
+      name,
+      description,
+      category,
+      publisher,
+      publisherUrl,
+      modules,
+      id,
+    },
     onUninstall,
     className,
     ...rest
   } = props;
+  const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   return (
     <li
       {...rest}
       className={twMerge(
-        "flex flex-col items-start rounded-md bg-slate-50 p-3 text-sm leading-5 shadow-sm",
+        "relative flex flex-col items-start rounded-md bg-slate-50 p-3 text-sm leading-5 shadow-sm",
         className,
       )}
     >
@@ -70,6 +86,32 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
           </li>
         ))}
       </ul>
+      <ConnectDropdownMenu
+        items={[
+          {
+            id,
+            label: "Uninstall",
+            icon: <Icon name="Trash" />,
+            className: "text-red-900",
+          },
+        ]}
+        onItemClick={(id) => onUninstall(id)}
+        onOpenChange={setIsDropdownMenuOpen}
+        open={isDropdownMenuOpen}
+      >
+        <button
+          className="group absolute right-3 top-3"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDropdownMenuOpen(true);
+          }}
+        >
+          <Icon
+            className="text-gray-600 group-hover:text-gray-900"
+            name="VerticalDots"
+          />
+        </button>
+      </ConnectDropdownMenu>
     </li>
   );
 };
