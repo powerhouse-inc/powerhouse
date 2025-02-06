@@ -80,7 +80,7 @@ function PackageManagerStoryWrapper(
     options: reactorOptions,
     packages,
     ...storyArgs,
-  };
+  } as PackageManagerProps;
   return {
     render: PackageManagerWrapper,
     args: defaultArgs,
