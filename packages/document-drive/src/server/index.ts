@@ -2074,13 +2074,36 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         switch (operation.type) {
           case "ADD_LISTENER": {
             const zodListener = operation.input.listener;
+
+            // create the transmitter
             const transmitter = this.transmitterFactory.instance(
               zodListener.callInfo?.transmitterType ?? "",
               zodListener as any,
               this,
             );
 
-            await this.addListener(drive, transmitter, operation);
+            // create the listener
+            const listener = {
+              ...zodListener,
+              driveId: drive,
+              label: zodListener.label ?? "",
+              system: zodListener.system ?? false,
+              filter: {
+                branch: zodListener.filter.branch ?? [],
+                documentId: zodListener.filter.documentId ?? [],
+                documentType: zodListener.filter.documentType ?? [],
+                scope: zodListener.filter.scope ?? [],
+              },
+              callInfo: {
+                data: zodListener.callInfo?.data ?? "",
+                name: zodListener.callInfo?.name ?? "PullResponder",
+                transmitterType:
+                  zodListener.callInfo?.transmitterType ?? "PullResponder",
+              },
+              transmitter,
+            };
+
+            await this.addListener(drive, listener);
             break;
           }
           case "REMOVE_LISTENER": {
@@ -2279,32 +2302,8 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     );
   }
 
-  async addListener(
-    driveId: string,
-    transmitter: ITransmitter,
-    operation: Operation<Action<"ADD_LISTENER", AddListenerInput>>,
-  ) {
-    const { listener: zodListener } = operation.input;
-
-    await this.listenerManager.setListener(driveId, {
-      ...zodListener,
-      driveId,
-      label: zodListener.label ?? "",
-      system: zodListener.system ?? false,
-      filter: {
-        branch: zodListener.filter.branch ?? [],
-        documentId: zodListener.filter.documentId ?? [],
-        documentType: zodListener.filter.documentType ?? [],
-        scope: zodListener.filter.scope ?? [],
-      },
-      callInfo: {
-        data: zodListener.callInfo?.data ?? "",
-        name: zodListener.callInfo?.name ?? "PullResponder",
-        transmitterType:
-          zodListener.callInfo?.transmitterType ?? "PullResponder",
-      },
-      transmitter,
-    });
+  async addListener(driveId: string, listener: Listener) {
+    await this.listenerManager.setListener(driveId, listener);
   }
 
   async addInternalListener(
