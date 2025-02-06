@@ -2279,7 +2279,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     );
   }
 
-  private async addListener(
+  async addListener(
     driveId: string,
     transmitter: ITransmitter,
     operation: Operation<Action<"ADD_LISTENER", AddListenerInput>>,
