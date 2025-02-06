@@ -1,5 +1,5 @@
-import { cn } from "..";
 import { ComponentPropsWithRef, forwardRef } from "react";
+import { cn } from "../utils/style.js";
 
 type Props = ComponentPropsWithRef<"button">;
 

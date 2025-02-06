@@ -1,6 +1,6 @@
-import { Module } from "document-model/document-model";
-import { toLowercaseSnakeCase } from "../schemas";
-import { TextField } from "./text-field";
+import type { Module } from "document-model/document-model";
+import { toLowercaseSnakeCase } from "../schemas/inputs.js";
+import { TextField } from "./text-field.js";
 
 type Props = {
   modules?: Module[];

@@ -1,17 +1,6 @@
-import { Document } from "document-model";
-import {
-    DocumentModelState,
-    DocumentModelAction,
-    DocumentModelLocalState,
-} from "document-model/document-model";
+import { OperationScope } from "document-model";
 
-export type Scope = "global" | "local";
-
-export type DocumentModelDocument = Document<
-  DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
->;
+export type Scope = OperationScope;
 
 export type DocumentActionHandlers = {
   // Creation handlers that return IDs

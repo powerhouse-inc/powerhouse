@@ -1,9 +1,7 @@
 import { isDocumentString, filterSchema } from "@graphql-tools/utils";
 import { Diagnostic, forceLinting, linter, lintKeymap } from "@codemirror/lint";
 import { GraphQLError, GraphQLSchema, locatedError, parse } from "graphql";
-import { validateSDL } from "graphql/validation/validate";
-import { updateTimeout } from "../../constants";
-import { Transaction } from "@codemirror/state";
+import { Transaction, Compartment, EditorState } from "@codemirror/state";
 import {
   crosshairCursor,
   drawSelection,
@@ -16,7 +14,6 @@ import {
   rectangularSelection,
   ViewUpdate,
 } from "@codemirror/view";
-import { Compartment, EditorState } from "@codemirror/state";
 import { useEffect, useRef } from "react";
 import {
   closeBrackets,
@@ -39,6 +36,8 @@ import {
   foldKeymap,
 } from "@codemirror/language";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { updateTimeout } from "@editors/document-model-2/constants/documents.js";
+import { validateSDL } from "graphql/validation/validate.js";
 
 /* Converts a GraphQLError to a Diagnostic
    GraphQLError uses a zero-indexed line and column, but the editor uses a one-indexed line and column

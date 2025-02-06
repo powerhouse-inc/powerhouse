@@ -1,6 +1,6 @@
-import { Module, Operation } from "document-model/document-model";
-import { toConstantCase } from "../schemas";
-import { TextField } from "./text-field";
+import type { Module, Operation } from "document-model/document-model";
+import { toConstantCase } from "../schemas/inputs.js";
+import { TextField } from "./text-field.js";
 import { useCallback } from "react";
 
 type Props = {

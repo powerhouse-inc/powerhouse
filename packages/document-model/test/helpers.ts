@@ -1,4 +1,3 @@
-import { DocumentAction } from "@document/actions/types.js";
 import { SignalDispatch } from "@document/signal.js";
 import {
   BaseDocument,
@@ -51,8 +50,7 @@ export type CountAction =
   | IncrementAction
   | DecrementAction
   | SetLocalNameAction
-  | ErrorAction
-  | DocumentAction;
+  | ErrorAction;
 
 export type CountState = { count: number };
 

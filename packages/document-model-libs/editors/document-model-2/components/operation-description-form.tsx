@@ -1,6 +1,6 @@
-import { Operation } from "document-model/document-model";
-import { TextField } from "./text-field";
+import type { Operation } from "document-model/document-model";
 import { useEffect, useRef } from "react";
+import { TextField } from "./text-field.js";
 
 type Props = {
   operation: Operation;

@@ -1,13 +1,17 @@
-import { makeMinimalObjectFromSDL, makeInitialSchemaDoc, cn } from "../utils";
-import { GraphqlEditor } from "./code-editors/graphql-editor";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 import { useState, useCallback } from "react";
-import { useSchemaContext } from "../context/schema-context";
-import { typeDefsDoc } from "../constants";
-import { Button } from "./button";
-import { ensureValidStateSchemaName } from "../utils/linting";
-import { Scope } from "../types";
-import { JSONEditor } from "./code-editors";
+import { typeDefsDoc } from "../constants/documents.js";
+import { useSchemaContext } from "../context/schema-context.js";
+import { Scope } from "../types/documents.js";
+import {
+  makeMinimalObjectFromSDL,
+  makeInitialSchemaDoc,
+} from "../utils/helpers.js";
+import { ensureValidStateSchemaName } from "../utils/linting.js";
+import { cn } from "../utils/style.js";
+import { Button } from "./button.js";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs.js";
+import { GraphqlEditor } from "./code-editors/graphql-editor.js";
+import { JSONEditor } from "./code-editors/json-editor.js";
 
 type Props = {
   modelName: string;

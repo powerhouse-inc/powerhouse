@@ -1,5 +1,5 @@
 import { pascalCase } from "change-case";
-import { Author } from "document-model/document-model";
+import { Author, DocumentModelDocument } from "document-model/document-model";
 import {
   buildASTSchema,
   extendSchema,
@@ -18,7 +18,7 @@ import {
   print,
   visit,
 } from "graphql";
-import { DocumentModelDocument, Scope } from "../types";
+import { Scope } from "../types/documents.js";
 import * as customScalars from "@powerhousedao/scalars";
 
 export function makeStateObject(modelName: string, scope: Scope) {

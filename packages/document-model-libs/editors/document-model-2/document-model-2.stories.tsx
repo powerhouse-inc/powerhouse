@@ -1,18 +1,18 @@
-import { reducer, utils } from "document-model/document-model";
-import Editor from "./editor";
-import { createDocumentStory } from "document-model-libs/utils";
+import { createExtendedState, reducer } from "document-model/document-model";
+import { DocumentModelEditor } from "./editor.js";
 import { v7 as uuidv7 } from "uuid";
 import { Meta } from "@storybook/react";
+import { createDocumentStory } from "@utils/storybook/document-story.js";
 const { meta, CreateDocumentStory: Empty } = createDocumentStory(
-  Editor,
+  DocumentModelEditor,
   reducer,
-  utils.createExtendedState(),
+  createExtendedState(),
 );
 
 const { CreateDocumentStory: WithData } = createDocumentStory(
-  Editor,
+  DocumentModelEditor,
   reducer,
-  utils.createExtendedState({
+  createExtendedState({
     state: {
       global: {
         id: "test type",
@@ -112,9 +112,9 @@ const { CreateDocumentStory: WithData } = createDocumentStory(
 );
 
 const { CreateDocumentStory: WithBackgroundUpdates } = createDocumentStory(
-  Editor,
+  DocumentModelEditor,
   reducer,
-  utils.createExtendedState({
+  createExtendedState({
     state: {
       global: {
         id: "test type",
@@ -288,6 +288,8 @@ type TestLocalDefinition${id} {
   },
 );
 
-export default { ...meta, title: "Document Model 2" } as Meta<typeof Editor>;
+export default { ...meta, title: "Document Model 2" } as Meta<
+  typeof DocumentModelEditor
+>;
 
 export { Empty, WithData, WithBackgroundUpdates };

@@ -1,18 +1,21 @@
 import type {
-    Action,
-    BaseAction,
-    Document,
-    ExtendedState,
-    PartialState,
-    Reducer,
-    ActionErrorCallback,
+  BaseAction,
+  ExtendedState,
+  PartialState,
+  Reducer,
+  ActionErrorCallback,
+  BaseDocument,
 } from "document-model";
 import { useState } from "react";
 
-export function wrapReducer<State, A extends Action, LocalState>(
-  reducer: Reducer<State, A, LocalState>,
+export function wrapReducer<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  reducer: Reducer<TGlobalState, TLocalState, TAction>,
   onError?: (error: unknown) => void,
-): Reducer<State, A, LocalState> {
+): Reducer<TGlobalState, TLocalState, TAction> {
   return (state, action) => {
     try {
       return reducer(state, action);
@@ -23,29 +26,41 @@ export function wrapReducer<State, A extends Action, LocalState>(
   };
 }
 
-export function createUseDocumentReducer<State, A extends Action, LocalState>(
-  reducer: Reducer<State, A, LocalState>,
+export function createUseDocumentReducer<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  reducer: Reducer<TGlobalState, TLocalState, TAction>,
   createDocument: (
-    document?: Partial<ExtendedState<PartialState<State>>>,
-  ) => Document<State, A, LocalState>,
+    document?: Partial<
+      ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
+    >,
+  ) => BaseDocument<TGlobalState, TLocalState, TAction>,
 ) {
   return (
-    document?: Partial<ExtendedState<Partial<State>>>,
+    document?: Partial<
+      ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
+    >,
     onError?: (error: unknown) => void,
   ) => useDocumentReducer(reducer, createDocument(document), onError);
 }
 
-export function useDocumentReducer<State, A extends Action, LocalState>(
-  reducer: Reducer<State, A, LocalState>,
-  initialState: Document<State, A, LocalState>,
+export function useDocumentReducer<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  reducer: Reducer<TGlobalState, TLocalState, TAction>,
+  initialState: BaseDocument<TGlobalState, TLocalState, TAction>,
   onError?: (error: unknown) => void,
-): readonly [Document<State, A, LocalState>, (action: A | BaseAction) => void] {
+): readonly [
+  BaseDocument<TGlobalState, TLocalState, TAction>,
+  (action: TAction) => void,
+] {
   const [state, setState] = useState(initialState);
 
-  const dispatch = (
-    action: A | BaseAction,
-    onErrorCallback?: ActionErrorCallback,
-  ) => {
+  const dispatch = (action: TAction, onErrorCallback?: ActionErrorCallback) => {
     setState((_state) => {
       try {
         const newState = reducer(_state, action);

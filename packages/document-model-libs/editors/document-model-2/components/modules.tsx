@@ -1,6 +1,6 @@
 import { Module as TModule, Operation } from "document-model/document-model";
 import { useState, useRef, useCallback } from "react";
-import { Module } from "./module";
+import { Module } from "./module.js";
 
 type Props = {
   modules: TModule[];

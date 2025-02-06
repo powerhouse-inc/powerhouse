@@ -1,28 +1,46 @@
 import { useEffect, useRef, useMemo, useCallback } from "react";
 import {
-    compareStringsWithoutWhitespace,
-    initializeModelSchema,
-    makeOperationInitialDoc,
-    Scope,
-} from ".";
-import {
-    DocumentModelState,
-    DocumentModelAction,
-    DocumentModelLocalState,
-    actions,
+  DocumentModelAction,
+  DocumentModelState,
+  DocumentModelLocalState,
+  setAuthorName,
+  setAuthorWebsite,
+  setModelDescription,
+  setModelExtension,
+  setModelId,
+  setModelName,
+  setStateSchema,
+  setInitialState,
+  addModule,
+  setModuleName,
+  deleteModule,
+  addOperation,
+  setOperationName,
+  setOperationSchema,
+  setOperationDescription,
+  deleteOperation,
+  addOperationError,
+  deleteOperationError,
+  setOperationErrorName,
 } from "document-model/document-model";
-import { EditorProps, utils } from "document-model";
-import { ModelMetadata } from "./components/model-metadata-form";
-import { SchemaContextProvider } from "./context/schema-context";
-import { Divider } from "./components/divider";
-import { Modules } from "./components/modules";
-import { StateSchemas } from "./components/state-schemas";
+import { EditorProps, hashKey } from "document-model";
+import { Divider } from "./components/divider.js";
+import { ModelMetadata } from "./components/model-metadata-form.js";
+import { Modules } from "./components/modules.js";
+import { StateSchemas } from "./components/state-schemas.js";
+import { SchemaContextProvider } from "./context/schema-context.js";
+import { Scope } from "./types/documents.js";
+import {
+  initializeModelSchema,
+  compareStringsWithoutWhitespace,
+  makeOperationInitialDoc,
+} from "./utils/helpers.js";
 
-export default function Editor(
+export function DocumentModelEditor(
   props: EditorProps<
     DocumentModelState,
-    DocumentModelAction,
-    DocumentModelLocalState
+    DocumentModelLocalState,
+    DocumentModelAction
   >,
 ) {
   const { document, documentNodeName, dispatch } = props;
@@ -57,13 +75,13 @@ export default function Editor(
   useEffect(() => {
     if (!shouldSetInitialName.current || !documentNodeName) return;
 
-    dispatch(actions.setModelName({ name: documentNodeName }));
+    dispatch(setModelName({ name: documentNodeName }));
 
     // Initialize schema if it's the first time setting the name
     initializeModelSchema({
       modelName: documentNodeName,
       setStateSchema: (schema: string, scope: Scope) => {
-        dispatch(actions.setStateSchema({ schema, scope }));
+        dispatch(setStateSchema({ schema, scope }));
       },
     });
 
@@ -75,81 +93,79 @@ export default function Editor(
     [operations],
   );
 
-  const setModelId = useCallback(
+  const handleSetModelId = useCallback(
     (id: string) => {
       if (compareStringsWithoutWhitespace(id, documentType)) return;
-      dispatch(actions.setModelId({ id }));
+      dispatch(setModelId({ id }));
     },
     [documentType],
   );
 
-  const setModelDescription = useCallback(
+  const handleSetModelDescription = useCallback(
     (newDescription: string) => {
       if (compareStringsWithoutWhitespace(newDescription, description)) return;
-      dispatch(actions.setModelDescription({ description: newDescription }));
+      dispatch(setModelDescription({ description: newDescription }));
     },
     [description],
   );
 
-  const setModelExtension = useCallback(
+  const handleSetModelExtension = useCallback(
     (newExtension: string) => {
       if (compareStringsWithoutWhitespace(newExtension, extension)) return;
-      dispatch(actions.setModelExtension({ extension: newExtension }));
+      dispatch(setModelExtension({ extension: newExtension }));
     },
     [extension],
   );
 
-  const setModelName = useCallback(
+  const handleSetModelName = useCallback(
     (newName: string) => {
       if (compareStringsWithoutWhitespace(newName, modelName)) return;
-      dispatch(actions.setModelName({ name: newName }));
+      dispatch(setModelName({ name: newName }));
     },
     [modelName],
   );
 
-  const setAuthorName = useCallback(
+  const handleSetAuthorName = useCallback(
     (newAuthorName: string) => {
       if (compareStringsWithoutWhitespace(newAuthorName, authorName)) return;
-      dispatch(actions.setAuthorName({ authorName: newAuthorName }));
+      dispatch(setAuthorName({ authorName: newAuthorName }));
     },
     [authorName],
   );
 
-  const setAuthorWebsite = useCallback(
+  const handleSetAuthorWebsite = useCallback(
     (newAuthorWebsite: string) => {
       if (
         compareStringsWithoutWhitespace(newAuthorWebsite, authorWebsite ?? "")
       )
         return;
-      dispatch(actions.setAuthorWebsite({ authorWebsite: newAuthorWebsite }));
+      dispatch(setAuthorWebsite({ authorWebsite: newAuthorWebsite }));
     },
     [authorWebsite],
   );
 
-  const setStateSchema = useCallback(
+  const handleSetStateSchema = useCallback(
     (newSchema: string, scope: Scope) => {
       const oldSchema =
         scope === "global" ? globalStateSchema : localStateSchema;
       if (compareStringsWithoutWhitespace(newSchema, oldSchema)) return;
-      dispatch(actions.setStateSchema({ schema: newSchema, scope }));
+      dispatch(setStateSchema({ schema: newSchema, scope }));
     },
     [globalStateSchema, localStateSchema],
   );
 
-  const setInitialState = useCallback(
+  const handleSetInitialState = useCallback(
     (newInitialValue: string, scope: Scope) => {
       const oldInitialValue =
         scope === "global" ? globalStateInitialValue : localStateInitialValue;
       if (compareStringsWithoutWhitespace(newInitialValue, oldInitialValue))
         return;
-      dispatch(
-        actions.setInitialState({ initialValue: newInitialValue, scope }),
-      );
+      dispatch(setInitialState({ initialValue: newInitialValue, scope }));
     },
     [globalStateInitialValue, localStateInitialValue],
   );
 
-  const addModule = useCallback(
+  const handleAddModule = useCallback(
     (name: string): Promise<string | undefined> => {
       return new Promise((resolve) => {
         try {
@@ -161,8 +177,8 @@ export default function Editor(
             resolve(undefined);
             return;
           }
-          const id = utils.hashKey();
-          dispatch(actions.addModule({ id, name }));
+          const id = hashKey();
+          dispatch(addModule({ id, name }));
           resolve(id);
         } catch (error) {
           console.error("Failed to add module:", error);
@@ -173,7 +189,7 @@ export default function Editor(
     [modules],
   );
 
-  const updateModuleName = useCallback(
+  const handleSetModuleName = useCallback(
     (id: string, name: string) => {
       if (
         modules.some((module) =>
@@ -181,17 +197,17 @@ export default function Editor(
         )
       )
         return;
-      dispatch(actions.setModuleName({ id, name }));
+      dispatch(setModuleName({ id, name }));
     },
     [modules],
   );
 
-  const deleteModule = useCallback(
-    (id: string) => dispatch(actions.deleteModule({ id })),
+  const handleDeleteModule = useCallback(
+    (id: string) => dispatch(deleteModule({ id })),
     [],
   );
 
-  const addOperation = useCallback(
+  const handleAddOperation = useCallback(
     (moduleId: string, name: string): Promise<string | undefined> => {
       return new Promise((resolve) => {
         try {
@@ -208,8 +224,8 @@ export default function Editor(
             resolve(undefined);
             return;
           }
-          const id = utils.hashKey();
-          dispatch(actions.addOperation({ id, moduleId, name }));
+          const id = hashKey();
+          dispatch(addOperation({ id, moduleId, name }));
           resolve(id);
         } catch (error) {
           console.error("Failed to add operation:", error);
@@ -220,7 +236,7 @@ export default function Editor(
     [modules],
   );
 
-  const updateOperationName = useCallback(
+  const handleSetOperationName = useCallback(
     (id: string, name: string) => {
       const operationModule = modules.find((module) =>
         module.operations.some((operation) => operation.id === id),
@@ -235,12 +251,12 @@ export default function Editor(
         )
       )
         return;
-      dispatch(actions.setOperationName({ id, name }));
+      dispatch(setOperationName({ id, name }));
     },
     [modules],
   );
 
-  const updateOperationSchema = useCallback(
+  const handleSetOperationSchema = useCallback(
     (id: string, newSchema: string) => {
       const operation = operations.find((operation) => operation.id === id);
       if (
@@ -248,30 +264,28 @@ export default function Editor(
         compareStringsWithoutWhitespace(newSchema, operation.schema)
       )
         return;
-      dispatch(actions.setOperationSchema({ id, schema: newSchema }));
+      dispatch(setOperationSchema({ id, schema: newSchema }));
     },
     [operations],
   );
 
-  const setOperationDescription = useCallback(
+  const handleSetOperationDescription = useCallback(
     (id: string, newDescription: string) => {
       const operationDescription =
         operations.find((operation) => operation.id === id)?.description ?? "";
       if (compareStringsWithoutWhitespace(operationDescription, newDescription))
         return;
-      dispatch(
-        actions.setOperationDescription({ id, description: newDescription }),
-      );
+      dispatch(setOperationDescription({ id, description: newDescription }));
     },
     [operations],
   );
 
-  const deleteOperation = useCallback(
-    (id: string) => dispatch(actions.deleteOperation({ id })),
+  const handleDeleteOperation = useCallback(
+    (id: string) => dispatch(deleteOperation({ id })),
     [],
   );
 
-  const addOperationError = useCallback(
+  const handleAddOperationError = useCallback(
     (operationId: string, errorName: string): Promise<string | undefined> => {
       return new Promise((resolve) => {
         try {
@@ -288,8 +302,8 @@ export default function Editor(
             resolve(undefined);
             return;
           }
-          const id = utils.hashKey();
-          dispatch(actions.addOperationError({ id, operationId, errorName }));
+          const id = hashKey();
+          dispatch(addOperationError({ id, operationId, errorName }));
           resolve(id);
         } catch (error) {
           console.error("Failed to add operation error:", error);
@@ -300,12 +314,12 @@ export default function Editor(
     [operations],
   );
 
-  const deleteOperationError = useCallback(
-    (id: string) => dispatch(actions.deleteOperationError({ id })),
+  const handleDeleteOperationError = useCallback(
+    (id: string) => dispatch(deleteOperationError({ id })),
     [],
   );
 
-  const setOperationErrorName = useCallback(
+  const handleSetOperationErrorName = useCallback(
     (operationId: string, errorId: string, errorName: string) => {
       const operation = operations.find(
         (operation) => operation.id === operationId,
@@ -318,7 +332,7 @@ export default function Editor(
         )
       )
         return;
-      dispatch(actions.setOperationErrorName({ id: errorId, errorName }));
+      dispatch(setOperationErrorName({ id: errorId, errorName }));
     },
     [operations],
   );
@@ -326,10 +340,10 @@ export default function Editor(
   const addOperationAndInitialSchema = useCallback(
     async (moduleId: string, name: string): Promise<string | undefined> => {
       try {
-        const id = await addOperation(moduleId, name);
+        const id = await handleAddOperation(moduleId, name);
         if (!id) return undefined;
         try {
-          updateOperationSchema(id, makeOperationInitialDoc(name));
+          handleSetOperationSchema(id, makeOperationInitialDoc(name));
           return id;
         } catch (error) {
           console.error("Failed to update operation schema:", error);
@@ -340,7 +354,7 @@ export default function Editor(
         return undefined;
       }
     },
-    [addOperation, updateOperationSchema],
+    [handleAddOperation, handleSetOperationSchema],
   );
 
   return (
@@ -360,13 +374,13 @@ export default function Editor(
             authorWebsite={authorWebsite ?? ""}
             globalStateSchema={globalStateSchema}
             localStateSchema={localStateSchema}
-            setModelId={setModelId}
-            setModelDescription={setModelDescription}
-            setModelExtension={setModelExtension}
-            setModelName={setModelName}
-            setAuthorName={setAuthorName}
-            setAuthorWebsite={setAuthorWebsite}
-            setStateSchema={setStateSchema}
+            setModelId={handleSetModelId}
+            setModelDescription={handleSetModelDescription}
+            setModelExtension={handleSetModelExtension}
+            setModelName={handleSetModelName}
+            setAuthorName={handleSetAuthorName}
+            setAuthorWebsite={handleSetAuthorWebsite}
+            setStateSchema={handleSetStateSchema}
           />
           <Divider />
           <div>
@@ -376,24 +390,24 @@ export default function Editor(
               globalStateInitialValue={globalStateInitialValue}
               localStateSchema={localStateSchema}
               localStateInitialValue={localStateInitialValue}
-              setStateSchema={setStateSchema}
-              setInitialState={setInitialState}
+              setStateSchema={handleSetStateSchema}
+              setInitialState={handleSetInitialState}
             />
             <Divider />
             <h3 className="mb-6 text-lg">Global Operations</h3>
             <Modules
               modules={modules}
               allOperations={operations}
-              addModule={addModule}
-              updateModuleName={updateModuleName}
-              deleteModule={deleteModule}
-              updateOperationName={updateOperationName}
-              updateOperationSchema={updateOperationSchema}
-              setOperationDescription={setOperationDescription}
-              deleteOperation={deleteOperation}
-              addOperationError={addOperationError}
-              deleteOperationError={deleteOperationError}
-              setOperationErrorName={setOperationErrorName}
+              addModule={handleAddModule}
+              updateModuleName={handleSetModuleName}
+              deleteModule={handleDeleteModule}
+              updateOperationName={handleSetOperationName}
+              updateOperationSchema={handleSetOperationSchema}
+              setOperationDescription={handleSetOperationDescription}
+              deleteOperation={handleDeleteOperation}
+              addOperationError={handleAddOperationError}
+              deleteOperationError={handleDeleteOperationError}
+              setOperationErrorName={handleSetOperationErrorName}
               addOperationAndInitialSchema={addOperationAndInitialSchema}
             />
           </div>

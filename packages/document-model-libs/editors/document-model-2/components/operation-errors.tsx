@@ -1,6 +1,6 @@
-import { Operation } from "document-model/document-model";
-import { OperationErrorForm } from "./operation-error-form";
+import type { Operation } from "document-model/document-model";
 import { useCallback, useId, useState } from "react";
+import { OperationErrorForm } from "./operation-error-form.js";
 
 type Props = {
   operation: Operation;

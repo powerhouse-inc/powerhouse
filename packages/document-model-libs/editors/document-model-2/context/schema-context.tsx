@@ -3,7 +3,7 @@ import {
   hiddenQueryTypeDefDoc,
   initialSchema,
   typeDefsDoc,
-} from "../constants/documents";
+} from "../constants/documents.js";
 import {
   buildASTSchema,
   buildSchema,

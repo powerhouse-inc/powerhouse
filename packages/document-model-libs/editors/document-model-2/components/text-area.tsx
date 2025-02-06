@@ -1,6 +1,6 @@
 import * as React from "react";
-import { cn } from "../utils";
 import { forwardRef, useImperativeHandle, useRef, useCallback } from "react";
+import { cn } from "../utils/style.js";
 
 export interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}

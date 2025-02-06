@@ -4,9 +4,4 @@
  */
 
 import "./global.css";
-export * from "./types.js";
-export { module as Json } from "./json";
-export { module as BudgetStatement } from "./budget-statement";
-export { module as DocumentModel2 } from "./document-model-2";
-export { module as ScopeFramework } from "./scope-framework";
-export { module as ChatRoomEditor } from "./chat-room-editor";
+export { DocumentModelEditor } from "./document-model-2/index.js";

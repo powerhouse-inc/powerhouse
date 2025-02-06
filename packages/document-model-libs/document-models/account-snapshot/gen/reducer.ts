@@ -3,6 +3,7 @@ import { AccountSnapshotState, AccountSnapshotLocalState } from "./types.js";
 import { AccountSnapshotAction } from "./actions.js";
 import { reducer as SnapshotReducer } from "@document-models/account-snapshot/src/reducers/snapshot.js";
 import { SetEndInputSchema, SetIdInputSchema, SetOwnerIdInputSchema, SetOwnerTypeInputSchema, SetPeriodInputSchema, SetStartInputSchema } from "./schema/zod.js";
+import { fileExtension } from "./constants.js";
 
 const stateReducer: ImmutableStateReducer<
   AccountSnapshotState,

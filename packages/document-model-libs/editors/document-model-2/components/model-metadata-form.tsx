@@ -1,12 +1,12 @@
-import { z } from "zod";
-import { TextField } from "./text-field";
 import { useCallback } from "react";
+import { z } from "zod";
+import { Scope } from "../types/documents.js";
 import {
-  handleModelNameChange,
   makeInitialSchemaDoc,
   renameSchemaType,
-} from "../utils";
-import { Scope } from "../types";
+  handleModelNameChange,
+} from "../utils/helpers.js";
+import { TextField } from "./text-field.js";
 
 export const MetadataFormSchema = z.object({
   name: z.string(),

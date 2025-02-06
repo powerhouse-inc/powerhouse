@@ -422,7 +422,7 @@ export type EditorProps<
   TAction extends BaseAction,
 > = {
   document: BaseDocument<TGlobalState, TLocalState, TAction>;
-  dispatch: (action: BaseAction, onErrorCallback?: ActionErrorCallback) => void;
+  dispatch: (action: TAction, onErrorCallback?: ActionErrorCallback) => void;
   context: EditorContext;
   error?: unknown;
   documentNodeName?: string;

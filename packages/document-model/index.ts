@@ -1,6 +1,8 @@
 export type {
   EditorProps,
   BaseAction,
+  ActionContext,
+  ActionErrorCallback,
   BaseActionWithAttachment,
   SignalDispatch,
   AttachmentInput,
@@ -18,6 +20,8 @@ export type {
   LoadFromFile,
   LoadFromInput,
   DocumentModelModule,
+  EditorModule,
+  OperationScope,
 } from "@document/types.js";
 export {
   createAction,
@@ -25,6 +29,7 @@ export {
   isDocumentAction,
   baseCreateExtendedState,
   baseCreateDocument,
+  hashKey,
 } from "@document/utils/base.js";
 export {
   baseSaveToFile,

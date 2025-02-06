@@ -1,18 +1,20 @@
+import { linter, forceLinting } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
+import { EditorView, keymap } from "@codemirror/view";
 import { memo, useEffect } from "react";
 import { ayuLight } from "thememirror";
-import { forceLinting, linter } from "@codemirror/lint";
-import { EditorView, keymap } from "@codemirror/view";
 import { json, jsonLanguage, jsonParseLinter } from "@codemirror/lang-json";
-import { makeUpdateHandler, makeFocusHandler, makePasteHandler } from "./utils";
 import {
   useEditorRefs,
+  baseEditorExtensions,
+  baseKeymap,
+  makeUpdateHandler,
+  makeFocusHandler,
+  makePasteHandler,
   useEditorCleanup,
   useHandlerReconfiguration,
   useDocumentSync,
-  baseEditorExtensions,
-  baseKeymap,
-} from "./utils";
+} from "./utils.js";
 
 type Props = {
   doc: string;

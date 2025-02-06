@@ -9,7 +9,6 @@
     "**/.hygen/**/*"
   ],
   "references": [
-    { "path": "../document-model" },
-    { "path": "../codegen" }
+    { "path": "../document-model" }
   ],
 }

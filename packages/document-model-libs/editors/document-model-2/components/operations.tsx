@@ -1,8 +1,10 @@
-import { OperationForm } from "./operation-form";
-import { DocumentActionHandlers } from "../types";
-import { Module, Operation as TOperation } from "document-model/document-model";
+import { OperationForm } from "./operation-form.js";
+import type {
+  Module,
+  Operation as TOperation,
+} from "document-model/document-model";
 import { useCallback, useId, useState } from "react";
-import { Operation } from "./operation";
+import { Operation } from "./operation.js";
 
 type Props = {
   module: Module;

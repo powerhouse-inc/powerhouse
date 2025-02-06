@@ -8,17 +8,17 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { createNameSchema } from "../schemas/inputs.js";
+import { compareStringsWithoutWhitespace } from "../utils/helpers.js";
 import {
-  Form,
   FormField,
   FormItem,
+  FormLabel,
   FormControl,
   FormMessage,
-  FormLabel,
-} from "./form";
-import { Textarea, TextareaHandle } from "./text-area";
-import { createNameSchema } from "../schemas";
-import { compareStringsWithoutWhitespace } from "../utils/helpers";
+  Form,
+} from "./form.js";
+import { TextareaHandle, Textarea } from "./text-area.js";
 
 type TextFieldProps = {
   name: string;

@@ -1,23 +1,23 @@
+import { Diagnostic, forceLinting } from "@codemirror/lint";
 import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import { ayuLight } from "thememirror";
-import { getSchema, graphql } from "cm6-graphql";
-import { memo, useEffect, useRef } from "react";
-import { useSchemaContext } from "../../context/schema-context";
-import { Diagnostic, forceLinting } from "@codemirror/lint";
+import { useSchemaContext } from "@editors/document-model-2/context/schema-context.js";
 import { buildSchema, printSchema } from "graphql";
+import { graphql, getSchema } from "cm6-graphql";
+import { memo, useRef, useEffect } from "react";
+import { ayuLight } from "thememirror";
 import {
-  makeLinter,
   useEditorRefs,
+  baseEditorExtensions,
+  baseKeymap,
+  makeLinter,
+  makeUpdateHandler,
+  makeFocusHandler,
+  makePasteHandler,
   useEditorCleanup,
   useHandlerReconfiguration,
   useDocumentSync,
-  baseEditorExtensions,
-  baseKeymap,
-  makeFocusHandler,
-  makePasteHandler,
-  makeUpdateHandler,
-} from "./utils";
+} from "./utils.js";
 
 type Props = {
   doc: string;

@@ -2,9 +2,10 @@ import type {
   Operation,
   Module as TModule,
 } from "document-model/document-model";
-import { ModuleForm } from "./module-form";
-import { Operations } from "./operations";
+
 import { Icon } from "@powerhousedao/design-system";
+import { ModuleForm } from "./module-form.js";
+import { Operations } from "./operations.js";
 type Props = {
   module?: TModule;
   modules?: TModule[];
