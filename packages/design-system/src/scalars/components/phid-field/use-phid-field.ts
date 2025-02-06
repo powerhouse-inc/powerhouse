@@ -7,6 +7,8 @@ interface UsePHIDFieldProps {
   autoComplete: PHIDProps["autoComplete"];
   defaultValue?: string;
   value?: string;
+  defaultBranch: PHIDProps["defaultBranch"];
+  defaultScope: PHIDProps["defaultScope"];
   allowedScopes: PHIDProps["allowedScopes"];
   allowedDocumentTypes: PHIDProps["allowedDocumentTypes"];
   onChange?: PHIDProps["onChange"];
@@ -17,12 +19,14 @@ export function usePHIDField({
   autoComplete,
   defaultValue,
   value,
+  defaultBranch,
+  defaultScope,
   allowedScopes,
   allowedDocumentTypes,
   onChange,
   onBlur,
 }: UsePHIDFieldProps) {
-  const isInternalChange = useRef(false);
+  const shouldFetchOptions = useRef(false);
   const optionsAbortControllerRef = useRef<AbortController | null>(null);
   const selectedOptionAbortControllerRef = useRef<AbortController | null>(null);
   const commandListRef = useRef<HTMLDivElement>(null);
@@ -69,6 +73,8 @@ export function usePHIDField({
         try {
           const newOptions = await fetchPHIDOptions({
             phidFragment: newValue,
+            defaultBranch,
+            defaultScope,
             allowedScopes,
             allowedDocumentTypes,
             signal: controller.signal,
@@ -158,7 +164,7 @@ export function usePHIDField({
 
   const toggleOption = useCallback(
     (optionValue: string) => {
-      isInternalChange.current = true;
+      shouldFetchOptions.current = false;
       setSelectedValue(optionValue);
       clear();
       onChange?.(optionValue);
@@ -169,6 +175,7 @@ export function usePHIDField({
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
+      shouldFetchOptions.current = true;
       setSelectedValue(newValue);
       onChange?.(newValue);
     },
@@ -188,15 +195,25 @@ export function usePHIDField({
     [onBlur, isPopoverOpen],
   );
 
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const pastedValue = e.clipboardData.getData("text");
+      if (pastedValue === selectedValue && haveFetchError) {
+        debouncedFetchOptions(selectedValue)?.catch((error) => {
+          console.error("Failed to fetch options: ", error);
+        });
+      }
+    },
+    [selectedValue, haveFetchError, debouncedFetchOptions],
+  );
+
   useEffect(() => {
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
-      return;
-    }
     if (autoComplete) {
-      debouncedFetchOptions(selectedValue)?.catch((error) => {
-        console.error("Failed to fetch options: ", error);
-      });
+      if (shouldFetchOptions.current) {
+        debouncedFetchOptions(selectedValue)?.catch((error) => {
+          console.error("Failed to fetch options: ", error);
+        });
+      }
     } else {
       clear();
       setOptions([]);
@@ -205,12 +222,9 @@ export function usePHIDField({
   }, [autoComplete, selectedValue, debouncedFetchOptions, clear]);
 
   useEffect(() => {
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
-      return;
-    }
-    setSelectedValue(value ?? defaultValue ?? "");
-  }, [value, defaultValue]);
+    shouldFetchOptions.current = false;
+    setSelectedValue(value ?? "");
+  }, [value]);
 
   useEffect(() => {
     if (!isPopoverOpen && haveBeenOpened) {
@@ -244,5 +258,6 @@ export function usePHIDField({
     handleChange,
     handleCommandValue,
     handleFetchSelectedOption,
+    handlePaste,
   };
 }

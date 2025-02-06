@@ -12,9 +12,9 @@ export interface PHIDBaseProps {
 
 export type PHIDProps = PHIDBaseProps &
   (
-    | { autoComplete?: false; variant: undefined }
+    | { autoComplete: false; variant?: never }
     | {
-        autoComplete: true;
+        autoComplete?: true;
         variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
       }
   );
