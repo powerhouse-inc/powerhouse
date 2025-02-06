@@ -17,7 +17,7 @@ interface SidebarItemProps {
   isPinned?: boolean;
   isActive?: boolean;
   style?: React.CSSProperties;
-  onChange?: (nodeId: string) => void;
+  onChange?: (node: SidebarNode) => void;
 }
 
 export const SidebarItem = ({
@@ -42,11 +42,11 @@ export const SidebarItem = ({
     : node.icon;
 
   const handleClick = useCallback(() => {
-    onChange?.(node.id);
+    onChange?.(node);
     if (node.children && node.children.length > 0) {
       toggleNode?.(node.id);
     }
-  }, [node.children, node.id, toggleNode, onChange]);
+  }, [onChange, node, toggleNode]);
 
   const handleTogglePin = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -80,7 +80,7 @@ export const SidebarItem = ({
               isSearchActive && "bg-yellow-100 dark:bg-[#604B0033]",
               // line between pinned items
               pinnedMode &&
-                "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 first:group-first/sidebar-item-wrapper:after:hidden",
+                "after:absolute after:-top-2.5 after:left-[15px] after:h-4 after:w-px after:bg-gray-300 hover:bg-gray-50 first:group-first/sidebar-item-wrapper:after:hidden dark:hover:bg-slate-600",
               isActive && "font-medium text-gray-900 dark:text-gray-50",
             )}
             onClick={handleClick}
