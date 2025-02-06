@@ -1,5 +1,5 @@
 import React, { PropsWithChildren } from "react";
-import { FieldCommonProps } from "../types";
+import { ErrorHandling, FieldCommonProps } from "../types";
 import { Input, InputProps } from "../fragments";
 import { cn } from "@/scalars/lib/utils";
 import { IconName } from "@/powerhouse";
@@ -8,7 +8,9 @@ import { Popover, PopoverContent } from "../fragments/popover/popover";
 import { PopoverTrigger } from "../fragments/popover/popover";
 import { Icon } from "@/powerhouse";
 
-export interface BasePickerFieldProps extends FieldCommonProps<string> {
+export interface BasePickerFieldProps
+  extends FieldCommonProps<string>,
+    ErrorHandling {
   id?: string;
   name: string;
   disabled?: boolean;
@@ -20,7 +22,11 @@ export interface BasePickerFieldProps extends FieldCommonProps<string> {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
+  handleBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+  inputProps?: Omit<
+    InputProps,
+    "name" | "onChange" | "value" | "defaultValue" | "onBlur"
+  >;
 }
 
 export const BasePickerField = React.forwardRef<
@@ -41,7 +47,9 @@ export const BasePickerField = React.forwardRef<
       isOpen,
       setIsOpen,
       onInputChange,
+      handleBlur,
       inputProps,
+      ...props
     },
     ref,
   ) => {
@@ -52,9 +60,6 @@ export const BasePickerField = React.forwardRef<
             "flex w-[275px] rounded-md text-sm",
             "focus-within:ring-ring focus-within:ring-1 focus-within:ring-offset-0 ring-gray-900 dark:ring-charcoal-300",
             "dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white",
-            // hover
-            "hover:border-gray-300 hover:bg-gray-100 dark:hover:bg-charcoal-800 dark:hover:border-charcoal-700",
-            "[&:hover_.input-field]:bg-transparent [&:hover_.button-ghost]:bg-transparent",
             // focus
             "focus:[&_.input-field]:bg-transparent",
             "focus-within:hover:bg-white dark:focus-within:hover:bg-charcoal-900 focus-within:hover:cursor-default",
@@ -102,6 +107,7 @@ export const BasePickerField = React.forwardRef<
             name={name}
             value={value}
             onChange={onInputChange}
+            onBlur={handleBlur}
             defaultValue={defaultValue}
             className={cn(
               "w-full rounded-l-none border-none text-right placeholder:text-right",
@@ -114,6 +120,7 @@ export const BasePickerField = React.forwardRef<
             disabled={disabled}
             required={required}
             {...inputProps}
+            {...props}
           />
         </div>
       </div>

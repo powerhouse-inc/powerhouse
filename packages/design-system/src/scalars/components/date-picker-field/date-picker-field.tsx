@@ -12,6 +12,7 @@ import { Calendar } from "./subcomponents/calendar/calendar";
 import { cn } from "@/scalars/lib/utils";
 import { useDatePickerField } from "./use-date-picker-field";
 import { InputProps } from "../fragments";
+import { validateDatePicker } from "./date-picker-validations";
 
 export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   label?: string;
@@ -23,7 +24,13 @@ export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   defaultValue?: DateFieldValue;
   placeholder?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  inputProps?: Omit<
+    InputProps,
+    "name" | "onChange" | "value" | "defaultValue" | "onBlur"
+  >;
+  minDate?: string;
+  maxDate?: string;
 }
 
 export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
@@ -41,6 +48,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       description,
       warnings,
       onChange,
+      onBlur,
       inputProps,
       ...props
     },
@@ -53,10 +61,12 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       handleInputChange,
       isOpen,
       setIsOpen,
+      handleBlur,
     } = useDatePickerField({
       value,
       defaultValue,
       onChange,
+      onBlur,
     });
 
     return (
@@ -86,6 +96,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           setIsOpen={setIsOpen}
           onInputChange={handleInputChange}
           inputProps={inputProps}
+          handleBlur={handleBlur}
         >
           <Calendar
             mode="single"
@@ -152,7 +163,13 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
   },
 );
 
-export const DatePickerField =
-  withFieldValidation<DatePickerFieldProps>(DatePickerRaw);
+export const DatePickerField = withFieldValidation<DatePickerFieldProps>(
+  DatePickerRaw,
+  {
+    validations: {
+      _datePickerType: validateDatePicker,
+    },
+  },
+);
 
 DatePickerField.displayName = "DatePickerField";
