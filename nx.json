@@ -82,6 +82,7 @@
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
+        "fallbackCurrentVersionResolver": "disk",
         "preserveLocalDependencyProtocols": true
       }
     },
