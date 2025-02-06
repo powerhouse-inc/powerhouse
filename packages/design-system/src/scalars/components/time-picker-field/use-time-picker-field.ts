@@ -126,5 +126,6 @@ export const useTimePickerField = ({
     timeZonesOptions,
     handleBlur,
     timeFormat,
+    is12HourFormat,
   };
 };

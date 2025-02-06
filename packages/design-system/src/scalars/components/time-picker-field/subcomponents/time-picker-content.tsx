@@ -19,6 +19,7 @@ interface TimePickerContentProps {
   minutes: string[];
   timeZonesOptions: SelectBaseProps["options"];
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
+  is12HourFormat: boolean;
 }
 
 const TimePickerContent: React.FC<TimePickerContentProps> = ({
@@ -34,6 +35,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
   minutes,
   timeZonesOptions,
   selectProps,
+  is12HourFormat,
 }) => {
   return (
     <div className="w-full mx-auto relative">
@@ -47,10 +49,12 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
         {...selectProps}
       />
 
-      <TimePeriodSelector
-        selectedPeriod={selectedPeriod}
-        setSelectedPeriod={setSelectedPeriod}
-      />
+      {is12HourFormat && (
+        <TimePeriodSelector
+          selectedPeriod={selectedPeriod}
+          setSelectedPeriod={setSelectedPeriod}
+        />
+      )}
       <div
         className="flex justify-center mt-[14px] h-[148px] mx-auto overflow-hidden"
         style={{

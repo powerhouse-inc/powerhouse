@@ -68,6 +68,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       handleCancel,
       timeZonesOptions,
       handleBlur,
+      is12HourFormat,
     } = useTimePickerField({
       value,
       defaultValue,
@@ -116,6 +117,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
             onCancel={handleCancel}
             timeZonesOptions={timeZonesOptions}
             selectProps={selectProps}
+            is12HourFormat={is12HourFormat}
           />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}
