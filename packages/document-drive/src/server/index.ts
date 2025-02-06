@@ -111,12 +111,46 @@ export * from "../read-mode";
 
 export const PULL_DRIVE_INTERVAL = 5000;
 
-export class BaseDocumentDriveServer implements IBaseDocumentDriveServer
-{
+interface ITransmitterFactory {
+  instance(
+    transmitterType: string,
+    listener: Listener,
+    driveServer: IBaseDocumentDriveServer,
+  ): ITransmitter;
+}
+
+export class TransmitterFactory implements ITransmitterFactory {
+  private readonly listenerManager: IListenerManager;
+
+  constructor(listenerManager: IListenerManager) {
+    this.listenerManager = listenerManager;
+  }
+
+  instance(
+    transmitterType: string,
+    listener: Listener,
+    driveServer: IBaseDocumentDriveServer,
+  ): ITransmitter {
+    switch (transmitterType) {
+      case "SwitchboardPush": {
+        return new SwitchboardPushTransmitter(listener.callInfo!.data!);
+      }
+      case "Internal": {
+        return new InternalTransmitter(listener, driveServer);
+      }
+      default: {
+        return new PullResponderTransmitter(listener, this.listenerManager);
+      }
+    }
+  }
+}
+
+export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   private emitter = createNanoEvents<DriveEvents>();
   private cache: ICache;
   private documentModels: DocumentModel[];
   private storage: IDriveStorage;
+  private transmitterFactory: ITransmitterFactory;
   private listenerManager: IListenerManager;
   private triggerMap = new Map<
     DocumentDriveState["id"],
@@ -159,6 +193,10 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer
       undefined,
       this.options.listenerManager,
     );
+
+    // todo: pull this into the constructor, depends on listenerManager
+    this.transmitterFactory = new TransmitterFactory(this.listenerManager);
+
     this.documentModels = documentModels;
     this.storage = storage;
     this.cache = cache;
@@ -613,23 +651,6 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer
     return errors.length === 0 ? null : errors;
   }
 
-  private newTransmitter(
-    transmitterType: string,
-    listener: Listener,
-  ): ITransmitter {
-    switch (transmitterType) {
-      case "SwitchboardPush": {
-        return new SwitchboardPushTransmitter(listener, this);
-      }
-      case "Internal": {
-        return new InternalTransmitter(listener, this);
-      }
-      default: {
-        return new PullResponderTransmitter(listener, this.listenerManager);
-      }
-    }
-  }
-
   private async _initializeDrive(driveId: string) {
     const drive = await this.getDrive(driveId);
     await this.initializeDriveSyncStatus(driveId, drive);
@@ -639,9 +660,10 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer
     }
 
     for (const zodListener of drive.state.local.listeners) {
-      const transmitter = this.newTransmitter(
+      const transmitter = this.transmitterFactory.instance(
         zodListener.callInfo?.transmitterType ?? "",
         zodListener as any,
+        this,
       );
 
       await this.listenerManager.setListener(driveId, {
@@ -655,7 +677,6 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer
         },
         listenerId: zodListener.listenerId,
         system: zodListener.system,
-        callInfo: zodListener.callInfo ?? undefined,
         label: zodListener.label ?? "",
         transmitter,
       });
@@ -2053,9 +2074,10 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer
         switch (operation.type) {
           case "ADD_LISTENER": {
             const zodListener = operation.input.listener;
-            const transmitter = this.newTransmitter(
+            const transmitter = this.transmitterFactory.instance(
               zodListener.callInfo?.transmitterType ?? "",
               zodListener as any,
+              this,
             );
 
             await this.addListener(drive, transmitter, operation);
