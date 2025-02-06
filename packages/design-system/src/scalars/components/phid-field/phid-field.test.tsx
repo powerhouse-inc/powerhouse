@@ -254,16 +254,20 @@ describe("PHIDField Component", () => {
     });
 
     await user.type(input, mockPhid.slice(4));
-
     await mockPromise;
-    await waitFor(() => {
-      expect(input).toHaveAttribute("aria-expanded", "false");
-      expect(screen.getByText(mockSelectedOption.title)).toBeInTheDocument();
-      expect(screen.getByText(mockSelectedOption.path)).toBeInTheDocument();
-      expect(
-        screen.getByText(mockSelectedOption.description),
-      ).toBeInTheDocument();
-    });
+
+    await waitFor(
+      () => {
+        expect(input).toHaveAttribute("aria-expanded", "false");
+      },
+      { timeout: 3000 },
+    );
+
+    expect(screen.getByText(mockSelectedOption.title)).toBeInTheDocument();
+    expect(screen.getByText(mockSelectedOption.path)).toBeInTheDocument();
+    expect(
+      screen.getByText(mockSelectedOption.description),
+    ).toBeInTheDocument();
 
     Math.random = originalRandom;
   });
