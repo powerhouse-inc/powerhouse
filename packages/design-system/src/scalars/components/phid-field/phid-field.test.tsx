@@ -255,8 +255,6 @@ describe("PHIDField Component", () => {
 
     await user.type(input, mockPhid.slice(4));
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     await mockPromise;
     await waitFor(() => {
       expect(input).toHaveAttribute("aria-expanded", "false");
