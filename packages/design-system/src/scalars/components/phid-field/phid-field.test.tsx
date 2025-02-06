@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
 import { PHIDField } from "./phid-field";
-import { fetchPHIDOptions, fetchSelectedOption } from "./utils";
+import { fetchPHIDOptions } from "./utils";
 import { Form } from "@/scalars/components/form";
 
 vi.mock("./utils", () => ({
@@ -223,51 +223,38 @@ describe("PHIDField Component", () => {
   });
 
   it("should handle value changes and auto selection", async () => {
-    const onChangeMock = vi.fn();
     const user = userEvent.setup();
-    const mockSelectedOption = mockOptions[0];
-    const mockPhid = mockSelectedOption.phid;
+    const mockPromise = Promise.resolve(mockOptions);
+    (fetchPHIDOptions as jest.Mock).mockReturnValue(mockPromise);
 
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
-
-    (fetchPHIDOptions as jest.Mock).mockResolvedValue(mockOptions);
-    const mockPromise = Promise.resolve(mockSelectedOption);
-    (fetchSelectedOption as jest.Mock).mockReturnValue(mockPromise);
 
     renderWithForm(
       <PHIDField
         name="phid"
         label="Test Label"
-        onChange={onChangeMock}
         variant="withIdTitleAndDescription"
       />,
     );
 
     const input = screen.getByRole("combobox");
-    await user.click(input);
-    await user.type(input, "phd:");
 
-    await waitFor(() => {
-      expect(input).toHaveAttribute("aria-expanded", "true");
-      expect(fetchPHIDOptions).toHaveBeenCalled();
-    });
-
-    await user.type(input, mockPhid.slice(4));
+    await user.type(input, mockOptions[0].phid);
     await mockPromise;
+
+    expect(input).toHaveAttribute("aria-expanded", "false");
 
     await waitFor(
       () => {
-        expect(input).toHaveAttribute("aria-expanded", "false");
+        expect(screen.getByText(mockOptions[0].title)).toBeInTheDocument();
+        expect(screen.getByText(mockOptions[0].path)).toBeInTheDocument();
+        expect(
+          screen.getByText(mockOptions[0].description),
+        ).toBeInTheDocument();
       },
-      { timeout: 3000 },
+      { timeout: 2000 },
     );
-
-    expect(screen.getByText(mockSelectedOption.title)).toBeInTheDocument();
-    expect(screen.getByText(mockSelectedOption.path)).toBeInTheDocument();
-    expect(
-      screen.getByText(mockSelectedOption.description),
-    ).toBeInTheDocument();
 
     Math.random = originalRandom;
   });
