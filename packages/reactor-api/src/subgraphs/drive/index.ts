@@ -13,8 +13,8 @@ import {
   ListenerFilter,
   TransmitterType,
 } from "document-model-libs/document-drive";
-import { Asset } from "document-model-libs/real-world-assets";
-import { BaseAction, Operation } from "document-model/document";
+import { Asset } from "./temp-hack-rwa-type-defs";
+import { BaseAction, Document, Operation } from "document-model/document";
 import {
   DocumentModelInput,
   DocumentModelState,
@@ -28,13 +28,15 @@ export class DriveSubgraph extends Subgraph {
   typeDefs = gql`
     type Query {
       system: System
-      drive: DocumentDriveState
-      document(id: ID!): IDocument
+      drive: DocumentDrive_DocumentDriveState
+      document(id: String!): IDocument
       documents: [String!]!
     }
 
     type Mutation {
-      registerPullResponderListener(filter: InputListenerFilter!): Listener
+      registerPullResponderListener(
+        filter: InputListenerFilter!
+      ): DocumentDrive_Listener
       pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
       acknowledge(
         listenerId: String!
@@ -175,6 +177,17 @@ export class DriveSubgraph extends Subgraph {
     Node: {
       __resolveType: (obj: FileNode) => {
         return obj.documentType ? "FileNode" : "FolderNode";
+      },
+    },
+    Document: {
+      operations: async (
+        obj: Document,
+        { first, skip }: { first: number; skip: number },
+        ctx: Context,
+      ) => {
+        const limit = first ?? 0;
+        const start = skip ?? 0;
+        return obj.operations.global.slice(start, start + limit);
       },
     },
     Query: {

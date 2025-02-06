@@ -1,5 +1,5 @@
 import { screen } from "@testing-library/react";
-import TimePickerField from "./time-picker-field";
+import { TimePickerField } from "./time-picker-field";
 import { renderWithForm } from "@/scalars/lib/testing";
 vi.mock("@/powerhouse/components/icon/icon", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (

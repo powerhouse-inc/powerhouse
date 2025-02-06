@@ -1,26 +1,34 @@
-import React, { forwardRef } from "react";
+import { forwardRef } from "react";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
+  InputProps,
+  SelectFieldProps,
+  withFieldValidation,
 } from "../fragments";
 import { FieldCommonProps } from "../types";
 import { TimeFieldValue } from "./type";
 import { BasePickerField } from "../date-time-field/base-picker-field";
+import TimePickerContent from "./subcomponents/time-picker-content";
+import { useTimePickerField } from "./use-time-picker-field";
+import { InputNumberProps } from "../number-field/types";
 
-interface TimePickerFieldProps extends FieldCommonProps<TimeFieldValue> {
+interface TimePickerFieldProps
+  extends FieldCommonProps<TimeFieldValue>,
+    InputNumberProps {
   label?: string;
   id?: string;
   name: string;
   value?: TimeFieldValue;
   defaultValue?: TimeFieldValue;
   placeholder?: string;
+  inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
+  selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
 }
 
-const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
-  // We need to pass the name prop to the TimePicker component
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
   (
     {
       label,
@@ -29,46 +37,75 @@ const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       name,
       placeholder,
       value,
+      onChange,
       defaultValue,
       description,
       warnings,
-      ...props
+      required,
+      disabled,
+      inputProps,
+      selectProps,
     },
     ref,
   ) => {
-    const [inputValue, setInputValue] = React.useState(
-      value ?? defaultValue ?? "",
-    );
-    const [isOpen, setIsOpen] = React.useState(false);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setInputValue(e.target.value);
-    };
+    const {
+      selectedHour,
+      setSelectedHour,
+      selectedMinute,
+      setSelectedMinute,
+      selectedPeriod,
+      setSelectedPeriod,
+      hours,
+      minutes,
+      isOpen,
+      setIsOpen,
+      inputValue,
+      handleInputChange,
+      handleSave,
+      handleCancel,
+      timeZonesOptions,
+    } = useTimePickerField(value, defaultValue, onChange);
 
     return (
       <FormGroup>
         {label && (
           <FormLabel
             htmlFor={id}
-            required={props.required}
-            disabled={props.disabled}
+            required={required}
+            disabled={disabled}
             hasError={!!errors?.length}
           >
             {label}
           </FormLabel>
         )}
         <BasePickerField
-          name={name}
-          placeholder={placeholder}
           iconName="Clock"
           isOpen={isOpen}
+          name={name}
+          errors={errors}
+          disabled={disabled}
+          required={required}
           value={inputValue}
           setIsOpen={setIsOpen}
           onInputChange={handleInputChange}
           ref={ref}
-          {...props}
+          placeholder={placeholder}
+          inputProps={inputProps}
         >
-          <div>Placeholder TimePicker</div>
+          <TimePickerContent
+            selectedHour={selectedHour}
+            selectedMinute={selectedMinute}
+            selectedPeriod={selectedPeriod}
+            setSelectedHour={setSelectedHour}
+            setSelectedMinute={setSelectedMinute}
+            setSelectedPeriod={setSelectedPeriod}
+            hours={hours}
+            minutes={minutes}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            timeZonesOptions={timeZonesOptions}
+            selectProps={selectProps}
+          />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}
         {warnings && <FormMessageList messages={warnings} type="warning" />}
@@ -78,4 +115,6 @@ const TimePickerField = forwardRef<HTMLInputElement, TimePickerFieldProps>(
   },
 );
 
-export default TimePickerField;
+export const TimePickerField =
+  withFieldValidation<TimePickerFieldProps>(TimePickerRaw);
+TimePickerField.displayName = "TimePickerField";

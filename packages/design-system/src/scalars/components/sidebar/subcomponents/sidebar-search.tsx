@@ -1,18 +1,18 @@
 "use client";
 
-import { Icon } from "@/index";
-import { Input } from "../../fragments";
 import { useCallback, useRef } from "react";
 import { useSidebar } from "./sidebar-provider";
-import { cn } from "@/scalars/lib/utils";
+import { Input } from "../../fragments";
+import { Icon } from "@/powerhouse";
+import { cn } from "@/scalars/lib";
 
 export const SidebarSearch = () => {
   const {
-    changeSearchTerm,
     searchTerm,
-    searchLoading,
+    isSearching,
     searchResults,
     activeSearchIndex,
+    changeSearchTerm,
     nextSearchResult,
     previousSearchResult,
   } = useSidebar();
@@ -50,7 +50,7 @@ export const SidebarSearch = () => {
           onKeyDown={handleKeyDown}
           tabIndex={1}
           placeholder="Search"
-          className="w-full pl-8"
+          className="w-full appearance-none pl-8"
           style={{
             paddingRight: (ref.current?.clientWidth ?? 0) + 16,
           }}
@@ -65,7 +65,7 @@ export const SidebarSearch = () => {
             ref={ref}
             className="absolute right-2 top-1/2 flex -translate-y-1/2 select-none items-center gap-2"
           >
-            {searchLoading ? (
+            {isSearching ? (
               <div className="h-4 w-6 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800" />
             ) : (
               <div className="text-xs">

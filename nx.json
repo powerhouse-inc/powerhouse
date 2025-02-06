@@ -28,7 +28,7 @@
       "dependsOn": ["^build"]
     },
     "check-types": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "generate"]
     },
     "generate": {
       "dependsOn": ["^build"]
@@ -41,7 +41,21 @@
     },
     "build": {
       "cache": true,
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "generate"],
+      "inputs": [
+        "noMarkdown",
+        "^noMarkdown",
+        "noStories",
+        "^noStories",
+        "noLicenses",
+        "^noLicenses",
+        "noTests",
+        "^noTests"
+      ]
+    },
+    "build:studio": {
+      "cache": true,
+      "dependsOn": ["^build", "generate"],
       "inputs": [
         "noMarkdown",
         "^noMarkdown",
@@ -60,8 +74,11 @@
     }
   },
   "release": {
-    "projects": ["packages/*"],
+    "projects": ["packages/*", "clis/*", "apps/connect"],
     "projectsRelationship": "independent",
+    "tags": {
+      "apps/connect": "dev"
+    },
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { screen, render } from "@testing-library/react";
-import { Sidebar } from "./sidebar";
-import { SidebarProvider } from "./subcomponents/sidebar-provider";
 import { Icon } from "@/powerhouse";
+import { SidebarProvider } from "./subcomponents/sidebar-provider";
+import { Sidebar } from "./sidebar";
 
 const mockNodes = [
   {
@@ -76,11 +76,5 @@ describe("Sidebar Component", () => {
 
     // Initially pinning area should not be visible
     expect(screen.queryByTestId("pinning-area")).not.toBeInTheDocument();
-  });
-
-  it("should open to default level on mount", () => {
-    renderSidebar({ defaultLevel: 2 });
-    // With defaultLevel 2, child nodes should be visible
-    expect(screen.getByText("Node 1.1")).toBeInTheDocument();
   });
 });

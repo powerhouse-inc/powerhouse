@@ -1,6 +1,6 @@
 import React, { PropsWithChildren } from "react";
 import { FieldCommonProps } from "../types";
-import { Input } from "../fragments";
+import { Input, InputProps } from "../fragments";
 import { cn } from "@/scalars/lib/utils";
 import { IconName } from "@/powerhouse";
 import { Button } from "../fragments/button/button";
@@ -20,6 +20,7 @@ export interface BasePickerFieldProps extends FieldCommonProps<string> {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
 }
 
 export const BasePickerField = React.forwardRef<
@@ -40,6 +41,7 @@ export const BasePickerField = React.forwardRef<
       isOpen,
       setIsOpen,
       onInputChange,
+      inputProps,
     },
     ref,
   ) => {
@@ -111,6 +113,7 @@ export const BasePickerField = React.forwardRef<
             ref={ref}
             disabled={disabled}
             required={required}
+            {...inputProps}
           />
         </div>
       </div>

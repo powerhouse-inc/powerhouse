@@ -4,7 +4,7 @@ import {
   getDefaultArgTypes,
   getValidationArgTypes,
 } from "@/scalars/lib/storybook-arg-types";
-import TimePickerField from "./time-picker-field";
+import { TimePickerField } from "./time-picker-field";
 
 const meta: Meta<typeof TimePickerField> = {
   title: "Document Engineering/Simple Components/Time Picker Field",
@@ -15,10 +15,7 @@ const meta: Meta<typeof TimePickerField> = {
   decorators: [withForm],
   tags: ["autodocs"],
   argTypes: {
-    ...getDefaultArgTypes({
-      valueControlType: "time",
-      valueType: "time",
-    }),
+    ...getDefaultArgTypes(),
     ...getValidationArgTypes(),
   },
 
@@ -34,14 +31,23 @@ export const Default: Story = {
   args: {
     name: "time",
     label: "Pick a time",
-    placeholder: "12:59 PM",
+    placeholder: "HH:mm",
   },
 };
 export const Disabled: Story = {
   args: {
-    name: "date",
-    label: "Pick a date",
-    placeholder: "12:59 PM",
+    name: "time",
+    label: "Pick a time",
+    placeholder: "HH:mm",
     disabled: true,
+  },
+};
+
+export const Filled: Story = {
+  args: {
+    name: "time",
+    label: "Pick a time",
+    value: "12:00 PM",
+    placeholder: "HH:mm",
   },
 };

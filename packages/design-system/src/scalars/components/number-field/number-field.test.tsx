@@ -538,4 +538,184 @@ describe("NumberField", () => {
 
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
+
+  //New test for the issues
+  it("should handle NonPositiveFloat numeric type correctly", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField
+              label="Float Field"
+              name="floatField"
+              numericType="NonPositiveFloat"
+              precision={2}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Float Field");
+    await user.type(input, "-0.90");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      floatField: -0.9,
+    });
+  });
+
+  it("should handle NegativeInt numeric type correctly", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField
+              label="Negative Int Field"
+              name="negativeField"
+              numericType="NegativeInt"
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Negative Int Field");
+    await user.type(input, "-87");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      negativeField: -87,
+    });
+  });
+
+  it("should show placeholder when value is empty", async () => {
+    const placeholder = "Enter a number";
+    const user = userEvent.setup();
+
+    renderWithForm(
+      <NumberField
+        label="Number Field"
+        name="numberField"
+        placeholder={placeholder}
+      />,
+    );
+
+    const input = screen.getByLabelText("Number Field");
+    await user.clear(input);
+
+    expect(input).toHaveAttribute("placeholder", placeholder);
+  });
+
+  it("should increment/decrement by specified step using keyboard", async () => {
+    const user = userEvent.setup();
+    const mockOnChange = vi.fn();
+
+    renderWithForm(
+      <NumberField
+        label="Step Field"
+        name="stepField"
+        value={10}
+        step={2}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const input = screen.getByLabelText("Step Field");
+    await user.type(input, "{arrowup}");
+
+    expect(mockOnChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        target: { value: 12 },
+      }),
+    );
+
+    await user.type(input, "{arrowdown}");
+
+    expect(mockOnChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        target: { value: 10 },
+      }),
+    );
+  });
+
+  it("should handle precision correctly for decimal numbers", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField
+              label="Precision Field"
+              name="precisionField"
+              precision={2}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Precision Field");
+    await user.type(input, "0.9");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      precisionField: 0.9,
+    });
+  });
+
+  it("should accept integer values when numericType is PositiveFloat", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div>
+            <NumberField
+              label="Positive Float Field"
+              name="positiveFloatField"
+              numericType="PositiveFloat"
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Positive Float Field");
+    await user.type(input, "42");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      positiveFloatField: 42,
+    });
+  });
 });

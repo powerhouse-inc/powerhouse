@@ -1,134 +1,217 @@
 "use client";
 
-/* eslint-disable prettier/prettier */
-import React, {
+import {
   createContext,
-  useReducer,
-  useContext,
   useCallback,
-  useState,
+  useContext,
   useEffect,
+  useMemo,
+  useState,
   useTransition,
 } from "react";
-import { SidebarNode } from "../types";
-import { SidebarActionType, sidebarReducer, SidebarState } from "./sidebar-reducer";
-import { getMaxDepth, nodesSearch } from "../utils";
+import type { SidebarNode, FlattenedNode } from "../types";
+import {
+  getMaxDepth,
+  getNodePath,
+  getOpenLevels,
+  isOpenLevel,
+  nodesSearch,
+} from "../utils";
 
 type SidebarContextType = {
-  state: SidebarState;
+  nodes: SidebarNode[];
+  flattenedNodes: FlattenedNode[];
+  pinnedNodePath: SidebarNode[];
+  maxDepth: number;
   searchTerm: string;
-  searchLoading: boolean;
   searchResults: SidebarNode[];
-  setItems: (items: SidebarNode[], defaultLevel?: number) => void;
-  toggleItem: (nodeId: string) => void;
-  openLevel: (level: number) => void;
-  togglePin: (nodeId: string) => void;
-  changeSearchTerm: (newSearchTerm: string) => void;
+  isSearching: boolean;
   activeSearchIndex: number;
+  activeNodeId?: string;
+  toggleNode: (nodeId: string) => void;
+  togglePin: (nodeId: string) => void;
+  openLevel: (level: number) => void;
+  changeSearchTerm: (newTerm: string) => void;
   nextSearchResult: () => void;
   previousSearchResult: () => void;
-  /**
-   * To set the active node id in the provider state. This is intended to be used internally by the sidebar
-   * component to sync the active node id with the provider state.
-   * 
-   * @param nodeId The id of the node to be set as active.
-   */
-  setActiveNodeId: (nodeId?: string) => void;
-  /**
-   * To set the callback internally in the provider to create the actual callback wrapper that
-   * is going to be invoked safely by the sidebar. This callback should be wrapped in a useCallback
-   * to avoid unnecessary re-renders.
-   * 
-   * @param callback The callback to be invoked when the active node changes.
-   */
+  setNodes: (newNodes: SidebarNode[]) => void;
+  syncActiveNodeId: (nodeId?: string) => void;
+  onActiveNodeChange: (nodeId: string) => void;
   setActiveNodeChangeCallback: (callback: (nodeId: string) => void) => void;
-  /**
-   * To handle the active node change from the sidebar. This is invoked by the sidebar items every time
-   * they are clicked/touched.
-   * 
-   * @param nodeId The id of the node that is being clicked/touched.
-   */
-  handleActiveNodeChange: (nodeId: string) => void;
 };
 
 const SidebarContext = createContext<SidebarContextType>({
-  state: { items: [], itemsState: {}, pinnedItems: [], maxDepth: 0 },
+  nodes: [],
+  flattenedNodes: [],
+  pinnedNodePath: [],
+  maxDepth: 4,
   searchTerm: "",
-  searchLoading: false,
   searchResults: [],
-  setItems: () => null,
-  toggleItem: () => null,
-  openLevel: () => null,
-  togglePin: () => null,
-  changeSearchTerm: () => null,
+  isSearching: false,
   activeSearchIndex: 0,
-  nextSearchResult: () => null,
-  previousSearchResult: () => null,
-  setActiveNodeId: () => null,
-  setActiveNodeChangeCallback: () => null,
-  handleActiveNodeChange: () => null,
+  activeNodeId: undefined,
+  toggleNode: () => undefined,
+  togglePin: () => undefined,
+  openLevel: () => undefined,
+  changeSearchTerm: () => undefined,
+  nextSearchResult: () => undefined,
+  previousSearchResult: () => undefined,
+  setNodes: () => undefined,
+  syncActiveNodeId: () => undefined,
+  onActiveNodeChange: () => undefined,
+  setActiveNodeChangeCallback: () => undefined,
 });
 
 interface SidebarProviderProps extends React.PropsWithChildren {
   nodes?: SidebarNode[];
 }
 
-const SidebarProvider: React.FC<SidebarProviderProps> = ({
+const SidebarProvider = ({
   children,
-  nodes,
-}) => {
-  const [state, dispatch] = useReducer(sidebarReducer, {
-    items: nodes || [],
-    itemsState: {},
-    pinnedItems: [],
-    activeNodeId: undefined,
-    maxDepth: getMaxDepth(nodes || []),
-  });
+  nodes: initialNodes,
+}: SidebarProviderProps) => {
+  const [nodes, setNodes] = useState<SidebarNode[]>(initialNodes || []);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [pinnedNodePath, setPinnedNodePath] = useState<SidebarNode[]>([]);
+  const [activeNodeId, setActiveNodeId] = useState<string | undefined>();
+  const [onActiveNodeChange, setOnActiveNodeChange] = useState<
+    (nodeId: string) => void
+  >(() => () => undefined);
 
-  const setItems = useCallback(
-    (items: SidebarNode[]) => {
-      dispatch({ type: SidebarActionType.SET_ITEMS, items });
+  const currentRoots = useMemo(() => {
+    if (pinnedNodePath.length > 0) {
+      return pinnedNodePath[pinnedNodePath.length - 1].children ?? [];
+    }
+    return nodes;
+  }, [nodes, pinnedNodePath]);
+
+  const setActiveNodeChangeCallback = useCallback(
+    (callback: (nodeId: string) => void) => {
+      setOnActiveNodeChange(() => callback);
     },
-    [dispatch],
+    [],
   );
-  const toggleItem = useCallback(
-    (nodeId: string) => {
-      dispatch({ type: SidebarActionType.TOGGLE_ITEM, nodeId });
-    },
-    [dispatch],
-  );
-  const openLevel = useCallback(
-    (level: number) => {
-      dispatch({ type: SidebarActionType.OPEN_LEVEL, level });
-    },
-    [dispatch],
-  );
-  const togglePin = useCallback(
-    (nodeId: string) => {
-      dispatch({ type: SidebarActionType.TOGGLE_PIN, nodeId });
-    },
-    [dispatch],
-  );
-  const changeSearchTerm = useCallback((newSearchTerm: string) => {
-    setSearchTerm(newSearchTerm);
+
+  const syncActiveNodeId = useCallback((nodeId?: string) => {
+    setActiveNodeId(nodeId);
   }, []);
 
-  // search state
+  const toggleNode = useCallback((nodeId: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  }, []);
+
+  const flattenTree = useCallback(
+    (nodes: SidebarNode[]): FlattenedNode[] => {
+      const flattened: FlattenedNode[] = [];
+
+      const dfs = (node: SidebarNode, depth: number) => {
+        const flatNode: FlattenedNode = {
+          ...node,
+          depth,
+          isExpanded: expandedNodes.has(node.id),
+        };
+        flattened.push(flatNode);
+
+        if (Array.isArray(node.children) && expandedNodes.has(node.id)) {
+          for (const child of node.children) {
+            dfs(child, depth + 1);
+          }
+        }
+      };
+
+      for (const node of nodes) {
+        dfs(node, 0);
+      }
+
+      return flattened;
+    },
+    [expandedNodes],
+  );
+
+  const flattenedNodes = useMemo(
+    () => flattenTree(currentRoots),
+    [currentRoots, flattenTree],
+  );
+
+  const maxDepth = useMemo(() => {
+    if (pinnedNodePath.length > 0) {
+      return getMaxDepth(
+        pinnedNodePath[pinnedNodePath.length - 1].children ?? [],
+      );
+    }
+    return getMaxDepth(nodes);
+  }, [nodes, pinnedNodePath]);
+
+  const openPathToNode = useCallback(
+    (nodeId: string) => {
+      const nodePath = getNodePath(currentRoots, nodeId);
+      if (nodePath) {
+        for (const node of nodePath) {
+          setExpandedNodes((prev) => {
+            const next = new Set(prev);
+            next.add(node.id);
+            return next;
+          });
+        }
+      }
+    },
+    [currentRoots],
+  );
+
+  const togglePin = useCallback(
+    (nodeId: string) => {
+      const isPinned =
+        pinnedNodePath.length > 0 &&
+        pinnedNodePath[pinnedNodePath.length - 1].id === nodeId;
+
+      const nodePath = isPinned
+        ? [] // unpin
+        : (getNodePath(nodes, nodeId) ?? []);
+      setPinnedNodePath(nodePath);
+    },
+    [nodes, pinnedNodePath],
+  );
+
+  const openLevel = useCallback(
+    (targetLevel: number) => {
+      const isTargetLevelOpen = isOpenLevel(
+        currentRoots,
+        expandedNodes,
+        targetLevel - 1,
+      );
+
+      if (isTargetLevelOpen) {
+        setExpandedNodes(new Set());
+      } else {
+        setExpandedNodes(getOpenLevels(currentRoots, targetLevel));
+      }
+    },
+    [currentRoots, expandedNodes],
+  );
+
+  // search logic
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<SidebarNode[]>([]);
   const [activeSearchIndex, setActiveSearchIndex] = useState<number>(0);
-  const [searchLoading, startSearch] = useTransition();
+  const [isSearching, startSearch] = useTransition();
 
   useEffect(() => {
     if (searchTerm) {
       // callback to search the nodes
       const searchAction = () => {
-        const nodesToSearch = state.pinnedItems.length > 0 ? state.pinnedItems[state.pinnedItems.length - 1].children ?? [] : state.items;
-        const results = nodesSearch(nodesToSearch, searchTerm, "dfs");
+        const results = nodesSearch(currentRoots, searchTerm, "dfs");
         setSearchResults(results);
         setActiveSearchIndex(0);
         if (results.length > 0) {
-          dispatch({ type: SidebarActionType.OPEN_PATH_TO_NODE, nodeId: results[0].id });
+          openPathToNode(results[0].id);
         }
       };
 
@@ -137,7 +220,7 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
     } else {
       setSearchResults([]);
     }
-  }, [searchTerm, state.items, state.pinnedItems]);
+  }, [currentRoots, searchTerm, openPathToNode]);
 
   useEffect(() => {
     // set the active index in the search results range
@@ -149,52 +232,41 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
   const nextSearchResult = useCallback(() => {
     const nextIndex = Math.min(searchResults.length - 1, activeSearchIndex + 1);
     if (nextIndex !== activeSearchIndex) {
-      dispatch({ type: SidebarActionType.OPEN_PATH_TO_NODE, nodeId: searchResults[nextIndex].id });
+      openPathToNode(searchResults[nextIndex].id);
       setActiveSearchIndex(nextIndex);
     }
-  }, [searchResults, activeSearchIndex, dispatch]);
+  }, [searchResults, activeSearchIndex, openPathToNode]);
 
   const previousSearchResult = useCallback(() => {
     const previousIndex = Math.max(0, activeSearchIndex - 1);
     if (previousIndex !== activeSearchIndex) {
-      dispatch({ type: SidebarActionType.OPEN_PATH_TO_NODE, nodeId: searchResults[previousIndex].id });
+      openPathToNode(searchResults[previousIndex].id);
       setActiveSearchIndex(previousIndex);
     }
-  }, [searchResults, activeSearchIndex, dispatch]);
-
-  const setActiveNodeId = useCallback((nodeId?: string) => {
-    dispatch({ type: SidebarActionType.SET_ACTIVE_NODE_ID, nodeId });
-  }, [dispatch]);
-
-  const [onActiveNodeChangeCallback, setOnActiveNodeChangeCallback] = useState<((nodeId: string) => void) | null>(null);
-  const setActiveNodeChangeCallback = useCallback((callback: (nodeId: string) => void) => {
-    setOnActiveNodeChangeCallback(() => callback);
-  }, [setOnActiveNodeChangeCallback]);
-
-  const handleActiveNodeChange = useCallback((nodeId: string) => {
-    // we don't change the active node id here, it should be changed by the callback, triggering a re-render
-    // when the new updated id is passed to the sidebar component and the sidebar update the provider state.
-    onActiveNodeChangeCallback?.(nodeId);
-  }, [onActiveNodeChangeCallback]);
+  }, [activeSearchIndex, openPathToNode, searchResults]);
 
   return (
     <SidebarContext.Provider
       value={{
-        state,
-        setItems,
-        toggleItem,
-        openLevel,
-        togglePin,
+        nodes,
+        flattenedNodes,
+        pinnedNodePath,
+        maxDepth,
         searchTerm,
-        changeSearchTerm,
-        searchLoading,
         searchResults,
+        isSearching,
         activeSearchIndex,
+        toggleNode,
+        togglePin,
+        openLevel,
+        changeSearchTerm: setSearchTerm,
         nextSearchResult,
         previousSearchResult,
-        setActiveNodeId,
+        setNodes,
+        activeNodeId,
+        syncActiveNodeId,
+        onActiveNodeChange,
         setActiveNodeChangeCallback,
-        handleActiveNodeChange,
       }}
     >
       {children}
@@ -202,34 +274,6 @@ const SidebarProvider: React.FC<SidebarProviderProps> = ({
   );
 };
 
-// TODO: move hooks to separate file
 const useSidebar = () => useContext(SidebarContext);
-const useSidebarNodeState = (nodeId: string): boolean => {
-  const { state } = useSidebar();
-  return !!state.itemsState[nodeId];
-};
-const useSidebarItemPinned = (nodeId: string): boolean => {
-  const { state } = useSidebar();
-  return (
-    state.pinnedItems.length > 0 &&
-    state.pinnedItems[state.pinnedItems.length - 1].id === nodeId
-  );
-};
-const useSidebarIsNodeSearchActive = (nodeId: string): boolean => {
-  const { searchResults, activeSearchIndex } = useSidebar();
-  return searchResults.length > 0 && searchResults[activeSearchIndex].id === nodeId;
-};
-const useSidebarIsNodeActive = (nodeId: string): boolean => {
-  const { state } = useSidebar();
-  return state.activeNodeId === nodeId;
-};
 
-export {
-  SidebarProvider,
-  useSidebar,
-  useSidebarNodeState,
-  useSidebarItemPinned,
-  useSidebarIsNodeSearchActive,
-  useSidebarIsNodeActive,
-};
-export type { SidebarState };
+export { SidebarProvider, useSidebar };

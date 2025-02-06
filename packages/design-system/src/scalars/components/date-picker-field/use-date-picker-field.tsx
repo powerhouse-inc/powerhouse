@@ -1,49 +1,66 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { DateFieldValue } from "./types";
-import { format, isValid } from "date-fns";
-
+import { format, isValid, parse } from "date-fns";
+import { createChangeEvent } from "../time-picker-field/utils";
 interface DatePickerFieldProps {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const useDatePickerField = ({
   value,
   defaultValue,
+  onChange,
 }: DatePickerFieldProps) => {
-  const [date, setDate] = React.useState<Date>();
-  const [inputValue, setInputValue] = React.useState(
-    value ?? defaultValue ?? "",
-  );
   const [isOpen, setIsOpen] = React.useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
+    const newValue = e.target.value;
+    const changeEvent = createChangeEvent(newValue);
+    onChange?.(changeEvent);
   };
 
-  const handleDateSelect = React.useCallback(
+  const handleDateSelect = useCallback(
     (date?: Date) => {
-      setDate(date);
       if (date) {
-        setInputValue(format(date, "MM/dd/yyyy"));
+        const formattedDate = format(date, "MM/dd/yyyy");
+        const changeEvent = createChangeEvent(formattedDate);
+        onChange?.(changeEvent);
       } else {
-        setInputValue("");
+        const changeEvent = createChangeEvent("");
+        onChange?.(changeEvent);
       }
     },
-    [setDate, setInputValue],
+    [onChange],
   );
-  const formatDate = React.useCallback((value: DateFieldValue): string => {
-    if (!value) return "";
 
-    if (typeof value === "string") {
-      return value;
-    }
+  const formatDate = React.useCallback(
+    (value: DateFieldValue): string => {
+      if (!value) return "";
+      if (typeof value === "string") {
+        return value;
+      }
+      if (typeof value === "number") {
+        const date = new Date(value);
+        if (isValid(date)) {
+          const newValue = format(date, "MM/dd/yyyy");
+          const changeEvent = createChangeEvent(newValue);
+          onChange?.(changeEvent);
+        }
+      }
+      if (typeof value === "object" && isValid(value)) {
+        return format(value, "dd/MM/yyyy");
+      }
 
-    if (typeof value === "object" && isValid(value)) {
-      return format(value, "dd/MM/yyyy");
-    }
-    return "";
-  }, []);
+      return "";
+    },
+    [onChange],
+  );
+  const inputValue = formatDate(value ?? defaultValue ?? "");
+
+  const parsedDate = parse(inputValue, "MM/dd/yyyy", new Date());
+  const date = isValid(parsedDate) ? parsedDate : undefined;
 
   return {
     date,
