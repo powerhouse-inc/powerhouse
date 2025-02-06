@@ -79,7 +79,6 @@ import {
   SwitchboardPushTransmitter,
 } from "./listener/transmitter";
 import {
-  AbstractDocumentDriveServer,
   AddOperationOptions,
   DefaultListenerManagerOptions,
   DocumentDriveServerOptions,
@@ -112,9 +111,7 @@ export * from "../read-mode";
 
 export const PULL_DRIVE_INTERVAL = 5000;
 
-export class BaseDocumentDriveServer
-  extends AbstractDocumentDriveServer
-  implements IBaseDocumentDriveServer
+export class BaseDocumentDriveServer implements IBaseDocumentDriveServer
 {
   private emitter = createNanoEvents<DriveEvents>();
   private cache: ICache;
@@ -141,7 +138,6 @@ export class BaseDocumentDriveServer
     queueManager: IQueueManager = new BaseQueueManager(),
     options?: DocumentDriveServerOptions,
   ) {
-    super();
     this.options = {
       ...options,
       defaultDrives: {
