@@ -53,7 +53,6 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       handleInputChange,
       isOpen,
       setIsOpen,
-      formatDate,
     } = useDatePickerField({
       value,
       defaultValue,
@@ -76,7 +75,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           ref={ref}
           label={label}
           id={id}
-          value={formatDate(inputValue)}
+          value={inputValue}
           name={name}
           errors={errors}
           disabled={disabled}

@@ -15,10 +15,7 @@ const meta: Meta<typeof TimePickerField> = {
   decorators: [withForm],
   tags: ["autodocs"],
   argTypes: {
-    ...getDefaultArgTypes({
-      valueControlType: "string",
-      valueType: "string",
-    }),
+    ...getDefaultArgTypes(),
     ...getValidationArgTypes(),
   },
 
@@ -34,14 +31,14 @@ export const Default: Story = {
   args: {
     name: "time",
     label: "Pick a time",
-    placeholder: "12:59 PM",
+    placeholder: "HH:mm",
   },
 };
 export const Disabled: Story = {
   args: {
     name: "time",
     label: "Pick a time",
-    placeholder: "12:59 PM",
+    placeholder: "HH:mm",
     disabled: true,
   },
 };
@@ -51,5 +48,6 @@ export const Filled: Story = {
     name: "time",
     label: "Pick a time",
     value: "12:00 PM",
+    placeholder: "HH:mm",
   },
 };
