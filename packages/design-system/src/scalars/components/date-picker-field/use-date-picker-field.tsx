@@ -6,12 +6,14 @@ interface DatePickerFieldProps {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 export const useDatePickerField = ({
   value,
   defaultValue,
   onChange,
+  onBlur,
 }: DatePickerFieldProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -19,6 +21,10 @@ export const useDatePickerField = ({
     const newValue = e.target.value;
     const changeEvent = createChangeEvent(newValue);
     onChange?.(changeEvent);
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    onBlur?.(e);
   };
 
   const handleDateSelect = useCallback(
@@ -58,7 +64,6 @@ export const useDatePickerField = ({
     [onChange],
   );
   const inputValue = formatDate(value ?? defaultValue ?? "");
-
   const parsedDate = parse(inputValue, "MM/dd/yyyy", new Date());
   const date = isValid(parsedDate) ? parsedDate : undefined;
 
@@ -70,5 +75,6 @@ export const useDatePickerField = ({
     isOpen,
     setIsOpen,
     formatDate,
+    handleBlur,
   };
 };

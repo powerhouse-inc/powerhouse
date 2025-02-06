@@ -7,6 +7,7 @@ export const useTimePickerField = (
   value?: TimeFieldValue,
   defaultValue?: TimeFieldValue,
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void,
 ) => {
   // Get the current hour and minutes
   const now = new Date();
@@ -21,7 +22,9 @@ export const useTimePickerField = (
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange?.(e);
   };
-
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    onBlur?.(e);
+  };
   // Convert the hour to 12-hour format and determine AM/PM
   const formattedHour = currentHour % 12 || 12;
   const period = currentHour >= 12 ? "PM" : "AM";
@@ -99,5 +102,6 @@ export const useTimePickerField = (
     handleCancel,
     handleSave,
     timeZonesOptions,
+    handleBlur,
   };
 };

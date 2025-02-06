@@ -38,6 +38,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       placeholder,
       value,
       onChange,
+      onBlur,
       defaultValue,
       description,
       warnings,
@@ -64,7 +65,8 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       handleSave,
       handleCancel,
       timeZonesOptions,
-    } = useTimePickerField(value, defaultValue, onChange);
+      handleBlur,
+    } = useTimePickerField(value, defaultValue, onChange, onBlur);
 
     return (
       <FormGroup>
@@ -90,6 +92,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           onInputChange={handleInputChange}
           ref={ref}
           placeholder={placeholder}
+          handleBlur={handleBlur}
           inputProps={inputProps}
         >
           <TimePickerContent

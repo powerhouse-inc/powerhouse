@@ -20,6 +20,22 @@ const meta: Meta<typeof DatePickerField> = {
       valueType: "date",
     }),
     ...getValidationArgTypes(),
+    minDate: {
+      control: "date",
+      description: "Minimum selectable date in the date picker",
+      table: {
+        type: { summary: "string" },
+        category: "Component Specific",
+      },
+    },
+    maxDate: {
+      control: "date",
+      description: "Maximum selectable date in the date picker",
+      table: {
+        type: { summary: "string" },
+        category: "Component Specific",
+      },
+    },
   },
   args: {
     name: "date-picker-field",
