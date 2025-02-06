@@ -24,13 +24,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     ...restProps
   } = props;
 
-  const initialTabId = tabs[0].id;
-  const [selectedTab, setSelectedTab] = useState(initialTabId);
+  const [selectedTab, setSelectedTab] = useState(tabs.at(0)?.id);
 
   const tabsContent = tabs.map((tab) => (
-    <button onClick={() => setSelectedTab(tab.id)}>
+    <button onClick={() => setSelectedTab(tab.id)} key={tab.id}>
       <div
-        key={tab.id}
         className={twMerge(
           "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 hover:bg-slate-50",
           selectedTab === tab.id ? "bg-slate-50" : "bg-transparent",
@@ -42,7 +40,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     </button>
   ));
 
-  const selectedTabContent = tabs.find(
+  const SelectedTabContent = tabs.find(
     (tab) => tab.id === selectedTab,
   )?.content;
 
@@ -72,9 +70,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
         <div className="flex flex-1 overflow-hidden">
           <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
           <div className="m-6 flex max-h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50 bg-gray-50">
-            {typeof selectedTabContent === "function"
-              ? selectedTabContent()
-              : selectedTabContent}
+            {typeof SelectedTabContent === "function" ? (
+              <SelectedTabContent />
+            ) : (
+              SelectedTabContent
+            )}
           </div>
         </div>
       </div>
