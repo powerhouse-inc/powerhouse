@@ -20,7 +20,6 @@ import type {
   Signal,
   State,
 } from "document-model/document";
-import { Unsubscribe } from "nanoevents";
 import { BaseDocumentDriveServer } from ".";
 import { IReadModeDriveServer } from "../read-mode/types";
 import { RunAsap } from "../utils";
