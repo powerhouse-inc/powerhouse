@@ -29,8 +29,6 @@ interface TimePickerFieldProps
 }
 
 export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
-  // We need to pass the name prop to the TimePicker component
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (
     {
       label,
@@ -67,6 +65,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       handleCancel,
       timeZonesOptions,
     } = useTimePickerField(value, defaultValue, onChange);
+
     return (
       <FormGroup>
         {label && (
@@ -80,15 +79,18 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           </FormLabel>
         )}
         <BasePickerField
-          placeholder={placeholder}
           iconName="Clock"
           isOpen={isOpen}
           name={name}
+          errors={errors}
+          disabled={disabled}
+          required={required}
           value={inputValue}
           setIsOpen={setIsOpen}
           onInputChange={handleInputChange}
           ref={ref}
-          {...inputProps}
+          placeholder={placeholder}
+          inputProps={inputProps}
         >
           <TimePickerContent
             selectedHour={selectedHour}

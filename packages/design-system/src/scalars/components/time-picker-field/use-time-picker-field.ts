@@ -13,12 +13,12 @@ export const useTimePickerField = (
   const currentHour = getHours(now);
   const currentMinute = getMinutes(now);
   // Input value format time
-  const [inputValue, setInputValue] = useState(value ?? defaultValue ?? "");
+
+  const inputValue = value ?? defaultValue ?? "";
 
   const [isOpen, setIsOpen] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
     onChange?.(e);
   };
 
@@ -53,7 +53,6 @@ export const useTimePickerField = (
     // Convert it to a correctly formatted string
     const formattedTime = format(parsedTime, "hh:mm a");
 
-    setInputValue(formattedTime);
     setIsOpen(false);
     onChange?.(createChangeEvent(formattedTime));
   };
