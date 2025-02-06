@@ -55,11 +55,15 @@ export const viteLoadExternalPackages = (
             name: 'vite-plugin-studio-external-packages',
             handleHotUpdate({ file, server, modules }) {
                 if (file.endsWith('powerhouse.config.json')) {
-                    console.log('External packages file changed, reloading...');
-                    const config = getConfig();
+                    const config = getConfig(file);
                     generateImportScript(
                         config.packages?.map(p => p.packageName) ?? [],
                     );
+
+                    config.packages?.forEach(pkg =>
+                        console.log('-> Loading package:', pkg.packageName),
+                    );
+
                     const module =
                         server.moduleGraph.getModuleById(IMPORT_SCRIPT_FILE);
 

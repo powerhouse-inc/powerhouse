@@ -4,7 +4,7 @@ const ENABLED_EDITORS = import.meta.env.PH_CONNECT_ENABLED_EDITORS || undefined;
 const enabledEditors = ENABLED_EDITORS?.split(',');
 
 const DISABLED_EDITORS =
-    import.meta.env.PH_CONNECT_DISABLED_EDITORS || undefined;
+    import.meta.env.PH_CONNECT_DISABLED_EDITORS || 'powerhouse/document-drive';
 const disabledEditors = DISABLED_EDITORS?.split(',');
 
 export interface FeatureFlag {

@@ -7,7 +7,7 @@ import {
     DocumentSelectSettingsRow,
 } from '@powerhousedao/design-system';
 import { DocumentModel } from 'document-model/document';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
 import PackagesManager from 'src/components/packages-manager';
@@ -50,21 +50,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
     const [documentModelEditor, setDocumentModelEditor] =
         useDefaultDocumentModelEditor();
     const [selectedDocuments, setSelectedDocuments] = useState(
-        mapDocumentModelsToOptions(enabledDocuments),
+        mapDocumentModelsToOptions(enabledDocuments ?? []), // TODO selected documents should update when new document models are loaded
     );
     const { logout, status } = useLogin();
     const user = useUser();
 
-    const onSaveHandler = () => {
-        setConfig(conf => ({
-            ...conf,
-            editors: {
-                enabledEditors: selectedDocuments.map(doc => doc.value),
-            },
-        }));
+    const {
+        content: { showDocumentModelSelectionSetting },
+    } = connectConfig;
+
+    const onSaveHandler = useCallback(() => {
+        if (showDocumentModelSelectionSetting) {
+            setConfig(conf => ({
+                ...conf,
+                editors: {
+                    enabledEditors: selectedDocuments.map(doc => doc.value),
+                },
+            }));
+        }
 
         onClose();
-    };
+    }, [
+        showDocumentModelSelectionSetting,
+        onClose,
+        setConfig,
+        selectedDocuments,
+    ]);
 
     const onClearStorage = () => {
         showModal('confirmationModal', {
