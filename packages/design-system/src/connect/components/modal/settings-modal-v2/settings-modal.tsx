@@ -1,7 +1,6 @@
 import { Icon, Modal } from "@/powerhouse";
 import React, { ComponentProps, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { T } from "vitest/dist/chunks/environment.LoooBwUu.js";
 import { About } from "./about";
 import { DangerZone } from "./danger-zone";
 import { DefaultEditor } from "./default-editor";
