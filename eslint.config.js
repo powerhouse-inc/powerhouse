@@ -15,6 +15,7 @@ const reactRuleOverrides = {
     "react/destructuring-assignment": "off",
     "react/function-component-definition": "off",
     "react/prop-types": "off",
+    "react/button-has-type": "off",
   },
   warn: {
     "react/no-unused-prop-types": "warn",
