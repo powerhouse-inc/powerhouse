@@ -46,13 +46,17 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
       <div className="flex items-center gap-4">
         <Input
           name="package"
-          className="text-gray-700"
+          className="max-w-xs text-gray-700"
           value={value}
           onChange={handleChange}
           onSubmit={handleSubmit}
           disabled={loading}
         />
-        <Button className="h-10" onClick={handleSubmit} disabled={loading}>
+        <Button
+          className="h-9 rounded-md text-sm"
+          onClick={handleSubmit}
+          disabled={loading}
+        >
           Install
         </Button>
       </div>

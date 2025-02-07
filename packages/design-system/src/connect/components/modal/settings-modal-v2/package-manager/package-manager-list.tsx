@@ -34,7 +34,7 @@ const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
 }) => {
   return (
     <div className="flex items-start gap-2 text-sm">
-      <p className="font-medium text-gray-600">{label}:</p>
+      <p className="text-gray-600">{label}:</p>
       <p className="text-gray-600">{value}</p>
     </div>
   );
@@ -62,7 +62,7 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
     <li
       {...rest}
       className={twMerge(
-        "relative flex flex-col items-start rounded-md bg-slate-50 p-3 text-sm leading-5 shadow-sm",
+        "relative flex flex-col items-start rounded-md border border-gray-200 p-3 text-sm leading-5 shadow-sm",
         className,
       )}
     >
@@ -78,11 +78,11 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
           </a>
         }
       />
-      <p className="text-sm font-medium text-gray-600">Modules included:</p>
+      <p className="text-sm text-gray-600">Modules included:</p>
       <ul className="list-disc pl-5">
         {modules.map((module) => (
           <li key={module}>
-            <span className="text-gray-500">{module}</span>
+            <span className="text-gray-600">{module}</span>
           </li>
         ))}
       </ul>
@@ -95,8 +95,8 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
             className: "text-red-900",
           },
         ]}
-        onItemClick={(id) => {
-          if (id === "uninstall") {
+        onItemClick={(optionId) => {
+          if (optionId === "uninstall") {
             onUninstall(id);
           }
         }}
@@ -141,7 +141,7 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
       )}
     >
       <h3 className="mb-4 font-semibold text-gray-900">Installed Packages</h3>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pr-2">
         <ul className="flex flex-col items-stretch gap-4 pr-2">
           {packages.map((pkg) => (
             <PackageManagerListItem
