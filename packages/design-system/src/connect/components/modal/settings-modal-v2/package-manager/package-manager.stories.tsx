@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { useState } from "react";
-import { PackageManager, PackageManagerProps } from "./package-manager";
+import { ComponentPropsWithoutRef, useState } from "react";
+import { mockPackages, mockReactorOptions } from "../mocks";
+import { PackageManager } from "./package-manager";
 
 const meta: Meta<typeof PackageManager> = {
   title: "Connect/Components/PackageManager",
@@ -12,54 +13,14 @@ const meta: Meta<typeof PackageManager> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const reactorOptions = [
-  {
-    label: "Local Reactor",
-    value: "local-reactor",
-  },
-  {
-    label: "Switchboard",
-    value: "switchboard",
-  },
-];
-
-const packages = [
-  {
-    id: "@sky-ph/rwa",
-    name: "RWA Reporting Package",
-    description:
-      "The real world assets portfolio reporting package for the sky ecosystem.",
-    category: "Finance",
-    publisher: "@powerhousedao",
-    publisherUrl: "https://www.powerhouse.inc/",
-    modules: [
-      "Analytics Processor (Switchboard)",
-      "RWA Portfolio Report Document Model (Connect)",
-      "RWA Portfolio Report Editor (Connect)",
-    ],
-  },
-  {
-    id: "@powerhousedao/builder-tooling",
-    name: "Builder Tooling",
-    description:
-      "The real world assets portfolio reporting package for the sky ecosystem.",
-    category: "Finance",
-    publisher: "@powerhousedao",
-    publisherUrl: "https://www.powerhouse.inc/",
-    modules: [
-      "Analytics Processor (Switchboard)",
-      "RWA Portfolio Report Document Model (Connect)",
-      "RWA Portfolio Report Editor (Connect)",
-    ],
-  },
-];
+type Props = ComponentPropsWithoutRef<typeof PackageManager>;
 
 export function PackageManagerWrapper(
-  args: PackageManagerProps = {
+  args: Props = {
     reactor: "local-reactor",
-    options: reactorOptions,
-    packages,
-  } as unknown as PackageManagerProps,
+    options: mockReactorOptions,
+    packages: mockPackages,
+  } as unknown as Props,
 ) {
   const { reactor, onReactorChange, ...rest } = args;
   const [value, setValue] = useState(reactor ?? "");
@@ -72,15 +33,13 @@ export function PackageManagerWrapper(
   );
 }
 
-function PackageManagerStoryWrapper(
-  storyArgs: Partial<PackageManagerProps> = {},
-): Story {
+function PackageManagerStoryWrapper(storyArgs: Partial<Props> = {}): Story {
   const defaultArgs = {
     reactor: "local-reactor",
-    options: reactorOptions,
-    packages,
+    options: mockReactorOptions,
+    packages: mockPackages,
     ...storyArgs,
-  } as PackageManagerProps;
+  } as Props;
   return {
     render: PackageManagerWrapper,
     args: defaultArgs,

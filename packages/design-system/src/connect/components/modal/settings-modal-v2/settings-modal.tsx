@@ -1,21 +1,30 @@
 import { Icon, Modal } from "@/powerhouse";
-import React, { ComponentPropsWithoutRef, useState } from "react";
+import React, { ComponentProps, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { T } from "vitest/dist/chunks/environment.LoooBwUu.js";
+import { About } from "./about";
+import { DangerZone } from "./danger-zone";
+import { DefaultEditor } from "./default-editor";
+import { PackageManager } from "./package-manager";
 
 export type SettingsTab = {
   id: string;
   icon?: React.ReactNode;
   label: React.ReactNode;
-  content: React.ReactNode | (() => React.ReactNode);
+  content: React.ComponentType<any>;
 };
 
-export type SettingsModalProps = ComponentPropsWithoutRef<typeof Modal> & {
+type Props = {
   readonly title: React.ReactNode;
   readonly tabs: SettingsTab[];
   defaultTab?: string;
-};
+} & ComponentProps<typeof Modal> &
+  ComponentProps<typeof About> &
+  ComponentProps<typeof DefaultEditor> &
+  ComponentProps<typeof DangerZone> &
+  ComponentProps<typeof PackageManager>;
 
-export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
+export function SettingsModal(props: Props) {
   const {
     title,
     overlayProps,
@@ -42,9 +51,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     </button>
   ));
 
-  const SelectedTabContent = tabs.find(
+  const selectedTabContent = tabs.find(
     (tab) => tab.id === selectedTab,
-  )?.content;
+  )!.content;
+
+  const SelectedTabComponent = selectedTabContent;
 
   return (
     <Modal
@@ -79,13 +90,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
         <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50">
-          {typeof SelectedTabContent === "function" ? (
-            <SelectedTabContent />
-          ) : (
-            SelectedTabContent
-          )}
+          <SelectedTabComponent {...restProps} />
         </div>
       </div>
     </Modal>
   );
-};
+}

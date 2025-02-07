@@ -2,6 +2,7 @@ import { useArgs } from "@storybook/preview-api";
 import { Meta, StoryObj } from "@storybook/react";
 import { useCallback } from "react";
 import { DefaultEditor } from "./default-editor.js";
+import { mockDocumentModelEditorOptions } from "./mocks.js";
 const meta = {
   title: "Connect/Components/Default Editor",
   component: DefaultEditor,
@@ -10,16 +11,10 @@ const meta = {
 export default meta;
 
 type Story = StoryObj<typeof meta>;
-
-const options = [
-  { label: "V1", value: "document-model-editor" },
-  { label: "V2", value: "document-model-editor-v2" },
-];
-
 export const Default: Story = {
   args: {
-    documentModelEditor: options[0].value,
-    options,
+    documentModelEditor: mockDocumentModelEditorOptions[0].value,
+    documentModelEditorOptions: mockDocumentModelEditorOptions,
     setDocumentModelEditor: () => {},
   },
   render: function Wrapper(args) {

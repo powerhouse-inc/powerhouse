@@ -1,4 +1,3 @@
-import { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import {
   PackageManagerInput,
@@ -13,14 +12,14 @@ import {
   PackageManagerReactorSelectProps,
 } from "./package-manager-select";
 
-export type PackageManagerProps = PackageManagerReactorSelectProps &
+type Props = PackageManagerReactorSelectProps &
   PackageManagerInputProps &
-  PackageManagerListProps &
-  ComponentPropsWithoutRef<"div">;
-export const PackageManager: React.FC<PackageManagerProps> = (props) => {
+  PackageManagerListProps;
+
+export const PackageManager: React.FC<Props> = (props) => {
   const {
     className,
-    options,
+    reactorOptions,
     reactor,
     onReactorChange,
     onInstall,
@@ -38,7 +37,7 @@ export const PackageManager: React.FC<PackageManagerProps> = (props) => {
     >
       <PackageManagerReactorSelect
         reactor={reactor}
-        options={options}
+        reactorOptions={reactorOptions}
         onReactorChange={onReactorChange}
         className="mb-4"
       />
