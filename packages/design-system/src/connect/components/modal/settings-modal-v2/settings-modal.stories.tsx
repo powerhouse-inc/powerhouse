@@ -1,15 +1,17 @@
 import { Icon } from "@/powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
+import { About } from "./about.js";
+import { Default as AboutStory } from "./about.stories.js";
+import { DangerZone } from "./danger-zone.js";
+import { Default as DangerZoneStory } from "./danger-zone.stories.js";
 import { DefaultEditor } from "./default-editor.js";
 import { Default as DefaultEditorStory } from "./default-editor.stories.js";
-import { Default as DangerZoneStory } from "./danger-zone.stories.js";
 import type { PackageManagerProps } from "./package-manager/package-manager.js";
 import {
   WithLoading as PackageManagerStory,
   PackageManagerWrapper,
 } from "./package-manager/package-manager.stories.js";
 import { SettingsModal } from "./settings-modal.js";
-import { DangerZone } from "./danger-zone.js";
 
 const meta: Meta<typeof SettingsModal> = {
   title: "Connect/Components/Modal/SettingsModalV2",
@@ -45,7 +47,7 @@ const tabs = [
     id: "about",
     icon: <Icon name="QuestionSquare" size={12} />,
     label: "About",
-    content: "About Content",
+    content: <About {...AboutStory.args} />,
   },
 ];
 
@@ -54,7 +56,7 @@ export const Primary: Story = {
     open: true,
     title: "Settings",
     tabs,
-    defaultTab: "danger-zone",
+    defaultTab: "about",
   },
   decorators: [
     (Story) => (
