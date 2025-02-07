@@ -3,13 +3,13 @@ import type { FC } from "react";
 import type { DocumentModelState } from "../document-model/";
 import type { BaseAction } from "./actions/types";
 import { BaseDocument } from "./object";
-import { FileInput } from "./utils";
 import { SignalDispatch } from "./signal";
+import { FileInput } from "./utils";
+export type { Immutable } from "mutative";
+export type { BaseAction } from "./actions/types";
 export { z } from "./schema";
 export type * from "./schema/types";
 export type { FileInput } from "./utils";
-export type { BaseAction } from "./actions/types";
-export type { Immutable } from "mutative";
 
 //  [
 //     signerAddress,
@@ -381,7 +381,27 @@ export type Editor<S = unknown, A extends Action = Action, L = unknown> = {
   documentTypes: string[];
 };
 
+export type Manifest = {
+  name: string;
+  description: string;
+  category: string;
+  publisher: {
+    name: string;
+    url: string;
+  };
+  documentModels: {
+    id: string;
+    name: string;
+  }[];
+  editors: {
+    id: string;
+    name: string;
+    documentTypes: string[];
+  }[];
+};
+
 export type DocumentModelLib = {
+  manifest: Manifest;
   documentModels: DocumentModel[];
   editors: Editor[];
 };

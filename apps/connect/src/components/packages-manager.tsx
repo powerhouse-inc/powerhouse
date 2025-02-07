@@ -1,28 +1,6 @@
 import { useState } from 'react';
+import { loadExternalPackage, removeExternalPackage } from 'src/services/hmr';
 import { useExternalPackages } from 'src/store/external-packages';
-import { getHMRModule } from 'src/utils/hmr';
-
-export async function loadExternalPackage(name: string) {
-    const hmr = await getHMRModule();
-    if (hmr) {
-        hmr.send('studio:add-external-package', {
-            name,
-        });
-    } else {
-        console.error('HMR not available.');
-    }
-}
-
-async function handlePackageEvents() {
-    const hmr = await getHMRModule();
-    if (!hmr) {
-        return;
-    }
-    hmr.on('studio:external-package-added', (data: any) => {
-        console.log('External package added:', data);
-    });
-}
-handlePackageEvents().catch(console.error);
 
 export default function PackagesManager() {
     const [name, setName] = useState('');
@@ -42,13 +20,23 @@ export default function PackagesManager() {
                     onChange={e => setName(e.target.value)}
                 />
             </label>
-            <button onClick={() => loadExternalPackage(name)}>Add</button>
+            <button type="submit" onClick={() => loadExternalPackage(name)}>
+                Add
+            </button>
             <ul>
                 {packages.map((pkg, index) => (
                     <li key={index}>
                         {pkg.documentModels
                             .map(dm => dm.documentModel.id)
                             .join(', ')}
+                        <button
+                            type="button"
+                            onClick={() =>
+                                removeExternalPackage('@sky-ph/atlas')
+                            }
+                        >
+                            Delete
+                        </button>
                     </li>
                 ))}
             </ul>
