@@ -1,7 +1,7 @@
+import { DocumentModelLib } from 'document-model/document';
 import { useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
-import { getHMRModule } from 'src/utils/hmr';
-import { DocumentModelsModule } from 'src/utils/types';
+import { subscribeExternalPackages } from 'src/services/hmr';
 
 const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
 const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES === 'true';
@@ -11,32 +11,9 @@ function loadExternalPackages() {
         return Promise.resolve([]);
     } else {
         return import('PH:EXTERNAL_PACKAGES').then(
-            module => module.default as DocumentModelsModule[],
+            module => module.default as DocumentModelLib[],
         );
     }
-}
-
-type PackagesUpdate = {
-    url: string;
-    timestamp: string;
-};
-
-async function subscribeExternalPackages(
-    callback: (modules: Promise<DocumentModelsModule[]>) => void,
-) {
-    const hmr = await getHMRModule();
-    const handler = (data: PackagesUpdate) => {
-        const modules = import(
-            /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
-        ) as Promise<{
-            default: DocumentModelsModule[];
-        }>;
-        callback(modules.then(m => m.default));
-    };
-    hmr?.on('studio:external-packages-updated', handler);
-    return () => {
-        hmr?.off('studio:external-packages-updated', handler);
-    };
 }
 
 // fetches the initial external packages only when needed
