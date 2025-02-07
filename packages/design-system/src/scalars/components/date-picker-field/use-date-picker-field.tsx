@@ -1,12 +1,14 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { DateFieldValue } from "./types";
-import { format, isValid, parse } from "date-fns";
+import { format, isValid, parse, startOfDay } from "date-fns";
 import { createChangeEvent } from "../time-picker-field/utils";
 interface DatePickerFieldProps {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  disablePastDates?: boolean;
+  disableFutureDates?: boolean;
   dateFormat?: string;
 }
 
@@ -15,10 +17,11 @@ export const useDatePickerField = ({
   defaultValue,
   onChange,
   onBlur,
+  disablePastDates,
+  disableFutureDates,
   dateFormat = "yyyy-MM-dd",
 }: DatePickerFieldProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     const changeEvent = createChangeEvent(newValue);
@@ -68,6 +71,28 @@ export const useDatePickerField = ({
   const inputValue = formatDate(value ?? defaultValue ?? "");
   const parsedDate = parse(inputValue, dateFormat, new Date());
   const date = isValid(parsedDate) ? parsedDate : undefined;
+
+  const today = useMemo(() => startOfDay(new Date()), []);
+
+  const disabledDates = useMemo(
+    () =>
+      disablePastDates && disableFutureDates
+        ? {
+            before: today,
+            after: today,
+          }
+        : disablePastDates
+          ? {
+              before: today,
+            }
+          : disableFutureDates
+            ? {
+                after: today,
+              }
+            : undefined,
+    [disablePastDates, disableFutureDates, today],
+  );
+
   return {
     date,
     inputValue,
@@ -77,5 +102,6 @@ export const useDatePickerField = ({
     setIsOpen,
     formatDate,
     handleBlur,
+    disabledDates,
   };
 };

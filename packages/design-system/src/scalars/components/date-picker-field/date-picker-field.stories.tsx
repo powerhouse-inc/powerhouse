@@ -37,6 +37,22 @@ const meta: Meta<typeof DatePickerField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    disablePastDates: {
+      control: "boolean",
+      description: "Disable past dates in the date picker",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    disableFutureDates: {
+      control: "boolean",
+      description: "Disable future dates in the date picker",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     dateFormat: {
       control: {
         type: "select",

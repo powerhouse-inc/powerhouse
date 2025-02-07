@@ -31,6 +31,8 @@ export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   >;
   minDate?: string;
   maxDate?: string;
+  disablePastDates?: boolean;
+  disableFutureDates?: boolean;
   dateFormat?: string;
 }
 
@@ -51,6 +53,8 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       onChange,
       onBlur,
       inputProps,
+      disablePastDates,
+      disableFutureDates,
       dateFormat = "yyyy-MM-dd",
       ...props
     },
@@ -64,11 +68,14 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       isOpen,
       setIsOpen,
       handleBlur,
+      disabledDates,
     } = useDatePickerField({
       value,
       defaultValue,
       onChange,
       onBlur,
+      disablePastDates,
+      disableFutureDates,
       dateFormat,
     });
 
@@ -106,6 +113,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
             required={true}
             selected={date}
             onSelect={handleDateSelect}
+            disabled={disabledDates}
             className={cn(
               "w-full",
               "p-0",
