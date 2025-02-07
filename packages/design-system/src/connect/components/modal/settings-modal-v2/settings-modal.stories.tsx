@@ -56,7 +56,6 @@ export const Primary: Story = {
     open: true,
     title: "Settings",
     tabs,
-    defaultTab: "about",
   },
   decorators: [
     (Story) => (

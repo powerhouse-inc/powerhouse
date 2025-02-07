@@ -51,7 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
       contentProps={{
         ...contentProps,
         className: twMerge(
-          "size-full max-w-4xl rounded-xl",
+          "min-h-full w-full max-w-4xl rounded-xl",
           contentProps?.className,
         ),
         style: {
@@ -67,25 +67,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
       }}
       {...restProps}
     >
-      <div className="flex-col text-gray-900">
-        <div className="flex justify-between border-b border-slate-50 p-4">
-          <h1 className="text-center text-xl font-semibold">{title}</h1>
-          <button
-            className="flex size-6 items-center justify-center rounded-md outline-none"
-            onClick={() => onOpenChange?.(false)}
-          >
-            <Icon name="XmarkLight" size={24} />
-          </button>
-        </div>
-        <div className="flex flex-1 overflow-hidden">
-          <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
-          <div className="m-6 flex max-h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50 bg-gray-50">
-            {typeof SelectedTabContent === "function" ? (
-              <SelectedTabContent />
-            ) : (
-              SelectedTabContent
-            )}
-          </div>
+      <div className="flex justify-between border-b border-slate-50 p-4">
+        <h1 className="text-center text-xl font-semibold">{title}</h1>
+        <button
+          className="flex size-6 items-center justify-center rounded-md outline-none"
+          onClick={() => onOpenChange?.(false)}
+        >
+          <Icon name="XmarkLight" size={24} />
+        </button>
+      </div>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
+        <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50">
+          {typeof SelectedTabContent === "function" ? (
+            <SelectedTabContent />
+          ) : (
+            SelectedTabContent
+          )}
         </div>
       </div>
     </Modal>
