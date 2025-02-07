@@ -31,6 +31,7 @@ export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   >;
   minDate?: string;
   maxDate?: string;
+  dateFormat?: string;
 }
 
 export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
@@ -50,6 +51,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       onChange,
       onBlur,
       inputProps,
+      dateFormat = "yyyy-MM-dd",
       ...props
     },
     ref,
@@ -67,6 +69,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       defaultValue,
       onChange,
       onBlur,
+      dateFormat,
     });
 
     return (

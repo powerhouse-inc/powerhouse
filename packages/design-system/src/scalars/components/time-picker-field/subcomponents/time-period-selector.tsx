@@ -3,7 +3,7 @@ import { TimePeriod } from "../type";
 import { Button } from "../../fragments/button";
 
 interface TimePeriodSelectorProps {
-  selectedPeriod: TimePeriod;
+  selectedPeriod?: TimePeriod;
   setSelectedPeriod: (period: TimePeriod) => void;
 }
 
