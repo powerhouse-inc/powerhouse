@@ -1,0 +1,17 @@
+import { Meta, StoryObj } from "@storybook/react";
+import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
+import { About } from "./about.js";
+const meta: Meta<typeof About> = {
+  title: "Connect/Components/Modal/SettingsModalV2/About",
+  component: About,
+};
+
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {
+  args: {
+    packageJson: mockPackageJson,
+  },
+};

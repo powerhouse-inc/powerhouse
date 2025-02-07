@@ -1,75 +1,85 @@
 import { useState } from "react";
+import { object, record, string } from "zod";
 import { Disclosure } from "../../../disclosure";
 
-export type ConnectAppPackageJson = {
+const REQUIRED_DEPENDENCIES = [
+  "@powerhousedao/design-system",
+  "document-drive",
+  "document-model",
+  "document-model-libs",
+] as const;
+
+type RequiredDependencies = Record<
+  (typeof REQUIRED_DEPENDENCIES)[number],
+  string
+>;
+
+const PackageJsonSchema = object({
+  version: string({ message: "Missing version field in package.json" }),
+  dependencies: record(string(), string()).nullable(),
+  devDependencies: record(string(), string()).nullable(),
+})
+  .refine(
+    (data) => data.dependencies != null || data.devDependencies != null,
+    "package.json must have either dependencies or devDependencies",
+  )
+  .transform((data) => {
+    const allDependencies = {
+      ...data.dependencies,
+      ...data.devDependencies,
+    };
+
+    // Check if all required dependencies exist
+    const missingDeps = REQUIRED_DEPENDENCIES.filter(
+      (dep) =>
+        !allDependencies[dep] || typeof allDependencies[dep] !== "string",
+    );
+
+    if (missingDeps.length > 0) {
+      console.error(
+        "Missing or invalid dependencies:",
+        missingDeps,
+        "Available dependencies:",
+        Object.keys(allDependencies),
+      );
+      return false;
+    }
+
+    return {
+      version: data.version,
+      dependencies: Object.fromEntries(
+        REQUIRED_DEPENDENCIES.map((dep) => [dep, allDependencies[dep]]),
+      ) as RequiredDependencies,
+    };
+  });
+
+type ValidatedPackageJson = {
   version: string;
-  devDependencies: {
-    "@powerhousedao/design-system": string;
-    "document-drive": string;
-    "document-model": string;
-    "document-model-libs": string;
-  };
+  dependencies: RequiredDependencies;
 };
 
 export function verifyPackageJsonFields(
   packageJson: unknown,
-): asserts packageJson is ConnectAppPackageJson {
-  if (!packageJson || typeof packageJson !== "object") {
-    throw new Error("Invalid package.json");
+): ValidatedPackageJson | false {
+  const parsed = PackageJsonSchema.safeParse(packageJson);
+  if (!parsed.success) {
+    console.error("Package.json validation failed:", parsed.error.format());
+    return false;
   }
-  if (!("version" in packageJson)) {
-    throw new Error("Missing version field in package.json");
-  }
-  if (!("devDependencies" in packageJson)) {
-    throw new Error("Missing devDependencies field in package.json");
-  }
-  if (typeof packageJson.version !== "string") {
-    throw new Error("Invalid version field in package.json");
-  }
-  if (
-    !packageJson.devDependencies ||
-    typeof packageJson.devDependencies !== "object"
-  ) {
-    throw new Error("Invalid devDependencies field in package.json");
-  }
-  if (
-    !("@powerhousedao/design-system" in packageJson.devDependencies) ||
-    typeof packageJson.devDependencies["@powerhousedao/design-system"] !==
-      "string"
-  ) {
-    throw new Error("Invalid @powerhousedao/design-system dependency");
-  }
-  if (
-    !("document-drive" in packageJson.devDependencies) ||
-    typeof packageJson.devDependencies["document-drive"] !== "string"
-  ) {
-    throw new Error("Invalid document-drive dependency");
-  }
-  if (
-    !("document-model" in packageJson.devDependencies) ||
-    typeof packageJson.devDependencies["document-model"] !== "string"
-  ) {
-    throw new Error("Invalid document-model dependency");
-  }
-  if (
-    !("document-model-libs" in packageJson.devDependencies) ||
-    typeof packageJson.devDependencies["document-model-libs"] !== "string"
-  ) {
-    throw new Error("Invalid document-model-libs dependency");
-  }
+  return parsed.data;
 }
 
 type Props = {
   readonly packageJson: unknown;
 };
+
 export function DependencyVersions(props: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const { packageJson } = props;
 
-  try {
-    verifyPackageJsonFields(packageJson);
-  } catch (e) {
-    console.error(e);
+  const validatedData = verifyPackageJsonFields(packageJson);
+  if (!validatedData) {
+    console.error("Failed to validate package.json data");
     return null;
   }
 
@@ -77,33 +87,17 @@ export function DependencyVersions(props: Props) {
     <Disclosure
       isOpen={isOpen}
       onOpenChange={() => setIsOpen(!isOpen)}
-      title={`App version: ${packageJson.version}`}
+      title={`App version: ${validatedData.version}`}
     >
       <ul className="text-gray-800">
-        <li className="my-1 flex justify-between pr-1">
-          <span>design-system:</span>
-          <span className="font-medium">
-            {packageJson.devDependencies["@powerhousedao/design-system"]}
-          </span>
-        </li>
-        <li className="my-1 flex justify-between pr-1">
-          <span>document-drive:</span>{" "}
-          <span className="font-medium">
-            {packageJson.devDependencies["document-drive"]}
-          </span>
-        </li>
-        <li className="my-1 flex justify-between pr-1">
-          <span>document-model:</span>{" "}
-          <span className="font-medium">
-            {packageJson.devDependencies["document-model"]}
-          </span>
-        </li>
-        <li className="my-1 flex justify-between pr-1">
-          <span>document-model-libs:</span>{" "}
-          <span className="font-medium">
-            {packageJson.devDependencies["document-model-libs"]}
-          </span>
-        </li>
+        {REQUIRED_DEPENDENCIES.map((dep) => (
+          <li key={dep} className="my-1 flex justify-between pr-1">
+            <span>{dep.replace("@powerhousedao/", "")}:</span>
+            <span className="font-medium">
+              {validatedData.dependencies[dep]}
+            </span>
+          </li>
+        ))}
       </ul>
     </Disclosure>
   );
