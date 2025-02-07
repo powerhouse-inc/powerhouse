@@ -76,6 +76,7 @@ export const DatePicker: Story = {
     description: "This is a date picker field",
     showDateSelect: true,
     showTimeSelect: false,
+    placeholder: "2025/01/27",
   },
 };
 
