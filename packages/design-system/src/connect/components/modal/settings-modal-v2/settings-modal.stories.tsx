@@ -7,6 +7,7 @@ import {
 import { Icon } from "@/powerhouse";
 import { useArgs, useCallback } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
+import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
 import { About } from "./about.js";
 import { DangerZone } from "./danger-zone.js";
 import { DefaultEditor } from "./default-editor.js";
@@ -17,7 +18,6 @@ import {
 } from "./mocks.js";
 import { PackageManager } from "./package-manager/package-manager.js";
 import { SettingsModal } from "./settings-modal.js";
-import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
 
 const meta: Meta<typeof SettingsModal> = {
   title: "Connect/Components/Modal/SettingsModalV2",

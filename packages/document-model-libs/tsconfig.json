@@ -14,6 +14,7 @@
     }
   },
   "include": [
+    "powerhouse.manifest.json",
     ".storybook/**/*.ts",
     ".storybook/**/*.tsx",
     "document-models/**/*.ts",
