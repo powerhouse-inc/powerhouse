@@ -53,8 +53,26 @@ const meta: Meta<typeof DatePickerField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    dateFormat: {
+      control: {
+        type: "select",
+      },
+      options: [
+        "yyyy-MM-dd",
+        "dd-MM-yyyy",
+        "MM-dd-yyyy",
+        "dd-MMM-yyyy",
+        "MMM-dd-yyyy",
+      ],
+      table: {
+        defaultValue: { summary: "yyyy-MM-dd" },
+        type: {
+          summary: "string",
+        },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
-
   args: {
     name: "date-picker-field",
   },
