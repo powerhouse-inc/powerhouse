@@ -16,7 +16,7 @@ const options = [
   { label: "V2", value: "document-model-editor-v2" },
 ];
 
-export const DefaultEditorStory: Story = {
+export const Default: Story = {
   args: {
     documentModelEditor: options[0].value,
     options,

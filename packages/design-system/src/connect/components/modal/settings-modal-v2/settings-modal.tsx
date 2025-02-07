@@ -12,6 +12,7 @@ export type SettingsTab = {
 export type SettingsModalProps = ComponentPropsWithoutRef<typeof Modal> & {
   readonly title: React.ReactNode;
   readonly tabs: SettingsTab[];
+  defaultTab?: string;
 };
 
 export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
@@ -21,10 +22,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     contentProps,
     onOpenChange,
     tabs,
+    defaultTab,
     ...restProps
   } = props;
 
-  const [selectedTab, setSelectedTab] = useState(tabs.at(0)?.id);
+  const [selectedTab, setSelectedTab] = useState(defaultTab ?? tabs.at(0)?.id);
 
   const tabsContent = tabs.map((tab) => (
     <button onClick={() => setSelectedTab(tab.id)} key={tab.id}>
@@ -48,16 +50,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     <Modal
       contentProps={{
         ...contentProps,
-        className: twMerge("rounded-xl", contentProps?.className),
+        className: twMerge(
+          "size-full max-w-4xl rounded-xl",
+          contentProps?.className,
+        ),
+        style: {
+          ...contentProps?.style,
+          boxShadow:
+            "0px 0px 16px 4px rgba(0, 0, 0, 0.04), 0px 33px 32px -16px rgba(0, 0, 0, 0.10)",
+        },
       }}
       onOpenChange={onOpenChange}
       overlayProps={{
         ...overlayProps,
-        className: twMerge("top-10", overlayProps?.className),
+        className: twMerge("py-28", overlayProps?.className),
       }}
       {...restProps}
     >
-      <div className="flex h-screen max-h-[700px] w-screen max-w-[900px] flex-col text-gray-900">
+      <div className="flex-col text-gray-900">
         <div className="flex justify-between border-b border-slate-50 p-4">
           <h1 className="text-center text-xl font-semibold">{title}</h1>
           <button

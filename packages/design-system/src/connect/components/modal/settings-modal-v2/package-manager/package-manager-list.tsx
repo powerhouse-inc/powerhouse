@@ -89,13 +89,17 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
       <ConnectDropdownMenu
         items={[
           {
-            id,
+            id: "uninstall",
             label: "Uninstall",
             icon: <Icon name="Trash" />,
             className: "text-red-900",
           },
         ]}
-        onItemClick={(id) => onUninstall(id)}
+        onItemClick={(id) => {
+          if (id === "uninstall") {
+            onUninstall(id);
+          }
+        }}
         onOpenChange={setIsDropdownMenuOpen}
         open={isDropdownMenuOpen}
       >

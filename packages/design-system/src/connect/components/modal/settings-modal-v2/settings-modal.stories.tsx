@@ -1,13 +1,15 @@
 import { Icon } from "@/powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { DefaultEditor } from "./default-editor";
-import { DefaultEditorStory } from "./default-editor.stories";
-import { PackageManagerProps } from "./package-manager";
+import { DefaultEditor } from "./default-editor.js";
+import { Default as DefaultEditorStory } from "./default-editor.stories.js";
+import { Default as DangerZoneStory } from "./danger-zone.stories.js";
+import type { PackageManagerProps } from "./package-manager/package-manager.js";
 import {
   WithLoading as PackageManagerStory,
   PackageManagerWrapper,
-} from "./package-manager/package-manager.stories";
-import { SettingsModal } from "./settings-modal";
+} from "./package-manager/package-manager.stories.js";
+import { SettingsModal } from "./settings-modal.js";
+import { DangerZone } from "./danger-zone.js";
 
 const meta: Meta<typeof SettingsModal> = {
   title: "Connect/Components/Modal/SettingsModalV2",
@@ -37,7 +39,7 @@ const tabs = [
     id: "danger-zone",
     icon: <Icon name="Danger" size={12} className="text-red-900" />,
     label: <span className="text-red-900">Danger Zone</span>,
-    content: "Danger Zone Content",
+    content: <DangerZone {...DangerZoneStory.args} />,
   },
   {
     id: "about",
@@ -52,5 +54,13 @@ export const Primary: Story = {
     open: true,
     title: "Settings",
     tabs,
+    defaultTab: "danger-zone",
   },
+  decorators: [
+    (Story) => (
+      <div className="h-dvh bg-gray-50">
+        <Story />
+      </div>
+    ),
+  ],
 };
