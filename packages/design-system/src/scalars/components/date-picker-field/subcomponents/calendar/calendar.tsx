@@ -174,8 +174,6 @@ const Calendar = ({
       showOutsideDays={showOutsideDays}
       numberOfMonths={columnsDisplayed}
       disabled={disabledDates}
-      // disabled={
-
       className={cn(
         "w-auto p-3 dark:border-gray-900 dark:bg-slate-600",
         className,

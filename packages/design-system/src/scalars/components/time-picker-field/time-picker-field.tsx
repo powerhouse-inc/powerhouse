@@ -15,7 +15,7 @@ import TimePickerContent from "./subcomponents/time-picker-content";
 import { useTimePickerField } from "./use-time-picker-field";
 import { InputNumberProps } from "../number-field/types";
 
-interface TimePickerFieldProps
+export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
     InputNumberProps {
   label?: string;
