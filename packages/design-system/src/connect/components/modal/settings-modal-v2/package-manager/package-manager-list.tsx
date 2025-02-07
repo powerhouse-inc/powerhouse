@@ -1,11 +1,6 @@
 import { ConnectDropdownMenu } from "@/connect/components/dropdown-menu";
 import { Icon } from "@/powerhouse/components/icon";
-import React, {
-  ComponentPropsWithoutRef,
-  ReactNode,
-  useCallback,
-  useState,
-} from "react";
+import React, { ReactNode, useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type PackageDetails = {
@@ -19,14 +14,16 @@ export type PackageDetails = {
 };
 
 export type PackageManagerListProps = {
-  readonly packages: PackageDetails[];
-  readonly onUninstall: (id: string) => void;
-} & ComponentPropsWithoutRef<"div">;
+  packages: PackageDetails[];
+  onUninstall: (id: string) => void;
+  className?: string;
+};
 
 export type PackageManagerListItemProps = {
-  readonly package: PackageDetails;
-  readonly onUninstall: (id: string) => void;
-} & ComponentPropsWithoutRef<"li">;
+  package: PackageDetails;
+  onUninstall: (id: string) => void;
+  className?: string;
+};
 
 const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
   label,
@@ -55,12 +52,10 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
     },
     onUninstall,
     className,
-    ...rest
   } = props;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   return (
     <li
-      {...rest}
       className={twMerge(
         "relative flex flex-col items-start rounded-md border border-gray-200 p-3 text-sm leading-5 shadow-sm",
         className,

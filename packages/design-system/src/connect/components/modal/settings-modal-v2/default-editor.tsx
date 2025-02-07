@@ -5,7 +5,7 @@ import { twMerge } from "tailwind-merge";
 type Props = {
   documentModelEditor: string;
   setDocumentModelEditor: (value: string) => void;
-  options: SelectOption[];
+  documentModelEditorOptions: SelectOption[];
   className?: string;
 };
 
@@ -19,8 +19,12 @@ export function DefaultEditor(props: Props) {
 }
 
 export function DefaultEditorSelect(props: Props) {
-  const { documentModelEditor, setDocumentModelEditor, options, className } =
-    props;
+  const {
+    documentModelEditor,
+    setDocumentModelEditor,
+    documentModelEditorOptions,
+    className,
+  } = props;
 
   return (
     <div>
@@ -32,7 +36,7 @@ export function DefaultEditorSelect(props: Props) {
         name="default-editor"
         required
         value={documentModelEditor}
-        options={options}
+        options={documentModelEditorOptions}
         multiple={false}
         onChange={(value) => setDocumentModelEditor(value as string)}
       />

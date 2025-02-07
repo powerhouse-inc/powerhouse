@@ -4,11 +4,12 @@ import { ComponentPropsWithoutRef, useCallback, useState } from "react";
 
 export type PackageManagerInputProps = {
   onInstall: (value: string) => void | Promise<void>;
-} & ComponentPropsWithoutRef<"div">;
+  className?: string;
+};
 export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
   props: PackageManagerInputProps,
 ) => {
-  const { onInstall, ...rest } = props;
+  const { onInstall, className } = props;
 
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,7 +42,7 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
         : (error as string);
 
   return (
-    <div {...rest}>
+    <div className={className}>
       <h3 className="mb-4 font-semibold text-gray-900">Install Package</h3>
       <div className="flex items-center gap-4">
         <Input
