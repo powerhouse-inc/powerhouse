@@ -1,4 +1,4 @@
-import { DocumentModelLib } from 'document-model/document';
+import { ExternalPackage } from 'src/store/external-packages';
 export type PackagesUpdate = {
     url: string;
     timestamp: string;
@@ -18,14 +18,21 @@ export async function getHMRModule() {
     }
 }
 
-export async function loadExternalPackage(name: string) {
+export async function addExternalPackage(name: string) {
     const hmr = await getHMRModule();
     if (!hmr) {
         throw new Error('HMR not available.');
     }
 
-    hmr.send('studio:add-external-package', {
-        name,
+    return new Promise<void>(resolve => {
+        function handle(addedPackage: { name: string }) {
+            if (name === addedPackage.name) {
+                resolve();
+                hmr?.off('studio:external-package-added', handle);
+            }
+        }
+        hmr.on('studio:external-package-added', handle);
+        hmr.send('studio:add-external-package', { name });
     });
 }
 
@@ -46,25 +53,6 @@ export async function removeExternalPackage(name: string) {
         hmr.send('studio:remove-external-package', { name });
     });
 }
-
-export async function addExternalPackage(name: string) {
-    const hmr = await getHMRModule();
-    if (!hmr) {
-        throw new Error('HMR not available.');
-    }
-
-    return new Promise<void>(resolve => {
-        function handle(removedPackage: { name: string }) {
-            if (name === removedPackage.name) {
-                resolve();
-                hmr?.off('studio:external-package-removed', handle);
-            }
-        }
-        hmr.on('studio:external-package-added', handle);
-        hmr.send('studio:add-external-package', { name });
-    });
-}
-
 export async function handlePackageEvents(
     handler: (data: { name: string }) => void,
 ) {
@@ -78,14 +66,14 @@ export async function handlePackageEvents(
 }
 
 export async function subscribeExternalPackages(
-    callback: (modules: Promise<DocumentModelLib[]>) => void,
+    callback: (modules: Promise<ExternalPackage[]>) => void,
 ) {
     const hmr = await getHMRModule();
     const handler = (data: PackagesUpdate) => {
         const modules = import(
             /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
         ) as Promise<{
-            default: DocumentModelLib[];
+            default: ExternalPackage[];
         }>;
         callback(modules.then(m => m.default));
     };

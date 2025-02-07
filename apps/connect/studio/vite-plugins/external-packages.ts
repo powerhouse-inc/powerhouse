@@ -31,7 +31,16 @@ export function generateImportScript(packages: string[]) {
         counter++;
     }
 
-    const exportStatement = `export default [${moduleNames.join(', ')}];`;
+    const exportStatement = `export default [
+        ${moduleNames
+            .map(
+                (name, index) => `{
+            id: "${packages[index]}",
+            ...${name},
+        }`,
+            )
+            .join(',\n')}
+    ];`;
 
     const fileContent = `${imports.join('\n')}\n\n${exportStatement}`;
     fs.writeFileSync(IMPORT_SCRIPT_FILE, fileContent);
