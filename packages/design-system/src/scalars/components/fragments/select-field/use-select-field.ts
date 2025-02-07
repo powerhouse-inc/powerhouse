@@ -99,19 +99,6 @@ export function useSelectField({
     }
   }, [isPopoverOpen, haveBeenOpened, onBlur]);
 
-  useEffect(() => {
-    if (!multiple && selectedValues.length > 1) {
-      isInternalChange.current = true;
-      setSelectedValues([selectedValues[0]]);
-      onChange?.(selectedValues[0]);
-      return;
-    }
-    if (selectedValues.length > 0) {
-      isInternalChange.current = true;
-      onChange?.(multiple ? [selectedValues[0]] : selectedValues[0]);
-    }
-  }, [multiple]);
-
   return {
     selectedValues,
     isPopoverOpen,

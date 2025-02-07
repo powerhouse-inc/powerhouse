@@ -79,27 +79,12 @@ export const withFieldValidation = <T extends PossibleProps>(
     useEffect(() => {
       if (initialized) {
         setValue(name, value);
-      } else {
-        // set default value
-        if (value === undefined) {
-          setValue(name, props.defaultValue ?? defaultValues?.[name]);
-        }
       }
       setInitialized(true);
       // initialized can not be in the dependencies because it would cause
       // a change of the value on initial render
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [name, value]);
-
-    // Sync form state with external value prop
-    useEffect(() => {
-      const formValue = getValues(name) as unknown;
-      if (formValue !== value && formValue !== undefined && onChangeProp) {
-        onChangeProp({
-          target: { value: formValue },
-        } as unknown as React.ChangeEvent<unknown>);
-      }
-    }, [getValues(name)]);
 
     if (value !== undefined && !onChangeProp) {
       console.warn(
