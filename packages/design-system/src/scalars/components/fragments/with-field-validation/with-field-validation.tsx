@@ -129,9 +129,6 @@ export const withFieldValidation = <T extends PossibleProps>(
             (event: React.ChangeEvent<HTMLInputElement>) => {
               // update value state
               if (onChangeProp) {
-                // the fields is controlled by the parent
-                onChangeProp(event);
-
                 if (Object.hasOwn(event, "target")) {
                   // it is probably an actual event
                   setValue(name, event.target.value);
@@ -139,6 +136,9 @@ export const withFieldValidation = <T extends PossibleProps>(
                   // it is a custom onChange and it pass the value directly
                   setValue(name, event);
                 }
+
+                // the fields is controlled by the parent
+                onChangeProp(event);
               } else {
                 // sometimes the onChange is overridden by the parent and use the new value as parameter instead of event
                 let value: unknown = event;

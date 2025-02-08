@@ -142,6 +142,7 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
       );
 
       if (transformedValue !== event.target.value) {
+        setValue((children.props as { name: string }).name, transformedValue);
         setNativeValue(event.target, transformedValue);
       }
 
