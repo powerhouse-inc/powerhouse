@@ -6,6 +6,7 @@ import {
   getValidationArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
+import { commonCryptoCurrencies } from "./defaults";
 
 const meta: Meta<typeof CurrencyCodeField> = {
   title: "Document Engineering/Simple Components/Currency Code Field",
@@ -19,55 +20,37 @@ const meta: Meta<typeof CurrencyCodeField> = {
     ...getDefaultArgTypes(),
     ...getValidationArgTypes(),
 
-    allowedCurrencies: {
+    currencies: {
       control: "object",
-      description: "List of allowed currency codes",
+      description: "Array of Currency objects",
       table: {
-        type: { summary: "string[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-    excludedCurrencies: {
-      control: "object",
-      description: "List of excluded currency codes",
-      table: {
-        type: { summary: "string[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-    multiple: {
-      control: "boolean",
-      description: "Whether to allow multiple selections",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
+        type: { summary: "Currency[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
     includeCurrencySymbols: {
       control: "boolean",
-      description: "Whether to show currency symbols in options",
+      description: " Whether to display currency symbols alongside codes",
       table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
+        defaultValue: { summary: "true" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    enableAutocomplete: {
-      control: "boolean",
-      description: "Enable search/autocomplete functionality",
+    allowedTypes: {
+      control: "select",
+      description: "Either Crypto, Fiat or Both",
+      options: ["Fiat", "Crypto", "Both"],
       table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
+        defaultValue: { summary: "Both" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    showFlagIcons: {
-      control: "boolean",
-      description: "Show country flag icons next to currency codes",
+    favoriteCurrencies: {
+      control: "object",
+      description:
+        "List of currencies to display at the top of the dropdown for quick access",
       table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
+        type: { summary: "string[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -84,27 +67,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     label: "Currency",
-  },
-};
-
-export const WithDescription: Story = {
-  args: {
-    label: "Payment Currency",
-    description: "Select the currency for your payment",
-  },
-};
-
-export const Required: Story = {
-  args: {
-    label: "Transaction Currency",
-    required: true,
-  },
-};
-
-export const Multiple: Story = {
-  args: {
-    label: "Currency",
-    multiple: true,
+    currencies: commonCryptoCurrencies,
   },
 };
 
@@ -113,59 +76,6 @@ export const Disabled: Story = {
     label: "Currency",
     value: "EUR",
     disabled: true,
-  },
-};
-
-export const WithError: Story = {
-  args: {
-    label: "Currency",
-    value: "XXX",
-    errors: ["Please select a valid currency"],
-  },
-};
-
-export const WithWarning: Story = {
-  args: {
-    label: "Currency",
-    value: "BTC",
-    warnings: ["Cryptocurrency is not supported"],
-  },
-};
-
-export const WithAllowedCurrencies: Story = {
-  args: {
-    label: "Currency",
-    allowedCurrencies: ["USD", "EUR", "GBP"],
-  },
-};
-
-export const WithExcludedCurrencies: Story = {
-  args: {
-    label: "Currency",
-    excludedCurrencies: ["BTC", "ETH", "DOGE"],
-  },
-};
-
-export const WithFlagIcons: Story = {
-  args: {
-    label: "Currency",
-    showFlagIcons: true,
-  },
-};
-
-export const WithCurrencySymbols: Story = {
-  args: {
-    label: "Currency",
-    includeCurrencySymbols: true,
-  },
-};
-
-export const WithMaxSelection: Story = {
-  args: {
-    label: "Currency",
-    multiple: true,
-    maxSelection: 2,
-    description:
-      "You can select up to 2 currencies only, more than 2 will raise an error",
+    currencies: commonCryptoCurrencies,
   },
 };
