@@ -6,7 +6,7 @@ import {
   getValidationArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
-import { commonCryptoCurrencies } from "./defaults";
+import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults";
 
 const meta: Meta<typeof CurrencyCodeField> = {
   title: "Document Engineering/Simple Components/Currency Code Field",
@@ -76,6 +76,6 @@ export const Disabled: Story = {
     label: "Currency",
     value: "EUR",
     disabled: true,
-    currencies: commonCryptoCurrencies,
+    currencies: commonFiatCurrencies,
   },
 };
