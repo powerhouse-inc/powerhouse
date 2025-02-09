@@ -1,4 +1,5 @@
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { pascalCase } from "change-case";
 import {
   generateUUID,
   ListenerRevision,
@@ -212,6 +213,9 @@ export class DriveSubgraph extends Subgraph {
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
+        const typeName = pascalCase(
+          (dm?.documentModel.name || "").replaceAll("/", " "),
+        );
         const response = {
           ...document,
           id,
@@ -225,7 +229,7 @@ export class DriveSubgraph extends Subgraph {
                 : JSON.stringify(op.input),
           })),
           initialState: document.initialState.state.global,
-          __typename: dm?.documentModel.name,
+          __typename: typeName,
         };
         return response;
       },
