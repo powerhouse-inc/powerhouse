@@ -35,6 +35,7 @@ export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   disableFutureDates?: boolean;
   dateFormat?: string;
   weekStart?: string;
+  autoClose?: boolean;
 }
 
 export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
@@ -58,6 +59,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       disableFutureDates,
       dateFormat = "yyyy-MM-dd",
       weekStart,
+      autoClose = false,
       ...props
     },
     ref,
@@ -72,6 +74,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       handleBlur,
       disabledDates,
       weekStartDay,
+      handleDayClick,
     } = useDatePickerField({
       value,
       defaultValue,
@@ -81,6 +84,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       disableFutureDates,
       dateFormat,
       weekStart,
+      autoClose,
     });
 
     return (
@@ -114,11 +118,11 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
         >
           <Calendar
             mode="single"
-            required={true}
             selected={date}
             weekStartsOn={weekStartDay}
             onSelect={handleDateSelect}
             disabled={disabledDates}
+            onDayClick={handleDayClick}
             className={cn(
               "w-full",
               "p-0",

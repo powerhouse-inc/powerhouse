@@ -11,6 +11,7 @@ interface DatePickerFieldProps {
   disableFutureDates?: boolean;
   dateFormat?: string;
   weekStart?: string;
+  autoClose?: boolean;
 }
 
 export const useDatePickerField = ({
@@ -22,6 +23,7 @@ export const useDatePickerField = ({
   disableFutureDates,
   dateFormat = "yyyy-MM-dd",
   weekStart = "Monday",
+  autoClose = false,
 }: DatePickerFieldProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,6 +110,12 @@ export const useDatePickerField = ({
     return (dayIndex >= 0 ? dayIndex : 1) as WeekStartDayNumber;
   }, [weekStart]);
 
+  // Close the calendar when a date is selected
+  const handleDayClick = () => {
+    if (autoClose) {
+      setIsOpen(false);
+    }
+  };
   return {
     date,
     inputValue,
@@ -119,5 +127,6 @@ export const useDatePickerField = ({
     handleBlur,
     disabledDates,
     weekStartDay,
+    handleDayClick,
   };
 };
