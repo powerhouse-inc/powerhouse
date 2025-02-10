@@ -15,7 +15,7 @@ import TimePickerContent from "./subcomponents/time-picker-content";
 import { useTimePickerField } from "./use-time-picker-field";
 import { InputNumberProps } from "../number-field/types";
 
-interface TimePickerFieldProps
+export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
     InputNumberProps {
   label?: string;
@@ -26,6 +26,7 @@ interface TimePickerFieldProps
   placeholder?: string;
   inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
+  timeFormat?: string;
 }
 
 export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
@@ -38,6 +39,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       placeholder,
       value,
       onChange,
+      onBlur,
       defaultValue,
       description,
       warnings,
@@ -45,6 +47,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       disabled,
       inputProps,
       selectProps,
+      timeFormat = "hh:mm a",
     },
     ref,
   ) => {
@@ -64,7 +67,15 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       handleSave,
       handleCancel,
       timeZonesOptions,
-    } = useTimePickerField(value, defaultValue, onChange);
+      handleBlur,
+      is12HourFormat,
+    } = useTimePickerField({
+      value,
+      defaultValue,
+      onChange,
+      onBlur,
+      timeFormat,
+    });
 
     return (
       <FormGroup>
@@ -90,6 +101,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           onInputChange={handleInputChange}
           ref={ref}
           placeholder={placeholder}
+          handleBlur={handleBlur}
           inputProps={inputProps}
         >
           <TimePickerContent
@@ -105,6 +117,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
             onCancel={handleCancel}
             timeZonesOptions={timeZonesOptions}
             selectProps={selectProps}
+            is12HourFormat={is12HourFormat}
           />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}

@@ -106,8 +106,8 @@ const meta: Meta<typeof Sidebar> = {
       </div>
     ),
     enableMacros: 4,
-    onActiveNodeChange: (nodeId) => {
-      console.log("onActiveNodeChange", nodeId);
+    onActiveNodeChange: (node) => {
+      console.log("onActiveNodeChange", node);
     },
   },
 };
@@ -132,7 +132,7 @@ export const WithinLayoutAndContent: Story = {
       <main className="flex h-svh w-full">
         <Sidebar
           {...args}
-          onActiveNodeChange={setActiveNode}
+          onActiveNodeChange={(node) => setActiveNode(node.id)}
           activeNodeId={activeNode}
           extraFooterContent={
             <div className="flex flex-col gap-1">

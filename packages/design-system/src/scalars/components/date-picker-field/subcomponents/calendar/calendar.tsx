@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/scalars/lib/utils";
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays, format, startOfDay } from "date-fns";
 import * as React from "react";
 import { DayPicker, useDayPicker, type DayPickerProps } from "react-day-picker";
 import { buttonVariants } from "../../../fragments/button/button";
@@ -12,6 +12,7 @@ import { DatePickerView } from "../../types";
 import CaptionLabel from "../caption-label/caption-label";
 import NavCalendar from "../calendar-nav/calendar-nav";
 import CalendarDateHeader from "../calendar-date-header/calendar-date-header";
+import { useMemo } from "react";
 
 export type CalendarProps = DayPickerProps & {
   /**
@@ -49,6 +50,7 @@ export type CalendarProps = DayPickerProps & {
   rangeMiddleClassName?: string;
   hiddenClassName?: string;
   dayPickerClassName?: string;
+  disabledDates?: boolean;
 };
 
 /**
@@ -63,6 +65,7 @@ const Calendar = ({
   showYearSwitcher = true,
   yearRange = 12,
   numberOfMonths,
+  disabledDates = false,
   ...props
 }: CalendarProps) => {
   const [navView, setNavView] = React.useState<DatePickerView>("days");
@@ -170,6 +173,7 @@ const Calendar = ({
       mode="single"
       showOutsideDays={showOutsideDays}
       numberOfMonths={columnsDisplayed}
+      disabled={disabledDates}
       className={cn(
         "w-auto p-3 dark:border-gray-900 dark:bg-slate-600",
         className,

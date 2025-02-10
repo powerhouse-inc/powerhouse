@@ -12,6 +12,7 @@ import { Calendar } from "./subcomponents/calendar/calendar";
 import { cn } from "@/scalars/lib/utils";
 import { useDatePickerField } from "./use-date-picker-field";
 import { InputProps } from "../fragments";
+import { validateDatePicker } from "./date-picker-validations";
 
 export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   label?: string;
@@ -23,7 +24,16 @@ export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   defaultValue?: DateFieldValue;
   placeholder?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  inputProps?: Omit<
+    InputProps,
+    "name" | "onChange" | "value" | "defaultValue" | "onBlur"
+  >;
+  minDate?: string;
+  maxDate?: string;
+  disablePastDates?: boolean;
+  disableFutureDates?: boolean;
+  dateFormat?: string;
 }
 
 export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
@@ -41,7 +51,11 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       description,
       warnings,
       onChange,
+      onBlur,
       inputProps,
+      disablePastDates,
+      disableFutureDates,
+      dateFormat = "yyyy-MM-dd",
       ...props
     },
     ref,
@@ -53,10 +67,16 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       handleInputChange,
       isOpen,
       setIsOpen,
+      handleBlur,
+      disabledDates,
     } = useDatePickerField({
       value,
       defaultValue,
       onChange,
+      onBlur,
+      disablePastDates,
+      disableFutureDates,
+      dateFormat,
     });
 
     return (
@@ -86,12 +106,14 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           setIsOpen={setIsOpen}
           onInputChange={handleInputChange}
           inputProps={inputProps}
+          handleBlur={handleBlur}
         >
           <Calendar
             mode="single"
             required={true}
             selected={date}
             onSelect={handleDateSelect}
+            disabled={disabledDates}
             className={cn(
               "w-full",
               "p-0",
@@ -152,7 +174,13 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
   },
 );
 
-export const DatePickerField =
-  withFieldValidation<DatePickerFieldProps>(DatePickerRaw);
+export const DatePickerField = withFieldValidation<DatePickerFieldProps>(
+  DatePickerRaw,
+  {
+    validations: {
+      _datePickerType: validateDatePicker,
+    },
+  },
+);
 
 DatePickerField.displayName = "DatePickerField";

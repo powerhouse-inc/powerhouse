@@ -17,9 +17,9 @@ export interface SidebarProps {
    */
   activeNodeId?: string;
   /**
-   * Callback function to update the active node ID
+   * Callback function to update the active node
    */
-  onActiveNodeChange?: (newActiveNodeId: string) => void;
+  onActiveNodeChange?: (newNode: SidebarNode) => void;
   /**
    * The nodes to be displayed in the sidebar
    */

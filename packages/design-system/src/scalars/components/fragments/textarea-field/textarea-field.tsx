@@ -15,6 +15,7 @@ import ValueTransformer, {
   type TransformerType,
 } from "@/scalars/components/fragments/value-transformer";
 import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
+import { useWindowSize } from "usehooks-ts";
 
 type TextareaFieldBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -87,6 +88,8 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
 
+    const { width } = useWindowSize();
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Prevent Enter key if multiline is falsy
       if (!multiline && e.key === "Enter") {
@@ -109,7 +112,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       if (value !== undefined && autoExpand) {
         adjustHeight();
       }
-    }, [id, value, autoExpand]);
+    }, [id, value, autoExpand, width]);
 
     const transformers: TransformerType = useMemo(
       () => [
