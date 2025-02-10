@@ -8,7 +8,7 @@ import {
   SelectFieldProps,
   withFieldValidation,
 } from "../fragments";
-import { FieldCommonProps } from "../types";
+import { ErrorHandling, FieldCommonProps } from "../types";
 import { TimeFieldValue } from "./type";
 import { BasePickerField } from "../date-time-field/base-picker-field";
 import TimePickerContent from "./subcomponents/time-picker-content";
@@ -17,7 +17,8 @@ import { InputNumberProps } from "../number-field/types";
 
 export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
-    InputNumberProps {
+    InputNumberProps,
+    ErrorHandling {
   label?: string;
   id?: string;
   name: string;
@@ -78,7 +79,6 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       onBlur,
       timeFormat,
     });
-
     return (
       <FormGroup>
         {label && (
