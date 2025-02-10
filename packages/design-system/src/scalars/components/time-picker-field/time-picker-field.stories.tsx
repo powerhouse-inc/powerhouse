@@ -7,7 +7,7 @@ import {
 import { TimePickerField } from "./time-picker-field";
 
 const meta: Meta<typeof TimePickerField> = {
-  title: "Document Engineering/Simple Components/Time Picker Field",
+  title: "Document Engineering/Fragments/Time Picker Field",
   component: TimePickerField,
   parameters: {
     layout: "centered",
@@ -23,6 +23,14 @@ const meta: Meta<typeof TimePickerField> = {
       },
       options: ["hh:mm a", "HH:mm"],
       defaultValue: { summary: "hh:mm a" },
+    },
+    showTimezoneSelect: {
+      control: {
+        type: "boolean",
+        defaultValue: false,
+        description: "Show timezone select",
+      },
+      defaultValue: { summary: false },
     },
   },
 

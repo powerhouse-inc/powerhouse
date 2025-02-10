@@ -9,7 +9,7 @@ import {
 import { DateTimeField } from "./date-time-field";
 
 const meta: Meta<typeof DateTimeField> = {
-  title: "Document Engineering/Simple Components/DateTimeField",
+  title: "Document Engineering/Simple Components/Date Time Field",
   component: DateTimeField,
   decorators: [withForm],
   tags: ["autodocs"],

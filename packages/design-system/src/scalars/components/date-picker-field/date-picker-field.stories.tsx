@@ -8,7 +8,7 @@ import {
 } from "@/scalars/lib/storybook-arg-types";
 
 const meta: Meta<typeof DatePickerField> = {
-  title: "Document Engineering/Simple Components/Date Picker Field",
+  title: "Document Engineering/Fragments/Date Picker Field",
   component: DatePickerField,
   parameters: {
     layout: "centered",
@@ -59,8 +59,8 @@ const meta: Meta<typeof DatePickerField> = {
       },
       options: [
         "yyyy-MM-dd",
-        "dd-MM-yyyy",
-        "MM-dd-yyyy",
+        "dd/MM/yyyy",
+        "MM/dd/yyyy",
         "dd-MMM-yyyy",
         "MMM-dd-yyyy",
       ],
@@ -69,6 +69,34 @@ const meta: Meta<typeof DatePickerField> = {
         type: {
           summary: "string",
         },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    weekStart: {
+      control: "select",
+      options: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
+      table: {
+        defaultValue: { summary: "Monday" },
+        type: {
+          summary: "string",
+        },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    autoClose: {
+      control: "boolean",
+      description: "Close the date picker when a date is selected",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },

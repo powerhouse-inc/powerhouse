@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { DateFieldValue } from "./types";
+import { DateFieldValue, WeekStartDayNumber } from "./types";
 import { format, isValid, parse, startOfDay } from "date-fns";
 import { createChangeEvent } from "../time-picker-field/utils";
 interface DatePickerFieldProps {
@@ -10,6 +10,8 @@ interface DatePickerFieldProps {
   disablePastDates?: boolean;
   disableFutureDates?: boolean;
   dateFormat?: string;
+  weekStart?: string;
+  autoClose?: boolean;
 }
 
 export const useDatePickerField = ({
@@ -20,6 +22,8 @@ export const useDatePickerField = ({
   disablePastDates,
   disableFutureDates,
   dateFormat = "yyyy-MM-dd",
+  weekStart = "Monday",
+  autoClose = false,
 }: DatePickerFieldProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +96,26 @@ export const useDatePickerField = ({
             : undefined,
     [disablePastDates, disableFutureDates, today],
   );
+  const weekStartDay = useMemo(() => {
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    const dayIndex = days.indexOf(weekStart.toLowerCase());
+    return (dayIndex >= 0 ? dayIndex : 1) as WeekStartDayNumber;
+  }, [weekStart]);
 
+  // Close the calendar when a date is selected
+  const handleDayClick = () => {
+    if (autoClose) {
+      setIsOpen(false);
+    }
+  };
   return {
     date,
     inputValue,
@@ -103,5 +126,7 @@ export const useDatePickerField = ({
     formatDate,
     handleBlur,
     disabledDates,
+    weekStartDay,
+    handleDayClick,
   };
 };
