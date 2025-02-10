@@ -7,7 +7,7 @@ import {
   generateProcessor,
   generateSubgraph,
 } from "./codegen/index";
-import { parseArgs, promptDirectories, parseConfig } from "./utils/index";
+import { parseArgs, parseConfig, promptDirectories } from "./utils/index";
 
 function parseCommand(argv: string[]) {
   const args = parseArgs(argv, {
@@ -17,11 +17,15 @@ function parseCommand(argv: string[]) {
     "--processor": String,
     "--document-types": String,
     "--processor-type": String,
+    "--file": String,
   });
+
   const editorName = args["--editor"];
   const processorName = args["--processor"];
   const processorType = args["--processor-type"];
   const subgraphName = args["--subgraph"];
+  const file = args["--file"];
+
   return {
     processor: !!processorName,
     processorName,
@@ -32,6 +36,7 @@ function parseCommand(argv: string[]) {
     arg: args._,
     subgraph: !!subgraphName,
     subgraphName: subgraphName ?? "example",
+    file,
   };
 }
 
@@ -72,9 +77,12 @@ async function main() {
       config,
     );
   } else if (command.subgraph) {
-    await generateSubgraph(command.subgraphName, config);
-  } else if (command.arg.length === 2) {
-    await generateFromFile(command.arg[1], config);
+    if (!command.subgraphName) {
+      throw new Error("Subgraph name is required (--subgraph)");
+    }
+    await generateSubgraph(command.subgraphName, command.file || null, config);
+  } else if (command.file || command.arg.length === 2) {
+    await generateFromFile(command.file || command.arg[1], config);
   } else {
     await generate(config);
   }
