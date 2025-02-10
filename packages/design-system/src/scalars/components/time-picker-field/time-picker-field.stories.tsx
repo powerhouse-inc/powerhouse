@@ -24,6 +24,14 @@ const meta: Meta<typeof TimePickerField> = {
       options: ["hh:mm a", "HH:mm"],
       defaultValue: { summary: "hh:mm a" },
     },
+    showTimezoneSelect: {
+      control: {
+        type: "boolean",
+        defaultValue: false,
+        description: "Show timezone select",
+      },
+      defaultValue: { summary: false },
+    },
   },
 
   args: {

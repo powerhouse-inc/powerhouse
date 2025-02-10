@@ -1,6 +1,7 @@
 import { renderWithForm } from "@/scalars/lib/testing";
 import { screen } from "@testing-library/react";
 import { DatePickerField } from "./date-picker-field";
+import userEvent from "@testing-library/user-event";
 
 vi.mock("@/powerhouse/components/icon/icon", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (
@@ -48,5 +49,54 @@ describe("DatePickerField", () => {
     const label = screen.getByText("Test Label");
     expect(label).toHaveClass("cursor-not-allowed");
     expect(label).toHaveClass("text-gray-700");
+  });
+
+  it("should respect the minDate prop", async () => {
+    renderWithForm(
+      <DatePickerField
+        showErrorOnBlur
+        label="Test Label"
+        name="test-date"
+        minDate="2023-01-01"
+      />,
+    );
+    const input = screen.getByRole("textbox");
+    expect(input).toBeInTheDocument();
+    // Intentamos escribir una fecha anterior al minDate
+    await userEvent.type(input, "2022-12-31");
+    await userEvent.tab(); // Trigger validation on blur
+    expect(screen.getByText(/Date must be on or after/i)).toBeInTheDocument();
+  });
+  it("should respect the maxDate prop", async () => {
+    renderWithForm(
+      <DatePickerField
+        showErrorOnBlur
+        label="Test Label"
+        name="test-date"
+        maxDate="2023-12-31"
+      />,
+    );
+
+    const input = screen.getByRole("textbox");
+    expect(input).toBeInTheDocument();
+
+    // Intentamos escribir una fecha posterior al maxDate
+    await userEvent.type(input, "2024-01-01");
+    await userEvent.tab(); // Trigger validation on blur
+    expect(screen.getByText(/Date must be on or before/i)).toBeInTheDocument();
+  });
+  it("should allow valid dates within min and max range", async () => {
+    renderWithForm(
+      <DatePickerField
+        label="Test Label"
+        name="test-date"
+        minDate="2023-01-01"
+        maxDate="2023-12-31"
+      />,
+    );
+
+    const input = screen.getByRole("textbox");
+    await userEvent.type(input, "2023-06-15");
+    expect(input).toHaveValue("2023-06-15");
   });
 });

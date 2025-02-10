@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { FieldCommonProps } from "../types";
+import { ErrorHandling, FieldCommonProps } from "../types";
 import { DateFieldValue } from "./types";
 import { withFieldValidation } from "../fragments/with-field-validation";
 
@@ -14,7 +14,9 @@ import { useDatePickerField } from "./use-date-picker-field";
 import { InputProps } from "../fragments";
 import { validateDatePicker } from "./date-picker-validations";
 
-export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
+export interface DatePickerFieldProps
+  extends FieldCommonProps<DateFieldValue>,
+    ErrorHandling {
   label?: string;
   id?: string;
   name: string;
@@ -34,6 +36,8 @@ export interface DatePickerFieldProps extends FieldCommonProps<DateFieldValue> {
   disablePastDates?: boolean;
   disableFutureDates?: boolean;
   dateFormat?: string;
+  weekStart?: string;
+  autoClose?: boolean;
 }
 
 export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
@@ -56,10 +60,13 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       disablePastDates,
       disableFutureDates,
       dateFormat = "yyyy-MM-dd",
+      weekStart,
+      autoClose = false,
       ...props
     },
     ref,
   ) => {
+    console.log("minDate", props.minDate);
     const {
       date,
       inputValue,
@@ -69,6 +76,8 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       setIsOpen,
       handleBlur,
       disabledDates,
+      weekStartDay,
+      handleDayClick,
     } = useDatePickerField({
       value,
       defaultValue,
@@ -77,6 +86,8 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       disablePastDates,
       disableFutureDates,
       dateFormat,
+      weekStart,
+      autoClose,
     });
 
     return (
@@ -110,10 +121,11 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
         >
           <Calendar
             mode="single"
-            required={true}
             selected={date}
+            weekStartsOn={weekStartDay}
             onSelect={handleDateSelect}
             disabled={disabledDates}
+            onDayClick={handleDayClick}
             className={cn(
               "w-full",
               "p-0",
@@ -130,9 +142,9 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
               "gap-x-[3px]",
               "dark:text-gray-600",
             )}
-            monthGridClassName={cn("w-full", "pr-[5.5px] pl-[5.5px]")}
+            monthGridClassName={cn("w-full", "px-[5.5px]")}
             dayClassName={cn(
-              "w-[34px] hover:bg-gray-200 hover:rounded-[4px] cursor-pointer",
+              "w-[34px] cursor-pointer hover:rounded-[4px] hover:bg-gray-200",
               // dark
               "dark:text-gray-50 hover:dark:bg-gray-900",
             )}
@@ -146,7 +158,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
               "border border-gray-200 ",
               "hover:bg-gray-200 dark:hover:bg-gray-900",
               // dark
-              "dark:text-gray-300 dark:border-gray-900",
+              "dark:border-gray-900 dark:text-gray-300",
             )}
             todayClassName={cn(
               "rounded-[4px]",

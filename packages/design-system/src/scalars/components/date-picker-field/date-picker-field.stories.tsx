@@ -72,6 +72,34 @@ const meta: Meta<typeof DatePickerField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    weekStart: {
+      control: "select",
+      options: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
+      table: {
+        defaultValue: { summary: "Monday" },
+        type: {
+          summary: "string",
+        },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    autoClose: {
+      control: "boolean",
+      description: "Close the date picker when a date is selected",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
   args: {
     name: "date-picker-field",
