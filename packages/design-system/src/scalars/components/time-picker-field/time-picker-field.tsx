@@ -14,6 +14,7 @@ import { BasePickerField } from "../date-time-field/base-picker-field";
 import TimePickerContent from "./subcomponents/time-picker-content";
 import { useTimePickerField } from "./use-time-picker-field";
 import { InputNumberProps } from "../number-field/types";
+import { validateTimePicker } from "./time-picker-validations";
 
 export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
@@ -131,6 +132,12 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
   },
 );
 
-export const TimePickerField =
-  withFieldValidation<TimePickerFieldProps>(TimePickerRaw);
+export const TimePickerField = withFieldValidation<TimePickerFieldProps>(
+  TimePickerRaw,
+  {
+    validations: {
+      _timePickerType: validateTimePicker,
+    },
+  },
+);
 TimePickerField.displayName = "TimePickerField";
