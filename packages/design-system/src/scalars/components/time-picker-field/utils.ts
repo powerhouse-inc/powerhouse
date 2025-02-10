@@ -19,3 +19,6 @@ export const ALLOWED_TIME_FORMATS = ["hh:mm a", "HH:mm", "hh:mm A"];
 export const isFormatTimeAllowed = (format: string): boolean => {
   return ALLOWED_TIME_FORMATS.includes(format);
 };
+
+export const timeRegex24Hour = /^(\d|0\d|1\d|2[0-3]):([0-5]\d)$/;
+export const timeRegex12Hour = /^(0?[1-9]|1[0-2]):([0-5]\d) (AM|PM|am|pm)$/;
