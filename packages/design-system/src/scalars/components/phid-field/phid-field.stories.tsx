@@ -6,7 +6,7 @@ import { PHIDField } from "./phid-field";
 import { PHIDInputContainer } from "./phid-input-container";
 import { PHIDList } from "./phid-list";
 import { PHIDListItem } from "./phid-list-item";
-import { mockedOptions } from "./utils";
+import { mockedOptions, fetchOptions, fetchSelectedOption } from "./utils";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -92,6 +92,26 @@ const meta: Meta<typeof PHIDField> = {
       },
     },
 
+    fetchOptionsCallback: {
+      control: false,
+      description: "Function to fetch PHID options based on user input",
+      table: {
+        type: { summary: "(phidFragment: string) => Promise<PHIDItem[]>" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "autoComplete", neq: false },
+    },
+
+    fetchSelectedOptionCallback: {
+      control: false,
+      description: "Function to fetch details for a selected PHID",
+      table: {
+        type: { summary: "(phid: string) => Promise<PHIDItem | undefined>" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "autoComplete", neq: false },
+    },
+
     allowDataObjectReference: {
       control: "boolean",
       description: "Allows direct referencing of data objects in the field",
@@ -132,6 +152,8 @@ export const Default: Story = {
   args: {
     label: "PHID field",
     placeholder: "phd:",
+    fetchOptionsCallback: fetchOptions,
+    fetchSelectedOptionCallback: fetchSelectedOption,
   },
 };
 
@@ -148,7 +170,7 @@ export const PopoverOpenWithResults: Story = {
             "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
           )}
         >
-          <input type="text" className="sr-only" aria-hidden="true" autoFocus />
+          <input type="text" className="sr-only" autoFocus />
           <PHIDList variant={args.variant} options={mockedOptions} />
         </div>
       </Command>
@@ -187,7 +209,7 @@ export const Filled: Story = {
     return (
       <Command
         shouldFilter={false}
-        className={cn("dark:bg-charcoal-900 rounded-md bg-white")}
+        className={cn("dark:bg-charcoal-900 rounded-md bg-gray-100")}
       >
         <PHIDInputContainer
           id="phid-field"
@@ -195,7 +217,6 @@ export const Filled: Story = {
           value={mockedOptions[0].phid}
           isLoading={false}
           haveFetchError={false}
-          options={[]}
           selectedOption={mockedOptions[0]}
           placeholder="phd:"
           hasError={false}
@@ -211,7 +232,7 @@ export const Filled: Story = {
             description={mockedOptions[0].description}
             asPlaceholder={false}
             showPHID={false}
-            className={cn("dark:bg-charcoal-900 rounded-t-none bg-white pt-2")}
+            className={cn("rounded-t-none pt-2")}
           />
         )}
       </Command>

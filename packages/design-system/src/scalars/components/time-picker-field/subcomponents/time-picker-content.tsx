@@ -20,6 +20,7 @@ interface TimePickerContentProps {
   timeZonesOptions: SelectBaseProps["options"];
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
   is12HourFormat: boolean;
+  showTimezoneSelect?: boolean;
 }
 
 const TimePickerContent: React.FC<TimePickerContentProps> = ({
@@ -36,12 +37,14 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
   timeZonesOptions,
   selectProps,
   is12HourFormat,
+  showTimezoneSelect,
 }) => {
   return (
     <div className="w-full mx-auto relative">
       <SelectFieldRaw
         name=""
         options={timeZonesOptions}
+        disabled={!showTimezoneSelect}
         searchable={true}
         placeholder="Select a timezone"
         className="w-full"

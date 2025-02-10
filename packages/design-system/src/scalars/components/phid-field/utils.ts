@@ -1,20 +1,6 @@
-import { PHIDProps, PHIDListItemProps } from "./types";
+import { PHIDItem } from "./types";
 
-interface FetchPHIDOptionsParams {
-  phidFragment: string; // input value
-  defaultBranch: PHIDProps["defaultBranch"];
-  defaultScope: PHIDProps["defaultScope"];
-  allowedScopes: PHIDProps["allowedScopes"];
-  allowedDocumentTypes: PHIDProps["allowedDocumentTypes"];
-  signal?: AbortSignal;
-}
-
-interface FetchSelectedOptionParams {
-  phid: string; // full phid of the selected option
-  signal?: AbortSignal;
-}
-
-export const mockedOptions: PHIDListItemProps[] = [
+export const mockedOptions: PHIDItem[] = [
   {
     title: "Document A",
     path: "projects/finance/document-a",
@@ -35,39 +21,21 @@ export const mockedOptions: PHIDListItemProps[] = [
   },
 ];
 
-export const fetchPHIDOptions = async ({
-  phidFragment,
-  defaultBranch,
-  defaultScope,
-  allowedScopes,
-  allowedDocumentTypes,
-  signal,
-}: FetchPHIDOptionsParams): Promise<PHIDListItemProps[]> => {
-  // TODO: Implement actual API call
-  // Example implementation:
-  // const params = new URLSearchParams({
-  //   phidFragment,
-  //   allowedScopes: JSON.stringify(allowedScopes),
-  //   allowedDocumentTypes: JSON.stringify(allowedDocumentTypes),
-  // });
-  // if URLSearchParams is to long, maybe a POST request will be better
-  // const response = await fetch(`/api/phid/search?${params}`, { signal });
-  // return response.json();
-
+export const fetchOptions = async (): Promise<PHIDItem[]> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  // Add 30% chance of error
+  if (Math.random() < 0.3) {
+    throw new Error();
+  }
+
   return mockedOptions;
 };
 
-export const fetchSelectedOption = async ({
-  phid,
-  signal,
-}: FetchSelectedOptionParams): Promise<PHIDListItemProps | undefined> => {
-  // TODO: Implement actual API call
-  // Example implementation:
-  // const response = await fetch(`/api/phid/${phid}`, { signal });
-  // return response.json();
-
+export const fetchSelectedOption = async (
+  phid: string,
+): Promise<PHIDItem | undefined> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
   return mockedOptions.find((option) => option.phid === phid);

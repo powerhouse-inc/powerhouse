@@ -8,13 +8,13 @@ import {
 import { useCommandState } from "cmdk";
 import { cn } from "@/scalars/lib/utils";
 import { PHIDListItem } from "./phid-list-item";
-import type { PHIDProps, PHIDListItemProps } from "./types";
+import type { PHIDProps, PHIDItem } from "./types";
 
 interface PHIDListProps {
   variant: PHIDProps["variant"];
   commandListRef?: React.RefObject<HTMLDivElement>;
   selectedValue?: string;
-  options?: PHIDListItemProps[];
+  options?: PHIDItem[];
   toggleOption?: (value: string) => void;
 }
 
@@ -51,7 +51,7 @@ export const PHIDList: React.FC<PHIDListProps> = ({
               value={opt.phid}
               onSelect={() => toggleOption?.(opt.phid)}
               className={cn(
-                "h-full cursor-pointer p-0",
+                "h-full cursor-pointer border-y-0 p-0",
                 "data-[selected=true]:bg-gray-100 dark:data-[selected=true]:bg-gray-900",
               )}
               role="option"

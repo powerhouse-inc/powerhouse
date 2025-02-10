@@ -13,3 +13,9 @@ export const createChangeEvent = (
 
   return nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>;
 };
+
+export const ALLOWED_TIME_FORMATS = ["hh:mm a", "HH:mm", "hh:mm A"];
+
+export const isFormatTimeAllowed = (format: string): boolean => {
+  return ALLOWED_TIME_FORMATS.includes(format);
+};

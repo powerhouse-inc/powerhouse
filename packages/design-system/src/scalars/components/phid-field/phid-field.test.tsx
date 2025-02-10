@@ -3,13 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
 import { PHIDField } from "./phid-field";
-import { fetchPHIDOptions } from "./utils";
 import { Form } from "@/scalars/components/form";
-
-vi.mock("./utils", () => ({
-  fetchPHIDOptions: vi.fn(),
-  fetchSelectedOption: vi.fn(),
-}));
 
 describe("PHIDField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -99,7 +93,7 @@ describe("PHIDField Component", () => {
   it("should show autocomplete options", async () => {
     const user = userEvent.setup();
     const mockPromise = Promise.resolve(mockOptions);
-    (fetchPHIDOptions as jest.Mock).mockReturnValue(mockPromise);
+    const getOptions = vi.fn().mockReturnValue(mockPromise);
 
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
@@ -110,6 +104,7 @@ describe("PHIDField Component", () => {
         label="Test Label"
         placeholder="phd:"
         variant="withIdAndTitle"
+        fetchOptionsCallback={getOptions}
       />,
     );
 
@@ -118,14 +113,7 @@ describe("PHIDField Component", () => {
     await user.type(input, "test");
 
     await waitFor(() => {
-      expect(fetchPHIDOptions).toHaveBeenCalledWith({
-        phidFragment: "test",
-        allowedScopes: undefined,
-        allowedDocumentTypes: undefined,
-        defaultBranch: "main",
-        defaultScope: "public",
-        signal: expect.any(AbortSignal) as AbortSignal,
-      });
+      expect(getOptions).toHaveBeenCalledWith("test");
     });
 
     await mockPromise;
@@ -179,17 +167,13 @@ describe("PHIDField Component", () => {
     ).toBeInTheDocument();
   });
 
-  it("should handle autoComplete disabled", async () => {
-    const user = userEvent.setup();
-
+  it("should handle autoComplete disabled", () => {
     renderWithForm(
       <PHIDField name="phid" label="Test Label" autoComplete={false} />,
     );
 
-    const input = screen.getByRole("textbox");
-    await user.type(input, "test");
-
-    expect(fetchPHIDOptions).not.toHaveBeenCalled();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
 
   it("should validate PHID format on submit", async () => {
@@ -225,7 +209,7 @@ describe("PHIDField Component", () => {
   it("should handle value changes and auto selection", async () => {
     const user = userEvent.setup();
     const mockPromise = Promise.resolve(mockOptions);
-    (fetchPHIDOptions as jest.Mock).mockReturnValue(mockPromise);
+    const getOptions = vi.fn().mockReturnValue(mockPromise);
 
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
@@ -235,26 +219,23 @@ describe("PHIDField Component", () => {
         name="phid"
         label="Test Label"
         variant="withIdTitleAndDescription"
+        fetchOptionsCallback={getOptions}
       />,
     );
 
     const input = screen.getByRole("combobox");
-
     await user.type(input, mockOptions[0].phid);
+
     await mockPromise;
+    await waitFor(() => {
+      expect(input).toHaveAttribute("aria-expanded", "false");
+    });
 
-    expect(input).toHaveAttribute("aria-expanded", "false");
-
-    await waitFor(
-      () => {
-        expect(screen.getByText(mockOptions[0].title)).toBeInTheDocument();
-        expect(screen.getByText(mockOptions[0].path)).toBeInTheDocument();
-        expect(
-          screen.getByText(mockOptions[0].description),
-        ).toBeInTheDocument();
-      },
-      { timeout: 2000 },
-    );
+    await waitFor(() => {
+      expect(screen.getByText(mockOptions[0].title)).toBeInTheDocument();
+      expect(screen.getByText(mockOptions[0].path)).toBeInTheDocument();
+      expect(screen.getByText(mockOptions[0].description)).toBeInTheDocument();
+    });
 
     Math.random = originalRandom;
   });
