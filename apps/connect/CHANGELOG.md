@@ -1,3 +1,39 @@
+## 1.0.0-dev.199 (2025-02-10)
+
+### 🚀 Features
+
+- **design-system:** add danger zone settings page ([572345bc](https://github.com/powerhouse-inc/powerhouse/commit/572345bc))
+
+### 🩹 Fixes
+
+- **reactor-api:** use pascal case for document model schema prefix ([835da67d](https://github.com/powerhouse-inc/powerhouse/commit/835da67d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
+## 1.0.3 (2025-02-10)
+
+### 🚀 Features
+
+- **design-system:** add danger zone settings page ([572345bc](https://github.com/powerhouse-inc/powerhouse/commit/572345bc))
+
+### 🩹 Fixes
+
+- **reactor-api:** use pascal case for document model schema prefix ([835da67d](https://github.com/powerhouse-inc/powerhouse/commit/835da67d))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model-libs to 1.131.2
+- Updated document-drive to 1.17.2
+- Updated @powerhousedao/design-system to 1.25.0
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
 ## 1.0.0-dev.196 (2025-01-29)
 
 ### 🚀 Features
