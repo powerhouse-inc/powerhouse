@@ -20,6 +20,7 @@ import type {
   Signal,
   State,
 } from "document-model/document";
+import { Unsubscribe } from "nanoevents";
 import { BaseDocumentDriveServer } from ".";
 import { IReadModeDriveServer } from "../read-mode/types";
 import { RunAsap } from "../utils";
@@ -517,6 +518,8 @@ export interface IBaseDocumentDriveServer {
     url: string,
     options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
   ): Promise<PullResponderTrigger>;
+
+  on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
 }
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
