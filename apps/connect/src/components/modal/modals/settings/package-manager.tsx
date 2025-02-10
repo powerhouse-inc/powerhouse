@@ -9,7 +9,7 @@ import { useExternalPackages } from 'src/store/external-packages';
 const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';
 
-function manifestToDetails(manifest: Manifest, id: string) {
+function manifestToDetails(manifest: Manifest, id: string, removable: boolean) {
     const documentModels = manifest.documentModels.map(
         dm => `Document Model: ${dm.name}`,
     );
@@ -20,6 +20,7 @@ function manifestToDetails(manifest: Manifest, id: string) {
         publisher: manifest.publisher.name,
         publisherUrl: manifest.publisher.url,
         modules: documentModels.concat(editors),
+        removable,
     };
 }
 
@@ -30,7 +31,6 @@ export interface SettingsModalProps {
 }
 
 export const PackageManager: React.FC = () => {
-    // Package Manager
     const packages = useExternalPackages();
     const [drives] = useDocumentDrives();
     const [reactor, setReactor] = useState('');
@@ -38,26 +38,33 @@ export const PackageManager: React.FC = () => {
     const options = useMemo(() => {
         return drives.reduce<
             { value: string; label: string; disabled: boolean }[]
-        >((acc, drive) => {
-            const trigger = drive.state.local.triggers.find(
-                trigger => trigger.data?.url,
-            );
-            if (!trigger?.data?.url) {
+        >(
+            (acc, drive) => {
+                const trigger = drive.state.local.triggers.find(
+                    trigger => trigger.data?.url,
+                );
+                if (!trigger?.data?.url) {
+                    return acc;
+                }
+
+                const value = trigger.data.url;
+                const label = drive.state.global.name;
+
+                acc.push({
+                    value,
+                    label,
+                    disabled: true,
+                });
                 return acc;
-            }
-
-            const url = new URL(trigger.data.url);
-            const isLocal =
-                url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-            const label = drive.state.global.name;
-
-            acc.push({
-                value: isLocal ? LOCAL_REACTOR_VALUE : trigger.data.url,
-                label: isLocal ? LOCAL_REACTOR_LABEL : label,
-                disabled: !isLocal,
-            });
-            return acc;
-        }, []);
+            },
+            [
+                {
+                    value: LOCAL_REACTOR_VALUE,
+                    label: LOCAL_REACTOR_LABEL,
+                    disabled: false,
+                },
+            ],
+        );
     }, [drives]);
 
     useEffect(() => {
@@ -71,10 +78,11 @@ export const PackageManager: React.FC = () => {
         });
     }, [reactor, options]);
 
-    // TODO packages should be filtered by reactor
     const packagesInfo = useMemo(() => {
-        return [manifestToDetails(CommonManifest, 'common')].concat(
-            ...packages.map(pkg => manifestToDetails(pkg.manifest, pkg.id)),
+        return [manifestToDetails(CommonManifest, 'common', false)].concat(
+            ...packages.map(pkg =>
+                manifestToDetails(pkg.manifest, pkg.id, true),
+            ),
         );
     }, [packages]);
 
