@@ -6,7 +6,7 @@ RUN apk add --no-cache python3 make g++ py3-setuptools && \
     ln -sf /usr/bin/python3 /usr/bin/python
 
 RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || echo "Link already exists"
-RUN npm install --global pnpm
+RUN npm install --global pnpm@9
 COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm build:all

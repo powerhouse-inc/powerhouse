@@ -2,7 +2,7 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || echo "Link already exists"
-RUN npm install --global pnpm
+RUN npm install --global pnpm@9
 COPY . .
 RUN pnpm install
 RUN cp -r ./packages/document-drive/prisma/schema.prisma ./schema.prisma
