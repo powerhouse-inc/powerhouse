@@ -146,6 +146,9 @@ describe("PHIDField Component", () => {
     const input = screen.getByRole("combobox");
     await user.click(input);
     await user.type(input, "test");
+    await waitFor(() => {
+      expect(input).toHaveValue("test");
+    });
 
     await waitFor(() => {
       expect(defaultGetOptions).toHaveBeenCalledWith("test");
@@ -240,14 +243,22 @@ describe("PHIDField Component", () => {
     );
 
     const input = screen.getByRole("combobox");
-
+    await user.click(input);
     await user.type(input, invalidPhid);
+    await waitFor(() => {
+      expect(input).toHaveValue(invalidPhid);
+    });
+
     await user.click(screen.getByText("Submit"));
     expect(mockOnSubmit).not.toHaveBeenCalled();
     expect(screen.getByText(/Invalid format/)).toBeInTheDocument();
 
     await user.clear(input);
     await user.type(input, validPhid);
+    await waitFor(() => {
+      expect(input).toHaveValue(validPhid);
+    });
+
     await user.click(screen.getByText("Submit"));
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
@@ -275,7 +286,11 @@ describe("PHIDField Component", () => {
     );
 
     const input = screen.getByRole("combobox");
+    await user.click(input);
     await user.type(input, mockOptions[0].phid);
+    await waitFor(() => {
+      expect(input).toHaveValue(mockOptions[0].phid);
+    });
 
     await mockPromise;
     await waitFor(() => {
