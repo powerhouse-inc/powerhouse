@@ -944,8 +944,8 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     return [...this.documentModels];
   }
 
-  async addDrive(drive: DriveInput): Promise<DocumentDriveDocument> {
-    const id = drive.global.id || generateUUID();
+  async addDrive(input: DriveInput): Promise<DocumentDriveDocument> {
+    const id = input.global.id || generateUUID();
     if (!id) {
       throw new Error("Invalid Drive Id");
     }
@@ -956,13 +956,13 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }
 
     const document = utils.createDocument({
-      state: drive,
+      state: input,
     });
 
     await this.storage.createDrive(id, document);
 
-    if (drive.global.slug) {
-      await this.cache.deleteDocument("drives-slug", drive.global.slug);
+    if (input.global.slug) {
+      await this.cache.deleteDocument("drives-slug", input.global.slug);
     }
 
     await this._initializeDrive(id);
@@ -1011,13 +1011,13 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   public async registerPullResponderTrigger(
-    id: string,
+    driveId: string,
     url: string,
     options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
   ) {
     const pullTrigger =
       await PullResponderTransmitter.createPullResponderTrigger(
-        id,
+        driveId,
         url,
         options,
       );
@@ -1025,12 +1025,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     return pullTrigger;
   }
 
-  async deleteDrive(id: string) {
+  async deleteDrive(driveId: string) {
     const result = await Promise.allSettled([
-      this.stopSyncRemoteDrive(id),
-      this.listenerManager.removeDrive(id),
-      this.cache.deleteDocument("drives", id),
-      this.storage.deleteDrive(id),
+      this.stopSyncRemoteDrive(driveId),
+      this.listenerManager.removeDrive(driveId),
+      this.cache.deleteDocument("drives", driveId),
+      this.storage.deleteDrive(driveId),
     ]);
 
     result.forEach((r) => {
@@ -1044,10 +1044,10 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     return this.storage.getDrives();
   }
 
-  async getDrive(drive: string, options?: GetDocumentOptions) {
+  async getDrive(driveId: string, options?: GetDocumentOptions) {
     let document: DocumentDriveDocument | undefined;
     try {
-      const cachedDocument = await this.cache.getDocument("drives", drive); // TODO support GetDocumentOptions
+      const cachedDocument = await this.cache.getDocument("drives", driveId); // TODO support GetDocumentOptions
       if (cachedDocument && isDocumentDrive(cachedDocument)) {
         document = cachedDocument;
         if (isAtRevision(document, options?.revisions)) {
@@ -1057,13 +1057,13 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     } catch (e) {
       logger.error("Error getting drive from cache", e);
     }
-    const driveStorage = document ?? (await this.storage.getDrive(drive));
+    const driveStorage = document ?? (await this.storage.getDrive(driveId));
     const result = this._buildDocument(driveStorage, options);
     if (!isDocumentDrive(result)) {
-      throw new Error(`Document with id ${drive} is not a Document Drive`);
+      throw new Error(`Document with id ${driveId} is not a Document Drive`);
     } else {
       if (!options?.revisions) {
-        this.cache.setDocument("drives", drive, result).catch(logger.error);
+        this.cache.setDocument("drives", driveId, result).catch(logger.error);
       }
       return result;
     }
@@ -1089,10 +1089,14 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }
   }
 
-  async getDocument(drive: string, id: string, options?: GetDocumentOptions) {
+  async getDocument(
+    driveId: string,
+    documentId: string,
+    options?: GetDocumentOptions,
+  ) {
     let cachedDocument: Document | undefined;
     try {
-      cachedDocument = await this.cache.getDocument(drive, id); // TODO support GetDocumentOptions
+      cachedDocument = await this.cache.getDocument(driveId, documentId); // TODO support GetDocumentOptions
       if (cachedDocument && isAtRevision(cachedDocument, options?.revisions)) {
         return cachedDocument;
       }
@@ -1100,17 +1104,17 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
       logger.error("Error getting document from cache", e);
     }
     const documentStorage =
-      cachedDocument ?? (await this.storage.getDocument(drive, id));
+      cachedDocument ?? (await this.storage.getDocument(driveId, documentId));
     const document = this._buildDocument(documentStorage, options);
 
     if (!options?.revisions) {
-      this.cache.setDocument(drive, id, document).catch(logger.error);
+      this.cache.setDocument(driveId, documentId, document).catch(logger.error);
     }
     return document;
   }
 
-  getDocuments(drive: string) {
-    return this.storage.getDocuments(drive);
+  getDocuments(driveId: string) {
+    return this.storage.getDocuments(driveId);
   }
 
   protected async createDocument(driveId: string, input: CreateDocumentInput) {
@@ -1176,9 +1180,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     return document;
   }
 
-  async deleteDocument(driveId: string, id: string) {
+  async deleteDocument(driveId: string, documentId: string) {
     try {
-      const syncUnits = await this.getSynchronizationUnitsIds(driveId, [id]);
+      const syncUnits = await this.getSynchronizationUnitsIds(driveId, [
+        documentId,
+      ]);
 
       // remove document sync units status when a document is deleted
       for (const syncUnit of syncUnits) {
@@ -1188,12 +1194,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     } catch (error) {
       logger.warn("Error deleting document", error);
     }
-    await this.cache.deleteDocument(driveId, id);
-    return this.storage.deleteDocument(driveId, id);
+    await this.cache.deleteDocument(driveId, documentId);
+    return this.storage.deleteDocument(driveId, documentId);
   }
 
   async _processOperations<T extends Document, A extends Action>(
-    drive: string,
+    driveId: string,
     documentId: string | undefined,
     documentStorage: DocumentStorage<T>,
     operations: Operation<A | BaseAction>[],
@@ -1203,7 +1209,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
     const documentStorageWithState = await this._addDocumentResultingStage(
       documentStorage,
-      drive,
+      driveId,
       documentId,
     );
 
@@ -1260,7 +1266,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
           const taskQueueMethod = this.options.taskQueueMethod;
           const task = () =>
             this._performOperation(
-              drive,
+              driveId,
               documentId,
               document,
               nextOperation,
@@ -1301,7 +1307,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   private async _addDocumentResultingStage<T extends Document>(
     document: DocumentStorage<T>,
-    drive: string,
+    driveId: string,
     documentId?: string,
     options?: GetDocumentOptions,
   ): Promise<DocumentStorage<T>> {
@@ -1323,14 +1329,14 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
       if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
         lastRemainingOperation.resultingState = await (documentId
           ? this.storage.getOperationResultingState?.(
-              drive,
+              driveId,
               documentId,
               lastRemainingOperation.index,
               lastRemainingOperation.scope,
               "main",
             )
           : this.storage.getDriveOperationResultingState?.(
-              drive,
+              driveId,
               lastRemainingOperation.index,
               lastRemainingOperation.scope,
               "main",
@@ -1386,8 +1392,8 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   private async _performOperation<T extends Document>(
-    drive: string,
-    id: string | undefined,
+    driveId: string,
+    documentId: string | undefined,
     document: T,
     operation: Operation,
     skipHashValidation = false,
@@ -1411,16 +1417,16 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     // if the latest operation doesn't have a resulting state then tries
     // to retrieve it from the db to avoid rerunning all the operations
     if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
-      lastRemainingOperation.resultingState = await (id
+      lastRemainingOperation.resultingState = await (documentId
         ? this.storage.getOperationResultingState?.(
-            drive,
-            id,
+            driveId,
+            documentId,
             lastRemainingOperation.index,
             lastRemainingOperation.scope,
             "main",
           )
         : this.storage.getDriveOperationResultingState?.(
-            drive,
+            driveId,
             lastRemainingOperation.index,
             lastRemainingOperation.scope,
             "main",
@@ -1435,20 +1441,21 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         let handler: (() => Promise<unknown>) | undefined = undefined;
         switch (signal.type) {
           case "CREATE_CHILD_DOCUMENT":
-            handler = () => this.createDocument(drive, signal.input);
+            handler = () => this.createDocument(driveId, signal.input);
             break;
           case "DELETE_CHILD_DOCUMENT":
-            handler = () => this.deleteDocument(drive, signal.input.id);
+            handler = () => this.deleteDocument(driveId, signal.input.id);
             break;
           case "COPY_CHILD_DOCUMENT":
             handler = () =>
-              this.getDocument(drive, signal.input.id).then((documentToCopy) =>
-                this.createDocument(drive, {
-                  id: signal.input.newId,
-                  documentType: documentToCopy.documentType,
-                  document: documentToCopy,
-                  synchronizationUnits: signal.input.synchronizationUnits,
-                }),
+              this.getDocument(driveId, signal.input.id).then(
+                (documentToCopy) =>
+                  this.createDocument(driveId, {
+                    id: signal.input.newId,
+                    documentType: documentToCopy.documentType,
+                    document: documentToCopy,
+                    synchronizationUnits: signal.input.synchronizationUnits,
+                  }),
               );
             break;
         }
@@ -1494,50 +1501,53 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   addOperation(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.addOperations(drive, id, [operation], options);
+    return this.addOperations(driveId, documentId, [operation], options);
   }
 
   private async _addOperations(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     callback: (document: DocumentStorage) => Promise<{
       operations: Operation[];
       header: DocumentHeader;
     }>,
   ) {
     if (!this.storage.addDocumentOperationsWithTransaction) {
-      const documentStorage = await this.storage.getDocument(drive, id);
+      const documentStorage = await this.storage.getDocument(
+        driveId,
+        documentId,
+      );
       const result = await callback(documentStorage);
       // saves the applied operations to storage
       if (result.operations.length > 0) {
         await this.storage.addDocumentOperations(
-          drive,
-          id,
+          driveId,
+          documentId,
           result.operations,
           result.header,
         );
       }
     } else {
       await this.storage.addDocumentOperationsWithTransaction(
-        drive,
-        id,
+        driveId,
+        documentId,
         callback,
       );
     }
   }
 
   queueOperation(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.queueOperations(drive, id, [operation], options);
+    return this.queueOperations(driveId, documentId, [operation], options);
   }
 
   private async resultIfExistingOperations(
@@ -1579,20 +1589,24 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   async queueOperations(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ) {
     // if operations are already stored then returns cached document
-    const result = await this.resultIfExistingOperations(drive, id, operations);
+    const result = await this.resultIfExistingOperations(
+      driveId,
+      documentId,
+      operations,
+    );
     if (result) {
       return result;
     }
     try {
       const jobId = await this.queueManager.addJob({
-        driveId: drive,
-        documentId: id,
+        driveId: driveId,
+        documentId: documentId,
         operations,
         options,
       });
@@ -1626,24 +1640,24 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   async queueAction(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.queueActions(drive, id, [action], options);
+    return this.queueActions(driveId, documentId, [action], options);
   }
 
   async queueActions(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
     try {
       const jobId = await this.queueManager.addJob({
-        driveId: drive,
-        documentId: id,
+        driveId: driveId,
+        documentId: documentId,
         actions,
         options,
       });
@@ -1677,21 +1691,21 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   async queueDriveAction(
-    drive: string,
+    driveId: string,
     action: DocumentDriveAction | BaseAction,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
-    return this.queueDriveActions(drive, [action], options);
+    return this.queueDriveActions(driveId, [action], options);
   }
 
   async queueDriveActions(
-    drive: string,
+    driveId: string,
     actions: (DocumentDriveAction | BaseAction)[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
     try {
       const jobId = await this.queueManager.addJob({
-        driveId: drive,
+        driveId: driveId,
         actions,
         options,
       });
@@ -1726,13 +1740,17 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   async addOperations(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ) {
     // if operations are already stored then returns the result
-    const result = await this.resultIfExistingOperations(drive, id, operations);
+    const result = await this.resultIfExistingOperations(
+      driveId,
+      documentId,
+      operations,
+    );
     if (result) {
       return result;
     }
@@ -1742,33 +1760,39 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     let error: Error | undefined;
 
     try {
-      await this._addOperations(drive, id, async (documentStorage) => {
-        const result = await this._processOperations(
-          drive,
-          id,
-          documentStorage,
-          operations,
-        );
+      await this._addOperations(
+        driveId,
+        documentId,
+        async (documentStorage) => {
+          const result = await this._processOperations(
+            driveId,
+            documentId,
+            documentStorage,
+            operations,
+          );
 
-        if (!result.document) {
-          logger.error("Invalid document");
-          throw result.error ?? new Error("Invalid document");
-        }
+          if (!result.document) {
+            logger.error("Invalid document");
+            throw result.error ?? new Error("Invalid document");
+          }
 
-        document = result.document;
-        error = result.error;
-        signals.push(...result.signals);
-        operationsApplied.push(...result.operationsApplied);
+          document = result.document;
+          error = result.error;
+          signals.push(...result.signals);
+          operationsApplied.push(...result.operationsApplied);
 
-        return {
-          operations: result.operationsApplied,
-          header: result.document,
-          newState: document.state,
-        };
-      });
+          return {
+            operations: result.operationsApplied,
+            header: result.document,
+            newState: document.state,
+          };
+        },
+      );
 
       if (document) {
-        this.cache.setDocument(drive, id, document).catch(logger.error);
+        this.cache
+          .setDocument(driveId, documentId, document)
+          .catch(logger.error);
       }
 
       // gets all the different scopes and branches combinations from the operations
@@ -1783,8 +1807,8 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
       );
 
       const syncUnits = await this.getSynchronizationUnits(
-        drive,
-        [id],
+        driveId,
+        [documentId],
         scopes,
         branches,
       );
@@ -1814,11 +1838,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
       this.listenerManager
         .updateSynchronizationRevisions(
-          drive,
+          driveId,
           syncUnits,
           source,
           () => {
-            this.updateSyncUnitStatus(drive, {
+            this.updateSyncUnitStatus(driveId, {
               [operationSource]: "SYNCING",
             });
 
@@ -1833,7 +1857,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         )
         .then((updates) => {
           if (updates.length) {
-            this.updateSyncUnitStatus(drive, {
+            this.updateSyncUnitStatus(driveId, {
               [operationSource]: "SUCCESS",
             });
           }
@@ -1847,7 +1871,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         .catch((error) => {
           logger.error("Non handled error updating sync revision", error);
           this.updateSyncUnitStatus(
-            drive,
+            driveId,
             {
               [operationSource]: "ERROR",
             },
@@ -1899,11 +1923,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   addDriveOperation(
-    drive: string,
+    driveId: string,
     operation: Operation<DocumentDriveAction | BaseAction>,
     options?: AddOperationOptions,
   ) {
-    return this.addDriveOperations(drive, [operation], options);
+    return this.addDriveOperations(driveId, [operation], options);
   }
 
   async clearStorage() {
@@ -1915,35 +1939,35 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   private async _addDriveOperations(
-    drive: string,
+    driveId: string,
     callback: (document: DocumentDriveStorage) => Promise<{
       operations: Operation<DocumentDriveAction | BaseAction>[];
       header: DocumentHeader;
     }>,
   ) {
     if (!this.storage.addDriveOperationsWithTransaction) {
-      const documentStorage = await this.storage.getDrive(drive);
+      const documentStorage = await this.storage.getDrive(driveId);
       const result = await callback(documentStorage);
       // saves the applied operations to storage
       if (result.operations.length > 0) {
         await this.storage.addDriveOperations(
-          drive,
+          driveId,
           result.operations,
           result.header,
         );
       }
       return result;
     } else {
-      return this.storage.addDriveOperationsWithTransaction(drive, callback);
+      return this.storage.addDriveOperationsWithTransaction(driveId, callback);
     }
   }
 
   queueDriveOperation(
-    drive: string,
+    driveId: string,
     operation: Operation<DocumentDriveAction | BaseAction>,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
-    return this.queueDriveOperations(drive, [operation], options);
+    return this.queueDriveOperations(driveId, [operation], options);
   }
 
   private async resultIfExistingDriveOperations(
@@ -1980,13 +2004,13 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   async queueDriveOperations(
-    drive: string,
+    driveId: string,
     operations: Operation<DocumentDriveAction | BaseAction>[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
     // if operations are already stored then returns cached document
     const result = await this.resultIfExistingDriveOperations(
-      drive,
+      driveId,
       operations,
     );
     if (result) {
@@ -1994,7 +2018,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }
     try {
       const jobId = await this.queueManager.addJob({
-        driveId: drive,
+        driveId: driveId,
         operations,
         options,
       });
@@ -2029,7 +2053,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   async addDriveOperations(
-    drive: string,
+    driveId: string,
     operations: Operation<DocumentDriveAction | BaseAction>[],
     options?: AddOperationOptions,
   ) {
@@ -2040,7 +2064,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
     // if operations are already stored then returns cached drive
     const result = await this.resultIfExistingDriveOperations(
-      drive,
+      driveId,
       operations,
     );
     if (result) {
@@ -2048,11 +2072,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }
 
     try {
-      await this._addDriveOperations(drive, async (documentStorage) => {
+      await this._addDriveOperations(driveId, async (documentStorage) => {
         const result = await this._processOperations<
           DocumentDriveDocument,
           DocumentDriveAction
-        >(drive, undefined, documentStorage, operations.slice());
+        >(driveId, undefined, documentStorage, operations.slice());
         document = result.document;
         operationsApplied.push(...result.operationsApplied);
         signals.push(...result.signals);
@@ -2068,7 +2092,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         throw error ?? new Error("Invalid Document Drive document");
       }
 
-      this.cache.setDocument("drives", drive, document).catch(logger.error);
+      this.cache.setDocument("drives", driveId, document).catch(logger.error);
 
       for (const operation of operationsApplied) {
         switch (operation.type) {
@@ -2085,7 +2109,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
             // create the listener
             const listener = {
               ...zodListener,
-              driveId: drive,
+              driveId: driveId,
               label: zodListener.label ?? "",
               system: zodListener.system ?? false,
               filter: {
@@ -2103,11 +2127,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
               transmitter,
             };
 
-            await this.addListener(drive, listener);
+            await this.addListener(driveId, listener);
             break;
           }
           case "REMOVE_LISTENER": {
-            await this.removeListener(drive, operation);
+            await this.removeListener(driveId, operation);
             break;
           }
         }
@@ -2143,11 +2167,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
         this.listenerManager
           .updateSynchronizationRevisions(
-            drive,
+            driveId,
             [
               {
                 syncId: "0",
-                driveId: drive,
+                driveId: driveId,
                 documentId: "",
                 scope: "global",
                 branch: "main",
@@ -2158,7 +2182,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
             ],
             source,
             () => {
-              this.updateSyncUnitStatus(drive, {
+              this.updateSyncUnitStatus(driveId, {
                 [operationSource]: "SYNCING",
               });
             },
@@ -2167,7 +2191,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
           )
           .then((updates) => {
             if (updates.length) {
-              this.updateSyncUnitStatus(drive, {
+              this.updateSyncUnitStatus(driveId, {
                 [operationSource]: "SUCCESS",
               });
             }
@@ -2175,7 +2199,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
           .catch((error) => {
             logger.error("Non handled error updating sync revision", error);
             this.updateSyncUnitStatus(
-              drive,
+              driveId,
               { [operationSource]: "ERROR" },
               error as Error,
             );
@@ -2222,14 +2246,14 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   private _buildOperations<T extends Action>(
-    document: Document,
+    documentId: Document,
     actions: (T | BaseAction)[],
   ): Operation<T | BaseAction>[] {
     const operations: Operation<T | BaseAction>[] = [];
-    const { reducer } = this.getDocumentModel(document.documentType);
+    const { reducer } = this.getDocumentModel(documentId.documentType);
     for (const action of actions) {
-      document = reducer(document, action);
-      const operation = document.operations[action.scope].slice().pop();
+      documentId = reducer(documentId, action);
+      const operation = documentId.operations[action.scope].slice().pop();
       if (!operation) {
         throw new Error("Error creating operations");
       }
@@ -2239,41 +2263,41 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   async addAction(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.addActions(drive, id, [action], options);
+    return this.addActions(driveId, documentId, [action], options);
   }
 
   async addActions(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    const document = await this.getDocument(drive, id);
+    const document = await this.getDocument(driveId, documentId);
     const operations = this._buildOperations(document, actions);
-    return this.addOperations(drive, id, operations, options);
+    return this.addOperations(driveId, documentId, operations, options);
   }
 
   async addDriveAction(
-    drive: string,
+    driveId: string,
     action: DocumentDriveAction | BaseAction,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
-    return this.addDriveActions(drive, [action], options);
+    return this.addDriveActions(driveId, [action], options);
   }
 
   async addDriveActions(
-    drive: string,
+    driveId: string,
     actions: (DocumentDriveAction | BaseAction)[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
-    const document = await this.getDrive(drive);
+    const document = await this.getDrive(driveId);
     const operations = this._buildOperations(document, actions);
-    const result = await this.addDriveOperations(drive, operations, options);
+    const result = await this.addDriveOperations(driveId, operations, options);
     return result;
   }
 
