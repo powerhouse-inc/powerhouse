@@ -97,6 +97,7 @@ export function reactorCommand(program: Command) {
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
+      "./powerhouse.config.json",
     )
     .option("--generate", "generate code when document model is updated")
     .option("--db-path <DB_PATH>", "path to the database")

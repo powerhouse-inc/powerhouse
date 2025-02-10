@@ -11,6 +11,7 @@ export type PackageDetails = {
   publisher: string;
   publisherUrl: string;
   modules: string[];
+  removable: boolean;
 };
 
 export type PackageManagerListProps = {
@@ -49,6 +50,7 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
       publisherUrl,
       modules,
       id,
+      removable,
     },
     onUninstall,
     className,
@@ -81,36 +83,38 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
           </li>
         ))}
       </ul>
-      <ConnectDropdownMenu
-        items={[
-          {
-            id: "uninstall",
-            label: "Uninstall",
-            icon: <Icon name="Trash" />,
-            className: "text-red-900",
-          },
-        ]}
-        onItemClick={(optionId) => {
-          if (optionId === "uninstall") {
-            onUninstall(id);
-          }
-        }}
-        onOpenChange={setIsDropdownMenuOpen}
-        open={isDropdownMenuOpen}
-      >
-        <button
-          className="group absolute right-3 top-3"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsDropdownMenuOpen(true);
+      {removable && (
+        <ConnectDropdownMenu
+          items={[
+            {
+              id: "uninstall",
+              label: "Uninstall",
+              icon: <Icon name="Trash" />,
+              className: "text-red-900",
+            },
+          ]}
+          onItemClick={(optionId) => {
+            if (optionId === "uninstall") {
+              onUninstall(id);
+            }
           }}
+          onOpenChange={setIsDropdownMenuOpen}
+          open={isDropdownMenuOpen}
         >
-          <Icon
-            className="text-gray-600 group-hover:text-gray-900"
-            name="VerticalDots"
-          />
-        </button>
-      </ConnectDropdownMenu>
+          <button
+            className="group absolute right-3 top-3"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDropdownMenuOpen(true);
+            }}
+          >
+            <Icon
+              className="text-gray-600 group-hover:text-gray-900"
+              name="VerticalDots"
+            />
+          </button>
+        </ConnectDropdownMenu>
+      )}
     </li>
   );
 };

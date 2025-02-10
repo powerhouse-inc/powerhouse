@@ -12,7 +12,7 @@ export type PackageManagerReactorSelectProps = {
 export const PackageManagerReactorSelect: React.FC<
   PackageManagerReactorSelectProps
 > = (props) => {
-  const { reactorOptions, reactor, onReactorChange } = props;
+  const { reactorOptions, reactor, onReactorChange, ...rest } = props;
 
   const handleChange = useCallback(
     (value: string | string[]) => {
@@ -22,7 +22,7 @@ export const PackageManagerReactorSelect: React.FC<
   );
 
   return (
-    <div>
+    <div {...rest}>
       <h3 className="mb-4 font-semibold text-gray-900">Select Reactor</h3>
       <SelectFieldRaw
         className="min-w-36 max-w-fit"

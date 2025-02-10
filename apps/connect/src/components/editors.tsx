@@ -13,7 +13,8 @@ import {
     actions,
 } from 'document-model/document';
 import { useAtomValue } from 'jotai';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
 import { TUiNodes } from 'src/hooks/useUiNodes';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
@@ -30,6 +31,7 @@ import {
 import { addActionContext, signOperation } from 'src/utils/signature';
 import Button from './button';
 import { EditorLoader } from './editor-loader';
+import { useModal } from './modal';
 
 export type EditorProps<
     T = unknown,
@@ -43,7 +45,7 @@ export type EditorProps<
     onChange?: (document: Document<T, A, LocalState>) => void;
 };
 
-function EditorError({ message }: { message: string }) {
+function EditorError({ message }: { message: React.ReactNode }) {
     return (
         <div className="flex size-full items-center justify-center">
             <h3 className="text-lg font-semibold">{message}</h3>
@@ -165,6 +167,9 @@ export function DocumentEditor(props: EditorProps) {
         setSelectedNode(selectedParentNode);
     }
 
+    const navigate = useNavigate();
+    const { showModal } = useModal();
+
     if (fileNodeDocument?.status === 'ERROR') {
         return <EditorError message={'Error loading document'} />;
     }
@@ -183,7 +188,29 @@ export function DocumentEditor(props: EditorProps) {
     if (!documentModel) {
         return (
             <EditorError
-                message={`Document of type '${documentType}' is not supported`}
+                message={
+                    <div className="text-center leading-10">
+                        <p>
+                            Unable to open the document because the document
+                            model "{documentType}" is not supported.
+                        </p>
+                        <p>
+                            Go to the{' '}
+                            <button
+                                type="button"
+                                className="cursor-pointer underline"
+                                onClick={() => {
+                                    showModal('settingsModal', {
+                                        onRefresh: () => navigate(0),
+                                    });
+                                }}
+                            >
+                                package manager
+                            </button>{' '}
+                            to install this document model
+                        </p>
+                    </div>
+                }
             />
         );
     }
@@ -191,7 +218,29 @@ export function DocumentEditor(props: EditorProps) {
     if (editor === null) {
         return (
             <EditorError
-                message={`No editor available for document of type '${documentType}'`}
+                message={
+                    <div className="text-center leading-10">
+                        <p>
+                            Unable to open the document because no editor has
+                            been found
+                        </p>
+                        <p>
+                            Go to the{' '}
+                            <button
+                                type="button"
+                                className="cursor-pointer underline"
+                                onClick={() => {
+                                    showModal('settingsModal', {
+                                        onRefresh: () => navigate(0),
+                                    });
+                                }}
+                            >
+                                package manager
+                            </button>{' '}
+                            an editor for the "${documentType}" document type
+                        </p>
+                    </div>
+                }
             />
         );
     }

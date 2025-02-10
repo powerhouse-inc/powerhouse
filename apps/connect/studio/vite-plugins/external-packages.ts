@@ -31,7 +31,16 @@ export function generateImportScript(packages: string[]) {
         counter++;
     }
 
-    const exportStatement = `export default [${moduleNames.join(', ')}];`;
+    const exportStatement = `export default [
+        ${moduleNames
+            .map(
+                (name, index) => `{
+            id: "${packages[index]}",
+            ...${name},
+        }`,
+            )
+            .join(',\n')}
+    ];`;
 
     const fileContent = `${imports.join('\n')}\n\n${exportStatement}`;
     fs.writeFileSync(IMPORT_SCRIPT_FILE, fileContent);
@@ -55,11 +64,15 @@ export const viteLoadExternalPackages = (
             name: 'vite-plugin-studio-external-packages',
             handleHotUpdate({ file, server, modules }) {
                 if (file.endsWith('powerhouse.config.json')) {
-                    console.log('External packages file changed, reloading...');
-                    const config = getConfig();
+                    const config = getConfig(file);
                     generateImportScript(
                         config.packages?.map(p => p.packageName) ?? [],
                     );
+
+                    config.packages?.forEach(pkg =>
+                        console.log('-> Loading package:', pkg.packageName),
+                    );
+
                     const module =
                         server.moduleGraph.getModuleById(IMPORT_SCRIPT_FILE);
 

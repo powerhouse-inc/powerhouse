@@ -1,28 +1,19 @@
 import { Icon, Modal } from "@/powerhouse";
 import React, { ComponentProps, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { T } from "vitest/dist/chunks/environment.LoooBwUu.js";
-import { About } from "./about";
-import { DangerZone } from "./danger-zone";
-import { DefaultEditor } from "./default-editor";
-import { PackageManager } from "./package-manager";
 
 export type SettingsTab = {
   id: string;
   icon?: React.ReactNode;
   label: React.ReactNode;
-  content: React.ComponentType<any>;
+  content: React.ReactNode | React.ComponentType<any>;
 };
 
 type Props = {
   readonly title: React.ReactNode;
   readonly tabs: SettingsTab[];
   defaultTab?: string;
-} & ComponentProps<typeof Modal> &
-  ComponentProps<typeof About> &
-  ComponentProps<typeof DefaultEditor> &
-  ComponentProps<typeof DangerZone> &
-  ComponentProps<typeof PackageManager>;
+} & ComponentProps<typeof Modal>;
 
 export function SettingsModal(props: Props) {
   const {
@@ -38,7 +29,7 @@ export function SettingsModal(props: Props) {
   const [selectedTab, setSelectedTab] = useState(defaultTab ?? tabs.at(0)?.id);
 
   const tabsContent = tabs.map((tab) => (
-    <button onClick={() => setSelectedTab(tab.id)} key={tab.id}>
+    <button type="button" onClick={() => setSelectedTab(tab.id)} key={tab.id}>
       <div
         className={twMerge(
           "flex h-9 w-48 cursor-pointer items-center gap-x-2 rounded-md pl-3 hover:bg-slate-50",
@@ -53,7 +44,7 @@ export function SettingsModal(props: Props) {
 
   const selectedTabContent = tabs.find(
     (tab) => tab.id === selectedTab,
-  )!.content;
+  )?.content;
 
   const SelectedTabComponent = selectedTabContent;
 
@@ -81,6 +72,7 @@ export function SettingsModal(props: Props) {
       <div className="flex justify-between border-b border-slate-50 p-4">
         <h1 className="text-center text-xl font-semibold">{title}</h1>
         <button
+          type="button"
           className="flex size-6 items-center justify-center rounded-md outline-none"
           onClick={() => onOpenChange?.(false)}
         >
@@ -90,7 +82,11 @@ export function SettingsModal(props: Props) {
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
         <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50">
-          <SelectedTabComponent {...restProps} />
+          {typeof SelectedTabComponent === "function" ? (
+            <SelectedTabComponent />
+          ) : (
+            SelectedTabComponent
+          )}
         </div>
       </div>
     </Modal>

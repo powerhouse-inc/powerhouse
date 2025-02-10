@@ -13,6 +13,7 @@ const entry: Record<string, string> = {
   "document-models": resolve(documentModelsDir, "index.ts"),
   utils: resolve(editorsDir, "utils/index.ts"),
   editors: resolve(editorsDir, "index.ts"),
+  manifest: "powerhouse.manifest.json",
 };
 
 readdirSync(documentModelsDir, { withFileTypes: true })

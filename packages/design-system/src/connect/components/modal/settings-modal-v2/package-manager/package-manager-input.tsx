@@ -1,6 +1,6 @@
 import { Button } from "@/powerhouse/components/button";
 import { Input } from "@/scalars/components/fragments/input";
-import { ComponentPropsWithoutRef, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 
 export type PackageManagerInputProps = {
   onInstall: (value: string) => void | Promise<void>;

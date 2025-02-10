@@ -23,6 +23,7 @@ export const mockPackages = [
       "RWA Portfolio Report Document Model (Connect)",
       "RWA Portfolio Report Editor (Connect)",
     ],
+    removable: true,
   },
   {
     id: "@powerhousedao/builder-tooling",
@@ -37,6 +38,7 @@ export const mockPackages = [
       "RWA Portfolio Report Document Model (Connect)",
       "RWA Portfolio Report Editor (Connect)",
     ],
+    removable: true,
   },
 ];
 

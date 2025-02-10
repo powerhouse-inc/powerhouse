@@ -1,0 +1,27 @@
+{
+  "name": "Common",
+  "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
+  "category": "Meta",
+  "publisher": {
+    "name": "Powerhouse",
+    "url": "https://www.powerhouse.inc/"
+  },
+  "documentModels": [
+    {
+      "id": "powerhouse/document-drive",
+      "name": "Document Drive"
+    }
+  ],
+  "editors": [
+    {
+      "id": "powerhouse/base-document-drive-editor",
+      "name": "Base Document Drive Editor",
+      "documentTypes": ["powerhouse/document-drive"]
+    },
+    {
+      "id": "powerhouse/json-editor",
+      "name": "JSON Editor",
+      "documentTypes": ["*"]
+    }
+  ]
+}

@@ -3,11 +3,11 @@ import { ClearStorageSettingsRow } from "./clear-storage-row";
 import { DependencyVersions } from "./dependency-versions";
 import mockPackageJson from "./dependency-versions/mock-package-json.json";
 import { DocumentSelectSettingsRow } from "./document-select-row";
-import { SettingsModal } from "./settings-modal";
+import { SettingsModalOld } from "./settings-modal";
 
-const meta: Meta<typeof SettingsModal> = {
+const meta: Meta<typeof SettingsModalOld> = {
   title: "Connect/Components/Modal/SettingsModal",
-  component: SettingsModal,
+  component: SettingsModalOld,
 };
 
 export default meta;

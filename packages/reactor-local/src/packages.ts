@@ -1,7 +1,7 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import { DocumentModel } from "document-model/document";
 import EventEmitter from "node:events";
-import { existsSync, readFileSync, watchFile } from "node:fs";
+import { existsSync, readFileSync, StatWatcher, watchFile } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
@@ -55,7 +55,7 @@ async function loadPackagesDocumentModels(packages: string[]) {
   const loadedPackages = new Map<string, DocumentModel[]>();
   for (const pkg of packages) {
     try {
-      console.log("> Loading package", pkg);
+      console.log("> Loading package:", pkg);
       const pkgModule = await loadDependency(pkg, "./document-models");
       if (pkgModule) {
         console.log(`  ➜  Loaded package: ${pkg}`);
@@ -86,6 +86,7 @@ function getUniqueDocumentModels(
 
 export class PackagesManager implements IPackagesManager {
   private packagesMap = new Map<string, DocumentModel[]>();
+  private configWatcher: StatWatcher | undefined;
   private eventEmitter = new EventEmitter<{
     documentModelsChange: DocumentModel[][];
   }>();
@@ -97,13 +98,13 @@ export class PackagesManager implements IPackagesManager {
     this.eventEmitter.setMaxListeners(0);
 
     if ("packages" in options) {
-      void this.initPackages(options.packages).catch(onError);
+      void this.loadPackages(options.packages).catch(onError);
     } else if ("configFile" in options) {
-      void this.initConfigFile(options.configFile)?.catch(onError);
+      void this.initConfigFile(options.configFile).catch(onError);
     }
   }
 
-  private async initPackages(packages: string[]) {
+  private async loadPackages(packages: string[]) {
     const packagesMap = await loadPackagesDocumentModels(packages);
     this.updatePackagesMap(packagesMap);
   }
@@ -111,27 +112,39 @@ export class PackagesManager implements IPackagesManager {
   private loadFromConfigFile(configFile: string) {
     const config = getConfig(configFile);
     const packages = config.packages;
-    if (packages) {
-      return this.initPackages(packages.map((pkg) => pkg.packageName)).catch(
-        this.onError,
-      );
-    }
+
+    return this.loadPackages(
+      packages?.map((pkg) => pkg.packageName) ?? [],
+    ).catch(this.onError);
   }
 
   private initConfigFile(configFile: string) {
     const result = this.loadFromConfigFile(configFile);
 
-    watchFile(configFile, { interval: 100 }, (curr, prev) => {
-      if (curr.mtime === prev.mtime) {
-        return;
-      }
-      void this.loadFromConfigFile(configFile)?.catch(this.onError);
-    });
+    if (!this.configWatcher) {
+      this.configWatcher = watchFile(
+        configFile,
+        { interval: 100 },
+        (curr, prev) => {
+          if (curr.mtime === prev.mtime) {
+            return;
+          }
+          void this.loadFromConfigFile(configFile).catch(this.onError);
+        },
+      );
+    }
 
     return result;
   }
 
   private updatePackagesMap(packagesMap: Map<string, DocumentModel[]>) {
+    const oldPackages = Array.from(this.packagesMap.keys());
+    const newPackages = Array.from(packagesMap.keys());
+    oldPackages
+      .filter((pkg) => !newPackages.includes(pkg))
+      .forEach((pkg) => {
+        console.log("> Removed package:", pkg);
+      });
     this.packagesMap = packagesMap;
     const documentModels = getUniqueDocumentModels(
       ...Array.from(packagesMap.values()),
