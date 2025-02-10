@@ -124,7 +124,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             {label}
           </FormLabel>
         )}
-        {autoComplete && fetchOptionsCallback && fetchSelectedOptionCallback ? (
+        {autoComplete && fetchOptionsCallback ? (
           <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
             <Command
               shouldFilter={false}
@@ -168,7 +168,11 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                   asPlaceholder={selectedOption === undefined}
                   showPHID={false}
                   isLoadingSelectedOption={isLoadingSelectedOption}
-                  handleFetchSelectedOption={handleFetchSelectedOption}
+                  handleFetchSelectedOption={
+                    fetchSelectedOptionCallback
+                      ? handleFetchSelectedOption
+                      : undefined
+                  }
                   className={cn("rounded-t-none pt-2")}
                 />
               )}

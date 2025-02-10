@@ -37,8 +37,7 @@ describe("PHIDField Component", () => {
   const defaultGetOptions = vi.fn().mockResolvedValue(mockOptions);
   const defaultGetSelectedOption = vi
     .fn()
-    .mockImplementation(async (phid: string) => {
-      await Promise.resolve();
+    .mockImplementation((phid: string) => {
       return mockOptions.find((option) => option.phid === phid);
     });
 
