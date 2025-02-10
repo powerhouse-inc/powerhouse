@@ -9,8 +9,10 @@ RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || 
 RUN npm install --global pnpm@9
 COPY . .
 RUN pnpm install --frozen-lockfile
+ARG BASE_PATH=""
+ENV BASE_PATH=${BASE_PATH}
 RUN pnpm build:all
-RUN pnpm --filter "@powerhousedao/connect" build:web
+RUN pnpm --filter "@powerhousedao/connect" build:web -- --base ${BASE_PATH}
 RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned
 
 # Final production image
