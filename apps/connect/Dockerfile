@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
 RUN pnpm build:all
-RUN pnpm --filter "@powerhousedao/connect" build:web -- --base ${BASE_PATH}
+RUN pnpm --filter "@powerhousedao/connect" build:web --base ${BASE_PATH}
 RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned
 
 # Final production image
