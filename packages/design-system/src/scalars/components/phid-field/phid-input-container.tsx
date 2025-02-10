@@ -8,7 +8,7 @@ import {
   TooltipProvider,
 } from "@/scalars/components/fragments/tooltip";
 import { cn } from "@/scalars/lib/utils";
-import type { PHIDListItemProps } from "./types";
+import type { PHIDItem } from "./types";
 
 interface PHIDInputContainerProps {
   id: string;
@@ -21,8 +21,7 @@ interface PHIDInputContainerProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onClick?: (e: React.MouseEvent<HTMLInputElement>) => void;
-  options: PHIDListItemProps[];
-  selectedOption?: PHIDListItemProps;
+  selectedOption?: PHIDItem;
   handleOpenChange?: (open: boolean) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLInputElement>) => void;
   placeholder?: string;
@@ -51,7 +50,6 @@ export const PHIDInputContainer = React.forwardRef<
       onChange,
       onBlur,
       onClick,
-      options,
       selectedOption,
       handleOpenChange,
       onMouseDown,
