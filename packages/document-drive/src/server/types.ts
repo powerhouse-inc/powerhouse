@@ -335,123 +335,123 @@ export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
   setDocumentModels(models: DocumentModel[]): void;
   getDrives(): Promise<string[]>;
-  addDrive(drive: DriveInput): Promise<DocumentDriveDocument>;
+  addDrive(input: DriveInput): Promise<DocumentDriveDocument>;
   addRemoteDrive(
     url: string,
     options: RemoteDriveOptions,
   ): Promise<DocumentDriveDocument>;
-  deleteDrive(id: string): Promise<void>;
+  deleteDrive(driveId: string): Promise<void>;
   getDrive(
-    id: string,
+    driveId: string,
     options?: GetDocumentOptions,
   ): Promise<DocumentDriveDocument>;
 
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
 
-  getDocuments(drive: string): Promise<string[]>;
+  getDocuments(driveId: string): Promise<string[]>;
   getDocument(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     options?: GetDocumentOptions,
   ): Promise<Document>;
 
   addOperation(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   addOperations(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueOperation(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueOperations(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueAction(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueActions(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   addDriveOperation(
-    drive: string,
+    driveId: string,
     operation: Operation<DocumentDriveAction | BaseAction>,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>>;
   addDriveOperations(
-    drive: string,
+    driveId: string,
     operations: Operation<DocumentDriveAction | BaseAction>[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>>;
 
   queueDriveOperation(
-    drive: string,
+    driveId: string,
     operation: Operation<DocumentDriveAction | BaseAction>,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>>;
 
   queueDriveOperations(
-    drive: string,
+    driveId: string,
     operations: Operation<DocumentDriveAction | BaseAction>[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>>;
 
   queueDriveAction(
-    drive: string,
+    driveId: string,
     action: DocumentDriveAction | BaseAction,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>>;
 
   queueDriveActions(
-    drive: string,
+    driveId: string,
     actions: Array<DocumentDriveAction | BaseAction>,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>>;
 
   addAction(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
   addActions(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   addDriveAction(
-    drive: string,
+    driveId: string,
     action: DocumentDriveAction | BaseAction,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>>;
   addDriveActions(
-    drive: string,
+    driveId: string,
     actions: (DocumentDriveAction | BaseAction)[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>>;
