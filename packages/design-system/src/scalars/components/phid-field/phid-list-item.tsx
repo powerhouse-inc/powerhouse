@@ -1,11 +1,11 @@
 import React from "react";
 import { Icon } from "@/powerhouse/components/icon";
 import { cn } from "@/scalars/lib/utils";
-import type { PHIDProps, PHIDListItemProps } from "./types";
+import type { PHIDProps, PHIDItem } from "./types";
 
 const ReloadButton: React.FC<{
   isLoadingSelectedOption?: boolean;
-  handleFetchSelectedOption?: (phid: string) => Promise<void>;
+  handleFetchSelectedOption?: (phid: string) => void;
   phid: string;
 }> = ({ isLoadingSelectedOption, handleFetchSelectedOption, phid }) => (
   <div>
@@ -14,7 +14,7 @@ const ReloadButton: React.FC<{
       disabled={isLoadingSelectedOption}
       onClick={() => {
         if (!isLoadingSelectedOption) {
-          void handleFetchSelectedOption?.(phid);
+          handleFetchSelectedOption?.(phid);
         }
       }}
       className={cn(
@@ -35,16 +35,16 @@ const ReloadButton: React.FC<{
   </div>
 );
 
-export const PHIDListItem: React.FC<
-  {
-    variant: PHIDProps["variant"];
-    asPlaceholder?: boolean;
-    showPHID?: boolean;
-    isLoadingSelectedOption?: boolean;
-    handleFetchSelectedOption?: (phid: string) => Promise<void>;
-    className?: string;
-  } & PHIDListItemProps
-> = ({
+export type PHIDListItemProps = {
+  variant: PHIDProps["variant"];
+  asPlaceholder?: boolean;
+  showPHID?: boolean;
+  isLoadingSelectedOption?: boolean;
+  handleFetchSelectedOption?: (phid: string) => void;
+  className?: string;
+} & PHIDItem;
+
+export const PHIDListItem: React.FC<PHIDListItemProps> = ({
   variant = "withId",
   title = "Title Unavailable",
   path = "aha/hah-lorem",

@@ -57,15 +57,17 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onBlur,
       onClick,
       onMouseDown,
-      defaultBranch = "main",
-      defaultScope = "public",
-      allowedScopes,
-      allowedDocumentTypes,
+      defaultBranch = "main", // verify with PH
+      defaultScope = "public", // verify with PH
+      allowedScopes, // used in field validation
+      allowedDocumentTypes, // verify with PH
       allowUris, // used in field validation
       autoComplete = true,
       allowDataObjectReference = false, // allways false for now
       variant = "withId",
       maxLength,
+      fetchOptionsCallback,
+      fetchSelectedOptionCallback,
       ...props
     },
     ref,
@@ -78,6 +80,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
 
     const {
       selectedValue,
+      selectedOption,
       isPopoverOpen,
       commandListRef,
       options,
@@ -96,15 +99,14 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       autoComplete,
       defaultValue,
       value,
-      defaultBranch,
-      defaultScope,
-      allowedScopes,
-      allowedDocumentTypes,
       onChange,
       onBlur,
+      fetchOptions: autoComplete ? fetchOptionsCallback : undefined,
+      fetchSelectedOption: autoComplete
+        ? fetchSelectedOptionCallback
+        : undefined,
     });
 
-    const selectedOption = options.find((opt) => opt.phid === selectedValue);
     const asCard =
       variant === "withIdAndTitle" || variant === "withIdTitleAndDescription";
 
@@ -130,7 +132,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
               shouldFilter={false}
               value={commandValue}
               onValueChange={handleCommandValue}
-              className={cn("dark:bg-charcoal-900 rounded-md bg-white")}
+              className={cn("dark:bg-charcoal-900 rounded-md bg-gray-100")}
             >
               <PopoverAnchor asChild={true}>
                 <PHIDInputContainer
@@ -144,7 +146,6 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                   onChange={handleChange}
                   onBlur={onTriggerBlur}
                   onClick={onClick}
-                  options={options}
                   selectedOption={selectedOption}
                   handleOpenChange={handleOpenChange}
                   onMouseDown={onMouseDown}
@@ -170,9 +171,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
                   showPHID={false}
                   isLoadingSelectedOption={isLoadingSelectedOption}
                   handleFetchSelectedOption={handleFetchSelectedOption}
-                  className={cn(
-                    "dark:bg-charcoal-900 rounded-t-none bg-white pt-2",
-                  )}
+                  className={cn("rounded-t-none pt-2")}
                 />
               )}
               <PopoverContent
