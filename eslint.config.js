@@ -108,6 +108,9 @@ export default tseslint.config(
       "**/create-require.js",
       ".nx/",
       "packages/document-drive/test/*",
+      "**/.vite/",
+      "**/out/",
+      "**/forge.config.js",
     ],
   },
   {
@@ -166,5 +169,5 @@ export default tseslint.config(
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,
     },
-  }
+  },
 );

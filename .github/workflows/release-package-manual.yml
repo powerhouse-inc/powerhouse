@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "The NPM tag to apply to the release"
+        description: "The NPM tag to apply to the release. Use 'latest' for Production release."
         required: false
         type: string
-        default: "latest"
+        default: "dev"
 
 env:
   NX_ISOLATE_PLUGINS: false
