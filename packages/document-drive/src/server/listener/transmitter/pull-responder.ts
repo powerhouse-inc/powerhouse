@@ -1,5 +1,5 @@
 import { ListenerFilter, Trigger } from "document-model-libs/document-drive";
-import { Operation, OperationScope } from "document-model/document";
+import { Operation } from "document-model/document";
 import { PULL_DRIVE_INTERVAL } from "../..";
 import { generateUUID } from "../../../utils";
 import { gql, requestGraphql } from "../../../utils/graphql";
@@ -7,7 +7,7 @@ import { logger as defaultLogger } from "../../../utils/logger";
 import { OperationError } from "../../error";
 import {
   GetStrandsOptions,
-  IBaseDocumentDriveServer,
+  IListenerManager,
   IOperationResult,
   Listener,
   ListenerRevision,
@@ -16,7 +16,6 @@ import {
   RemoteDriveOptions,
   StrandUpdate,
 } from "../../types";
-import { ListenerManager } from "../manager";
 import {
   ITransmitter,
   PullResponderTrigger,
@@ -46,17 +45,11 @@ export interface IPullResponderTransmitter extends ITransmitter {
 }
 
 export class PullResponderTransmitter implements IPullResponderTransmitter {
-  private drive: IBaseDocumentDriveServer;
   private listener: Listener;
-  private manager: ListenerManager;
+  private manager: IListenerManager;
 
-  constructor(
-    listener: Listener,
-    drive: IBaseDocumentDriveServer,
-    manager: ListenerManager,
-  ) {
+  constructor(listener: Listener, manager: IListenerManager) {
     this.listener = listener;
-    this.drive = drive;
     this.manager = manager;
   }
 
