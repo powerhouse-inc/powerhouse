@@ -1,253 +1,120 @@
 import {
   DocumentDriveServer,
   generateUUID,
-  type IDocumentDriveServer,
+  InternalTransmitterUpdate,
+  IReceiver,
 } from "document-drive";
 import { MemoryStorage } from "document-drive/storage/memory";
-import {
-  actions,
-  DocumentDriveDocument,
-  generateAddNodeAction,
-  Listener,
-  TransmitterType,
-} from "document-model-libs/document-drive";
+import { ListenerFilter } from "document-model-libs/document-drive";
 import * as documentModelsMap from "document-model-libs/document-models";
-import { Document, DocumentModel } from "document-model/document";
 import {
-  DocumentModelAction,
-  DocumentModelLocalState,
-  DocumentModelState,
-  utils,
-} from "document-model/document-model";
-import { processGetStrands, processPushUpdate } from "src/sync/utils";
+  Document,
+  DocumentModel,
+  OperationScope,
+} from "document-model/document";
+import { utils } from "document-model/document-model";
 
-let documentModels: DocumentModel[];
-let document: Document<
-  DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
-> | null = null;
-let serverA: IDocumentDriveServer | null = null;
-let serverB: IDocumentDriveServer | null = null;
-let driveA: DocumentDriveDocument | null = null;
-let driveB: DocumentDriveDocument | null = null;
+import { beforeAll, bench, describe } from "vitest";
 
-let serverAListenerId: string | null = null;
+class TestReceiver<
+  T extends Document = Document,
+  S extends OperationScope = OperationScope,
+> implements IReceiver<T, S>
+{
+  async onStrands(strands: InternalTransmitterUpdate<T, S>[]) {
+    return Promise.resolve();
+  }
 
-const initialize = async () => {
-  documentModels = Object.values(documentModelsMap) as DocumentModel[];
+  async onDisconnect() {
+    return Promise.resolve();
+  }
+}
 
-  document = await utils.loadFromFile("test/data/BlocktowerAndromeda.zip");
-};
+beforeAll(async () => {});
 
-const prepRun = async () => {
-  // create server A
-  serverA = new DocumentDriveServer(documentModels, new MemoryStorage());
-  await serverA.initialize();
+describe("Document Drive", async () => {
+  const documentModels = Object.values(documentModelsMap) as DocumentModel[];
+  const document = await utils.loadFromFile(
+    "test/data/BlocktowerAndromeda.zip",
+  );
 
-  // create drive
-  driveA = await serverA.addDrive({
-    global: {
-      id: generateUUID(),
-      name: "Test Drive",
-      icon: null,
-      slug: null,
-    },
-    local: {
-      availableOffline: false,
-      sharingType: "PRIVATE",
-      listeners: [],
-      triggers: [],
-    },
-  });
+  bench("Load PHDM into Document Drive", async () => {
+    const serverA = new DocumentDriveServer(
+      documentModels,
+      new MemoryStorage(),
+    );
+    await serverA.initialize();
 
-  // create a listener
-  serverAListenerId = generateUUID();
-  const listener: Listener = {
-    block: false,
-    callInfo: {
-      data: "",
-      name: "PullResponder",
-      transmitterType: "PullResponder" as TransmitterType,
-    },
-    filter: {
-      branch: ["main"],
+    const serverB = new DocumentDriveServer(
+      documentModels,
+      new MemoryStorage(),
+    );
+    await serverB.initialize();
+
+    const driveAId = generateUUID();
+    await serverA.addDrive({
+      global: {
+        id: driveAId,
+        name: "Test Drive",
+        icon: null,
+        slug: null,
+      },
+      local: {
+        availableOffline: false,
+        sharingType: "PRIVATE",
+        listeners: [],
+        triggers: [],
+      },
+    });
+
+    const driveBId = generateUUID();
+    const driveB = await serverB.addDrive({
+      global: {
+        id: driveBId,
+        name: "Test Drive",
+        icon: null,
+        slug: null,
+      },
+      local: {
+        availableOffline: false,
+        sharingType: "PRIVATE",
+        listeners: [],
+        triggers: [],
+      },
+    });
+
+    // listener!
+    const filter: ListenerFilter = {
+      branch: ["*"],
       documentId: ["*"],
       documentType: ["*"],
       scope: ["*"],
-    },
-    label: `Pullresponder #${serverAListenerId}`,
-    listenerId: serverAListenerId,
-    system: false,
-  };
-
-  await serverA.queueDriveAction(
-    driveA!.state.global.id,
-    actions.addListener({ listener })
-  );
-
-  // create server B
-  serverB = new DocumentDriveServer(documentModels, new MemoryStorage());
-  await serverB.initialize();
-
-  // create drive on server B
-  driveB = await serverB.addDrive({
-    global: {
-      id: generateUUID(),
-      name: "Test Drive",
-      icon: null,
-      slug: null,
-    },
-    local: {
-      availableOffline: false,
-      sharingType: "PRIVATE",
-      listeners: [],
-      triggers: [],
-    },
-  });
-};
-
-const run = async () =>
-  new Promise((resolve, rej) => {
-    // import into server A, but do not wait for it to complete
-    let isServerAImportComplete = false;
-    let serverAOperationCount = 0;
-    serverA!
-      .addDriveAction(
-        driveA!.state.global.id,
-        generateAddNodeAction(
-          driveA!.state.global,
-          {
-            id: generateUUID(),
-            name: "Imported Document",
-            documentType: document!.documentType,
-            document: document,
-          },
-          ["global"]
-        )
-      )
-      .then((res) => {
-        isServerAImportComplete = true;
-        serverAOperationCount = res.document?.operations.global.length ?? 0;
-
-        console.log("Server A import complete.");
-      });
-
-    console.log("Started import.");
-
-    // loop until the document is imported
-    let since: string | undefined = undefined;
-    const poll = async () => {
-      // wait for poll interval
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      console.log("Poll.");
-
-      // pull from server A
-      let strands;
-      try {
-        strands = await processGetStrands(
-          serverA!,
-          driveA!.state.global.id,
-          serverAListenerId!,
-          since
-        );
-      } catch (e) {
-        console.error(e);
-        rej(e);
-        return;
-      }
-
-      console.log(`Pushing ${strands.length} strands to server B.`);
-
-      const updates = strands.map((strand) => ({
-        operations: strand.operations.map((op) => ({
-          ...op,
-          scope: strand.scope,
-          branch: strand.branch,
-        })),
-        documentId: strand.documentId,
-        driveId: driveB!.state.global.id,
-        scope: strand.scope,
-        branch: strand.branch,
-      }));
-
-      // push to server B
-      try {
-        await Promise.all(
-          updates.map((update) => processPushUpdate(serverB!, update))
-        );
-      } catch (e) {
-        console.error(e);
-        rej(e);
-        return;
-      }
-
-      console.log(`Pushed ${strands.length} strands to server B.`);
-
-      // no more updates
-      if (strands.length !== 0) {
-        // get the latest timestamp on the strand operations
-        let latestTimestamp = new Date("1970-01-01T00:00:00Z");
-        for (const strand of strands) {
-          for (const operation of strand.operations) {
-            if (new Date(operation.timestamp) > latestTimestamp) {
-              latestTimestamp = new Date(operation.timestamp);
-            }
-          }
-        }
-
-        since = latestTimestamp.toISOString();
-      }
-
-      // check that BOTH servers are done importing
-      if (isServerAImportComplete) {
-        console.log("Server A import complete. Checking server B.");
-
-        let serverBDocument;
-        try {
-          serverBDocument = await serverB?.getDocument(
-            driveB!.state.global.id,
-            document!.state.global.id
-          );
-        } catch (e) {
-          console.error(e);
-          rej(e);
-          return;
-        }
-
-        if (
-          serverBDocument?.operations.global.length === serverAOperationCount
-        ) {
-          console.log("Server B import complete. Done.");
-
-          resolve(void 0);
-          return;
-        } else {
-          console.log("Server B import not complete. Polling again.");
-
-          poll();
-        }
-      }
     };
 
-    poll();
-  });
+    const receiver = new TestReceiver();
+    await serverA.addInternalListener(driveAId, receiver, {
+      listenerId: generateUUID(),
+      label: "Test Listener",
+      block: false,
+      filter,
+    });
 
-/*
-beforeAll(initialize);
+    await serverB.addInternalListener(driveBId, receiver, {
+      listenerId: generateUUID(),
+      label: "Test Listener",
+      block: false,
+      filter,
+    });
 
-describe("Document Drive", () => {
-  bench("Load PHDM into Document Drive", run, {
-    setup: prepRun,
+    await serverA.addOperations(
+      driveAId,
+      document.state.global.id,
+      document.operations.global,
+    );
+
+    // magic number for magic data
+    if (645 !== document.operations.global.length) {
+      throw new Error("Document operations length mismatch");
+    }
   });
 });
-*/
-
-const main = async () => {
-  await initialize();
-  await prepRun();
-  await run();
-};
-
-main();
