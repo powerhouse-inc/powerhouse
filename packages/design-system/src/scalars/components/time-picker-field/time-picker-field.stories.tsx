@@ -7,7 +7,7 @@ import {
 import { TimePickerField } from "./time-picker-field";
 
 const meta: Meta<typeof TimePickerField> = {
-  title: "Document Engineering/Simple Components/Time Picker Field",
+  title: "Document Engineering/Fragments/Time Picker Field",
   component: TimePickerField,
   parameters: {
     layout: "centered",

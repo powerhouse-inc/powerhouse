@@ -8,16 +8,18 @@ import {
   SelectFieldProps,
   withFieldValidation,
 } from "../fragments";
-import { FieldCommonProps } from "../types";
+import { ErrorHandling, FieldCommonProps } from "../types";
 import { TimeFieldValue } from "./type";
 import { BasePickerField } from "../date-time-field/base-picker-field";
 import TimePickerContent from "./subcomponents/time-picker-content";
 import { useTimePickerField } from "./use-time-picker-field";
 import { InputNumberProps } from "../number-field/types";
+import { validateTimePicker } from "./time-picker-validations";
 
 export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
-    InputNumberProps {
+    InputNumberProps,
+    ErrorHandling {
   label?: string;
   id?: string;
   name: string;
@@ -78,7 +80,6 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       onBlur,
       timeFormat,
     });
-
     return (
       <FormGroup>
         {label && (
@@ -131,6 +132,12 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
   },
 );
 
-export const TimePickerField =
-  withFieldValidation<TimePickerFieldProps>(TimePickerRaw);
+export const TimePickerField = withFieldValidation<TimePickerFieldProps>(
+  TimePickerRaw,
+  {
+    validations: {
+      _timePickerType: validateTimePicker,
+    },
+  },
+);
 TimePickerField.displayName = "TimePickerField";

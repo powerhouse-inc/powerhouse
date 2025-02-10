@@ -66,7 +66,6 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
     },
     ref,
   ) => {
-    console.log("minDate", props.minDate);
     const {
       date,
       inputValue,

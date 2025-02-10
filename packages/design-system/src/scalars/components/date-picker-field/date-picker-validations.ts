@@ -1,8 +1,9 @@
-import { format } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 import { DatePickerFieldProps } from "./date-picker-field";
+import { isFormatAllowed } from "./utils";
 
 export const validateDatePicker =
-  ({ minDate, maxDate }: DatePickerFieldProps) =>
+  ({ minDate, maxDate, dateFormat = "yyyy-MM-dd" }: DatePickerFieldProps) =>
   (value: unknown) => {
     if (value === "") {
       return true;
@@ -10,14 +11,19 @@ export const validateDatePicker =
     if (value === undefined) {
       return true;
     }
-    const inputDate = new Date(value as string);
-    if (isNaN(inputDate.getTime())) {
-      return "Invalid date format";
+
+    if (dateFormat && !isFormatAllowed(dateFormat)) {
+      return `Invalid date format.Plese select a valid format`;
+    }
+    // Parse the input value using the specified format
+    const parsedDate = parse(value as string, dateFormat, new Date());
+    if (!isValid(parsedDate)) {
+      return `Invalid date format. Please select a valid format`;
     }
 
     if (minDate) {
       const minDateValue = new Date(minDate);
-      if (inputDate < minDateValue) {
+      if (parsedDate < minDateValue) {
         const formattedMinDate = format(minDateValue, "yyyy-MM-dd");
         return `Date must be on or after ${formattedMinDate}`;
       }
@@ -25,7 +31,7 @@ export const validateDatePicker =
 
     if (maxDate) {
       const maxDateValue = new Date(maxDate);
-      if (inputDate > maxDateValue) {
+      if (parsedDate > maxDateValue) {
         const formattedMaxDate = format(maxDateValue, "yyyy-MM-dd");
         return `Date must be on or before ${formattedMaxDate}`;
       }
