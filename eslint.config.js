@@ -15,6 +15,7 @@ const reactRuleOverrides = {
     "react/destructuring-assignment": "off",
     "react/function-component-definition": "off",
     "react/prop-types": "off",
+    "react/button-has-type": "off",
   },
   warn: {
     "react/no-unused-prop-types": "warn",
@@ -107,6 +108,9 @@ export default tseslint.config(
       "**/create-require.js",
       ".nx/",
       "packages/document-drive/test/*",
+      "**/.vite/",
+      "**/out/",
+      "**/forge.config.js",
     ],
   },
   {
@@ -165,5 +169,5 @@ export default tseslint.config(
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,
     },
-  }
+  },
 );

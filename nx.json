@@ -74,7 +74,7 @@
     }
   },
   "release": {
-    "projects": ["packages/*", "apps/connect"],
+    "projects": ["packages/*", "clis/*", "apps/connect"],
     "projectsRelationship": "independent",
     "tags": {
       "apps/connect": "dev"
@@ -82,6 +82,7 @@
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
+        "fallbackCurrentVersionResolver": "disk",
         "preserveLocalDependencyProtocols": true
       }
     },

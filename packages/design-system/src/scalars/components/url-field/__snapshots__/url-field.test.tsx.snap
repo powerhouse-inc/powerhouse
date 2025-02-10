@@ -41,7 +41,7 @@ exports[`UrlField > should match snapshot 1`] = `
         Enter your website URL
       </p>
       <p
-        class="mb-0 inline-flex items-center text-xs font-medium text-orange-900 dark:text-orange-900"
+        class="mb-0 inline-flex items-center text-xs font-medium text-yellow-900 dark:text-yellow-900"
         data-type="warning"
       >
         URL may be unreachable

@@ -3,19 +3,19 @@ import { connectCommand } from "./connect.js";
 import { devCommand } from "./dev.js";
 import { generateCommand } from "./generate.js";
 import { helpCommand } from "./help.js";
-import { initCommand } from "./init.js";
 import { installCommand } from "./install.js";
-import { reactorCommand } from "./switchboard.js";
-
 import { serviceCommand } from "./service.js";
+import { reactorCommand } from "./switchboard.js";
+import { uninstallCommand } from "./uninstall.js";
+
 export const commands = [
-  initCommand,
   devCommand,
   connectCommand,
   generateCommand,
   reactorCommand,
   helpCommand,
   installCommand,
+  uninstallCommand,
   serviceCommand,
 ];
 
@@ -23,9 +23,11 @@ export default function registerCommands(program: Command) {
   commands.forEach((command) => command(program));
 }
 
+export * from "./connect.js";
 export * from "./dev.js";
 export * from "./generate.js";
 export * from "./help.js";
-export * from "./init.js";
-export * from "./switchboard.js";
+export * from "./install.js";
 export * from "./service.js";
+export * from "./switchboard.js";
+export * from "./uninstall.js";

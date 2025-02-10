@@ -1,4 +1,5 @@
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { pascalCase } from "change-case";
 import {
   generateUUID,
   ListenerRevision,
@@ -32,13 +33,15 @@ export class DriveSubgraph extends Subgraph {
   typeDefs = gql`
     type Query {
       system: System
-      drive: DocumentDriveState
+      drive: DocumentDrive_DocumentDriveState
       document(id: String!): IDocument
       documents: [String!]!
     }
 
     type Mutation {
-      registerPullResponderListener(filter: InputListenerFilter!): Listener
+      registerPullResponderListener(
+        filter: InputListenerFilter!
+      ): DocumentDrive_Listener
       pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
       acknowledge(
         listenerId: String!
@@ -185,7 +188,7 @@ export class DriveSubgraph extends Subgraph {
       operations: async (
         obj: Document,
         { first, skip }: { first: number; skip: number },
-        ctx: Context
+        ctx: Context,
       ) => {
         const limit = first ?? 0;
         const start = skip ?? 0;
@@ -210,10 +213,13 @@ export class DriveSubgraph extends Subgraph {
         const dms = this.reactor.getDocumentModels();
         const dm = dms.find(
           ({ documentModel }: { documentModel: DocumentModelState }) =>
-            documentModel.id === document.documentType
+            documentModel.id === document.documentType,
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
+        const typeName = pascalCase(
+          (dm?.documentModel.name || "").replaceAll("/", " "),
+        );
         const response = {
           ...document,
           id,
@@ -227,7 +233,7 @@ export class DriveSubgraph extends Subgraph {
                 : JSON.stringify(op.input),
           })),
           initialState: document.initialState.state.global,
-          __typename: dm?.documentModel.name,
+          __typename: typeName,
         };
         return response;
       },
@@ -237,7 +243,7 @@ export class DriveSubgraph extends Subgraph {
       registerPullResponderListener: async (
         _: unknown,
         { filter }: { filter: ListenerFilter },
-        ctx: Context
+        ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const uuid = generateUUID();
@@ -261,12 +267,12 @@ export class DriveSubgraph extends Subgraph {
 
         const result = await this.reactor.queueDriveAction(
           ctx.driveId,
-          actions.addListener({ listener })
+          actions.addListener({ listener }),
         );
 
         if (result.status !== "SUCCESS" && result.error) {
           throw new Error(
-            `Listener couldn't be registered: ${result.error.message}`
+            `Listener couldn't be registered: ${result.error.message}`,
           );
         }
 
@@ -275,7 +281,7 @@ export class DriveSubgraph extends Subgraph {
       pushUpdates: async (
         _: unknown,
         { strands: strandsGql }: { strands: StrandUpdateGraphQL[] },
-        ctx: Context
+        ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
@@ -298,7 +304,7 @@ export class DriveSubgraph extends Subgraph {
 
         // return a list of listener revisions
         return await Promise.all(
-          strands.map((strand) => processPushUpdate(this.reactor, strand))
+          strands.map((strand) => processPushUpdate(this.reactor, strand)),
         );
       },
       acknowledge: async (
@@ -307,7 +313,7 @@ export class DriveSubgraph extends Subgraph {
           listenerId,
           revisions,
         }: { listenerId: string; revisions: ListenerRevision[] },
-        ctx: Context
+        ctx: Context,
       ) => {
         if (!listenerId || !revisions) return false;
         if (!ctx.driveId) throw new Error("Drive ID is required");
@@ -329,7 +335,7 @@ export class DriveSubgraph extends Subgraph {
           this.reactor,
           ctx.driveId,
           listenerId,
-          validEntries
+          validEntries,
         );
       },
     },
@@ -341,7 +347,7 @@ export class DriveSubgraph extends Subgraph {
           listenerId,
           since,
         }: { listenerId: string; since: string | undefined },
-        ctx: Context
+        ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
@@ -350,7 +356,7 @@ export class DriveSubgraph extends Subgraph {
           this.reactor,
           ctx.driveId,
           listenerId,
-          since
+          since,
         );
 
         // translate data types

@@ -11,6 +11,11 @@ const meta: Meta<typeof ToggleField> = {
   tags: ["autodocs"],
   component: ToggleField,
   decorators: [withForm],
+  parameters: {
+    chromatic: {
+      disableSnapshot: true,
+    },
+  },
   argTypes: {
     ...getDefaultArgTypes({
       valueControlType: "boolean",

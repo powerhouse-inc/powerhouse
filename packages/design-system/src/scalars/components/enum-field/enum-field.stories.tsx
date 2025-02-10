@@ -29,16 +29,16 @@ const meta: Meta<typeof EnumField> = {
 
     variant: {
       control: "radio",
-      options: ["Auto", "RadioGroup", "Select"],
+      options: ["auto", "RadioGroup", "Select"],
       description:
         "Enum field variant. " +
-        "Auto: uses the most appropriate variant based on the number of options " +
+        "auto: uses the most appropriate variant based on the number of options " +
         "(less than 6 options -> RadioGroup, 6 options or more -> Select). " +
         "RadioGroup: displays options in a group of radio buttons. " +
         "Select: displays options in a dropdown menu.",
       table: {
-        type: { summary: '"Auto" | "RadioGroup" | "Select"' },
-        defaultValue: { summary: "Auto" },
+        type: { summary: '"auto" | "RadioGroup" | "Select"' },
+        defaultValue: { summary: "auto" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -66,31 +66,31 @@ const meta: Meta<typeof EnumField> = {
       },
     },
 
-    optionsCheckmark: {
+    selectionIcon: {
       control: "radio",
-      options: ["Auto", "Checkmark"],
+      options: ["auto", "checkmark"],
       description:
-        "Type of checkmark to show in the options. " +
-        "Auto: Show a Radio for Single Select and a Checkbox for Multi Select. " +
-        "Checkmark: Show a Checkmark for Single and Multi Select. ",
+        "Selection icon to show in the options. " +
+        "auto: Show a Radio for Single Select and a Checkbox for Multi Select. " +
+        "checkmark: Show a checkmark icon for Single and Multi Select. ",
       table: {
-        type: { summary: '"Auto" | "Checkmark"' },
-        defaultValue: { summary: '"Auto"' },
+        type: { summary: '"auto" | "checkmark"' },
+        defaultValue: { summary: '"auto"' },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
 
-    optionsCheckmarkPosition: {
+    selectionIconPosition: {
       control: "radio",
-      options: ["Left", "Right"],
+      options: ["left", "right"],
       description:
-        'Checkmark position in options. Only apply if optionsCheckmark is "Checkmark".',
+        'Selection icon position in options. Only apply if "selectionIcon" is "checkmark".',
       table: {
-        type: { summary: '"Left" | "Right"' },
-        defaultValue: { summary: '"Left"' },
+        type: { summary: '"left" | "right"' },
+        defaultValue: { summary: '"left"' },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "optionsCheckmark", eq: "Checkmark" },
+      if: { arg: "selectionIcon", eq: "checkmark" },
     },
 
     searchable: {
@@ -128,13 +128,13 @@ type EnumFieldArgs = {
     description?: string;
     disabled?: boolean;
   }[];
-  optionsCheckmark?: "Auto" | "Checkmark";
-  optionsCheckmarkPosition?: "Left" | "Right";
+  selectionIcon?: "auto" | "checkmark";
+  selectionIconPosition?: "left" | "right";
   placeholder?: string;
   required?: boolean;
   searchable?: boolean;
   value?: string | string[];
-  variant: "Auto" | "RadioGroup" | "Select";
+  variant: "auto" | "RadioGroup" | "Select";
   warnings?: string[];
 };
 
@@ -300,7 +300,7 @@ export const SelectWithCheckmark: Story = {
     description: "Shows a checkmark for selected options",
     variant: "Select",
     options: defaultOptions,
-    optionsCheckmark: "Checkmark",
+    selectionIcon: "checkmark",
     placeholder: "Select an icon name",
   },
 };
@@ -311,8 +311,8 @@ export const SelectWithIcon: Story = {
     description: "Choose your favorite icon",
     variant: "Select",
     options: defaultOptionsWithIcon,
-    optionsCheckmark: "Checkmark",
-    optionsCheckmarkPosition: "Right",
+    selectionIcon: "checkmark",
+    selectionIconPosition: "right",
     placeholder: "Select an icon",
   },
 };

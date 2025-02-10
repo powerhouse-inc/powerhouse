@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import { Argument, Command } from "commander";
 import pm2, { StartOptions } from "pm2";

@@ -6,15 +6,13 @@ import { fileURLToPath } from 'node:url';
 import { createLogger, createServer, InlineConfig, Plugin } from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { backupIndexHtml, removeBase64EnvValues } from './helpers';
-import {
-    getStudioConfig,
-    viteConnectDevStudioPlugin,
-    viteLoadExternalProjects,
-} from './vite-plugin';
+import { getStudioConfig } from './vite-plugins/base';
+import { viteLoadExternalPackages } from './vite-plugins/external-packages';
+import { viteConnectDevStudioPlugin } from './vite-plugins/studio';
 
 export type StartServerOptions = {
-    projectsImportPath?: string;
-    enableExternalProjects?: boolean;
+    configFile?: string;
+    packages?: string[];
     https?: boolean;
     open?: boolean;
 };
@@ -77,8 +75,6 @@ function runShellScriptPlugin(scriptPath: string): Plugin {
 }
 
 export async function startServer(options: StartServerOptions = {}) {
-    const { enableExternalProjects = true } = options;
-
     // exits if node version is not compatible
     ensureNodeVersion();
 
@@ -145,10 +141,7 @@ export async function startServer(options: StartServerOptions = {}) {
         },
         plugins: [
             viteConnectDevStudioPlugin(true),
-            viteLoadExternalProjects(
-                enableExternalProjects,
-                options.projectsImportPath,
-            ),
+            viteLoadExternalPackages(options.packages, true),
             viteEnvs({
                 declarationFile: join(studioDirname, '../.env'),
                 computedEnv: studioConfig,

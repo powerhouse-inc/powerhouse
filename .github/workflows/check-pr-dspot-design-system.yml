@@ -1,0 +1,97 @@
+name: Check PR design-system
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["dspot-scalars"]
+    paths:
+      - "packages/design-system/**"
+  pull_request:
+    branches: ["dspot-scalars"]
+    paths:
+      - "packages/design-system/**"
+    types: [opened, synchronize]
+
+env:
+  NX_ISOLATE_PLUGINS: false
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    container: node:22
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Lint
+        run: npx nx run @powerhousedao/design-system:lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    container: node:22
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Test
+        run: npx nx run @powerhousedao/design-system:test
+
+  storybook:
+    name: Storybook
+    runs-on: ubuntu-latest
+    container: node:22
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Test
+        run: npx nx run @powerhousedao/design-system:build-storybook
+
+  build:
+    name: Build
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    container: node:22
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build
+        run: npx nx run @powerhousedao/design-system:build

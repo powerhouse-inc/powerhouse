@@ -7,12 +7,12 @@ import { IDocumentDriveServer } from "document-drive";
 import express, { Express } from "express";
 import fs from "node:fs";
 import https from "node:https";
+import path from "node:path";
 import { Pool } from "pg";
-import { ProcessorManager } from "./processors";
+import { IAnalyticsStore, ProcessorManager } from "./processors";
 import { SubgraphManager } from "./subgraphs/manager";
 import { API } from "./types";
 import { getDbClient } from "./utils/db";
-import path from "node:path";
 
 type Options = {
   express?: Express;
@@ -37,7 +37,7 @@ export async function startAPI(
   const analyticsStore = new KnexAnalyticsStore({
     executor: new KnexQueryExecutor(),
     knex: db,
-  });
+  }) as unknown as IAnalyticsStore; // TODO update @powerhousedao/analytics-engine-pg to use @powerhousedao/analytics-engine-core@0.3.2
   const subgraphManager = new SubgraphManager(
     "/",
     app,

@@ -1,3 +1,80 @@
+## 1.22.0 (2025-02-06)
+
+### 🚀 Features
+
+- **ph-cli:** added commands alias ([6fddb07a](https://github.com/powerhouse-inc/powerhouse/commit/6fddb07a))
+- **connect:** improved loading of external packages ([7ea94ee5](https://github.com/powerhouse-inc/powerhouse/commit/7ea94ee5))
+- **scalars:** improve sidebar performance ([c7a03809](https://github.com/powerhouse-inc/powerhouse/commit/c7a03809))
+- **ph-cli:** enable uninstall command ([#965](https://github.com/powerhouse-inc/powerhouse/pull/965))
+- **scalars:** allow to use custom icons in the sidebar items ([cc95e0ff](https://github.com/powerhouse-inc/powerhouse/commit/cc95e0ff))
+- **scalars:** preserve react directives ([b15888e7](https://github.com/powerhouse-inc/powerhouse/commit/b15888e7))
+- **scalars:** allow to collapse/expand the sidebar ([617c4168](https://github.com/powerhouse-inc/powerhouse/commit/617c4168))
+- **scalars:** add sidebar base ([16fc4630](https://github.com/powerhouse-inc/powerhouse/commit/16fc4630))
+- merge main into dspot-branch ([#769](https://github.com/powerhouse-inc/powerhouse/pull/769))
+- **scalars:** add support to include dependent areas ([b0b385d8](https://github.com/powerhouse-inc/powerhouse/commit/b0b385d8))
+- **scalars:** generate nanoids by default in id fields ([445ff4bf](https://github.com/powerhouse-inc/powerhouse/commit/445ff4bf))
+- **design-system:** update github actions ([b0d86f4c](https://github.com/powerhouse-inc/powerhouse/commit/b0d86f4c))
+- **scalars:** add CountryCodeField with configs, tests & base stories ([503b2408](https://github.com/powerhouse-inc/powerhouse/commit/503b2408))
+- **scalars:** improve protocols and url field ([6a965cf6](https://github.com/powerhouse-inc/powerhouse/commit/6a965cf6))
+- **scalars:** add last styles to SelectField, improve fragments & refactor ([9f03f005](https://github.com/powerhouse-inc/powerhouse/commit/9f03f005))
+- **scalars:** add strings styles ([58f38f9a](https://github.com/powerhouse-inc/powerhouse/commit/58f38f9a))
+- **scalars:** add EnumField with configs & tests ([31386853](https://github.com/powerhouse-inc/powerhouse/commit/31386853))
+- **scalars:** add single/multi select fields with all props & base styles ([e38ef055](https://github.com/powerhouse-inc/powerhouse/commit/e38ef055))
+- **scalars:** add form example ([91e9fa31](https://github.com/powerhouse-inc/powerhouse/commit/91e9fa31))
+- **scalars:** added built-in form & fields validation ([8cf3a995](https://github.com/powerhouse-inc/powerhouse/commit/8cf3a995))
+- **scalars:** add tooltip ([e3635ed4](https://github.com/powerhouse-inc/powerhouse/commit/e3635ed4))
+- **scalars:** add checkbox support for warnings and errors messages ([3279c8d8](https://github.com/powerhouse-inc/powerhouse/commit/3279c8d8))
+- **scalars:** add a checkbox field ([2d9e11fb](https://github.com/powerhouse-inc/powerhouse/commit/2d9e11fb))
+- **scalars:** added exports for codegen ([#434](https://github.com/powerhouse-inc/powerhouse/pull/434))
+- **scalars:** boolean fields scafolding ([217683de](https://github.com/powerhouse-inc/powerhouse/commit/217683de))
+
+### 🩹 Fixes
+
+- **reactor-api:** type error ([df877b9e](https://github.com/powerhouse-inc/powerhouse/commit/df877b9e))
+- **scalars:** lint ([1dd6dd5a](https://github.com/powerhouse-inc/powerhouse/commit/1dd6dd5a))
+- **scalars:** update pnpm and commit the .yaml ([6152f641](https://github.com/powerhouse-inc/powerhouse/commit/6152f641))
+- **scalars:** try to generate the lock.ymal ([49a69907](https://github.com/powerhouse-inc/powerhouse/commit/49a69907))
+- **scalars:** generate the .yaml ([34d8fffd](https://github.com/powerhouse-inc/powerhouse/commit/34d8fffd))
+- **scalars:** solving conflict with .yaml file ([3a83b86b](https://github.com/powerhouse-inc/powerhouse/commit/3a83b86b))
+- **connect:** docker build ([3b679117](https://github.com/powerhouse-inc/powerhouse/commit/3b679117))
+- **scalars:** add the .yaml ([33eecd8c](https://github.com/powerhouse-inc/powerhouse/commit/33eecd8c))
+- update docker publish action ([956236a1](https://github.com/powerhouse-inc/powerhouse/commit/956236a1))
+- **scalars:** change warning colors ([c1405294](https://github.com/powerhouse-inc/powerhouse/commit/c1405294))
+- **scalars:** validate on blur when specified dynamically ([5e0c621d](https://github.com/powerhouse-inc/powerhouse/commit/5e0c621d))
+- **scalars:** revalidate field on required prop change ([41d2f7d7](https://github.com/powerhouse-inc/powerhouse/commit/41d2f7d7))
+- **scalars:** merge branch 'dspot-scalars' into feat/amount-with-currencies-token ([bb8118f8](https://github.com/powerhouse-inc/powerhouse/commit/bb8118f8))
+- **monorepo:** remove nx cloud id ([2b728067](https://github.com/powerhouse-inc/powerhouse/commit/2b728067))
+- **scalars:** update pnpm-lock.yaml ([787f0962](https://github.com/powerhouse-inc/powerhouse/commit/787f0962))
+- **design-system:** added missing deps after rebase ([04f00323](https://github.com/powerhouse-inc/powerhouse/commit/04f00323))
+- **switchboard-gui:** restore prev vite version ([57273e5d](https://github.com/powerhouse-inc/powerhouse/commit/57273e5d))
+- **scalars:** update pnpm-lock.yaml ([d0ace5e5](https://github.com/powerhouse-inc/powerhouse/commit/d0ace5e5))
+- **scalars:** fix snapshot tests after conflict resolution ([0fbe8a20](https://github.com/powerhouse-inc/powerhouse/commit/0fbe8a20))
+- **scalars:** import path ([44ed009d](https://github.com/powerhouse-inc/powerhouse/commit/44ed009d))
+- **scalars:** windows paths ([2bbe727b](https://github.com/powerhouse-inc/powerhouse/commit/2bbe727b))
+- **scalars:** tests ([5a5a4a58](https://github.com/powerhouse-inc/powerhouse/commit/5a5a4a58))
+- **scalars:** windows paths ([c7c21bfe](https://github.com/powerhouse-inc/powerhouse/commit/c7c21bfe))
+- **scalars:** generic validation ([a7c80ba8](https://github.com/powerhouse-inc/powerhouse/commit/a7c80ba8))
+- **scalars:** fix the test when change type to number ([453348ed](https://github.com/powerhouse-inc/powerhouse/commit/453348ed))
+- **scalars:** tests ([21bf584b](https://github.com/powerhouse-inc/powerhouse/commit/21bf584b))
+- **scalars:** move Radio & Radio Group to Fragments & add warnings support ([33b09173](https://github.com/powerhouse-inc/powerhouse/commit/33b09173))
+- **scalars:** package.json windows paths ([0a50b7a2](https://github.com/powerhouse-inc/powerhouse/commit/0a50b7a2))
+- **scalars:** test & lint ([cfb050b8](https://github.com/powerhouse-inc/powerhouse/commit/cfb050b8))
+- **scalars:** package.json exports paths ([366a66e5](https://github.com/powerhouse-inc/powerhouse/commit/366a66e5))
+- **scalars:** package.json exports paths ([f8900284](https://github.com/powerhouse-inc/powerhouse/commit/f8900284))
+- **scalars:** code improvements in Radio and Radio Group components ([bd05bd49](https://github.com/powerhouse-inc/powerhouse/commit/bd05bd49))
+- **scalars:** missing dependency ([ef058160](https://github.com/powerhouse-inc/powerhouse/commit/ef058160))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- alejandrocabriales
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- nestor
+- ryanwolhuter @ryanwolhuter
+- Yasiel Cabrera @YasielCabrera
+
 ## 1.21.1 (2025-01-29)
 
 ### 🚀 Features

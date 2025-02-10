@@ -9,17 +9,13 @@ const dirname =
 
 const outdir = path.resolve(dirname, '../dist/studio');
 
-function copyCLIScript() {
-    fs.copyFileSync(
-        path.resolve(dirname, 'cli.js'),
-        path.resolve(outdir, 'cli.js'),
-    );
-}
-
-function copyEnvFile() {
-    fs.copyFileSync(
-        path.resolve(dirname, '../.env'),
-        path.resolve(outdir, '../.env'),
+/**
+ * @param {string} dirnamePath
+ */
+function copyFileToOutdir(dirnamePath) {
+    return fs.copyFileSync(
+        path.resolve(dirname, dirnamePath),
+        path.resolve(outdir, dirnamePath),
     );
 }
 
@@ -30,10 +26,13 @@ await build({
     bundle: true,
     packages: 'external',
     logLevel: 'info',
-    entryPoints: [path.resolve(dirname, 'index.ts')],
+    entryPoints: [
+        path.resolve(dirname, 'index.ts'),
+        path.resolve(dirname, 'hmr.ts'),
+    ],
 })
     .then(() => {
-        copyCLIScript();
-        copyEnvFile();
+        copyFileToOutdir('cli.js');
+        copyFileToOutdir('../.env');
     })
     .catch(() => process.exit(1));

@@ -46,7 +46,7 @@ type ImportMetaEnv = {
   PH_CONNECT_GA_TRACKING_ID: string
   LOCAL_DOCUMENT_MODELS: string
   LOCAL_DOCUMENT_EDITORS: string
-  LOAD_EXTERNAL_PROJECTS: string
+  LOAD_EXTERNAL_PACKAGES: string
   // @user-defined-start
   /*
    *  You can use this section to explicitly extend the type definition of `import.meta.env`

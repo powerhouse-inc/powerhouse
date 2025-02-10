@@ -99,7 +99,7 @@ const CurrencyCodeFieldRaw = React.forwardRef<
       <SelectFieldRaw
         ref={ref}
         options={options}
-        optionsCheckmark="Checkmark"
+        selectionIcon="checkmark"
         searchable
         multiple={multiple}
         placeholder={placeholder}

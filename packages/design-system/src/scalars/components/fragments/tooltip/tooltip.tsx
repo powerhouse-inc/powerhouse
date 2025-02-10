@@ -20,13 +20,13 @@ interface TooltipProps
   triggerAsChild?: boolean;
 }
 
-const TooltipContent = ({
-  children,
-  className,
-  ...props
-}: TooltipContentProps) => {
+const TooltipContent = React.forwardRef<
+  React.ElementRef<typeof Content>,
+  TooltipContentProps
+>(({ children, className, ...props }, ref) => {
   return (
     <Content
+      ref={ref}
       {...props}
       className={cn(
         // Base styles
@@ -49,12 +49,13 @@ const TooltipContent = ({
       {children}
     </Content>
   );
-};
+});
 
 const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
   triggerAsChild = false,
+  delayDuration = 0,
   ...props
 }) => {
   const { open, defaultOpen, onOpenChange, ...rest } = props;
@@ -62,11 +63,16 @@ const Tooltip: React.FC<TooltipProps> = ({
   return (
     <Root
       defaultOpen={defaultOpen}
-      delayDuration={0}
+      delayDuration={delayDuration}
       onOpenChange={onOpenChange}
       open={open}
     >
-      <Trigger asChild={triggerAsChild}>{children}</Trigger>
+      <Trigger
+        asChild={triggerAsChild}
+        type={triggerAsChild ? undefined : "button"} // Prevent form submission when default trigger is clicked
+      >
+        {children}
+      </Trigger>
       <Portal>
         <TooltipContent sideOffset={3} {...rest}>
           {content}

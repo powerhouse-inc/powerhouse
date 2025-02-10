@@ -230,7 +230,7 @@ describe("UrlField", () => {
   it("should hide warnings when the form is reset", async () => {
     const user = userEvent.setup();
     render(
-      <Form onSubmit={() => null} defaultValues={{ "test-url": "" }}>
+      <Form onSubmit={() => undefined} defaultValues={{ "test-url": "" }}>
         {({ reset }) => (
           <>
             <UrlField

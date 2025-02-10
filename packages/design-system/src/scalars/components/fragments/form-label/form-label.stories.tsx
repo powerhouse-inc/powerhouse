@@ -4,6 +4,11 @@ import { FormLabel } from "./form-label";
 const meta: Meta<typeof FormLabel> = {
   title: "Document Engineering/Fragments/FormLabel",
   component: FormLabel,
+  parameters: {
+    chromatic: {
+      disableSnapshot: true,
+    },
+  },
   tags: ["autodocs"],
   argTypes: {
     required: {

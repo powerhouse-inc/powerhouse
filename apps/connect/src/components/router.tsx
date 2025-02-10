@@ -13,7 +13,13 @@ const Content = React.lazy(() => import('src/pages/content'));
 async function createRouter(routes: RouteObject[]) {
     const isPackaged = await window.electronAPI?.isPackaged();
     const createRouter = isPackaged ? createMemoryRouter : createBrowserRouter;
-    return createRouter(routes, { basename: connectConfig.routerBasename });
+    return createRouter(routes, {
+        basename: connectConfig.routerBasename,
+        future: {
+            v7_fetcherPersist: true,
+            v7_relativeSplatPath: true,
+        },
+    });
 }
 
 const RouterAsync = async () => {

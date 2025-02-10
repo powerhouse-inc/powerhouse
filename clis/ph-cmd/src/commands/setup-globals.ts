@@ -10,7 +10,7 @@ import {
   PH_BIN_PATH,
 } from "../utils.js";
 
-export const init: CommandActionType<
+export const setupGlobals: CommandActionType<
   [
     string | undefined,
     {
@@ -70,5 +70,5 @@ export function setupGlobalsCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
-    .action(init);
+    .action(setupGlobals);
 }

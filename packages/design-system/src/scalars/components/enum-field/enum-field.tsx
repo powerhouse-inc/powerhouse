@@ -27,7 +27,7 @@ type SelectVariant = Omit<
 };
 
 export const EnumField: React.FC<EnumFieldProps> = ({
-  variant = "Auto",
+  variant = "auto",
   options = [],
   ...props
 }) => {
@@ -43,7 +43,7 @@ export const EnumField: React.FC<EnumFieldProps> = ({
       return radio;
     case "Select":
       return select;
-    case "Auto":
+    case "auto":
       return options.length < 6 ? radio : select;
   }
 };

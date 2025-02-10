@@ -27,7 +27,7 @@ describe("FormMessage", () => {
   it("applies correct classes for warning type", () => {
     render(<FormMessage type="warning">Warning message</FormMessage>);
     const message = screen.getByText("Warning message");
-    expect(message).toHaveClass("text-orange-900");
+    expect(message).toHaveClass("text-yellow-900");
   });
 
   it("renders with custom props", () => {

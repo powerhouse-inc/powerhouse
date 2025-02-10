@@ -6,6 +6,9 @@ const meta: Meta<typeof Tooltip> = {
   component: Tooltip,
   parameters: {
     layout: "centered",
+    chromatic: {
+      disableSnapshot: true,
+    },
     docs: {
       description: {
         component: `A tooltip is a popup that displays informative text when users hover over an element.

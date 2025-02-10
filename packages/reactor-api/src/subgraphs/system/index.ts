@@ -15,7 +15,9 @@ export class SystemSubgraph extends Subgraph {
     }
 
     type Mutation {
-      addDrive(global: DocumentDriveStateInput!): DocumentDriveState
+      addDrive(
+        global: DocumentDriveStateInput!
+      ): DocumentDrive_DocumentDriveState
       deleteDrive(id: ID!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
       setDriveName(id: String!, name: String!): Boolean

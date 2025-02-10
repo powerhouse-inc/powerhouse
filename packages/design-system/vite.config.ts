@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import path, { resolve } from "path";
 import { visualizer } from "rollup-plugin-visualizer";
+import preserveDirectives from "rollup-preserve-directives";
 import { defineConfig, UserConfig } from "vite";
 import dts from "vite-plugin-dts";
 import pkg from "./package.json";
@@ -27,6 +28,7 @@ export default defineConfig(() => {
     },
     plugins: [
       react(),
+      preserveDirectives(),
       dts({
         include: ["src/**"],
         exclude: ["src/**/*.stories.*"],

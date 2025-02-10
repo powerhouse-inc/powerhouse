@@ -24,8 +24,8 @@ describe("CharacterCounter", () => {
 
   it("should show warning state when between 90% and 100% of max length", () => {
     render(<CharacterCounter maxLength={10} value="Hello Wor" />);
-    expect(screen.getByText("9")).toHaveClass("text-orange-900");
-    expect(screen.getByText("/10")).toHaveClass("text-orange-400");
+    expect(screen.getByText("9")).toHaveClass("text-yellow-900");
+    expect(screen.getByText("/10")).toHaveClass("text-yellow-400");
   });
 
   it("should show error state when at or exceeding max length", () => {

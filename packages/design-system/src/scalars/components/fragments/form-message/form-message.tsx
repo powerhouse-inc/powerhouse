@@ -29,7 +29,7 @@ export const FormMessage: <E extends React.ElementType = typeof defaultElement>(
   const typeClasses: Record<FormMessageType, string> = {
     error: "text-red-900 dark:text-red-900",
     info: "text-blue-900 dark:text-blue-900",
-    warning: "text-orange-900 dark:text-orange-900",
+    warning: "text-yellow-900 dark:text-yellow-900",
   };
 
   const classes = twMerge(

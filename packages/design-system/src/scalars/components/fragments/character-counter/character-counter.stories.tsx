@@ -6,6 +6,9 @@ const meta = {
   component: CharacterCounter,
   parameters: {
     layout: "centered",
+    chromatic: {
+      disableSnapshot: true,
+    },
   },
   tags: ["autodocs"],
   argTypes: {

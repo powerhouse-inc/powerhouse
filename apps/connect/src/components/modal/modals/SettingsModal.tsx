@@ -10,6 +10,7 @@ import { DocumentModel } from 'document-model/document';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
+import PackagesManager from 'src/components/packages-manager';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
 import { DefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor/atom';
@@ -114,6 +115,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                     <Login />
                 )}
             </div>
+            <PackagesManager />
             {connectConfig.content.showDocumentModelSelectionSetting && (
                 <DocumentSelectSettingsRow
                     selected={selectedDocuments}

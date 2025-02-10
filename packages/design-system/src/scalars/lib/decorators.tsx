@@ -16,11 +16,18 @@ function _isValidRegex(pattern: unknown): boolean {
   }
 }
 
+interface StoryFormParameters {
+  form?: {
+    defaultValues?: Record<string, any>;
+  };
+}
+
 export const withForm: Decorator = (Story, context) => {
   const formRef = useRef<UseFormReturn>(null);
   const [showFormButtons, setShowFormButtons] = useState<boolean>(false);
   const checkboxId = useId();
-  const { viewMode } = context;
+  const { viewMode, parameters } = context;
+  const isDocs = viewMode === "docs";
 
   const onSubmit = useCallback((data: any) => {
     // Allow to show bigInt values in the alert
@@ -45,11 +52,12 @@ export const withForm: Decorator = (Story, context) => {
     const defaultValues = Object.fromEntries(
       Object.keys(formRef.current?.control._fields ?? {}).map((fieldName) => [
         fieldName,
-        "",
+        (parameters as StoryFormParameters).form?.defaultValues?.[fieldName] ??
+          "",
       ]),
     );
     formRef.current?.reset(defaultValues);
-  }, []);
+  }, [parameters]);
 
   const onShowFormButtonsChange = useCallback((checked: boolean) => {
     setShowFormButtons(checked);
@@ -74,7 +82,7 @@ export const withForm: Decorator = (Story, context) => {
       <Form ref={formRef} onSubmit={onSubmit}>
         <Story args={overrideArgs} />
 
-        {showFormButtons ? (
+        {showFormButtons || isDocs ? (
           <div className="flex gap-2">
             <Button
               className="mt-4 w-full"
@@ -95,7 +103,7 @@ export const withForm: Decorator = (Story, context) => {
         )}
       </Form>
 
-      {viewMode !== "docs" && (
+      {!isDocs && (
         <div className="absolute bottom-5 right-5 z-50">
           <div className="flex items-center gap-2">
             <Checkbox

@@ -44,14 +44,14 @@ export default function Content() {
         renameNode,
         getDocumentModel,
     } = useUiNodes();
+    useNodeNavigation();
     const { showModal } = useModal();
     const preloadEditor = usePreloadEditor();
-    useNodeNavigation();
 
     // preload document editors
     useEffect(() => {
         if (!documentModels) return;
-        // waits 1 second to preload editors
+
         const requestIC = window.requestIdleCallback ?? setTimeout;
         const cancelIC = window.cancelIdleCallback ?? clearTimeout;
 

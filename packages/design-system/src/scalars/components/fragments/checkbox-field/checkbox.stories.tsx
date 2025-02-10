@@ -13,6 +13,11 @@ const meta: Meta<typeof CheckboxField> = {
   title: "Document Engineering/Fragments/Checkbox Field",
   tags: ["autodocs"],
   decorators: [withForm],
+  parameters: {
+    chromatic: {
+      disableSnapshot: true,
+    },
+  },
   argTypes: {
     ...getDefaultArgTypes({
       valueControlType: "boolean",

@@ -17,7 +17,7 @@ const MultipleFieldsWithComplexLayout = () => {
         email: "",
         bio: "",
         phone: "",
-        age: NaN,
+        age: 0,
         notifications: true,
         gender: "",
         subscribe: true,

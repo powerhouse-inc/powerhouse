@@ -18,6 +18,7 @@ export interface NumberFieldProps extends InputNumberProps {
   defaultValue?: number | bigint;
   className?: string;
   pattern?: RegExp;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
   (
@@ -38,8 +39,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       step = 1,
       pattern,
       trailingZeros = false,
-      numericType,
+      numericType = "Float",
       precision = 0,
+      onFocus,
       ...props
     },
     ref,
@@ -56,6 +58,9 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       preventLetterInput,
       isBigInt,
       handleBlur,
+
+      handleFocus,
+      buttonRef,
     } = useNumberField({
       value,
       maxValue,
@@ -66,6 +71,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
       onBlur,
       trailingZeros,
       precision,
+      onFocus,
     });
 
     return (
@@ -84,10 +90,13 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
         <div className="relative flex items-center">
           <Input
             id={id}
+            onFocus={handleFocus}
             name={name}
-            className={cn(className, showSteps && "pr-8")}
+            className={cn("pr-8", className)}
             pattern={isBigInt ? regex.toString() : pattern?.toString()}
-            type="number"
+            type="text"
+            inputMode="numeric"
+            role="spinbutton"
             min={minValue}
             max={maxValue}
             aria-valuemin={minValue}
@@ -109,9 +118,16 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
           {showSteps && (
             <div className="absolute inset-y-2 right-3 flex flex-col justify-center">
               <button
+                aria-label="Increment"
                 disabled={canIncrement}
+                onMouseDown={(e) => e.preventDefault()}
                 type="button"
-                onClick={(e) => stepValueHandler(e, "increment")}
+                onClick={(e) => {
+                  stepValueHandler(e, "increment");
+                  if (buttonRef.current) {
+                    buttonRef.current.focus();
+                  }
+                }}
               >
                 <Icon
                   size={10}
@@ -123,9 +139,16 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                 />
               </button>
               <button
+                aria-label="Decrement"
+                onMouseDown={(e) => e.preventDefault()}
                 disabled={canDecrement}
                 type="button"
-                onClick={(e) => stepValueHandler(e, "decrement")}
+                onClick={(e) => {
+                  stepValueHandler(e, "decrement");
+                  if (buttonRef.current) {
+                    buttonRef.current.focus();
+                  }
+                }}
               >
                 <Icon
                   size={10}

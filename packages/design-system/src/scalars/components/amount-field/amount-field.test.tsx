@@ -6,7 +6,6 @@ describe("AmountField Component", () => {
   it("should match snapshot", () => {
     const { container } = renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -19,7 +18,6 @@ describe("AmountField Component", () => {
   it("should render label when provided", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -32,24 +30,24 @@ describe("AmountField Component", () => {
   it("should render error messages when provided", async () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
         value={345}
         errors={["Error 1", "Error 2"]}
+        validators={() => "Error 3"}
       />,
     );
     await waitFor(() => {
       expect(screen.getByText("Error 1")).toBeInTheDocument();
       expect(screen.getByText("Error 2")).toBeInTheDocument();
+      expect(screen.getByText("Error 3")).toBeInTheDocument();
     });
   });
 
   it("should render the percentage sign if the type is percent", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="AmountPercentage"
@@ -63,7 +61,6 @@ describe("AmountField Component", () => {
   it("should disable the input when disabled prop is true", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -71,7 +68,7 @@ describe("AmountField Component", () => {
         disabled
       />,
     );
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByLabelText("Amount Label");
 
     expect(input).toBeDisabled();
   });
@@ -79,7 +76,6 @@ describe("AmountField Component", () => {
   it("should set the input as required when required prop is true", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"
@@ -93,7 +89,6 @@ describe("AmountField Component", () => {
   it("should render the description when provided", () => {
     renderWithForm(
       <AmountField
-        selectName="currency"
         label="Amount Label"
         name="amount"
         type="Amount"

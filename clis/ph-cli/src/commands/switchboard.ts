@@ -1,13 +1,13 @@
-import { Command } from "commander";
+import { generateFromFile } from "@powerhousedao/codegen";
+import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import {
   DefaultStartServerOptions,
+  LocalReactor,
   startServer,
   StartServerOptions,
-  LocalReactor,
 } from "@powerhousedao/reactor-local";
-import { generateFromFile } from "@powerhousedao/codegen";
+import { Command } from "commander";
 import { CommandActionType } from "../types.js";
-import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 
 export type SwitchboardOptions = StartServerOptions & {
   configFile?: string;
@@ -27,7 +27,6 @@ async function startLocalSwitchboard(switchboardOptions: SwitchboardOptions) {
   const baseConfig = getConfig(switchboardOptions.configFile);
   const options = {
     ...DefaultSwitchboardOptions,
-    packages: baseConfig.packages,
     ...switchboardOptions,
   };
 
@@ -92,6 +91,7 @@ export const switchboard: CommandActionType<
 export function reactorCommand(program: Command) {
   program
     .command("switchboard")
+    .alias("reactor")
     .description("Starts local switchboard")
     .option("--port <PORT>", "port to host the api", "4001")
     .option(
@@ -105,6 +105,10 @@ export function reactorCommand(program: Command) {
     .option(
       "-w, --watch",
       "if the reactor should watch for local changes to document models and processors",
+    )
+    .option(
+      "--packages <packages...>",
+      "list of packages to be loaded, if defined then packages on config file are ignored",
     )
     .action(async (...args: [SwitchboardOptions]) => {
       await switchboard(...args);

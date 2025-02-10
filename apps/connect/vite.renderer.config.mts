@@ -9,21 +9,10 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 import pkg from './package.json';
-import {
-    externalIds,
-    viteConnectDevStudioPlugin,
-    viteLoadExternalProjects,
-} from './studio/vite-plugin';
+import { viteLoadExternalPackages } from './studio/vite-plugins/external-packages';
+import { viteConnectDevStudioPlugin } from './studio/vite-plugins/studio';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
-const buildStudioExternals = isBuildStudio
-    ? [
-          externalIds,
-          '@powerhousedao/studio',
-          '@powerhousedao/design-system',
-          'document-model-libs',
-      ]
-    : [externalIds];
 
 const reactImportScript = `
     <script type="importmap">
@@ -69,7 +58,7 @@ export default defineConfig(({ mode }) => {
 
     const plugins: PluginOption[] = [
         viteConnectDevStudioPlugin(false, env),
-        viteLoadExternalProjects(),
+        viteLoadExternalPackages(undefined),
         react({
             include: 'src/**/*.tsx',
             babel: {
@@ -137,7 +126,7 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: ['node:crypto', ...buildStudioExternals],
+                external: ['node:crypto'],
             },
         },
         resolve: {

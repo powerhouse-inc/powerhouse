@@ -207,4 +207,19 @@ describe("SelectField Component", () => {
     await user.click(screen.getByText("Option 2"));
     expect(onChangeMock).toHaveBeenLastCalledWith(["1", "2"]);
   });
+
+  it("should keep popover closed and focus the select/button when clicking the label", async () => {
+    const user = userEvent.setup();
+
+    renderWithForm(
+      <SelectField name="select" options={defaultOptions} label="Test Label" />,
+    );
+
+    const label = screen.getByText("Test Label");
+    const select = screen.getByRole("combobox");
+    await user.click(label);
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(select).toHaveFocus();
+  });
 });

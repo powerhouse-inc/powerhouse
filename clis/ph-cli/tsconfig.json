@@ -4,7 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "isolatedModules": true,
+    "isolatedModules": true
   },
-  "include": ["src/**/*", "*.config.ts"],
+  "include": ["src/**/*", "*.config.ts"]
 }

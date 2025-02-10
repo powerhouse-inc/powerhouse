@@ -9,7 +9,10 @@ const Command = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive
     ref={ref}
-    className={cn("flex size-full flex-col rounded", className)}
+    className={cn(
+      "flex size-full flex-col rounded [&_[cmdk-label]]:hidden",
+      className,
+    )}
     {...props}
   />
 ));
@@ -67,6 +70,11 @@ const CommandList = React.forwardRef<
     className={cn(
       "max-h-[300px] overflow-y-auto overflow-x-hidden",
       "focus:outline-none",
+      "scrollbar-thin scrollbar-gutter-stable",
+      "scrollbar-track-transparent",
+      "scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-300",
+      "dark:scrollbar-thumb-charcoal-700 dark:hover:scrollbar-thumb-charcoal-700",
+      "scrollbar-thumb-rounded-md",
       className,
     )}
     {...props}
@@ -74,11 +82,16 @@ const CommandList = React.forwardRef<
 ));
 CommandList.displayName = CommandPrimitive.List.displayName;
 
+const CommandLoading = React.forwardRef<
+  React.ElementRef<typeof CommandPrimitive.Loading>,
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Loading>
+>((props, ref) => <CommandPrimitive.Loading ref={ref} {...props} />);
+CommandLoading.displayName = CommandPrimitive.Loading.displayName;
+
 const CommandEmpty = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Empty>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
 >((props, ref) => <CommandPrimitive.Empty ref={ref} {...props} />);
-
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
 
 const CommandGroup = React.forwardRef<
@@ -124,4 +137,5 @@ export {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandLoading,
 };

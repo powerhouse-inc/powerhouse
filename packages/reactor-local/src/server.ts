@@ -16,14 +16,17 @@ import {
   IReceiver,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
-import { ListenerFilter } from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+import {
+  module as DocumentDrive,
+  ListenerFilter,
+} from "document-model-libs/document-drive";
 import { DocumentModel } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, ViteDevServer } from "vite";
+import { PackagesManager } from "./packages";
 
 type FSError = {
   errno: number;
@@ -36,17 +39,14 @@ const dirname = process.cwd();
 
 dotenv.config();
 
-type Packages = {
-  packageName: string;
-}[];
-
 export type StartServerOptions = {
+  configFile?: string;
   dev?: boolean;
   port?: string | number;
   storagePath?: string;
   dbPath?: string;
   drive?: DriveInput;
-  packages?: Packages;
+  packages?: string[];
   https?: {
     keyPath: string;
     certPath: string;
@@ -88,16 +88,13 @@ export type LocalReactor = {
   ) => Promise<InternalTransmitter>;
 };
 
-const baseDocumentModels = [
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
-] as DocumentModel[];
+const baseDocumentModels = [DocumentModelLib, DocumentDrive] as DocumentModel[];
 
 const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   process.setMaxListeners(0);
-  const { port, storagePath, drive, dev, dbPath, packages } = {
+  const { port, storagePath, drive, dev, dbPath, packages, configFile } = {
     ...DefaultStartServerOptions,
     ...options,
   };
@@ -132,16 +129,19 @@ const startServer = async (
     }
   }
 
-  if (packages?.length) {
-    try {
-      const documentModels = await loadPackages(packages);
-      driveServer.setDocumentModels(
-        joinDocumentModels(driveServer.getDocumentModels(), documentModels),
-      );
-    } catch (e) {
-      console.error("Error loading packages", e);
-    }
-  }
+  const packagesManager = new PackagesManager(
+    packages?.length
+      ? { packages }
+      : configFile
+        ? { configFile }
+        : { packages: [] },
+    (error) => console.error(error),
+  );
+  packagesManager.onDocumentModelsChange((documentModels) => {
+    driveServer.setDocumentModels(
+      joinDocumentModels(baseDocumentModels, documentModels),
+    );
+  });
 
   try {
     // start api
@@ -205,27 +205,6 @@ async function startDevMode(api: API, driveServer: IDocumentDriveServer) {
   /**
    * TODO: watch code changes on processors and document models
    */
-}
-
-async function loadPackages(packages: Packages) {
-  const loadedPackages: DocumentModel[] = [];
-  for (const pkg of packages) {
-    try {
-      console.log("> Loading package", pkg.packageName);
-      const pkgModule = (await import(
-        `${pkg.packageName}/document-models`
-      )) as unknown as { [key: string]: DocumentModel } | undefined;
-      if (pkgModule) {
-        console.log(`  ➜  Loaded package: ${pkg.packageName}`);
-        loadedPackages.push(...Object.values(pkgModule));
-      } else {
-        console.warn(`  ➜  No package found: ${pkg.packageName}`);
-      }
-    } catch (e) {
-      console.error("Error loading package", pkg.packageName, e);
-    }
-  }
-  return loadedPackages;
 }
 
 async function loadDocumentModels(
