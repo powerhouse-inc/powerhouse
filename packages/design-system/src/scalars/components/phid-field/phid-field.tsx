@@ -101,10 +101,8 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       value,
       onChange,
       onBlur,
-      fetchOptions: autoComplete ? fetchOptionsCallback : undefined,
-      fetchSelectedOption: autoComplete
-        ? fetchSelectedOptionCallback
-        : undefined,
+      fetchOptions: fetchOptionsCallback,
+      fetchSelectedOption: fetchSelectedOptionCallback,
     });
 
     const asCard =
@@ -126,7 +124,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             {label}
           </FormLabel>
         )}
-        {autoComplete ? (
+        {autoComplete && fetchOptionsCallback && fetchSelectedOptionCallback ? (
           <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
             <Command
               shouldFilter={false}

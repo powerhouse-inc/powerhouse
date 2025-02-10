@@ -22,6 +22,7 @@ export function usePHIDField({
   fetchSelectedOption,
 }: UsePHIDFieldParams) {
   const shouldFetchOptions = useRef(false);
+  const isInternalChange = useRef(false);
   const commandListRef = useRef<HTMLDivElement>(null);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -133,6 +134,7 @@ export function usePHIDField({
   const toggleOption = useCallback(
     (optionValue: string) => {
       shouldFetchOptions.current = false;
+      isInternalChange.current = true;
       setSelectedValue(optionValue);
       setSelectedOption(options.find((opt) => opt.phid === optionValue));
       clear();
@@ -168,11 +170,11 @@ export function usePHIDField({
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
       const pastedValue = e.clipboardData.getData("text");
-      if (pastedValue === selectedValue && haveFetchError) {
+      if (pastedValue === selectedValue) {
         debouncedFetchOptions(selectedValue);
       }
     },
-    [selectedValue, haveFetchError, debouncedFetchOptions],
+    [selectedValue, debouncedFetchOptions],
   );
 
   useEffect(() => {
@@ -189,8 +191,12 @@ export function usePHIDField({
   }, [autoComplete, selectedValue, debouncedFetchOptions, clear]);
 
   useEffect(() => {
-    shouldFetchOptions.current = false;
-    setSelectedValue(value ?? "");
+    if (!isInternalChange.current) {
+      shouldFetchOptions.current = false;
+      setSelectedValue(value ?? "");
+      setSelectedOption(undefined);
+    }
+    isInternalChange.current = false;
   }, [value]);
 
   useEffect(() => {
