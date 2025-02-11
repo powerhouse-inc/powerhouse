@@ -9,6 +9,13 @@ export async function getHMRModule() {
     if (import.meta.hot) {
         return import.meta.hot;
     }
+
+    // checks if the hmr module was inserted into the bundle
+    const resolvedImport = import.meta.resolve('PH:HMR_MODULE');
+    if (resolvedImport.toLowerCase() === 'ph:hmr_module') {
+        return undefined;
+    }
+
     try {
         const module = await import('PH:HMR_MODULE');
         const hmr = module.default;
