@@ -1,21 +1,22 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { noop, redo, undo } from "@document/actions/creators.js";
+import { DocumentAction } from "@document/actions/types.js";
+import { processUndoRedo } from "@document/reducer.js";
 import { BaseDocument } from "@document/types.js";
 import {
-  CountState,
+  baseCreateDocument,
+  baseCreateExtendedState,
+} from "@document/utils/base.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
   CountAction,
   CountLocalState,
   countReducer,
+  CountState,
   increment,
 } from "../helpers.js";
-import { undo, noop, redo } from "@document/actions/creators.js";
-import {
-  baseCreateExtendedState,
-  baseCreateDocument,
-} from "@document/utils/base.js";
-import { processUndoRedo } from "@document/reducer.js";
 
 describe("UNDO/REDO", () => {
-  let document: BaseDocument<CountState, CountLocalState, CountAction>;
+  let document: BaseDocument<CountState, CountLocalState, CountAction | DocumentAction>;
 
   beforeEach(() => {
     const initialState = baseCreateExtendedState<CountState, CountLocalState>({

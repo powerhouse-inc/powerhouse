@@ -1,20 +1,20 @@
-import { castDraft, create, Draft } from "mutative";
 import {
-  BaseDocument,
-  ImmutableStateReducer,
-  BaseState,
   BaseAction,
+  BaseDocument,
+  BaseState,
+  ImmutableStateReducer,
 } from "@document/types.js";
-import { loadState, noop } from "./creators.js";
 import {
-  replayOperations,
   hashDocumentStateForScope,
+  replayOperations,
 } from "@document/utils/base.js";
 import {
-  sortOperations,
   nextSkipNumber,
+  sortOperations,
 } from "@document/utils/document-helpers.js";
-import { PruneAction } from "./types.js";
+import { castDraft, create, Draft } from "mutative";
+import { loadState, noop } from "./creators.js";
+import { DocumentAction, PruneAction } from "./types.js";
 
 // updates the name of the document
 export function setNameOperation<
@@ -142,9 +142,9 @@ export function pruneOperation<
   TLocalState,
   TAction extends BaseAction,
 >(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+  document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
   action: PruneAction,
-  wrappedReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
+  wrappedReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
 ) {
   const { scope } = action;
   const operations = document.operations[scope];

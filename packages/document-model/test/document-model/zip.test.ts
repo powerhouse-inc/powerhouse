@@ -1,17 +1,13 @@
 import {
-  setModelId,
   setModelDescription,
+  setModelId,
   setModelName,
 } from "@document-model/gen/creators.js";
+import { createDocument, loadFromFile, saveToFile } from "@document-model/gen/document-model-utils.js";
 import { reducer } from "@document-model/gen/reducer.js";
-import {
-  createDocument,
-  loadFromFile,
-  saveToFile,
-} from "@document-model/module.js";
 import { undo } from "@document/actions/creators.js";
 import fs from "fs";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 describe("DocumentModel", () => {
   const tempDir = "./test/document/temp/document-model/zip";

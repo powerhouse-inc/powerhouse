@@ -1,22 +1,23 @@
-import JSZip from "jszip";
-import mime from "mime/lite";
+import { DocumentAction } from "@document/actions/types.js";
 import type {
-  BaseAction,
   Attachment,
   AttachmentInput,
+  BaseAction,
   BaseDocument,
   DocumentHeader,
+  DocumentOperations,
   ExtendedState,
   Reducer,
-  DocumentOperations,
 } from "@document/types.js";
-import { fetchFile, getFile, hash, readFile, writeFile } from "./node.js";
+import JSZip from "jszip";
+import mime from "mime/lite";
 import { replayDocument, ReplayDocumentOptions } from "./base.js";
-import { validateOperations } from "./validation.js";
 import {
   filterDocumentOperationsResultingState,
   garbageCollectDocumentOperations,
 } from "./document-helpers.js";
+import { fetchFile, getFile, hash, readFile, writeFile } from "./node.js";
+import { validateOperations } from "./validation.js";
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
@@ -137,7 +138,7 @@ export async function baseLoadFromFile<
   TAction extends BaseAction,
 >(
   path: string,
-  reducer: Reducer<TGlobalState, TLocalState, TAction>,
+  reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
   options?: ReplayDocumentOptions,
 ) {
   const file = readFile(path);
@@ -150,7 +151,7 @@ export async function baseLoadFromInput<
   TAction extends BaseAction,
 >(
   input: FileInput,
-  reducer: Reducer<TGlobalState, TLocalState, TAction>,
+  reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
   options?: ReplayDocumentOptions,
 ) {
   const zip = new JSZip();
@@ -164,7 +165,7 @@ async function loadFromZip<
   TAction extends BaseAction,
 >(
   zip: JSZip,
-  reducer: Reducer<TGlobalState, TLocalState, TAction>,
+  reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
   options?: ReplayDocumentOptions,
 ) {
   const initialStateZip = zip.file("state.json");

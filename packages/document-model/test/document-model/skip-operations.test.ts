@@ -1,13 +1,14 @@
 import {
-  setModelDescription,
-  setModelName,
-  setModelExtension,
   setAuthorName,
   setAuthorWebsite,
+  setModelDescription,
+  setModelExtension,
   setModelId,
+  setModelName,
 } from "@document-model/gen/creators.js";
+import { createDocument } from "@document-model/gen/document-model-utils.js";
 import { reducer, stateReducer } from "@document-model/gen/reducer.js";
-import { createDocument, createExtendedState } from "@document-model/module.js";
+import { createExtendedState } from "@document-model/index.js";
 import { replayOperations } from "@document/utils/base.js";
 import { garbageCollectDocumentOperations } from "@document/utils/document-helpers.js";
 

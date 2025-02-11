@@ -1,25 +1,24 @@
-import { BaseDocument } from "@document/object.js";
 import {
+    DocumentModelAction,
+    DocumentModelLocalState,
+    DocumentModelState,
+} from "@document-model/gen/types.js";
+import { BaseDocumentClass } from "@document/object.js";
+import { ReducerOptions } from "@document/types.js";
+import { SetAuthorNameInput, SetAuthorWebsiteInput, SetModelDescriptionInput, SetModelExtensionInput, SetModelIdInput, SetModelNameInput } from "../schema/types.js";
+import {
+    setAuthorName,
+    setAuthorWebsite,
+    setModelDescription,
+    setModelExtension,
+    setModelId,
+    setModelName,
+} from "./creators.js";
 
+export default class DocumentModel_Header extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,
-  DocumentModelAction,
-} from "@document-model/gen/types.js";
-import {
-  setModelName,
-  setModelId,
-  setModelExtension,
-  setModelDescription,
-  setAuthorName,
-  setAuthorWebsite,
-} from "./creators.js";
-import { ReducerOptions } from "@document/types.js";
-import { SetModelNameInput, SetModelIdInput, SetModelExtensionInput, SetModelDescriptionInput, SetAuthorNameInput, SetAuthorWebsiteInput } from "../schema/types.js";
-
-export default class DocumentModel_Header extends BaseDocument<
-  DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
+  DocumentModelAction
 > {
   public setModelName(input: SetModelNameInput, options?: ReducerOptions) {
     return this.dispatch(setModelName(input), options);

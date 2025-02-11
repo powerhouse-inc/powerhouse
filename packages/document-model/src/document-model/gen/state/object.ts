@@ -1,30 +1,30 @@
-import { BaseDocument } from "@document/object.js";
+import { BaseDocumentClass } from "@document/object.js";
 
+import { ReducerOptions } from "@document/types.js";
+import { DocumentModelAction } from "../actions.js";
 import {
-    SetStateSchemaInput,
-    SetInitialStateInput,
     AddStateExampleInput,
-    UpdateStateExampleInput,
     DeleteStateExampleInput,
-    ReorderStateExamplesInput,
-    DocumentModelState,
     DocumentModelLocalState,
+    DocumentModelState,
+    ReorderStateExamplesInput,
+    SetInitialStateInput,
+    SetStateSchemaInput,
+    UpdateStateExampleInput,
 } from "../schema/types.js";
 import {
-    setStateSchema,
-    setInitialState,
     addStateExample,
-    updateStateExample,
     deleteStateExample,
     reorderStateExamples,
+    setInitialState,
+    setStateSchema,
+    updateStateExample,
 } from "./creators.js";
-import { DocumentModelAction } from "../actions.js";
-import { ReducerOptions } from "@document/types.js";
 
-export default class DocumentModel_State extends BaseDocument<
+export default class DocumentModel_State extends BaseDocumentClass<
   DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
+  DocumentModelLocalState,
+  DocumentModelAction
 > {
   public setStateSchema(input: SetStateSchemaInput, options?: ReducerOptions) {
     return this.dispatch(setStateSchema(input), options);

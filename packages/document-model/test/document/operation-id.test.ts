@@ -1,22 +1,23 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { DocumentAction } from "@document/actions/types.js";
+import { BaseDocument, ExtendedState } from "@document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
   replayOperations,
 } from "@document/utils/base.js";
+import { garbageCollectDocumentOperations } from "@document/utils/document-helpers.js";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-  CountState,
+  baseCountReducer,
   CountAction,
   CountLocalState,
   countReducer,
+  CountState,
   increment,
-  baseCountReducer,
 } from "../helpers.js";
-import { ExtendedState, BaseDocument } from "@document/types.js";
-import { garbageCollectDocumentOperations } from "@document/utils/document-helpers.js";
 
 describe("Document Operation ID", () => {
-  let document: BaseDocument<CountState, CountLocalState, CountAction>;
+  let document: BaseDocument<CountState, CountLocalState, CountAction | DocumentAction>;
   let initialState: ExtendedState<CountState, CountLocalState>;
 
   beforeEach(() => {

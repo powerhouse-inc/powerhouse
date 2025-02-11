@@ -1,8 +1,8 @@
-import { it, expect } from "vitest";
-import { DocumentModel } from "../../src/document-model";
+import { DocumentModelClass } from "@document-model/gen/object.js";
+import { expect, it } from "vitest";
 
 it("should return a read only object on toDocument", () => {
-  const model = new DocumentModel();
+  const model = new DocumentModelClass();
 
   expect(model.state.global.id).toBe("");
 

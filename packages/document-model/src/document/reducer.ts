@@ -1,4 +1,4 @@
-import { create, castDraft, unsafe } from "mutative";
+import { castDraft, create, unsafe } from "mutative";
 import {
   loadStateOperation,
   pruneOperation,
@@ -14,33 +14,33 @@ import {
   SET_NAME,
   UNDO,
 } from "./actions/types.js";
+import { BaseActionSchema } from "./schema/zod.js";
+import { SignalDispatch } from "./signal.js";
 import {
+  BaseAction,
   BaseDocument,
+  BaseState,
   ImmutableStateReducer,
+  Operation,
   OperationScope,
   ReducerOptions,
-  BaseState,
-  Operation,
-  BaseAction,
 } from "./types.js";
 import {
-  isDocumentAction,
-  hashDocumentStateForScope,
-  replayOperations,
-  isUndoRedo,
-  isUndo,
   getDocumentLastModified,
+  hashDocumentStateForScope,
+  isDocumentAction,
+  isUndo,
+  isUndoRedo,
   parseResultingState,
+  replayOperations,
 } from "./utils/base.js";
-import { SignalDispatch } from "./signal.js";
 import { generateId } from "./utils/crypto.js";
-import { BaseActionSchema } from "./schema/zod.js";
 import {
+  diffOperations,
+  garbageCollect,
   garbageCollectDocumentOperations,
   skipHeaderOperations,
   sortOperations,
-  diffOperations,
-  garbageCollect,
 } from "./utils/document-helpers.js";
 
 /**
@@ -52,7 +52,7 @@ import {
  */
 function getNextRevision<TGlobalState, TLocalState, TAction extends BaseAction>(
   document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  operation: { index?: number; scope: OperationScope },
+  operation: { index?: number; scope: OperationScope }
 ) {
   let latestOperationIndex: number | undefined;
 
@@ -83,7 +83,7 @@ export function updateHeader<
   action:
     | TAction
     | DocumentAction
-    | Operation<TGlobalState, TLocalState, TAction>,
+    | Operation<TGlobalState, TLocalState, TAction>
 ) {
   return {
     ...document,
@@ -112,7 +112,7 @@ function updateOperations<
   document: BaseDocument<TGlobalState, TLocalState, TAction>,
   actionOrOperation: TAction | Operation<TGlobalState, TLocalState, TAction>,
   skip = 0,
-  reuseLastOperationIndex = false,
+  reuseLastOperationIndex = false
 ) {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
@@ -139,7 +139,7 @@ function updateOperations<
   if ("index" in actionOrOperation) {
     if (actionOrOperation.index - skip > nextIndex) {
       throw new Error(
-        `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${actionOrOperation.index} with skip ${skip}`,
+        `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${actionOrOperation.index} with skip ${skip}`
       );
     }
 
@@ -187,16 +187,16 @@ export function updateDocument<
   TLocalState,
   TAction extends BaseAction,
 >(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
+  document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
+  action: TAction | DocumentAction,
   skip = 0,
-  reuseLastOperationIndex = false,
+  reuseLastOperationIndex = false
 ) {
   let newDocument = updateOperations(
     document,
     action,
     skip,
-    reuseLastOperationIndex,
+    reuseLastOperationIndex
   );
   newDocument = updateHeader(newDocument, action);
   return newDocument;
@@ -211,9 +211,9 @@ export function updateDocument<
  * @returns The updated document state.
  */
 function _baseReducer<TGlobalState, TLocalState, TAction extends BaseAction>(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
-  wrappedReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
+  document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
+  action: TAction | DocumentAction,
+  wrappedReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>
 ) {
   // throws if action is not valid base action
   const parsedAction = BaseActionSchema().parse(action);
@@ -244,8 +244,8 @@ export function processUndoRedo<
   TAction extends BaseAction,
 >(
   document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
-  skip: number,
+  action: TAction | DocumentAction,
+  skip: number
 ) {
   switch (action.type) {
     case UNDO:
@@ -274,12 +274,12 @@ function processSkipOperation<
   TLocalState,
   TAction extends BaseAction,
 >(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: BaseAction,
-  customReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
+  document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
+  action: TAction | DocumentAction,
+  customReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
   skipValue: number,
   reuseOperationResultingState = false,
-  resultingStateParser = parseResultingState,
+  resultingStateParser = parseResultingState
 ) {
   const scope = action.scope;
 
@@ -313,7 +313,7 @@ function processSkipOperation<
         reuseHash: true,
         reuseOperationResultingState,
         operationResultingStateParser: resultingStateParser,
-      },
+      }
     );
     scopeState = state[scope];
   }
@@ -335,11 +335,11 @@ function processUndoOperation<
   TLocalState,
   TAction extends BaseAction,
 >(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+  document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
   scope: OperationScope,
-  customReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
+  customReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
   reuseOperationResultingState = false,
-  resultingStateParser = parseResultingState,
+  resultingStateParser = parseResultingState
 ) {
   const operations = [...document.operations[scope]];
   const sortedOperations = sortOperations(operations);
@@ -353,7 +353,7 @@ function processUndoOperation<
   const clearedOperations = [...documentOperations[scope]];
   const diff = diffOperations(
     garbageCollect(sortedOperations),
-    clearedOperations,
+    clearedOperations
   );
 
   const doc = replayOperations(
@@ -368,11 +368,11 @@ function processUndoOperation<
       reuseHash: true,
       reuseOperationResultingState,
       operationResultingStateParser: resultingStateParser,
-    },
+    }
   );
 
   const clipboard = sortOperations(
-    [...document.clipboard, ...diff].filter((op) => op.type !== "NOOP"),
+    [...document.clipboard, ...diff].filter((op) => op.type !== "NOOP")
   ).reverse();
 
   return { ...doc, clipboard };
@@ -395,11 +395,11 @@ export function baseReducer<
   TLocalState,
   TAction extends BaseAction,
 >(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
-  customReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
-  options: ReducerOptions = {},
+  document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
+  action: TAction | DocumentAction,
+  customReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
+  options: ReducerOptions = {}
 ) {
   const {
     skip,
@@ -411,7 +411,7 @@ export function baseReducer<
 
   let _action = { ...action };
   let skipValue = skip || 0;
-  let newDocument: BaseDocument<TGlobalState, TLocalState, TAction> = {
+  let newDocument: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction> = {
     ...document,
   };
   let reuseLastOperationIndex = false;
@@ -455,7 +455,7 @@ export function baseReducer<
     newDocument,
     _action,
     skipValue,
-    reuseLastOperationIndex,
+    reuseLastOperationIndex
   );
 
   const isUndoAction = isUndo(action);
@@ -464,7 +464,7 @@ export function baseReducer<
     const result = processUndoOperation(
       newDocument,
       action.scope,
-      customReducer,
+      customReducer
     );
 
     return result;
@@ -477,7 +477,7 @@ export function baseReducer<
       customReducer,
       skipValue,
       reuseOperationResultingState,
-      operationResultingStateParser,
+      operationResultingStateParser
     );
   }
 
@@ -585,16 +585,16 @@ export function baseReducer<
 export function mutableBaseReducer<
   TGlobalState,
   TLocalState,
-  TAction extends
-    | BaseAction
+  TAction extends BaseAction,
+>(
+  document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
+  action:
+    | TAction
     | DocumentAction
     | Operation<TGlobalState, TLocalState, BaseAction | DocumentAction>,
->(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
-  customReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
-  options: ReducerOptions = {},
+  customReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
+  options: ReducerOptions = {}
 ) {
   const {
     skip,
@@ -606,7 +606,7 @@ export function mutableBaseReducer<
 
   const _action = { ...action };
   const skipValue = skip || 0;
-  let newDocument: BaseDocument<TGlobalState, TLocalState, TAction> = {
+  let newDocument: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction> = {
     ...document,
   };
   // let clipboard = [...document.clipboard];
@@ -628,19 +628,19 @@ export function mutableBaseReducer<
   if (shouldProcessSkipOperation) {
     newDocument = processSkipOperation(
       newDocument,
-      _action,
+      _action as DocumentAction | TAction,
       customReducer,
       skipValue,
       reuseOperationResultingState,
-      operationResultingStateParser,
+      operationResultingStateParser
     );
   }
 
   try {
     const newState = customReducer(
       castDraft(newDocument.state),
-      _action,
-      dispatch,
+      _action as DocumentAction | TAction,
+      dispatch
     );
     if (newState) {
       newDocument.state = newState;

@@ -1,32 +1,14 @@
-import { BaseDocument } from "../../../document/object";
+import { BaseDocumentClass } from "@document/object.js";
+import { ReducerOptions } from "@document/types.js";
+import { DocumentModelAction } from "../actions.js";
+import { AddOperationErrorInput, DeleteOperationErrorInput, ReorderOperationErrorsInput, SetOperationErrorCodeInput, SetOperationErrorDescriptionInput, SetOperationErrorNameInput, SetOperationErrorTemplateInput } from "../schema/types.js";
+import { DocumentModelLocalState, DocumentModelState } from "../types.js";
+import { addOperationError, deleteOperationError, reorderOperationErrors, setOperationErrorCode, setOperationErrorDescription, setOperationErrorName, setOperationErrorTemplate } from "./creators.js";
 
-import {
-  AddOperationErrorInput,
-  SetOperationErrorCodeInput,
-  SetOperationErrorNameInput,
-  SetOperationErrorDescriptionInput,
-  SetOperationErrorTemplateInput,
-  DeleteOperationErrorInput,
-  ReorderOperationErrorsInput,
+export default class DocumentModel_OperationError extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,
-} from "../types";
-import {
-  addOperationError,
-  setOperationErrorCode,
-  setOperationErrorName,
-  setOperationErrorDescription,
-  setOperationErrorTemplate,
-  deleteOperationError,
-  reorderOperationErrors,
-} from "./creators";
-import { DocumentModelAction } from "../actions";
-import { ReducerOptions } from "../../../document";
-
-export default class DocumentModel_OperationError extends BaseDocument<
-  DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
+  DocumentModelAction
 > {
   public addOperationError(
     input: AddOperationErrorInput,

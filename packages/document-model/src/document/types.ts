@@ -1,10 +1,9 @@
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
+import { DocumentAction } from "./actions/types.js";
 import { SignalDispatch } from "./signal.js";
 import { FileInput } from "./utils/file.js";
-export type { FileInput };
-export type { Immutable };
-export type { SignalDispatch };
+export type { FileInput, Immutable, SignalDispatch };
 
 //  [
 //     signerAddress,
@@ -82,7 +81,7 @@ export type ReducerOptions = {
  */
 export type Reducer<TGlobalState, TLocalState, TAction extends BaseAction> = (
   state: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
+  action: TAction | DocumentAction,
   dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
   options?: ReducerOptions,
 ) => BaseDocument<TGlobalState, TLocalState, TAction>;
@@ -115,8 +114,8 @@ export type ImmutableStateReducer<
   TAction extends BaseAction,
 > = (
   state: Draft<BaseState<TGlobalState, TLocalState>>,
-  action: TAction,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
+  action: TAction | DocumentAction,
+  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
 ) => BaseState<TGlobalState, TLocalState> | undefined;
 
 export type MutableStateReducer<

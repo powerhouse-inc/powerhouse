@@ -145,9 +145,9 @@ export function createReducer<
   TLocalState,
   TAction extends BaseAction,
 >(
-  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
+  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
   documentReducer = baseReducer,
-): Reducer<TGlobalState, TLocalState, TAction> {
+): Reducer<TGlobalState, TLocalState, TAction | DocumentAction> {
   return (document, action, dispatch, options) => {
     return documentReducer(document, action, reducer, dispatch, options);
   };
@@ -158,9 +158,9 @@ export function createUnsafeReducer<
   TLocalState,
   TAction extends BaseAction,
 >(
-  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
+  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
   documentReducer = mutableBaseReducer,
-): Reducer<TGlobalState, TLocalState, TAction> {
+): Reducer<TGlobalState, TLocalState, TAction | DocumentAction> {
   return (document, action, dispatch, options) => {
     return documentReducer(document, action, reducer, dispatch, options);
   };
@@ -216,7 +216,7 @@ export function baseCreateDocument<
       BaseState<PartialState<TGlobalState>, PartialState<TLocalState>>
     >,
   ) => BaseState<TGlobalState, TLocalState>,
-): BaseDocument<TGlobalState, TLocalState, TAction> {
+): BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction> {
   const state: ExtendedState<TGlobalState, TLocalState> =
     baseCreateExtendedState(initialState, createState);
   return {
@@ -349,13 +349,13 @@ export function replayOperations<
 >(
   initialState: ExtendedState<TGlobalState, TLocalState>,
   clearedOperations: DocumentOperations<TGlobalState, TLocalState, TAction>,
-  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction>,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
+  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
   header?: DocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReducerOptions,
-): BaseDocument<TGlobalState, TLocalState, TAction> {
+): BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction> {
   // wraps the provided custom reducer with the
   // base document reducer
   const wrappedReducer = createReducer(reducer, documentReducer);
@@ -395,9 +395,9 @@ export function replayDocument<
   TAction extends BaseAction,
 >(
   initialState: ExtendedState<TGlobalState, TLocalState>,
-  operations: DocumentOperations<TGlobalState, TLocalState, TAction>,
-  reducer: Reducer<TGlobalState, TLocalState, TAction>,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
+  operations: DocumentOperations<TGlobalState, TLocalState, TAction | DocumentAction>,
+  reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
   header?: DocumentHeader,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
@@ -409,12 +409,12 @@ export function replayDocument<
   } = options || {};
 
   let documentState = initialState;
-  const operationsToReplay: Operation<TGlobalState, TLocalState, TAction>[] =
+  const operationsToReplay: Operation<TGlobalState, TLocalState, TAction | DocumentAction>[] =
     [];
   const initialOperations: DocumentOperations<
     TGlobalState,
     TLocalState,
-    TAction
+    TAction | DocumentAction
   > = {
     global: [],
     local: [],

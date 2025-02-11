@@ -1,20 +1,21 @@
+import { DocumentAction } from "@document/actions/types.js";
 import { SignalDispatch } from "@document/signal.js";
 import {
-  BaseDocument,
   BaseAction,
+  BaseDocument,
   ImmutableStateReducer,
+  Operation,
   OperationScope,
   ReducerOptions,
-  Operation,
 } from "@document/types.js";
-import { createReducer, createAction } from "@document/utils/base.js";
+import { createAction, createReducer } from "@document/utils/base.js";
 // Empty reducer that supports base actions
 export const emptyReducer = <
   TGlobalState,
   TLocalState,
   TAction extends BaseAction,
 >(
-  state: BaseDocument<TGlobalState, TLocalState, TAction>,
+  state: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
 ) => state;
 
 export const wrappedEmptyReducer = <
@@ -22,9 +23,9 @@ export const wrappedEmptyReducer = <
   TLocalState,
   TAction extends BaseAction,
 >(
-  state: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction | Operation<TGlobalState, TLocalState, TAction>,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
+  state: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
+  action: TAction | Operation<TGlobalState, TLocalState, TAction | DocumentAction>,
+  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
   options?: ReducerOptions,
 ) => {
   return emptyReducer(state);
@@ -74,7 +75,7 @@ export const setLocalName = (name: string) =>
 export const baseCountReducer: ImmutableStateReducer<
   CountState,
   CountLocalState,
-  CountAction
+  CountAction | DocumentAction
 > = (state, action) => {
   switch (action.type) {
     case "INCREMENT":
@@ -96,7 +97,7 @@ export const baseCountReducer: ImmutableStateReducer<
 export const mutableCountReducer: ImmutableStateReducer<
   CountState,
   CountLocalState,
-  CountAction
+  CountAction | DocumentAction
 > = (state, action) => {
   switch (action.type) {
     case "INCREMENT":
@@ -121,11 +122,7 @@ export const mutableCountReducer: ImmutableStateReducer<
   }
 };
 
-export const countReducer = createReducer<
-  CountState,
-  CountLocalState,
-  CountAction
->(baseCountReducer);
+export const countReducer = createReducer(baseCountReducer);
 
 export const mapOperations = <
   TGlobalState,

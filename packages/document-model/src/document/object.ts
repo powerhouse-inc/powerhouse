@@ -1,16 +1,9 @@
-import { loadState, prune, redo, setName, undo } from "./actions";
-import type { BaseAction } from "./actions/types";
-import type { SignalDispatch } from "./signal";
-import type {
-  Action,
-  AttachmentRef,
-  Document,
-  ExtendedState,
-  OperationScope,
-  Reducer,
-  ReducerOptions,
-} from "./types";
-import { loadFromFile, readOnly, saveToFile } from "./utils";
+import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
+import { DocumentAction } from "./actions/types.js";
+import { SignalDispatch } from "./signal.js";
+import { AttachmentRef, BaseAction, BaseDocument, BaseState, OperationScope, Reducer, ReducerOptions } from "./types.js";
+import { readOnly } from "./utils/base.js";
+import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";
 
 /**
  * This is an abstract class representing a document and provides methods
@@ -18,10 +11,10 @@ import { loadFromFile, readOnly, saveToFile } from "./utils";
  * @typeparam T - The type of data stored in the document.
  * @typeparam A - The type of action the document can take.
  */
-export abstract class BaseDocument<T, A extends Action, L = unknown> {
-  protected _document: Document<T, A, L>;
-  private _reducer: Reducer<T, A, L>;
-  private _signalDispatch?: SignalDispatch;
+export abstract class BaseDocumentClass<TGlobalState, TLocalState, TAction extends BaseAction> {
+  protected _document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>;
+  private _reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>;
+  private _signalDispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>;
 
   /**
    * Constructs a BaseDocument instance with an initial state.
@@ -29,9 +22,9 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param document - The initial state of the document.
    */
   constructor(
-    reducer: Reducer<T, A, L>,
-    document: Document<T, A, L>,
-    signalDispatch?: SignalDispatch,
+    reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+    document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
+    signalDispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
   ) {
     this._reducer = reducer;
     this._document = document;
@@ -43,7 +36,7 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param action - The action to dispatch.
    * @returns The Document instance.
    */
-  protected dispatch(action: A | BaseAction, options?: ReducerOptions) {
+  protected dispatch(action: TAction | DocumentAction, options?: ReducerOptions) {
     this._document = this._reducer(
       this._document,
       action,
@@ -60,7 +53,7 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @returns The file path where the state was saved.
    */
   protected saveToFile(path: string, extension: string, name?: string) {
-    return saveToFile(this._document, path, extension, name);
+    return baseSaveToFile(this._document, path, extension, name);
   }
 
   /**
@@ -68,7 +61,7 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param path - The file path where the state is stored.
    */
   async loadFromFile(path: string) {
-    this._document = await loadFromFile<T, A, L>(path, this._reducer);
+    this._document = await baseLoadFromFile(path, this._reducer);
   }
 
   /**
@@ -77,11 +70,11 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param reducer - The reducer function that updates the state.
    * @returns The state of the document.
    */
-  protected static async stateFromFile<T, A extends Action, L>(
+  protected static async stateFromFile<TGlobalState, TLocalState, TAction extends BaseAction>(
     path: string,
-    reducer: Reducer<T, A, L>,
+    reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
   ) {
-    const state = await loadFromFile<T, A, L>(path, reducer);
+    const state = await baseLoadFromFile<TGlobalState, TLocalState, TAction>(path, reducer);
     return state;
   }
 
@@ -202,7 +195,10 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param operations - The operations to apply to the document.
    */
   public loadState(
-    state: Pick<ExtendedState<T, L>, "state" | "name">,
+    state: {
+      name: string;
+      state: BaseState<TGlobalState, TLocalState>;
+    },
     operations: number,
   ) {
     this.dispatch(loadState(state, operations));
