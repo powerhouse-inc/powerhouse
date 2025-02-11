@@ -7,9 +7,9 @@ import {
   generateSubgraph,
   promptDirectories,
 } from "@powerhousedao/codegen";
+import { getConfig } from "@powerhousedao/config/powerhouse";
 import { Command } from "commander";
 import { CommandActionType } from "../types.js";
-import { getConfig } from "@powerhousedao/config/powerhouse";
 
 export const generate: CommandActionType<
   [
@@ -90,7 +90,7 @@ export const generate: CommandActionType<
   }
 
   if (command.subgraph && command.subgraphName) {
-    await generateSubgraph(command.subgraphName, config);
+    await generateSubgraph(command.subgraphName, null, config);
     return;
   }
 
