@@ -65,7 +65,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
         />
       )}
       <div
-        className="mx-auto mt-[14px] flex h-[148px] justify-center overflow-hidden"
+        className="mx-auto mt-[15px] flex h-[148px] justify-center overflow-hidden"
         style={{
           maskImage:
             "linear-gradient(to bottom, transparent 0%, black 30%, black 70%, transparent 100%)",
@@ -85,7 +85,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
           onSelect={setSelectedMinute}
         />
       </div>
-      <div className="flex items-center justify-between pt-[27px]">
+      <div className="flex items-center justify-between pt-[25px]">
         <Button
           variant="ghost"
           onClick={onCancel}

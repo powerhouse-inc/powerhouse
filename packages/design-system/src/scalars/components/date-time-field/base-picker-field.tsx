@@ -27,6 +27,7 @@ export interface BasePickerFieldProps
     InputProps,
     "name" | "onChange" | "value" | "defaultValue" | "onBlur"
   >;
+  className?: string;
 }
 
 export const BasePickerField = React.forwardRef<
@@ -49,6 +50,7 @@ export const BasePickerField = React.forwardRef<
       onInputChange,
       handleBlur,
       inputProps,
+      className,
       ...props
     },
     ref,
@@ -94,9 +96,9 @@ export const BasePickerField = React.forwardRef<
                 "rounded-lg",
                 "shadow-[0px_2px_4px_0px_rgba(0,0,0,0.08),0px_3px_10px_0px_rgba(0,0,0,0.10)]",
                 "mt-[14px]",
-                // custom styles
-                "pt-3 pr-4 pb-6 pl-4",
                 "dark:shadow-[1px_4px_15.3px_0px_#141921]",
+                "-translate-y-1",
+                className,
               )}
             >
               {children}

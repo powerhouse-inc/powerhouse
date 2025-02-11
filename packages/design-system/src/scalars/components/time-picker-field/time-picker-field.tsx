@@ -15,6 +15,7 @@ import TimePickerContent from "./subcomponents/time-picker-content";
 import { useTimePickerField } from "./use-time-picker-field";
 import { InputNumberProps } from "../number-field/types";
 import { validateTimePicker } from "./time-picker-validations";
+import { cn } from "@/scalars/lib";
 
 export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
@@ -108,6 +109,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           placeholder={placeholder}
           handleBlur={handleBlur}
           inputProps={inputProps}
+          className={cn("pt-3 pr-4 pb-4 pl-4")}
         >
           <TimePickerContent
             selectedHour={selectedHour}
