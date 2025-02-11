@@ -232,6 +232,7 @@ export const Filled: Story = {
             description={mockedOptions[0].description}
             asPlaceholder={false}
             showPHID={false}
+            handleFetchSelectedOption={() => {}}
             className={cn("rounded-t-none pt-2")}
           />
         )}

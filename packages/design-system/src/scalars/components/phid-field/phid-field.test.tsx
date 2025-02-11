@@ -34,19 +34,35 @@ describe("PHIDField Component", () => {
     },
   ];
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  const defaultGetOptions = vi.fn().mockResolvedValue(mockOptions);
+  const defaultGetSelectedOption = vi
+    .fn()
+    .mockImplementation((phid: string) => {
+      return mockOptions.find((option) => option.phid === phid);
+    });
 
   it("should match snapshot", () => {
     const { asFragment } = renderWithForm(
-      <PHIDField name="phid" label="PHID Field" placeholder="phd:" />,
+      <PHIDField
+        name="phid"
+        label="PHID Field"
+        placeholder="phd:"
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
+      />,
     );
     expect(asFragment()).toMatchSnapshot();
   });
 
   it("should render with label", () => {
-    renderWithForm(<PHIDField name="phid" label="Test Label" />);
+    renderWithForm(
+      <PHIDField
+        name="phid"
+        label="Test Label"
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
+      />,
+    );
     expect(screen.getByText("Test Label")).toBeInTheDocument();
   });
 
@@ -56,13 +72,23 @@ describe("PHIDField Component", () => {
         name="phid"
         label="Test Label"
         description="Test Description"
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
     expect(screen.getByText("Test Description")).toBeInTheDocument();
   });
 
   it("should handle disabled state", () => {
-    renderWithForm(<PHIDField name="phid" label="Test Label" disabled />);
+    renderWithForm(
+      <PHIDField
+        name="phid"
+        label="Test Label"
+        disabled
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
+      />,
+    );
     expect(screen.getByRole("combobox")).toBeDisabled();
   });
 
@@ -72,6 +98,8 @@ describe("PHIDField Component", () => {
         name="phid"
         label="Test Label"
         errors={["Invalid PHID format"]}
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
     await waitFor(() =>
@@ -85,6 +113,8 @@ describe("PHIDField Component", () => {
         name="phid"
         label="Test Label"
         warnings={["PHID may be deprecated"]}
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
     expect(screen.getByText("PHID may be deprecated")).toBeInTheDocument();
@@ -105,6 +135,7 @@ describe("PHIDField Component", () => {
         placeholder="phd:"
         variant="withIdAndTitle"
         fetchOptionsCallback={getOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
 
@@ -134,6 +165,8 @@ describe("PHIDField Component", () => {
         label="Test Label"
         required
         errors={["Error message"]}
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
 
@@ -145,7 +178,13 @@ describe("PHIDField Component", () => {
 
   it("should show correct placeholders for different variants", () => {
     const { rerender } = renderWithForm(
-      <PHIDField name="phid" label="Test Label" variant="withIdAndTitle" />,
+      <PHIDField
+        name="phid"
+        label="Test Label"
+        variant="withIdAndTitle"
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
+      />,
     );
 
     expect(screen.getByText("Title Unavailable")).toBeInTheDocument();
@@ -155,6 +194,8 @@ describe("PHIDField Component", () => {
         name="phid"
         label="Test Label"
         variant="withIdTitleAndDescription"
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
 
@@ -184,20 +225,29 @@ describe("PHIDField Component", () => {
 
     render(
       <Form onSubmit={mockOnSubmit}>
-        <PHIDField name="phid" label="Test Label" />
+        <PHIDField
+          name="phid"
+          label="Test Label"
+          fetchOptionsCallback={defaultGetOptions}
+          fetchSelectedOptionCallback={defaultGetSelectedOption}
+        />
         <button type="submit">Submit</button>
       </Form>,
     );
 
     const input = screen.getByRole("combobox");
-
+    await user.click(input);
     await user.type(input, invalidPhid);
+
     await user.click(screen.getByText("Submit"));
-    expect(mockOnSubmit).not.toHaveBeenCalled();
-    expect(screen.getByText(/Invalid format/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+      expect(screen.getByText(/Invalid format/)).toBeInTheDocument();
+    });
 
     await user.clear(input);
     await user.type(input, validPhid);
+
     await user.click(screen.getByText("Submit"));
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
@@ -220,10 +270,12 @@ describe("PHIDField Component", () => {
         label="Test Label"
         variant="withIdTitleAndDescription"
         fetchOptionsCallback={getOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
 
     const input = screen.getByRole("combobox");
+    await user.click(input);
     await user.type(input, mockOptions[0].phid);
 
     await mockPromise;

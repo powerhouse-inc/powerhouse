@@ -5,7 +5,7 @@ import type { PHIDProps, PHIDItem } from "./types";
 
 const ReloadButton: React.FC<{
   isLoadingSelectedOption?: boolean;
-  handleFetchSelectedOption?: (phid: string) => void;
+  handleFetchSelectedOption: (phid: string) => void;
   phid: string;
 }> = ({ isLoadingSelectedOption, handleFetchSelectedOption, phid }) => (
   <div>
@@ -14,7 +14,7 @@ const ReloadButton: React.FC<{
       disabled={isLoadingSelectedOption}
       onClick={() => {
         if (!isLoadingSelectedOption) {
-          handleFetchSelectedOption?.(phid);
+          handleFetchSelectedOption(phid);
         }
       }}
       className={cn(
@@ -91,7 +91,7 @@ export const PHIDListItem: React.FC<PHIDListItemProps> = ({
         >
           {title}
         </span>
-        {asPlaceholder === false && (
+        {asPlaceholder === false && handleFetchSelectedOption && (
           <ReloadButton
             isLoadingSelectedOption={isLoadingSelectedOption}
             handleFetchSelectedOption={handleFetchSelectedOption}
@@ -148,7 +148,7 @@ export const PHIDListItem: React.FC<PHIDListItemProps> = ({
             {path}
           </span>
         </div>
-        {asPlaceholder === false && (
+        {asPlaceholder === false && handleFetchSelectedOption && (
           <ReloadButton
             isLoadingSelectedOption={isLoadingSelectedOption}
             handleFetchSelectedOption={handleFetchSelectedOption}
