@@ -1,9 +1,12 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import { Argument, Command } from "commander";
+import { execSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import pm2, { StartOptions } from "pm2";
 import { CommandActionType } from "../types.js";
 
-const actions = ["start", "stop", "status", "list", "install", "save"];
+const actions = ["start", "stop", "status", "list", "startup", "unstartup"];
 const services = ["switchboard", "connect", "all"];
 
 let switchboardPort = 8442;
@@ -29,7 +32,13 @@ export const manageService: CommandActionType<[string, string]> = async (
         case "stop":
           stopServices(service);
           break;
-        case "status":
+        case "startup":
+          startupServices();
+          break;
+        case "unstartup":
+          unstartupServices();
+          break;
+        default:
           statusServices();
           break;
       }
@@ -135,4 +144,27 @@ function statusServices() {
     console.table(formattedList);
     process.exit(0);
   });
+}
+
+function startupServices() {
+  const dirname =
+    import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
+  const scriptPath = path.join(dirname, "..", "scripts", "service-startup.sh");
+  const result = execSync(`bash ${scriptPath}`).toString();
+  console.log(result);
+  process.exit(0);
+}
+
+function unstartupServices() {
+  const dirname =
+    import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
+  const scriptPath = path.join(
+    dirname,
+    "..",
+    "scripts",
+    "service-unstartup.sh",
+  );
+  const result = execSync(`bash ${scriptPath}`).toString();
+  console.log(result);
+  process.exit(0);
 }
