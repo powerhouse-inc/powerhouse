@@ -73,7 +73,7 @@ export const BasePickerField = React.forwardRef<
                 variant="ghost"
                 disabled={disabled}
                 className={cn(
-                  "w-[50px] rounded-l-md border-none px-2",
+                  "w-[50px] rounded-l-md border-none pl-3 pr-2",
                   "focus:bg-none focus:text-selected-foreground",
                   "button-ghost",
                   disabled && "cursor-not-allowed  hover:bg-transparent",
