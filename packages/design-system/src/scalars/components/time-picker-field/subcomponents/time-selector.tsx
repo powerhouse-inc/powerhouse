@@ -24,8 +24,8 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
           className={cn(
             "px-3 py-2 text-[12px] flex cursor-pointer items-center justify-center",
             selectedValue === value
-              ? "rounded-[6px] bg-white border border-gray-300 text-gray-900"
-              : "text-gray-900 w-[16px] h-[20px]",
+              ? "rounded-[6px] bg-white border border-gray-300 text-gray-900 font-normal"
+              : "text-gray-900 w-[16px] h-[20px] font-normal",
           )}
         >
           {value}
