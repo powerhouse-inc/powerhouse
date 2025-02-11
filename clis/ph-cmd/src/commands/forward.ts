@@ -1,7 +1,7 @@
 import {
-  getProjectInfo,
-  getPackageManagerFromLockfile,
   forwardPHCommand,
+  getPackageManagerFromLockfile,
+  getProjectInfo,
 } from "../utils.js";
 
 type ForwardPHCommandOptions = {

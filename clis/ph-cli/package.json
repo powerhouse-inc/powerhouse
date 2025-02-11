@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.30.0",
+  "version": "0.31.3-dev.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -8,7 +8,7 @@
     "access": "public"
   },
   "bin": {
-    "ph-cli": "dist/cli.cjs"
+    "ph-cli": "dist/cli.js"
   },
   "files": [
     "dist"
@@ -24,9 +24,9 @@
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "@powerhousedao/analytics-engine-core": "^0.3.0",
-    "@powerhousedao/analytics-engine-graphql": "^0.2.1",
-    "@powerhousedao/analytics-engine-pg": "^0.3.0",
+    "@powerhousedao/analytics-engine-core": "^0.3.2",
+    "@powerhousedao/analytics-engine-graphql": "^0.2.2",
+    "@powerhousedao/analytics-engine-pg": "^0.4.0",
     "document-drive": "workspace:*",
     "graphql-tag": "^2.12.6",
     "knex": "^3.1.0",
@@ -35,7 +35,7 @@
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/connect": "1.0.0-dev.195",
+    "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",

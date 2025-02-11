@@ -1,3 +1,5 @@
+import { useRef, useState } from "react";
+import { isNotSafeValue } from "../amount-field/utils";
 import { NumericType } from "./types";
 import { getDisplayValue } from "./utils";
 
@@ -11,6 +13,7 @@ interface UseNumberFieldProps {
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   trailingZeros?: boolean;
   precision?: number;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 export const useNumberField = ({
@@ -23,7 +26,10 @@ export const useNumberField = ({
   onBlur,
   trailingZeros = false,
   precision = 0,
+  onFocus,
 }: UseNumberFieldProps) => {
+  const [isFocus, setIsFocus] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const canIncrement =
     maxValue !== undefined &&
     (typeof value === "bigint"
@@ -36,7 +42,7 @@ export const useNumberField = ({
       ? value <= BigInt(minValue)
       : Number(value) <= minValue);
 
-  const showSteps = step !== 0;
+  const showSteps = isFocus;
 
   // Boolean to no convert float values to BigInt
   const isBigInt = numericType && numericType === "BigInt";
@@ -45,7 +51,7 @@ export const useNumberField = ({
   const preventInvalidCharsAndHandleArrows = (
     e: React.KeyboardEvent<HTMLInputElement>,
   ) => {
-    if (["e", "E"].includes(e.key)) {
+    if (["e", "E", "+"].includes(e.key)) {
       e.preventDefault();
       return;
     }
@@ -85,7 +91,6 @@ export const useNumberField = ({
     operation: "increment" | "decrement",
   ) => {
     e.preventDefault();
-
     let newValue: number | bigint;
 
     if (isBigInt) {
@@ -119,9 +124,11 @@ export const useNumberField = ({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocus(false);
     const inputValue = e.target.value;
-    // if its empty, keep it empty
-    if (!inputValue || inputValue === "") {
+
+    // If the value is not a number, not an empty string, or is empty, show the error message or keep it empty
+    if (inputValue === "" || isNaN(Number(inputValue))) {
       onBlur?.(e);
       return;
     }
@@ -135,24 +142,23 @@ export const useNumberField = ({
       "Int",
     ] as NumericType[];
 
+    // Get the formatted value for keeping the trailing zeros
     const formattedValue = getDisplayValue(inputValue, {
       numericType,
       precision,
       trailingZeros,
     });
 
-    const isNotSafeValue =
-      Math.abs(Number(formattedValue)) > Number.MAX_SAFE_INTEGER;
+    const isNotSafe = isNotSafeValue(inputValue);
 
-    // //Avoid to convert to no safe value in notation scientific
-    if (isNotSafeValue) {
+    // Avoid converting an unsafe value to scientific notation
+    if (isNotSafe) {
       onBlur?.(e);
       return;
     }
 
-    // if includes some of the integer or bigint types, we remove any decimal part
     const finalValue =
-      numericType && integerTypes.includes(numericType)
+      !numericType || integerTypes.includes(numericType)
         ? parseFloat(inputValue).toString()
         : formattedValue;
 
@@ -170,6 +176,12 @@ export const useNumberField = ({
     onBlur?.(e);
   };
 
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setIsFocus(true);
+    onFocus?.(e);
+  };
+
   return {
     canIncrement,
     canDecrement,
@@ -180,5 +192,8 @@ export const useNumberField = ({
     preventLetterInput,
     isBigInt,
     handleBlur,
+    handleFocus,
+    isFocus,
+    buttonRef,
   };
 };

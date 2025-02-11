@@ -1,8 +1,9 @@
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import { IDocumentDriveServer } from "document-drive";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
-import { DocumentNode, parse } from "graphql";
+import { pascalCase } from "change-case";
+import { IDocumentDriveServer } from "document-drive";
+import { DocumentNode } from "graphql";
 import gql from "graphql-tag";
 import { Context } from "src/subgraphs";
 
@@ -25,13 +26,11 @@ export const getDocumentModelTypeDefs = (
   const documentModels = documentDriveServer.getDocumentModels();
   let dmSchema = "";
   documentModels.forEach(({ documentModel }) => {
-    dmSchema += `
+    const dmSchemaName = pascalCase(documentModel.name.replaceAll("/", " "));
+    let tmpDmSchema = `
           ${documentModel.specifications
             .map((specification) =>
               specification.state.global.schema
-                .replaceAll(" Account ", ` ${documentModel.name}Account `)
-                .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-                .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
                 .replaceAll("scalar DateTime", "")
                 .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
             )
@@ -40,9 +39,6 @@ export const getDocumentModelTypeDefs = (
           ${documentModel.specifications
             .map((specification) =>
               specification.state.local.schema
-                .replaceAll(" Account ", ` ${documentModel.name}Account `)
-                .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-                .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
                 .replaceAll("scalar DateTime", "")
                 .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
                 .replaceAll("type AccountSnapshotLocalState", "")
@@ -51,7 +47,53 @@ export const getDocumentModelTypeDefs = (
             )
             .join("\n")};
 
-    type ${documentModel.name} implements IDocument {
+    \n`;
+
+    const found = tmpDmSchema.match(/(type|enum|union)\s+(\w+)\s/g);
+    const trimmedFound = found?.map((f) =>
+      f
+        .replaceAll("type ", "")
+        .replaceAll("enum ", "")
+        .replaceAll("union ", "")
+        .trim(),
+    );
+    trimmedFound?.forEach((f) => {
+      // Create a regex that matches the type name with proper boundaries
+      const typeRegex = new RegExp(
+        // Match type references in various GraphQL contexts
+        `(?<![_A-Za-z0-9])(${f})(?![_A-Za-z0-9])|` + // Basic type references
+          `\\[(${f})\\]|` + // Array types without nullability
+          `\\[(${f})!\\]|` + // Array of non-null types
+          `\\[(${f})\\]!|` + // Non-null array of types
+          `\\[(${f})!\\]!`, // Non-null array of non-null types
+        "g",
+      );
+
+      tmpDmSchema = tmpDmSchema.replace(
+        typeRegex,
+        (
+          match: string,
+          p1: string,
+          p2: string,
+          p3: string,
+          p4: string,
+          p5: string,
+        ) => {
+          // If it's an array type, preserve the brackets and ! while replacing the type name
+          if (match.startsWith("[")) {
+            return match.replace(
+              p2 || p3 || p4 || p5,
+              `${dmSchemaName}_${p2 || p3 || p4 || p5}`,
+            );
+          }
+          // Basic type reference
+          return `${dmSchemaName}_${p1}`;
+        },
+      );
+    });
+    dmSchema += tmpDmSchema;
+    dmSchema += `
+    type ${dmSchemaName} implements IDocument {
               id: String!
               name: String!
               documentType: String!
@@ -59,8 +101,8 @@ export const getDocumentModelTypeDefs = (
               revision: Int!
               created: DateTime!
               lastModified: DateTime!
-              ${documentModel.name !== "DocumentModel" ? `initialState: ${documentModel.name}State!` : ""}
-              ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ""}
+              ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
+              ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
           }\n`;
   });
 

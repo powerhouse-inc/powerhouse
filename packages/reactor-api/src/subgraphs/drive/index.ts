@@ -1,4 +1,5 @@
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { pascalCase } from "change-case";
 import {
   generateUUID,
   ListenerRevision,
@@ -13,28 +14,30 @@ import {
   ListenerFilter,
   TransmitterType,
 } from "document-model-libs/document-drive";
-import { Asset } from "./temp-hack-rwa-type-defs";
 import { BaseAction, Document, Operation } from "document-model/document";
 import {
   DocumentModelInput,
   DocumentModelState,
 } from "document-model/document-model";
 import { gql } from "graphql-tag";
-import { Context } from "../types";
 import { Subgraph } from "../base";
+import { Context } from "../types";
+import { Asset } from "./temp-hack-rwa-type-defs";
 
 export class DriveSubgraph extends Subgraph {
   name = "d/:drive";
   typeDefs = gql`
     type Query {
       system: System
-      drive: DocumentDriveState
+      drive: DocumentDrive_DocumentDriveState
       document(id: String!): IDocument
       documents: [String!]!
     }
 
     type Mutation {
-      registerPullResponderListener(filter: InputListenerFilter!): Listener
+      registerPullResponderListener(
+        filter: InputListenerFilter!
+      ): DocumentDrive_Listener
       pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
       acknowledge(
         listenerId: String!
@@ -210,6 +213,9 @@ export class DriveSubgraph extends Subgraph {
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
+        const typeName = pascalCase(
+          (dm?.documentModel.name || "").replaceAll("/", " "),
+        );
         const response = {
           ...document,
           id,
@@ -223,7 +229,7 @@ export class DriveSubgraph extends Subgraph {
                 : JSON.stringify(op.input),
           })),
           initialState: document.initialState.state.global,
-          __typename: dm?.documentModel.name,
+          __typename: typeName,
         };
         return response;
       },

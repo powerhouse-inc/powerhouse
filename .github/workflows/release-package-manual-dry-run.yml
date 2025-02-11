@@ -1,4 +1,4 @@
-name: Release Package Manual
+name: Release Package Manual --Dry-Run
 
 on:
   workflow_dispatch:

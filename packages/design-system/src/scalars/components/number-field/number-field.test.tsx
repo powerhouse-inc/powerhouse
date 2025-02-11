@@ -166,7 +166,7 @@ describe("NumberField", () => {
 
     await user.type(input, "10");
     expect(mockOnChange).toHaveBeenCalled();
-    expect(input).toHaveValue(10);
+    expect(input).toHaveValue("10");
   });
 
   it("should disable the input when disabled prop is true", () => {
@@ -178,7 +178,7 @@ describe("NumberField", () => {
         name="Label"
       />,
     );
-    const input = screen.getByRole("spinbutton");
+    const input = screen.getByLabelText("Test Label");
 
     expect(input).toBeDisabled();
   });
@@ -206,12 +206,12 @@ describe("NumberField", () => {
     );
     const input = screen.getByRole("spinbutton");
 
-    expect(input).toHaveValue(5);
+    expect(input).toHaveValue("5");
   });
-
   // Test for step
   it("should increment the value when increment arrow button is clicked", async () => {
     const user = userEvent.setup();
+
     renderWithForm(
       <NumberField
         label="Test Label"
@@ -222,15 +222,20 @@ describe("NumberField", () => {
       />,
     );
 
-    const decrementButton = screen.getAllByRole("button")[0];
-    await user.click(decrementButton);
+    const input = screen.getByRole("spinbutton");
+    await user.click(input); // Simula el clic en el input
 
+    // Ensure that the input has focus
+    expect(input).toHaveFocus();
+
+    const incrementButton = screen.getByRole("button", { name: /Increment/i });
+    await user.click(incrementButton);
+
+    // Verify that `mockOnChange` was called and that the input remains focused
     expect(mockOnChange).toHaveBeenCalledTimes(1);
-
+    expect(input).toHaveFocus();
     const eventArg = mockOnChange.mock
       .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
-
-    expect(eventArg).toBeInstanceOf(Event);
 
     expect(eventArg.target).toMatchObject({
       value: 6,
@@ -248,9 +253,16 @@ describe("NumberField", () => {
         onChange={mockOnChange}
       />,
     );
+    const input = screen.getByRole("spinbutton");
+    await user.click(input);
+    // Ensure that the input has focus
+    expect(input).toHaveFocus();
 
-    const decrementButton = screen.getAllByRole("button")[1];
+    const decrementButton = screen.getByRole("button", { name: /Decrement/i });
     await user.click(decrementButton);
+    // Ensure that the input has focus
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
+
     const eventArg = mockOnChange.mock
       .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
 
@@ -259,7 +271,7 @@ describe("NumberField", () => {
     });
   });
 
-  it("should not exceed maxValue when increment button is clicked, and should not invoke onChange if the value does not change", async () => {
+  it("should not exceed maxValue when increment button is clicked", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <NumberField
@@ -271,32 +283,23 @@ describe("NumberField", () => {
         onChange={mockOnChange}
       />,
     );
+    const input = screen.getByRole("spinbutton");
+    await user.click(input);
+    // Ensure that the input has focus
+    expect(input).toHaveFocus();
 
-    const incrementButton = screen.getAllByRole("button")[0];
+    const incrementButton = screen.getByRole("button", { name: /Increment/i });
     await user.click(incrementButton);
+    // // Asegúrate de que el input tiene foco
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
 
-    expect(mockOnChange).not.toHaveBeenCalled();
+    const eventArg = mockOnChange.mock
+      .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
+
+    expect(eventArg.target.value).toBe("10");
   });
 
-  it("should not go up of  maxValue when increment button is clicked and should not invoke onChange if the value does not change", async () => {
-    const user = userEvent.setup();
-    renderWithForm(
-      <NumberField
-        label="Test Label"
-        name="Label"
-        value={30}
-        maxValue={30}
-        step={1}
-        onChange={mockOnChange}
-      />,
-    );
-
-    const decrementButton = screen.getAllByRole("button")[0];
-    await user.click(decrementButton);
-
-    expect(mockOnChange).not.toHaveBeenCalled();
-  });
-  it("should not go below minValue when decrement button is clicked and should not invoke onChange if the value does not change", async () => {
+  it("should not go below minValue when decrement button is clicked", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <NumberField
@@ -308,11 +311,18 @@ describe("NumberField", () => {
         onChange={mockOnChange}
       />,
     );
+    const input = screen.getByRole("spinbutton");
+    await user.click(input);
+    // Ensure that the input has focus
+    expect(input).toHaveFocus();
 
-    const decrementButton = screen.getAllByRole("button")[1];
+    const decrementButton = screen.getByRole("button", { name: /Decrement/i });
     await user.click(decrementButton);
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
+    const eventArg = mockOnChange.mock
+      .calls[0][0] as React.ChangeEvent<HTMLInputElement>;
 
-    expect(mockOnChange).not.toHaveBeenCalled();
+    expect(eventArg.target.value).toBe("1");
   });
 
   //New test for the issues
@@ -397,7 +407,220 @@ describe("NumberField", () => {
     await user.clear(input);
 
     expect(input).toHaveAttribute("placeholder", placeholder);
-    expect(input).toHaveValue(null);
+    expect(input).toHaveValue("");
+  });
+
+  it("should increment/decrement by specified step using keyboard", async () => {
+    const user = userEvent.setup();
+    const mockOnChange = vi.fn();
+
+    renderWithForm(
+      <NumberField
+        label="Step Field"
+        name="stepField"
+        value={10}
+        step={2}
+        onChange={mockOnChange}
+      />,
+    );
+
+    const input = screen.getByLabelText("Step Field");
+    await user.type(input, "{arrowup}");
+
+    expect(mockOnChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        target: { value: 12 },
+      }),
+    );
+
+    await user.type(input, "{arrowdown}");
+
+    expect(mockOnChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        target: { value: 10 },
+      }),
+    );
+  });
+
+  it("should handle precision correctly for decimal numbers", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField
+              label="Precision Field"
+              name="precisionField"
+              precision={2}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Precision Field");
+    await user.type(input, "0.9");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      precisionField: 0.9,
+    });
+  });
+
+  it("should accept integer values when numericType is PositiveFloat", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div>
+            <NumberField
+              label="Positive Float Field"
+              name="positiveFloatField"
+              numericType="PositiveFloat"
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Positive Float Field");
+    await user.type(input, "42");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      positiveFloatField: 42,
+    });
+  });
+
+  it("should retain the input value '4546-56' and display an error message", async () => {
+    const mockOnSubmit = vi.fn();
+    // const user = userEvent.setup({ delay: 100 });
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div>
+            <NumberField
+              label="Special Case Field"
+              name="specialCaseField"
+              onChange={mockOnChange}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Special Case Field");
+    await user.type(input, "4546-56");
+
+    expect(input).toHaveValue("4546-56");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).not.toHaveBeenCalled();
+  });
+
+  //New test for the issues
+  it("should handle NonPositiveFloat numeric type correctly", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField
+              label="Float Field"
+              name="floatField"
+              numericType="NonPositiveFloat"
+              precision={2}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Float Field");
+    await user.type(input, "-0.90");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      floatField: -0.9,
+    });
+  });
+
+  it("should handle NegativeInt numeric type correctly", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        {({ formState: { isSubmitting } }) => (
+          <div className="flex w-[400px] flex-col gap-4">
+            <NumberField
+              label="Negative Int Field"
+              name="negativeField"
+              numericType="NegativeInt"
+            />
+            <Button type="submit" disabled={isSubmitting}>
+              Submit
+            </Button>
+          </div>
+        )}
+      </Form>,
+    );
+
+    const input = screen.getByLabelText("Negative Int Field");
+    await user.type(input, "-87");
+
+    const submitButton = screen.getByText("Submit");
+    await user.click(submitButton);
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      negativeField: -87,
+    });
+  });
+
+  it("should show placeholder when value is empty", async () => {
+    const placeholder = "Enter a number";
+    const user = userEvent.setup();
+
+    renderWithForm(
+      <NumberField
+        label="Number Field"
+        name="numberField"
+        placeholder={placeholder}
+      />,
+    );
+
+    const input = screen.getByLabelText("Number Field");
+    await user.clear(input);
+
+    expect(input).toHaveAttribute("placeholder", placeholder);
   });
 
   it("should increment/decrement by specified step using keyboard", async () => {

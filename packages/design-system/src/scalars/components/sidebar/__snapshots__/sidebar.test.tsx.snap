@@ -1,0 +1,117 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Sidebar Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <aside
+    class="group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600"
+    style="width: min(100%, var(--sidebar-width));"
+  >
+    <header
+      class="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-gray-800 dark:bg-slate-600"
+    >
+      <div
+        class="flex items-center gap-2 truncate"
+      >
+        <div
+          data-testid="icon-fallback"
+          style="width: 16px; height: 16px;"
+        />
+        <div
+          class="truncate text-sm font-semibold text-gray-700 dark:text-gray-300"
+        >
+          Test Sidebar
+        </div>
+      </div>
+      <div
+        class="flex select-none items-center gap-2"
+      >
+        <div
+          class="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200 hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50"
+          role="button"
+          tabindex="2"
+        >
+          1
+        </div>
+        <div
+          class="w-[26px] rounded-lg bg-slate-50 p-1 text-center text-xs text-slate-100 dark:bg-gray-900 dark:text-slate-200 hover:bg-slate-100 hover:text-slate-200 dark:hover:bg-gray-600 dark:hover:text-slate-50"
+          role="button"
+          tabindex="2"
+        >
+          2
+        </div>
+      </div>
+    </header>
+    <div
+      class="flex flex-1 flex-col gap-1 overflow-y-auto"
+    >
+      <div
+        class="flex-1 overflow-y-hidden"
+      >
+        <div
+          style="overflow: visible; height: 0px; width: 0px;"
+        >
+          <div
+            aria-label="grid"
+            aria-readonly="true"
+            class="ReactVirtualized__Grid ReactVirtualized__List p-2"
+            role="grid"
+            style="box-sizing: border-box; direction: ltr; height: 0px; position: relative; width: 0px; will-change: transform; overflow-x: hidden; overflow-y: auto;"
+            tabindex="0"
+          />
+        </div>
+        <div
+          class="resize-triggers"
+        >
+          <div
+            class="expand-trigger"
+          >
+            <div
+              style="width: 1px; height: 1px;"
+            />
+          </div>
+          <div
+            class="contract-trigger"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="w-full border-t border-gray-300 p-2 dark:border-gray-800"
+    >
+      <div
+        class="relative"
+      >
+        <input
+          class="flex h-9 rounded-md text-sm font-normal leading-5 text-gray-900 dark:text-gray-50 dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white px-3 py-2 font-sans placeholder:text-gray-500 dark:placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 dark:focus:bg-charcoal-900 focus:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-white disabled:text-gray-700 disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300 w-full appearance-none pl-8"
+          placeholder="Search"
+          style="padding-right: 16px;"
+          tabindex="1"
+          type="search"
+          value=""
+        />
+        <div
+          data-testid="icon-fallback"
+          style="width: 16px; height: 16px;"
+        />
+      </div>
+    </div>
+    <div
+      class="group/sidebar-resizer absolute right-0 top-0 h-full w-[10px] translate-x-1/2 cursor-ew-resize select-none"
+    >
+      <div
+        class="relative h-full w-px translate-x-[5px] transition-colors group-hover/sidebar-resizer:bg-gray-500 dark:group-hover/sidebar-resizer:bg-gray-600"
+      >
+        <button
+          class="absolute right-0 top-14 size-4 translate-x-1/2 rounded-full bg-gray-500 dark:bg-gray-900 opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100"
+          type="button"
+        >
+          <div
+            data-testid="icon-fallback"
+            style="width: 16px; height: 16px;"
+          />
+        </button>
+      </div>
+    </div>
+  </aside>
+</DocumentFragment>
+`;

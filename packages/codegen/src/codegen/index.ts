@@ -1,11 +1,16 @@
 #! /usr/bin/env node
-import { DocumentModelModule, DocumentModelState } from "document-model";
+import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/scalars";
+import { paramCase, pascalCase } from "change-case";
+import { DocumentModel } from "document-model/document";
+import { DocumentModelModule, DocumentModelState } from "document-model";
+import fs from "node:fs";
+import { join, resolve } from "path";
+import { generateSchema, generateSchemas } from "./graphql";
 import {
-  generateAll,
   generateEditor as _generateEditor,
+  generateImportScript as _generateImportScript,
   generateProcessor as _generateProcessor,
-  generateDocumentModel,
   generateSubgraph as _generateSubgraph,
 } from "./hygen.js";
 import { generateSchemas, generateSchema } from "./graphql.js";
@@ -167,6 +172,19 @@ export async function generateEditor(
   );
 }
 
+export async function generateSubgraph(
+  name: string,
+  file: string | null,
+  config: PowerhouseConfig,
+) {
+  return _generateSubgraph(
+    name,
+    file !== null ? await loadDocumentModel(file) : null,
+    config.subgraphsDir,
+    config,
+  );
+}
+
 export async function generateProcessor(
   name: string,
   type: "analytics" | "operational",
@@ -194,6 +212,9 @@ export async function generateProcessor(
   );
 }
 
-export async function generateSubgraph(name: string, config: PowerhouseConfig) {
-  return _generateSubgraph(name, config.subgraphsDir, config);
+export async function generateImportScript(
+  name: string,
+  config: PowerhouseConfig,
+) {
+  return _generateImportScript(name, config.importScriptsDir, config);
 }

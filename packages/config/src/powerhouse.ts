@@ -1,10 +1,15 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
+export type PowerhousePackage = {
+  packageName: string;
+};
+
 export type PowerhouseConfig = {
   documentModelsDir: string;
   editorsDir: string;
   processorsDir: string;
   subgraphsDir: string;
+  importScriptsDir: string;
   interactive?: boolean;
   skipFormat?: boolean;
   watch?: boolean;
@@ -17,21 +22,21 @@ export type PowerhouseConfig = {
     https: boolean;
     openBrowser?: boolean;
   };
-  packages?: {
-    packageName: string;
-  }[];
+  packages?: PowerhousePackage[];
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
 const DEFAULT_EDITORS_DIR = "./editors";
 const DEFAULT_PROCESSORS_DIR = "./processors";
 const DEFAULT_SUBGRAPHS_DIR = "./subgraphs";
+const DEFAULT_IMPORT_SCRIPTS_DIR = "./scripts";
 
 export const DEFAULT_CONFIG: PowerhouseConfig = {
   documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,
   editorsDir: DEFAULT_EDITORS_DIR,
   processorsDir: DEFAULT_PROCESSORS_DIR,
   subgraphsDir: DEFAULT_SUBGRAPHS_DIR,
+  importScriptsDir: DEFAULT_IMPORT_SCRIPTS_DIR,
   skipFormat: false,
 };
 

@@ -14,6 +14,9 @@ const meta: Meta<typeof SelectField> = {
   component: SelectField,
   parameters: {
     layout: "padded",
+    chromatic: {
+      disableSnapshot: true,
+    },
   },
   decorators: [
     withForm,
@@ -50,31 +53,31 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
-    optionsCheckmark: {
+    selectionIcon: {
       control: "radio",
-      options: ["Auto", "Checkmark"],
+      options: ["auto", "checkmark"],
       description:
-        "Type of checkmark to show in the options. " +
-        "Auto: Show a Radio for Single Select and a Checkbox for Multi Select. " +
-        "Checkmark: Show a Checkmark for Single and Multi Select. ",
+        "Selection icon to show in the options. " +
+        "auto: Show a Radio for Single Select and a Checkbox for Multi Select. " +
+        "checkmark: Show a checkmark icon for Single and Multi Select. ",
       table: {
-        type: { summary: '"Auto" | "Checkmark"' },
-        defaultValue: { summary: '"Auto"' },
+        type: { summary: '"auto" | "checkmark"' },
+        defaultValue: { summary: '"auto"' },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
 
-    optionsCheckmarkPosition: {
+    selectionIconPosition: {
       control: "radio",
-      options: ["Left", "Right"],
+      options: ["left", "right"],
       description:
-        'Checkmark position in options. Only apply if optionsCheckmark is "Checkmark".',
+        'Selection icon position in options. Only apply if "selectionIcon" is "checkmark".',
       table: {
-        type: { summary: '"Left" | "Right"' },
-        defaultValue: { summary: '"Left"' },
+        type: { summary: '"left" | "right"' },
+        defaultValue: { summary: '"left"' },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "optionsCheckmark", eq: "Checkmark" },
+      if: { arg: "selectionIcon", eq: "checkmark" },
     },
 
     searchable: {
@@ -96,7 +99,7 @@ const meta: Meta<typeof SelectField> = {
 } satisfies Meta<typeof SelectField>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<typeof SelectField>;
 
 const IconComponent = (
   name: IconName,
@@ -240,9 +243,9 @@ export const Multiple: Story = {
 export const WithCheckmark: Story = {
   args: {
     label: "With checkmark",
-    description: "This select field shows a checkmark for selected options",
+    description: "This select field shows a checkmark icon for selected option",
     options: defaultOptions,
-    optionsCheckmark: "Checkmark",
+    selectionIcon: "checkmark",
     placeholder: "Select an icon name",
   },
 };
@@ -252,8 +255,8 @@ export const WithIcon: Story = {
     label: "Favorite icon",
     description: "Choose your favorite icon",
     options: defaultOptionsWithIcon,
-    optionsCheckmark: "Checkmark",
-    optionsCheckmarkPosition: "Right",
+    selectionIcon: "checkmark",
+    selectionIconPosition: "right",
     placeholder: "Select an icon",
   },
 };

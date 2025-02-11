@@ -1,6 +1,6 @@
 import * as documentModelsMap from "document-model-libs/document-models";
 import { DocumentModelModule } from "document-model/document";
-import { bench, describe, vi } from "vitest";
+import { bench, BenchOptions, describe, vi } from "vitest";
 import {
   DefaultRemoteDriveInput,
   DocumentDriveServer,
@@ -27,55 +27,66 @@ setLogger({
   trace: function (...data: any[]): void {},
 });
 
-vi.mock(import("graphql-request"), () => ({
-  ClientError: Error,
-  GraphQLClient: vi.fn().mockImplementation(() => {
-    return {
-      request: vi.fn().mockImplementation((query: string) => {
-        if (query.includes("query getDrive")) {
-          return Promise.resolve(GetDrive.data);
-        }
+vi.mock(import("graphql-request"), async () => {
+  const originalModule = await vi.importActual("graphql-request");
 
-        let done = false;
-        if (query.includes("query strands")) {
-          if (done) {
-            return Promise.resolve({
-              system: {
-                sync: {
-                  strands: [],
+  return {
+    ...originalModule,
+    GraphQLClient: vi.fn().mockImplementation(() => {
+      return {
+        request: vi.fn().mockImplementation((query: string) => {
+          if (query.includes("query getDrive")) {
+            return Promise.resolve(GetDrive.data);
+          }
+
+          let done = false;
+          if (query.includes("query strands")) {
+            if (done) {
+              return Promise.resolve({
+                system: {
+                  sync: {
+                    strands: [],
+                  },
                 },
+              });
+            }
+            done = true;
+            return Promise.resolve((Strands as { data: object }).data);
+          }
+
+          if (query.includes("mutation registerPullResponderListener")) {
+            return Promise.resolve({
+              registerPullResponderListener: {
+                listenerId: generateUUID(),
               },
             });
           }
-          done = true;
-          return Promise.resolve((Strands as { data: object }).data);
-        }
 
-        if (query.includes("mutation registerPullResponderListener")) {
-          return Promise.resolve({
-            registerPullResponderListener: {
-              listenerId: generateUUID(),
-            },
-          });
-        }
+          if (query.includes("mutation pushUpdates")) {
+            return Promise.resolve({
+              pushUpdates: {
+                acknowledge: true,
+              },
+            });
+          }
 
-        if (query.includes("mutation pushUpdates")) {
-          return Promise.resolve({
-            pushUpdates: {
-              acknowledge: true,
-            },
-          });
-        }
-
-        return Promise.resolve({});
-      }),
-    };
-  }),
-  gql: vi.fn().mockImplementation((...args) => args.join("")),
-}));
+          return Promise.resolve({});
+        }),
+      };
+    }),
+    gql: vi.fn().mockImplementation((...args) => args.join("")),
+  };
+});
 
 const ITERATIONS = 10;
 const WARMUP = 5;
+const THROWS = true;
+
+const BENCH_OPTIONS: BenchOptions = {
+  iterations: 10,
+  warmupIterations: 5,
+  throws: true,
+};
 
 describe("Process Operations", () => {
   const defaultRemoteDrives: DefaultRemoteDriveInput[] = [
@@ -105,6 +116,7 @@ describe("Process Operations", () => {
         ],
         triggers: [],
         pullInterval: 3000,
+        accessLevel: "WRITE",
       },
     },
   ];
@@ -120,7 +132,7 @@ describe("Process Operations", () => {
       undefined,
       undefined,
       {
-        defaultRemoteDrives,
+        defaultDrives: { remoteDrives: defaultRemoteDrives },
         taskQueueMethod: runOnMacroTask,
       },
     );
@@ -149,7 +161,7 @@ describe("Process Operations", () => {
         processStrands(null, resolve, reject);
       });
     },
-    { iterations: ITERATIONS, warmupIterations: WARMUP },
+    BENCH_OPTIONS,
   );
 
   const setImmediate = RunAsap.useSetImmediate;
@@ -164,7 +176,7 @@ describe("Process Operations", () => {
         );
       });
     },
-    { iterations: ITERATIONS, warmupIterations: WARMUP },
+    BENCH_OPTIONS,
   );
 
   const messageChannel = RunAsap.useMessageChannel;
@@ -179,7 +191,7 @@ describe("Process Operations", () => {
         );
       });
     },
-    { iterations: ITERATIONS, warmupIterations: WARMUP },
+    BENCH_OPTIONS,
   );
 
   const postMessage = RunAsap.usePostMessage;
@@ -194,7 +206,7 @@ describe("Process Operations", () => {
         );
       });
     },
-    { iterations: ITERATIONS, warmupIterations: WARMUP },
+    BENCH_OPTIONS,
   );
 
   const setTimeout = RunAsap.useSetTimeout;
@@ -205,6 +217,6 @@ describe("Process Operations", () => {
         processStrands(setTimeout, resolve, reject);
       });
     },
-    { iterations: ITERATIONS, warmupIterations: WARMUP },
+    BENCH_OPTIONS,
   );
 });

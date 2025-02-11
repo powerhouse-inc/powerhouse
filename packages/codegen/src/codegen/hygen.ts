@@ -1,3 +1,7 @@
+import { pascalCase } from "change-case";
+import { DocumentModel } from "document-model";
+import { DocumentModelState } from "document-model/document-model";
+import { Logger, runner } from "hygen";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -92,11 +96,12 @@ export async function generateDocumentModel(
     { watch, skipFormat },
   );
 
-  // Generate the module-specific files for the document model logic
   const latestSpec =
     documentModelState.specifications[
       documentModelState.specifications.length - 1
     ];
+
+  // Generate the module-specific files for the document model logic
   for (const module of latestSpec.modules) {
     await run(
       [
@@ -176,6 +181,48 @@ export async function generateProcessor(
 
 export async function generateSubgraph(
   name: string,
+  documentModel: DocumentModelState | null,
+  dir: string,
+  { skipFormat = false } = {},
+) {
+  const params = [
+    "powerhouse",
+    `generate-subgraph`,
+    "--name",
+    name,
+    "--pascalName",
+    pascalCase(name),
+    "--root-dir",
+    dir,
+  ];
+
+  if (documentModel) {
+    params.push("--loadFromFile", "1");
+  }
+
+  // Generate the singular files for the document model logic
+  await run(params, { skipFormat });
+
+  if (documentModel) {
+    // Generate the GraphQL mutation schemas
+    await run(
+      [
+        "powerhouse",
+        "generate-document-model-mutations",
+        "--subgraph",
+        name,
+        "--document-model",
+        JSON.stringify(documentModel),
+        "--root-dir",
+        dir,
+      ],
+      { skipFormat },
+    );
+  }
+}
+
+export async function generateImportScript(
+  name: string,
   dir: string,
   { skipFormat = false } = {},
 ) {
@@ -183,7 +230,7 @@ export async function generateSubgraph(
   await run(
     [
       "powerhouse",
-      `generate-subgraph`,
+      `generate-import-script`,
       "--name",
       name,
       "--pascalName",

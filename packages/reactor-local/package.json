@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "1.17.0",
+  "version": "1.19.2",
   "main": "dist/server.js",
   "bin": {
     "reactor-local": "dist/cli.js"
@@ -37,7 +37,8 @@
     "uuid": "^11.0.2"
   },
   "devDependencies": {
-    "@powerhousedao/analytics-engine-graphql": "^0.2.1",
+    "@powerhousedao/analytics-engine-graphql": "^0.2.2",
+    "@powerhousedao/config": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
