@@ -42,6 +42,9 @@ export const useTimePickerField = ({
   const [selectedPeriod, setSelectedPeriod] = useState<"AM" | "PM" | undefined>(
     initialPeriod,
   );
+  const [selectedTimeZone, setSelectedTimeZone] = useState<
+    string | string[] | undefined
+  >(undefined);
 
   const inputValue = value ?? defaultValue ?? "";
   const [isOpen, setIsOpen] = useState(false);
@@ -127,5 +130,7 @@ export const useTimePickerField = ({
     handleBlur,
     timeFormat,
     is12HourFormat,
+    selectedTimeZone,
+    setSelectedTimeZone,
   };
 };
