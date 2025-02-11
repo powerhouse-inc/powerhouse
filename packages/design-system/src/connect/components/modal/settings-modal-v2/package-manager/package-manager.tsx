@@ -25,6 +25,7 @@ export const PackageManager: React.FC<Props> = (props) => {
     onInstall,
     packages,
     onUninstall,
+    mutable,
     ...rest
   } = props;
   return (
@@ -41,8 +42,12 @@ export const PackageManager: React.FC<Props> = (props) => {
         onReactorChange={onReactorChange}
         className="mb-4"
       />
-      <PackageManagerInput onInstall={onInstall} />
-      <PackageManagerList packages={packages} onUninstall={onUninstall} />
+      {mutable && <PackageManagerInput onInstall={onInstall} />}
+      <PackageManagerList
+        packages={packages}
+        onUninstall={onUninstall}
+        mutable={mutable}
+      />
     </div>
   );
 };

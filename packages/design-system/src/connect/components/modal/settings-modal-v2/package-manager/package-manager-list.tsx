@@ -15,12 +15,14 @@ export type PackageDetails = {
 };
 
 export type PackageManagerListProps = {
+  mutable: boolean;
   packages: PackageDetails[];
   onUninstall: (id: string) => void;
   className?: string;
 };
 
 export type PackageManagerListItemProps = {
+  mutable: boolean;
   package: PackageDetails;
   onUninstall: (id: string) => void;
   className?: string;
@@ -52,6 +54,7 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
       id,
       removable,
     },
+    mutable,
     onUninstall,
     className,
   } = props;
@@ -83,7 +86,7 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
           </li>
         ))}
       </ul>
-      {removable && (
+      {mutable && removable && (
         <ConnectDropdownMenu
           items={[
             {
@@ -122,7 +125,7 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
 export const PackageManagerList: React.FC<PackageManagerListProps> = (
   props,
 ) => {
-  const { className, packages, onUninstall, ...rest } = props;
+  const { className, packages, onUninstall, mutable, ...rest } = props;
 
   const handleUninstall = useCallback(
     (id: string) => {
@@ -147,6 +150,7 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
               key={pkg.id}
               package={pkg}
               onUninstall={handleUninstall}
+              mutable={mutable}
             />
           ))}
         </ul>

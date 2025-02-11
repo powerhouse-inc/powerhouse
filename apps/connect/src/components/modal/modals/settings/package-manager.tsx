@@ -4,7 +4,10 @@ import { Manifest } from 'document-model/document';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDocumentDrives } from 'src/hooks/useDocumentDrives';
 import { addExternalPackage, removeExternalPackage } from 'src/services/hmr';
-import { useExternalPackages } from 'src/store/external-packages';
+import {
+    useExternalPackages,
+    useMutableExternalPackages,
+} from 'src/store/external-packages';
 
 const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';
@@ -32,6 +35,7 @@ export interface SettingsModalProps {
 
 export const PackageManager: React.FC = () => {
     const packages = useExternalPackages();
+    const isMutable = useMutableExternalPackages();
     const [drives] = useDocumentDrives();
     const [reactor, setReactor] = useState('');
 
@@ -116,6 +120,7 @@ export const PackageManager: React.FC = () => {
 
     return (
         <BasePackageManager
+            mutable={isMutable}
             reactorOptions={options}
             reactor={reactor}
             packages={packagesInfo}

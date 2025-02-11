@@ -19,6 +19,7 @@ const baseArgs = {
   reactor: "local-reactor",
   reactorOptions: mockReactorOptions,
   packages: mockPackages,
+  mutable: true,
 };
 export function PackageManagerWrapper(
   args: Pick<Props, "reactor" | "onReactorChange">,
@@ -68,3 +69,5 @@ export const WithError: Story = PackageManagerStoryWrapper({
       ),
     ),
 });
+
+export const Immutable: Story = PackageManagerStoryWrapper({ mutable: false });
