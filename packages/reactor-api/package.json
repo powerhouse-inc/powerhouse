@@ -21,6 +21,7 @@
   "devDependencies": {
     "@powerhousedao/analytics-engine-graphql": "^0.2.2",
     "@powerhousedao/scalars": "workspace:*",
+    "@sky-ph/atlas": "^1.0.14",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
