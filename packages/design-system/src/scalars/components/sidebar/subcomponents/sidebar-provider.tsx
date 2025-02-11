@@ -21,6 +21,7 @@ import {
 type SidebarContextType = {
   nodes: SidebarNode[];
   flattenedNodes: FlattenedNode[];
+  expandedNodes: Set<string>;
   pinnedNodePath: SidebarNode[];
   maxDepth: number;
   searchTerm: string;
@@ -29,6 +30,8 @@ type SidebarContextType = {
   activeSearchIndex: number;
   activeNodeId?: string;
   toggleNode: (nodeId: string) => void;
+  openNode: (nodeId: string, openPath?: boolean) => void;
+  closeNode: (nodeId: string) => void;
   togglePin: (nodeId: string) => void;
   openLevel: (level: number) => void;
   changeSearchTerm: (newTerm: string) => void;
@@ -43,6 +46,7 @@ type SidebarContextType = {
 const SidebarContext = createContext<SidebarContextType>({
   nodes: [],
   flattenedNodes: [],
+  expandedNodes: new Set<string>(),
   pinnedNodePath: [],
   maxDepth: 4,
   searchTerm: "",
@@ -51,6 +55,8 @@ const SidebarContext = createContext<SidebarContextType>({
   activeSearchIndex: 0,
   activeNodeId: undefined,
   toggleNode: () => undefined,
+  openNode: () => undefined,
+  closeNode: () => undefined,
   togglePin: () => undefined,
   openLevel: () => undefined,
   changeSearchTerm: () => undefined,
@@ -96,6 +102,22 @@ const SidebarProvider = ({
     setActiveNodeId(nodeId);
   }, []);
 
+  const openPathToNode = useCallback(
+    (nodeId: string) => {
+      const nodePath = getNodePath(currentRoots, nodeId);
+      if (nodePath) {
+        for (const node of nodePath) {
+          setExpandedNodes((prev) => {
+            const next = new Set(prev);
+            next.add(node.id);
+            return next;
+          });
+        }
+      }
+    },
+    [currentRoots],
+  );
+
   const toggleNode = useCallback((nodeId: string) => {
     setExpandedNodes((prev) => {
       const next = new Set(prev);
@@ -104,6 +126,28 @@ const SidebarProvider = ({
       } else {
         next.add(nodeId);
       }
+      return next;
+    });
+  }, []);
+
+  const openNode = useCallback(
+    (nodeId: string, openPath?: boolean) => {
+      setExpandedNodes((prev) => {
+        const next = new Set(prev);
+        next.add(nodeId);
+        return next;
+      });
+      if (openPath) {
+        openPathToNode(nodeId);
+      }
+    },
+    [openPathToNode],
+  );
+
+  const closeNode = useCallback((nodeId: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      next.delete(nodeId);
       return next;
     });
   }, []);
@@ -149,22 +193,6 @@ const SidebarProvider = ({
     }
     return getMaxDepth(nodes);
   }, [nodes, pinnedNodePath]);
-
-  const openPathToNode = useCallback(
-    (nodeId: string) => {
-      const nodePath = getNodePath(currentRoots, nodeId);
-      if (nodePath) {
-        for (const node of nodePath) {
-          setExpandedNodes((prev) => {
-            const next = new Set(prev);
-            next.add(node.id);
-            return next;
-          });
-        }
-      }
-    },
-    [currentRoots],
-  );
 
   const togglePin = useCallback(
     (nodeId: string) => {
@@ -250,6 +278,7 @@ const SidebarProvider = ({
       value={{
         nodes,
         flattenedNodes,
+        expandedNodes,
         pinnedNodePath,
         maxDepth,
         searchTerm,
@@ -257,6 +286,8 @@ const SidebarProvider = ({
         isSearching,
         activeSearchIndex,
         toggleNode,
+        openNode,
+        closeNode,
         togglePin,
         openLevel,
         changeSearchTerm: setSearchTerm,
