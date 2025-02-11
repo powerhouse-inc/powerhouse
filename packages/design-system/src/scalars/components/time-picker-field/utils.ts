@@ -20,5 +20,9 @@ export const isFormatTimeAllowed = (format: string): boolean => {
   return ALLOWED_TIME_FORMATS.includes(format);
 };
 
-export const timeRegex24Hour = /^(\d|0\d|1\d|2[0-3]):([0-5]\d)$/;
-export const timeRegex12Hour = /^(0?[1-9]|1[0-2]):([0-5]\d) (AM|PM|am|pm)$/;
+export const TIME_PATTERNS = {
+  /** Matches times in 24-hour format (HH:mm) like: 0:00, 09:30, 23:59 */
+  HOURS_24: /^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-5][0-9])$/,
+  /** Matches times in 12-hour format (h:mm a) like: 1:00 AM, 12:59 PM */
+  HOURS_12: /^(0?[1-9]|1[0-2]):([0-5][0-9])\s(AM|PM|am|pm)$/,
+} as const;

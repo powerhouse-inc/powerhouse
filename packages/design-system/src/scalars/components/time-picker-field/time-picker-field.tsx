@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import {
   FormDescription,
   FormGroup,
@@ -73,6 +73,8 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       timeZonesOptions,
       handleBlur,
       is12HourFormat,
+      selectedTimeZone,
+      setSelectedTimeZone,
     } = useTimePickerField({
       value,
       defaultValue,
@@ -122,6 +124,8 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
             selectProps={selectProps}
             is12HourFormat={is12HourFormat}
             showTimezoneSelect={showTimezoneSelect}
+            selectedTimeZone={selectedTimeZone as string}
+            setSelectedTimeZone={setSelectedTimeZone}
           />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}
