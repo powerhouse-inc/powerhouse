@@ -127,7 +127,7 @@ describe("PHIDField Component", () => {
   it("should show autocomplete options", async () => {
     const user = userEvent.setup();
     const mockPromise = Promise.resolve(mockOptions);
-    defaultGetOptions.mockReturnValue(mockPromise);
+    const getOptions = vi.fn().mockReturnValue(mockPromise);
 
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
@@ -138,7 +138,7 @@ describe("PHIDField Component", () => {
         label="Test Label"
         placeholder="phd:"
         variant="withIdAndTitle"
-        fetchOptionsCallback={defaultGetOptions}
+        fetchOptionsCallback={getOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
@@ -149,9 +149,8 @@ describe("PHIDField Component", () => {
     await waitFor(() => {
       expect(input).toHaveValue("test");
     });
-
     await waitFor(() => {
-      expect(defaultGetOptions).toHaveBeenCalledWith("test");
+      expect(getOptions).toHaveBeenCalledWith("test");
     });
 
     await mockPromise;
@@ -270,7 +269,7 @@ describe("PHIDField Component", () => {
   it("should handle value changes and auto selection", async () => {
     const user = userEvent.setup();
     const mockPromise = Promise.resolve(mockOptions);
-    defaultGetOptions.mockReturnValue(mockPromise);
+    const getOptions = vi.fn().mockReturnValue(mockPromise);
 
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
@@ -280,7 +279,7 @@ describe("PHIDField Component", () => {
         name="phid"
         label="Test Label"
         variant="withIdTitleAndDescription"
-        fetchOptionsCallback={defaultGetOptions}
+        fetchOptionsCallback={getOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
