@@ -5,10 +5,10 @@
 
 import { generateMock } from "@powerhousedao/codegen";
 
-import utils from "../../gen/utils";
-import { reducer } from "../../gen/reducer";
-import * as creators from "../../gen/drive/creators";
-import { DocumentDriveDocument } from "../../gen/types";
+import * as creators from "../../gen/drive/creators.js";
+import { reducer } from "../../gen/reducer.js";
+import { DocumentDriveDocument } from "../../gen/types.js";
+import utils from "../../gen/utils.js";
 
 describe("Drive Operations", () => {
   let document: DocumentDriveDocument;

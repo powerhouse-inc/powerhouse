@@ -1,25 +1,25 @@
 import { BaseDocument } from "document-model";
+import { DocumentDriveAction } from "../actions.js";
 import {
     AddFileInput,
     AddFolderInput,
+    CopyNodeInput,
     DeleteNodeInput,
+    DocumentDriveLocalState,
+    DocumentDriveState,
+    MoveNodeInput,
     UpdateFileInput,
     UpdateNodeInput,
-    CopyNodeInput,
-    MoveNodeInput,
-    DocumentDriveState,
-    DocumentDriveLocalState,
 } from "../types.js";
 import {
     addFile,
     addFolder,
+    copyNode,
     deleteNode,
+    moveNode,
     updateFile,
     updateNode,
-    copyNode,
-    moveNode,
-} from "./creators";
-import { DocumentDriveAction } from "../actions";
+} from "./creators.js";
 
 export default class DocumentDrive_Node extends BaseDocument<
   DocumentDriveState,

@@ -4,31 +4,60 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
-    ".": "./dist/src/index.ts",
-    "./server": "./dist/src/server/index.ts",
-    "./storage": "./dist/src/storage/index.ts",
-    "./storage/browser": "./dist/src/storage/browser.ts",
-    "./storage/filesystem": "./dist/src/storage/filesystem.ts",
-    "./storage/memory": "./dist/src/storage/memory.ts",
-    "./storage/prisma": "./dist/src/storage/prisma.ts",
-    "./cache/redis": "./dist/src/cache/redis.ts",
-    "./cache/memory": "./dist/src/cache/memory.ts",
-    "./queue/redis": "./dist/src/queue/redis.ts",
-    "./queue/base": "./dist/src/queue/base.ts",
-    "./utils": "./dist/src/utils/index.ts",
-    "./utils/graphql": "./dist/src/utils/graphql.ts",
-    "./utils/migrations": "./dist/src/utils/migrations.ts",
-    "./logger": "./dist/src/utils/logger.ts"
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/src/server/index.js",
+      "types": "./dist/src/server/index.d.ts"
+    },
+    "./storage": {
+      "import": "./dist/src/storage/index.js",
+      "types": "./dist/src/storage/index.d.ts"
+    },
+    "./storage/*": {
+      "import": "./dist/src/storage/*.js",
+      "types": "./dist/src/storage/*.d.ts"
+    },
+    "./cache/*": {
+      "import": "./dist/src/cache/*.js",
+      "types": "./dist/src/cache/*.d.ts"
+    },
+    "./queue/*": {
+      "import": "./dist/src/queue/*.js",
+      "types": "./dist/src/queue/*.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/src/utils/index.js",
+      "types": "./dist/src/utils/index.d.ts"
+    },
+    "./utils/*": {
+      "import": "./dist/src/utils/*.js",
+      "types": "./dist/src/utils/*.d.ts"
+    },
+    "./logger": {
+      "import": "./dist/src/utils/logger.js",
+      "types": "./dist/src/utils/logger.d.ts"
+    },
+    "./drive-document-model": {
+      "import": "./dist/src/document-model/index.js",
+      "types": "./dist/src/document-model/index.d.ts"
+    },
+    "./drive-document-model/*": {
+      "import": "./dist/src/document-model/*.js",
+      "types": "./dist/src/document-model/*.d.ts"
+    }
   },
   "files": [
     "./dist"
   ],
   "scripts": {
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --build --noEmit",
     "postlint": "npm run check-types",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "build": "tsc --build",
+    "build": "tsc --project tsconfig.build.json",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:watch": "vitest watch",

@@ -4,10 +4,10 @@
  */
 
 import { generateMock } from "@powerhousedao/codegen";
-import * as creators from "../../gen/node/creators";
-import { reducer } from "../../gen/reducer";
-import { DocumentDriveDocument } from "../../gen/types";
-import utils from "../../gen/utils";
+import * as creators from "../../gen/node/creators.js";
+import { reducer } from "../../gen/reducer.js";
+import { DocumentDriveDocument } from "../../gen/types.js";
+import utils from "../../gen/utils.js";
 
 describe("Node Operations", () => {
   let document: DocumentDriveDocument;

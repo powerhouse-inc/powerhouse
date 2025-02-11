@@ -1,19 +1,19 @@
 import {
+    applyMixins,
     BaseDocument,
     ExtendedState,
     PartialState,
-    applyMixins,
     SignalDispatch,
 } from "document-model";
-import { DocumentDriveState, DocumentDriveLocalState } from "./types";
 import { DocumentDriveAction } from "./actions.js";
-import { reducer } from "./reducer";
-import utils from "./utils";
-import DocumentDrive_Node from "./node/object";
-import DocumentDrive_Drive from "./drive/object";
+import DocumentDrive_Drive from "./drive/object.js";
+import DocumentDrive_Node from "./node/object.js";
+import { reducer } from "./reducer.js";
+import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
+import utils from "./utils.js";
 
-export * from "./node/object";
-export * from "./drive/object";
+export * from "./drive/object.js";
+export * from "./node/object.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface DocumentDrive extends DocumentDrive_Node, DocumentDrive_Drive {}

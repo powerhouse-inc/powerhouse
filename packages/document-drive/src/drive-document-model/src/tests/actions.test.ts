@@ -1,14 +1,14 @@
 import { Document } from "document-model";
 import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-  FileNode,
-  actions,
-  generateSynchronizationUnits,
-  reducer,
-  utils,
-} from "../..";
+    DocumentDriveAction,
+    DocumentDriveLocalState,
+    DocumentDriveState,
+    FileNode,
+    actions,
+    generateSynchronizationUnits,
+    reducer,
+    utils,
+} from "../../index.js";
 
 describe("DocumentDrive Actions", () => {
   let documentDrive: Document.Document<

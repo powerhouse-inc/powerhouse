@@ -3,5 +3,25 @@
   "compilerOptions": {
     "emitDeclarationOnly": true,
     "outDir": "./dist",
+    "paths": {
+      "@server": ["../server/index.ts"],
+      "@server/*": ["../server/*.ts"],
+      "@storage": ["../storage/index.ts"],
+      "@storage/*": ["../storage/*.ts"],
+      "@cache": ["../cache/index.ts"],
+      "@cache/*": ["../cache/*.ts"],
+      "@drive-document-model": ["../drive-document-model/index.ts"],
+      "@drive-document-model/*": ["../drive-document-model/*.ts"],
+      "@scalars": ["../scalars/index.ts"],
+      "@scalars/*": ["../scalars/*.ts"]
+    }
   },
+  "references": [
+    {
+      "path": "../scalars"
+    },
+    {
+      "path": "../document-model"
+    }
+  ]
 }

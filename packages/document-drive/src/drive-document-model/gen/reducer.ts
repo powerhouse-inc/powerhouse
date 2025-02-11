@@ -1,9 +1,9 @@
 import { ImmutableStateReducer, utils } from "document-model";
-import { DocumentDriveState, DocumentDriveLocalState } from "./types";
 import { DocumentDriveAction } from "./actions.js";
+import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
 
-import { reducer as NodeReducer } from "../src/reducers/node";
-import { reducer as DriveReducer } from "../src/reducers/drive";
+import { reducer as DriveReducer } from "../src/reducers/drive.js";
+import { reducer as NodeReducer } from "../src/reducers/node.js";
 
 const stateReducer: ImmutableStateReducer<
   DocumentDriveState,

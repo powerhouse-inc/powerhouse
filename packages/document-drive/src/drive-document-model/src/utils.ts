@@ -7,11 +7,11 @@ import {
     FileNode,
     FolderNode,
     Node,
-} from "..";
+} from "../index.js";
 
 import { OperationScope, SynchronizationUnit } from "document-model";
-import { AddFileAction, CopyNodeAction } from "../gen/node/actions";
-import { addFile, copyNode } from "../gen/node/creators";
+import { AddFileAction, CopyNodeAction } from "../gen/node/actions.js";
+import { addFile, copyNode } from "../gen/node/creators.js";
 
 export function isFileNode(node: Node): node is FileNode {
   return node.kind === "file";

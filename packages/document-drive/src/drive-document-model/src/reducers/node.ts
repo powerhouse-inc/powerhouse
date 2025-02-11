@@ -8,14 +8,14 @@ import {
     CreateChildDocumentInput,
     SynchronizationUnit,
 } from "document-model";
+import { DocumentDriveNodeOperations } from "../../gen/node/operations.js";
 import {
     FileNode,
     getDescendants,
     handleTargetNameCollisions,
     isFileNode,
     isFolderNode,
-} from "../..";
-import { DocumentDriveNodeOperations } from "../../gen/node/operations";
+} from "../../index.js";
 
 export const reducer: DocumentDriveNodeOperations = {
   addFileOperation(state, action, dispatch) {

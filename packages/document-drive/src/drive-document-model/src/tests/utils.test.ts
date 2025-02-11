@@ -1,13 +1,13 @@
 import { validate } from "uuid";
 import {
-  CopyNodeInput,
-  DocumentDriveState,
-  generateSynchronizationUnitId,
-  generateSynchronizationUnits,
-  getNextCopyNumber,
-  handleTargetNameCollisions,
-  utils,
-} from "../..";
+    CopyNodeInput,
+    DocumentDriveState,
+    generateSynchronizationUnitId,
+    generateSynchronizationUnits,
+    getNextCopyNumber,
+    handleTargetNameCollisions,
+    utils,
+} from "../../index.js";
 
 const baseNodes: DocumentDriveState["nodes"] = [
   {

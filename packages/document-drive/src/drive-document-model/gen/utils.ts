@@ -1,10 +1,10 @@
 import { DocumentModelUtils } from "document-model";
+import { reducer } from "./reducer.js";
 import {
     DocumentDriveAction,
-    DocumentDriveState,
     DocumentDriveLocalState,
-} from "./types";
-import { reducer } from "./reducer";
+    DocumentDriveState,
+} from "./types.js";
 
 export const initialGlobalState: DocumentDriveState = {
   id: "",

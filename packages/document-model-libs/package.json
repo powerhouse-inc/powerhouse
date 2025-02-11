@@ -34,7 +34,7 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "dev:watch": "vite build --watch",
-    "generate": "powerhouse generate",
+    "generate": "ph-cli generate",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "postlint": "npm run check-types",
@@ -99,6 +99,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@semantic-release/changelog": "^6.0.3",
