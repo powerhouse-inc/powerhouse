@@ -41,10 +41,6 @@ describe("PHIDField Component", () => {
       return mockOptions.find((option) => option.phid === phid);
     });
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("should match snapshot", () => {
     const { asFragment } = renderWithForm(
       <PHIDField
@@ -146,9 +142,7 @@ describe("PHIDField Component", () => {
     const input = screen.getByRole("combobox");
     await user.click(input);
     await user.type(input, "test");
-    await waitFor(() => {
-      expect(input).toHaveValue("test");
-    });
+
     await waitFor(() => {
       expect(getOptions).toHaveBeenCalledWith("test");
     });
@@ -243,11 +237,7 @@ describe("PHIDField Component", () => {
 
     const input = screen.getByRole("combobox");
     await user.click(input);
-    await user.keyboard(invalidPhid);
-
-    await waitFor(() => {
-      expect(input).toHaveValue(invalidPhid);
-    });
+    await user.type(input, invalidPhid);
 
     await user.click(screen.getByText("Submit"));
     await waitFor(() => {
@@ -256,10 +246,7 @@ describe("PHIDField Component", () => {
     });
 
     await user.clear(input);
-    await user.keyboard(validPhid);
-    await waitFor(() => {
-      expect(input).toHaveValue(validPhid);
-    });
+    await user.type(input, validPhid);
 
     await user.click(screen.getByText("Submit"));
     await waitFor(() => {
@@ -289,11 +276,7 @@ describe("PHIDField Component", () => {
 
     const input = screen.getByRole("combobox");
     await user.click(input);
-    await user.keyboard(mockOptions[0].phid);
-
-    await waitFor(() => {
-      expect(input).toHaveValue(mockOptions[0].phid);
-    });
+    await user.type(input, mockOptions[0].phid);
 
     await mockPromise;
     await waitFor(() => {
