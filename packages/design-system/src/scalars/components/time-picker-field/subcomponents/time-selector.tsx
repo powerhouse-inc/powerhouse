@@ -22,9 +22,9 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
           key={value}
           onClick={() => onSelect(value)}
           className={cn(
-            "px-3 py-2 text-[12px] flex cursor-pointer items-center justify-center",
+            "text-[12px] leading-[20px] flex cursor-pointer items-center justify-center",
             selectedValue === value
-              ? "rounded-[6px] bg-white border border-gray-300 text-gray-900 font-normal"
+              ? "rounded-[6px] bg-white border border-gray-300 text-gray-900 font-normal px-3 py-2 "
               : "text-gray-900 w-[16px] h-[20px] font-normal",
           )}
         >

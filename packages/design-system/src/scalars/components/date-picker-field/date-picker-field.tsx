@@ -117,6 +117,10 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           onInputChange={handleInputChange}
           inputProps={inputProps}
           handleBlur={handleBlur}
+          className={cn(
+            // custom styles
+            "pt-3 pr-4 pb-6 pl-4",
+          )}
         >
           <Calendar
             mode="single"
@@ -149,13 +153,15 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
             )}
             buttonPreviousClassName={cn(
               "border border-gray-200",
-              "hover:bg-gray-200 dark:hover:bg-gray-900",
+              // hover
+              "hover:bg-gray-100  hover:border-gray-300 hover:text-gray-900 dark:hover:bg-gray-900",
               // dark
               "dark:border-gray-900 dark:text-gray-300",
             )}
             buttonNextClassName={cn(
               "border border-gray-200 ",
-              "hover:bg-gray-200 dark:hover:bg-gray-900",
+              // hover
+              "hover:bg-gray-100  hover:border-gray-300 hover:text-gray-900 dark:hover:bg-gray-900",
               // dark
               "dark:border-gray-900 dark:text-gray-300",
             )}
