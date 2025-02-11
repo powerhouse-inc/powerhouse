@@ -1,3 +1,4 @@
+import { RealWorldAssets } from "@sky-ph/atlas/document-models";
 import {
   DocumentDriveServer,
   generateUUID,
@@ -5,14 +6,16 @@ import {
   IReceiver,
 } from "document-drive";
 import { MemoryStorage } from "document-drive/storage/memory";
-import { ListenerFilter } from "document-model-libs/document-drive";
-import * as documentModelsMap from "document-model-libs/document-models";
+import {
+  module as DocumentDrive,
+  generateAddNodeAction,
+  ListenerFilter,
+} from "document-model-libs/document-drive";
 import {
   Document,
   DocumentModel,
   OperationScope,
 } from "document-model/document";
-import { utils } from "document-model/document-model";
 
 import { beforeAll, bench, describe } from "vitest";
 
@@ -33,88 +36,116 @@ class TestReceiver<
 beforeAll(async () => {});
 
 describe("Document Drive", async () => {
-  const documentModels = Object.values(documentModelsMap) as DocumentModel[];
-  const document = await utils.loadFromFile(
+  const documentModels = Object.values([
+    DocumentDrive,
+    RealWorldAssets,
+  ]) as DocumentModel[];
+  const document = await RealWorldAssets.utils.loadFromFile(
     "test/data/BlocktowerAndromeda.zip",
   );
 
-  bench("Load PHDM into Document Drive", async () => {
-    const serverA = new DocumentDriveServer(
-      documentModels,
-      new MemoryStorage(),
-    );
-    await serverA.initialize();
+  bench(
+    "Load PHDM into Document Drive",
+    async () => {
+      const serverA = new DocumentDriveServer(
+        documentModels,
+        new MemoryStorage(),
+      );
+      await serverA.initialize();
 
-    const serverB = new DocumentDriveServer(
-      documentModels,
-      new MemoryStorage(),
-    );
-    await serverB.initialize();
+      const serverB = new DocumentDriveServer(
+        documentModels,
+        new MemoryStorage(),
+      );
+      await serverB.initialize();
 
-    const driveAId = generateUUID();
-    await serverA.addDrive({
-      global: {
-        id: driveAId,
-        name: "Test Drive",
-        icon: null,
-        slug: null,
-      },
-      local: {
-        availableOffline: false,
-        sharingType: "PRIVATE",
-        listeners: [],
-        triggers: [],
-      },
-    });
+      const driveAId = generateUUID();
+      const documentId = generateUUID();
 
-    const driveBId = generateUUID();
-    const driveB = await serverB.addDrive({
-      global: {
-        id: driveBId,
-        name: "Test Drive",
-        icon: null,
-        slug: null,
-      },
-      local: {
-        availableOffline: false,
-        sharingType: "PRIVATE",
-        listeners: [],
-        triggers: [],
-      },
-    });
+      const driveA = await serverA.addDrive({
+        global: {
+          id: driveAId,
+          name: "Test Drive",
+          icon: null,
+          slug: null,
+        },
+        local: {
+          availableOffline: false,
+          sharingType: "PRIVATE",
+          listeners: [],
+          triggers: [],
+        },
+      });
 
-    // listener!
-    const filter: ListenerFilter = {
-      branch: ["*"],
-      documentId: ["*"],
-      documentType: ["*"],
-      scope: ["*"],
-    };
+      const driveBId = generateUUID();
+      const driveB = await serverB.addDrive({
+        global: {
+          id: driveBId,
+          name: "Test Drive",
+          icon: null,
+          slug: null,
+        },
+        local: {
+          availableOffline: false,
+          sharingType: "PRIVATE",
+          listeners: [],
+          triggers: [],
+        },
+      });
 
-    const receiver = new TestReceiver();
-    await serverA.addInternalListener(driveAId, receiver, {
-      listenerId: generateUUID(),
-      label: "Test Listener",
-      block: false,
-      filter,
-    });
+      // listener!
+      const filter: ListenerFilter = {
+        branch: ["*"],
+        documentId: ["*"],
+        documentType: ["*"],
+        scope: ["*"],
+      };
 
-    await serverB.addInternalListener(driveBId, receiver, {
-      listenerId: generateUUID(),
-      label: "Test Listener",
-      block: false,
-      filter,
-    });
+      const receiver = new TestReceiver();
+      await serverA.addInternalListener(driveAId, receiver, {
+        listenerId: generateUUID(),
+        label: "Test Listener",
+        block: false,
+        filter,
+      });
 
-    await serverA.addOperations(
-      driveAId,
-      document.state.global.id,
-      document.operations.global,
-    );
+      await serverB.addInternalListener(driveBId, receiver, {
+        listenerId: generateUUID(),
+        label: "Test Listener",
+        block: false,
+        filter,
+      });
 
-    // magic number for magic data
-    if (645 !== document.operations.global.length) {
-      throw new Error("Document operations length mismatch");
-    }
-  });
+      // loads document in drive A
+      const addFileAction = generateAddNodeAction(
+        driveA.state.global,
+        {
+          documentType: document.documentType,
+          id: documentId,
+          name: "BlocktowerAndromeda",
+        },
+        ["global"],
+      );
+      await serverA.addDriveAction(driveAId, addFileAction);
+
+      const result = await serverA.addOperations(
+        driveAId,
+        documentId,
+        document.operations.global,
+      );
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      const lastOperation = document.operations.global.at(-1);
+      const lastLoadedOperation = result.operations.at(-1);
+      if (
+        JSON.stringify(lastOperation) !== JSON.stringify(lastLoadedOperation)
+      ) {
+        throw new Error("Document operations  mismatch");
+      }
+    },
+    { throws: true },
+  );
 });
