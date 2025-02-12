@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Command } from "commander";
 import path from "node:path";
 import { CommandActionType } from "../types.js";
@@ -21,21 +20,18 @@ export const list: CommandActionType<
     console.log("\n>>> projectInfo", projectInfo);
   }
 
-  const manifest: {
-    editors: { name: string; id: string }[];
-    documentModels: { name: string; id: string }[];
-    default: { name: string };
-  } = await import(path.join(projectInfo.path, "powerhouse.manifest.json"));
+  const phConfig = (await import(
+    path.join(projectInfo.path, "powerhouse.config.json")
+  )) as { packages: { packageName: string }[] };
 
-  console.log(manifest.default.name);
-  console.log("\nDocument Models:");
-  manifest.documentModels.forEach((model) => {
-    console.log(`- ${model.name} (${model.id})`);
-  });
+  if (!phConfig.packages || phConfig.packages.length === 0) {
+    console.log("No packages found in the project");
+    return;
+  }
 
-  console.log("\nEditors:");
-  manifest.editors.forEach((editor) => {
-    console.log(`- ${editor.name} (${editor.id})`);
+  console.log("Installed Packages:\n");
+  phConfig.packages.forEach((pkg) => {
+    console.log(pkg.packageName);
   });
 };
 

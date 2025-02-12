@@ -20,6 +20,7 @@ export const PH_CLI_COMMANDS = [
   "uninstall",
   "service",
   "list",
+  "inspect",
 ];
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const HOME_DIR = homedir();
