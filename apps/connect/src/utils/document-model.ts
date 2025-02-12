@@ -66,6 +66,7 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
 
     useEffect(() => {
         setState(initialState);
+        setError(undefined);
     }, [initialState]);
 
     const dispatch: DocumentDispatch<State, A, LocalState> = (
