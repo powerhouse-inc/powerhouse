@@ -162,35 +162,358 @@ export interface ISynchronizationManager {
     documentType?: string[],
   ): Promise<SynchronizationUnitQuery[]>;
 
+  getSynchronizationUnit(
+    driveId: string,
+    syncId: string,
+  ): Promise<SynchronizationUnit | undefined>;
+
   getOperationData(
     driveId: string,
     syncId: string,
     filter: GetStrandsOptions,
   ): Promise<OperationUpdate[]>;
+
+  getSynchronizationUnitsRevision(
+    driveId: string,
+    syncUnitsQuery: SynchronizationUnitQuery[],
+  ): Promise<SynchronizationUnit[]>;
+}
+
+export class SynchronizationManager implements ISynchronizationManager {
+  constructor(
+    private readonly storage: IDriveStorage,
+    private readonly cache: ICache,
+    private readonly documentModels: DocumentModel[],
+  ) {}
+
+  async getSynchronizationUnits(
+    driveId: string,
+    documentId?: string[],
+    scope?: string[],
+    branch?: string[],
+    documentType?: string[],
+  ): Promise<SynchronizationUnit[]> {
+    const synchronizationUnitsQuery = await this.getSynchronizationUnitsIds(
+      driveId,
+      documentId,
+      scope,
+      branch,
+      documentType,
+    );
+
+    return this.getSynchronizationUnitsRevision(
+      driveId,
+      synchronizationUnitsQuery,
+    );
+  }
+
+  async getSynchronizationUnitsRevision(
+    driveId: string,
+    syncUnitsQuery: SynchronizationUnitQuery[],
+  ): Promise<SynchronizationUnit[]> {
+    const drive = await this.getDrive(driveId);
+
+    const revisions =
+      await this.storage.getSynchronizationUnitsRevision(syncUnitsQuery);
+
+    const synchronizationUnits: SynchronizationUnit[] = syncUnitsQuery.map(
+      (s) => ({
+        ...s,
+        lastUpdated: drive.created,
+        revision: -1,
+      }),
+    );
+    for (const revision of revisions) {
+      const syncUnit = synchronizationUnits.find(
+        (s) =>
+          revision.driveId === s.driveId &&
+          revision.documentId === s.documentId &&
+          revision.scope === s.scope &&
+          revision.branch === s.branch,
+      );
+      if (syncUnit) {
+        syncUnit.revision = revision.revision;
+        syncUnit.lastUpdated = revision.lastUpdated;
+      }
+    }
+    return synchronizationUnits;
+  }
+
+  async getSynchronizationUnitsIds(
+    driveId: string,
+    documentId?: string[],
+    scope?: string[],
+    branch?: string[],
+    documentType?: string[],
+  ): Promise<SynchronizationUnitQuery[]> {
+    const drive = await this.getDrive(driveId);
+    const nodes = drive.state.global.nodes.filter(
+      (node) =>
+        isFileNode(node) &&
+        (!documentId?.length ||
+          documentId.includes(node.id) ||
+          documentId.includes("*")) &&
+        (!documentType?.length ||
+          documentType.includes(node.documentType) ||
+          documentType.includes("*")),
+    ) as Pick<FileNode, "id" | "documentType" | "synchronizationUnits">[];
+
+    // checks if document drive synchronization unit should be added
+    if (
+      (!documentId || documentId.includes("*") || documentId.includes("")) &&
+      (!documentType?.length ||
+        documentType.includes("powerhouse/document-drive") ||
+        documentType.includes("*"))
+    ) {
+      nodes.unshift({
+        id: "",
+        documentType: "powerhouse/document-drive",
+        synchronizationUnits: [
+          {
+            syncId: "0",
+            scope: "global",
+            branch: "main",
+          },
+        ],
+      });
+    }
+
+    const synchronizationUnitsQuery: Omit<
+      SynchronizationUnit,
+      "revision" | "lastUpdated"
+    >[] = [];
+    for (const node of nodes) {
+      const nodeUnits =
+        scope?.length || branch?.length
+          ? node.synchronizationUnits.filter(
+              (unit) =>
+                (!scope?.length ||
+                  scope.includes(unit.scope) ||
+                  scope.includes("*")) &&
+                (!branch?.length ||
+                  branch.includes(unit.branch) ||
+                  branch.includes("*")),
+            )
+          : node.synchronizationUnits;
+      if (!nodeUnits.length) {
+        continue;
+      }
+      synchronizationUnitsQuery.push(
+        ...nodeUnits.map((n) => ({
+          driveId,
+          documentId: node.id,
+          syncId: n.syncId,
+          documentType: node.documentType,
+          scope: n.scope,
+          branch: n.branch,
+        })),
+      );
+    }
+    return synchronizationUnitsQuery;
+  }
+
+  async getSynchronizationUnitIdInfo(
+    driveId: string,
+    syncId: string,
+  ): Promise<SynchronizationUnitQuery | undefined> {
+    const drive = await this.getDrive(driveId);
+    const node = drive.state.global.nodes.find(
+      (node) =>
+        isFileNode(node) &&
+        node.synchronizationUnits.find((unit) => unit.syncId === syncId),
+    );
+
+    if (!node || !isFileNode(node)) {
+      return undefined;
+    }
+
+    const syncUnit = node.synchronizationUnits.find(
+      (unit) => unit.syncId === syncId,
+    );
+    if (!syncUnit) {
+      return undefined;
+    }
+
+    return {
+      syncId,
+      scope: syncUnit.scope,
+      branch: syncUnit.branch,
+      driveId,
+      documentId: node.id,
+      documentType: node.documentType,
+    };
+  }
+
+  async getSynchronizationUnit(
+    driveId: string,
+    syncId: string,
+  ): Promise<SynchronizationUnit | undefined> {
+    const syncUnit = await this.getSynchronizationUnitIdInfo(driveId, syncId);
+
+    if (!syncUnit) {
+      return undefined;
+    }
+
+    const { scope, branch, documentId, documentType } = syncUnit;
+
+    // TODO: REPLACE WITH GET DOCUMENT OPERATIONS
+    const document = await this.getDocument(driveId, documentId);
+    const operations = document.operations[scope as OperationScope] ?? [];
+    const lastOperation = operations[operations.length - 1];
+
+    return {
+      syncId,
+      scope,
+      branch,
+      driveId,
+      documentId,
+      documentType,
+      lastUpdated: lastOperation?.timestamp ?? document.lastModified,
+      revision: lastOperation?.index ?? 0,
+    };
+  }
+
+  async getOperationData(
+    driveId: string,
+    syncId: string,
+    filter: GetStrandsOptions,
+  ): Promise<OperationUpdate[]> {
+    const syncUnit =
+      syncId === "0"
+        ? { documentId: "", scope: "global" }
+        : await this.getSynchronizationUnitIdInfo(driveId, syncId);
+
+    if (!syncUnit) {
+      throw new Error(`Invalid Sync Id ${syncId} in drive ${driveId}`);
+    }
+
+    const document =
+      syncId === "0"
+        ? await this.getDrive(driveId)
+        : await this.getDocument(driveId, syncUnit.documentId); // TODO replace with getDocumentOperations
+
+    const operations =
+      document.operations[syncUnit.scope as OperationScope] ?? []; // TODO filter by branch also
+
+    const filteredOperations = operations.filter(
+      (operation) =>
+        Object.keys(filter).length === 0 ||
+        ((filter.since === undefined ||
+          isBefore(filter.since, operation.timestamp)) &&
+          (filter.fromRevision === undefined ||
+            operation.index > filter.fromRevision)),
+    );
+
+    const limitedOperations = filter.limit
+      ? filteredOperations.slice(0, filter.limit)
+      : filteredOperations;
+
+    return limitedOperations.map((operation) => ({
+      hash: operation.hash,
+      index: operation.index,
+      timestamp: operation.timestamp,
+      type: operation.type,
+      input: operation.input as object,
+      skip: operation.skip,
+      context: operation.context,
+      id: operation.id,
+    }));
+  }
+
+  private async getDrive(driveId: string): Promise<DocumentDriveDocument> {
+    try {
+      const cachedDocument = await this.cache.getDocument("drives", driveId);
+      if (cachedDocument && isDocumentDrive(cachedDocument)) {
+        return cachedDocument;
+      }
+    } catch (e) {
+      logger.error("Error getting drive from cache", e);
+    }
+    const driveStorage = await this.storage.getDrive(driveId);
+    const result = this._buildDocument(driveStorage);
+    if (!isDocumentDrive(result)) {
+      throw new Error(`Document with id ${driveId} is not a Document Drive`);
+    }
+    return result;
+  }
+
+  private async getDocument(
+    driveId: string,
+    documentId: string,
+  ): Promise<Document> {
+    try {
+      const cachedDocument = await this.cache.getDocument(driveId, documentId);
+      if (cachedDocument) {
+        return cachedDocument;
+      }
+    } catch (e) {
+      logger.error("Error getting document from cache", e);
+    }
+    const documentStorage = await this.storage.getDocument(driveId, documentId);
+    return this._buildDocument(documentStorage);
+  }
+
+  private _buildDocument<T extends Document>(
+    documentStorage: DocumentStorage<T>,
+  ): T {
+    const documentModel = this.getDocumentModel(documentStorage.documentType);
+
+    const operations =
+      baseUtils.documentHelpers.garbageCollectDocumentOperations(
+        documentStorage.operations,
+      );
+
+    return baseUtils.replayDocument(
+      documentStorage.initialState,
+      operations,
+      documentModel.reducer,
+      undefined,
+      documentStorage,
+      undefined,
+      {
+        checkHashes: true,
+        reuseOperationResultingState: true,
+      },
+    ) as T;
+  }
+
+  private getDocumentModel(documentType: string) {
+    const documentModel = this.documentModels.find(
+      (model) => model.documentModel.id === documentType,
+    );
+    if (!documentModel) {
+      throw new Error(`Document type ${documentType} not supported`);
+    }
+    return documentModel;
+  }
 }
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, ISynchronizationManager
 {
+  // external dependencies
   private documentModels: DocumentModel[];
   private storage: IDriveStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
+  protected options: Required<DocumentDriveServerOptions>;
 
-  private emitter = createNanoEvents<DriveEvents>();
-  private transmitterFactory: ITransmitterFactory;
+  // waiting to move to external dependencies
   private listenerManager: IListenerManager;
+  private transmitterFactory: ITransmitterFactory;
+
+  // internal dependencies
+  private defaultDrivesManager: DefaultDrivesManager;
+  private synchronizationManager: ISynchronizationManager;
+
+  // internal state
+  private emitter = createNanoEvents<DriveEvents>();
   private triggerMap = new Map<
     DocumentDriveState["id"],
     Map<Trigger["id"], CancelPullLoop>
   >();
   private syncStatus = new Map<string, SyncUnitStatusObject>();
-
   private initializePromise: Promise<Error[] | null>;
-
-  private defaultDrivesManager: DefaultDrivesManager;
-
-  protected options: Required<DocumentDriveServerOptions>;
 
   constructor(
     documentModels: DocumentModel[],
@@ -203,6 +526,11 @@ export class BaseDocumentDriveServer
     this.storage = storage;
     this.cache = cache;
     this.queueManager = queueManager;
+    this.synchronizationManager = new SynchronizationManager(
+      storage,
+      cache,
+      documentModels,
+    );
     this.options = {
       ...options,
       defaultDrives: {
@@ -702,238 +1030,59 @@ export class BaseDocumentDriveServer
     }
   }
 
-  public async getSynchronizationUnits(
+  // Delegate synchronization methods to synchronizationManager
+  getSynchronizationUnits(
     driveId: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],
     documentType?: string[],
-  ) {
-    const synchronizationUnitsQuery = await this.getSynchronizationUnitsIds(
+  ): Promise<SynchronizationUnit[]> {
+    return this.synchronizationManager.getSynchronizationUnits(
       driveId,
       documentId,
       scope,
       branch,
       documentType,
     );
-
-    return this.getSynchronizationUnitsRevision(
-      driveId,
-      synchronizationUnitsQuery,
-    );
   }
 
-  public async getSynchronizationUnitsRevision(
-    driveId: string,
-    syncUnitsQuery: SynchronizationUnitQuery[],
-  ): Promise<SynchronizationUnit[]> {
-    const drive = await this.getDrive(driveId);
-
-    const revisions =
-      await this.storage.getSynchronizationUnitsRevision(syncUnitsQuery);
-
-    const synchronizationUnits: SynchronizationUnit[] = syncUnitsQuery.map(
-      (s) => ({
-        ...s,
-        lastUpdated: drive.created,
-        revision: -1,
-      }),
-    );
-    for (const revision of revisions) {
-      const syncUnit = synchronizationUnits.find(
-        (s) =>
-          revision.driveId === s.driveId &&
-          revision.documentId === s.documentId &&
-          revision.scope === s.scope &&
-          revision.branch === s.branch,
-      );
-      if (syncUnit) {
-        syncUnit.revision = revision.revision;
-        syncUnit.lastUpdated = revision.lastUpdated;
-      }
-    }
-    return synchronizationUnits;
-  }
-
-  public async getSynchronizationUnitsIds(
+  getSynchronizationUnitsIds(
     driveId: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],
     documentType?: string[],
   ): Promise<SynchronizationUnitQuery[]> {
-    const drive = await this.getDrive(driveId);
-    const nodes = drive.state.global.nodes.filter(
-      (node) =>
-        isFileNode(node) &&
-        (!documentId?.length ||
-          documentId.includes(node.id) ||
-          documentId.includes("*")) &&
-        (!documentType?.length ||
-          documentType.includes(node.documentType) ||
-          documentType.includes("*")),
-    ) as Pick<FileNode, "id" | "documentType" | "synchronizationUnits">[];
-
-    // checks if document drive synchronization unit should be added
-    if (
-      (!documentId || documentId.includes("*") || documentId.includes("")) &&
-      (!documentType?.length ||
-        documentType.includes("powerhouse/document-drive") ||
-        documentType.includes("*"))
-    ) {
-      nodes.unshift({
-        id: "",
-        documentType: "powerhouse/document-drive",
-        synchronizationUnits: [
-          {
-            syncId: "0",
-            scope: "global",
-            branch: "main",
-          },
-        ],
-      });
-    }
-
-    const synchronizationUnitsQuery: Omit<
-      SynchronizationUnit,
-      "revision" | "lastUpdated"
-    >[] = [];
-    for (const node of nodes) {
-      const nodeUnits =
-        scope?.length || branch?.length
-          ? node.synchronizationUnits.filter(
-              (unit) =>
-                (!scope?.length ||
-                  scope.includes(unit.scope) ||
-                  scope.includes("*")) &&
-                (!branch?.length ||
-                  branch.includes(unit.branch) ||
-                  branch.includes("*")),
-            )
-          : node.synchronizationUnits;
-      if (!nodeUnits.length) {
-        continue;
-      }
-      synchronizationUnitsQuery.push(
-        ...nodeUnits.map((n) => ({
-          driveId,
-          documentId: node.id,
-          syncId: n.syncId,
-          documentType: node.documentType,
-          scope: n.scope,
-          branch: n.branch,
-        })),
-      );
-    }
-    return synchronizationUnitsQuery;
-  }
-
-  public async getSynchronizationUnitIdInfo(
-    driveId: string,
-    syncId: string,
-  ): Promise<SynchronizationUnitQuery | undefined> {
-    const drive = await this.getDrive(driveId);
-    const node = drive.state.global.nodes.find(
-      (node) =>
-        isFileNode(node) &&
-        node.synchronizationUnits.find((unit) => unit.syncId === syncId),
-    );
-
-    if (!node || !isFileNode(node)) {
-      return undefined;
-    }
-
-    const syncUnit = node.synchronizationUnits.find(
-      (unit) => unit.syncId === syncId,
-    );
-    if (!syncUnit) {
-      return undefined;
-    }
-
-    return {
-      syncId,
-      scope: syncUnit.scope,
-      branch: syncUnit.branch,
-      driveId,
-      documentId: node.id,
-      documentType: node.documentType,
-    };
-  }
-
-  public async getSynchronizationUnit(
-    driveId: string,
-    syncId: string,
-  ): Promise<SynchronizationUnit | undefined> {
-    const syncUnit = await this.getSynchronizationUnitIdInfo(driveId, syncId);
-
-    if (!syncUnit) {
-      return undefined;
-    }
-
-    const { scope, branch, documentId, documentType } = syncUnit;
-
-    // TODO: REPLACE WITH GET DOCUMENT OPERATIONS
-    const document = await this.getDocument(driveId, documentId);
-    const operations = document.operations[scope as OperationScope] ?? [];
-    const lastOperation = operations[operations.length - 1];
-
-    return {
-      syncId,
-      scope,
-      branch,
+    return this.synchronizationManager.getSynchronizationUnitsIds(
       driveId,
       documentId,
+      scope,
+      branch,
       documentType,
-      lastUpdated: lastOperation?.timestamp ?? document.lastModified,
-      revision: lastOperation?.index ?? 0,
-    };
+    );
   }
 
-  async getOperationData(
+  getOperationData(
     driveId: string,
     syncId: string,
     filter: GetStrandsOptions,
   ): Promise<OperationUpdate[]> {
-    const syncUnit =
-      syncId === "0"
-        ? { documentId: "", scope: "global" }
-        : await this.getSynchronizationUnitIdInfo(driveId, syncId);
-
-    if (!syncUnit) {
-      throw new Error(`Invalid Sync Id ${syncId} in drive ${driveId}`);
-    }
-
-    const document =
-      syncId === "0"
-        ? await this.getDrive(driveId)
-        : await this.getDocument(driveId, syncUnit.documentId); // TODO replace with getDocumentOperations
-
-    const operations =
-      document.operations[syncUnit.scope as OperationScope] ?? []; // TODO filter by branch also
-
-    const filteredOperations = operations.filter(
-      (operation) =>
-        Object.keys(filter).length === 0 ||
-        ((filter.since === undefined ||
-          isBefore(filter.since, operation.timestamp)) &&
-          (filter.fromRevision === undefined ||
-            operation.index > filter.fromRevision)),
+    return this.synchronizationManager.getOperationData(
+      driveId,
+      syncId,
+      filter,
     );
+  }
 
-    const limitedOperations = filter.limit
-      ? filteredOperations.slice(0, filter.limit)
-      : filteredOperations;
-
-    return limitedOperations.map((operation) => ({
-      hash: operation.hash,
-      index: operation.index,
-      timestamp: operation.timestamp,
-      type: operation.type,
-      input: operation.input as object,
-      skip: operation.skip,
-      context: operation.context,
-      id: operation.id,
-    }));
+  getSynchronizationUnitsRevision(
+    driveId: string,
+    syncUnitsQuery: SynchronizationUnitQuery[],
+  ): Promise<SynchronizationUnit[]> {
+    return this.synchronizationManager.getSynchronizationUnitsRevision(
+      driveId,
+      syncUnitsQuery,
+    );
   }
 
   protected getDocumentModel(documentType: string) {
@@ -2206,7 +2355,9 @@ export class BaseDocumentDriveServer
             logger.error("Non handled error updating sync revision", error);
             this.updateSyncUnitStatus(
               driveId,
-              { [operationSource]: "ERROR" },
+              {
+                [operationSource]: "ERROR",
+              },
               error as Error,
             );
           });
@@ -2428,6 +2579,13 @@ export class BaseDocumentDriveServer
     ...args: Parameters<DriveEvents[K]>
   ): void {
     return this.emitter.emit(event, ...args);
+  }
+
+  getSynchronizationUnit(
+    driveId: string,
+    syncId: string,
+  ): Promise<SynchronizationUnit | undefined> {
+    return this.synchronizationManager.getSynchronizationUnit(driveId, syncId);
   }
 }
 
