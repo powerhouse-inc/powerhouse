@@ -50,6 +50,11 @@ export interface SidebarProps {
    */
   showSearchBar?: boolean;
   /**
+   * Whether to display the status filter button in the sidebar. This option is ignored if `showSearchBar` is `false`.
+   * @default false
+   */
+  showStatusFilter?: boolean;
+  /**
    * The title that appears at the top of the sidebar, providing context or a heading for the hierarchy displayed within it.
    */
   sidebarTitle?: string;
@@ -78,6 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   allowPinning = true,
   resizable = true,
   showSearchBar = true,
+  showStatusFilter = false,
   extraFooterContent,
   className,
 }) => {
@@ -144,7 +150,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {allowPinning && pinnedNodePath.length > 0 && <SidebarPinningArea />}
           <SidebarContentArea allowPinning={allowPinning} />
-          {showSearchBar && <SidebarSearch />}
+          {showSearchBar && (
+            <SidebarSearch showStatusFilter={showStatusFilter} />
+          )}
           {extraFooterContent && (
             <div className="w-full border-t border-gray-300 p-2 dark:border-gray-800">
               {extraFooterContent}

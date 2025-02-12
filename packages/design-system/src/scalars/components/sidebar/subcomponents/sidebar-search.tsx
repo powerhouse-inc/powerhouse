@@ -6,15 +6,23 @@ import { Input } from "../../fragments";
 import { Icon } from "@/powerhouse";
 import { cn } from "@/scalars/lib";
 
-export const SidebarSearch = () => {
+interface SidebarSearchProps {
+  showStatusFilter: boolean;
+}
+
+export const SidebarSearch: React.FC<SidebarSearchProps> = ({
+  showStatusFilter,
+}) => {
   const {
     searchTerm,
     isSearching,
     searchResults,
     activeSearchIndex,
+    isStatusFilterEnabled,
     changeSearchTerm,
     nextSearchResult,
     previousSearchResult,
+    toggleStatusFilter,
   } = useSidebar();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -41,8 +49,8 @@ export const SidebarSearch = () => {
   );
 
   return (
-    <div className="w-full border-t border-gray-300 p-2 dark:border-gray-800">
-      <div className="relative">
+    <div className="flex w-full gap-2 border-t border-gray-300 p-2 dark:border-gray-800">
+      <div className="relative flex-1">
         <Input
           type="search"
           value={searchTerm}
@@ -50,7 +58,7 @@ export const SidebarSearch = () => {
           onKeyDown={handleKeyDown}
           tabIndex={1}
           placeholder="Search"
-          className="w-full appearance-none pl-8"
+          className="w-full appearance-none pl-8 [&::-webkit-search-cancel-button]:hidden"
           style={{
             paddingRight: (ref.current?.clientWidth ?? 0) + 16,
           }}
@@ -141,6 +149,21 @@ export const SidebarSearch = () => {
           </div>
         )}
       </div>
+      {showStatusFilter && (
+        <button
+          type="button"
+          onClick={toggleStatusFilter}
+          tabIndex={1}
+          className={cn(
+            "rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-500",
+            isStatusFilterEnabled
+              ? "border-blue-500 bg-blue-100 text-blue-900"
+              : "hover:bg-gray-100 hover:text-gray-700",
+          )}
+        >
+          <Icon name="Tabler" size={16} />
+        </button>
+      )}
     </div>
   );
 };

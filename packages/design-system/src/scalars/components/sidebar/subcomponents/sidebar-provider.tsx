@@ -9,8 +9,9 @@ import {
   useState,
   useTransition,
 } from "react";
-import type { SidebarNode, FlattenedNode } from "../types";
+import { type SidebarNode, type FlattenedNode, NodeStatus } from "../types";
 import {
+  filterStatuses,
   getMaxDepth,
   getNodePath,
   getOpenLevels,
@@ -29,6 +30,7 @@ type SidebarContextType = {
   isSearching: boolean;
   activeSearchIndex: number;
   activeNodeId?: string;
+  isStatusFilterEnabled: boolean;
   toggleNode: (nodeId: string) => void;
   openNode: (nodeId: string, openPath?: boolean) => void;
   closeNode: (nodeId: string) => void;
@@ -41,6 +43,7 @@ type SidebarContextType = {
   syncActiveNodeId: (nodeId?: string) => void;
   onActiveNodeChange: (node: SidebarNode) => void;
   setActiveNodeChangeCallback: (callback: (node: SidebarNode) => void) => void;
+  toggleStatusFilter: () => void;
 };
 
 const SidebarContext = createContext<SidebarContextType>({
@@ -54,6 +57,7 @@ const SidebarContext = createContext<SidebarContextType>({
   isSearching: false,
   activeSearchIndex: 0,
   activeNodeId: undefined,
+  isStatusFilterEnabled: false,
   toggleNode: () => undefined,
   openNode: () => undefined,
   closeNode: () => undefined,
@@ -66,6 +70,7 @@ const SidebarContext = createContext<SidebarContextType>({
   syncActiveNodeId: () => undefined,
   onActiveNodeChange: () => undefined,
   setActiveNodeChangeCallback: () => undefined,
+  toggleStatusFilter: () => undefined,
 });
 
 interface SidebarProviderProps extends React.PropsWithChildren {
@@ -80,16 +85,28 @@ const SidebarProvider = ({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [pinnedNodePath, setPinnedNodePath] = useState<SidebarNode[]>([]);
   const [activeNodeId, setActiveNodeId] = useState<string | undefined>();
+  const [isStatusFilterEnabled, setIsStatusFilterEnabled] =
+    useState<boolean>(false);
   const [onActiveNodeChange, setOnActiveNodeChange] = useState<
     (nodeId: SidebarNode) => void
   >(() => () => undefined);
 
   const currentRoots = useMemo(() => {
+    let roots = nodes;
     if (pinnedNodePath.length > 0) {
-      return pinnedNodePath[pinnedNodePath.length - 1].children ?? [];
+      roots = pinnedNodePath[pinnedNodePath.length - 1].children ?? [];
     }
-    return nodes;
-  }, [nodes, pinnedNodePath]);
+    if (isStatusFilterEnabled) {
+      roots = filterStatuses(roots, [
+        NodeStatus.CREATED,
+        NodeStatus.MODIFIED,
+        NodeStatus.REMOVED,
+        NodeStatus.MOVED,
+        NodeStatus.DUPLICATED,
+      ]);
+    }
+    return roots;
+  }, [nodes, pinnedNodePath, isStatusFilterEnabled]);
 
   const setActiveNodeChangeCallback = useCallback(
     (callback: (node: SidebarNode) => void) => {
@@ -225,6 +242,10 @@ const SidebarProvider = ({
     [currentRoots, expandedNodes],
   );
 
+  const toggleStatusFilter = useCallback(() => {
+    setIsStatusFilterEnabled((prev) => !prev);
+  }, []);
+
   // search logic
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<SidebarNode[]>([]);
@@ -285,6 +306,7 @@ const SidebarProvider = ({
         searchResults,
         isSearching,
         activeSearchIndex,
+        isStatusFilterEnabled,
         toggleNode,
         openNode,
         closeNode,
@@ -298,6 +320,7 @@ const SidebarProvider = ({
         syncActiveNodeId,
         onActiveNodeChange,
         setActiveNodeChangeCallback,
+        toggleStatusFilter,
       }}
     >
       {children}

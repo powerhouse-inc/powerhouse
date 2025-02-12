@@ -29,7 +29,16 @@ import { SidebarNode } from "./types";
  *   children: SidebarNode[];
  *   icon?: IconName;
  *   expandedIcon?: IconName;
+ *   status?: NodeStatus;
  * };
+ * enum NodeStatus {
+ *   CREATED = "CREATED",
+ *   MODIFIED = "MODIFIED",
+ *   REMOVED = "REMOVED",
+ *   MOVED = "MOVED",
+ *   DUPLICATED = "DUPLICATED",
+ *   UNCHANGED = "UNCHANGED", // default status, no need to set it
+ * }
  * ```
  *
  * The `icon` and `expandedIcon` properties are optional and can be used to display an icon in the sidebar item.
@@ -84,18 +93,44 @@ const meta: Meta<typeof Sidebar> = {
       control: "number",
       description:
         "The number of macros to be displayed in the sidebar. Recommended up to 4.",
+      table: {
+        defaultValue: { summary: "0" },
+      },
     },
     allowPinning: {
       control: "boolean",
       description: "Whether the sidebar items can be pinned.",
+      table: {
+        defaultValue: { summary: "true" },
+      },
     },
     resizable: {
       control: "boolean",
       description: "Whether the sidebar is resizable.",
+      table: {
+        defaultValue: { summary: "true" },
+      },
     },
     showSearchBar: {
       control: "boolean",
       description: "Whether the sidebar allows searching.",
+      table: {
+        defaultValue: { summary: "true" },
+      },
+    },
+    showStatusFilter: {
+      control: "boolean",
+      description: "Whether the sidebar allows filtering by status.",
+      table: {
+        defaultValue: { summary: "false" },
+      },
+    },
+    extraFooterContent: {
+      control: "object",
+      description: "Additional content to be displayed in the sidebar footer.",
+      table: {
+        readonly: true,
+      },
     },
   },
   args: {
@@ -123,6 +158,9 @@ export const Default: Story = {};
  * or any other react component.
  */
 export const WithinLayoutAndContent: Story = {
+  args: {
+    showStatusFilter: true,
+  },
   render: (args) => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const [activeNode, setActiveNode] = useState<string>(
