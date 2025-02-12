@@ -20,19 +20,23 @@ export const list: CommandActionType<
     console.log("\n>>> projectInfo", projectInfo);
   }
 
-  const phConfig = (await import(
-    path.join(projectInfo.path, "powerhouse.config.json")
-  )) as { packages: { packageName: string }[] };
+  try {
+    const phConfig = (await import(
+      path.join(projectInfo.path, "powerhouse.config.json")
+    )) as { packages: { packageName: string }[] };
 
-  if (!phConfig.packages || phConfig.packages.length === 0) {
+    if (!phConfig.packages || phConfig.packages.length === 0) {
+      console.log("No packages found in the project");
+      return;
+    }
+
+    console.log("Installed Packages:\n");
+    phConfig.packages.forEach((pkg) => {
+      console.log(pkg.packageName);
+    });
+  } catch (e) {
     console.log("No packages found in the project");
-    return;
   }
-
-  console.log("Installed Packages:\n");
-  phConfig.packages.forEach((pkg) => {
-    console.log(pkg.packageName);
-  });
 };
 
 export function listCommand(program: Command) {
