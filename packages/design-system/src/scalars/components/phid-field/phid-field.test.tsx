@@ -21,12 +21,14 @@ describe("PHIDField Component", () => {
 
   const mockOptions = [
     {
+      icon: "PowerhouseLogoSmall",
       title: "Document A",
       path: "projects/finance/document-a",
       phid: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea7:main:public",
       description: "Financial report for Q1 2024",
     },
     {
+      icon: "PowerhouseLogoSmall",
       title: "Document B",
       path: "projects/legal/document-b",
       phid: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8:main:public",
@@ -122,9 +124,6 @@ describe("PHIDField Component", () => {
 
   it("should show autocomplete options", async () => {
     const user = userEvent.setup();
-    const mockPromise = Promise.resolve(mockOptions);
-    const getOptions = vi.fn().mockReturnValue(mockPromise);
-
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
 
@@ -134,7 +133,7 @@ describe("PHIDField Component", () => {
         label="Test Label"
         placeholder="phd:"
         variant="withIdAndTitle"
-        fetchOptionsCallback={getOptions}
+        fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
@@ -144,10 +143,8 @@ describe("PHIDField Component", () => {
     await user.type(input, "test");
 
     await waitFor(() => {
-      expect(getOptions).toHaveBeenCalledWith("test");
+      expect(defaultGetOptions).toHaveBeenCalledWith("test");
     });
-
-    await mockPromise;
 
     await waitFor(() => {
       expect(input).toHaveAttribute("aria-expanded", "true");
@@ -258,9 +255,6 @@ describe("PHIDField Component", () => {
 
   it("should handle value changes and auto selection", async () => {
     const user = userEvent.setup();
-    const mockPromise = Promise.resolve(mockOptions);
-    const getOptions = vi.fn().mockReturnValue(mockPromise);
-
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
 
@@ -269,7 +263,7 @@ describe("PHIDField Component", () => {
         name="phid"
         label="Test Label"
         variant="withIdTitleAndDescription"
-        fetchOptionsCallback={getOptions}
+        fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
@@ -278,7 +272,6 @@ describe("PHIDField Component", () => {
     await user.click(input);
     await user.type(input, mockOptions[0].phid);
 
-    await mockPromise;
     await waitFor(() => {
       expect(input).toHaveAttribute("aria-expanded", "false");
     });
@@ -290,5 +283,20 @@ describe("PHIDField Component", () => {
     });
 
     Math.random = originalRandom;
+  });
+
+  it("should not invoke onChange on mount when it has a defaultValue", () => {
+    const onChange = vi.fn();
+    renderWithForm(
+      <PHIDField
+        name="phid"
+        label="Test Label"
+        defaultValue={mockOptions[0].phid}
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
+        onChange={onChange}
+      />,
+    );
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

@@ -8,8 +8,8 @@ interface UsePHIDFieldParams {
   value?: string;
   onChange?: PHIDProps["onChange"];
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
-  fetchOptions?: PHIDProps["fetchOptionsCallback"];
-  fetchSelectedOption?: PHIDProps["fetchSelectedOptionCallback"];
+  fetchOptions: PHIDProps["fetchOptionsCallback"];
+  fetchSelectedOption: PHIDProps["fetchSelectedOptionCallback"];
 }
 
 export function usePHIDField({
