@@ -117,6 +117,10 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           onInputChange={handleInputChange}
           inputProps={inputProps}
           handleBlur={handleBlur}
+          className={cn(
+            // custom styles
+            "pt-3 pr-4 pb-6 pl-4",
+          )}
         >
           <Calendar
             mode="single"
@@ -143,19 +147,21 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
             )}
             monthGridClassName={cn("w-full", "px-[5.5px]")}
             dayClassName={cn(
-              "w-[34px] cursor-pointer hover:rounded-[4px] hover:bg-gray-200",
+              "w-[34px] cursor-pointer text-[12px] hover:rounded-[4px] hover:bg-gray-200 text-gray-900",
               // dark
               "dark:text-gray-50 hover:dark:bg-gray-900",
             )}
             buttonPreviousClassName={cn(
               "border border-gray-200",
-              "hover:bg-gray-200 dark:hover:bg-gray-900",
+              // hover
+              "hover:bg-gray-100  hover:border-gray-300 hover:text-gray-900 dark:hover:bg-gray-900",
               // dark
               "dark:border-gray-900 dark:text-gray-300",
             )}
             buttonNextClassName={cn(
               "border border-gray-200 ",
-              "hover:bg-gray-200 dark:hover:bg-gray-900",
+              // hover
+              "hover:bg-gray-100  hover:border-gray-300 hover:text-gray-900 dark:hover:bg-gray-900",
               // dark
               "dark:border-gray-900 dark:text-gray-300",
             )}
@@ -173,6 +179,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
               "dark:bg-gray-50 dark:text-gray-900",
               "dark:hover:bg-gray-50 dark:hover:text-gray-900",
             )}
+            dayButtonClassName={cn("text-[12px] font-medium")}
             weekClassName={cn("w-full")}
             {...props}
           />

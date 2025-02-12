@@ -15,6 +15,7 @@ import TimePickerContent from "./subcomponents/time-picker-content";
 import { useTimePickerField } from "./use-time-picker-field";
 import { InputNumberProps } from "../number-field/types";
 import { validateTimePicker } from "./time-picker-validations";
+import { cn } from "@/scalars/lib";
 
 export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
@@ -30,6 +31,7 @@ export interface TimePickerFieldProps
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
   timeFormat?: string;
   showTimezoneSelect?: boolean;
+  dateIntervals?: number;
 }
 
 export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
@@ -52,6 +54,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       selectProps,
       timeFormat = "hh:mm a",
       showTimezoneSelect,
+      dateIntervals,
     },
     ref,
   ) => {
@@ -73,12 +76,15 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       timeZonesOptions,
       handleBlur,
       is12HourFormat,
+      selectedTimeZone,
+      setSelectedTimeZone,
     } = useTimePickerField({
       value,
       defaultValue,
       onChange,
       onBlur,
       timeFormat,
+      dateIntervals,
     });
     return (
       <FormGroup>
@@ -106,6 +112,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           placeholder={placeholder}
           handleBlur={handleBlur}
           inputProps={inputProps}
+          className={cn("pt-3 pr-4 pb-4 pl-4")}
         >
           <TimePickerContent
             selectedHour={selectedHour}
@@ -122,6 +129,8 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
             selectProps={selectProps}
             is12HourFormat={is12HourFormat}
             showTimezoneSelect={showTimezoneSelect}
+            selectedTimeZone={selectedTimeZone as string}
+            setSelectedTimeZone={setSelectedTimeZone}
           />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}

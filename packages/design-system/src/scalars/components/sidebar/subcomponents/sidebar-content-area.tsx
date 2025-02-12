@@ -47,15 +47,18 @@ export const SidebarContentArea = ({
 
   const renderNode = ({
     index,
+    key,
     style,
   }: {
     index: number;
+    key: string;
     style: React.CSSProperties;
   }) => {
     const node = flattenedNodes[index];
 
     return (
       <SidebarItem
+        key={key}
         node={node}
         toggleNode={toggleNode}
         togglePin={togglePin}

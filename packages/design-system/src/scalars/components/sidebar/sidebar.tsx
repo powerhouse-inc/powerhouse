@@ -61,6 +61,10 @@ export interface SidebarProps {
    * An optional footer content that can be displayed at the bottom of the sidebar.
    */
   extraFooterContent?: React.ReactNode;
+  /**
+   * Optional className for the sidebar container
+   */
+  className?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -75,6 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   resizable = true,
   showSearchBar = true,
   extraFooterContent,
+  className,
 }) => {
   const {
     sidebarRef,
@@ -126,6 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       className={cn(
         "group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600",
         isResizing && "transition-none",
+        className,
       )}
     >
       {isSidebarOpen && (

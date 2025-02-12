@@ -3,7 +3,6 @@ import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
-  PrebuiltArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
 import { DateTimeField } from "./date-time-field";
@@ -15,10 +14,11 @@ const meta: Meta<typeof DateTimeField> = {
   tags: ["autodocs"],
   argTypes: {
     ...getDefaultArgTypes({
-      valueControlType: "date",
-      valueType: "date",
+      enabledArgTypes: {
+        value: true,
+      },
     }),
-    ...getValidationArgTypes(),
+    ...getValidationArgTypes({}),
     showDateSelect: {
       control: "boolean",
       description: "Show the date picker",
@@ -35,23 +35,119 @@ const meta: Meta<typeof DateTimeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    dateProps: {
-      control: "object",
-      description: "Date picker props",
+    minDate: {
+      control: "date",
+      description: "Minimum date",
       table: {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
+      if: { arg: "showDateSelect", truthy: true },
     },
-    timeProps: {
-      control: "object",
-      description: "Time picker props",
+    maxDate: {
+      control: "date",
+      description: "Maximum date",
       table: {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
+      if: { arg: "showDateSelect", truthy: true },
+    },
+    disablePastDates: {
+      control: "boolean",
+      description: "Disable past dates in the date picker",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "showDateSelect", truthy: true },
+    },
+    disableFutureDates: {
+      control: "boolean",
+      description: "Disable future dates in the date picker",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "showDateSelect", truthy: true },
+    },
+    dateFormat: {
+      control: {
+        type: "select",
+      },
+      options: [
+        "yyyy-MM-dd",
+        "dd/MM/yyyy",
+        "MM/dd/yyyy",
+        "dd-MMM-yyyy",
+        "MMM-dd-yyyy",
+      ],
+      table: {
+        defaultValue: { summary: "yyyy-MM-dd" },
+        type: {
+          summary: "string",
+        },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "showDateSelect", truthy: true },
+    },
+    weekStart: {
+      control: "select",
+      options: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
+      table: {
+        defaultValue: { summary: "Monday" },
+        type: {
+          summary: "string",
+        },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "showDateSelect", truthy: true },
+    },
+    autoClose: {
+      control: "boolean",
+      description: "Close the date picker when a date is selected",
+      table: {
+        type: { summary: "boolean" },
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "showDateSelect", truthy: true },
+    },
+    // Time picker props
+    timeFormat: {
+      control: {
+        type: "select",
+      },
+      table: {
+        defaultValue: { summary: "hh:mm a" },
+        type: {
+          summary: "string",
+        },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "showTimeSelect", truthy: true },
+      options: ["hh:mm a", "HH:mm"],
+      defaultValue: { summary: "hh:mm a" },
+    },
+    showTimezoneSelect: {
+      control: {
+        type: "boolean",
+      },
+      description: "Show timezone select",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "showTimeSelect", truthy: true },
+      defaultValue: { summary: false },
     },
   },
-
-  ...PrebuiltArgTypes.placeholder,
 
   args: {
     name: "date-picker-field",

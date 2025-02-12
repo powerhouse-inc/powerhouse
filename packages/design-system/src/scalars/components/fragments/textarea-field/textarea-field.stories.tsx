@@ -166,6 +166,31 @@ export const WithAutoExpandSingleLine: Story = {
   },
 };
 
+export const WithResizableContainer: Story = {
+  args: {
+    label: "Auto-expanding textarea inside a resizable container",
+    autoExpand: true,
+    placeholder: "Type something...",
+    multiline: true,
+  },
+  decorators: [
+    (Story) => (
+      <div
+        style={{
+          resize: "horizontal",
+          overflow: "auto",
+          padding: "16px",
+          border: "1px dotted black",
+          minWidth: "200px",
+          minHeight: "150px",
+        }}
+      >
+        <Story />
+      </div>
+    ),
+  ],
+};
+
 export const WithSpellCheck: Story = {
   args: {
     label: "Spell-checked textarea",
