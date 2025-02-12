@@ -1,12 +1,5 @@
-import {
-  AddFileInput,
-  DeleteNodeInput,
-} from "document-model-libs/document-drive";
-import { Action } from "document-model/document";
-import { Unsubscribe, createNanoEvents } from "nanoevents";
-import { generateUUID, runAsap } from "../utils";
-import { logger } from "../utils/logger";
-import {
+import { AddFileInput, DeleteNodeInput } from "@drive-document-model";
+import type {
   IJob,
   IJobQueue,
   IQueue,
@@ -15,10 +8,14 @@ import {
   Job,
   JobId,
   QueueEvents,
-  isOperationJob,
-} from "./types";
+} from "@queue/types";
+import { isOperationJob } from "@queue/types";
+import { logger } from "@utils/logger";
+import { generateUUID, runAsap } from "@utils/misc";
+import { BaseAction } from "document-model";
+import { Unsubscribe, createNanoEvents } from "nanoevents";
 
-export class MemoryQueue<T, R> implements IQueue<T, R> {
+export class MemoryQueue<T> implements IQueue<T> {
   private id: string;
   private blocked = false;
   private deleted = false;
@@ -141,7 +138,7 @@ export class BaseQueueManager implements IQueueManager {
         const actions = isOperationJob(driveJob)
           ? driveJob.operations
           : driveJob.actions;
-        const op = actions.find((j: Action) => {
+        const op = actions.find((j: BaseAction) => {
           const input = j.input as AddFileInput;
           return j.type === "ADD_FILE" && input.id === job.documentId;
         });
@@ -154,7 +151,7 @@ export class BaseQueueManager implements IQueueManager {
     // if it has ADD_FILE operations then adds the job as
     // a dependency to the corresponding document queues
     const actions = isOperationJob(job) ? job.operations : job.actions;
-    const addFileOps = actions.filter((j: Action) => j.type === "ADD_FILE");
+    const addFileOps = actions.filter((j: BaseAction) => j.type === "ADD_FILE");
     for (const addFileOp of addFileOps) {
       const input = addFileOp.input as AddFileInput;
       const q = this.getQueue(job.driveId, input.id);
@@ -163,7 +160,7 @@ export class BaseQueueManager implements IQueueManager {
 
     // remove document if operations contains delete_node
     const removeFileOps = actions.filter(
-      (j: Action) => j.type === "DELETE_NODE",
+      (j: BaseAction) => j.type === "DELETE_NODE",
     );
     for (const removeFileOp of removeFileOps) {
       const input = removeFileOp.input as DeleteNodeInput;
@@ -175,7 +172,10 @@ export class BaseQueueManager implements IQueueManager {
     return jobId;
   }
 
-  getQueue(driveId: string, documentId?: string) {
+  getQueue<TGlobalState, TLocalState, TAction extends BaseAction>(
+    driveId: string,
+    documentId?: string,
+  ) {
     const queueId = this.getQueueId(driveId, documentId);
     let queue = this.queues.find((q) => q.getId() === queueId);
 

@@ -121,7 +121,7 @@ describe("removeExistingOperations", () => {
         hash: "5XOFEY2NKrHVyOA3c3oXDibrjwM=",
         skip: 0,
       },
-    ] as Operation<unknown, unknown, BaseAction>[];
+    ] as Operation<unknown, unknown>[];
 
     const operationsHistory = [
       {
@@ -151,7 +151,7 @@ describe("removeExistingOperations", () => {
         hash: "5XOFEY2NKrHVyOA3c3oXDibrjwM=",
         skip: 0,
       },
-    ] as Operation<unknown, unknown, BaseAction>[];
+    ] as Operation<unknown, unknown>[];
 
     const result = removeExistingOperations(
       existingOperations,

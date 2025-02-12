@@ -1,15 +1,15 @@
 import {
-  DocumentDriveDocument,
-  utils,
-} from "document-model-libs/document-drive";
+    DocumentDriveDocument,
+    utils,
+} from "@drive-document-model";
+import * as DocumentModelLib from "document-model";
+import { DocumentModelModule } from "document-model";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModelModule } from "document-model/document";
-import * as DocumentModelLib from "document-model/document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import {
-  DocumentDriveServer,
-  InternalTransmitterUpdate,
-  IReceiver,
+    DocumentDriveServer,
+    InternalTransmitterUpdate,
+    IReceiver,
 } from "../src";
 import { expectUTCTimestamp, expectUUID } from "./utils";
 

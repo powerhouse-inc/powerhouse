@@ -5,16 +5,22 @@
 
 import { generateMock } from "@powerhousedao/codegen";
 
+import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/drive/creators.js";
 import { reducer } from "../../gen/reducer.js";
+import {
+  SetAvailableOfflineInputSchema,
+  SetDriveNameInputSchema,
+  SetSharingTypeInputSchema,
+} from "../../gen/schema/zod.js";
 import { DocumentDriveDocument } from "../../gen/types.js";
-import utils from "../../gen/utils.js";
+import { createDocument } from "../../gen/utils.js";
 
 describe("Drive Operations", () => {
   let document: DocumentDriveDocument;
 
   beforeEach(() => {
-    document = utils.createDocument();
+    document = createDocument();
   });
 
   it("should handle setDriveName operation", () => {

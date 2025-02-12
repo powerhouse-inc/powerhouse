@@ -1,27 +1,25 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { setName } from "@document/actions/creators.js";
 import { SET_NAME } from "@document/actions/types.js";
 
-import {
-  emptyReducer,
-  wrappedEmptyReducer,
-  CountState,
-  CountAction,
-  CountLocalState,
-  countReducer,
-  increment,
-  error,
-} from "../helpers.js";
 import { CreateChildDocumentInput } from "@document/signal.js";
 import { BaseAction } from "@document/types.js";
 import {
   baseCreateDocument,
+  baseCreateExtendedState,
   createAction,
   createReducer,
-  baseCreateExtendedState,
   hashKey,
 } from "@document/utils/base.js";
+import {
+  CountLocalState,
+  countReducer,
+  CountState,
+  error,
+  increment,
+  wrappedEmptyReducer,
+} from "../helpers.js";
 
 describe("Base reducer", () => {
   beforeAll(() => {
@@ -147,11 +145,7 @@ describe("Base reducer", () => {
 
     reducer(document, triggerAction, (action) => {
       expect(action.type).toBe("CREATE_CHILD_DOCUMENT");
-      const input = action.input as CreateChildDocumentInput<
-        unknown,
-        unknown,
-        BaseAction
-      >;
+      const input = action.input as CreateChildDocumentInput<unknown, unknown>;
       expect(input.id).toBe(id);
       expect(input.documentType).toBe("test");
       expect(input.document?.initialState.state.global).toStrictEqual({
@@ -266,9 +260,7 @@ describe("Base reducer", () => {
       state: { global: { count: 0 }, local: {} },
     });
 
-    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
-      initialState,
-    );
+    let document = baseCreateDocument(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());
@@ -284,9 +276,7 @@ describe("Base reducer", () => {
       state: { global: { count: 0 }, local: {} },
     });
 
-    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
-      initialState,
-    );
+    let document = baseCreateDocument(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment(), undefined, { skip: 1 });
@@ -302,9 +292,7 @@ describe("Base reducer", () => {
       state: { global: { count: 0 }, local: {} },
     });
 
-    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
-      initialState,
-    );
+    let document = baseCreateDocument(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment(), undefined, { skip: 1 });
@@ -341,9 +329,7 @@ describe("Base reducer", () => {
       state: { global: { count: 0 }, local: {} },
     });
 
-    let document = baseCreateDocument<CountState, CountLocalState, CountAction>(
-      initialState,
-    );
+    let document = baseCreateDocument(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());

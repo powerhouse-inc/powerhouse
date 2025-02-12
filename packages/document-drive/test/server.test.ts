@@ -1,22 +1,21 @@
+import {
+    utils as DocumentDriveUtils,
+    actions,
+    generateAddNodeAction,
+    reducer,
+} from "@drive-document-model";
 import { PrismaClient } from "@prisma/client";
+import { generateUUID } from "@utils/misc";
 import {
-  utils as DocumentDriveUtils,
-  actions,
-  generateAddNodeAction,
-  reducer,
-} from "document-model-libs/document-drive";
+    ActionContext,
+    Document,
+    actions as DocumentModelActions,
+    DocumentModelDocument,
+    module as DocumentModelLib,
+    DocumentModelModule,
+    utils as DocumentModelUtils,
+} from "document-model";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import {
-  ActionContext,
-  Document,
-  DocumentModelModule,
-} from "document-model/document";
-import {
-  actions as DocumentModelActions,
-  DocumentModelDocument,
-  module as DocumentModelLib,
-  utils as DocumentModelUtils,
-} from "document-model/document-model";
 import fs from "fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -27,7 +26,6 @@ import { MemoryStorage } from "../src/storage/memory";
 import { PrismaStorage } from "../src/storage/prisma";
 import { SequelizeStorage } from "../src/storage/sequelize";
 import { IDriveStorage } from "../src/storage/types";
-import { generateUUID } from "../src/utils";
 import { expectUUID } from "./utils";
 
 const documentModels = [

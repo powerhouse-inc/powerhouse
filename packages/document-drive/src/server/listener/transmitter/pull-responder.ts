@@ -1,10 +1,12 @@
-import { ListenerFilter, Trigger } from "document-model-libs/document-drive";
-import { Operation, OperationScope } from "document-model/document";
-import { PULL_DRIVE_INTERVAL } from "../../index.js";
-import { generateUUID } from "../../../utils/index.js";
-import { gql, requestGraphql } from "../../../utils/graphql.js";
-import { logger as defaultLogger } from "../../../utils/logger.js";
-import { OperationError } from "../../error.js";
+import { ListenerFilter, Trigger } from "@drive-document-model";
+import { PULL_DRIVE_INTERVAL } from "@server/base";
+import { OperationError } from "@server/error";
+import { ListenerManager } from "@server/listener/manager";
+import {
+  ITransmitter,
+  PullResponderTrigger,
+  StrandUpdateSource,
+} from "@server/listener/transmitter/types";
 import {
   GetStrandsOptions,
   IBaseDocumentDriveServer,
@@ -15,13 +17,11 @@ import {
   OperationUpdate,
   RemoteDriveOptions,
   StrandUpdate,
-} from "../../types";
-import { ListenerManager } from "../manager";
-import {
-  ITransmitter,
-  PullResponderTrigger,
-  StrandUpdateSource,
-} from "./types";
+} from "@server/types";
+import { gql, requestGraphql } from "@utils/graphql";
+import { logger as defaultLogger } from "@utils/logger";
+import { generateUUID } from "@utils/misc";
+import { BaseAction } from "document-model";
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
@@ -237,13 +237,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     return result.acknowledge;
   }
 
-  private static async executePull(
+  private static async executePull<TGlobalState, TLocalState, TAction extends BaseAction>(
     driveId: string,
     trigger: PullResponderTrigger,
     onStrandUpdate: (
       strand: StrandUpdate,
       source: StrandUpdateSource,
-    ) => Promise<IOperationResult>,
+    ) => Promise<IOperationResult<TGlobalState, TLocalState, TAction>>,
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
@@ -266,7 +266,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       const listenerRevisions: ListenerRevisionWithError[] = [];
 
       for (const strand of strands) {
-        const operations: Operation[] = strand.operations.map((op) => ({
+        const operations = strand.operations.map((op) => ({
           ...op,
           scope: strand.scope,
           branch: strand.branch,
@@ -319,13 +319,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }
   }
 
-  static setupPull(
+  static setupPull<TGlobalState, TLocalState, TAction extends BaseAction>(
     driveId: string,
     trigger: PullResponderTrigger,
     onStrandUpdate: (
       strand: StrandUpdate,
       source: StrandUpdateSource,
-    ) => Promise<IOperationResult>,
+    ) => Promise<IOperationResult<TGlobalState, TLocalState, TAction>>,
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,

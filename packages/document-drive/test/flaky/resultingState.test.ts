@@ -1,7 +1,7 @@
+import { actions } from "@drive-document-model";
 import { PrismaClient } from "@prisma/client";
-import { actions } from "document-model-libs/document-drive";
+import { DocumentModelModule } from "document-model";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModelModule } from "document-model/document";
 import { beforeAll, describe, it } from "vitest";
 import { DocumentDriveServer } from "../../src";
 import { PrismaStorage } from "../../src/storage/prisma";

@@ -4,18 +4,20 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import {
-    CreateChildDocumentInput,
-    SynchronizationUnit,
-} from "document-model";
+import { BaseDocument, SynchronizationUnit } from "document-model";
 import { DocumentDriveNodeOperations } from "../../gen/node/operations.js";
 import {
-    FileNode,
-    getDescendants,
-    handleTargetNameCollisions,
-    isFileNode,
-    isFolderNode,
-} from "../../index.js";
+  DocumentDriveAction,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+  FileNode,
+} from "../../gen/types.js";
+import {
+  getDescendants,
+  handleTargetNameCollisions,
+  isFileNode,
+  isFolderNode,
+} from "../utils.js";
 
 export const reducer: DocumentDriveNodeOperations = {
   addFileOperation(state, action, dispatch) {
@@ -64,7 +66,11 @@ export const reducer: DocumentDriveNodeOperations = {
         id: action.input.id,
         documentType: action.input.documentType,
         synchronizationUnits,
-        document: action.input.document as CreateChildDocumentInput["document"],
+        document: action.input.document as BaseDocument<
+          DocumentDriveState,
+          DocumentDriveLocalState,
+          DocumentDriveAction
+        >,
       },
     });
   },

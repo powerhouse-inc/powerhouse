@@ -1,12 +1,11 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-  actions,
-  reducer,
-} from "document-model-libs/document-drive";
+    DocumentDriveAction,
+    DocumentDriveDocument,
+    actions,
+    reducer,
+} from "@drive-document-model";
+import { BaseAction, module as DocumentModelLib, DocumentModelModule, Operation } from "document-model";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { BaseAction, DocumentModelModule, Operation } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DocumentDriveServer } from "../src";
 

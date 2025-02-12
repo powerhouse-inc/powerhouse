@@ -1,18 +1,29 @@
-import { DocumentDriveAction } from "document-model-libs/document-drive";
+import {
+  DocumentDriveAction,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "@drive-document-model";
+import { DriveNotFoundError } from "@server/error";
+import type { SynchronizationUnitQuery } from "@server/types";
+import type {
+  DocumentDriveStorage,
+  DocumentStorage,
+  IDriveStorage,
+} from "@storage/types";
+import { mergeOperations } from "@utils/misc";
 import {
   BaseAction,
-  Document,
+  BaseDocument,
   DocumentHeader,
   Operation,
   OperationScope,
-} from "document-model/document";
-import { DriveNotFoundError } from "../server/error";
-import type { SynchronizationUnitQuery } from "../server/types";
-import { mergeOperations } from "../utils";
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from "./types";
+} from "document-model";
 
 export class MemoryStorage implements IDriveStorage {
-  private documents: Record<string, Record<string, DocumentStorage>>;
+  private documents: Record<
+    string,
+    Record<string, BaseDocument<any, any, BaseAction>>
+  >;
   private drives: Record<string, DocumentDriveStorage>;
   private slugToDriveId: Record<string, string> = {};
 
@@ -22,14 +33,17 @@ export class MemoryStorage implements IDriveStorage {
   }
 
   checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    return Promise.resolve(this.documents[drive]?.[id] !== undefined);
+    return Promise.resolve(this.documents[drive][id] !== undefined);
   }
 
   async getDocuments(drive: string) {
     return Object.keys(this.documents[drive] ?? {});
   }
 
-  async getDocument(driveId: string, id: string) {
+  async getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+    driveId: string,
+    id: string,
+  ): Promise<DocumentStorage<TGlobalState, TLocalState, TAction>> {
     const drive = this.documents[driveId];
     if (!drive) {
       throw new DriveNotFoundError(driveId);
@@ -39,10 +53,14 @@ export class MemoryStorage implements IDriveStorage {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    return document;
+    return document as DocumentStorage<TGlobalState, TLocalState, TAction>;
   }
 
-  async saveDocument(drive: string, id: string, document: Document) {
+  async saveDocument(
+    drive: string,
+    id: string,
+    document: BaseDocument<any, any, BaseAction>,
+  ) {
     this.documents[drive] = this.documents[drive] ?? {};
     this.documents[drive][id] = document;
   }
@@ -52,7 +70,11 @@ export class MemoryStorage implements IDriveStorage {
     this.drives = {};
   }
 
-  async createDocument(drive: string, id: string, document: DocumentStorage) {
+  async createDocument(
+    drive: string,
+    id: string,
+    document: DocumentStorage<any, any, BaseAction>,
+  ) {
     this.documents[drive] = this.documents[drive] ?? {};
     const {
       operations,
@@ -81,7 +103,7 @@ export class MemoryStorage implements IDriveStorage {
   async addDocumentOperations(
     drive: string,
     id: string,
-    operations: Operation[],
+    operations: Operation<any, any, BaseAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     const document = await this.getDocument(drive, id);
@@ -91,7 +113,7 @@ export class MemoryStorage implements IDriveStorage {
 
     const mergedOperations = mergeOperations(document.operations, operations);
 
-    this.documents[drive]![id] = {
+    this.documents[drive][id] = {
       ...document,
       ...header,
       operations: mergedOperations,
@@ -136,7 +158,11 @@ export class MemoryStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction
+    >[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

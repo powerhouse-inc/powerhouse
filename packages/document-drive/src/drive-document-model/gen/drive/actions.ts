@@ -1,12 +1,13 @@
+import { BaseAction } from "document-model";
 import {
-    SetDriveNameInput,
-    SetDriveIconInput,
-    SetSharingTypeInput,
-    SetAvailableOfflineInput,
-    AddListenerInput,
-    RemoveListenerInput,
-    AddTriggerInput,
-    RemoveTriggerInput,
+  AddListenerInput,
+  AddTriggerInput,
+  RemoveListenerInput,
+  RemoveTriggerInput,
+  SetAvailableOfflineInput,
+  SetDriveIconInput,
+  SetDriveNameInput,
+  SetSharingTypeInput,
 } from "../types.js";
 
 export type SetDriveNameAction = BaseAction<

@@ -1,5 +1,4 @@
 import { noop, redo, undo } from "@document/actions/creators.js";
-import { DocumentAction } from "@document/actions/types.js";
 import { processUndoRedo } from "@document/reducer.js";
 import { BaseDocument } from "@document/types.js";
 import {
@@ -16,7 +15,7 @@ import {
 } from "../helpers.js";
 
 describe("UNDO/REDO", () => {
-  let document: BaseDocument<CountState, CountLocalState, CountAction | DocumentAction>;
+  let document: BaseDocument<CountState, CountLocalState>;
 
   beforeEach(() => {
     const initialState = baseCreateExtendedState<CountState, CountLocalState>({
@@ -24,9 +23,7 @@ describe("UNDO/REDO", () => {
       state: { global: { count: 0 }, local: {} },
     });
 
-    document = baseCreateDocument<CountState, CountLocalState, CountAction>(
-      initialState,
-    );
+    document = baseCreateDocument(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());
@@ -100,9 +97,7 @@ describe("UNDO/REDO", () => {
         },
       );
 
-      document = baseCreateDocument<CountState, CountLocalState, CountAction>(
-        initialState,
-      );
+      document = baseCreateDocument(initialState);
 
       const skip = 0;
       const undoAction = undo();
@@ -123,9 +118,7 @@ describe("UNDO/REDO", () => {
         },
       );
 
-      document = baseCreateDocument<CountState, CountLocalState, CountAction>(
-        initialState,
-      );
+      document = baseCreateDocument(initialState);
 
       const skip = 0;
       const redoAction = redo();

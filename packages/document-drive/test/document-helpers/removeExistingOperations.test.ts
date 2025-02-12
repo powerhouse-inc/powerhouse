@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Operation } from "document-model/document";
+import { Operation } from "document-model";
 import { removeExistingOperations } from "../../src/utils/document-helpers";
 import { buildOperations } from "./utils";
 

@@ -4,16 +4,14 @@
     "emitDeclarationOnly": true,
     "outDir": "./dist",
     "paths": {
-      "@server": ["../server/index.ts"],
-      "@server/*": ["../server/*.ts"],
-      "@storage": ["../storage/index.ts"],
-      "@storage/*": ["../storage/*.ts"],
-      "@cache": ["../cache/index.ts"],
-      "@cache/*": ["../cache/*.ts"],
-      "@drive-document-model": ["../drive-document-model/index.ts"],
-      "@drive-document-model/*": ["../drive-document-model/*.ts"],
-      "@scalars": ["../scalars/index.ts"],
-      "@scalars/*": ["../scalars/*.ts"]
+      "@server/*": ["./src/server/*.ts"],
+      "@storage/*": ["./src/storage/*.ts"],
+      "@cache/*": ["./src/cache/*.ts"],
+      "@utils/*": ["./src/utils/*.ts"],
+      "@read-mode/*": ["./src/read-mode/*.ts"],
+      "@queue/*": ["./src/queue/*.ts"],
+      "@drive-document-model": ["./src/drive-document-model/index.ts"],
+      "@drive-document-model/module": ["./src/drive-document-model/module.ts"]
     }
   },
   "references": [
@@ -22,6 +20,9 @@
     },
     {
       "path": "../document-model"
+    },
+    {
+      "path": "../codegen"
     }
   ]
 }

@@ -1,18 +1,17 @@
+import type { DocumentStorage } from "@storage/types";
 import {
-  Action,
-  Document,
+  BaseAction,
   DocumentOperations,
   Operation,
   OperationScope,
-} from "document-model/document";
-import { DocumentStorage } from "../storage/types.js";
+} from "document-model";
 
-export function migrateDocumentOperationSigatures<D extends Document>(
-  document: DocumentStorage<D>,
-): DocumentStorage<D> | undefined {
+export function migrateDocumentOperationSignatures(
+  document: DocumentStorage<any, any, BaseAction>,
+): DocumentStorage<any, any, BaseAction> | undefined {
   let legacy = false;
   const operations = Object.entries(document.operations).reduce<
-    DocumentOperations<Action>
+    DocumentOperations<any, any, BaseAction>
   >(
     (acc, [key, operations]) => {
       const scope = key as unknown as OperationScope;
@@ -31,10 +30,13 @@ export function migrateDocumentOperationSigatures<D extends Document>(
   return legacy ? { ...document, operations } : document;
 }
 
-export function migrateLegacyOperationSignature<A extends Action>(
-  operation: Operation<A>,
-): Operation<A> {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+export function migrateLegacyOperationSignature<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  operation: Operation<TGlobalState, TLocalState, TAction>,
+): Operation<TGlobalState, TLocalState, TAction> {
   if (!operation.context?.signer || operation.context.signer.signatures) {
     return operation;
   }

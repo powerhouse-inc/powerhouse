@@ -1,28 +1,19 @@
-import { Document } from "document-model";
-import {
-    DocumentDriveAction,
-    DocumentDriveLocalState,
-    DocumentDriveState,
-    FileNode,
-    actions,
-    generateSynchronizationUnits,
-    reducer,
-    utils,
-} from "../../index.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import { addFile, addFolder, copyNode, moveNode } from "../../gen/creators.js";
+import { FileNode } from "../../gen/types.js";
+import { createDocument } from "../../gen/utils.js";
+import { generateSynchronizationUnits } from "../utils.js";
+import { reducer } from "../../gen/reducer.js";
 
 describe("DocumentDrive Actions", () => {
-  let documentDrive: Document.Document<
-    DocumentDriveState,
-    DocumentDriveAction,
-    DocumentDriveLocalState
-  >;
+  let documentDrive = createDocument();
 
   beforeEach(() => {
-    documentDrive = utils.createDocument();
+    documentDrive = createDocument();
 
     documentDrive = reducer(
       documentDrive,
-      actions.addFolder({
+      addFolder({
         id: "1",
         name: "Folder 1",
       }),
@@ -30,7 +21,7 @@ describe("DocumentDrive Actions", () => {
 
     documentDrive = reducer(
       documentDrive,
-      actions.addFolder({
+      addFolder({
         id: "1.1",
         name: "Folder 1.1",
         parentFolder: "1",
@@ -39,7 +30,7 @@ describe("DocumentDrive Actions", () => {
 
     documentDrive = reducer(
       documentDrive,
-      actions.addFolder({
+      addFolder({
         id: "1.1.1",
         name: "Folder 1.1.1",
         parentFolder: "1.1",
@@ -48,7 +39,7 @@ describe("DocumentDrive Actions", () => {
 
     documentDrive = reducer(
       documentDrive,
-      actions.addFolder({
+      addFolder({
         id: "2",
         name: "Folder 2",
       }),
@@ -56,7 +47,7 @@ describe("DocumentDrive Actions", () => {
 
     documentDrive = reducer(
       documentDrive,
-      actions.addFolder({
+      addFolder({
         id: "3",
         name: "Folder 3",
       }),
@@ -70,7 +61,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.moveNode({
+        moveNode({
           srcFolder,
           targetParentFolder,
         }),
@@ -88,7 +79,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.moveNode({
+        moveNode({
           srcFolder,
         }),
       );
@@ -105,7 +96,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.moveNode({
+        moveNode({
           srcFolder,
           targetParentFolder: null,
         }),
@@ -124,7 +115,7 @@ describe("DocumentDrive Actions", () => {
 
       const document = reducer(
         documentDrive,
-        actions.moveNode({
+        moveNode({
           srcFolder,
           targetParentFolder,
         }),
@@ -155,7 +146,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.copyNode({
+        copyNode({
           srcId,
           targetId,
           targetParentFolder,
@@ -179,7 +170,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.copyNode({
+        copyNode({
           srcId,
           targetId,
         }),
@@ -202,7 +193,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.copyNode({
+        copyNode({
           srcId,
           targetId,
           targetParentFolder: null,
@@ -226,7 +217,7 @@ describe("DocumentDrive Actions", () => {
 
       const document = reducer(
         documentDrive,
-        actions.copyNode({
+        copyNode({
           srcId,
           targetId,
           targetParentFolder,
@@ -261,7 +252,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.copyNode({
+        copyNode({
           srcId,
           targetId,
           targetName,
@@ -288,7 +279,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.copyNode({
+        copyNode({
           srcId,
           targetId,
           targetParentFolder,
@@ -314,7 +305,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.copyNode({
+        copyNode({
           srcId,
           targetId,
           targetName: null,
@@ -341,7 +332,7 @@ describe("DocumentDrive Actions", () => {
 
       documentDrive = reducer(
         documentDrive,
-        actions.addFile({
+        addFile({
           id: "testFile",
           documentType: "",
           name: "Test File",
@@ -357,7 +348,7 @@ describe("DocumentDrive Actions", () => {
       );
       documentDrive = reducer(
         documentDrive,
-        actions.copyNode({
+        copyNode({
           srcId: "testFile",
           targetId: "testFile-copy",
           targetName: null,

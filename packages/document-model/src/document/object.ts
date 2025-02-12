@@ -1,7 +1,14 @@
 import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
-import { DocumentAction } from "./actions/types.js";
 import { SignalDispatch } from "./signal.js";
-import { AttachmentRef, BaseAction, BaseDocument, BaseState, OperationScope, Reducer, ReducerOptions } from "./types.js";
+import {
+  Action,
+  AttachmentRef,
+  BaseDocument,
+  BaseState,
+  OperationScope,
+  Reducer,
+  ReducerOptions,
+} from "./types.js";
 import { readOnly } from "./utils/base.js";
 import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";
 
@@ -11,10 +18,14 @@ import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";
  * @typeparam T - The type of data stored in the document.
  * @typeparam A - The type of action the document can take.
  */
-export abstract class BaseDocumentClass<TGlobalState, TLocalState, TAction extends BaseAction> {
-  protected _document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>;
-  private _reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>;
-  private _signalDispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>;
+export abstract class BaseDocumentClass<
+  TGlobalState,
+  TLocalState,
+  TAllowedAction extends Action,
+> {
+  protected _document: BaseDocument<TGlobalState, TLocalState>;
+  private _reducer: Reducer<TGlobalState, TLocalState, Action>;
+  private _signalDispatch?: SignalDispatch;
 
   /**
    * Constructs a BaseDocument instance with an initial state.
@@ -22,9 +33,9 @@ export abstract class BaseDocumentClass<TGlobalState, TLocalState, TAction exten
    * @param document - The initial state of the document.
    */
   constructor(
-    reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
-    document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
-    signalDispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
+    reducer: Reducer<TGlobalState, TLocalState, TAllowedAction>,
+    document: BaseDocument<TGlobalState, TLocalState>,
+    signalDispatch?: SignalDispatch,
   ) {
     this._reducer = reducer;
     this._document = document;
@@ -36,7 +47,7 @@ export abstract class BaseDocumentClass<TGlobalState, TLocalState, TAction exten
    * @param action - The action to dispatch.
    * @returns The Document instance.
    */
-  protected dispatch(action: TAction | DocumentAction, options?: ReducerOptions) {
+  protected dispatch(action: Action, options?: ReducerOptions) {
     this._document = this._reducer(
       this._document,
       action,
@@ -70,11 +81,14 @@ export abstract class BaseDocumentClass<TGlobalState, TLocalState, TAction exten
    * @param reducer - The reducer function that updates the state.
    * @returns The state of the document.
    */
-  protected static async stateFromFile<TGlobalState, TLocalState, TAction extends BaseAction>(
+  protected static async stateFromFile<TGlobalState, TLocalState>(
     path: string,
-    reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+    reducer: Reducer<TGlobalState, TLocalState, Action>,
   ) {
-    const state = await baseLoadFromFile<TGlobalState, TLocalState, TAction>(path, reducer);
+    const state = await baseLoadFromFile<TGlobalState, TLocalState>(
+      path,
+      reducer,
+    );
     return state;
   }
 
@@ -150,7 +164,7 @@ export abstract class BaseDocumentClass<TGlobalState, TLocalState, TAction exten
    * @param attachment - The key of the attachment to retrieve.
    */
   public getAttachment(attachment: AttachmentRef) {
-    return this._document.attachments[attachment];
+    return this._document.attachments?.[attachment];
   }
 
   /**

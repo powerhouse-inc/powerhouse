@@ -1,4 +1,3 @@
-import { DocumentAction } from "@document/actions/types.js";
 import { BaseDocument, ExtendedState } from "@document/types.js";
 import {
   baseCreateDocument,
@@ -9,7 +8,6 @@ import { garbageCollectDocumentOperations } from "@document/utils/document-helpe
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   baseCountReducer,
-  CountAction,
   CountLocalState,
   countReducer,
   CountState,
@@ -17,7 +15,7 @@ import {
 } from "../helpers.js";
 
 describe("Document Operation ID", () => {
-  let document: BaseDocument<CountState, CountLocalState, CountAction | DocumentAction>;
+  let document: BaseDocument<CountState, CountLocalState>;
   let initialState: ExtendedState<CountState, CountLocalState>;
 
   beforeEach(() => {
@@ -26,9 +24,7 @@ describe("Document Operation ID", () => {
       state: { global: { count: 0 }, local: {} },
     });
 
-    document = baseCreateDocument<CountState, CountLocalState, CountAction>(
-      initialState,
-    );
+    document = baseCreateDocument(initialState);
   });
 
   it("should add an id to new operations", () => {

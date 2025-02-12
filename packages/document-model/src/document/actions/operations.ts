@@ -1,5 +1,5 @@
 import {
-  BaseAction,
+  Action,
   BaseDocument,
   BaseState,
   ImmutableStateReducer,
@@ -14,24 +14,19 @@ import {
 } from "@document/utils/document-helpers.js";
 import { castDraft, create, Draft } from "mutative";
 import { loadState, noop } from "./creators.js";
-import { DocumentAction, PruneAction } from "./types.js";
+import { PruneAction } from "./types.js";
 
 // updates the name of the document
-export function setNameOperation<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(document: BaseDocument<TGlobalState, TLocalState, TAction>, name: string) {
+export function setNameOperation<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
+  name: string,
+) {
   return { ...document, name };
 }
 
-export function undoOperation<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
+export function undoOperation<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
+  action: Action,
   skip: number,
 ) {
   // const scope = action.scope;
@@ -48,7 +43,7 @@ export function undoOperation<
     const operations = [...document.operations[scope]];
     const sortedOperations = sortOperations(operations);
 
-    draft.action = noop(scope) as Draft<TAction>;
+    draft.action = noop(scope) as Draft<Action>;
 
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
@@ -81,13 +76,9 @@ export function undoOperation<
   });
 }
 
-export function redoOperation<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
+export function redoOperation<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
+  action: Action,
   skip: number,
 ) {
   const { scope, input } = action;
@@ -133,18 +124,14 @@ export function redoOperation<
       type: operation.type,
       scope: operation.scope,
       input: operation.input,
-    } as TAction);
+    } as Action);
   });
 }
 
-export function pruneOperation<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  document: BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction>,
+export function pruneOperation<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
   action: PruneAction,
-  wrappedReducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  wrappedReducer: ImmutableStateReducer<TGlobalState, TLocalState, Action>,
 ) {
   const { scope } = action;
   const operations = document.operations[scope];
@@ -208,14 +195,10 @@ export function pruneOperation<
   );
 }
 
-export function loadStateOperation<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  oldDocument: BaseDocument<TGlobalState, TLocalState, TAction>,
+export function loadStateOperation<TGlobalState, TLocalState>(
+  oldDocument: BaseDocument<TGlobalState, TLocalState>,
   newDocument: { name: string; state?: BaseState<TGlobalState, TLocalState> },
-): BaseDocument<TGlobalState, TLocalState, TAction> {
+): BaseDocument<TGlobalState, TLocalState> {
   return {
     ...oldDocument,
     name: newDocument.name,

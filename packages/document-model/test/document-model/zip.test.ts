@@ -3,7 +3,11 @@ import {
   setModelId,
   setModelName,
 } from "@document-model/gen/creators.js";
-import { createDocument, loadFromFile, saveToFile } from "@document-model/gen/document-model-utils.js";
+import {
+  createDocument,
+  loadFromFile,
+  saveToFile,
+} from "@document-model/gen/document-model-utils.js";
 import { reducer } from "@document-model/gen/reducer.js";
 import { undo } from "@document/actions/creators.js";
 import fs from "fs";

@@ -1,17 +1,16 @@
 import { v4 as generateUUID } from "uuid";
 
-import {
-    AddFileInput,
-    CopyNodeInput,
-    DocumentDriveState,
-    FileNode,
-    FolderNode,
-    Node,
-} from "../index.js";
-
 import { OperationScope, SynchronizationUnit } from "document-model";
 import { AddFileAction, CopyNodeAction } from "../gen/node/actions.js";
 import { addFile, copyNode } from "../gen/node/creators.js";
+import {
+  AddFileInput,
+  CopyNodeInput,
+  DocumentDriveState,
+  FileNode,
+  FolderNode,
+  Node,
+} from "../gen/types.js";
 
 export function isFileNode(node: Node): node is FileNode {
   return node.kind === "file";

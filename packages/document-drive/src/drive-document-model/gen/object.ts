@@ -1,30 +1,31 @@
 import {
-    applyMixins,
-    BaseDocument,
-    ExtendedState,
-    PartialState,
-    SignalDispatch,
+  applyMixins,
+  BaseDocumentClass,
+  ExtendedState,
+  PartialState,
+  SignalDispatch,
 } from "document-model";
 import { DocumentDriveAction } from "./actions.js";
+import { fileExtension } from "./constants.js";
 import DocumentDrive_Drive from "./drive/object.js";
 import DocumentDrive_Node from "./node/object.js";
 import { reducer } from "./reducer.js";
 import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
-import utils from "./utils.js";
+import { createDocument } from "./utils.js";
 
 export * from "./drive/object.js";
 export * from "./node/object.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-interface DocumentDrive extends DocumentDrive_Node, DocumentDrive_Drive {}
+interface DocumentDriveClass extends DocumentDrive_Node, DocumentDrive_Drive {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class DocumentDrive extends BaseDocument<
+class DocumentDriveClass extends BaseDocumentClass<
   DocumentDriveState,
-  DocumentDriveAction,
-  DocumentDriveLocalState
+  DocumentDriveLocalState,
+  DocumentDriveAction
 > {
-  static fileExtension = "phdd";
+  static fileExtension = fileExtension;
 
   constructor(
     initialState?: Partial<
@@ -33,13 +34,17 @@ class DocumentDrive extends BaseDocument<
         PartialState<DocumentDriveLocalState>
       >
     >,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction
+    >
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 
   public saveToFile(path: string, name?: string) {
-    return super.saveToFile(path, DocumentDrive.fileExtension, name);
+    return super.saveToFile(path, DocumentDriveClass.fileExtension, name);
   }
 
   public loadFromFile(path: string) {
@@ -53,6 +58,6 @@ class DocumentDrive extends BaseDocument<
   }
 }
 
-applyMixins(DocumentDrive, [DocumentDrive_Node, DocumentDrive_Drive]);
+applyMixins(DocumentDriveClass, [DocumentDrive_Node, DocumentDrive_Drive]);
 
-export { DocumentDrive };
+export { DocumentDriveClass };

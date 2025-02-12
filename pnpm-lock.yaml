@@ -960,6 +960,9 @@ importers:
 
   packages/document-drive:
     dependencies:
+      '@powerhousedao/codegen':
+        specifier: workspace:*
+        version: link:../codegen
       '@types/node':
         specifier: ^20.14.11
         version: 20.17.16
@@ -972,9 +975,6 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
-      document-model-libs:
-        specifier: workspace:*
-        version: link:../document-model-libs
       fake-indexeddb:
         specifier: ^5.0.2
         version: 5.0.2
@@ -1005,6 +1005,9 @@ importers:
       webdriverio:
         specifier: ^9.0.9
         version: 9.7.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
     optionalDependencies:
       '@powerhousedao/scalars':
         specifier: workspace:*

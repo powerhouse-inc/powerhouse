@@ -7,6 +7,7 @@ import {
     CopyNodeInput,
     MoveNodeInput,
 } from "../types.js";
+import { BaseAction } from "document-model";
 
 export type AddFileAction = BaseAction<"ADD_FILE", AddFileInput, "global">;
 export type AddFolderAction = BaseAction<"ADD_FOLDER", AddFolderInput, "global">;

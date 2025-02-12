@@ -1,55 +1,55 @@
 import { SignalDispatch } from "document-model";
+import { DocumentDriveAction, DocumentDriveLocalState, DocumentDriveState } from "../types.js";
 import {
-    SetDriveNameAction,
-    SetDriveIconAction,
-    SetSharingTypeAction,
-    SetAvailableOfflineAction,
-    AddListenerAction,
-    RemoveListenerAction,
-    AddTriggerAction,
-    RemoveTriggerAction,
+  AddListenerAction,
+  AddTriggerAction,
+  RemoveListenerAction,
+  RemoveTriggerAction,
+  SetAvailableOfflineAction,
+  SetDriveIconAction,
+  SetDriveNameAction,
+  SetSharingTypeAction,
 } from "./actions.js";
-import { DocumentDriveState, DocumentDriveLocalState } from "../types.js";
 
 export interface DocumentDriveDriveOperations {
   setDriveNameOperation: (
     state: DocumentDriveState,
     action: SetDriveNameAction,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<DocumentDriveState, DocumentDriveLocalState, DocumentDriveAction>,
   ) => void;
   setDriveIconOperation: (
     state: DocumentDriveState,
     action: SetDriveIconAction,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<DocumentDriveState, DocumentDriveLocalState, DocumentDriveAction>,
   ) => void;
   setSharingTypeOperation: (
     state: DocumentDriveLocalState,
     action: SetSharingTypeAction,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<DocumentDriveState, DocumentDriveLocalState, DocumentDriveAction>,
   ) => void;
   setAvailableOfflineOperation: (
     state: DocumentDriveLocalState,
     action: SetAvailableOfflineAction,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<DocumentDriveState, DocumentDriveLocalState, DocumentDriveAction>,
   ) => void;
   addListenerOperation: (
     state: DocumentDriveLocalState,
     action: AddListenerAction,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<DocumentDriveState, DocumentDriveLocalState, DocumentDriveAction>,
   ) => void;
   removeListenerOperation: (
     state: DocumentDriveLocalState,
     action: RemoveListenerAction,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<DocumentDriveState, DocumentDriveLocalState, DocumentDriveAction>,
   ) => void;
   addTriggerOperation: (
     state: DocumentDriveLocalState,
     action: AddTriggerAction,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<DocumentDriveState, DocumentDriveLocalState, DocumentDriveAction>,
   ) => void;
   removeTriggerOperation: (
     state: DocumentDriveLocalState,
     action: RemoveTriggerAction,
-    dispatch?: SignalDispatch,
+    dispatch?: SignalDispatch<DocumentDriveState, DocumentDriveLocalState, DocumentDriveAction>,
   ) => void;
 }

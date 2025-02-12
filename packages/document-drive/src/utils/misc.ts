@@ -1,40 +1,32 @@
+import { type DocumentDriveDocument, driveDocumentType } from "@drive-document-model";
+import { OperationError } from "@server/error";
 import {
-  DocumentDriveDocument,
-  documentModel as DocumentDriveModel,
-} from "document-model-libs/document-drive";
-import {
-  Action,
   BaseAction,
-  Document,
+  BaseDocument,
   DocumentOperations,
   Operation,
   OperationScope,
-} from "document-model/document";
-import { generateId } from "document-model/utils";
-import { OperationError } from "../server/error";
-import { DocumentDriveStorage, DocumentStorage } from "../storage";
-import { RunAsap } from "./run-asap";
-export * from "./run-asap";
+  generateId,
+} from "document-model";
+import { RunAsap } from "./run-asap.js";
 
 export const runAsap = RunAsap.runAsap;
 export const runAsapAsync = RunAsap.runAsapAsync;
 
-export function isDocumentDriveStorage(
-  document: DocumentStorage,
-): document is DocumentDriveStorage {
-  return document.documentType === DocumentDriveModel.id;
-}
-
 export function isDocumentDrive(
-  document: Document,
+  document: BaseDocument<any, any, BaseAction>,
 ): document is DocumentDriveDocument {
-  return document.documentType === DocumentDriveModel.id;
+  return document.documentType === driveDocumentType;
 }
 
-export function mergeOperations<A extends Action = Action>(
-  currentOperations: DocumentOperations<A>,
-  newOperations: Operation<A | BaseAction>[],
-): DocumentOperations<A> {
+export function mergeOperations<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  currentOperations: DocumentOperations<TGlobalState, TLocalState, TAction>,
+  newOperations: Operation<TGlobalState, TLocalState, TAction>[],
+): DocumentOperations<TGlobalState, TLocalState, TAction> {
   const minIndexByScope = Object.keys(currentOperations).reduce<
     Partial<Record<OperationScope, number>>
   >((acc, curr) => {
@@ -56,19 +48,26 @@ export function mergeOperations<A extends Action = Action>(
 
   return newOperations
     .sort((a, b) => a.index - b.index)
-    .reduce<DocumentOperations<A>>((acc, curr) => {
-      const existingOperations = acc[curr.scope] || [];
-      return { ...acc, [curr.scope]: [...existingOperations, curr] };
-    }, currentOperations);
+    .reduce<DocumentOperations<TGlobalState, TLocalState, TAction>>(
+      (acc, curr) => {
+        const existingOperations = acc[curr.scope] || [];
+        return { ...acc, [curr.scope]: [...existingOperations, curr] };
+      },
+      currentOperations,
+    );
 }
 
 export function generateUUID(): string {
   return generateId();
 }
 
-export function isNoopUpdate(
-  operation: Operation,
-  latestOperation?: Operation,
+export function isNoopUpdate<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+>(
+  operation: Operation<TGlobalState, TLocalState, TAction>,
+  latestOperation?: Operation<TGlobalState, TLocalState, TAction>,
 ) {
   if (!latestOperation) {
     return false;

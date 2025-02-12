@@ -1,13 +1,12 @@
-import * as BudgetStatement from "document-model-libs/budget-statement";
 import {
-  actions,
-  DocumentDriveDocument,
-  utils as DocumentDriveUtils,
-  reducer,
-} from "document-model-libs/document-drive";
+    actions,
+    DocumentDriveDocument,
+    utils as DocumentDriveUtils,
+    reducer,
+} from "@drive-document-model";
+import { module as DocumentModelLib, DocumentModelModule } from "document-model";
+import * as BudgetStatement from "document-model-libs/budget-statement";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModelModule } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
 import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
 import { generateUUID, IOperationResult } from "../src";

@@ -1,14 +1,13 @@
 import { noop } from "@document/actions/creators.js";
+import type { BaseDocument } from "@document/types.js";
 import { createReducer, replayDocument } from "@document/utils/base.js";
 import {
-  CountAction,
   CountLocalState,
   CountState,
   baseCountReducer,
   countReducer,
   increment,
 } from "../helpers.js";
-import type { BaseDocument } from "@document/types.js";
 describe("DocumentModel Class", () => {
   const initialState = {
     name: "",
@@ -29,11 +28,7 @@ describe("DocumentModel Class", () => {
     },
     attachments: {},
   };
-  const initialDocument: BaseDocument<
-    CountState,
-    CountLocalState,
-    CountAction
-  > = {
+  const initialDocument: BaseDocument<CountState, CountLocalState> = {
     name: "",
     revision: {
       global: 0,
@@ -107,7 +102,7 @@ describe("DocumentModel Class", () => {
   });
 
   it("should replay document", () => {
-    const document = replayDocument<CountState, CountLocalState, CountAction>(
+    const document = replayDocument(
       initialState,
       { global: [], local: [] },
       countReducer,
@@ -121,7 +116,7 @@ describe("DocumentModel Class", () => {
     let newDocument = reducer(initialDocument, increment());
     newDocument = reducer(newDocument, increment());
     expect(mockReducer).toHaveBeenCalledTimes(2);
-    const document = replayDocument<CountState, CountLocalState, CountAction>(
+    const document = replayDocument(
       initialState,
       newDocument.operations,
       reducer,
@@ -140,7 +135,7 @@ describe("DocumentModel Class", () => {
     newDocument = reducer(newDocument, noop(), undefined, { skip: 1 });
     expect(mockReducer).toHaveBeenCalledTimes(4);
 
-    const document = replayDocument<CountState, CountLocalState, CountAction>(
+    const document = replayDocument(
       initialState,
       newDocument.operations,
       reducer,
@@ -169,7 +164,7 @@ describe("DocumentModel Class", () => {
     expect(mockReducer).toHaveBeenCalledTimes(3);
     expect(newDocument.state.global.count).toBe(1);
 
-    const document = replayDocument<CountState, CountLocalState, CountAction>(
+    const document = replayDocument(
       initialState,
       newDocument.operations,
       reducer,

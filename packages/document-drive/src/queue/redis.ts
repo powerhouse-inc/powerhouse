@@ -1,14 +1,14 @@
 import { RedisClientType } from "redis";
-import { BaseQueueManager } from "./base";
-import {
+import { BaseQueueManager } from "@queue/base";
+import type {
   IJob,
   IQueue,
   IQueueManager,
   IServerDelegate,
   OperationJob,
-} from "./types";
+} from "@queue/types";
 
-export class RedisQueue<T, R> implements IQueue<T, R> {
+export class RedisQueue<T> implements IQueue<T> {
   private id: string;
   private client: RedisClientType;
 

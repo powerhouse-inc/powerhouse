@@ -1,21 +1,8 @@
-import { ActionCreator, Reducer, DocumentModelUtils } from "@document/types.js";
-import {
-  DocumentModelAction,
-  DocumentModelLocalState,
+import { DocumentModelModule } from "@document/types.js";
+import { DocumentModelLocalState, DocumentModelState } from "./gen/types.js";
+import { DocumentModelAction } from "./gen/actions.js";
+export type DocumentModelDocumentModelModule = DocumentModelModule<
   DocumentModelState,
-} from "./gen/types.js";
-
-export type DocumentModelDocumentModelModule = {
-  reducer: Reducer<
-    DocumentModelState,
-    DocumentModelLocalState,
-    DocumentModelAction
-  >;
-  actions: Record<string, ActionCreator<DocumentModelAction>>;
-  utils: DocumentModelUtils<
-    DocumentModelState,
-    DocumentModelLocalState,
-    DocumentModelAction
-  >;
-  documentModelState: DocumentModelState;
-};
+  DocumentModelLocalState,
+  DocumentModelAction
+>;

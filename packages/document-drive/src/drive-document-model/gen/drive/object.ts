@@ -1,32 +1,32 @@
-import { BaseDocument } from "document-model";
+import { BaseDocumentClass } from "document-model";
 import { DocumentDriveAction } from "../actions.js";
 import {
-    AddListenerInput,
-    AddTriggerInput,
-    DocumentDriveLocalState,
-    DocumentDriveState,
-    RemoveListenerInput,
-    RemoveTriggerInput,
-    SetAvailableOfflineInput,
-    SetDriveIconInput,
-    SetDriveNameInput,
-    SetSharingTypeInput,
+  AddListenerInput,
+  AddTriggerInput,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+  RemoveListenerInput,
+  RemoveTriggerInput,
+  SetAvailableOfflineInput,
+  SetDriveIconInput,
+  SetDriveNameInput,
+  SetSharingTypeInput,
 } from "../types.js";
 import {
-    addListener,
-    addTrigger,
-    removeListener,
-    removeTrigger,
-    setAvailableOffline,
-    setDriveIcon,
-    setDriveName,
-    setSharingType,
+  addListener,
+  addTrigger,
+  removeListener,
+  removeTrigger,
+  setAvailableOffline,
+  setDriveIcon,
+  setDriveName,
+  setSharingType,
 } from "./creators.js";
 
-export default class DocumentDrive_Drive extends BaseDocument<
+export default class DocumentDrive_Drive extends BaseDocumentClass<
   DocumentDriveState,
-  DocumentDriveAction,
-  DocumentDriveLocalState
+  DocumentDriveLocalState,
+  DocumentDriveAction
 > {
   public setDriveName(input: SetDriveNameInput) {
     return this.dispatch(setDriveName(input));

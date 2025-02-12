@@ -1,17 +1,23 @@
 import {
+  DocumentDriveAction,
   DocumentDriveLocalState,
   DocumentDriveState,
-} from "document-model-libs/document-drive";
+} from "@drive-document-model";
+import type { SynchronizationUnitQuery } from "@server/types";
+import {
+  DocumentDriveStorage,
+  DocumentStorage,
+  IDriveStorage,
+} from "@storage/types";
 import {
   AttachmentInput,
+  BaseAction,
   DocumentHeader,
   ExtendedState,
   Operation,
   OperationScope,
-} from "document-model/document";
+} from "document-model";
 import { DataTypes, Options, Sequelize } from "sequelize";
-import type { SynchronizationUnitQuery } from "../server/types";
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from "./types";
 
 export class SequelizeStorage implements IDriveStorage {
   private db: Sequelize;
@@ -124,21 +130,25 @@ export class SequelizeStorage implements IDriveStorage {
   }
 
   async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
-    await this.createDocument("drives", id, drive as DocumentStorage);
+    await this.createDocument("drives", id, drive);
     const Drive = this.db.models.drive;
-    await Drive?.upsert({ id, slug: drive.initialState.state.global.slug });
+    await Drive.upsert({ id, slug: drive.initialState.state.global.slug });
   }
   async addDriveOperations(
     id: string,
-    operations: Operation[],
+    operations: Operation<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction
+    >[],
     header: DocumentHeader,
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);
   }
-  async createDocument(
+  async createDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
-    document: DocumentStorage,
+    document: DocumentStorage<TGlobalState, TLocalState, TAction>,
   ): Promise<void> {
     const Document = this.db.models.document;
 
@@ -156,10 +166,14 @@ export class SequelizeStorage implements IDriveStorage {
       revision: document.revision,
     });
   }
-  async addDocumentOperations(
+  async addDocumentOperations<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
     id: string,
-    operations: Operation[],
+    operations: Operation<TGlobalState, TLocalState, TAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     const document = await this.getDocument(drive, id);
@@ -234,10 +248,14 @@ export class SequelizeStorage implements IDriveStorage {
     );
   }
 
-  async _addDocumentOperationAttachments(
+  async _addDocumentOperationAttachments<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     driveId: string,
     documentId: string,
-    operation: Operation,
+    operation: Operation<TGlobalState, TLocalState, TAction>,
     attachments: AttachmentInput[],
   ) {
     const Attachment = this.db.models.attachment;
@@ -296,8 +314,10 @@ export class SequelizeStorage implements IDriveStorage {
     return count > 0;
   }
 
-  // @ts-expect-error TODO: fix as this should not be undefined
-  async getDocument(driveId: string, id: string) {
+  async getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+    driveId: string,
+    id: string,
+  ): Promise<DocumentStorage<TGlobalState, TLocalState, TAction>> {
     const Document = this.db.models.document;
     if (!Document) {
       throw new Error("Document model not found");
@@ -346,7 +366,7 @@ export class SequelizeStorage implements IDriveStorage {
       throw new Error("Operation model not found");
     }
 
-    const operations: Operation[] = document.operations.map((op) => ({
+    const operations = document.operations.map((op) => ({
       hash: op.hash,
       index: op.index,
       timestamp: new Date(op.timestamp).toISOString(),
@@ -356,7 +376,7 @@ export class SequelizeStorage implements IDriveStorage {
       id: op.opId,
       skip: op.skip,
       // attachments: fileRegistry
-    }));
+    })) as Operation<TGlobalState, TLocalState, TAction>[];
 
     const doc = {
       created: document.createdAt.toISOString(),
@@ -365,13 +385,13 @@ export class SequelizeStorage implements IDriveStorage {
       initialState: document.initialState,
       lastModified: document.updatedAt.toISOString(),
       operations: {
-        global: operations.filter((op: Operation) => op.scope === "global"),
-        local: operations.filter((op: Operation) => op.scope === "local"),
+        global: operations.filter((op) => op.scope === "global"),
+        local: operations.filter((op) => op.scope === "local"),
       },
       revision: document.revision,
     };
 
-    return doc;
+    return doc as DocumentStorage<TGlobalState, TLocalState, TAction>;
   }
 
   async deleteDocument(drive: string, id: string) {

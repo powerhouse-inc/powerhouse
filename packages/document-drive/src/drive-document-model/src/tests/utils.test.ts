@@ -1,13 +1,14 @@
 import { validate } from "uuid";
+import { beforeEach, describe, expect, it } from "vitest";
+import { CopyNodeInput, DocumentDriveState } from "../../gen/types.js";
+
 import {
-    CopyNodeInput,
-    DocumentDriveState,
-    generateSynchronizationUnitId,
-    generateSynchronizationUnits,
-    getNextCopyNumber,
-    handleTargetNameCollisions,
-    utils,
-} from "../../index.js";
+  generateNodesCopy,
+  generateSynchronizationUnitId,
+  generateSynchronizationUnits,
+  getNextCopyNumber,
+  handleTargetNameCollisions,
+} from "../utils.js";
 
 const baseNodes: DocumentDriveState["nodes"] = [
   {
@@ -74,7 +75,7 @@ describe("DocumentDrive Utils", () => {
         },
       ];
 
-      const result = utils.generateNodesCopy({ srcId: "1" }, generateId, nodes);
+      const result = generateNodesCopy({ srcId: "1" }, generateId, nodes);
 
       expect(result.length).toBe(3);
       expect(result).toEqual(expectedResult);
@@ -102,7 +103,7 @@ describe("DocumentDrive Utils", () => {
         },
       ];
 
-      const result = utils.generateNodesCopy(
+      const result = generateNodesCopy(
         { srcId: "1", targetName: "New Name" },
         generateId,
         nodes,
@@ -122,7 +123,7 @@ describe("DocumentDrive Utils", () => {
         },
       ];
 
-      const result = utils.generateNodesCopy(
+      const result = generateNodesCopy(
         { srcId: "1.1.1", targetParentFolder: "1.1" },
         generateId,
         nodes,
@@ -154,7 +155,7 @@ describe("DocumentDrive Utils", () => {
         },
       ];
 
-      const result = utils.generateNodesCopy(
+      const result = generateNodesCopy(
         { srcId: "1", targetParentFolder: "2" },
         generateId,
         nodes,
@@ -186,7 +187,7 @@ describe("DocumentDrive Utils", () => {
         },
       ];
 
-      const result = utils.generateNodesCopy(
+      const result = generateNodesCopy(
         {
           srcId: "1",
           targetParentFolder: "2",
@@ -202,7 +203,7 @@ describe("DocumentDrive Utils", () => {
 
     it("should throw an error if the src node is not found", () => {
       expect(() =>
-        utils.generateNodesCopy({ srcId: "invalid" }, generateId, nodes),
+        generateNodesCopy({ srcId: "invalid" }, generateId, nodes),
       ).toThrowError(`Node with id invalid not found`);
     });
 

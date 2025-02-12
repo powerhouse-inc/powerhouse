@@ -1,15 +1,15 @@
-import stringifyJson from "safe-stable-stringify";
 import type {
-  BaseAction,
+  Action,
   ActionSigner,
   BaseDocument,
+  Operation,
   OperationSignatureContext,
   OperationSigningHandler,
   OperationVerificationHandler,
   Reducer,
   Signature,
-  Operation,
 } from "@document/types.js";
+import stringifyJson from "safe-stable-stringify";
 import { generateUUID, hash } from "./node.js";
 
 export function generateId(method?: "UUIDv4"): string {
@@ -25,16 +25,12 @@ export function getUnixTimestamp(date: Date | string): string {
   return (new Date(date).getTime() / 1000).toFixed(0);
 }
 
-export function buildOperationSignatureParams<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->({
+export function buildOperationSignatureParams<TGlobalState, TLocalState>({
   documentId,
   signer,
   operation,
   previousStateHash,
-}: OperationSignatureContext<TGlobalState, TLocalState, TAction>): [
+}: OperationSignatureContext<TGlobalState, TLocalState>): [
   string,
   string,
   string,
@@ -77,12 +73,8 @@ export function hex2ab(hex: string) {
   );
 }
 
-export async function buildOperationSignature<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  context: OperationSignatureContext<TGlobalState, TLocalState, TAction>,
+export async function buildOperationSignature<TGlobalState, TLocalState>(
+  context: OperationSignatureContext<TGlobalState, TLocalState>,
   signMethod: OperationSigningHandler,
 ): Promise<Signature> {
   const params = buildOperationSignatureParams(context);
@@ -91,16 +83,12 @@ export async function buildOperationSignature<
   return [...params, `0x${ab2hex(signature)}`];
 }
 
-export async function buildSignedOperation<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  action: TAction,
-  reducer: Reducer<TGlobalState, TLocalState, TAction>,
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+export async function buildSignedOperation<TGlobalState, TLocalState>(
+  action: Action,
+  reducer: Reducer<TGlobalState, TLocalState, Action>,
+  document: BaseDocument<TGlobalState, TLocalState>,
   context: Omit<
-    OperationSignatureContext<TGlobalState, TLocalState, TAction>,
+    OperationSignatureContext<TGlobalState, TLocalState>,
     "operation" | "previousStateHash"
   >,
   signHandler: OperationSigningHandler,
@@ -134,7 +122,7 @@ export async function buildSignedOperation<
         signatures: [...(context.signer.signatures ?? []), signature],
       },
     },
-  } as Operation<TGlobalState, TLocalState, TAction>;
+  } as Operation<TGlobalState, TLocalState>;
 }
 
 export async function verifyOperationSignature(

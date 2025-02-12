@@ -1,15 +1,12 @@
 import {
   DocumentOperations,
-  BaseAction,
-  ValidationError,
   OperationScope,
+  ValidationError,
 } from "@document/types.js";
 
-export function validateOperations<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(operations: DocumentOperations<TGlobalState, TLocalState, TAction>) {
+export function validateOperations<TGlobalState, TLocalState>(
+  operations: DocumentOperations<TGlobalState, TLocalState>,
+) {
   const errors: ValidationError[] = [];
   const scopes = Object.keys(operations) as OperationScope[];
 

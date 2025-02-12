@@ -9,28 +9,28 @@
  */
 
 import {
-  DocumentDriveAction,
-  Listener,
-  ListenerFilter,
-  actions,
-  reducer,
-} from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+    DocumentDriveAction,
+    Listener,
+    ListenerFilter,
+    actions,
+    reducer,
+} from "@drive-document-model";
+import * as DocumentModelLib from "document-model";
 import {
-  DocumentModelModule,
-  Operation
-} from "document-model/document";
-import * as DocumentModelLib from "document-model/document-model";
+    DocumentModelModule,
+    Operation
+} from "document-model";
+import * as DocumentModelsLibs from "document-model-libs/document-models";
 import stringify from "json-stringify-deterministic";
 import { GraphQLQuery, HttpResponse, graphql } from "msw";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
-  DocumentDriveServer,
-  ListenerRevision,
-  PullResponderTransmitter,
-  StrandUpdate,
-  SyncStatus,
+    DocumentDriveServer,
+    ListenerRevision,
+    PullResponderTransmitter,
+    StrandUpdate,
+    SyncStatus,
 } from "../../src/server";
 import { generateUUID } from "../../src/utils";
 import { buildOperation, buildOperations } from "../utils";

@@ -46,7 +46,7 @@ class DocumentModelClass extends BaseDocumentClass<
         PartialState<DocumentModelLocalState>
       >
     >,
-    dispatch?: SignalDispatch<DocumentModelState, DocumentModelLocalState, DocumentModelAction>,
+    dispatch?: SignalDispatch,
   ) {
     super(reducer, createDocument(initialState), dispatch);
   }

@@ -1,20 +1,22 @@
+import { createAction } from "document-model";
+import { AddFileInputSchema, AddFolderInputSchema, CopyNodeInputSchema, DeleteNodeInputSchema, MoveNodeInputSchema, UpdateFileInputSchema, UpdateNodeInputSchema } from "../schema/zod.js";
 import {
-    AddFileInput,
-    AddFolderInput,
-    DeleteNodeInput,
-    UpdateFileInput,
-    UpdateNodeInput,
-    CopyNodeInput,
-    MoveNodeInput
+  AddFileInput,
+  AddFolderInput,
+  CopyNodeInput,
+  DeleteNodeInput,
+  MoveNodeInput,
+  UpdateFileInput,
+  UpdateNodeInput
 } from "../types.js";
 import {
-    AddFileAction,
-    AddFolderAction,
-    DeleteNodeAction,
-    UpdateFileAction,
-    UpdateNodeAction,
-    CopyNodeAction,
-    MoveNodeAction,
+  AddFileAction,
+  AddFolderAction,
+  CopyNodeAction,
+  DeleteNodeAction,
+  MoveNodeAction,
+  UpdateFileAction,
+  UpdateNodeAction,
 } from "./actions.js";
 
 

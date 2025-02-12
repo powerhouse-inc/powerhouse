@@ -1,11 +1,11 @@
-import * as DocumentDrive from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+import * as DocumentDrive from "@drive-document-model";
 import {
-  BaseAction,
-  DocumentModelModule as BaseDocumentModel,
-  Operation,
-} from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+    BaseAction,
+    DocumentModelModule as BaseDocumentModel,
+    module as DocumentModelLib,
+    Operation,
+} from "document-model";
+import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DocumentDriveServer, IOperationResult } from "../../src";
 import { DriveBasicClient } from "../utils";

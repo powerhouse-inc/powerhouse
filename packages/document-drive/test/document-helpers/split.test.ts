@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Operation } from "document-model/document";
+import { Operation } from "document-model";
 import { split } from "../../src/utils/document-helpers";
 import { buildOperation, buildOperations } from "./utils";
 

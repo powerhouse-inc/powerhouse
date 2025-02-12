@@ -1,6 +1,6 @@
+import { actions, reducer, utils } from "@drive-document-model";
 import { PrismaClient } from "@prisma/client";
-import { actions, reducer, utils } from "document-model-libs/document-drive";
-import { ActionContext, Operation } from "document-model/document";
+import { ActionContext, Operation } from "document-model";
 import { beforeEach, describe, it } from "vitest";
 import { generateUUID } from "../src";
 import { BrowserStorage } from "../src/storage/browser";

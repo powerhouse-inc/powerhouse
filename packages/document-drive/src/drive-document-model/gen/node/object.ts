@@ -1,30 +1,30 @@
-import { BaseDocument } from "document-model";
+import { BaseDocumentClass } from "document-model";
 import { DocumentDriveAction } from "../actions.js";
 import {
-    AddFileInput,
-    AddFolderInput,
-    CopyNodeInput,
-    DeleteNodeInput,
-    DocumentDriveLocalState,
-    DocumentDriveState,
-    MoveNodeInput,
-    UpdateFileInput,
-    UpdateNodeInput,
+  AddFileInput,
+  AddFolderInput,
+  CopyNodeInput,
+  DeleteNodeInput,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+  MoveNodeInput,
+  UpdateFileInput,
+  UpdateNodeInput,
 } from "../types.js";
 import {
-    addFile,
-    addFolder,
-    copyNode,
-    deleteNode,
-    moveNode,
-    updateFile,
-    updateNode,
+  addFile,
+  addFolder,
+  copyNode,
+  deleteNode,
+  moveNode,
+  updateFile,
+  updateNode,
 } from "./creators.js";
 
-export default class DocumentDrive_Node extends BaseDocument<
+export default class DocumentDrive_Node extends BaseDocumentClass<
   DocumentDriveState,
-  DocumentDriveAction,
-  DocumentDriveLocalState
+  DocumentDriveLocalState,
+  DocumentDriveAction
 > {
   public addFile(input: AddFileInput) {
     return this.dispatch(addFile(input));

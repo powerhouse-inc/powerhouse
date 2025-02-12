@@ -1,16 +1,16 @@
+import * as DocumentDrive from "@drive-document-model";
+import { Document, DocumentModelModule } from "document-model";
 import * as BudgetStatement from "document-model-libs/budget-statement";
-import * as DocumentDrive from "document-model-libs/document-drive";
 import * as documentModelsMap from "document-model-libs/document-models";
-import { Document, DocumentModelModule } from "document-model/document";
 import { beforeEach, describe, it, vi } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 import { DocumentModelNotFoundError } from "../src";
 import {
-  ReadDocumentNotFoundError,
-  ReadDrive,
-  ReadDriveContext,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
+    ReadDocumentNotFoundError,
+    ReadDrive,
+    ReadDriveContext,
+    ReadDriveNotFoundError,
+    ReadDriveSlugNotFoundError,
 } from "../src/read-mode";
 import { ReadModeService } from "../src/read-mode/service";
 

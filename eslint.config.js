@@ -6,7 +6,6 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
 import tailwind from "eslint-plugin-tailwindcss";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import importPlugin from "eslint-plugin-import";
 import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
 
 export default tseslint.config(
@@ -125,13 +124,7 @@ export default tseslint.config(
           allowNumber: true,
         },
       ],
-      "import/no-unresolved": "off",
-      "import/extensions": ["error", "ignorePackages"],
-    },
-    extends: [
-      importPlugin.flatConfigs.recommended,
-      importPlugin.flatConfigs.typescript,
-    ],
+    }
   },
   {
     files: ["**/*.tsx"],

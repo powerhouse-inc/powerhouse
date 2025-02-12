@@ -1,4 +1,4 @@
-import { documentModel } from "document-model-libs/document-drive";
+import { documentModel } from "@drive-document-model";
 import { describe, it } from "vitest";
 import { generateDocumentStateQueryFields } from "../src/utils/graphql";
 

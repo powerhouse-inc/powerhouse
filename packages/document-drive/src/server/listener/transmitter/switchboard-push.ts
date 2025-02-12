@@ -1,13 +1,13 @@
 import stringify from "json-stringify-deterministic";
-import { gql, requestGraphql } from "../../../utils/graphql";
-import { logger } from "../../../utils/logger";
+import { gql, requestGraphql } from "@utils/graphql";
+import { logger } from "@utils/logger";
 import {
   IBaseDocumentDriveServer,
   Listener,
   ListenerRevision,
   StrandUpdate,
-} from "../../types";
-import { ITransmitter, StrandUpdateSource } from "./types";
+} from "@server/types";
+import { ITransmitter, StrandUpdateSource } from "@server/listener/transmitter/types";
 
 export class SwitchboardPushTransmitter implements ITransmitter {
   private drive: IBaseDocumentDriveServer;

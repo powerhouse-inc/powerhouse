@@ -1,35 +1,35 @@
-export { createExtendedState } from "./gen/document-model-utils.js";
-export { reducer } from "./gen/reducer.js";
-export type {
-  DocumentModelAction,
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelDocument,
-} from "./gen/types.js";
 export {
-  setModelName,
-  setModelId,
-  setModelDescription,
-  setModelExtension,
+  addModule,
+  addOperation,
+  addOperationError,
+  deleteModule,
+  deleteOperation,
+  deleteOperationError,
   setAuthorName,
   setAuthorWebsite,
-  setStateSchema,
   setInitialState,
-  addModule,
+  setModelDescription,
+  setModelExtension,
+  setModelId,
+  setModelName,
   setModuleName,
-  deleteModule,
-  addOperation,
+  setOperationDescription,
+  setOperationErrorName,
   setOperationName,
   setOperationSchema,
-  setOperationDescription,
-  deleteOperation,
-  addOperationError,
-  deleteOperationError,
-  setOperationErrorName,
+  setStateSchema,
 } from "./gen/creators.js";
+export { createExtendedState } from "./gen/document-model-utils.js";
+export { reducer as documentModelReducer } from "./gen/reducer.js";
 export type {
-  Module,
-  Operation,
-  OperationError,
   Author,
+  Operation as DocumentModelOperation,
+  Module,
+  OperationError,
 } from "./gen/schema/types.js";
+export type {
+  DocumentModelAction,
+  DocumentModelDocument,
+  DocumentModelLocalState,
+  DocumentModelState,
+} from "./gen/types.js";

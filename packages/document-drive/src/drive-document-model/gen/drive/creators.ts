@@ -1,22 +1,24 @@
+import { createAction } from "document-model";
+import { AddListenerInputSchema, AddTriggerInputSchema, RemoveListenerInputSchema, RemoveTriggerInputSchema, SetAvailableOfflineInputSchema, SetDriveIconInputSchema, SetDriveNameInputSchema, SetSharingTypeInputSchema } from "../schema/zod.js";
 import {
-    SetDriveNameInput,
-    SetDriveIconInput,
-    SetSharingTypeInput,
-    SetAvailableOfflineInput,
-    AddListenerInput,
-    RemoveListenerInput,
-    AddTriggerInput,
-    RemoveTriggerInput
+  AddListenerInput,
+  AddTriggerInput,
+  RemoveListenerInput,
+  RemoveTriggerInput,
+  SetAvailableOfflineInput,
+  SetDriveIconInput,
+  SetDriveNameInput,
+  SetSharingTypeInput
 } from "../types.js";
 import {
-    SetDriveNameAction,
-    SetDriveIconAction,
-    SetSharingTypeAction,
-    SetAvailableOfflineAction,
-    AddListenerAction,
-    RemoveListenerAction,
-    AddTriggerAction,
-    RemoveTriggerAction,
+  AddListenerAction,
+  AddTriggerAction,
+  RemoveListenerAction,
+  RemoveTriggerAction,
+  SetAvailableOfflineAction,
+  SetDriveIconAction,
+  SetDriveNameAction,
+  SetSharingTypeAction,
 } from "./actions.js";
 
 

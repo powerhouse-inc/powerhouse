@@ -1,3 +1,5 @@
+import { DocumentModelState } from "document-model/document-model";
+
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
@@ -70,7 +72,7 @@ export type DocumentDriveLocalState = {
   triggers: Array<Trigger>;
 };
 
-export type DocumentDriveState = {
+export type DocumentDriveState = DocumentModelState & {
   icon: Maybe<Scalars["String"]["output"]>;
   id: Scalars["ID"]["output"];
   name: Scalars["String"]["output"];

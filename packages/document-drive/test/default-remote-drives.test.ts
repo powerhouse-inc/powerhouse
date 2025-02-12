@@ -1,13 +1,12 @@
-import { DocumentDriveDocument } from "document-model-libs/document-drive";
+import { DocumentDriveDocument } from "@drive-document-model";
+import { DocumentModelModule as BaseDocumentModel, module as DocumentModelLib } from "document-model";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModelModule as BaseDocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  DefaultRemoteDriveInput,
-  DocumentDriveServer,
-  DocumentDriveServerOptions,
-  generateUUID,
+    DefaultRemoteDriveInput,
+    DocumentDriveServer,
+    DocumentDriveServerOptions,
+    generateUUID,
 } from "../src";
 import { MemoryStorage } from "../src/storage/memory";
 import { DriveInfo } from "../src/utils/graphql";

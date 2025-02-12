@@ -1,14 +1,7 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
-import {
-  CountAction,
-  CountLocalState,
-  CountState,
-  countReducer,
-  wrappedEmptyReducer,
-  setLocalName,
-} from "../helpers.js";
-import { undo, redo, prune } from "@document/actions/creators.js";
+import { prune, redo, undo } from "@document/actions/creators.js";
 import { baseCreateDocument } from "@document/utils/base.js";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { countReducer, setLocalName, wrappedEmptyReducer } from "../helpers.js";
 
 describe("Local reducer", () => {
   beforeAll(() => {
@@ -93,11 +86,7 @@ describe("Local reducer", () => {
   });
 
   it("should update local name", async () => {
-    const document = baseCreateDocument<
-      CountState,
-      CountLocalState,
-      CountAction
-    >({
+    const document = baseCreateDocument({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -129,11 +118,7 @@ describe("Local reducer", () => {
   });
 
   it("should undo local operation", async () => {
-    const document = baseCreateDocument<
-      CountState,
-      CountLocalState,
-      CountAction
-    >({
+    const document = baseCreateDocument({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -175,11 +160,7 @@ describe("Local reducer", () => {
   });
 
   it("should redo local operation", async () => {
-    const document = baseCreateDocument<
-      CountState,
-      CountLocalState,
-      CountAction
-    >({
+    const document = baseCreateDocument({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -214,11 +195,7 @@ describe("Local reducer", () => {
   });
 
   it.skip("should prune local operations", async () => {
-    const document = baseCreateDocument<
-      CountState,
-      CountLocalState,
-      CountAction
-    >({
+    const document = baseCreateDocument({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

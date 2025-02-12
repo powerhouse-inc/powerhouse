@@ -1,45 +1,48 @@
-import { ZodError } from "zod";
-import stringifyJson from "safe-stable-stringify";
+import {
+  DocumentAction,
+  LOAD_STATE,
+  NOOP,
+  PRUNE,
+  REDO,
+  SET_NAME,
+  UNDO,
+  UndoAction,
+} from "@document/actions/types.js";
 import {
   baseReducer,
   mutableBaseReducer,
   updateHeader,
 } from "@document/reducer.js";
+import { UndoRedoAction } from "@document/schema/types.js";
+import { SignalDispatch } from "@document/signal.js";
 import type {
+  Action,
   BaseAction,
   BaseDocument,
-  ExtendedState,
-  ImmutableStateReducer,
-  Reducer,
-  OperationScope,
   BaseState,
   CreateState,
-  PartialState,
-  DocumentOperations,
   DocumentHeader,
+  DocumentOperations,
   DocumentOperationsIgnoreMap,
+  ExtendedState,
+  ImmutableStateReducer,
   MappedOperation,
-  ReducerOptions,
+  MutableStateReducer,
   Operation,
+  OperationScope,
+  PartialState,
+  Reducer,
+  ReducerOptions,
+  StateReducer,
 } from "@document/types.js";
-import { hash } from "./node.js";
-import {
-  LOAD_STATE,
-  PRUNE,
-  REDO,
-  SET_NAME,
-  UNDO,
-  NOOP,
-  UndoAction,
-  DocumentAction,
-} from "@document/actions/types.js";
-import { SignalDispatch } from "@document/signal.js";
+import stringifyJson from "safe-stable-stringify";
+import { ZodError } from "zod";
+import { sortOperations } from "./document-helpers.js";
 import {
   InvalidActionInputError,
   InvalidActionInputZodError,
 } from "./errors.js";
-import { sortOperations } from "./document-helpers.js";
-import { UndoRedoAction } from "@document/schema/types.js";
+import { hash } from "./node.js";
 
 export function isNoopOperation<
   TOp extends {
@@ -143,11 +146,11 @@ export function createAction<TAction extends BaseAction>(
 export function createReducer<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAllowedAction extends Action,
 >(
-  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAllowedAction>,
   documentReducer = baseReducer,
-): Reducer<TGlobalState, TLocalState, TAction | DocumentAction> {
+): Reducer<TGlobalState, TLocalState, TAllowedAction | Action> {
   return (document, action, dispatch, options) => {
     return documentReducer(document, action, reducer, dispatch, options);
   };
@@ -156,11 +159,11 @@ export function createReducer<
 export function createUnsafeReducer<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAllowedAction extends Action,
 >(
-  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  reducer: MutableStateReducer<TGlobalState, TLocalState, TAllowedAction>,
   documentReducer = mutableBaseReducer,
-): Reducer<TGlobalState, TLocalState, TAction | DocumentAction> {
+): Reducer<TGlobalState, TLocalState, TAllowedAction> {
   return (document, action, dispatch, options) => {
     return documentReducer(document, action, reducer, dispatch, options);
   };
@@ -203,20 +206,12 @@ export function baseCreateExtendedState<TGlobalState, TLocalState>(
  *
  * @returns The new document state.
  */
-export function baseCreateDocument<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
+export function baseCreateDocument<TGlobalState, TLocalState>(
   initialState?: Partial<
     ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
   >,
-  createState?: (
-    state?: Partial<
-      BaseState<PartialState<TGlobalState>, PartialState<TLocalState>>
-    >,
-  ) => BaseState<TGlobalState, TLocalState>,
-): BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction> {
+  createState?: CreateState<TGlobalState, TLocalState>,
+): BaseDocument<TGlobalState, TLocalState> {
   const state: ExtendedState<TGlobalState, TLocalState> =
     baseCreateExtendedState(initialState, createState);
   return {
@@ -257,24 +252,16 @@ export function readOnly<T>(value: T): Readonly<T> {
  * @returns An array of mapped operations with ignore flag indicating if the operation is skipped.
  * @throws Error if the operation index is invalid and there are missing operations.
  */
-export function mapSkippedOperations<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  operations: Operation<TGlobalState, TLocalState, TAction>[],
+export function mapSkippedOperations<TGlobalState, TLocalState>(
+  operations: Operation<TGlobalState, TLocalState>[],
   skippedHeadOperations?: number,
-): MappedOperation<TGlobalState, TLocalState, TAction>[] {
+): MappedOperation<TGlobalState, TLocalState>[] {
   const ops = [...operations];
 
   let skipped = skippedHeadOperations || 0;
   let latestOpIndex = ops.length > 0 ? ops[ops.length - 1].index : 0;
 
-  const scopeOpsWithIgnore: MappedOperation<
-    TGlobalState,
-    TLocalState,
-    TAction
-  >[] = [];
+  const scopeOpsWithIgnore: MappedOperation<TGlobalState, TLocalState>[] = [];
 
   for (const operation of ops.reverse()) {
     if (skipped > 0) {
@@ -310,11 +297,9 @@ export function mapSkippedOperations<
 
 // Flattens the mapped operations (with ignore flag) from all scopes into
 // a single array and sorts them by timestamp
-export function sortMappedOperations<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(operations: DocumentOperationsIgnoreMap<TGlobalState, TLocalState, TAction>) {
+export function sortMappedOperations<TGlobalState, TLocalState>(
+  operations: DocumentOperationsIgnoreMap<TGlobalState, TLocalState>,
+) {
   return Object.values(operations)
     .flatMap((array) => array)
     .sort(
@@ -326,11 +311,9 @@ export function sortMappedOperations<
 
 // gets the last modified timestamp of a document from
 // it's operations, falling back to the initial state
-export function getDocumentLastModified<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(document: BaseDocument<TGlobalState, TLocalState, TAction>) {
+export function getDocumentLastModified<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
+) {
   const sortedOperations = sortOperations(
     Object.values(document.operations).flat(),
   );
@@ -345,17 +328,17 @@ export function getDocumentLastModified<
 export function replayOperations<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAllowedAction extends Action,
 >(
   initialState: ExtendedState<TGlobalState, TLocalState>,
-  clearedOperations: DocumentOperations<TGlobalState, TLocalState, TAction>,
-  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAction | DocumentAction>,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
+  clearedOperations: DocumentOperations<TGlobalState, TLocalState>,
+  reducer: ImmutableStateReducer<TGlobalState, TLocalState, TAllowedAction>,
+  dispatch?: SignalDispatch,
   header?: DocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReducerOptions,
-): BaseDocument<TGlobalState, TLocalState, TAction | DocumentAction> {
+): BaseDocument<TGlobalState, TLocalState> {
   // wraps the provided custom reducer with the
   // base document reducer
   const wrappedReducer = createReducer(reducer, documentReducer);
@@ -389,15 +372,11 @@ export type ReplayDocumentOptions = {
 // Runs the operations on the initial data using the
 // provided document reducer.
 // This rebuilds the document according to the provided actions.
-export function replayDocument<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
+export function replayDocument<TGlobalState, TLocalState>(
   initialState: ExtendedState<TGlobalState, TLocalState>,
-  operations: DocumentOperations<TGlobalState, TLocalState, TAction | DocumentAction>,
-  reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
+  operations: DocumentOperations<TGlobalState, TLocalState>,
+  reducer: Reducer<TGlobalState, TLocalState, Action>,
+  dispatch?: SignalDispatch,
   header?: DocumentHeader,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
@@ -409,13 +388,8 @@ export function replayDocument<
   } = options || {};
 
   let documentState = initialState;
-  const operationsToReplay: Operation<TGlobalState, TLocalState, TAction | DocumentAction>[] =
-    [];
-  const initialOperations: DocumentOperations<
-    TGlobalState,
-    TLocalState,
-    TAction | DocumentAction
-  > = {
+  const operationsToReplay: Operation<TGlobalState, TLocalState>[] = [];
+  const initialOperations: DocumentOperations<TGlobalState, TLocalState> = {
     global: [],
     local: [],
   };
@@ -458,9 +432,7 @@ export function replayDocument<
   }
 
   // builds a new document from the initial data
-  const document = baseCreateDocument<TGlobalState, TLocalState, TAction>(
-    documentState,
-  );
+  const document = baseCreateDocument(documentState);
   document.initialState = initialState;
   document.operations = initialOperations;
 
@@ -509,32 +481,29 @@ export function replayDocument<
   }
 
   // reuses operation timestamp if provided
-  const resultOperations: DocumentOperations<
-    TGlobalState,
-    TLocalState,
-    TAction
-  > = Object.keys(result.operations).reduce(
-    (acc, key) => {
-      const scope = key as keyof DocumentOperations<
-        TGlobalState,
-        TLocalState,
-        TAction
-      >;
-      return {
-        ...acc,
-        [scope]: [
-          ...result.operations[scope].map((operation, index) => {
-            return {
-              ...operation,
-              timestamp:
-                operations[scope][index]?.timestamp ?? operation.timestamp,
-            };
-          }),
-        ],
-      };
-    },
-    { global: [], local: [] },
-  );
+  const resultOperations: DocumentOperations<TGlobalState, TLocalState> =
+    Object.keys(result.operations).reduce(
+      (acc, key) => {
+        const scope = key as keyof DocumentOperations<
+          TGlobalState,
+          TLocalState
+        >;
+
+        return {
+          ...acc,
+          [scope]: [
+            ...result.operations[scope].map((operation, index) => {
+              return {
+                ...operation,
+                timestamp:
+                  operations[scope][index]?.timestamp ?? operation.timestamp,
+              };
+            }),
+          ],
+        };
+      },
+      { global: [], local: [] },
+    );
   // gets the last modified timestamp from the latest operation
   const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
     const operation = curr.at(-1);

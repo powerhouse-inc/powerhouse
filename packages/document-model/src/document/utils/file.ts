@@ -1,8 +1,7 @@
-import { DocumentAction } from "@document/actions/types.js";
 import type {
+  Action,
   Attachment,
   AttachmentInput,
-  BaseAction,
   BaseDocument,
   DocumentHeader,
   DocumentOperations,
@@ -21,11 +20,9 @@ import { validateOperations } from "./validation.js";
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
-export function createZip<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(document: BaseDocument<TGlobalState, TLocalState, TAction>) {
+export function createZip<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
+) {
   // create zip file
   const zip = new JSZip();
 
@@ -52,12 +49,14 @@ export function createZip<
   if (document.attachments) {
     const attachments = Object.keys(document.attachments);
     attachments.forEach((key) => {
-      const { data, ...attributes } = document.attachments[key];
-      zip.file(key, data, {
-        base64: true,
-        createFolders: true,
-        comment: JSON.stringify(attributes),
-      });
+      const { data, ...attributes } = document.attachments?.[key] ?? {};
+      if (data) {
+        zip.file(key, data, {
+          base64: true,
+          createFolders: true,
+          comment: JSON.stringify(attributes),
+        });
+      }
     });
   }
 
@@ -76,12 +75,8 @@ export function createZip<
  * @param extension - The extension to use for the file.
  * @returns A promise that resolves to the path of the saved file.
  */
-export async function baseSaveToFile<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+export async function baseSaveToFile<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
   path: string,
   extension: string,
   name?: string,
@@ -102,12 +97,8 @@ export async function baseSaveToFile<
   );
 }
 
-export async function baseSaveToFileHandle<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+export async function baseSaveToFileHandle<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
   input: FileSystemFileHandle,
 ) {
   const zip = createZip(document);
@@ -132,26 +123,18 @@ export async function baseSaveToFileHandle<
  * @returns A promise that resolves to the document state after applying all the operations.
  * @throws An error if the initial state or the operations history is not found in the ZIP file.
  */
-export async function baseLoadFromFile<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
+export async function baseLoadFromFile<TGlobalState, TLocalState>(
   path: string,
-  reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  reducer: Reducer<TGlobalState, TLocalState, Action>,
   options?: ReplayDocumentOptions,
 ) {
   const file = readFile(path);
   return baseLoadFromInput(file, reducer, options);
 }
 
-export async function baseLoadFromInput<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
+export async function baseLoadFromInput<TGlobalState, TLocalState>(
   input: FileInput,
-  reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  reducer: Reducer<TGlobalState, TLocalState, Action>,
   options?: ReplayDocumentOptions,
 ) {
   const zip = new JSZip();
@@ -159,13 +142,9 @@ export async function baseLoadFromInput<
   return loadFromZip(zip, reducer, options);
 }
 
-async function loadFromZip<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
+async function loadFromZip<TGlobalState, TLocalState>(
   zip: JSZip,
-  reducer: Reducer<TGlobalState, TLocalState, TAction | DocumentAction>,
+  reducer: Reducer<TGlobalState, TLocalState, Action>,
   options?: ReplayDocumentOptions,
 ) {
   const initialStateZip = zip.file("state.json");
@@ -188,10 +167,9 @@ async function loadFromZip<
   if (!operationsZip) {
     throw new Error("Operations history not found");
   }
-
   const operations = JSON.parse(
     await operationsZip.async("string"),
-  ) as DocumentOperations<TGlobalState, TLocalState, TAction>;
+  ) as DocumentOperations<TGlobalState, TLocalState>;
 
   const clearedOperations = garbageCollectDocumentOperations(operations);
 

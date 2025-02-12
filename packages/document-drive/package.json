@@ -4,17 +4,9 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
-    ".": {
-      "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
-    },
-    "./server": {
-      "import": "./dist/src/server/index.js",
-      "types": "./dist/src/server/index.d.ts"
-    },
-    "./storage": {
-      "import": "./dist/src/storage/index.js",
-      "types": "./dist/src/storage/index.d.ts"
+    "./server/*": {
+      "import": "./dist/src/server/*.js",
+      "types": "./dist/src/server/*.d.ts"
     },
     "./storage/*": {
       "import": "./dist/src/storage/*.js",
@@ -28,32 +20,24 @@
       "import": "./dist/src/queue/*.js",
       "types": "./dist/src/queue/*.d.ts"
     },
-    "./utils": {
-      "import": "./dist/src/utils/index.js",
-      "types": "./dist/src/utils/index.d.ts"
-    },
     "./utils/*": {
       "import": "./dist/src/utils/*.js",
       "types": "./dist/src/utils/*.d.ts"
     },
-    "./logger": {
-      "import": "./dist/src/utils/logger.js",
-      "types": "./dist/src/utils/logger.d.ts"
+    "./read-mode/*": {
+      "import": "./dist/src/read-mode/*.js",
+      "types": "./dist/src/read-mode/*.d.ts"
     },
-    "./drive-document-model": {
-      "import": "./dist/src/document-model/index.js",
-      "types": "./dist/src/document-model/index.d.ts"
-    },
-    "./drive-document-model/*": {
-      "import": "./dist/src/document-model/*.js",
-      "types": "./dist/src/document-model/*.d.ts"
+    "./types": {
+      "import": "./dist/src/types.js",
+      "types": "./dist/src/types.d.ts"
     }
   },
   "files": [
     "./dist"
   ],
   "scripts": {
-    "check-types": "tsc --build --noEmit",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
@@ -74,13 +58,13 @@
     "sqlite3": "^5.1.7"
   },
   "dependencies": {
+    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",
     "change-case": "^5.4.4",
     "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
     "exponential-backoff": "^3.1.1",
     "fake-indexeddb": "^5.0.2",
     "graphql": "^16.9.0",
@@ -94,6 +78,7 @@
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
     "vitest-fetch-mock": "^0.3.0",
-    "webdriverio": "^9.0.9"
+    "webdriverio": "^9.0.9",
+    "zod": "^3.24.1"
   }
 }

@@ -1,12 +1,12 @@
+import { DocumentModelModule } from "document-model";
 import * as documentModelsMap from "document-model-libs/document-models";
-import { DocumentModelModule } from "document-model/document";
 import { bench, BenchOptions, describe, vi } from "vitest";
 import {
-  DefaultRemoteDriveInput,
-  DocumentDriveServer,
-  DocumentDriveServerOptions,
-  generateUUID,
-  RunAsap,
+    DefaultRemoteDriveInput,
+    DocumentDriveServer,
+    DocumentDriveServerOptions,
+    generateUUID,
+    RunAsap,
 } from "../../src";
 import { BrowserStorage } from "../../src/storage/browser";
 import { setLogger } from "../../src/utils/logger";

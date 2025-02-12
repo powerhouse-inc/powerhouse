@@ -1,35 +1,34 @@
+import {
+    DocumentDriveAction,
+    Trigger,
+    actions,
+    reducer,
+} from "@drive-document-model";
 import { PrismaClient } from "@prisma/client";
 import {
-  DocumentDriveAction,
-  Trigger,
-  actions,
-  reducer,
-} from "document-model-libs/document-drive";
+    actions as DocumentModelActions,
+    DocumentModelDocument,
+    module as DocumentModelLib, DocumentModelModule, Operation
+} from "document-model";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModelModule, Operation } from "document-model/document";
-import {
-  actions as DocumentModelActions,
-  DocumentModelDocument,
-  module as DocumentModelLib,
-} from "document-model/document-model";
 import stringify from "json-stringify-deterministic";
 import { HttpResponse, graphql, http } from "msw";
 import { setupServer } from "msw/node";
 import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  it,
-  vi,
+    afterAll,
+    afterEach,
+    beforeAll,
+    beforeEach,
+    describe,
+    it,
+    vi,
 } from "vitest";
 import {
-  DocumentDriveServer,
-  ListenerRevision,
-  StrandUpdateGraphQL,
-  SyncStatus,
-  UpdateStatus,
+    DocumentDriveServer,
+    ListenerRevision,
+    StrandUpdateGraphQL,
+    SyncStatus,
+    UpdateStatus,
 } from "../src/server";
 import { ConflictOperationError } from "../src/server/error";
 import { MemoryStorage } from "../src/storage/memory";

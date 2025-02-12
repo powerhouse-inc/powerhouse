@@ -1,5 +1,5 @@
-import type { Document, OperationScope } from "document-model/document";
-import { RevisionsFilter, StrandUpdate } from "./types";
+import { RevisionsFilter, StrandUpdate } from "@server/types";
+import type { BaseAction, BaseDocument, OperationScope } from "document-model";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],
@@ -15,8 +15,8 @@ export function buildRevisionsFilter(
   }, {});
 }
 
-export function buildDocumentRevisionsFilter(
-  document: Document,
+export function buildDocumentRevisionsFilter<TGlobalState, TLocalState, TAction extends BaseAction>(
+  document: BaseDocument<TGlobalState, TLocalState, TAction>,
 ): RevisionsFilter {
   return Object.entries(document.operations).reduce<RevisionsFilter>(
     (acc, [scope, operations]) => {
@@ -27,15 +27,15 @@ export function buildDocumentRevisionsFilter(
   );
 }
 
-export function filterOperationsByRevision(
-  operations: Document["operations"],
+export function filterOperationsByRevision<TGlobalState, TLocalState, TAction extends BaseAction, TDocument extends BaseDocument<TGlobalState, TLocalState, TAction>>(
+  operations: TDocument["operations"],
   revisions?: RevisionsFilter,
-): Document["operations"] {
+): TDocument["operations"] {
   if (!revisions) {
     return operations;
   }
   return (Object.keys(operations) as OperationScope[]).reduce<
-    Document["operations"]
+    TDocument["operations"]
   >(
     (acc, scope) => {
       const revision = revisions[scope];
@@ -44,12 +44,12 @@ export function filterOperationsByRevision(
       }
       return acc;
     },
-    { global: [], local: [] } as unknown as Document["operations"],
+    { global: [], local: [] } as TDocument["operations"],
   );
 }
 
-export function isAtRevision(
-  document: Document,
+export function isAtRevision<TGlobalState, TLocalState, TAction extends BaseAction>(
+  document: BaseDocument<TGlobalState, TLocalState, TAction>,
   revisions?: RevisionsFilter,
 ): boolean {
   return (
@@ -64,8 +64,8 @@ export function isAtRevision(
   );
 }
 
-export function isAfterRevision(
-  document: Document,
+export function isAfterRevision<TGlobalState, TLocalState, TAction extends BaseAction>(
+  document: BaseDocument<TGlobalState, TLocalState, TAction>,
   revisions?: RevisionsFilter,
 ): boolean {
   return (

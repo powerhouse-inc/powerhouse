@@ -1,10 +1,23 @@
+import { DocumentModelHeaderAction } from "@document-model/gen/actions.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
 import { DocumentAction } from "./actions/types.js";
-import { SignalDispatch } from "./signal.js";
+import type {
+  CreateChildDocumentInput,
+  Signal,
+  SignalDispatch,
+  SynchronizationUnitInput,
+} from "./signal.js";
 import { FileInput } from "./utils/file.js";
-export type { FileInput, Immutable, SignalDispatch };
-
+export type { NOOPAction } from "./schema/types.js";
+export type {
+  CreateChildDocumentInput,
+  FileInput,
+  Immutable,
+  Signal,
+  SignalDispatch,
+  SynchronizationUnitInput,
+};
 //  [
 //     signerAddress,
 //     hash (docID, scope, operationID, operationName, operationInput),
@@ -58,6 +71,15 @@ export type BaseActionWithAttachment<
   attachments: AttachmentInput[];
 };
 
+export type Action<
+  TType extends string = string,
+  TInput = unknown,
+  TScope extends OperationScope = OperationScope,
+> =
+  | BaseAction<TType, TInput, TScope>
+  | DocumentAction
+  | DocumentModelHeaderAction;
+
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */
   skip?: number;
@@ -79,12 +101,16 @@ export type ReducerOptions = {
  * A pure function that takes an action and the previous state
  * of the document and returns the new state.
  */
-export type Reducer<TGlobalState, TLocalState, TAction extends BaseAction> = (
-  state: BaseDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction | DocumentAction,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
+export type Reducer<
+  TGlobalState,
+  TLocalState,
+  TAllowedAction extends Action,
+> = <TAction extends TAllowedAction>(
+  state: BaseDocument<TGlobalState, TLocalState>,
+  action: TAction,
+  dispatch?: SignalDispatch,
   options?: ReducerOptions,
-) => BaseDocument<TGlobalState, TLocalState, TAction>;
+) => BaseDocument<TGlobalState, TLocalState>;
 
 /**
  * A {@link Reducer} that prevents mutable code from changing the previous state.
@@ -101,40 +127,40 @@ export type Reducer<TGlobalState, TLocalState, TAction extends BaseAction> = (
 export type ImmutableReducer<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-> = (
-  state: Draft<BaseDocument<TGlobalState, TLocalState, TAction>>,
+  TAllowedAction extends Action,
+> = <TAction extends TAllowedAction>(
+  state: Draft<BaseDocument<TGlobalState, TLocalState>>,
   action: TAction,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
-) => BaseDocument<TGlobalState, TLocalState, TAction> | undefined;
+  dispatch?: SignalDispatch,
+) => BaseDocument<TGlobalState, TLocalState> | undefined;
 
 export type ImmutableStateReducer<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-> = (
+  TAllowedAction extends Action,
+> = <TAction extends TAllowedAction>(
   state: Draft<BaseState<TGlobalState, TLocalState>>,
-  action: TAction | DocumentAction,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction | DocumentAction>,
+  action: TAction,
+  dispatch?: SignalDispatch,
 ) => BaseState<TGlobalState, TLocalState> | undefined;
 
 export type MutableStateReducer<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-> = (
+  TAllowedAction extends Action,
+> = <TAction extends TAllowedAction>(
   state: BaseState<TGlobalState, TLocalState>,
   action: TAction,
-  dispatch?: SignalDispatch<TGlobalState, TLocalState, TAction>,
+  dispatch?: SignalDispatch,
 ) => BaseState<TGlobalState, TLocalState> | undefined;
 
 export type StateReducer<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAllowedAction extends Action,
 > =
-  | ImmutableStateReducer<TGlobalState, TLocalState, TAction>
-  | MutableStateReducer<TGlobalState, TLocalState, TAction>;
+  | ImmutableStateReducer<TGlobalState, TLocalState, TAllowedAction>
+  | MutableStateReducer<TGlobalState, TLocalState, TAllowedAction>;
 
 /**
  * Scope of an operation.
@@ -152,11 +178,7 @@ export type OperationScope = "global" | "local";
  *
  * @typeParam A - The type of the action.
  */
-export type Operation<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = TAction & {
+export type Operation<TGlobalState, TLocalState> = Action & {
   /** Position of the operation in the history */
   index: number;
   /** Timestamp of when the operation was added */
@@ -239,96 +261,60 @@ export type CreateExtendedState<TGlobalState, TLocalState> = (
   createState?: CreateState<TGlobalState, TLocalState>,
 ) => ExtendedState<TGlobalState, TLocalState>;
 
-export type SaveToFileHandle<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = (
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+export type SaveToFileHandle = <TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
   input: FileSystemFileHandle,
 ) => void | Promise<void>;
 
-export type SaveToFile<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = (
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+export type SaveToFile = <TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
   path: string,
   name?: string,
 ) => string | Promise<string>;
 
-export type LoadFromInput<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = (
+export type LoadFromInput<TGlobalState, TLocalState> = (
   input: FileInput,
 ) =>
-  | BaseDocument<TGlobalState, TLocalState, TAction>
-  | Promise<BaseDocument<TGlobalState, TLocalState, TAction>>;
+  | BaseDocument<TGlobalState, TLocalState>
+  | Promise<BaseDocument<TGlobalState, TLocalState>>;
 
-export type LoadFromFile<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = (
+export type LoadFromFile<TGlobalState, TLocalState> = (
   path: string,
 ) =>
-  | BaseDocument<TGlobalState, TLocalState, TAction>
-  | Promise<BaseDocument<TGlobalState, TLocalState, TAction>>;
+  | BaseDocument<TGlobalState, TLocalState>
+  | Promise<BaseDocument<TGlobalState, TLocalState>>;
 
-export type CreateDocument<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = (
+export type CreateDocument<TGlobalState, TLocalState> = (
   document?: Partial<
     ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
   >,
   createState?: CreateState<TGlobalState, TLocalState>,
-) => BaseDocument<TGlobalState, TLocalState, TAction>;
+) => BaseDocument<TGlobalState, TLocalState>;
 
 export type ExtendedState<TGlobalState, TLocalState> = DocumentHeader & {
   /** The document model specific state. */
   state: BaseState<TGlobalState, TLocalState>;
   /** The index of document attachments. */
-  attachments: FileRegistry;
+  attachments?: FileRegistry;
 };
 
-export type DocumentOperations<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = Required<
-  Record<OperationScope, Operation<TGlobalState, TLocalState, TAction>[]>
+export type DocumentOperations<TGlobalState, TLocalState> = Required<
+  Record<OperationScope, Operation<TGlobalState, TLocalState>[]>
 >;
 
-export type MappedOperation<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = {
+export type MappedOperation<TGlobalState, TLocalState> = {
   ignore: boolean;
-  operation: Operation<TGlobalState, TLocalState, TAction>;
+  operation: Operation<TGlobalState, TLocalState>;
 };
 
-export type DocumentOperationsIgnoreMap<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = Required<
-  Record<OperationScope, MappedOperation<TGlobalState, TLocalState, TAction>[]>
+export type DocumentOperationsIgnoreMap<TGlobalState, TLocalState> = Required<
+  Record<OperationScope, MappedOperation<TGlobalState, TLocalState>[]>
 >;
 
-export type OperationSignatureContext<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = {
+export type OperationSignatureContext<TGlobalState, TLocalState> = {
   documentId: string;
   signer: Omit<ActionSigner, "signatures"> & { signatures?: Signature[] };
-  operation: Operation<TGlobalState, TLocalState, TAction>;
+  operation: Operation<TGlobalState, TLocalState>;
   previousStateHash: string;
 };
 
@@ -351,19 +337,15 @@ export type OperationVerificationHandler = (
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type BaseDocument<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> =
+export type BaseDocument<TGlobalState, TLocalState> =
   /** The document model specific state. */
   ExtendedState<TGlobalState, TLocalState> & {
     /** The operations history of the document. */
-    operations: DocumentOperations<TGlobalState, TLocalState, TAction>;
+    operations: DocumentOperations<TGlobalState, TLocalState>;
     /** The initial state of the document, enabling replaying operations. */
     initialState: ExtendedState<TGlobalState, TLocalState>;
     /** A list of undone operations */
-    clipboard: Operation<TGlobalState, TLocalState, TAction>[];
+    clipboard: Operation<TGlobalState, TLocalState>[];
   };
 
 /**
@@ -374,19 +356,14 @@ export type BaseDocument<
  */
 export type AttachmentRef = string; // TODO `attachment://${string}`;
 
-export type DocumentModelUtils<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = {
-  fileExtension: string;
+export type DocumentModelUtils<TGlobalState, TLocalState> = {
   createState: CreateState<TGlobalState, TLocalState>;
   createExtendedState: CreateExtendedState<TGlobalState, TLocalState>;
-  createDocument: CreateDocument<TGlobalState, TLocalState, TAction>;
-  loadFromFile: LoadFromFile<TGlobalState, TLocalState, TAction>;
-  loadFromInput: LoadFromInput<TGlobalState, TLocalState, TAction>;
-  saveToFile: SaveToFile<TGlobalState, TLocalState, TAction>;
-  saveToFileHandle: SaveToFileHandle<TGlobalState, TLocalState, TAction>;
+  createDocument: CreateDocument<TGlobalState, TLocalState>;
+  loadFromFile: LoadFromFile<TGlobalState, TLocalState>;
+  loadFromInput: LoadFromInput<TGlobalState, TLocalState>;
+  saveToFile: SaveToFile;
+  saveToFileHandle: SaveToFileHandle;
 };
 
 export type ActionCreator<TAction extends BaseAction> = // TODO remove any
@@ -415,13 +392,9 @@ export type EditorContext = {
 
 export type ActionErrorCallback = (error: unknown) => void;
 
-export type EditorProps<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = {
-  document: BaseDocument<TGlobalState, TLocalState, TAction>;
-  dispatch: (action: TAction, onErrorCallback?: ActionErrorCallback) => void;
+export type EditorProps<TGlobalState, TLocalState> = {
+  document: BaseDocument<TGlobalState, TLocalState>;
+  dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
   context: EditorContext;
   error?: unknown;
   documentNodeName?: string;
@@ -430,25 +403,20 @@ export type EditorProps<
 export type EditorModule<
   TGlobalState = unknown,
   TLocalState = unknown,
-  TAction extends BaseAction = BaseAction,
   TCustomProps = unknown,
   TEditorConfig extends Record<string, unknown> = Record<string, unknown>,
 > = {
   Component: FC<
-    EditorProps<TGlobalState, TLocalState, TAction> &
+    EditorProps<TGlobalState, TLocalState> &
       TCustomProps &
       Record<string, unknown>
   >;
   documentTypes: string[];
   config?: Partial<TEditorConfig>;
 };
-export type UndoRedoProcessResult<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = {
-  document: BaseDocument<TGlobalState, TLocalState, TAction>;
-  action: BaseAction;
+export type UndoRedoProcessResult<TGlobalState, TLocalState> = {
+  document: BaseDocument<TGlobalState, TLocalState>;
+  action: Action;
   skip: number;
   reuseLastOperationIndex: boolean;
 };
@@ -456,12 +424,15 @@ export type UndoRedoProcessResult<
 export type ValidationError = { message: string; details: object };
 
 export type DocumentModelModule<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-  TAction extends BaseAction = BaseAction,
+  TGlobalState,
+  TLocalState,
+  TAllowedAction extends Action,
 > = {
-  reducer: Reducer<TGlobalState, TLocalState, TAction>;
-  actions: Record<string, ActionCreator<TAction>>;
-  utils: DocumentModelUtils<TGlobalState, TLocalState, TAction>;
-  initialGlobalState: TGlobalState;
+  documentModelName: string;
+  documentType: string;
+  fileExtension: string;
+  reducer: Reducer<TGlobalState, TLocalState, TAllowedAction>;
+  actions: Record<string, ActionCreator<TAllowedAction>>;
+  utils: DocumentModelUtils<TGlobalState, TLocalState>;
+  documentModelState: TGlobalState;
 };

@@ -313,11 +313,7 @@ describe("skip operations", () => {
         },
       );
 
-      let document = baseCreateDocument<
-        CountState,
-        CountLocalState,
-        CountAction
-      >(initialState);
+      let document = baseCreateDocument(initialState);
 
       document = countReducer(document, increment()); // valid operation, skip 0
       document = countReducer(document, increment()); // skipped
@@ -366,11 +362,7 @@ describe("skip operations", () => {
         },
       );
 
-      let document = baseCreateDocument<
-        CountState,
-        CountLocalState,
-        CountAction
-      >(initialState);
+      let document = baseCreateDocument(initialState);
 
       document = countReducer(document, increment()); // valid operation, skip 0
       document = countReducer(document, increment()); // skipped
@@ -420,11 +412,7 @@ describe("skip operations", () => {
         },
       );
 
-      let document = baseCreateDocument<
-        CountState,
-        CountLocalState,
-        CountAction
-      >(initialState);
+      let document = baseCreateDocument(initialState);
 
       document = countReducer(document, increment()); // valid operation, skip 0
       document = countReducer(document, increment()); // skipped
@@ -492,11 +480,7 @@ describe("skip operations", () => {
         },
       );
 
-      let document = baseCreateDocument<
-        CountState,
-        CountLocalState,
-        CountAction
-      >(initialState);
+      let document = baseCreateDocument(initialState);
 
       document = countReducer(document, increment()); // skipped
       document = countReducer(document, increment()); // skipped
@@ -542,11 +526,7 @@ describe("skip operations", () => {
         },
       );
 
-      let document = baseCreateDocument<
-        CountState,
-        CountLocalState,
-        CountAction
-      >(initialState);
+      let document = baseCreateDocument(initialState);
 
       document = countReducer(document, increment());
       document = countReducer(document, increment());
@@ -588,11 +568,7 @@ describe("skip operations", () => {
         },
       );
 
-      let document = baseCreateDocument<
-        CountState,
-        CountLocalState,
-        CountAction
-      >(initialState);
+      let document = baseCreateDocument(initialState);
 
       document = countReducer(document, increment());
       document = countReducer(document, increment());

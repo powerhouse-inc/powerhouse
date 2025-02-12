@@ -4,7 +4,6 @@ import { hashKey } from "@document/utils/base.js";
 describe("DocumentModel Class", () => {
   it("should create an empty document", () => {
     const model = new DocumentModelClass();
-
     expect(model.name).toBe("");
     expect(model.documentType).toBe("powerhouse/document-model");
     expect(model.revision).toBe(0);

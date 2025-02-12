@@ -1,10 +1,7 @@
-import {
-  DocumentDriveDocument,
-  ListenerFilter,
-} from "document-model-libs/document-drive";
-import { OperationScope } from "document-model/document";
-import { logger } from "../../utils/logger.js";
-import { OperationError } from "../error.js";
+import { DocumentDriveDocument, ListenerFilter } from "@drive-document-model";
+import { OperationScope } from "document-model";
+import { logger } from "@utils/logger";
+import { OperationError } from "@server/error";
 import {
   BaseListenerManager,
   ErrorStatus,
@@ -15,11 +12,11 @@ import {
   OperationUpdate,
   StrandUpdate,
   SynchronizationUnit,
-} from "../types.js";
-import { PullResponderTransmitter } from "./transmitter/index.js";
-import { InternalTransmitter } from "./transmitter/internal.js";
-import { SwitchboardPushTransmitter } from "./transmitter/switchboard-push.js";
-import { ITransmitter, StrandUpdateSource } from "./transmitter/types.js";
+} from "@server/types";
+import { InternalTransmitter } from "@server/listener/transmitter/internal";
+import { PullResponderTransmitter } from "@server/listener/transmitter/pull-responder";
+import { SwitchboardPushTransmitter } from "@server/listener/transmitter/switchboard-push";
+import { ITransmitter, StrandUpdateSource } from "@server/listener/transmitter/types";
 
 function debounce<T extends unknown[], R>(
   func: (...args: T) => Promise<R>,
@@ -52,7 +49,7 @@ export class ListenerManager extends BaseListenerManager {
     driveId: string,
     listenerId: string,
   ): Promise<ITransmitter | undefined> {
-    return Promise.resolve(this.transmitters[driveId]?.[listenerId]);
+    return Promise.resolve(this.transmitters[driveId][listenerId]);
   }
 
   driveHasListeners(driveId: string) {

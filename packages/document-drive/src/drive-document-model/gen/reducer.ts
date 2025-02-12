@@ -1,16 +1,34 @@
-import { ImmutableStateReducer, utils } from "document-model";
+import { createReducer, ImmutableStateReducer, isDocumentAction, Reducer } from "document-model";
 import { DocumentDriveAction } from "./actions.js";
 import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
 
+import { DocumentAction } from "../../../../document-model/src/document/actions/types.js";
 import { reducer as DriveReducer } from "../src/reducers/drive.js";
 import { reducer as NodeReducer } from "../src/reducers/node.js";
+import {
+  AddFileInputSchema,
+  AddFolderInputSchema,
+  AddListenerInputSchema,
+  AddTriggerInputSchema,
+  CopyNodeInputSchema,
+  DeleteNodeInputSchema,
+  MoveNodeInputSchema,
+  RemoveListenerInputSchema,
+  RemoveTriggerInputSchema,
+  SetAvailableOfflineInputSchema,
+  SetDriveIconInputSchema,
+  SetDriveNameInputSchema,
+  SetSharingTypeInputSchema,
+  UpdateFileInputSchema,
+  UpdateNodeInputSchema,
+} from "./schema/zod.js";
 
 const stateReducer: ImmutableStateReducer<
   DocumentDriveState,
-  DocumentDriveAction,
-  DocumentDriveLocalState
+  DocumentDriveLocalState,
+  DocumentDriveAction
 > = (state, action, dispatch) => {
-  if (utils.isBaseAction(action)) {
+  if (isDocumentAction(action)) {
     return state;
   }
 
@@ -65,7 +83,7 @@ const stateReducer: ImmutableStateReducer<
       DriveReducer.setSharingTypeOperation(
         state[action.scope],
         action,
-        dispatch,
+        dispatch
       );
       break;
 
@@ -74,7 +92,7 @@ const stateReducer: ImmutableStateReducer<
       DriveReducer.setAvailableOfflineOperation(
         state[action.scope],
         action,
-        dispatch,
+        dispatch
       );
       break;
 
@@ -88,7 +106,7 @@ const stateReducer: ImmutableStateReducer<
       DriveReducer.removeListenerOperation(
         state[action.scope],
         action,
-        dispatch,
+        dispatch
       );
       break;
 
@@ -102,7 +120,7 @@ const stateReducer: ImmutableStateReducer<
       DriveReducer.removeTriggerOperation(
         state[action.scope],
         action,
-        dispatch,
+        dispatch
       );
       break;
 
@@ -111,8 +129,8 @@ const stateReducer: ImmutableStateReducer<
   }
 };
 
-export const reducer = utils.createReducer<
+export const reducer: Reducer<
   DocumentDriveState,
-  DocumentDriveAction,
-  DocumentDriveLocalState
->(stateReducer);
+  DocumentDriveLocalState,
+  DocumentDriveAction
+> = createReducer(stateReducer);

@@ -1,29 +1,28 @@
-import { Document } from "document-model/document";
-import { DocumentDriveServerConstructor, RemoteDriveOptions } from "../server";
-import { logger } from "../utils/logger";
-import { ReadDriveSlugNotFoundError } from "./errors";
-import { ReadModeService } from "./service";
-import {
+import { ReadDriveSlugNotFoundError } from "@read-mode/errors";
+import { ReadModeService } from "@read-mode/service";
+import type {
   IReadModeDriveServer,
   IReadModeDriveService,
   ReadDrive,
   ReadDriveOptions,
   ReadDrivesListener,
   ReadModeDriveServerMixin,
-} from "./types";
+} from "@read-mode/types";
+import type {
+  DocumentDriveServerConstructor,
+  RemoteDriveOptions,
+} from "@server/base";
+import { logger } from "@utils/logger";
+import type { BaseAction } from "document-model";
 
-export * from "./errors";
-export * from "./types";
-
-export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
-  Base: TBase,
+export function ReadModeServer(
+  Base: DocumentDriveServerConstructor,
 ): ReadModeDriveServerMixin {
   return class ReadMode extends Base implements IReadModeDriveServer {
     #readModeStorage: IReadModeDriveService;
     #listeners = new Set<ReadDrivesListener>();
 
     constructor(...args: any[]) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       super(...args);
 
       this.#readModeStorage = new ReadModeService(
@@ -78,16 +77,16 @@ export function ReadModeServer<TBase extends DocumentDriveServerConstructor>(
       return this.#readModeStorage.fetchDrive(id);
     }
 
-    fetchDocument<D extends Document>(
+    fetchDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
       driveId: string,
       documentId: string,
       documentType: string,
     ) {
-      return this.#readModeStorage.fetchDocument<D>(
-        driveId,
-        documentId,
-        documentType,
-      );
+      return this.#readModeStorage.fetchDocument<
+        TGlobalState,
+        TLocalState,
+        TAction
+      >(driveId, documentId, documentType);
     }
 
     async deleteReadDrive(id: string) {

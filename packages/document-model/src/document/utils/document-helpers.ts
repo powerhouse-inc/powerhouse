@@ -1,8 +1,8 @@
 import {
-  OperationScope,
-  DocumentOperations,
   BaseAction,
+  DocumentOperations,
   Operation,
+  OperationScope,
 } from "@document/types.js";
 import stringify from "safe-stable-stringify";
 
@@ -115,9 +115,9 @@ export function garbageCollect<TOpIndex extends OperationIndex>(
   return result;
 }
 
-export function addUndo<TGlobalState, TLocalState, TAction extends BaseAction>(
-  sortedOperations: Operation<TGlobalState, TLocalState, TAction>[],
-): Operation<TGlobalState, TLocalState, TAction>[] {
+export function addUndo<TGlobalState, TLocalState>(
+  sortedOperations: Operation<TGlobalState, TLocalState>[],
+): Operation<TGlobalState, TLocalState>[] {
   const operationsCopy = [...sortedOperations];
   const latestOperation = operationsCopy[operationsCopy.length - 1];
 
@@ -139,7 +139,7 @@ export function addUndo<TGlobalState, TLocalState, TAction extends BaseAction>(
       skip: 1,
       scope: latestOperation.scope,
       hash: latestOperation.hash,
-    } as Operation<TGlobalState, TLocalState, TAction>);
+    });
   }
 
   return operationsCopy;
@@ -211,17 +211,20 @@ export function operationsAreEqual<TOp>(op1: TOp, op2: TOp): boolean {
 // [T0:0 T1:0 T2:0 T3:0] + [B3:0 B3:2] = [T0:0 T1:0 T2:0 B3:0 B3:2]
 // [T0:0 T1:0 T2:0 T3:0] + [B2:3 B3:0] = [T0:0 T1:0 B2:3 B3:0]
 
-export function attachBranch(
-  trunk: Operation<any, any, BaseAction>[],
-  newBranch: Operation<any, any, BaseAction>[],
-): [Operation<any, any, BaseAction>[], Operation<any, any, BaseAction>[]] {
+export function attachBranch<TGlobalState, TLocalState>(
+  trunk: Operation<TGlobalState, TLocalState>[],
+  newBranch: Operation<TGlobalState, TLocalState>[],
+): [
+  Operation<TGlobalState, TLocalState>[],
+  Operation<TGlobalState, TLocalState>[],
+] {
   const trunkCopy = garbageCollect(sortOperations(trunk.slice()));
   const newOperations = garbageCollect(sortOperations(newBranch.slice()));
   if (trunkCopy.length < 1) {
     return [newOperations, []];
   }
 
-  const result: Operation<any, any, BaseAction>[] = [];
+  const result: Operation<TGlobalState, TLocalState>[] = [];
   let enteredBranch = false;
 
   while (newOperations.length > 0) {
@@ -403,8 +406,7 @@ export function nextSkipNumber(sortedOperations: OperationIndex[]) {
 export function checkOperationsIntegrity<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+  TOp extends Operation<TGlobalState, TLocalState>,
 >(operations: TOp[]): IntegrityIssue[] {
   return checkCleanedOperationsIntegrity(
     garbageCollect(sortOperations(operations)),
@@ -414,20 +416,16 @@ export function checkOperationsIntegrity<
 export type OperationsByScope<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+  TOp extends Operation<TGlobalState, TLocalState>,
 > = Partial<Record<OperationScope, TOp[]>>;
 
 export function groupOperationsByScope<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-  TOp extends Operation<TGlobalState, TLocalState, TAction>,
->(
-  operations: TOp[],
-): OperationsByScope<TGlobalState, TLocalState, TAction, TOp> {
+  TOp extends Operation<TGlobalState, TLocalState>,
+>(operations: TOp[]): OperationsByScope<TGlobalState, TLocalState, TOp> {
   const result = operations.reduce<
-    OperationsByScope<TGlobalState, TLocalState, TAction, TOp>
+    OperationsByScope<TGlobalState, TLocalState, TOp>
   >((acc, operation) => {
     if (!acc[operation.scope]) {
       acc[operation.scope] = [];
@@ -444,8 +442,7 @@ export function groupOperationsByScope<
 type PrepareOperationsResult<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+  TOp extends Operation<TGlobalState, TLocalState>,
 > = {
   validOperations: TOp[];
   invalidOperations: TOp[];
@@ -456,15 +453,9 @@ type PrepareOperationsResult<
 export function prepareOperations<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+  TOp extends Operation<TGlobalState, TLocalState>,
 >(operationsHistory: TOp[], newOperations: TOp[]) {
-  const result: PrepareOperationsResult<
-    TGlobalState,
-    TLocalState,
-    TAction,
-    TOp
-  > = {
+  const result: PrepareOperationsResult<TGlobalState, TLocalState, TOp> = {
     integrityIssues: [],
     validOperations: [],
     invalidOperations: [],
@@ -525,8 +516,7 @@ export function prepareOperations<
 export function removeExistingOperations<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
-  TOp extends Operation<TGlobalState, TLocalState, TAction>,
+  TOp extends Operation<TGlobalState, TLocalState>,
 >(newOperations: TOp[], operationsHistory: TOp[]): TOp[] {
   return newOperations.filter((newOperation) => {
     return !operationsHistory.some((historyOperation) => {
@@ -580,13 +570,9 @@ export function skipHeaderOperations<TOpIndex extends OperationIndex>(
   return (clearedOperations.at(0) ?? []) as TOpIndex[];
 }
 
-export function garbageCollectDocumentOperations<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  documentOperations: DocumentOperations<TGlobalState, TLocalState, TAction>,
-): DocumentOperations<TGlobalState, TLocalState, TAction> {
+export function garbageCollectDocumentOperations<TGlobalState, TLocalState>(
+  documentOperations: DocumentOperations<TGlobalState, TLocalState>,
+): DocumentOperations<TGlobalState, TLocalState> {
   const clearedOperations = Object.entries(documentOperations).reduce(
     (acc, entry) => {
       const [scope, ops] = entry;
@@ -599,11 +585,7 @@ export function garbageCollectDocumentOperations<
     {},
   );
 
-  return clearedOperations as DocumentOperations<
-    TGlobalState,
-    TLocalState,
-    TAction
-  >;
+  return clearedOperations as DocumentOperations<TGlobalState, TLocalState>;
 }
 
 /**
@@ -630,12 +612,11 @@ export function filterDuplicatedOperations<T extends { id?: string | number }>(
 export function filterDocumentOperationsResultingState<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
 >(
-  documentOperations?: DocumentOperations<TGlobalState, TLocalState, TAction>,
-): DocumentOperations<TGlobalState, TLocalState, TAction> {
+  documentOperations?: DocumentOperations<TGlobalState, TLocalState>,
+): DocumentOperations<TGlobalState, TLocalState> {
   if (!documentOperations) {
-    return {} as DocumentOperations<TGlobalState, TLocalState, TAction>;
+    return {} as DocumentOperations<TGlobalState, TLocalState>;
   }
 
   const entries = Object.entries(documentOperations);
@@ -649,7 +630,7 @@ export function filterDocumentOperationsResultingState<
         return restProps;
       }),
     }),
-    {} as DocumentOperations<TGlobalState, TLocalState, TAction>,
+    {} as DocumentOperations<TGlobalState, TLocalState>,
   );
 }
 

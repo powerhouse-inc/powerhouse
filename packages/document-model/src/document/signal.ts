@@ -1,34 +1,26 @@
-import { BaseAction, BaseDocument, OperationScope } from "./types.js";
+import { BaseDocument, OperationScope } from "./types.js";
 
 export interface ISignal<TType extends string, TInput> {
   type: TType;
   input: TInput;
 }
 
-export type SynchronizationUnit = {
+export type SynchronizationUnitInput = {
   syncId: string;
   scope: OperationScope;
   branch: string;
 };
 
-export type CreateChildDocumentInput<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = {
+export type CreateChildDocumentInput<TGlobalState, TLocalState> = {
   id: string;
   documentType: string;
-  document?: BaseDocument<TGlobalState, TLocalState, TAction>;
-  synchronizationUnits: SynchronizationUnit[];
+  document?: BaseDocument<TGlobalState, TLocalState>;
+  synchronizationUnits: SynchronizationUnitInput[];
 };
 
-export type CreateChildDocumentSignal<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = ISignal<
+export type CreateChildDocumentSignal<TGlobalState, TLocalState> = ISignal<
   "CREATE_CHILD_DOCUMENT",
-  CreateChildDocumentInput<TGlobalState, TLocalState, TAction>
+  CreateChildDocumentInput<TGlobalState, TLocalState>
 >;
 
 export type DeleteChildDocumentInput = {
@@ -43,7 +35,7 @@ export type DeleteChildDocumentSignal = ISignal<
 export type CopyChildDocumentInput = {
   id: string;
   newId: string;
-  synchronizationUnits: SynchronizationUnit[];
+  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CopyChildDocumentSignal = ISignal<
@@ -51,13 +43,11 @@ export type CopyChildDocumentSignal = ISignal<
   CopyChildDocumentInput
 >;
 
-export type Signal<TGlobalState, TLocalState, TAction extends BaseAction> =
-  | CreateChildDocumentSignal<TGlobalState, TLocalState, TAction>
+export type Signal<TGlobalState, TLocalState> =
+  | CreateChildDocumentSignal<TGlobalState, TLocalState>
   | DeleteChildDocumentSignal
   | CopyChildDocumentSignal;
 
-export type SignalDispatch<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = (signal: Signal<TGlobalState, TLocalState, TAction>) => void;
+export type SignalDispatch = <TGlobalState, TLocalState>(
+  signal: Signal<TGlobalState, TLocalState>,
+) => void;

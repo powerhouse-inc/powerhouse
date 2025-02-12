@@ -4,16 +4,28 @@
  */
 
 import { generateMock } from "@powerhousedao/codegen";
+import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/node/creators.js";
 import { reducer } from "../../gen/reducer.js";
+import {
+  AddFileInputSchema,
+  AddFolderInputSchema,
+  CopyNodeInputSchema,
+  DeleteNodeInputSchema,
+  FileNodeSchema,
+  MoveNodeInputSchema,
+  NodeSchema,
+  UpdateFileInputSchema,
+  UpdateNodeInputSchema,
+} from "../../gen/schema/zod.js";
 import { DocumentDriveDocument } from "../../gen/types.js";
-import utils from "../../gen/utils.js";
+import { createDocument } from "../../gen/utils.js";
 
 describe("Node Operations", () => {
   let document: DocumentDriveDocument;
 
   beforeEach(() => {
-    document = utils.createDocument();
+    document = createDocument();
   });
 
   it("should handle addFile operation", () => {
@@ -144,7 +156,7 @@ describe("Node Operations", () => {
 
   it("should handle deleteNode operation", () => {
     const input = generateMock(DeleteNodeInputSchema());
-    const document = utils.createDocument({
+    const document = createDocument({
       state: {
         global: {
           // @ts-expect-error mock
@@ -216,7 +228,7 @@ describe("Node Operations", () => {
   });
   it("should handle copyNode operation", () => {
     const input = generateMock(CopyNodeInputSchema());
-    const document = utils.createDocument({
+    const document = createDocument({
       state: {
         global: {
           nodes: [
@@ -243,7 +255,7 @@ describe("Node Operations", () => {
   });
   it("should handle duplicated id when copy a node", () => {
     const input = generateMock(CopyNodeInputSchema());
-    const document = utils.createDocument({
+    const document = createDocument({
       state: {
         global: {
           nodes: [
@@ -335,7 +347,7 @@ describe("Node Operations", () => {
   });
   it("should handle moveNode operation", () => {
     const input = generateMock(MoveNodeInputSchema());
-    const document = utils.createDocument({
+    const document = createDocument({
       state: {
         global: {
           nodes: [

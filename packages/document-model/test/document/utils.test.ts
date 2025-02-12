@@ -1,5 +1,4 @@
-import fs from "fs";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { ImmutableStateReducer, MutableStateReducer } from "@document/types.js";
 import {
   baseCreateDocument,
   createReducer,
@@ -7,13 +6,17 @@ import {
   replayDocument,
 } from "@document/utils/base.js";
 import {
-  hash as hashBrowser,
   generateUUID as generateUUIDBrowser,
+  hash as hashBrowser,
 } from "@document/utils/browser.js";
+import { getLocalFile } from "@document/utils/file.js";
 import {
-  hash as hashNode,
   generateUUID as generateUUIDNode,
+  hash as hashNode,
 } from "@document/utils/node.js";
+import { validateOperations } from "@document/utils/validation.js";
+import fs from "fs";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   baseCountReducer,
   CountAction,
@@ -24,8 +27,6 @@ import {
   mutableCountReducer,
   setLocalName,
 } from "../helpers.js";
-import { getLocalFile } from "@document/utils/file.js";
-import { validateOperations } from "@document/utils/validation.js";
 
 describe("Base utils", () => {
   const tempDir = "./test/document/temp/utils/";
@@ -162,11 +163,7 @@ describe("Base utils", () => {
   });
 
   it("should replay document and keep lastModified timestamp", async () => {
-    const document = baseCreateDocument<
-      CountState,
-      CountLocalState,
-      CountAction
-    >({
+    const document = baseCreateDocument({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -188,12 +185,14 @@ describe("Base utils", () => {
   });
 
   it("should mutate state on unsafeReducer", () => {
-    const unsafeReducer = createUnsafeReducer(baseCountReducer);
-    const document = baseCreateDocument<
-      CountState,
-      CountLocalState,
-      CountAction
-    >({
+    const unsafeReducer = createUnsafeReducer(
+      baseCountReducer as MutableStateReducer<
+        CountState,
+        CountLocalState,
+        CountAction
+      >,
+    );
+    const document = baseCreateDocument({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -202,11 +201,7 @@ describe("Base utils", () => {
     expect(newDocument.state.global.count).toBe(1);
     expect(document.state.global.count).toBe(0);
 
-    const unsafeDocument = baseCreateDocument<
-      CountState,
-      CountLocalState,
-      CountAction
-    >({
+    const unsafeDocument = baseCreateDocument({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -216,12 +211,14 @@ describe("Base utils", () => {
   });
 
   it("should work with mutable reducer", () => {
-    const reducer = createReducer(mutableCountReducer);
-    const document = baseCreateDocument<
-      CountState,
-      CountLocalState,
-      CountAction
-    >({
+    const reducer = createReducer(
+      mutableCountReducer as ImmutableStateReducer<
+        CountState,
+        CountLocalState,
+        CountAction
+      >,
+    );
+    const document = baseCreateDocument({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

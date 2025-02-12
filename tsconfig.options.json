@@ -11,7 +11,6 @@
     "strict": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    // we should definitely enable this, but it's a breaking change
     "isolatedModules": true,
     "target": "ESNext",
     "module": "NodeNext",

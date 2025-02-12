@@ -1,39 +1,56 @@
-import { DocumentDriveAction } from "document-model-libs/document-drive";
-import { BaseAction, DocumentHeader, Operation } from "document-model/document";
-import { SynchronizationUnitQuery } from "../server";
-import {
+import type { SynchronizationUnitQuery } from "@server/base";
+import type { BaseAction, DocumentHeader, Operation } from "document-model";
+import type { DocumentModelState } from "document-model/document-model";
+import type {
   DocumentDriveStorage,
   DocumentStorage,
   IDriveStorage,
   IStorage,
   IStorageDelegate,
-} from "./types";
+} from "@storage/types";
 
 abstract class BaseStorage implements IStorage {
   abstract checkDocumentExists(drive: string, id: string): Promise<boolean>;
 
   abstract getDocuments(drive: string): Promise<string[]>;
 
-  abstract getDocument(drive: string, id: string): Promise<DocumentStorage>;
-
-  abstract createDocument(
+  abstract getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
-    document: DocumentStorage,
+  ): Promise<DocumentStorage<TGlobalState, TLocalState, TAction>>;
+
+  abstract createDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
+    drive: string,
+    id: string,
+    document: DocumentStorage<TGlobalState, TLocalState, TAction>,
   ): Promise<void>;
 
-  abstract addDocumentOperations(
+  abstract addDocumentOperations<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
     id: string,
-    operations: Operation[],
+    operations: Operation<TGlobalState, TLocalState, TAction>[],
     header: DocumentHeader,
   ): Promise<void>;
 
-  abstract addDocumentOperationsWithTransaction?(
+  abstract addDocumentOperationsWithTransaction<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
     id: string,
-    callback: (document: DocumentStorage) => Promise<{
-      operations: Operation[];
+    callback: (
+      document: DocumentStorage<TGlobalState, TLocalState, TAction>,
+    ) => Promise<{
+      operations: Operation<TGlobalState, TLocalState, TAction>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;
@@ -73,9 +90,13 @@ export abstract class BaseDriveStorage
   abstract getDriveBySlug(slug: string): Promise<DocumentDriveStorage>;
   abstract createDrive(id: string, drive: DocumentDriveStorage): Promise<void>;
   abstract deleteDrive(id: string): Promise<void>;
-  abstract addDriveOperations(
+  abstract addDriveOperations<
+    TGlobalState extends DocumentModelState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     id: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<TGlobalState, TLocalState, TAction>[],
     header: DocumentHeader,
   ): Promise<void>;
 }

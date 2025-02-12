@@ -1,15 +1,29 @@
 import { Signal } from "document-model";
-import { DocumentDrive, actions, reducer, utils } from "../../index.js";
-
+import { describe, expect, it, vi } from "vitest";
+import {
+  addFolder,
+  deleteNode,
+  setAvailableOffline,
+  setDriveName,
+  setSharingType,
+} from "../../gen/creators.js";
+import { DocumentDriveClass } from "../../gen/object.js";
+import { reducer } from "../../gen/reducer.js";
+import {
+  DocumentDriveAction,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "../../gen/types.js";
+import { createDocument } from "../../gen/utils.js";
 describe("DocumentDrive Class", () => {
   it("should rename drive", () => {
-    let documentDrive = utils.createDocument();
+    let documentDrive = createDocument();
 
     expect(documentDrive.state.global.name).toBe("");
 
     documentDrive = reducer(
       documentDrive,
-      actions.setDriveName({
+      setDriveName({
         name: "new name",
       }),
     );
@@ -18,17 +32,17 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should delete children when node is deleted", () => {
-    let documentDrive = utils.createDocument();
+    let documentDrive = createDocument();
     documentDrive = reducer(
       documentDrive,
-      actions.addFolder({
+      addFolder({
         id: "1",
         name: "1",
       }),
     );
     documentDrive = reducer(
       documentDrive,
-      actions.addFolder({
+      addFolder({
         id: "1.1",
         name: "1.1",
         parentFolder: "1",
@@ -37,7 +51,7 @@ describe("DocumentDrive Class", () => {
 
     documentDrive = reducer(
       documentDrive,
-      actions.deleteNode({
+      deleteNode({
         id: "1",
       }),
     );
@@ -46,7 +60,7 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should add file", () => {
-    const documentDrive = new DocumentDrive(undefined);
+    const documentDrive = new DocumentDriveClass();
     documentDrive.addFile({
       id: "1",
       documentType: "test",
@@ -81,9 +95,14 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should trigger create child document signal", () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    function dispatch(_signal: Signal) {}
-    const documentDrive = new DocumentDrive(undefined, dispatch);
+    function dispatch(
+      _signal: Signal<
+        DocumentDriveState,
+        DocumentDriveLocalState,
+        DocumentDriveAction
+      >,
+    ) {}
+    const documentDrive = new DocumentDriveClass(undefined, dispatch);
     // @ts-expect-error spying on private method
     const spy = vi.spyOn(documentDrive, "_signalDispatch");
     documentDrive.addFile({
@@ -120,10 +139,10 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should set local sharing type", () => {
-    let documentDrive = utils.createDocument();
+    let documentDrive = createDocument();
     documentDrive = reducer(
       documentDrive,
-      actions.setSharingType({
+      setSharingType({
         type: "public",
       }),
     );
@@ -132,12 +151,12 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should set available offline", () => {
-    let documentDrive = utils.createDocument();
+    let documentDrive = createDocument();
 
     expect(documentDrive.state.local.availableOffline).toBe(false);
     documentDrive = reducer(
       documentDrive,
-      actions.setAvailableOffline({
+      setAvailableOffline({
         availableOffline: true,
       }),
     );

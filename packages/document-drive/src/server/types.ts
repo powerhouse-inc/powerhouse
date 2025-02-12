@@ -6,41 +6,43 @@ import type {
   ListenerCallInfo,
   ListenerFilter,
   Trigger,
-} from "document-model-libs/document-drive";
+} from "@drive-document-model";
+import { IReadModeDriveServer } from "@read-mode/types";
+import { BaseDocumentDriveServer } from "@server/base";
+import {
+  OperationError,
+  SynchronizationUnitNotFoundError,
+} from "@server/error";
+import {
+  IReceiver as IInternalListener,
+  IInternalTransmitter,
+} from "@server/listener/transmitter/internal";
+import {
+  ITransmitter,
+  PullResponderTrigger,
+  StrandUpdateSource,
+} from "@server/listener/transmitter/types";
+import { IDefaultDrivesManager } from "@utils/default-drives-manager";
+import { DriveInfo } from "@utils/graphql";
+import { RunAsap } from "@utils/run-asap";
 import type {
-  Action,
   ActionContext,
   BaseAction,
+  BaseDocument,
+  BaseState,
   CreateChildDocumentInput,
-  Document,
   DocumentModelModule,
   Operation,
   OperationScope,
   ReducerOptions,
   Signal,
-  State,
-} from "document-model/document";
+} from "document-model";
 import { Unsubscribe } from "nanoevents";
-import { BaseDocumentDriveServer } from ".";
-import {
-  IReceiver as IInternalListener,
-  IInternalTransmitter,
-} from "./listener/transmitter/internal";
-import { IReadModeDriveServer } from "../read-mode/types";
-import { RunAsap } from "../utils";
-import { IDefaultDrivesManager } from "../utils/default-drives-manager";
-import { DriveInfo } from "../utils/graphql";
-import { OperationError, SynchronizationUnitNotFoundError } from "./error";
-import {
-  ITransmitter,
-  PullResponderTrigger,
-  StrandUpdateSource,
-} from "./listener/transmitter/types";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 
-export type DocumentDriveServerConstructor =
-  Constructor<BaseDocumentDriveServer>;
+export type DocumentDriveServerConstructor<TGlobalState, TLocalState, TAction extends BaseAction> =
+  Constructor<BaseDocumentDriveServer<TGlobalState, TLocalState, TAction>>;
 
 // Mixin type that returns a type extending both the base class and the interface
 export type Mixin<T extends Constructor, I> = T &
@@ -51,7 +53,7 @@ export type DocumentDriveServerMixin<I> = Mixin<
   I
 >;
 
-export type DriveInput = State<
+export type DriveInput = BaseState<
   Omit<DocumentDriveState, "__typename" | "id" | "nodes"> & { id?: string },
   DocumentDriveLocalState
 >;
@@ -66,18 +68,30 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
   accessLevel?: RemoteDriveAccessLevel;
 };
 
-export type CreateDocumentInput = CreateChildDocumentInput;
+export type CreateDocumentInput = CreateChildDocumentInput<
+  DocumentDriveState,
+  DocumentDriveLocalState,
+  DocumentDriveAction
+>;
 
 export type SignalResult = {
-  signal: Signal;
+  signal: Signal<
+    DocumentDriveState,
+    DocumentDriveLocalState,
+    DocumentDriveAction
+  >;
   result: unknown; // infer from return types on document-model
 };
 
-export type IOperationResult<T extends Document = Document> = {
+export type IOperationResult<
+  TGlobalState,
+  TLocalState,
+  TAction extends BaseAction,
+> = {
   status: UpdateStatus;
-  error?: OperationError;
-  operations: Operation[];
-  document: T | undefined;
+  error?: OperationError<TGlobalState, TLocalState, TAction>;
+  operations: Operation<TGlobalState, TLocalState, TAction>[];
+  document: BaseDocument<TGlobalState, TLocalState, TAction> | undefined;
   signals: SignalResult[];
 };
 
@@ -205,7 +219,13 @@ export interface DriveEvents {
     status: number,
     errorMessage: string,
   ) => void;
-  documentModels: (documentModels: DocumentModelModule[]) => void;
+  documentModels: (
+    documentModels: DocumentModelModule<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction
+    >[],
+  ) => void;
   driveAdded: (drive: DocumentDriveDocument) => void;
   driveDeleted: (driveId: string) => void;
 }
@@ -320,7 +340,13 @@ export type GetStrandsOptions = {
 export abstract class AbstractDocumentDriveServer {
   /** Public methods **/
   abstract initialize(): Promise<Error[] | null>;
-  abstract setDocumentModels(models: DocumentModelModule[]): void;
+  abstract setDocumentModels(
+    models: DocumentModelModule<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction
+    >[],
+  ): void;
   abstract getDrives(): Promise<string[]>;
   abstract addDrive(drive: DriveInput): Promise<DocumentDriveDocument>;
   abstract addRemoteDrive(
@@ -336,112 +362,168 @@ export abstract class AbstractDocumentDriveServer {
   abstract getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
 
   abstract getDocuments(drive: string): Promise<string[]>;
-  abstract getDocument(
+  abstract getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
     options?: GetDocumentOptions,
-  ): Promise<Document>;
+  ): Promise<BaseDocument<TGlobalState, TLocalState, TAction>>;
 
-  abstract addOperation(
+  abstract addOperation<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
-    operation: Operation,
+    operation: Operation<TGlobalState, TLocalState, TAction>,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract addOperations(
+  abstract addOperations<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
-    operations: Operation[],
+    operations: Operation<TGlobalState, TLocalState, TAction>[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract queueOperation(
+  abstract queueOperation<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
     id: string,
-    operation: Operation,
+    operation: Operation<TGlobalState, TLocalState, TAction>,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract queueOperations(
+  abstract queueOperations<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
     id: string,
-    operations: Operation[],
+    operations: Operation<TGlobalState, TLocalState, TAction>[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract queueAction(
+  abstract queueAction<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
-    action: Action,
+    action: TAction,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract queueActions(
+  abstract queueActions<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
-    actions: Action[],
+    actions: TAction[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
   abstract addDriveOperation(
     drive: string,
-    operation: Operation<DocumentDriveAction | BaseAction>,
+    operation: Operation<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction | BaseAction
+    >,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<
+    IOperationResult<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction | BaseAction
+    >
+  >;
   abstract addDriveOperations(
     drive: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction | BaseAction
+    >[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<
+    IOperationResult<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction | BaseAction
+    >
+  >;
 
-  abstract queueDriveOperation(
+  abstract queueDriveOperation<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
-    operation: Operation<DocumentDriveAction | BaseAction>,
+    operation: Operation<TGlobalState, TLocalState, TAction>,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract queueDriveOperations(
+  abstract queueDriveOperations<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<TGlobalState, TLocalState, TAction>[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract queueDriveAction(
+  abstract queueDriveAction<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
-    action: DocumentDriveAction | BaseAction,
+    action: TAction,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract queueDriveActions(
+  abstract queueDriveActions<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
     drive: string,
-    actions: Array<DocumentDriveAction | BaseAction>,
+    actions: Array<DocumentDriveAction | TAction>,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
-  abstract addAction(
+  abstract addAction<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
-    action: Action,
+    action: TAction,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  abstract addActions(
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
+  abstract addActions<TGlobalState, TLocalState, TAction extends BaseAction>(
     drive: string,
     id: string,
-    actions: Action[],
+    actions: TAction[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
+  ): Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
 
   abstract addDriveAction(
     drive: string,
     action: DocumentDriveAction | BaseAction,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<
+    IOperationResult<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction | BaseAction
+    >
+  >;
   abstract addDriveActions(
     drive: string,
     actions: (DocumentDriveAction | BaseAction)[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<
+    IOperationResult<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction | BaseAction
+    >
+  >;
 
   abstract getSyncStatus(
     syncUnitId: string,
@@ -496,8 +578,18 @@ export abstract class AbstractDocumentDriveServer {
   ): Promise<Document>;
   protected abstract deleteDocument(drive: string, id: string): Promise<void>;
 
-  protected abstract getDocumentModel(documentType: string): DocumentModelModule;
-  abstract getDocumentModels(): DocumentModelModule[];
+  protected abstract getDocumentModel<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(
+    documentType: string,
+  ): DocumentModelModule<TGlobalState, TLocalState, TAction>;
+  abstract getDocumentModels<
+    TGlobalState,
+    TLocalState,
+    TAction extends BaseAction,
+  >(): DocumentModelModule<TGlobalState, TLocalState, TAction>[];
 
   /** Event methods **/
   protected abstract emit<K extends keyof DriveEvents>(
