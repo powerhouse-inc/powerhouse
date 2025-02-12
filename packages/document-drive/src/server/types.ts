@@ -21,7 +21,6 @@ import type {
   State,
 } from "document-model/document";
 import { Unsubscribe } from "nanoevents";
-import { BaseDocumentDriveServer } from ".";
 import { IReadModeDriveServer } from "../read-mode/types";
 import { RunAsap } from "../utils";
 import { IDefaultDrivesManager } from "../utils/default-drives-manager";
@@ -39,17 +38,9 @@ import {
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 
-export type DocumentDriveServerConstructor =
-  Constructor<BaseDocumentDriveServer>;
-
 // Mixin type that returns a type extending both the base class and the interface
 export type Mixin<T extends Constructor, I> = T &
   Constructor<InstanceType<T> & I>;
-
-export type DocumentDriveServerMixin<I> = Mixin<
-  typeof BaseDocumentDriveServer,
-  I
->;
 
 export type DriveInput = State<
   Omit<DocumentDriveState, "__typename" | "id" | "nodes"> & { id?: string },
@@ -591,4 +582,46 @@ export interface ListenerState {
 export interface SyncronizationUnitState {
   listenerRev: number;
   lastUpdated: string;
+}
+
+export interface ITransmitterFactory {
+  instance(
+    transmitterType: string,
+    listener: Listener,
+    driveServer: IBaseDocumentDriveServer,
+  ): ITransmitter;
+}
+
+export interface ISynchronizationManager {
+  getSynchronizationUnits(
+    driveId: string,
+    documentId?: string[],
+    scope?: string[],
+    branch?: string[],
+    documentType?: string[],
+  ): Promise<SynchronizationUnit[]>;
+
+  getSynchronizationUnitsIds(
+    driveId: string,
+    documentId?: string[],
+    scope?: string[],
+    branch?: string[],
+    documentType?: string[],
+  ): Promise<SynchronizationUnitQuery[]>;
+
+  getSynchronizationUnit(
+    driveId: string,
+    syncId: string,
+  ): Promise<SynchronizationUnit | undefined>;
+
+  getOperationData(
+    driveId: string,
+    syncId: string,
+    filter: GetStrandsOptions,
+  ): Promise<OperationUpdate[]>;
+
+  getSynchronizationUnitsRevision(
+    driveId: string,
+    syncUnitsQuery: SynchronizationUnitQuery[],
+  ): Promise<SynchronizationUnit[]>;
 }
