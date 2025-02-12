@@ -23,8 +23,6 @@ import {
 import { ClientError } from "graphql-request";
 import { Unsubscribe } from "nanoevents";
 import { ICache } from "../cache";
-import InMemoryCache from "../cache/memory";
-import { BaseQueueManager } from "../queue/base";
 import {
   ActionJob,
   IQueueManager,
@@ -33,14 +31,17 @@ import {
   Job,
   OperationJob,
 } from "../queue/types";
-import { MemoryStorage } from "../storage/memory";
+import { ReadModeServer } from "../read-mode";
 import type {
   DocumentDriveStorage,
   DocumentStorage,
   IDriveStorage,
 } from "../storage/types";
 import { generateUUID, isDocumentDrive, RunAsap, runAsapAsync } from "../utils";
-import { DefaultDrivesManager } from "../utils/default-drives-manager";
+import {
+  DefaultDrivesManager,
+  IDefaultDrivesManager,
+} from "../utils/default-drives-manager";
 import {
   attachBranch,
   garbageCollect,
@@ -59,8 +60,6 @@ import {
   OperationError,
   SynchronizationUnitNotFoundError,
 } from "./error";
-import { DefaultEventEmitter } from "./event-emitter";
-import { ListenerManager } from "./listener";
 import {
   CancelPullLoop,
   InternalTransmitter,
@@ -69,8 +68,6 @@ import {
   PullResponderTransmitter,
   StrandUpdateSource,
 } from "./listener/transmitter";
-import TransmitterFactory from "./listener/transmitter/factory";
-import SynchronizationManager from "./sync-manager";
 import {
   AddOperationOptions,
   Constructor,
@@ -102,7 +99,9 @@ import {
 } from "./types";
 import { filterOperationsByRevision, isAtRevision } from "./utils";
 
-export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
+export class BaseDocumentDriveServer
+  implements IBaseDocumentDriveServer, IDefaultDrivesManager
+{
   // external dependencies
   private documentModels: DocumentModel[];
   private storage: IDriveStorage;
@@ -128,10 +127,14 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   constructor(
     documentModels: DocumentModel[],
-    storage: IDriveStorage = new MemoryStorage(),
-    cache: ICache = new InMemoryCache(),
-    queueManager: IQueueManager = new BaseQueueManager(),
-    eventEmitter: IEventEmitter = new DefaultEventEmitter(),
+    storage: IDriveStorage,
+    cache: ICache,
+    queueManager: IQueueManager,
+    eventEmitter: IEventEmitter,
+    synchronizationManager: ISynchronizationManager,
+    listenerManager: IListenerManager,
+    transmitterFactory: ITransmitterFactory,
+
     options?: DocumentDriveServerOptions,
   ) {
     this.documentModels = documentModels;
@@ -139,6 +142,10 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     this.cache = cache;
     this.queueManager = queueManager;
     this.eventEmitter = eventEmitter;
+    this.synchronizationManager = synchronizationManager;
+    this.listenerManager = listenerManager;
+    this.transmitterFactory = transmitterFactory;
+
     this.options = {
       ...options,
       defaultDrives: {
@@ -153,23 +160,6 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
           ? RunAsap.runAsap
           : options.taskQueueMethod,
     };
-
-    // todo: pull this into the constructor -- there is a circular dependency right now
-    this.synchronizationManager = new SynchronizationManager(
-      storage,
-      cache,
-      documentModels,
-      eventEmitter,
-    );
-
-    // todo: pull this into the constructor -- there is a circular dependency right now
-    this.listenerManager = new ListenerManager(
-      this.synchronizationManager,
-      this.options.listenerManager,
-    );
-
-    // todo: pull this into the constructor, depends on listenerManager
-    this.transmitterFactory = new TransmitterFactory(this.listenerManager);
 
     this.defaultDrivesManager = new DefaultDrivesManager(
       this,
@@ -2130,3 +2120,5 @@ export type DocumentDriveServerMixin<I> = Mixin<
   typeof BaseDocumentDriveServer,
   I
 >;
+
+export const DocumentDriveServer = ReadModeServer(BaseDocumentDriveServer);

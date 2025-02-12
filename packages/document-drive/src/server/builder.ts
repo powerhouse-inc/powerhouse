@@ -5,99 +5,137 @@ import { BaseQueueManager } from "../queue/base";
 import { IQueueManager } from "../queue/types";
 import { MemoryStorage } from "../storage/memory";
 import { IDriveStorage } from "../storage/types";
-import { BaseDocumentDriveServer } from "./base-server";
+import { DocumentDriveServer } from "./base-server";
 import { DefaultEventEmitter } from "./event-emitter";
-import type { DocumentDriveServerOptions } from "./types";
-import { IEventEmitter } from "./types";
+import { ListenerManager } from "./listener/listener-manager";
+import TransmitterFactory from "./listener/transmitter/factory";
+import SynchronizationManager from "./sync-manager";
+import {
+  DefaultListenerManagerOptions,
+  type DocumentDriveServerOptions,
+  type IEventEmitter,
+  type IListenerManager,
+  type ISynchronizationManager,
+  type ITransmitterFactory,
+} from "./types";
 
 /**
  * Builder class for constructing BaseDocumentDriveServer instances with proper configuration
  */
 export class DocumentDriveServerBuilder {
   private documentModels: DocumentModel[] = [];
-  private storage: IDriveStorage = new MemoryStorage();
-  private cache: ICache = new InMemoryCache();
-  private queueManager: IQueueManager = new BaseQueueManager();
-  private eventEmitter: IEventEmitter = new DefaultEventEmitter();
-  private options: DocumentDriveServerOptions | undefined;
 
-  /**
-   * Set the document models for the server
-   * @param models Array of document models
-   */
-  public withDocumentModels(models: DocumentModel[]): this {
+  private storage?: IDriveStorage;
+  private cache?: ICache;
+  private queueManager?: IQueueManager;
+  private eventEmitter?: IEventEmitter;
+  private options?: DocumentDriveServerOptions;
+  private synchronizationManager?: ISynchronizationManager;
+  private listenerManager?: IListenerManager;
+  private transmitterFactory?: ITransmitterFactory;
+
+  constructor(models: DocumentModel[]) {
     this.documentModels = models;
-    return this;
   }
 
-  /**
-   * Set the storage implementation
-   * @param storage Storage implementation
-   */
   public withStorage(storage: IDriveStorage): this {
     this.storage = storage;
     return this;
   }
 
-  /**
-   * Set the cache implementation
-   * @param cache Cache implementation
-   */
   public withCache(cache: ICache): this {
     this.cache = cache;
     return this;
   }
 
-  /**
-   * Set the queue manager implementation
-   * @param queueManager Queue manager implementation
-   */
   public withQueueManager(queueManager: IQueueManager): this {
     this.queueManager = queueManager;
     return this;
   }
 
-  /**
-   * Set the event emitter implementation
-   * @param eventEmitter Event emitter implementation
-   */
   public withEventEmitter(eventEmitter: IEventEmitter): this {
     this.eventEmitter = eventEmitter;
     return this;
   }
 
-  /**
-   * Set server options
-   * @param options Server configuration options
-   */
+  public withSynchronizationManager(
+    synchronizationManager: ISynchronizationManager,
+  ): this {
+    this.synchronizationManager = synchronizationManager;
+    return this;
+  }
+
+  public withListenerManager(listenerManager: IListenerManager): this {
+    this.listenerManager = listenerManager;
+    return this;
+  }
+
+  public withTransmitterFactory(transmitterFactory: ITransmitterFactory): this {
+    this.transmitterFactory = transmitterFactory;
+    return this;
+  }
+
   public withOptions(options: DocumentDriveServerOptions): this {
     this.options = options;
     return this;
   }
 
-  /**
-   * Build and return a new BaseDocumentDriveServer instance
-   * @throws Error if document models are not provided
-   */
-  public build(): BaseDocumentDriveServer {
+  public build() {
     if (!this.documentModels.length) {
       throw new Error("Document models are required to build the server");
     }
 
-    return new BaseDocumentDriveServer(
+    if (!this.storage) {
+      this.storage = new MemoryStorage();
+    }
+
+    if (!this.cache) {
+      this.cache = new InMemoryCache();
+    }
+
+    if (!this.queueManager) {
+      this.queueManager = new BaseQueueManager();
+    }
+
+    if (!this.eventEmitter) {
+      this.eventEmitter = new DefaultEventEmitter();
+    }
+
+    if (!this.synchronizationManager) {
+      this.synchronizationManager = new SynchronizationManager(
+        this.storage,
+        this.cache,
+        this.documentModels,
+        this.eventEmitter,
+      );
+    }
+
+    if (!this.listenerManager) {
+      const config = {
+        ...DefaultListenerManagerOptions,
+        ...this.options?.listenerManager,
+      };
+
+      this.listenerManager = new ListenerManager(
+        this.synchronizationManager,
+        config,
+      );
+    }
+
+    if (!this.transmitterFactory) {
+      this.transmitterFactory = new TransmitterFactory(this.listenerManager);
+    }
+
+    return new DocumentDriveServer(
       this.documentModels,
       this.storage,
       this.cache,
       this.queueManager,
       this.eventEmitter,
+      this.synchronizationManager,
+      this.listenerManager,
+      this.transmitterFactory,
       this.options,
     );
-  }
-
-  /**
-   * Create a new builder instance
-   */
-  public static create(models: DocumentModel[]): DocumentDriveServerBuilder {
-    return new DocumentDriveServerBuilder().withDocumentModels(models);
   }
 }

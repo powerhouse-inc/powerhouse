@@ -7,7 +7,7 @@ import { DocumentModel } from "document-model/document";
 import * as DocumentModelLib from "document-model/document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import {
-  DocumentDriveServer,
+  DocumentDriveServerBuilder,
   InternalTransmitterUpdate,
   IReceiver,
 } from "../src";
@@ -20,7 +20,7 @@ describe("Internal Listener", () => {
   ] as DocumentModel[];
 
   async function buildServer(receiver: IReceiver) {
-    const server = new DocumentDriveServer(documentModels);
+    const server = new DocumentDriveServerBuilder(documentModels).build();
     await server.initialize();
 
     await server.addDrive({
