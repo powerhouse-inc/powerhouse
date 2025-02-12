@@ -3,6 +3,7 @@ import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
+  StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
 import { TimePickerField } from "./time-picker-field";
 
@@ -21,16 +22,32 @@ const meta: Meta<typeof TimePickerField> = {
       control: {
         type: "select",
       },
+
       options: ["hh:mm a", "HH:mm"],
       defaultValue: { summary: "hh:mm a" },
     },
     showTimezoneSelect: {
       control: {
         type: "boolean",
-        defaultValue: false,
         description: "Show timezone select",
+        defaultValue: false,
+        table: {
+          category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        },
       },
       defaultValue: { summary: false },
+    },
+    dateIntervals: {
+      control: {
+        description: "The interval between each time option",
+        type: "number",
+        min: 1,
+        max: 60,
+        table: {
+          category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        },
+      },
+      defaultValue: { summary: 1 },
     },
   },
 

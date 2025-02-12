@@ -1,7 +1,12 @@
-import { format, getHours, getMinutes, isValid, parse } from "date-fns";
+import { format, getHours, getMinutes, parse } from "date-fns";
 import React, { useMemo, useState } from "react";
 import { TimeFieldValue } from "./type";
-import { createChangeEvent } from "./utils";
+import {
+  createChangeEvent,
+  isValidTimeInput,
+  roundMinute,
+  transformInputTime,
+} from "./utils";
 
 interface TimePickerFieldProps {
   value?: TimeFieldValue;
@@ -9,6 +14,7 @@ interface TimePickerFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   timeFormat?: string;
+  dateIntervals?: number;
 }
 
 export const useTimePickerField = ({
@@ -17,6 +23,7 @@ export const useTimePickerField = ({
   onChange,
   onBlur,
   timeFormat = "hh:mm a",
+  dateIntervals = 1,
 }: TimePickerFieldProps) => {
   const now = new Date();
   const currentHour = getHours(now);
@@ -54,6 +61,37 @@ export const useTimePickerField = ({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+
+    // If the transformation fails (empty values), do not make changes
+    if (!isValidTimeInput(input)) {
+      onBlur?.(e);
+      return;
+    }
+    const { hour, minute, period } = transformInputTime(
+      input,
+      is12HourFormat,
+      selectedPeriod,
+    );
+
+    // Redondear minutos
+    const minuteNum = parseInt(minute, 10);
+    const roundedMinute = roundMinute(minuteNum, dateIntervals);
+    const formattedRoundedMinute = String(roundedMinute).padStart(2, "0");
+
+    // Actualizar estados
+    setSelectedHour(hour);
+    setSelectedMinute(formattedRoundedMinute);
+    if (is12HourFormat) {
+      setSelectedPeriod(period);
+    }
+
+    // Formatear y disparar el cambio
+    const newTimeString = is12HourFormat
+      ? `${hour}:${formattedRoundedMinute} ${period}`
+      : `${hour}:${formattedRoundedMinute}`;
+
+    onChange?.(createChangeEvent(newTimeString));
     onBlur?.(e);
   };
 
@@ -62,11 +100,16 @@ export const useTimePickerField = ({
     ? Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")) // 1-12
     : Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")); // 0-23
 
-  // Generate minutes (0-59)
-  const minutes = Array.from({ length: 60 }, (_, i) =>
-    String(i).padStart(2, "0"),
-  );
-
+  const minutes = useMemo(() => {
+    if (dateIntervals > 1) {
+      const arr: string[] = [];
+      for (let i = 0; i < 60; i += dateIntervals) {
+        arr.push(String(i).padStart(2, "0"));
+      }
+      return arr;
+    }
+    return Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+  }, [dateIntervals]);
   const handleSave = () => {
     let timeString: string;
 

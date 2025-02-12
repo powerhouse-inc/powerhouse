@@ -31,6 +31,7 @@ export interface TimePickerFieldProps
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
   timeFormat?: string;
   showTimezoneSelect?: boolean;
+  dateIntervals?: number;
 }
 
 export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
@@ -53,6 +54,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       selectProps,
       timeFormat = "hh:mm a",
       showTimezoneSelect,
+      dateIntervals,
     },
     ref,
   ) => {
@@ -82,6 +84,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       onChange,
       onBlur,
       timeFormat,
+      dateIntervals,
     });
     return (
       <FormGroup>
