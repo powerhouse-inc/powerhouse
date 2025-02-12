@@ -1,0 +1,102 @@
+{
+  "name": "common",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "type": "module",
+  "files": [
+    "/dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/es/index.js",
+      "require": "./dist/cjs/index.cjs"
+    },
+    "./editors": {
+      "types": "./dist/editors.d.ts",
+      "import": "./dist/es/editors.js",
+      "require": "./dist/cjs/editors.cjs"
+    },
+    "./document-models": {
+      "types": "./dist/documentModels.d.ts",
+      "import": "./dist/es/documentModels.js",
+      "require": "./dist/cjs/documentModels.cjs"
+    }
+  },
+  "scripts": {
+    "generate": "powerhouse generate",
+    "dev": "ph-cli dev --config-file ./powerhouse.config.json",
+    "format-generated": "npx prettier \"**/{gen,processors,editors}/**/*\" --write --ignore-path --no-error-on-unmatched-pattern >> /dev/null",
+    "postgenerate": "npm run format-generated",
+    "check-types": "tsc",
+    "postlint": "npm run check-types",
+    "lint": "eslint",
+    "build": "npm run generate && vite build",
+    "storybook": "npm run install:storybook && npm run generate && storybook dev -p 6006",
+    "build-storybook": "npm run generate && storybook build",
+    "test": "vitest run",
+    "test:nogen": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build",
+    "connect": "ph-cli connect",
+    "reactor": "ph-cli reactor",
+    "install:storybook": "tsx scripts/index.ts",
+    "service": "ph-cli service",
+    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
+    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+  },
+  "peerDependencies": {
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^1.2.5",
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.18.0",
+    "@powerhousedao/analytics-engine-core": "^0.3.2",
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor-local": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
+    "@types/eslint__js": "^8.42.3",
+    "@types/node": "^22.10.9",
+    "@types/react": "^18.3.18",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "autoprefixer": "^10.4.20",
+    "document-model": "workspace:*",
+    "document-model-libs": "workspace:*",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-react": "^7.37.4",
+    "globals": "^15.14.0",
+    "package-manager-detector": "^0.2.8",
+    "pm2": "^5.4.3",
+    "postcss": "^8.5.1",
+    "prettier": "^3.4.2",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-scrollbar": "^3.1.0",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.21.0",
+    "vite": "^6.0.11",
+    "vite-plugin-dts": "^4.5.0",
+    "vite-plugin-generate-file": "^0.2.0",
+    "vitest": "^2.1.8",
+    "zod": "^3.24.1"
+  },
+  "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps."
+}
