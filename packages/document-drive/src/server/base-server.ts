@@ -102,9 +102,7 @@ import {
 } from "./types";
 import { filterOperationsByRevision, isAtRevision } from "./utils";
 
-export class BaseDocumentDriveServer
-  implements IBaseDocumentDriveServer, ISynchronizationManager
-{
+export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   // external dependencies
   private documentModels: DocumentModel[];
   private storage: IDriveStorage;
@@ -166,7 +164,7 @@ export class BaseDocumentDriveServer
 
     // todo: pull this into the constructor -- there is a circular dependency right now
     this.listenerManager = new ListenerManager(
-      this,
+      this.synchronizationManager,
       this.options.listenerManager,
     );
 
