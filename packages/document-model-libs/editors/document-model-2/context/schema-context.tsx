@@ -1,9 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import {
-  hiddenQueryTypeDefDoc,
-  initialSchema,
-  typeDefsDoc,
-} from "../constants/documents";
+import { createDefaultRules, isDocumentString } from "@graphql-tools/utils";
 import {
   buildASTSchema,
   buildSchema,
@@ -15,7 +10,12 @@ import {
   printSchema,
   validate,
 } from "graphql";
-import { createDefaultRules, isDocumentString } from "@graphql-tools/utils";
+import { createContext, useContext, useEffect, useState } from "react";
+import {
+  hiddenQueryTypeDefDoc,
+  initialSchema,
+  typeDefsDoc,
+} from "../constants/documents";
 
 /* Required to make the schema "count" as an actual schema */
 const hiddenQueryTypeDefinitions = parse(hiddenQueryTypeDefDoc).definitions;
@@ -123,7 +123,6 @@ function safeParseSdl(sdl: string) {
     if (!sdl || !isDocumentString(sdl)) return null;
     return parse(sdl);
   } catch (error) {
-    console.debug("in safe parse", error);
     return null;
   }
 }

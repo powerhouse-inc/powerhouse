@@ -1,6 +1,6 @@
 import { Breadcrumbs, FILE } from '@powerhousedao/design-system';
 import { Document, DocumentModel, Operation } from 'document-model/document';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import Button from 'src/components/button';
 import { DocumentEditor } from 'src/components/editors';
@@ -11,7 +11,6 @@ import { SearchBar } from 'src/components/search-bar';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useNodeNavigation } from 'src/hooks/useNodeNavigation';
 import { useUiNodes } from 'src/hooks/useUiNodes';
-import { usePreloadEditor } from 'src/store/editor';
 import { exportFile } from 'src/utils';
 import { validateDocument } from 'src/utils/validate-document';
 
@@ -46,22 +45,6 @@ export default function Content() {
     } = useUiNodes();
     useNodeNavigation();
     const { showModal } = useModal();
-    const preloadEditor = usePreloadEditor();
-
-    // preload document editors
-    useEffect(() => {
-        if (!documentModels) return;
-
-        const requestIC = window.requestIdleCallback ?? setTimeout;
-        const cancelIC = window.cancelIdleCallback ?? clearTimeout;
-
-        const id = requestIC(async () => {
-            for (const documentModel of documentModels) {
-                await preloadEditor(documentModel.documentModel.id);
-            }
-        });
-        return () => cancelIC(id);
-    }, [documentModels, preloadEditor]);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
@@ -78,15 +61,18 @@ export default function Content() {
         });
     }, [selectedDriveNode, selectedNode, addFile]);
 
-    async function handleAddOperationToSelectedDocument(operation: Operation) {
-        if (!selectedDocument) {
-            throw new Error('No document selected');
-        }
-        if (!addOperationToSelectedDocument) {
-            throw new Error('No add operation function defined');
-        }
-        await addOperationToSelectedDocument(operation);
-    }
+    const handleAddOperationToSelectedDocument = useCallback(
+        async (operation: Operation) => {
+            if (!selectedDocument) {
+                throw new Error('No document selected');
+            }
+            if (!addOperationToSelectedDocument) {
+                throw new Error('No add operation function defined');
+            }
+            await addOperationToSelectedDocument(operation);
+        },
+        [addOperationToSelectedDocument, selectedDocument],
+    );
 
     function createDocument(documentModel: DocumentModel) {
         if (!selectedDriveNode) return;
@@ -98,56 +84,82 @@ export default function Content() {
         });
     }
 
-    function exportDocument(document: Document) {
-        const validationErrors = validateDocument(document);
+    const exportDocument = useCallback(
+        (document: Document) => {
+            const validationErrors = validateDocument(document);
 
-        if (validationErrors.length) {
-            showModal('confirmationModal', {
-                title: t('modals.exportDocumentWithErrors.title'),
-                body: (
-                    <div>
-                        <p>{t('modals.exportDocumentWithErrors.body')}</p>
-                        <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
-                            {validationErrors.map((error, index) => (
-                                <li key={index}>{error.message}</li>
-                            ))}
-                        </ul>
-                    </div>
-                ),
-                cancelLabel: t('common.cancel'),
-                continueLabel: t('common.export'),
-                onCancel(closeModal) {
-                    closeModal();
-                },
-                onContinue(closeModal) {
-                    closeModal();
-                    return exportFile(document, getDocumentModel);
-                },
-            });
-        } else {
-            return exportFile(document, getDocumentModel);
+            if (validationErrors.length) {
+                showModal('confirmationModal', {
+                    title: t('modals.exportDocumentWithErrors.title'),
+                    body: (
+                        <div>
+                            <p>{t('modals.exportDocumentWithErrors.body')}</p>
+                            <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
+                                {validationErrors.map((error, index) => (
+                                    <li key={index}>{error.message}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    ),
+                    cancelLabel: t('common.cancel'),
+                    continueLabel: t('common.export'),
+                    onCancel(closeModal) {
+                        closeModal();
+                    },
+                    onContinue(closeModal) {
+                        closeModal();
+                        return exportFile(document, getDocumentModel);
+                    },
+                });
+            } else {
+                return exportFile(document, getDocumentModel);
+            }
+        },
+        [getDocumentModel, showModal, t],
+    );
+
+    const onOpenSwitchboardLink = useMemo(() => {
+        return isRemoteDrive
+            ? () => openSwitchboardLink(selectedNode)
+            : undefined;
+    }, [isRemoteDrive, openSwitchboardLink, selectedNode]);
+
+    const onDocumentChangeHandler = useCallback(
+        (documentId: string, document: Document) => {
+            if (documentId !== fileNodeDocument?.documentId) {
+                return;
+            }
+            setSelectedDocument(document);
+
+            if (
+                !!selectedNode &&
+                document.name !== '' &&
+                selectedNode.name !== document.name
+            ) {
+                return renameNode(
+                    selectedNode.driveId,
+                    selectedNode.id,
+                    document.name,
+                );
+            }
+        },
+        [
+            fileNodeDocument?.documentId,
+            renameNode,
+            selectedNode,
+            setSelectedDocument,
+        ],
+    );
+
+    const onClose = useCallback(() => {
+        setSelectedNode(selectedParentNode);
+    }, [selectedParentNode, setSelectedNode]);
+
+    const onExport = useCallback(() => {
+        if (selectedDocument) {
+            return exportDocument(selectedDocument);
         }
-    }
-
-    const onOpenSwitchboardLink = async () => {
-        await openSwitchboardLink(selectedNode);
-    };
-
-    const onDocumentChangeHandler = (document: Document) => {
-        setSelectedDocument(document);
-
-        if (
-            !!selectedNode &&
-            document.name !== '' &&
-            selectedNode.name !== document.name
-        ) {
-            return renameNode(
-                selectedNode.driveId,
-                selectedNode.id,
-                document.name,
-            );
-        }
-    };
+    }, [exportDocument, selectedDocument]);
 
     return (
         <div
@@ -157,14 +169,13 @@ export default function Content() {
             {fileNodeDocument ? (
                 <div className="flex-1 rounded-2xl bg-gray-50 p-4">
                     <DocumentEditor
-                        {...uiNodes}
+                        fileNodeDocument={fileNodeDocument}
                         document={selectedDocument}
                         onChange={onDocumentChangeHandler}
-                        onExport={() =>
-                            selectedDocument && exportDocument(selectedDocument)
-                        }
+                        onClose={onClose}
+                        onExport={onExport}
                         onAddOperation={handleAddOperationToSelectedDocument}
-                        {...(isRemoteDrive && { onOpenSwitchboardLink })}
+                        onOpenSwitchboardLink={onOpenSwitchboardLink}
                     />
                 </div>
             ) : (
