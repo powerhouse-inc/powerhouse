@@ -3,7 +3,6 @@ import { connectCommand } from "./connect.js";
 import { devCommand } from "./dev.js";
 import { generateCommand } from "./generate.js";
 import { helpCommand } from "./help.js";
-import { inspectCommand } from "./inspect.js";
 import { installCommand } from "./install.js";
 import { listCommand } from "./list.js";
 import { serviceCommand } from "./service.js";
@@ -20,7 +19,6 @@ export const commands = [
   uninstallCommand,
   serviceCommand,
   listCommand,
-  inspectCommand,
 ];
 
 export default function registerCommands(program: Command) {
