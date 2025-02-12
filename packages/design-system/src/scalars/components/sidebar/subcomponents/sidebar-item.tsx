@@ -1,9 +1,10 @@
 /* eslint-disable react/jsx-max-depth */
-import { SidebarNode, FlattenedNode } from "../types";
+import { SidebarNode, FlattenedNode, NodeStatus } from "../types";
 import { useCallback } from "react";
 import { cn } from "@/scalars/lib";
 import { Tooltip, TooltipProvider } from "../../fragments";
 import { Icon } from "@/powerhouse";
+import { StatusIcon } from "./status-icon";
 
 interface SidebarItemProps {
   node: FlattenedNode;
@@ -40,12 +41,11 @@ export const SidebarItem = ({
   const iconName = node.isExpanded
     ? (node.expandedIcon ?? node.icon)
     : node.icon;
+  const hasStatus = node.status && node.status !== NodeStatus.UNCHANGED;
 
   const handleClick = useCallback(() => {
+    toggleNode?.(node.id);
     onChange?.(node);
-    if (node.children && node.children.length > 0) {
-      toggleNode?.(node.id);
-    }
   }, [onChange, node, toggleNode]);
 
   const handleTogglePin = useCallback(
@@ -73,10 +73,12 @@ export const SidebarItem = ({
         >
           <div
             id={`sidebar-item-${node.id}`}
+            // eslint-disable-next-line tailwindcss/no-custom-classname
             className={cn(
               "group/sidebar-item dark:hover:bg-charcoal-900 relative flex w-full cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-400",
-              allowPinning && "hover:pr-6",
-              isPinned && "pr-6",
+              hasStatus && "pr-6",
+              allowPinning && (hasStatus ? "hover:pr-12" : "hover:pr-6"),
+              isPinned && (hasStatus ? "pr-12" : "pr-6"),
               isSearchActive && "bg-yellow-100 dark:bg-[#604B0033]",
               // line between pinned items
               pinnedMode &&
@@ -95,7 +97,9 @@ export const SidebarItem = ({
                   height="16"
                   className={cn(
                     "min-w-4",
-                    node.isExpanded ? "" : "-rotate-90",
+                    node.isExpanded && node.children && node.children.length > 0
+                      ? ""
+                      : "-rotate-90",
                     node.children === undefined || node.children.length === 0
                       ? "text-gray-300 dark:text-gray-700"
                       : "text-gray-700 dark:text-gray-400",
@@ -153,7 +157,8 @@ export const SidebarItem = ({
 
               <div
                 className={cn(
-                  "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
+                  "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
+                  hasStatus ? "right-8" : "right-2",
                   isPinned
                     ? "text-gray-700 hover:text-blue-900 dark:text-gray-50 dark:hover:text-blue-900"
                     : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
@@ -162,6 +167,17 @@ export const SidebarItem = ({
               >
                 <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
               </div>
+              {node.status && hasStatus && (
+                <div
+                  className={cn(
+                    "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
+                    "text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
+                  )}
+                  onClick={handleTogglePin}
+                >
+                  <StatusIcon status={node.status} />
+                </div>
+              )}
             </div>
           </div>
         </div>

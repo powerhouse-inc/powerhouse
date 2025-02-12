@@ -4,56 +4,66 @@
     "title": "A.0 - Atlas Preamble",
     "icon": "FolderClose",
     "expandedIcon": "FolderOpen",
+    "status": "CREATED",
     "children": [
       {
         "id": "4371c842-4ea4-4974-8927-be425cf89aad",
         "title": "A.0.1 - Atlas Preamble",
         "icon": "FolderClose",
         "expandedIcon": "FolderOpen",
+        "status": "MODIFIED",
         "children": [
           {
             "id": "f9eee92a-2e64-42f7-aa36-9b66c61c490a",
             "title": "A.0.1.1 - Definitions",
             "icon": "FolderClose",
             "expandedIcon": "FolderOpen",
+            "status": "REMOVED",
             "children": [
               {
                 "id": "7bc39d30-4692-41a6-a500-04bc82090d98",
                 "title": "A.0.1.1.1 - Organizational Alignment",
                 "icon": "File",
+                "status": "MOVED",
                 "children": []
               },
               {
                 "id": "1be87264-19ef-42c2-8bfd-2bc710c21fe4",
                 "title": "A.0.1.1.2 - Ecosystem Intelligence",
                 "icon": "File",
+                "status": "DUPLICATED",
                 "children": []
               },
               {
                 "id": "57ce46dc-de32-49c4-a331-0e0836351a6c",
                 "title": "A.0.1.1.3 - Aligned Structure",
                 "icon": "File",
+                "status": "CREATED",
                 "children": []
               },
               {
                 "id": "fa84d113-a62b-4acc-9c67-23945d7efcdd",
                 "title": "A.0.1.1.4 - Universal Alignment",
                 "icon": "File",
+                "status": "CREATED",
                 "children": []
               },
               {
                 "id": "f5907d9f-b720-4297-b799-8cb60671b60a",
                 "title": "A.0.1.1.5 - Universal Alignment Assumption",
+                "status": "CREATED",
                 "children": []
               },
               {
                 "id": "cef1c8be-0a1a-47f6-bf03-6d1372aab51e",
                 "title": "A.0.1.1.6 - Alignment Artifact Strength",
+                "status": "MODIFIED",
                 "children": []
               },
               {
                 "id": "8e13be2a-db2c-4b6f-b4f3-3891c1788fc5",
                 "title": "A.0.1.1.7 - Inner Incentive",
+                "status": "MODIFIED",
                 "children": []
               },
               {
