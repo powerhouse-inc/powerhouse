@@ -1,7 +1,7 @@
 import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
-import path, { dirname } from "node:path";
 import fs from "node:fs";
 import { homedir } from "node:os";
+import path, { dirname } from "node:path";
 
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const POWERHOUSE_GLOBAL_DIR = path.join(homedir(), ".ph");
