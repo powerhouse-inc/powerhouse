@@ -21,7 +21,7 @@ import {
   OperationScope,
 } from "document-model/document";
 import { ClientError } from "graphql-request";
-import { createNanoEvents, Unsubscribe } from "nanoevents";
+import { Unsubscribe } from "nanoevents";
 import { ICache } from "../cache";
 import InMemoryCache from "../cache/memory";
 import { BaseQueueManager } from "../queue/base";
@@ -59,6 +59,7 @@ import {
   OperationError,
   SynchronizationUnitNotFoundError,
 } from "./error";
+import { DefaultEventEmitter } from "./event-emitter";
 import { ListenerManager } from "./listener";
 import {
   CancelPullLoop,
@@ -79,6 +80,7 @@ import {
   GetDocumentOptions,
   GetStrandsOptions,
   IBaseDocumentDriveServer,
+  IEventEmitter,
   IListenerManager,
   IOperationResult,
   ISynchronizationManager,
@@ -108,23 +110,22 @@ export class BaseDocumentDriveServer
   private storage: IDriveStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
+  private eventEmitter: IEventEmitter;
   protected options: Required<DocumentDriveServerOptions>;
 
   // waiting to move to external dependencies
   private listenerManager: IListenerManager;
   private transmitterFactory: ITransmitterFactory;
+  private synchronizationManager: ISynchronizationManager;
 
   // internal dependencies
   private defaultDrivesManager: DefaultDrivesManager;
-  private synchronizationManager: ISynchronizationManager;
 
   // internal state
-  private emitter = createNanoEvents<DriveEvents>();
   private triggerMap = new Map<
     DocumentDriveState["id"],
     Map<Trigger["id"], CancelPullLoop>
   >();
-  private syncStatus = new Map<string, SyncUnitStatusObject>();
   private initializePromise: Promise<Error[] | null>;
 
   constructor(
@@ -132,17 +133,14 @@ export class BaseDocumentDriveServer
     storage: IDriveStorage = new MemoryStorage(),
     cache: ICache = new InMemoryCache(),
     queueManager: IQueueManager = new BaseQueueManager(),
+    eventEmitter: IEventEmitter = new DefaultEventEmitter(),
     options?: DocumentDriveServerOptions,
   ) {
     this.documentModels = documentModels;
     this.storage = storage;
     this.cache = cache;
     this.queueManager = queueManager;
-    this.synchronizationManager = new SynchronizationManager(
-      storage,
-      cache,
-      documentModels,
-    );
+    this.eventEmitter = eventEmitter;
     this.options = {
       ...options,
       defaultDrives: {
@@ -157,6 +155,14 @@ export class BaseDocumentDriveServer
           ? RunAsap.runAsap
           : options.taskQueueMethod,
     };
+
+    // todo: pull this into the constructor -- there is a circular dependency right now
+    this.synchronizationManager = new SynchronizationManager(
+      storage,
+      cache,
+      documentModels,
+      eventEmitter,
+    );
 
     // todo: pull this into the constructor -- there is a circular dependency right now
     this.listenerManager = new ListenerManager(
@@ -224,7 +230,7 @@ export class BaseDocumentDriveServer
 
   setDocumentModels(models: DocumentModel[]): void {
     this.documentModels = [...models];
-    this.emit("documentModels", [...models]);
+    this.eventEmitter.emit("documentModels", [...models]);
   }
 
   initializeDefaultRemoteDrives() {
@@ -247,168 +253,6 @@ export class BaseDocumentDriveServer
     return source.type === "local" ? "push" : "pull";
   }
 
-  private getCombinedSyncUnitStatus(
-    syncUnitStatus: SyncUnitStatusObject,
-  ): SyncStatus {
-    if (!syncUnitStatus.pull && !syncUnitStatus.push) return "INITIAL_SYNC";
-    if (syncUnitStatus.pull === "INITIAL_SYNC") return "INITIAL_SYNC";
-    if (syncUnitStatus.push === "INITIAL_SYNC")
-      return syncUnitStatus.pull || "INITIAL_SYNC";
-
-    const order: Array<SyncStatus> = [
-      "ERROR",
-      "MISSING",
-      "CONFLICT",
-      "SYNCING",
-      "SUCCESS",
-    ];
-    const sortedStatus = Object.values(syncUnitStatus).sort(
-      (a, b) => order.indexOf(a) - order.indexOf(b),
-    );
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return sortedStatus[0]!;
-  }
-
-  private initSyncStatus(
-    syncUnitId: string,
-    status: Partial<SyncUnitStatusObject>,
-  ) {
-    const defaultSyncUnitStatus: SyncUnitStatusObject = Object.entries(
-      status,
-    ).reduce((acc, [key, _status]) => {
-      return {
-        ...acc,
-        [key]: _status !== "SYNCING" ? _status : "INITIAL_SYNC",
-      };
-    }, {});
-
-    this.syncStatus.set(syncUnitId, defaultSyncUnitStatus);
-    this.emit(
-      "syncStatus",
-      syncUnitId,
-      this.getCombinedSyncUnitStatus(defaultSyncUnitStatus),
-      undefined,
-      defaultSyncUnitStatus,
-    );
-  }
-
-  private async initializeDriveSyncStatus(
-    driveId: string,
-    drive: DocumentDriveDocument,
-  ) {
-    const syncUnits = await this.getSynchronizationUnitsIds(driveId);
-    const syncStatus: SyncUnitStatusObject = {
-      pull: drive.state.local.triggers.length > 0 ? "INITIAL_SYNC" : undefined,
-      push: drive.state.local.listeners.length > 0 ? "SUCCESS" : undefined,
-    };
-
-    if (!syncStatus.pull && !syncStatus.push) return;
-
-    const syncUnitsIds = [driveId, ...syncUnits.map((s) => s.syncId)];
-
-    for (const syncUnitId of syncUnitsIds) {
-      this.initSyncStatus(syncUnitId, syncStatus);
-    }
-  }
-
-  private updateSyncUnitStatus(
-    syncUnitId: string,
-    status: Partial<SyncUnitStatusObject> | null,
-    error?: Error,
-  ) {
-    if (status === null) {
-      this.syncStatus.delete(syncUnitId);
-      return;
-    }
-
-    const syncUnitStatus = this.syncStatus.get(syncUnitId);
-
-    if (!syncUnitStatus) {
-      this.initSyncStatus(syncUnitId, status);
-      return;
-    }
-
-    const shouldUpdateStatus = Object.entries(status).some(
-      ([key, _status]) =>
-        syncUnitStatus[key as keyof SyncUnitStatusObject] !== _status,
-    );
-
-    if (shouldUpdateStatus) {
-      const newstatus = Object.entries(status).reduce((acc, [key, _status]) => {
-        return {
-          ...acc,
-          // do not replace initial_syncing if it has not finished yet
-          [key]:
-            acc[key as keyof SyncUnitStatusObject] === "INITIAL_SYNC" &&
-            _status === "SYNCING"
-              ? "INITIAL_SYNC"
-              : _status,
-        };
-      }, syncUnitStatus);
-
-      const previousCombinedStatus =
-        this.getCombinedSyncUnitStatus(syncUnitStatus);
-      const newCombinedStatus = this.getCombinedSyncUnitStatus(newstatus);
-
-      this.syncStatus.set(syncUnitId, newstatus);
-
-      if (previousCombinedStatus !== newCombinedStatus) {
-        this.emit(
-          "syncStatus",
-          syncUnitId,
-          this.getCombinedSyncUnitStatus(newstatus),
-          error,
-          newstatus,
-        );
-      }
-    }
-  }
-
-  private async saveStrand(strand: StrandUpdate, source: StrandUpdateSource) {
-    const operations: Operation[] = strand.operations.map((op) => ({
-      ...op,
-      scope: strand.scope,
-      branch: strand.branch,
-    }));
-
-    const result = await (!strand.documentId
-      ? this.queueDriveOperations(
-          strand.driveId,
-          operations as Operation<DocumentDriveAction | BaseAction>[],
-          { source },
-        )
-      : this.queueOperations(strand.driveId, strand.documentId, operations, {
-          source,
-        }));
-
-    if (result.status === "ERROR") {
-      const syncUnits =
-        strand.documentId !== ""
-          ? (
-              await this.getSynchronizationUnitsIds(
-                strand.driveId,
-                [strand.documentId],
-                [strand.scope],
-                [strand.branch],
-              )
-            ).map((s) => s.syncId)
-          : [strand.driveId];
-
-      const operationSource = this.getOperationSource(source);
-
-      for (const syncUnit of syncUnits) {
-        this.updateSyncUnitStatus(
-          syncUnit,
-          { [operationSource]: result.status },
-          result.error,
-        );
-      }
-    }
-    this.emit("strandUpdate", strand);
-    return result;
-  }
-
   private handleListenerError(
     error: Error,
     driveId: string,
@@ -421,7 +265,11 @@ export class BaseDocumentDriveServer
 
     const status = error instanceof OperationError ? error.status : "ERROR";
 
-    this.updateSyncUnitStatus(driveId, { push: status }, error);
+    this.synchronizationManager.updateSyncStatus(
+      driveId,
+      { push: status },
+      error,
+    );
   }
 
   private shouldSyncRemoteDrive(drive: DocumentDriveDocument) {
@@ -446,10 +294,14 @@ export class BaseDocumentDriveServer
         driveTriggers = new Map();
       }
 
-      this.updateSyncUnitStatus(driveId, { pull: "SYNCING" });
+      this.synchronizationManager.updateSyncStatus(driveId, {
+        pull: "SYNCING",
+      });
 
       for (const syncUnit of syncUnits) {
-        this.updateSyncUnitStatus(syncUnit.syncId, { pull: "SYNCING" });
+        this.synchronizationManager.updateSyncStatus(syncUnit.syncId, {
+          pull: "SYNCING",
+        });
       }
 
       if (PullResponderTransmitter.isPullResponderTrigger(trigger)) {
@@ -462,10 +314,14 @@ export class BaseDocumentDriveServer
             const statusError =
               error instanceof OperationError ? error.status : "ERROR";
 
-            this.updateSyncUnitStatus(driveId, { pull: statusError }, error);
+            this.synchronizationManager.updateSyncStatus(
+              driveId,
+              { pull: statusError },
+              error,
+            );
 
             if (error instanceof ClientError) {
-              this.emit(
+              this.eventEmitter.emit(
                 "clientStrandsError",
                 driveId,
                 trigger,
@@ -480,7 +336,7 @@ export class BaseDocumentDriveServer
             );
 
             if (errorRevision.length < 1) {
-              this.updateSyncUnitStatus(driveId, {
+              this.synchronizationManager.updateSyncStatus(driveId, {
                 pull: "SUCCESS",
               });
             }
@@ -497,15 +353,18 @@ export class BaseDocumentDriveServer
                   );
 
                   if (fileErrorRevision) {
-                    this.updateSyncUnitStatus(
+                    this.synchronizationManager.updateSyncStatus(
                       syncUnit.syncId,
                       { pull: fileErrorRevision.status },
                       fileErrorRevision.error,
                     );
                   } else {
-                    this.updateSyncUnitStatus(syncUnit.syncId, {
-                      pull: "SUCCESS",
-                    });
+                    this.synchronizationManager.updateSyncStatus(
+                      syncUnit.syncId,
+                      {
+                        pull: "SUCCESS",
+                      },
+                    );
                   }
                 }
               })
@@ -551,10 +410,10 @@ export class BaseDocumentDriveServer
 
     const triggers = this.triggerMap.get(driveId);
     triggers?.forEach((cancel) => cancel());
-    this.updateSyncUnitStatus(driveId, null);
+    this.synchronizationManager.updateSyncStatus(driveId, null);
 
     for (const fileNodeSyncId of filesNodeSyncId) {
-      this.updateSyncUnitStatus(fileNodeSyncId, null);
+      this.synchronizationManager.updateSyncStatus(fileNodeSyncId, null);
     }
     return this.triggerMap.delete(driveId);
   }
@@ -562,7 +421,7 @@ export class BaseDocumentDriveServer
   private defaultDrivesManagerDelegate = {
     detachDrive: this.detachDrive.bind(this),
     emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) =>
-      this.emit("defaultRemoteDrive", ...args),
+      this.eventEmitter.emit("defaultRemoteDrive", ...args),
   };
 
   private queueDelegate = {
@@ -612,7 +471,7 @@ export class BaseDocumentDriveServer
 
   private async _initializeDrive(driveId: string) {
     const drive = await this.getDrive(driveId);
-    await this.initializeDriveSyncStatus(driveId, drive);
+    await this.synchronizationManager.initializeDriveSyncStatus(driveId, drive);
 
     if (this.shouldSyncRemoteDrive(drive)) {
       await this.startSyncRemoteDrive(driveId);
@@ -734,7 +593,7 @@ export class BaseDocumentDriveServer
 
     await this._initializeDrive(id);
 
-    this.emit("driveAdded", document);
+    this.eventEmitter.emit("driveAdded", document);
 
     return document;
   }
@@ -916,7 +775,7 @@ export class BaseDocumentDriveServer
 
     // set initial state for new syncUnits
     for (const syncUnit of input.synchronizationUnits) {
-      this.initSyncStatus(syncUnit.syncId, {
+      this.synchronizationManager.updateSyncStatus(syncUnit.syncId, {
         pull: this.triggerMap.get(driveId) ? "INITIAL_SYNC" : undefined,
         push: this.listenerManager.driveHasListeners(driveId)
           ? "SUCCESS"
@@ -955,7 +814,7 @@ export class BaseDocumentDriveServer
 
       // remove document sync units status when a document is deleted
       for (const syncUnit of syncUnits) {
-        this.updateSyncUnitStatus(syncUnit.syncId, null);
+        this.synchronizationManager.updateSyncStatus(syncUnit.syncId, null);
       }
       await this.listenerManager.removeSyncUnits(driveId, syncUnits);
     } catch (error) {
@@ -1609,12 +1468,12 @@ export class BaseDocumentDriveServer
           syncUnits,
           source,
           () => {
-            this.updateSyncUnitStatus(driveId, {
+            this.synchronizationManager.updateSyncStatus(driveId, {
               [operationSource]: "SYNCING",
             });
 
             for (const syncUnit of syncUnits) {
-              this.updateSyncUnitStatus(syncUnit.syncId, {
+              this.synchronizationManager.updateSyncStatus(syncUnit.syncId, {
                 [operationSource]: "SYNCING",
               });
             }
@@ -1624,20 +1483,20 @@ export class BaseDocumentDriveServer
         )
         .then((updates) => {
           if (updates.length) {
-            this.updateSyncUnitStatus(driveId, {
+            this.synchronizationManager.updateSyncStatus(driveId, {
               [operationSource]: "SUCCESS",
             });
           }
 
           for (const syncUnit of syncUnits) {
-            this.updateSyncUnitStatus(syncUnit.syncId, {
+            this.synchronizationManager.updateSyncStatus(syncUnit.syncId, {
               [operationSource]: "SUCCESS",
             });
           }
         })
         .catch((error) => {
           logger.error("Non handled error updating sync revision", error);
-          this.updateSyncUnitStatus(
+          this.synchronizationManager.updateSyncStatus(
             driveId,
             {
               [operationSource]: "ERROR",
@@ -1646,7 +1505,7 @@ export class BaseDocumentDriveServer
           );
 
           for (const syncUnit of syncUnits) {
-            this.updateSyncUnitStatus(
+            this.synchronizationManager.updateSyncStatus(
               syncUnit.syncId,
               {
                 [operationSource]: "ERROR",
@@ -1949,7 +1808,7 @@ export class BaseDocumentDriveServer
             ],
             source,
             () => {
-              this.updateSyncUnitStatus(driveId, {
+              this.synchronizationManager.updateSyncStatus(driveId, {
                 [operationSource]: "SYNCING",
               });
             },
@@ -1958,14 +1817,14 @@ export class BaseDocumentDriveServer
           )
           .then((updates) => {
             if (updates.length) {
-              this.updateSyncUnitStatus(driveId, {
+              this.synchronizationManager.updateSyncStatus(driveId, {
                 [operationSource]: "SUCCESS",
               });
             }
           })
           .catch((error) => {
             logger.error("Non handled error updating sync revision", error);
-            this.updateSyncUnitStatus(
+            this.synchronizationManager.updateSyncStatus(
               driveId,
               {
                 [operationSource]: "ERROR",
@@ -2172,25 +2031,18 @@ export class BaseDocumentDriveServer
   getSyncStatus(
     syncUnitId: string,
   ): SyncStatus | SynchronizationUnitNotFoundError {
-    const status = this.syncStatus.get(syncUnitId);
-    if (!status) {
-      return new SynchronizationUnitNotFoundError(
-        `Sync status not found for syncUnitId: ${syncUnitId}`,
-        syncUnitId,
-      );
-    }
-    return this.getCombinedSyncUnitStatus(status);
+    return this.synchronizationManager.getSyncStatus(syncUnitId);
   }
 
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe {
-    return this.emitter.on(event, cb);
+    return this.eventEmitter.on(event, cb);
   }
 
-  protected emit<K extends keyof DriveEvents>(
+  private emit<K extends keyof DriveEvents>(
     event: K,
     ...args: Parameters<DriveEvents[K]>
   ): void {
-    return this.emitter.emit(event, ...args);
+    return this.eventEmitter.emit(event, ...args);
   }
 
   getSynchronizationUnit(
@@ -2198,6 +2050,78 @@ export class BaseDocumentDriveServer
     syncId: string,
   ): Promise<SynchronizationUnit | undefined> {
     return this.synchronizationManager.getSynchronizationUnit(driveId, syncId);
+  }
+
+  // Add delegated methods to properly implement ISynchronizationManager
+  updateSyncStatus(
+    syncUnitId: string,
+    status: Partial<SyncUnitStatusObject> | null,
+    error?: Error,
+  ): void {
+    this.synchronizationManager.updateSyncStatus(syncUnitId, status, error);
+  }
+
+  initializeDriveSyncStatus(
+    driveId: string,
+    drive: DocumentDriveDocument,
+  ): Promise<void> {
+    return this.synchronizationManager.initializeDriveSyncStatus(
+      driveId,
+      drive,
+    );
+  }
+
+  getCombinedSyncUnitStatus(syncUnitStatus: SyncUnitStatusObject): SyncStatus {
+    return this.synchronizationManager.getCombinedSyncUnitStatus(
+      syncUnitStatus,
+    );
+  }
+
+  // Add back the saveStrand method that was accidentally removed
+  private async saveStrand(strand: StrandUpdate, source: StrandUpdateSource) {
+    const operations: Operation[] = strand.operations.map(
+      (op: OperationUpdate) => ({
+        ...op,
+        scope: strand.scope,
+        branch: strand.branch,
+      }),
+    );
+
+    const result = await (!strand.documentId
+      ? this.queueDriveOperations(
+          strand.driveId,
+          operations as Operation<DocumentDriveAction | BaseAction>[],
+          { source },
+        )
+      : this.queueOperations(strand.driveId, strand.documentId, operations, {
+          source,
+        }));
+
+    if (result.status === "ERROR") {
+      const syncUnits =
+        strand.documentId !== ""
+          ? (
+              await this.getSynchronizationUnitsIds(
+                strand.driveId,
+                [strand.documentId],
+                [strand.scope],
+                [strand.branch],
+              )
+            ).map((s) => s.syncId)
+          : [strand.driveId];
+
+      const operationSource = this.getOperationSource(source);
+
+      for (const syncUnit of syncUnits) {
+        this.synchronizationManager.updateSyncStatus(
+          syncUnit,
+          { [operationSource]: result.status },
+          result.error,
+        );
+      }
+    }
+    this.eventEmitter.emit("strandUpdate", strand);
+    return result;
   }
 }
 

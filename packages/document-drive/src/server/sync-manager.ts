@@ -13,19 +13,26 @@ import { ICache } from "../cache";
 import type { DocumentStorage, IDriveStorage } from "../storage/types";
 import { isBefore, isDocumentDrive } from "../utils";
 import { logger } from "../utils/logger";
+import { SynchronizationUnitNotFoundError } from "./error";
 import {
   GetStrandsOptions,
+  IEventEmitter,
   ISynchronizationManager,
   SynchronizationUnitQuery,
+  SyncStatus,
+  SyncUnitStatusObject,
   type OperationUpdate,
   type SynchronizationUnit,
 } from "./types";
 
 export default class SynchronizationManager implements ISynchronizationManager {
+  private syncStatus = new Map<string, SyncUnitStatusObject>();
+
   constructor(
     private readonly storage: IDriveStorage,
     private readonly cache: ICache,
     private readonly documentModels: DocumentModel[],
+    private readonly eventEmitter?: IEventEmitter,
   ) {}
 
   async getSynchronizationUnits(
@@ -327,5 +334,136 @@ export default class SynchronizationManager implements ISynchronizationManager {
       throw new Error(`Document type ${documentType} not supported`);
     }
     return documentModel;
+  }
+
+  getCombinedSyncUnitStatus(syncUnitStatus: SyncUnitStatusObject): SyncStatus {
+    if (!syncUnitStatus.pull && !syncUnitStatus.push) return "INITIAL_SYNC";
+    if (syncUnitStatus.pull === "INITIAL_SYNC") return "INITIAL_SYNC";
+    if (syncUnitStatus.push === "INITIAL_SYNC")
+      return syncUnitStatus.pull || "INITIAL_SYNC";
+
+    const order: Array<SyncStatus> = [
+      "ERROR",
+      "MISSING",
+      "CONFLICT",
+      "SYNCING",
+      "SUCCESS",
+    ];
+    const sortedStatus = Object.values(syncUnitStatus).sort(
+      (a, b) => order.indexOf(a) - order.indexOf(b),
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return sortedStatus[0]!;
+  }
+
+  getSyncStatus(
+    syncUnitId: string,
+  ): SyncStatus | SynchronizationUnitNotFoundError {
+    const status = this.syncStatus.get(syncUnitId);
+    if (!status) {
+      return new SynchronizationUnitNotFoundError(
+        `Sync status not found for syncUnitId: ${syncUnitId}`,
+        syncUnitId,
+      );
+    }
+    return this.getCombinedSyncUnitStatus(status);
+  }
+
+  updateSyncStatus(
+    syncUnitId: string,
+    status: Partial<SyncUnitStatusObject> | null,
+    error?: Error,
+  ): void {
+    if (status === null) {
+      this.syncStatus.delete(syncUnitId);
+      return;
+    }
+
+    const syncUnitStatus = this.syncStatus.get(syncUnitId);
+
+    if (!syncUnitStatus) {
+      this.initSyncStatus(syncUnitId, status);
+      return;
+    }
+
+    const shouldUpdateStatus = Object.entries(status).some(
+      ([key, _status]) =>
+        syncUnitStatus[key as keyof SyncUnitStatusObject] !== _status,
+    );
+
+    if (shouldUpdateStatus) {
+      const newstatus = Object.entries(status).reduce((acc, [key, _status]) => {
+        return {
+          ...acc,
+          // do not replace initial_syncing if it has not finished yet
+          [key]:
+            acc[key as keyof SyncUnitStatusObject] === "INITIAL_SYNC" &&
+            _status === "SYNCING"
+              ? "INITIAL_SYNC"
+              : _status,
+        };
+      }, syncUnitStatus);
+
+      const previousCombinedStatus =
+        this.getCombinedSyncUnitStatus(syncUnitStatus);
+      const newCombinedStatus = this.getCombinedSyncUnitStatus(newstatus);
+
+      this.syncStatus.set(syncUnitId, newstatus);
+
+      if (previousCombinedStatus !== newCombinedStatus && this.eventEmitter) {
+        this.eventEmitter.emit(
+          "syncStatus",
+          syncUnitId,
+          this.getCombinedSyncUnitStatus(newstatus),
+          error,
+          newstatus,
+        );
+      }
+    }
+  }
+
+  private initSyncStatus(
+    syncUnitId: string,
+    status: Partial<SyncUnitStatusObject>,
+  ) {
+    const defaultSyncUnitStatus: SyncUnitStatusObject = Object.entries(
+      status,
+    ).reduce((acc, [key, _status]) => {
+      return {
+        ...acc,
+        [key]: _status !== "SYNCING" ? _status : "INITIAL_SYNC",
+      };
+    }, {});
+
+    this.syncStatus.set(syncUnitId, defaultSyncUnitStatus);
+    if (this.eventEmitter) {
+      this.eventEmitter.emit(
+        "syncStatus",
+        syncUnitId,
+        this.getCombinedSyncUnitStatus(defaultSyncUnitStatus),
+        undefined,
+        defaultSyncUnitStatus,
+      );
+    }
+  }
+
+  async initializeDriveSyncStatus(
+    driveId: string,
+    drive: DocumentDriveDocument,
+  ): Promise<void> {
+    const syncUnits = await this.getSynchronizationUnitsIds(driveId);
+    const syncStatus: SyncUnitStatusObject = {
+      pull: drive.state.local.triggers.length > 0 ? "INITIAL_SYNC" : undefined,
+      push: drive.state.local.listeners.length > 0 ? "SUCCESS" : undefined,
+    };
+
+    if (!syncStatus.pull && !syncStatus.push) return;
+
+    const syncUnitsIds = [driveId, ...syncUnits.map((s) => s.syncId)];
+
+    for (const syncUnitId of syncUnitsIds) {
+      this.initSyncStatus(syncUnitId, syncStatus);
+    }
   }
 }

@@ -592,6 +592,15 @@ export interface ITransmitterFactory {
   ): ITransmitter;
 }
 
+export interface IEventEmitter {
+  emit<K extends keyof DriveEvents>(
+    event: K,
+    ...args: Parameters<DriveEvents[K]>
+  ): void;
+
+  on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
+}
+
 export interface ISynchronizationManager {
   getSynchronizationUnits(
     driveId: string,
@@ -624,4 +633,22 @@ export interface ISynchronizationManager {
     driveId: string,
     syncUnitsQuery: SynchronizationUnitQuery[],
   ): Promise<SynchronizationUnit[]>;
+
+  // New sync status methods
+  getSyncStatus(
+    syncUnitId: string,
+  ): SyncStatus | SynchronizationUnitNotFoundError;
+
+  updateSyncStatus(
+    syncUnitId: string,
+    status: Partial<SyncUnitStatusObject> | null,
+    error?: Error,
+  ): void;
+
+  initializeDriveSyncStatus(
+    driveId: string,
+    drive: DocumentDriveDocument,
+  ): Promise<void>;
+
+  getCombinedSyncUnitStatus(syncUnitStatus: SyncUnitStatusObject): SyncStatus;
 }
