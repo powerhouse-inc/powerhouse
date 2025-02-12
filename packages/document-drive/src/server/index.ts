@@ -145,11 +145,39 @@ export class TransmitterFactory implements ITransmitterFactory {
   }
 }
 
-export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
-  private emitter = createNanoEvents<DriveEvents>();
-  private cache: ICache;
+export interface ISynchronizationManager {
+  getSynchronizationUnits(
+    driveId: string,
+    documentId?: string[],
+    scope?: string[],
+    branch?: string[],
+    documentType?: string[],
+  ): Promise<SynchronizationUnit[]>;
+
+  getSynchronizationUnitsIds(
+    driveId: string,
+    documentId?: string[],
+    scope?: string[],
+    branch?: string[],
+    documentType?: string[],
+  ): Promise<SynchronizationUnitQuery[]>;
+
+  getOperationData(
+    driveId: string,
+    syncId: string,
+    filter: GetStrandsOptions,
+  ): Promise<OperationUpdate[]>;
+}
+
+export class BaseDocumentDriveServer
+  implements IBaseDocumentDriveServer, ISynchronizationManager
+{
   private documentModels: DocumentModel[];
   private storage: IDriveStorage;
+  private cache: ICache;
+  private queueManager: IQueueManager;
+
+  private emitter = createNanoEvents<DriveEvents>();
   private transmitterFactory: ITransmitterFactory;
   private listenerManager: IListenerManager;
   private triggerMap = new Map<
@@ -158,7 +186,6 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   >();
   private syncStatus = new Map<string, SyncUnitStatusObject>();
 
-  private queueManager: IQueueManager;
   private initializePromise: Promise<Error[] | null>;
 
   private defaultDrivesManager: DefaultDrivesManager;
@@ -172,6 +199,10 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     queueManager: IQueueManager = new BaseQueueManager(),
     options?: DocumentDriveServerOptions,
   ) {
+    this.documentModels = documentModels;
+    this.storage = storage;
+    this.cache = cache;
+    this.queueManager = queueManager;
     this.options = {
       ...options,
       defaultDrives: {
@@ -190,17 +221,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     // todo: pull this into the constructor -- there is a circular dependency right now
     this.listenerManager = new ListenerManager(
       this,
-      undefined,
       this.options.listenerManager,
     );
 
     // todo: pull this into the constructor, depends on listenerManager
     this.transmitterFactory = new TransmitterFactory(this.listenerManager);
 
-    this.documentModels = documentModels;
-    this.storage = storage;
-    this.cache = cache;
-    this.queueManager = queueManager;
     this.defaultDrivesManager = new DefaultDrivesManager(
       this,
       this.defaultDrivesManagerDelegate,
@@ -220,6 +246,40 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     });
 
     this.initializePromise = this._initialize();
+  }
+
+  initialize() {
+    return this.initializePromise;
+  }
+
+  private async _initialize() {
+    await this.listenerManager.initialize(this.handleListenerError);
+
+    await this.queueManager.init(this.queueDelegate, (error) => {
+      logger.error(`Error initializing queue manager`, error);
+      errors.push(error);
+    });
+
+    try {
+      await this.defaultDrivesManager.removeOldremoteDrives();
+    } catch (error) {
+      logger.error(error);
+    }
+
+    const errors: Error[] = [];
+    const drives = await this.getDrives();
+    for (const drive of drives) {
+      await this._initializeDrive(drive).catch((error) => {
+        logger.error(`Error initializing drive ${drive}`, error);
+        errors.push(error as Error);
+      });
+    }
+
+    if (this.options.defaultDrives.loadOnInit !== false) {
+      await this.defaultDrivesManager.initializeDefaultRemoteDrives();
+    }
+
+    return errors.length === 0 ? null : errors;
   }
 
   setDocumentModels(models: DocumentModel[]): void {
@@ -432,18 +492,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   private async startSyncRemoteDrive(driveId: string) {
-    const drive = await this.getDrive(driveId);
     let driveTriggers = this.triggerMap.get(driveId);
 
-    const syncUnits = await this.getSynchronizationUnitsIds(
-      driveId,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      drive,
-    );
+    const syncUnits = await this.getSynchronizationUnitsIds(driveId);
 
+    const drive = await this.getDrive(driveId);
     for (const trigger of drive.state.local.triggers) {
       if (driveTriggers?.get(trigger.id)) {
         continue;
@@ -617,40 +670,6 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     },
   };
 
-  initialize() {
-    return this.initializePromise;
-  }
-
-  private async _initialize() {
-    await this.listenerManager.initialize(this.handleListenerError);
-
-    await this.queueManager.init(this.queueDelegate, (error) => {
-      logger.error(`Error initializing queue manager`, error);
-      errors.push(error);
-    });
-
-    try {
-      await this.defaultDrivesManager.removeOldremoteDrives();
-    } catch (error) {
-      logger.error(error);
-    }
-
-    const errors: Error[] = [];
-    const drives = await this.getDrives();
-    for (const drive of drives) {
-      await this._initializeDrive(drive).catch((error) => {
-        logger.error(`Error initializing drive ${drive}`, error);
-        errors.push(error as Error);
-      });
-    }
-
-    if (this.options.defaultDrives.loadOnInit !== false) {
-      await this.defaultDrivesManager.initializeDefaultRemoteDrives();
-    }
-
-    return errors.length === 0 ? null : errors;
-  }
-
   private async _initializeDrive(driveId: string) {
     const drive = await this.getDrive(driveId);
     await this.initializeDriveSyncStatus(driveId, drive);
@@ -689,31 +708,26 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     scope?: string[],
     branch?: string[],
     documentType?: string[],
-    loadedDrive?: DocumentDriveDocument,
   ) {
-    const drive = loadedDrive || (await this.getDrive(driveId));
-
     const synchronizationUnitsQuery = await this.getSynchronizationUnitsIds(
       driveId,
       documentId,
       scope,
       branch,
       documentType,
-      drive,
     );
+
     return this.getSynchronizationUnitsRevision(
       driveId,
       synchronizationUnitsQuery,
-      drive,
     );
   }
 
   public async getSynchronizationUnitsRevision(
     driveId: string,
     syncUnitsQuery: SynchronizationUnitQuery[],
-    loadedDrive?: DocumentDriveDocument,
   ): Promise<SynchronizationUnit[]> {
-    const drive = loadedDrive || (await this.getDrive(driveId));
+    const drive = await this.getDrive(driveId);
 
     const revisions =
       await this.storage.getSynchronizationUnitsRevision(syncUnitsQuery);
@@ -747,9 +761,8 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     scope?: string[],
     branch?: string[],
     documentType?: string[],
-    loadedDrive?: DocumentDriveDocument,
   ): Promise<SynchronizationUnitQuery[]> {
-    const drive = loadedDrive ?? (await this.getDrive(driveId));
+    const drive = await this.getDrive(driveId);
     const nodes = drive.state.global.nodes.filter(
       (node) =>
         isFileNode(node) &&
@@ -818,9 +831,8 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   public async getSynchronizationUnitIdInfo(
     driveId: string,
     syncId: string,
-    loadedDrive?: DocumentDriveDocument,
   ): Promise<SynchronizationUnitQuery | undefined> {
-    const drive = loadedDrive || (await this.getDrive(driveId));
+    const drive = await this.getDrive(driveId);
     const node = drive.state.global.nodes.find(
       (node) =>
         isFileNode(node) &&
@@ -851,13 +863,8 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   public async getSynchronizationUnit(
     driveId: string,
     syncId: string,
-    loadedDrive?: DocumentDriveDocument,
   ): Promise<SynchronizationUnit | undefined> {
-    const syncUnit = await this.getSynchronizationUnitIdInfo(
-      driveId,
-      syncId,
-      loadedDrive,
-    );
+    const syncUnit = await this.getSynchronizationUnitIdInfo(driveId, syncId);
 
     if (!syncUnit) {
       return undefined;
@@ -886,12 +893,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     driveId: string,
     syncId: string,
     filter: GetStrandsOptions,
-    loadedDrive?: DocumentDriveDocument,
   ): Promise<OperationUpdate[]> {
     const syncUnit =
       syncId === "0"
         ? { documentId: "", scope: "global" }
-        : await this.getSynchronizationUnitIdInfo(driveId, syncId, loadedDrive);
+        : await this.getSynchronizationUnitIdInfo(driveId, syncId);
 
     if (!syncUnit) {
       throw new Error(`Invalid Sync Id ${syncId} in drive ${driveId}`);
@@ -899,7 +905,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
     const document =
       syncId === "0"
-        ? loadedDrive || (await this.getDrive(driveId))
+        ? await this.getDrive(driveId)
         : await this.getDocument(driveId, syncUnit.documentId); // TODO replace with getDocumentOperations
 
     const operations =

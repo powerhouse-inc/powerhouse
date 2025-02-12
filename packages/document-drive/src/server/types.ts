@@ -479,7 +479,6 @@ export interface IBaseDocumentDriveServer {
     scope?: string[],
     branch?: string[],
     documentType?: string[],
-    loadedDrive?: DocumentDriveDocument,
   ): Promise<SynchronizationUnit[]>;
 
   getSynchronizationUnit(
@@ -500,7 +499,6 @@ export interface IBaseDocumentDriveServer {
     driveId: string,
     syncId: string,
     filter: GetStrandsOptions,
-    loadedDrive?: DocumentDriveDocument,
   ): Promise<OperationUpdate[]>;
 
   /** Internal methods **/
