@@ -74,19 +74,16 @@ export const useTimePickerField = ({
       selectedPeriod,
     );
 
-    // Redondear minutos
     const minuteNum = parseInt(minute, 10);
     const roundedMinute = roundMinute(minuteNum, dateIntervals);
     const formattedRoundedMinute = String(roundedMinute).padStart(2, "0");
 
-    // Actualizar estados
     setSelectedHour(hour);
     setSelectedMinute(formattedRoundedMinute);
     if (is12HourFormat) {
       setSelectedPeriod(period);
     }
 
-    // Formatear y disparar el cambio
     const newTimeString = is12HourFormat
       ? `${hour}:${formattedRoundedMinute} ${period}`
       : `${hour}:${formattedRoundedMinute}`;
