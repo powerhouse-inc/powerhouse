@@ -150,6 +150,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
               "w-[34px] cursor-pointer text-[12px] hover:rounded-[4px] hover:bg-gray-200 text-gray-900",
               // dark
               "dark:text-gray-50 hover:dark:bg-gray-900",
+              "disabled:text-gray-300",
             )}
             buttonPreviousClassName={cn(
               "border border-gray-200",
@@ -181,6 +182,9 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
             )}
             dayButtonClassName={cn("text-[12px] font-medium")}
             weekClassName={cn("w-full")}
+            disabledClassName={cn(
+              "!text-gray-300 !cursor-not-allowed hover:!bg-transparent [&>button]:hover:!bg-transparent",
+            )}
             {...props}
           />
         </BasePickerField>
