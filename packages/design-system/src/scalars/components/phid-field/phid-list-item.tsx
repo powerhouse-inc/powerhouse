@@ -1,7 +1,25 @@
 import React from "react";
-import { Icon } from "@/powerhouse/components/icon";
+import { Icon, type IconName } from "@/powerhouse/components/icon";
 import { cn } from "@/scalars/lib/utils";
 import type { PHIDProps, PHIDItem } from "./types";
+
+const IconRenderer: React.FC<{
+  customIcon?: IconName | React.ReactElement;
+}> = ({ customIcon }) => {
+  if (typeof customIcon === "string") {
+    return (
+      <Icon
+        name={customIcon}
+        size={24}
+        className={cn("shrink-0 text-gray-900 dark:text-gray-300")}
+      />
+    );
+  }
+  if (React.isValidElement(customIcon)) {
+    return <div className="size-6 shrink-0">{customIcon}</div>;
+  }
+  return null;
+};
 
 const ReloadButton: React.FC<{
   isLoadingSelectedOption?: boolean;
@@ -46,6 +64,7 @@ export type PHIDListItemProps = {
 
 export const PHIDListItem: React.FC<PHIDListItemProps> = ({
   variant = "withId",
+  icon,
   title = "Title Unavailable",
   path = "aha/hah-lorem",
   phid,
@@ -71,16 +90,15 @@ export const PHIDListItem: React.FC<PHIDListItemProps> = ({
   const renderWithIdAndTitle = () => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex items-center gap-2")}>
-        <Icon
-          name="PowerhouseLogoSmall"
-          size={24}
-          className={cn(
-            "shrink-0",
-            asPlaceholder
-              ? "text-gray-400 dark:text-gray-700"
-              : "text-gray-900 dark:text-gray-300",
-          )}
-        />
+        {asPlaceholder ? (
+          <Icon
+            name="PowerhouseLogoSmall"
+            size={24}
+            className={cn("shrink-0 text-gray-400 dark:text-gray-700")}
+          />
+        ) : (
+          <IconRenderer customIcon={icon} />
+        )}
         <span
           className={cn(
             "grow truncate text-sm font-bold leading-5",
@@ -116,16 +134,15 @@ export const PHIDListItem: React.FC<PHIDListItemProps> = ({
   const renderWithIdTitleAndDescription = () => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex gap-2")}>
-        <Icon
-          name="PowerhouseLogoSmall"
-          size={24}
-          className={cn(
-            "shrink-0",
-            asPlaceholder
-              ? "text-gray-400 dark:text-gray-700"
-              : "text-gray-900 dark:text-gray-300",
-          )}
-        />
+        {asPlaceholder ? (
+          <Icon
+            name="PowerhouseLogoSmall"
+            size={24}
+            className={cn("shrink-0 text-gray-400 dark:text-gray-700")}
+          />
+        ) : (
+          <IconRenderer customIcon={icon} />
+        )}
         <div className={cn("flex min-w-0 grow flex-col gap-[-2px]")}>
           <span
             className={cn(

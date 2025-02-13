@@ -1,3 +1,5 @@
+import type { IconName } from "@/powerhouse/components/icon";
+
 export interface PHIDBaseProps {
   onChange?: (value: string) => void;
   placeholder?: string;
@@ -21,7 +23,7 @@ export type PHIDProps = PHIDBaseProps &
     | {
         autoComplete?: true;
         variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
-        fetchOptionsCallback?: (phidFragment: string) => Promise<PHIDItem[]>;
+        fetchOptionsCallback: (phidFragment: string) => Promise<PHIDItem[]>;
         fetchSelectedOptionCallback?: (
           phid: string,
         ) => Promise<PHIDItem | undefined>;
@@ -29,6 +31,7 @@ export type PHIDProps = PHIDBaseProps &
   );
 
 export interface PHIDItem {
+  icon?: IconName | React.ReactElement;
   title?: string;
   path?: string;
   phid: string;

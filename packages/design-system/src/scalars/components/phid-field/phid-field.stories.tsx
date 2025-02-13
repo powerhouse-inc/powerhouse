@@ -93,21 +93,38 @@ const meta: Meta<typeof PHIDField> = {
     },
 
     fetchOptionsCallback: {
-      control: false,
-      description: "Function to fetch PHID options based on user input",
+      control: "object",
+      description:
+        "Function to fetch options based on user input. " +
+        "Can return an array of PHIDItem with:\n\n" +
+        "icon?: IconName | React.ReactElement\n\n" +
+        "title?: string\n\n" +
+        "path?: string\n\n" +
+        "phid: string\n\n" +
+        "description?: string",
       table: {
         type: { summary: "(phidFragment: string) => Promise<PHIDItem[]>" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        readonly: true,
       },
       if: { arg: "autoComplete", neq: false },
     },
 
     fetchSelectedOptionCallback: {
-      control: false,
-      description: "Function to fetch details for a selected PHID",
+      control: "object",
+      description:
+        "Function to fetch details for a selected PHID. " +
+        "Can return a PHIDItem with:\n\n" +
+        "icon?: IconName | React.ReactElement\n\n" +
+        "title?: string\n\n" +
+        "path?: string\n\n" +
+        "phid: string\n\n" +
+        "description?: string\n\n" +
+        "or undefined if the PHID is not found",
       table: {
         type: { summary: "(phid: string) => Promise<PHIDItem | undefined>" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        readonly: true,
       },
       if: { arg: "autoComplete", neq: false },
     },
@@ -226,6 +243,7 @@ export const Filled: Story = {
         {asCard && (
           <PHIDListItem
             variant={args.variant}
+            icon={mockedOptions[0].icon}
             title={mockedOptions[0].title}
             path={mockedOptions[0].path}
             phid={mockedOptions[0].phid}

@@ -161,6 +161,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
               {asCard && (
                 <PHIDListItem
                   variant={variant}
+                  icon={selectedOption?.icon}
                   title={selectedOption?.title}
                   path={selectedOption?.path}
                   phid={selectedOption?.phid ?? ""}
@@ -240,7 +241,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         // URL pattern
         // Domain segments can start/end with alphanumeric and contain hyphens
         // Multiple segments separated by dots are allowed (e.g., sub.domain.com)
-        const domainSegment = "[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?";
+        const domainSegment = "[a-zA-Z0-9](?:[a-zA-Z0-9\\-]*[a-zA-Z0-9])?";
         const domain = `${domainSegment}(?:\\.${domainSegment})*`;
         const uuidPattern =
           "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}";
@@ -258,15 +259,14 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         }
 
         // URI patterns
-        const branchPattern = "[a-zA-Z0-9][a-zA-Z0-9-/]*[a-zA-Z0-9]"; // Until PH defines the pattern to be used
-        const scopePattern = "[a-zA-Z0-9][a-zA-Z0-9-/]*[a-zA-Z0-9]"; // Until PH defines the pattern to be used
+        const branchScopePattern = "[a-zA-Z][a-zA-Z0-9\\-/_]*[a-zA-Z]";
 
         // Valid URI formats
         const URIFormats = [
           `^phd:${uuidPattern}$`,
-          `^phd:${uuidPattern}:${branchPattern}$`,
-          `^phd:${uuidPattern}::${scopePattern}$`,
-          `^phd:${uuidPattern}:${branchPattern}:${scopePattern}$`,
+          `^phd:${uuidPattern}:${branchScopePattern}$`,
+          `^phd:${uuidPattern}::${branchScopePattern}$`,
+          `^phd:${uuidPattern}:${branchScopePattern}:${branchScopePattern}$`,
         ];
 
         const isValidURIFormat = URIFormats.some((format) =>
