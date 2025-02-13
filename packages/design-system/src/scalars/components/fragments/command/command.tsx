@@ -10,7 +10,7 @@ const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "flex size-full flex-col rounded [&_[cmdk-label]]:hidden",
+      "flex size-full flex-col rounded-md [&_[cmdk-label]]:hidden",
       className,
     )}
     {...props}
@@ -120,7 +120,7 @@ const CommandItem = React.forwardRef<
       "relative flex select-none items-center justify-between",
       "h-8 gap-2 rounded-md py-1.5 pl-1.5 pr-2.5",
       "text-[14px] leading-4 outline-none",
-      "border-y-2 border-white dark:border-slate-700",
+      "border-y-2 border-white dark:border-slate-600",
       "data-[disabled=true]:pointer-events-none",
       "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
       className,

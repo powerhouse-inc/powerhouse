@@ -16,7 +16,7 @@ const IconRenderer: React.FC<{
     );
   }
   if (React.isValidElement(customIcon)) {
-    return <div className="size-6 shrink-0">{customIcon}</div>;
+    return <div className="size-6 shrink-0 overflow-hidden">{customIcon}</div>;
   }
   return null;
 };
@@ -65,10 +65,10 @@ export type PHIDListItemProps = {
 export const PHIDListItem: React.FC<PHIDListItemProps> = ({
   variant = "withId",
   icon,
-  title = "Title Unavailable",
-  path = "aha/hah-lorem",
+  title = "Title not available",
+  path = "Path not available",
   phid,
-  description = "Lorem ipsum dolor sit amet consectetur. Sed elementum tempor.",
+  description = "Description not available",
   asPlaceholder,
   showPHID = true,
   isLoadingSelectedOption,

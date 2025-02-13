@@ -6,6 +6,8 @@ interface UsePHIDFieldParams {
   autoComplete: PHIDProps["autoComplete"];
   defaultValue?: string;
   value?: string;
+  isOpenByDefault: PHIDProps["isOpenByDefault"];
+  initialOptions: PHIDProps["initialOptions"];
   onChange?: PHIDProps["onChange"];
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   fetchOptions: PHIDProps["fetchOptionsCallback"];
@@ -16,6 +18,8 @@ export function usePHIDField({
   autoComplete,
   defaultValue,
   value,
+  isOpenByDefault,
+  initialOptions,
   onChange,
   onBlur,
   fetchOptions,
@@ -25,8 +29,8 @@ export function usePHIDField({
   const isInternalChange = useRef(false);
   const commandListRef = useRef<HTMLDivElement>(null);
 
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [options, setOptions] = useState<PHIDItem[]>([]);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(isOpenByDefault ?? false);
+  const [options, setOptions] = useState<PHIDItem[]>(initialOptions ?? []);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSelectedOption, setIsLoadingSelectedOption] = useState(false);
   const [haveFetchError, setHaveFetchError] = useState(false);
@@ -208,6 +212,18 @@ export function usePHIDField({
       setHaveBeenOpened(true);
     }
   }, [isPopoverOpen, haveBeenOpened, onBlur]);
+
+  // added to support the Filled variant in stories
+  useEffect(() => {
+    if (initialOptions?.length && selectedValue) {
+      const matchingOption = initialOptions.find(
+        (opt) => opt.phid === selectedValue,
+      );
+      if (matchingOption) {
+        setSelectedOption(matchingOption);
+      }
+    }
+  }, []);
 
   return {
     selectedValue,

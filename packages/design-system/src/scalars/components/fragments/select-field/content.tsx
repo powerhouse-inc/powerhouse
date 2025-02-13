@@ -98,7 +98,7 @@ export const Content: React.FC<ContentProps> = ({
                 {selectionIcon === "auto" && (
                   <div
                     className={cn(
-                      "flex size-4 items-center justify-center rounded border",
+                      "flex size-4 items-center justify-center rounded-md border",
                       "border-gray-700 dark:border-gray-400",
                       selectedValues.length === enabledOptions.length &&
                         "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black",
@@ -168,7 +168,7 @@ export const Content: React.FC<ContentProps> = ({
                   (multiple ? (
                     <div
                       className={cn(
-                        "flex size-4 items-center justify-center rounded border",
+                        "flex size-4 items-center justify-center rounded-md border",
                         "border-gray-700 dark:border-gray-400",
                         isSelected &&
                           "bg-gray-900 text-slate-50 dark:bg-gray-400 dark:text-black",
