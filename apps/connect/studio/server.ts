@@ -15,6 +15,7 @@ export type StartServerOptions = {
     packages?: string[];
     https?: boolean;
     open?: boolean;
+    phCliVersion?: string;
 };
 
 const studioDirname = fileURLToPath(new URL('.', import.meta.url));
@@ -96,6 +97,7 @@ export async function startServer(options: StartServerOptions = {}) {
     }
 
     process.env.PH_CONNECT_STUDIO_MODE = 'true';
+    process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
 
     const config: InlineConfig = {
         customLogger: logger,

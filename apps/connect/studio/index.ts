@@ -29,6 +29,7 @@ export type ConnectStudioOptions = {
     localDocuments?: string;
     open?: boolean;
     packages?: { packageName: string }[];
+    phCliVersion?: string;
 };
 
 export function startConnectStudio(options: ConnectStudioOptions) {
@@ -97,6 +98,10 @@ export function startConnectStudio(options: ConnectStudioOptions) {
 
     if (options.https) {
         serverOptions.https = options.https;
+    }
+
+    if (options.phCliVersion) {
+        serverOptions.phCliVersion = options.phCliVersion;
     }
 
     return startServer(serverOptions).catch(error => {
