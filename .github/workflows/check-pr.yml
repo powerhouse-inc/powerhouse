@@ -18,30 +18,26 @@ env:
 jobs:
   verify:
     name: Verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22
+    container: node:20
     permissions:
       contents: read
       actions: read
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: nrwl/nx-set-shas@v4
+      - name: Set up Nx SHAs
+        uses: nrwl/nx-set-shas@v4
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install
