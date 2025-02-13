@@ -39,7 +39,6 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
-    "@sky-ph/atlas": "^1.0.14",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "document-model": "workspace:*",
