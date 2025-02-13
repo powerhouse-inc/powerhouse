@@ -121,8 +121,15 @@ const Calendar = ({
     props.buttonPreviousClassName,
   );
   const _navClassName = cn("flex items-start", props.navClassName);
-  const _monthGridClassName = cn("mt-4", "w-auto", props.monthGridClassName);
-  const _weekClassName = cn("mt-2 flex w-max items-start", props.weekClassName);
+  const _monthGridClassName = cn(
+    "mt-[15px]",
+    "w-auto",
+    props.monthGridClassName,
+  );
+  const _weekClassName = cn(
+    "mt-[5px] flex w-max items-start",
+    props.weekClassName,
+  );
   const _dayClassName = cn(
     "flex h-[34px] w-8 flex-1 items-center justify-center p-0 text-sm",
     props.dayClassName,
@@ -162,7 +169,7 @@ const Calendar = ({
     props.outsideClassName,
   );
   const _disabledClassName = cn(
-    "text-muted-foreground opacity-50",
+    "text-gray-300 cursor-not-allowed",
     props.disabledClassName,
   );
   const _hiddenClassName = cn("invisible flex-1", props.hiddenClassName);
@@ -269,7 +276,7 @@ const Calendar = ({
                         <Button
                           key={i}
                           className={cn(
-                            "h-[28px] w-[68px] rounded-[4px] leading-[18px] text-[12px] text-gray-900",
+                            "h-[28px] w-[68px] rounded-[4px] text-[12px] leading-[18px] text-gray-900",
                             displayYears.from + i ===
                               new Date().getFullYear() &&
                               "text-accent-foreground bg-gray-100 font-medium",
@@ -313,7 +320,7 @@ const Calendar = ({
                       key={month}
                       variant="ghost"
                       className={cn(
-                        "w-full leading-[18px] text-[12px] text-gray-900 pl-[2px] pr-[2px] pt-[5px] pb-[5px]",
+                        "w-full px-[2px] py-[5px] text-[12px] leading-[18px] text-gray-900",
 
                         month === actualMonth &&
                           "bg-gray-900 hover:bg-gray-900",

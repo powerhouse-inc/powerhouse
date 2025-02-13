@@ -24,12 +24,12 @@ exports[`DatePickerField > should match the snapshot 1`] = `
             aria-controls="radix-:r1:"
             aria-expanded="false"
             aria-haspopup="dialog"
-            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground w-[50px] rounded-l-md border-none pl-3 pr-2 focus:bg-none focus:text-selected-foreground button-ghost"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-l-md border-none pl-3 pr-2 focus:bg-none focus:text-selected-foreground button-ghost"
             data-state="closed"
             type="button"
           >
             <div
-              class="size-4 hover:none text-gray-700 dark:text-gray-50"
+              class="hover:none text-gray-700 dark:text-gray-50"
               data-testid="mock-icon-CalendarTime"
             >
               Mock Icon: 

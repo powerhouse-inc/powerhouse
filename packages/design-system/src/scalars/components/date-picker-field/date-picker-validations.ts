@@ -13,12 +13,12 @@ export const validateDatePicker =
     }
 
     if (dateFormat && !isFormatAllowed(dateFormat)) {
-      return `Invalid date format.Plese select a valid format`;
+      return `Invalid date format.Plese insert a valid format`;
     }
     // Parse the input value using the specified format
     const parsedDate = parse(value as string, dateFormat, new Date());
     if (!isValid(parsedDate)) {
-      return `Invalid date format. Please select a valid format`;
+      return `Invalid date format. Please insert a valid format`;
     }
 
     if (minDate) {
