@@ -1,4 +1,4 @@
-import type { SidebarNode } from "./types";
+import type { NodeStatus, SidebarNode } from "./types";
 
 export const nodesSearch = (
   nodes: SidebarNode[],
@@ -168,4 +168,32 @@ export const getMaxDepth = (items: SidebarNode[]): number => {
   }
 
   return maxDepth;
+};
+
+export const filterStatuses = (
+  nodes: SidebarNode[],
+  statuses: NodeStatus[],
+): SidebarNode[] => {
+  return nodes.reduce<SidebarNode[]>((filteredNodes, node) => {
+    // Check if the node itself or any of its children have one of the statuses
+    const shouldIncludeNode =
+      node.status !== undefined && statuses.includes(node.status);
+
+    // Recursively filter children
+    const filteredChildren = node.children
+      ? filterStatuses(node.children, statuses)
+      : [];
+
+    // Include the node if it or any of its children should be included
+    if (shouldIncludeNode || filteredChildren.length > 0) {
+      // Create a copy of the node with filtered children
+      const filteredNode: SidebarNode = {
+        ...node,
+        children: filteredChildren,
+      };
+      filteredNodes.push(filteredNode);
+    }
+
+    return filteredNodes;
+  }, []);
 };
