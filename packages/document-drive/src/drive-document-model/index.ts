@@ -17,9 +17,10 @@ export type {
   Trigger,
 } from "./gen/types.js";
 export { isFileNode } from "./src/utils.js";
-export type {
-  AddListenerAction,
-  RemoveListenerAction,
-} from "./gen/actions.js";
-export { createDocument, createExtendedState, createState } from "./gen/utils.js";
+export type { AddListenerAction, RemoveListenerAction } from "./gen/actions.js";
+export {
+  createDocument,
+  createExtendedState,
+  createState,
+} from "./gen/utils.js";
 export { reducer } from "./gen/reducer.js";

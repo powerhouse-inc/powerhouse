@@ -16,7 +16,10 @@ import {
 import { InternalTransmitter } from "@server/listener/transmitter/internal";
 import { PullResponderTransmitter } from "@server/listener/transmitter/pull-responder";
 import { SwitchboardPushTransmitter } from "@server/listener/transmitter/switchboard-push";
-import { ITransmitter, StrandUpdateSource } from "@server/listener/transmitter/types";
+import {
+  ITransmitter,
+  StrandUpdateSource,
+} from "@server/listener/transmitter/types";
 
 function debounce<T extends unknown[], R>(
   func: (...args: T) => Promise<R>,

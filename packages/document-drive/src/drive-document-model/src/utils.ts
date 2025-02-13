@@ -1,6 +1,6 @@
 import { v4 as generateUUID } from "uuid";
 
-import { OperationScope, SynchronizationUnit } from "document-model";
+import { OperationScope } from "document-model";
 import { AddFileAction, CopyNodeAction } from "../gen/node/actions.js";
 import { addFile, copyNode } from "../gen/node/creators.js";
 import {
@@ -10,6 +10,7 @@ import {
   FileNode,
   FolderNode,
   Node,
+  SynchronizationUnit,
 } from "../gen/types.js";
 
 export function isFileNode(node: Node): node is FileNode {

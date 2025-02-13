@@ -12,12 +12,7 @@ import type {
 } from "@storage/types";
 import { migrateDocumentOperationSignatures } from "@utils/migrations";
 import { mergeOperations } from "@utils/misc";
-import type {
-  BaseAction,
-  DocumentHeader,
-  Operation,
-  OperationScope,
-} from "document-model";
+import type { DocumentHeader, Operation, OperationScope } from "document-model";
 import LocalForage from "localforage";
 
 export class BrowserStorage implements IDriveStorage {
@@ -57,13 +52,10 @@ export class BrowserStorage implements IDriveStorage {
       .map((key) => key.slice(driveKey.length));
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
-    driveId: string,
-    id: string,
-  ) {
+  async getDocument<TGlobalState, TLocalState>(driveId: string, id: string) {
     const document = await (
       await this.db
-    ).getItem<DocumentStorage<TGlobalState, TLocalState, TAction>>(
+    ).getItem<DocumentStorage<TGlobalState, TLocalState>>(
       this.buildKey(driveId, id),
     );
     if (!document) {
@@ -72,10 +64,10 @@ export class BrowserStorage implements IDriveStorage {
     return document;
   }
 
-  async createDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  async createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState, TAction>,
+    document: DocumentStorage<TGlobalState, TLocalState>,
   ) {
     await (await this.db).setItem(this.buildKey(drive, id), document);
   }
@@ -88,14 +80,10 @@ export class BrowserStorage implements IDriveStorage {
     return (await this.db).clear();
   }
 
-  async addDocumentOperations<
-    TGlobalState,
-    TLocalState,
-    TAction extends BaseAction,
-  >(
+  async addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState, TAction>[],
+    operations: Operation<TGlobalState, TLocalState>[],
     header: DocumentHeader,
   ): Promise<void> {
     const document = await this.getDocument(drive, id);
@@ -162,11 +150,7 @@ export class BrowserStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction
-    >[],
+    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

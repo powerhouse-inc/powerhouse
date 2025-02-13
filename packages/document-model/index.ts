@@ -4,6 +4,8 @@ export type {
   ActionErrorCallback,
   AttachmentInput,
   BaseAction,
+  Action,
+  DocumentAction,
   BaseState,
   BaseActionWithAttachment,
   BaseDocument,

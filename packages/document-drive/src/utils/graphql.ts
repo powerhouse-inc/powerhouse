@@ -5,7 +5,7 @@ import {
 } from "@drive-document-model";
 import { pascalCase } from "change-case";
 import {
-  BaseAction,
+  Action,
   BaseDocument,
   DocumentModelModule,
   Operation,
@@ -24,7 +24,7 @@ import {
   buildSchema,
 } from "graphql";
 import request, { GraphQLClient, gql } from "graphql-request";
-import { logger } from "./logger.js";
+import { logger } from "@utils/logger";
 
 export { gql } from "graphql-request";
 
@@ -169,12 +169,11 @@ export type DriveState = DriveInfo &
     nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
   };
 
-export type DocumentGraphQLResult<
+export type DocumentGraphQLResult<TGlobalState, TLocalState> = BaseDocument<
   TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = BaseDocument<TGlobalState, TLocalState, TAction> & {
-  operations: (Operation<TGlobalState, TLocalState, TAction> & {
+  TLocalState
+> & {
+  operations: (Operation<TGlobalState, TLocalState> & {
     inputText: string;
   })[];
 };
@@ -182,14 +181,14 @@ export type DocumentGraphQLResult<
 export async function fetchDocument<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  ,
 >(
   url: string,
   documentId: string,
   documentModelLib: DocumentModelModule<TGlobalState, TLocalState, TAction>,
 ): Promise<
   GraphQLResult<{
-    document: DocumentGraphQLResult<TGlobalState, TLocalState, TAction>;
+    document: DocumentGraphQLResult<TGlobalState, TLocalState>;
   }>
 > {
   const { documentModelState, utils } = documentModelLib;
@@ -198,7 +197,7 @@ export async function fetchDocument<
   );
   const name = pascalCase((documentModelState as DocumentModelState).name);
   const result = await requestGraphql<{
-    document: DocumentGraphQLResult<TGlobalState, TLocalState, TAction>;
+    document: DocumentGraphQLResult<TGlobalState, TLocalState>;
   }>(
     url,
     gql`
@@ -262,8 +261,7 @@ export async function fetchDocument<
             scope: "global",
             input: JSON.parse(inputText) as BaseDocument<
               TGlobalState,
-              TLocalState,
-              TAction
+              TLocalState
             >,
           })),
           local: [],
@@ -285,6 +283,6 @@ export async function fetchDocument<
     ...result,
     document,
   } as GraphQLResult<{
-    document: DocumentGraphQLResult<TGlobalState, TLocalState, TAction>;
+    document: DocumentGraphQLResult<TGlobalState, TLocalState>;
   }>;
 }

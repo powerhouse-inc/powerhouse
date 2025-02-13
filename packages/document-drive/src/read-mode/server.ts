@@ -6,18 +6,23 @@ import type {
   ReadDrive,
   ReadDriveOptions,
   ReadDrivesListener,
-  ReadModeDriveServerMixin,
 } from "@read-mode/types";
-import type {
+import {
   DocumentDriveServerConstructor,
   RemoteDriveOptions,
-} from "@server/base";
+} from "@server/types";
 import { logger } from "@utils/logger";
-import type { BaseAction } from "document-model";
+import { Action } from "document-model";
 
-export function ReadModeServer(
-  Base: DocumentDriveServerConstructor,
-): ReadModeDriveServerMixin {
+export function ReadModeServer<
+  TGlobalState,
+  TLocalState,
+  ,
+>(
+  Base: DocumentDriveServerConstructor<TGlobalState, TLocalState, TAction>,
+): new (
+  ...args: ConstructorParameters<typeof Base>
+) => InstanceType<typeof Base> & IReadModeDriveServer {
   return class ReadMode extends Base implements IReadModeDriveServer {
     #readModeStorage: IReadModeDriveService;
     #listeners = new Set<ReadDrivesListener>();
@@ -77,16 +82,16 @@ export function ReadModeServer(
       return this.#readModeStorage.fetchDrive(id);
     }
 
-    fetchDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+    fetchDocument<TGlobalState, TLocalState>(
       driveId: string,
       documentId: string,
       documentType: string,
     ) {
-      return this.#readModeStorage.fetchDocument<
-        TGlobalState,
-        TLocalState,
-        TAction
-      >(driveId, documentId, documentType);
+      return this.#readModeStorage.fetchDocument<TGlobalState, TLocalState>(
+        driveId,
+        documentId,
+        documentType,
+      );
     }
 
     async deleteReadDrive(id: string) {

@@ -1,9 +1,9 @@
-import { BaseAction, BaseDocument } from "document-model";
+import { BaseDocument } from "document-model";
 import type { RedisClientType } from "redis";
 import { ICache } from "./types.js";
 
-class RedisCache<TGlobalState, TLocalState, TAction extends BaseAction>
-  implements ICache<TGlobalState, TLocalState, TAction>
+class RedisCache<TGlobalState, TLocalState>
+  implements ICache<TGlobalState, TLocalState>
 {
   private redis: RedisClientType;
   private timeoutInSeconds: number;
@@ -23,7 +23,7 @@ class RedisCache<TGlobalState, TLocalState, TAction extends BaseAction>
   async setDocument(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState, TAction>,
+    document: BaseDocument<TGlobalState, TLocalState>,
   ) {
     const global = document.operations.global.map((e) => {
       delete e.resultingState;
@@ -51,7 +51,7 @@ class RedisCache<TGlobalState, TLocalState, TAction extends BaseAction>
     const doc = await this.redis.get(redisId);
 
     return doc
-      ? (JSON.parse(doc) as BaseDocument<TGlobalState, TLocalState, TAction>)
+      ? (JSON.parse(doc) as BaseDocument<TGlobalState, TLocalState>)
       : undefined;
   }
 

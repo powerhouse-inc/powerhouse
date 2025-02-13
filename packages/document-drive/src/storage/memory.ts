@@ -20,10 +20,7 @@ import {
 } from "document-model";
 
 export class MemoryStorage implements IDriveStorage {
-  private documents: Record<
-    string,
-    Record<string, BaseDocument<any, any, BaseAction>>
-  >;
+  private documents: Record<string, Record<string, BaseDocument<any, any>>>;
   private drives: Record<string, DocumentDriveStorage>;
   private slugToDriveId: Record<string, string> = {};
 
@@ -40,10 +37,10 @@ export class MemoryStorage implements IDriveStorage {
     return Object.keys(this.documents[drive] ?? {});
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  async getDocument<TGlobalState, TLocalState>(
     driveId: string,
     id: string,
-  ): Promise<DocumentStorage<TGlobalState, TLocalState, TAction>> {
+  ): Promise<DocumentStorage<TGlobalState, TLocalState>> {
     const drive = this.documents[driveId];
     if (!drive) {
       throw new DriveNotFoundError(driveId);
@@ -53,13 +50,13 @@ export class MemoryStorage implements IDriveStorage {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    return document as DocumentStorage<TGlobalState, TLocalState, TAction>;
+    return document as DocumentStorage<TGlobalState, TLocalState>;
   }
 
-  async saveDocument(
+  async saveDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: BaseDocument<any, any, BaseAction>,
+    document: BaseDocument<TGlobalState, TLocalState>,
   ) {
     this.documents[drive] = this.documents[drive] ?? {};
     this.documents[drive][id] = document;
@@ -70,10 +67,10 @@ export class MemoryStorage implements IDriveStorage {
     this.drives = {};
   }
 
-  async createDocument(
+  async createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<any, any, BaseAction>,
+    document: DocumentStorage<TGlobalState, TLocalState>,
   ) {
     this.documents[drive] = this.documents[drive] ?? {};
     const {
@@ -100,10 +97,10 @@ export class MemoryStorage implements IDriveStorage {
     };
   }
 
-  async addDocumentOperations(
+  async addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<any, any, BaseAction>[],
+    operations: Operation<TGlobalState, TLocalState>[],
     header: DocumentHeader,
   ): Promise<void> {
     const document = await this.getDocument(drive, id);
@@ -158,11 +155,7 @@ export class MemoryStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction
-    >[],
+    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

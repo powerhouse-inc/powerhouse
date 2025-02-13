@@ -21,7 +21,7 @@ import {
 import { gql, requestGraphql } from "@utils/graphql";
 import { logger as defaultLogger } from "@utils/logger";
 import { generateUUID } from "@utils/misc";
-import { BaseAction } from "document-model";
+import { Action } from "document-model";
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
@@ -237,13 +237,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     return result.acknowledge;
   }
 
-  private static async executePull<TGlobalState, TLocalState, TAction extends BaseAction>(
+  private static async executePull<TGlobalState, TLocalState>(
     driveId: string,
     trigger: PullResponderTrigger,
     onStrandUpdate: (
       strand: StrandUpdate,
       source: StrandUpdateSource,
-    ) => Promise<IOperationResult<TGlobalState, TLocalState, TAction>>,
+    ) => Promise<IOperationResult<TGlobalState, TLocalState>>,
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
@@ -319,13 +319,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }
   }
 
-  static setupPull<TGlobalState, TLocalState, TAction extends BaseAction>(
+  static setupPull<TGlobalState, TLocalState>(
     driveId: string,
     trigger: PullResponderTrigger,
     onStrandUpdate: (
       strand: StrandUpdate,
       source: StrandUpdateSource,
-    ) => Promise<IOperationResult<TGlobalState, TLocalState, TAction>>,
+    ) => Promise<IOperationResult<TGlobalState, TLocalState>>,
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,

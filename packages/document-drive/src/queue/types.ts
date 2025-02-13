@@ -1,5 +1,5 @@
 import type { AddOperationOptions, IOperationResult } from "@server/types";
-import type { BaseAction, Operation } from "document-model";
+import type { Action, BaseAction, Operation } from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {
@@ -10,11 +10,11 @@ export interface BaseJob {
 }
 
 export interface OperationJob extends BaseJob {
-  operations: Operation<any, any, BaseAction>[];
+  operations: Operation<any, any>[];
 }
 
 export interface ActionJob extends BaseJob {
-  actions: BaseAction[];
+  actions: Action[];
 }
 
 export type Job = OperationJob | ActionJob;
@@ -22,9 +22,9 @@ export type Job = OperationJob | ActionJob;
 export type JobId = string;
 
 export interface QueueEvents {
-  jobCompleted: <TGlobalState, TLocalState, TAction extends BaseAction>(
+  jobCompleted: <TGlobalState, TLocalState>(
     job: IJob<Job>,
-    result: IOperationResult<TGlobalState, TLocalState, TAction>,
+    result: IOperationResult<TGlobalState, TLocalState>,
   ) => void;
   jobFailed: (job: IJob<Job>, error: Error) => void;
   queueRemoved: (queueId: string) => void;
@@ -35,9 +35,9 @@ export interface IServerDelegate {
     driveId: string,
     documentId: string,
   ) => Promise<boolean>;
-  processJob: <TGlobalState, TLocalState, TAction extends BaseAction>(
+  processJob: <TGlobalState, TLocalState>(
     job: Job,
-  ) => Promise<IOperationResult<TGlobalState, TLocalState, TAction>>;
+  ) => Promise<IOperationResult<TGlobalState, TLocalState>>;
 }
 
 export interface IQueueManager {

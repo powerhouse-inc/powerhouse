@@ -34,11 +34,7 @@ class DocumentDriveClass extends BaseDocumentClass<
         PartialState<DocumentDriveLocalState>
       >
     >,
-    dispatch?: SignalDispatch<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction
-    >
+    dispatch?: SignalDispatch
   ) {
     super(reducer, createDocument(initialState), dispatch);
   }

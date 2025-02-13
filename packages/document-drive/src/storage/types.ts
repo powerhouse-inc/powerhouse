@@ -1,67 +1,57 @@
 import type {
-  DocumentDriveAction,
   DocumentDriveLocalState,
   DocumentDriveState,
 } from "@drive-document-model";
 import type { SynchronizationUnitQuery } from "@server/types";
 import type {
-  BaseAction,
   BaseDocument,
   DocumentHeader,
   DocumentOperations,
   Operation,
 } from "document-model";
 
-export type DocumentStorage<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = Omit<BaseDocument<TGlobalState, TLocalState, TAction>, "attachments">;
+export type DocumentStorage<TGlobalState, TLocalState> = Omit<
+  BaseDocument<TGlobalState, TLocalState>,
+  "attachments"
+>;
 
 export type DocumentDriveStorage = DocumentStorage<
   DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
+  DocumentDriveLocalState
 >;
 
 export interface IStorageDelegate {
-  getCachedOperations<TGlobalState, TLocalState, TAction extends BaseAction>(
+  getCachedOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-  ): Promise<
-    DocumentOperations<TGlobalState, TLocalState, TAction> | undefined
-  >;
+  ): Promise<DocumentOperations<TGlobalState, TLocalState> | undefined>;
 }
 
 export interface IStorage {
   checkDocumentExists(drive: string, id: string): Promise<boolean>;
   getDocuments: (drive: string) => Promise<string[]>;
-  getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  getDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-  ): Promise<DocumentStorage<TGlobalState, TLocalState, TAction>>;
-  createDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  ): Promise<DocumentStorage<TGlobalState, TLocalState>>;
+  createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState, TAction>,
+    document: DocumentStorage<TGlobalState, TLocalState>,
   ): Promise<void>;
-  addDocumentOperations<TGlobalState, TLocalState, TAction extends BaseAction>(
+  addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState, TAction>[],
+    operations: Operation<TGlobalState, TLocalState>[],
     header: DocumentHeader,
   ): Promise<void>;
-  addDocumentOperationsWithTransaction?<
-    TGlobalState,
-    TLocalState,
-    TAction extends BaseAction,
-  >(
+  addDocumentOperationsWithTransaction?<TGlobalState, TLocalState>(
     drive: string,
     id: string,
     callback: (
-      document: DocumentStorage<TGlobalState, TLocalState, TAction>,
+      document: DocumentStorage<TGlobalState, TLocalState>,
     ) => Promise<{
-      operations: Operation<TGlobalState, TLocalState, TAction>[];
+      operations: Operation<TGlobalState, TLocalState>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;
@@ -94,21 +84,13 @@ export interface IDriveStorage extends IStorage {
   clearStorage?(): Promise<void>;
   addDriveOperations(
     id: string,
-    operations: Operation<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction | BaseAction
-    >[],
+    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
     header: DocumentHeader,
   ): Promise<void>;
-  addDriveOperationsWithTransaction?<
-    TGlobalState,
-    TLocalState,
-    TAction extends BaseAction,
-  >(
+  addDriveOperationsWithTransaction?(
     drive: string,
     callback: (document: DocumentDriveStorage) => Promise<{
-      operations: Operation<TGlobalState, TLocalState, TAction>[];
+      operations: Operation<DocumentDriveState, DocumentDriveLocalState>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;

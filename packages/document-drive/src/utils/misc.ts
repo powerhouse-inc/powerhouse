@@ -1,7 +1,9 @@
-import { type DocumentDriveDocument, driveDocumentType } from "@drive-document-model";
+import {
+  type DocumentDriveDocument,
+  driveDocumentType,
+} from "@drive-document-model";
 import { OperationError } from "@server/error";
 import {
-  BaseAction,
   BaseDocument,
   DocumentOperations,
   Operation,
@@ -14,19 +16,15 @@ export const runAsap = RunAsap.runAsap;
 export const runAsapAsync = RunAsap.runAsapAsync;
 
 export function isDocumentDrive(
-  document: BaseDocument<any, any, BaseAction>,
+  document: BaseDocument<any, any>,
 ): document is DocumentDriveDocument {
   return document.documentType === driveDocumentType;
 }
 
-export function mergeOperations<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  currentOperations: DocumentOperations<TGlobalState, TLocalState, TAction>,
-  newOperations: Operation<TGlobalState, TLocalState, TAction>[],
-): DocumentOperations<TGlobalState, TLocalState, TAction> {
+export function mergeOperations<TGlobalState, TLocalState>(
+  currentOperations: DocumentOperations<TGlobalState, TLocalState>,
+  newOperations: Operation<TGlobalState, TLocalState>[],
+): DocumentOperations<TGlobalState, TLocalState> {
   const minIndexByScope = Object.keys(currentOperations).reduce<
     Partial<Record<OperationScope, number>>
   >((acc, curr) => {
@@ -48,26 +46,19 @@ export function mergeOperations<
 
   return newOperations
     .sort((a, b) => a.index - b.index)
-    .reduce<DocumentOperations<TGlobalState, TLocalState, TAction>>(
-      (acc, curr) => {
-        const existingOperations = acc[curr.scope] || [];
-        return { ...acc, [curr.scope]: [...existingOperations, curr] };
-      },
-      currentOperations,
-    );
+    .reduce<DocumentOperations<TGlobalState, TLocalState>>((acc, curr) => {
+      const existingOperations = acc[curr.scope] || [];
+      return { ...acc, [curr.scope]: [...existingOperations, curr] };
+    }, currentOperations);
 }
 
 export function generateUUID(): string {
   return generateId();
 }
 
-export function isNoopUpdate<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  operation: Operation<TGlobalState, TLocalState, TAction>,
-  latestOperation?: Operation<TGlobalState, TLocalState, TAction>,
+export function isNoopUpdate<TGlobalState, TLocalState>(
+  operation: Operation<TGlobalState, TLocalState>,
+  latestOperation?: Operation<TGlobalState, TLocalState>,
 ) {
   if (!latestOperation) {
     return false;

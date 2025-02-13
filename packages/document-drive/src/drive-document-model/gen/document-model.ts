@@ -1,4 +1,3 @@
-import { DocumentModelState } from "document-model/document-model";
 import { documentModelName, documentType, fileExtension } from "./constants.js";
 import { DocumentDriveState } from "./schema/types.js";
 

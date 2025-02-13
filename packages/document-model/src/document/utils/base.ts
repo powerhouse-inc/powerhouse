@@ -33,7 +33,6 @@ import type {
   PartialState,
   Reducer,
   ReducerOptions,
-  StateReducer,
 } from "@document/types.js";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";

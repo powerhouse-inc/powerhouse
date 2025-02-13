@@ -12,7 +12,7 @@ import type {
 import { isOperationJob } from "@queue/types";
 import { logger } from "@utils/logger";
 import { generateUUID, runAsap } from "@utils/misc";
-import { BaseAction } from "document-model";
+import { Action, BaseAction } from "document-model";
 import { Unsubscribe, createNanoEvents } from "nanoevents";
 
 export class MemoryQueue<T> implements IQueue<T> {
@@ -138,7 +138,7 @@ export class BaseQueueManager implements IQueueManager {
         const actions = isOperationJob(driveJob)
           ? driveJob.operations
           : driveJob.actions;
-        const op = actions.find((j: BaseAction) => {
+        const op = actions.find((j: Action) => {
           const input = j.input as AddFileInput;
           return j.type === "ADD_FILE" && input.id === job.documentId;
         });
@@ -172,10 +172,7 @@ export class BaseQueueManager implements IQueueManager {
     return jobId;
   }
 
-  getQueue<TGlobalState, TLocalState, TAction extends BaseAction>(
-    driveId: string,
-    documentId?: string,
-  ) {
+  getQueue(driveId: string, documentId?: string) {
     const queueId = this.getQueueId(driveId, documentId);
     let queue = this.queues.find((q) => q.getId() === queueId);
 
@@ -306,8 +303,8 @@ export class BaseQueueManager implements IQueueManager {
   ) {
     this.emitter.emit(event, ...args);
   }
-  on<K extends keyof QueueEvents>(
-    this: this,
+
+  public on<K extends keyof QueueEvents>(
     event: K,
     cb: QueueEvents[K],
   ): Unsubscribe {

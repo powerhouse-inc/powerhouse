@@ -12,8 +12,7 @@ export type ExtendedDocumentDriveState = ExtendedState<
 >;
 export type DocumentDriveDocument = BaseDocument<
   DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
+  DocumentDriveLocalState
 >;
 
 export type DriveDocumentModelModule = DocumentModelModule<

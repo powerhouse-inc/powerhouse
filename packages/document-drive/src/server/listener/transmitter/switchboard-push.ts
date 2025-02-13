@@ -7,7 +7,10 @@ import {
   ListenerRevision,
   StrandUpdate,
 } from "@server/types";
-import { ITransmitter, StrandUpdateSource } from "@server/listener/transmitter/types";
+import {
+  ITransmitter,
+  StrandUpdateSource,
+} from "@server/listener/transmitter/types";
 
 export class SwitchboardPushTransmitter implements ITransmitter {
   private drive: IBaseDocumentDriveServer;

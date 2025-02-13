@@ -9,11 +9,6 @@ import {
 } from "../../gen/creators.js";
 import { DocumentDriveClass } from "../../gen/object.js";
 import { reducer } from "../../gen/reducer.js";
-import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "../../gen/types.js";
 import { createDocument } from "../../gen/utils.js";
 describe("DocumentDrive Class", () => {
   it("should rename drive", () => {
@@ -95,12 +90,8 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should trigger create child document signal", () => {
-    function dispatch(
-      _signal: Signal<
-        DocumentDriveState,
-        DocumentDriveLocalState,
-        DocumentDriveAction
-      >,
+    function dispatch<TGlobalState, TLocalState>(
+      _signal: Signal<TGlobalState, TLocalState>,
     ) {}
     const documentDrive = new DocumentDriveClass(undefined, dispatch);
     // @ts-expect-error spying on private method

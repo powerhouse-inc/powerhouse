@@ -19,12 +19,11 @@ import {
   initialGlobalState,
   initialLocalState,
 } from "./constants.js";
-import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "./types.js";
 import { reducer } from "./reducer.js";
+import {
+  DocumentDriveLocalState,
+  DocumentDriveState
+} from "./types.js";
 
 export const createState: CreateState<
   DocumentDriveState,
@@ -48,40 +47,29 @@ export const createExtendedState: CreateExtendedState<
 
 export const createDocument: CreateDocument<
   DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
+  DocumentDriveLocalState
 > = (state) => {
   return baseCreateDocument(createExtendedState(state), createState);
 };
 
-export const saveToFile: SaveToFile<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> = (document, path, name) => {
+export const saveToFile: SaveToFile = (document, path, name) => {
   return baseSaveToFile(document, path, fileExtension, name);
 };
 
-export const saveToFileHandle: SaveToFileHandle<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> = (document, input) => {
+export const saveToFileHandle: SaveToFileHandle = (document, input) => {
   return baseSaveToFileHandle(document, input);
 };
 
 export const loadFromFile: LoadFromFile<
   DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
+  DocumentDriveLocalState
 > = (path) => {
   return baseLoadFromFile(path, reducer);
 };
 
 export const loadFromInput: LoadFromInput<
   DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
+  DocumentDriveLocalState
 > = (input) => {
   return baseLoadFromInput(input, reducer);
 };

@@ -1,5 +1,9 @@
 import { RevisionsFilter, StrandUpdate } from "@server/types";
-import type { BaseAction, BaseDocument, OperationScope } from "document-model";
+import type {
+  BaseDocument,
+  DocumentOperations,
+  OperationScope,
+} from "document-model";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],
@@ -15,8 +19,8 @@ export function buildRevisionsFilter(
   }, {});
 }
 
-export function buildDocumentRevisionsFilter<TGlobalState, TLocalState, TAction extends BaseAction>(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+export function buildDocumentRevisionsFilter<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
 ): RevisionsFilter {
   return Object.entries(document.operations).reduce<RevisionsFilter>(
     (acc, [scope, operations]) => {
@@ -27,29 +31,29 @@ export function buildDocumentRevisionsFilter<TGlobalState, TLocalState, TAction 
   );
 }
 
-export function filterOperationsByRevision<TGlobalState, TLocalState, TAction extends BaseAction, TDocument extends BaseDocument<TGlobalState, TLocalState, TAction>>(
-  operations: TDocument["operations"],
+export function filterOperationsByRevision<TGlobalState, TLocalState>(
+  operations: DocumentOperations<TGlobalState, TLocalState>,
   revisions?: RevisionsFilter,
-): TDocument["operations"] {
+) {
   if (!revisions) {
     return operations;
   }
-  return (Object.keys(operations) as OperationScope[]).reduce<
-    TDocument["operations"]
-  >(
+  return Object.keys(operations).reduce(
     (acc, scope) => {
-      const revision = revisions[scope];
+      const revision = revisions[scope as OperationScope];
       if (revision !== undefined) {
-        acc[scope] = operations[scope].filter((op) => op.index <= revision);
+        acc[scope as OperationScope] = operations[
+          scope as OperationScope
+        ].filter((op) => op.index <= revision);
       }
       return acc;
     },
-    { global: [], local: [] } as TDocument["operations"],
+    { global: [], local: [] } as DocumentOperations<TGlobalState, TLocalState>,
   );
 }
 
-export function isAtRevision<TGlobalState, TLocalState, TAction extends BaseAction>(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+export function isAtRevision<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
   revisions?: RevisionsFilter,
 ): boolean {
   return (
@@ -64,8 +68,8 @@ export function isAtRevision<TGlobalState, TLocalState, TAction extends BaseActi
   );
 }
 
-export function isAfterRevision<TGlobalState, TLocalState, TAction extends BaseAction>(
-  document: BaseDocument<TGlobalState, TLocalState, TAction>,
+export function isAfterRevision<TGlobalState, TLocalState>(
+  document: BaseDocument<TGlobalState, TLocalState>,
   revisions?: RevisionsFilter,
 ): boolean {
   return (

@@ -1,37 +1,34 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-  driveDocumentType,
+    DocumentDriveAction,
+    DocumentDriveLocalState,
+    DocumentDriveState,
+    driveDocumentType,
 } from "@drive-document-model";
 import { module as driveDocumentModelModule } from "@drive-document-model/module";
 import {
-  ReadDocumentNotFoundError,
-  ReadDriveError,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
+    ReadDocumentNotFoundError,
+    ReadDriveError,
+    ReadDriveNotFoundError,
+    ReadDriveSlugNotFoundError,
 } from "@read-mode/errors";
 import {
-  GetDocumentModel,
-  IReadModeDriveService,
-  ReadDrive,
-  ReadDriveContext,
-  ReadDriveOptions,
+    GetDocumentModel,
+    IReadModeDriveService,
+    ReadDrive,
+    ReadDriveContext,
+    ReadDriveOptions,
 } from "@read-mode/types";
 import { DocumentModelNotFoundError } from "@server/error";
 import {
-  DocumentGraphQLResult,
-  fetchDocument,
-  requestPublicDrive,
+    DocumentGraphQLResult,
+    fetchDocument,
+    requestPublicDrive,
 } from "@utils/graphql";
-import type { BaseAction, DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { GraphQLError } from "graphql";
 
-export class ReadModeService<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> implements IReadModeDriveService
+export class ReadModeService<TGlobalState, TLocalState, >
+  implements IReadModeDriveService
 {
   #getDocumentModel: GetDocumentModel;
   #drives = new Map<
@@ -92,7 +89,7 @@ export class ReadModeService<
     return result;
   }
 
-  async fetchDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  async fetchDocument<TGlobalState, TLocalState, >(
     driveId: string,
     documentId: string,
     documentType: string,

@@ -12,6 +12,7 @@ import { FileInput } from "./utils/file.js";
 export type { NOOPAction } from "./schema/types.js";
 export type {
   CreateChildDocumentInput,
+  DocumentAction,
   FileInput,
   Immutable,
   Signal,

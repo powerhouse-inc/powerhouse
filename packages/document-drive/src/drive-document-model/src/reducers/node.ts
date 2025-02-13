@@ -4,10 +4,9 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { BaseDocument, SynchronizationUnit } from "document-model";
+import { BaseDocument, SynchronizationUnitInput } from "document-model";
 import { DocumentDriveNodeOperations } from "../../gen/node/operations.js";
 import {
-  DocumentDriveAction,
   DocumentDriveLocalState,
   DocumentDriveState,
   FileNode,
@@ -32,9 +31,9 @@ export const reducer: DocumentDriveNodeOperations = {
     });
 
     const synchronizationUnits = action.input
-      .synchronizationUnits as SynchronizationUnit[];
+      .synchronizationUnits as SynchronizationUnitInput[];
 
-    const invalidSyncUnit: SynchronizationUnit | undefined =
+    const invalidSyncUnit: SynchronizationUnitInput | undefined =
       synchronizationUnits.find(
         (unit) =>
           !!state.nodes.find(
@@ -68,8 +67,7 @@ export const reducer: DocumentDriveNodeOperations = {
         synchronizationUnits,
         document: action.input.document as BaseDocument<
           DocumentDriveState,
-          DocumentDriveLocalState,
-          DocumentDriveAction
+          DocumentDriveLocalState
         >,
       },
     });
@@ -183,13 +181,13 @@ export const reducer: DocumentDriveNodeOperations = {
 
     if (isFile) {
       const synchronizationUnits = action.input
-        .synchronizationUnits as SynchronizationUnit[];
+        .synchronizationUnits as SynchronizationUnitInput[];
 
       if (!action.input.synchronizationUnits) {
         throw new Error("Synchronization units were not provided");
       }
 
-      const invalidSyncUnit: SynchronizationUnit | undefined =
+      const invalidSyncUnit: SynchronizationUnitInput | undefined =
         synchronizationUnits.find(
           (unit) =>
             !!state.nodes.find(
@@ -218,7 +216,7 @@ export const reducer: DocumentDriveNodeOperations = {
           id: action.input.srcId,
           newId: action.input.targetId,
           synchronizationUnits:
-            newNode.synchronizationUnits as SynchronizationUnit[],
+            newNode.synchronizationUnits as SynchronizationUnitInput[],
         },
       });
     }

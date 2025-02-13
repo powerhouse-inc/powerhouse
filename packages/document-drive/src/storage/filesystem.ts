@@ -11,12 +11,7 @@ import type {
   IDriveStorage,
 } from "@storage/types";
 import { mergeOperations } from "@utils/misc";
-import {
-  BaseAction,
-  DocumentHeader,
-  Operation,
-  OperationScope,
-} from "document-model";
+import { DocumentHeader, Operation, OperationScope } from "document-model";
 import type { Dirent } from "fs";
 import {
   existsSync,
@@ -94,26 +89,21 @@ export class FilesystemStorage implements IDriveStorage {
     return Promise.resolve(documentExists);
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
-    drive: string,
-    id: string,
-  ) {
+  async getDocument<TGlobalState, TLocalState>(drive: string, id: string) {
     try {
       const content = readFileSync(this._buildDocumentPath(drive, id), {
         encoding: "utf-8",
       });
-      return JSON.parse(content) as Promise<
-        DocumentStorage<TGlobalState, TLocalState, TAction>
-      >;
+      return JSON.parse(content) as DocumentStorage<TGlobalState, TLocalState>;
     } catch (error) {
       throw new Error(`Document with id ${id} not found`);
     }
   }
 
-  async createDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  async createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState, TAction>,
+    document: DocumentStorage<TGlobalState, TLocalState>,
   ) {
     const documentPath = this._buildDocumentPath(drive, id);
     ensureDir(path.dirname(documentPath));
@@ -162,14 +152,10 @@ export class FilesystemStorage implements IDriveStorage {
     return fs.rm(this._buildDocumentPath(drive, id));
   }
 
-  async addDocumentOperations<
-    TGlobalState,
-    TLocalState,
-    TAction extends BaseAction,
-  >(
+  async addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState, TAction>[],
+    operations: Operation<TGlobalState, TLocalState>[],
     header: DocumentHeader,
   ) {
     const document = await this.getDocument(drive, id);
@@ -248,11 +234,7 @@ export class FilesystemStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction
-    >[],
+    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

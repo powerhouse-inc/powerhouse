@@ -7,7 +7,7 @@ import {
 import { DocumentModelNotFoundError } from "@server/error";
 import { DocumentDriveServerMixin, RemoteDriveOptions } from "@server/types";
 import { DriveInfo } from "@utils/graphql";
-import { BaseAction, BaseDocument, DocumentModelModule } from "document-model";
+import { Action, BaseDocument, DocumentModelModule } from "document-model";
 
 export type ReadModeDriveServerMixin =
   DocumentDriveServerMixin<IReadModeDriveServer>;
@@ -59,12 +59,12 @@ export interface IReadModeDriveService {
 
   fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
 
-  fetchDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  fetchDocument<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | BaseDocument<TGlobalState, TLocalState, TAction>
+    | BaseDocument<TGlobalState, TLocalState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError
@@ -76,7 +76,7 @@ export interface IReadModeDriveService {
 export type GetDocumentModel = <
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  ,
 >(
   documentType: string,
 ) => DocumentModelModule<TGlobalState, TLocalState, TAction>;

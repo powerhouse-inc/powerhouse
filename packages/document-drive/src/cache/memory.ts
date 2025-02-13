@@ -1,18 +1,18 @@
-import { BaseAction, BaseDocument } from "document-model";
+import { BaseDocument } from "document-model";
 import { ICache } from "./types.js";
 
-class InMemoryCache<TGlobalState, TLocalState, TAction extends BaseAction>
-  implements ICache<TGlobalState, TLocalState, TAction>
+class InMemoryCache<TGlobalState, TLocalState>
+  implements ICache<TGlobalState, TLocalState>
 {
   private cache = new Map<
     string,
-    Map<string, BaseDocument<TGlobalState, TLocalState, TAction>>
+    Map<string, BaseDocument<TGlobalState, TLocalState>>
   >();
 
   async setDocument(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState, TAction>,
+    document: BaseDocument<TGlobalState, TLocalState>,
   ) {
     const global = document.operations.global.map((e) => {
       delete e.resultingState;

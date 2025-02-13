@@ -1,30 +1,42 @@
-import { DocumentDriveLocalState, DocumentDriveState } from "@drive-document-model";
-import { ITransmitter, StrandUpdateSource } from "@server/listener/transmitter/types";
-import { GetDocumentOptions, IBaseDocumentDriveServer, Listener, ListenerRevision, StrandUpdate } from "@server/types";
+import {
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "@drive-document-model";
+import {
+  ITransmitter,
+  StrandUpdateSource,
+} from "@server/listener/transmitter/types";
+import {
+  GetDocumentOptions,
+  IBaseDocumentDriveServer,
+  Listener,
+  ListenerRevision,
+  StrandUpdate,
+} from "@server/types";
 import { logger } from "@utils/logger";
-import { BaseAction, Operation, OperationScope } from "document-model";
+import { Operation, OperationScope } from "document-model";
 
 export interface IReceiver {
-  onStrands: <TGlobalState, TLocalState, TAction extends BaseAction>(strands: InternalTransmitterUpdate<TGlobalState, TLocalState, TAction>[]) => Promise<void>;
+  onStrands: <TGlobalState, TLocalState>(
+    strands: InternalTransmitterUpdate<TGlobalState, TLocalState>[],
+  ) => Promise<void>;
   onDisconnect: () => Promise<void>;
 }
 
-export type InternalOperationUpdate<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
-> = Omit<Operation<TGlobalState, TLocalState, TAction>, "scope"> & {
+export type InternalOperationUpdate<TGlobalState, TLocalState> = Omit<
+  Operation<TGlobalState, TLocalState>,
+  "scope"
+> & {
   state: TGlobalState | TLocalState;
   previousState: TGlobalState | TLocalState;
 };
 
-
-export type InternalTransmitterUpdate<TGlobalState, TLocalState, TAction extends BaseAction> = {
+export type InternalTransmitterUpdate<TGlobalState, TLocalState> = {
   driveId: string;
   documentId: string;
   scope: OperationScope;
   branch: string;
-  operations: InternalOperationUpdate<TGlobalState, TLocalState, TAction>[];
+  operations: InternalOperationUpdate<TGlobalState, TLocalState>[];
   state: TGlobalState | TLocalState;
 };
 
@@ -42,9 +54,14 @@ export class InternalTransmitter implements ITransmitter {
     this.drive = drive;
   }
 
-  async #buildInternalOperationUpdate<TGlobalState, TLocalState, TAction extends BaseAction>(strand: StrandUpdate) {
+  async #buildInternalOperationUpdate<TGlobalState, TLocalState>(
+    strand: StrandUpdate,
+  ) {
     const operations = [];
-    const stateByIndex = new Map<number, TGlobalState | TLocalState | DocumentDriveState | DocumentDriveLocalState>();
+    const stateByIndex = new Map<
+      number,
+      TGlobalState | TLocalState | DocumentDriveState | DocumentDriveLocalState
+    >();
     const getStateByIndex = async (index: number) => {
       const state = stateByIndex.get(index);
       if (state) {
@@ -58,7 +75,7 @@ export class InternalTransmitter implements ITransmitter {
         checkHashes: false,
       };
       const document = await (strand.documentId
-        ? this.drive.getDocument<TGlobalState, TLocalState, TAction>(
+        ? this.drive.getDocument<TGlobalState, TLocalState>(
             strand.driveId,
             strand.documentId,
             getDocumentOptions,

@@ -1,4 +1,4 @@
-import { DocumentAction } from "../../../../document-model/src/document/actions/types.js";
+import { DocumentAction } from "document-model";
 import { DocumentDriveDriveAction } from "./drive/actions.js";
 import { DocumentDriveNodeAction } from "./node/actions.js";
 

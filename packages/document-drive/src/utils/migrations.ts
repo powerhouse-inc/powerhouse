@@ -1,20 +1,15 @@
 import type { DocumentStorage } from "@storage/types";
-import {
-  BaseAction,
-  DocumentOperations,
-  Operation,
-  OperationScope,
-} from "document-model";
+import { DocumentOperations, Operation, OperationScope } from "document-model";
 
-export function migrateDocumentOperationSignatures(
-  document: DocumentStorage<any, any, BaseAction>,
-): DocumentStorage<any, any, BaseAction> | undefined {
+export function migrateDocumentOperationSignatures<TGlobalState, TLocalState>(
+  document: DocumentStorage<TGlobalState, TLocalState>,
+): DocumentStorage<TGlobalState, TLocalState> | undefined {
   let legacy = false;
   const operations = Object.entries(document.operations).reduce<
-    DocumentOperations<any, any, BaseAction>
+    DocumentOperations<TGlobalState, TLocalState>
   >(
     (acc, [key, operations]) => {
-      const scope = key as unknown as OperationScope;
+      const scope = key as OperationScope;
       for (const op of operations) {
         const newOp = migrateLegacyOperationSignature(op);
         acc[scope].push(newOp);
@@ -30,13 +25,9 @@ export function migrateDocumentOperationSignatures(
   return legacy ? { ...document, operations } : document;
 }
 
-export function migrateLegacyOperationSignature<
-  TGlobalState,
-  TLocalState,
-  TAction extends BaseAction,
->(
-  operation: Operation<TGlobalState, TLocalState, TAction>,
-): Operation<TGlobalState, TLocalState, TAction> {
+export function migrateLegacyOperationSignature<TGlobalState, TLocalState>(
+  operation: Operation<TGlobalState, TLocalState>,
+): Operation<TGlobalState, TLocalState> {
   if (!operation.context?.signer || operation.context.signer.signatures) {
     return operation;
   }

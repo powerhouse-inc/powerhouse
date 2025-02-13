@@ -11,7 +11,6 @@ import {
 } from "@storage/types";
 import {
   AttachmentInput,
-  BaseAction,
   DocumentHeader,
   ExtendedState,
   Operation,
@@ -136,19 +135,15 @@ export class SequelizeStorage implements IDriveStorage {
   }
   async addDriveOperations(
     id: string,
-    operations: Operation<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction
-    >[],
+    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
     header: DocumentHeader,
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);
   }
-  async createDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  async createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState, TAction>,
+    document: DocumentStorage<TGlobalState, TLocalState>,
   ): Promise<void> {
     const Document = this.db.models.document;
 
@@ -166,14 +161,10 @@ export class SequelizeStorage implements IDriveStorage {
       revision: document.revision,
     });
   }
-  async addDocumentOperations<
-    TGlobalState,
-    TLocalState,
-    TAction extends BaseAction,
-  >(
+  async addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState, TAction>[],
+    operations: Operation<TGlobalState, TLocalState>[],
     header: DocumentHeader,
   ): Promise<void> {
     const document = await this.getDocument(drive, id);
@@ -248,14 +239,10 @@ export class SequelizeStorage implements IDriveStorage {
     );
   }
 
-  async _addDocumentOperationAttachments<
-    TGlobalState,
-    TLocalState,
-    TAction extends BaseAction,
-  >(
+  async _addDocumentOperationAttachments<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string,
-    operation: Operation<TGlobalState, TLocalState, TAction>,
+    operation: Operation<TGlobalState, TLocalState>,
     attachments: AttachmentInput[],
   ) {
     const Attachment = this.db.models.attachment;
@@ -314,10 +301,10 @@ export class SequelizeStorage implements IDriveStorage {
     return count > 0;
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends BaseAction>(
+  async getDocument<TGlobalState, TLocalState>(
     driveId: string,
     id: string,
-  ): Promise<DocumentStorage<TGlobalState, TLocalState, TAction>> {
+  ): Promise<DocumentStorage<TGlobalState, TLocalState>> {
     const Document = this.db.models.document;
     if (!Document) {
       throw new Error("Document model not found");
@@ -376,7 +363,7 @@ export class SequelizeStorage implements IDriveStorage {
       id: op.opId,
       skip: op.skip,
       // attachments: fileRegistry
-    })) as Operation<TGlobalState, TLocalState, TAction>[];
+    })) as Operation<TGlobalState, TLocalState>[];
 
     const doc = {
       created: document.createdAt.toISOString(),
@@ -391,7 +378,7 @@ export class SequelizeStorage implements IDriveStorage {
       revision: document.revision,
     };
 
-    return doc as DocumentStorage<TGlobalState, TLocalState, TAction>;
+    return doc as DocumentStorage<TGlobalState, TLocalState>;
   }
 
   async deleteDocument(drive: string, id: string) {

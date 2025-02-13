@@ -2,7 +2,6 @@ import { createReducer, ImmutableStateReducer, isDocumentAction, Reducer } from 
 import { DocumentDriveAction } from "./actions.js";
 import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
 
-import { DocumentAction } from "../../../../document-model/src/document/actions/types.js";
 import { reducer as DriveReducer } from "../src/reducers/drive.js";
 import { reducer as NodeReducer } from "../src/reducers/node.js";
 import {
