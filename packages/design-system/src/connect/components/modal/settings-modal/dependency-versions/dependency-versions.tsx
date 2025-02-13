@@ -71,11 +71,12 @@ export function verifyPackageJsonFields(
 
 type Props = {
   readonly packageJson: unknown;
+  readonly phCliVersion?: string;
 };
 
 export function DependencyVersions(props: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const { packageJson } = props;
+  const { packageJson, phCliVersion } = props;
 
   const validatedData = verifyPackageJsonFields(packageJson);
   if (!validatedData) {
@@ -90,7 +91,7 @@ export function DependencyVersions(props: Props) {
       title={`App version: ${validatedData.version}`}
       toggleClassName="text-gray-900 text-sm"
     >
-      <ul className="text-gray-600 text-sm">
+      <ul className="text-sm text-gray-600">
         {REQUIRED_DEPENDENCIES.map((dep) => (
           <li key={dep} className="my-1 flex justify-between pr-1">
             <span>{dep.replace("@powerhousedao/", "")}:</span>
@@ -99,6 +100,12 @@ export function DependencyVersions(props: Props) {
             </span>
           </li>
         ))}
+        {phCliVersion && (
+          <li className="my-1 flex justify-between pr-1" key="ph-cli">
+            <span>@powerhousedao/ph-cli:</span>
+            <span className="font-normal">{phCliVersion}</span>
+          </li>
+        )}
       </ul>
     </Disclosure>
   );
