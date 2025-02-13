@@ -1,11 +1,11 @@
-import { noop, redo, undo } from "@document/actions/creators.js";
-import { processUndoRedo } from "@document/reducer.js";
-import { BaseDocument } from "@document/types.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import { noop, redo, undo } from "../../src/document/actions/creators.js";
+import { processUndoRedo } from "../../src/document/reducer.js";
+import { BaseDocument } from "../../src/document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
-} from "@document/utils/base.js";
-import { beforeEach, describe, expect, it } from "vitest";
+} from "../../src/document/utils/base.js";
 import {
   CountAction,
   CountLocalState,

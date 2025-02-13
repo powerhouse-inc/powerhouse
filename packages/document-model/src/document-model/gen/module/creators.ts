@@ -1,18 +1,17 @@
-
-import { createAction } from "@document/utils/base.js";
+import { createAction } from "../../../document/utils/base.js";
 import {
   AddModuleInput,
-  SetModuleNameInput,
-  SetModuleDescriptionInput,
   DeleteModuleInput,
   ReorderModulesInput,
+  SetModuleDescriptionInput,
+  SetModuleNameInput,
 } from "../schema/types.js";
 import {
   AddModuleAction,
-  SetModuleNameAction,
-  SetModuleDescriptionAction,
   DeleteModuleAction,
   ReorderModulesAction,
+  SetModuleDescriptionAction,
+  SetModuleNameAction,
 } from "./actions.js";
 
 export const addModule = (input: AddModuleInput) =>

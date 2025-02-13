@@ -1,5 +1,10 @@
-import { DocumentDriveDocument, ListenerFilter } from "@drive-document-model";
-import { OperationError } from "@server/error";
+import { OperationScope } from "document-model";
+import {
+  DocumentDriveDocument,
+  ListenerFilter,
+} from "../../drive-document-model/gen/types.js";
+import { logger } from "../../utils/logger.js";
+import { OperationError } from "../error.js";
 import {
   DefaultListenerManagerOptions,
   DriveUpdateErrorHandler,
@@ -15,9 +20,7 @@ import {
   StrandUpdate,
   SynchronizationUnit,
   SynchronizationUnitQuery,
-} from "@server/types";
-import { logger } from "@utils/logger";
-import { OperationScope } from "document-model";
+} from "../types.js";
 import { StrandUpdateSource } from "./transmitter/types.js";
 
 function debounce<T extends unknown[], R>(

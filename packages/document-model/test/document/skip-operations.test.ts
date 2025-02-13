@@ -1,23 +1,22 @@
-import { setName } from "@document/actions/creators.js";
+import { setName } from "../../src/document/actions/creators.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
   mapSkippedOperations,
   replayOperations,
-} from "@document/utils/base.js";
+} from "../../src/document/utils/base.js";
+import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
 import {
-  mapOperations,
-  createFakeOperation,
-  CountState,
+  baseCountReducer,
   CountLocalState,
   countReducer,
-  increment,
+  CountState,
+  createFakeOperation,
   error,
-  baseCountReducer,
-  CountAction,
+  increment,
+  mapOperations,
   wrappedEmptyReducer,
 } from "../helpers.js";
-import { garbageCollectDocumentOperations } from "@document/utils/document-helpers.js";
 
 describe("skip operations", () => {
   describe("skip operation param", () => {

@@ -1,5 +1,5 @@
-import { BaseDocumentClass } from "@document/object.js";
-import { ReducerOptions } from "@document/types.js";
+import { BaseDocumentClass } from "../../../document/object.js";
+import { ReducerOptions } from "../../../document/types.js";
 import {
   AddModuleInput,
   DeleteModuleInput,
@@ -7,7 +7,7 @@ import {
   DocumentModelState,
   ReorderModulesInput,
   SetModuleDescriptionInput,
-  SetModuleNameInput
+  SetModuleNameInput,
 } from "../schema/types.js";
 import { DocumentModelModuleAction } from "./actions.js";
 import {

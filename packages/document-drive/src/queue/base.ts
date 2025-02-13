@@ -3,7 +3,8 @@ import { createNanoEvents, Unsubscribe } from "nanoevents";
 import {
   AddFileInput,
   DeleteNodeInput,
-} from "../drive-document-model/index.js";
+} from "../drive-document-model/gen/types.js";
+import { logger } from "../utils/logger.js";
 import { generateUUID, runAsap } from "../utils/misc.js";
 import {
   IJob,
@@ -16,7 +17,6 @@ import {
   JobId,
   QueueEvents,
 } from "./types.js";
-import { logger } from "../utils/logger.js";
 
 export class MemoryQueue<T> implements IQueue<T> {
   private id: string;

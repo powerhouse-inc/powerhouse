@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OperationScope } from "@document/types.js";
+import { OperationScope } from "../types.js";
 import {
   Action,
   DocumentFile,

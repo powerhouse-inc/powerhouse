@@ -11,17 +11,17 @@ import {
   LoadFromInput,
   SaveToFile,
   SaveToFileHandle,
-} from "@document/types.js";
+} from "../../document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
-} from "@document/utils/base.js";
+} from "../../document/utils/base.js";
 import {
   baseLoadFromFile,
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
-} from "@document/utils/file.js";
+} from "../../document/utils/file.js";
 import {
   documentModelState,
   documentType,

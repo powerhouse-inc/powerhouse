@@ -1,7 +1,6 @@
 import { z } from "zod";
+import { OperationScope } from "../../../document/types.js";
 import {
-  Operation,
-  State,
   AddChangeLogItemInput,
   AddModuleInput,
   AddOperationErrorInput,
@@ -20,6 +19,7 @@ import {
   DocumentSpecification,
   Module,
   MoveOperationInput,
+  Operation,
   OperationError,
   ReorderChangeLogItemsInput,
   ReorderModuleOperationsInput,
@@ -48,11 +48,11 @@ import {
   SetOperationScopeInput,
   SetOperationTemplateInput,
   SetStateSchemaInput,
+  State,
   UpdateChangeLogItemInput,
   UpdateOperationExampleInput,
   UpdateStateExampleInput,
 } from "./types.js";
-import { OperationScope } from "@document/types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;

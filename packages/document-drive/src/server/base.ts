@@ -1613,7 +1613,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         options,
       });
 
-      return new Promise<IOperationResult<TGlobalState, TLocalState>>(
+      return await new Promise<IOperationResult<TGlobalState, TLocalState>>(
         (resolve, reject) => {
           const unsubscribe = this.queueManager.on(
             "jobCompleted",

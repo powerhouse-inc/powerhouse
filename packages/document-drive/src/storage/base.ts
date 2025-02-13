@@ -42,13 +42,13 @@ abstract class BaseStorage implements IStorage {
 
   abstract deleteDocument(drive: string, id: string): Promise<void>;
 
-  abstract getOperationResultingState?(
+  abstract getOperationResultingState<TGlobalState, TLocalState>(
     drive: string,
     id: string,
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown>;
+  ): Promise<TGlobalState | TLocalState | undefined>;
 
   abstract setStorageDelegate?(delegate: IStorageDelegate): void;
 

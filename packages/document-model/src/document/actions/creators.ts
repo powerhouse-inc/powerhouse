@@ -1,5 +1,5 @@
-import { ExtendedState, OperationScope } from "@document/types.js";
-import { createAction } from "@document/utils/base.js";
+import { ExtendedState, OperationScope } from "../types.js";
+import { createAction } from "../utils/base.js";
 import {
   LoadStateAction,
   PruneAction,
@@ -14,7 +14,7 @@ import {
   RedoActionInputSchema,
   SetNameActionInputSchema,
   UndoActionInputSchema,
-} from "@document/schema/zod.js";
+} from "../schema/zod.js";
 
 /**
  * Changes the name of the document.

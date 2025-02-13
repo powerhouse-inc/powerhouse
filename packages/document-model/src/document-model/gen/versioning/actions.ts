@@ -1,6 +1,10 @@
-import { BaseAction } from "@document/types.js";
-import { AddChangeLogItemInput, UpdateChangeLogItemInput, DeleteChangeLogItemInput, ReorderChangeLogItemsInput } from "../schema/types.js";
-
+import { BaseAction } from "../../../document/types.js";
+import {
+  AddChangeLogItemInput,
+  DeleteChangeLogItemInput,
+  ReorderChangeLogItemsInput,
+  UpdateChangeLogItemInput,
+} from "../schema/types.js";
 
 export type AddChangeLogItemAction = BaseAction<
   "ADD_CHANGE_LOG_ITEM",

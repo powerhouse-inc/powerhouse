@@ -1,4 +1,4 @@
-export { applyMixins, BaseDocumentClass } from "@document/object.js";
+export { applyMixins, BaseDocumentClass } from "./src/document/object.js";
 export type {
   ActionContext,
   ActionErrorCallback,
@@ -37,7 +37,7 @@ export type {
   ReducerOptions,
   DocumentModelLib,
   Manifest,
-} from "@document/types.js";
+} from "./src/document/types.js";
 export {
   baseCreateDocument,
   baseCreateExtendedState,
@@ -46,14 +46,14 @@ export {
   hashKey,
   isDocumentAction,
   replayDocument,
-} from "@document/utils/base.js";
-export { generateId } from "@document/utils/crypto.js";
+} from "./src/document/utils/base.js";
+export { generateId } from "./src/document/utils/crypto.js";
 export {
   baseLoadFromFile,
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
-} from "@document/utils/file.js";
+} from "./src/document/utils/file.js";
 export {
   attachBranch,
   garbageCollect,
@@ -65,4 +65,4 @@ export {
   sortOperations,
   garbageCollectDocumentOperations,
   skipHeaderOperations,
-} from "@document/utils/document-helpers.js";
+} from "./src/document/utils/document-helpers.js";

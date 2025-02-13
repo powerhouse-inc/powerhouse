@@ -6,8 +6,8 @@ import {
   redo,
   setName,
   undo,
-} from "@document/actions/creators.js";
-import { baseCreateDocument } from "@document/utils/base.js";
+} from "../../src/document/actions/creators.js";
+import { baseCreateDocument } from "../../src/document/utils/base.js";
 import {
   CountLocalState,
   countReducer,

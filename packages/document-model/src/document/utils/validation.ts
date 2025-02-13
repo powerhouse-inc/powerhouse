@@ -2,7 +2,7 @@ import {
   DocumentOperations,
   OperationScope,
   ValidationError,
-} from "@document/types.js";
+} from "../types.js";
 
 export function validateOperations<TGlobalState, TLocalState>(
   operations: DocumentOperations<TGlobalState, TLocalState>,

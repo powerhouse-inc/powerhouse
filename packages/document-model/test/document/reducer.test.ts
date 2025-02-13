@@ -1,17 +1,17 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { setName } from "@document/actions/creators.js";
-import { SET_NAME } from "@document/actions/types.js";
+import { setName } from "../../src/document/actions/creators.js";
+import { SET_NAME } from "../../src/document/actions/types.js";
 
-import { CreateChildDocumentInput } from "@document/signal.js";
-import { BaseAction } from "@document/types.js";
+import { CreateChildDocumentInput } from "../../src/document/signal.js";
+import { BaseAction } from "../../src/document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
   createAction,
   createReducer,
   hashKey,
-} from "@document/utils/base.js";
+} from "../../src/document/utils/base.js";
 import {
   CountLocalState,
   countReducer,

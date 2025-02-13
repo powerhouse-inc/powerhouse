@@ -1,4 +1,4 @@
-import { BaseDocumentClass } from "@document/object.js";
+import { BaseDocumentClass } from "../../document/object.js";
 import { applyMixins, ExtendedState, PartialState, SignalDispatch } from "document-model";
 import { DocumentModelAction } from "./actions.js";
 import DocumentModel_Header from "./header/object.js";

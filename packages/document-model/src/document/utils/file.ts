@@ -1,4 +1,6 @@
-import type {
+import JSZip from "jszip";
+import mime from "mime/lite";
+import {
   Action,
   Attachment,
   AttachmentInput,
@@ -7,9 +9,7 @@ import type {
   DocumentOperations,
   ExtendedState,
   Reducer,
-} from "@document/types.js";
-import JSZip from "jszip";
-import mime from "mime/lite";
+} from "../types.js";
 import { replayDocument, ReplayDocumentOptions } from "./base.js";
 import {
   filterDocumentOperationsResultingState,

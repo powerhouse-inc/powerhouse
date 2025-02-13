@@ -1,6 +1,16 @@
-import { BaseAction } from "@document/types.js";
-import { AddOperationInput, SetOperationNameInput, SetOperationScopeInput, SetOperationSchemaInput, SetOperationDescriptionInput, SetOperationTemplateInput, SetOperationReducerInput, MoveOperationInput, DeleteOperationInput, ReorderModuleOperationsInput } from "../schema/types.js";
-
+import { BaseAction } from "../../../document/types.js";
+import {
+  AddOperationInput,
+  DeleteOperationInput,
+  MoveOperationInput,
+  ReorderModuleOperationsInput,
+  SetOperationDescriptionInput,
+  SetOperationNameInput,
+  SetOperationReducerInput,
+  SetOperationSchemaInput,
+  SetOperationScopeInput,
+  SetOperationTemplateInput,
+} from "../schema/types.js";
 
 export type AddOperationAction = BaseAction<"ADD_OPERATION", AddOperationInput>;
 export type SetOperationNameAction = BaseAction<
@@ -27,7 +37,10 @@ export type SetOperationReducerAction = BaseAction<
   "SET_OPERATION_REDUCER",
   SetOperationReducerInput
 >;
-export type MoveOperationAction = BaseAction<"MOVE_OPERATION", MoveOperationInput>;
+export type MoveOperationAction = BaseAction<
+  "MOVE_OPERATION",
+  MoveOperationInput
+>;
 export type DeleteOperationAction = BaseAction<
   "DELETE_OPERATION",
   DeleteOperationInput

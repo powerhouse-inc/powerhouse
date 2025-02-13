@@ -1,4 +1,5 @@
-import type {
+import stringifyJson from "safe-stable-stringify";
+import {
   Action,
   ActionSigner,
   BaseDocument,
@@ -8,8 +9,7 @@ import type {
   OperationVerificationHandler,
   Reducer,
   Signature,
-} from "@document/types.js";
-import stringifyJson from "safe-stable-stringify";
+} from "../types.js";
 import { generateUUID, hash } from "./node.js";
 
 export function generateId(method?: "UUIDv4"): string {

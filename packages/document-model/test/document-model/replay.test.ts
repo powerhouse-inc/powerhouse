@@ -1,6 +1,9 @@
-import { noop } from "@document/actions/creators.js";
-import type { BaseDocument } from "@document/types.js";
-import { createReducer, replayDocument } from "@document/utils/base.js";
+import { noop } from "../../src/document/actions/creators.js";
+import type { BaseDocument } from "../../src/document/types.js";
+import {
+  createReducer,
+  replayDocument,
+} from "../../src/document/utils/base.js";
 import {
   CountLocalState,
   CountState,

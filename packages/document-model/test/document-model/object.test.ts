@@ -1,5 +1,5 @@
-import { DocumentModelClass } from "@document-model/gen/object.js";
-import { hashKey } from "@document/utils/base.js";
+import { DocumentModelClass } from "../../src/document-model/gen/object.js";
+import { hashKey } from "../../src/document/utils/base.js";
 
 describe("DocumentModel Class", () => {
   it("should create an empty document", () => {

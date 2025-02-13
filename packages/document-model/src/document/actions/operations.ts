@@ -1,18 +1,12 @@
+import { castDraft, create, Draft } from "mutative";
 import {
   Action,
   BaseDocument,
   BaseState,
   ImmutableStateReducer,
-} from "@document/types.js";
-import {
-  hashDocumentStateForScope,
-  replayOperations,
-} from "@document/utils/base.js";
-import {
-  nextSkipNumber,
-  sortOperations,
-} from "@document/utils/document-helpers.js";
-import { castDraft, create, Draft } from "mutative";
+} from "../types.js";
+import { hashDocumentStateForScope, replayOperations } from "../utils/base.js";
+import { nextSkipNumber, sortOperations } from "../utils/document-helpers.js";
 import { loadState, noop } from "./creators.js";
 import { PruneAction } from "./types.js";
 

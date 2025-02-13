@@ -1,26 +1,29 @@
-import { ListenerFilter, Trigger } from "@drive-document-model";
-import { PULL_DRIVE_INTERVAL } from "@server/base";
-import { OperationError } from "@server/error";
+import { Listener } from "@prisma/client";
+import { gql } from "graphql-request";
+import {
+  ListenerFilter,
+  Trigger,
+} from "../../../drive-document-model/gen/types.js";
+import { requestGraphql } from "../../../utils/graphql.js";
+import { logger as defaultLogger } from "../../../utils/logger.js";
+import { generateUUID } from "../../../utils/misc.js";
+import { PULL_DRIVE_INTERVAL } from "../../base.js";
+import { OperationError } from "../../error.js";
 import {
   GetStrandsOptions,
   IListenerManager,
   IOperationResult,
-  Listener,
   ListenerRevision,
   ListenerRevisionWithError,
   OperationUpdate,
   RemoteDriveOptions,
   StrandUpdate,
-} from "@server/types";
-import { requestGraphql } from "@utils/graphql";
-import { generateUUID } from "@utils/misc";
-import { gql } from "graphql-request";
+} from "../../types.js";
 import {
   ITransmitter,
   PullResponderTrigger,
   StrandUpdateSource,
 } from "./types.js";
-import { logger as defaultLogger } from "@utils/logger";
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
 };

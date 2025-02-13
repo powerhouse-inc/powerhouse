@@ -1,11 +1,8 @@
 import stringify from "json-stringify-deterministic";
-import { gql, requestGraphql } from "@utils/graphql";
-import { logger } from "@utils/logger";
-import { ListenerRevision, StrandUpdate } from "@server/types";
-import {
-  ITransmitter,
-  StrandUpdateSource,
-} from "@server/listener/transmitter/types";
+import { gql, requestGraphql } from "../../../utils/graphql.js";
+import { logger } from "../../../utils/logger.js";
+import { ListenerRevision, StrandUpdate } from "../../types.js";
+import { ITransmitter, StrandUpdateSource } from "./types.js";
 
 export class SwitchboardPushTransmitter implements ITransmitter {
   private targetURL: string;

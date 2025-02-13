@@ -1,4 +1,4 @@
-import { DocumentModelHeaderAction } from "@document-model/gen/actions.js";
+import { DocumentModelHeaderAction } from "../document-model/gen/actions.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
 import { DocumentAction } from "./actions/types.js";

@@ -1,22 +1,25 @@
-import { ImmutableStateReducer, MutableStateReducer } from "@document/types.js";
+import fs from "fs";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  ImmutableStateReducer,
+  MutableStateReducer,
+} from "../../src/document/types.js";
 import {
   baseCreateDocument,
   createReducer,
   createUnsafeReducer,
   replayDocument,
-} from "@document/utils/base.js";
+} from "../../src/document/utils/base.js";
 import {
   generateUUID as generateUUIDBrowser,
   hash as hashBrowser,
-} from "@document/utils/browser.js";
-import { getLocalFile } from "@document/utils/file.js";
+} from "../../src/document/utils/browser.js";
+import { getLocalFile } from "../../src/document/utils/file.js";
 import {
   generateUUID as generateUUIDNode,
   hash as hashNode,
-} from "@document/utils/node.js";
-import { validateOperations } from "@document/utils/validation.js";
-import fs from "fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+} from "../../src/document/utils/node.js";
+import { validateOperations } from "../../src/document/utils/validation.js";
 import {
   baseCountReducer,
   CountAction,

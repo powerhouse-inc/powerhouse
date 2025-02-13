@@ -45,13 +45,13 @@ export interface IStorage {
     }>,
   ): Promise<void>;
   deleteDocument(drive: string, id: string): Promise<void>;
-  getOperationResultingState?<TGlobalState, TLocalState>(
+  getOperationResultingState?(
     drive: string,
     id: string,
     index: number,
     scope: string,
     branch: string,
-  ): Promise<TGlobalState | TLocalState | undefined>;
+  ): Promise<string | undefined>;
   setStorageDelegate?(delegate: IStorageDelegate): void;
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
@@ -83,10 +83,10 @@ export interface IDriveStorage extends IStorage {
       header: DocumentHeader;
     }>,
   ): Promise<void>;
-  getDriveOperationResultingState?<TGlobalState, TLocalState>(
+  getDriveOperationResultingState?(
     drive: string,
     index: number,
     scope: string,
     branch: string,
-  ): Promise<TGlobalState | TLocalState | undefined>;
+  ): Promise<string | undefined>;
 }

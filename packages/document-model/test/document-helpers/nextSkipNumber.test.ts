@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { nextSkipNumber } from "@document/utils/document-helpers.js";
+import { nextSkipNumber } from "../../src/document/utils/document-helpers.js";
 import { buildOperations } from "./utils.js";
 
 describe("nextSkipNumber", () => {

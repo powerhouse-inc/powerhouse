@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { removeExistingOperations } from "@document/utils/document-helpers.js";
+import { Operation } from "../../src/document/types.js";
+import { removeExistingOperations } from "../../src/document/utils/document-helpers.js";
 import { buildOperations } from "./utils.js";
-import { BaseAction, Operation } from "@document/types.js";
 
 describe("removeExistingOperations", () => {
   const scenarios = [

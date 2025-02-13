@@ -557,7 +557,7 @@ export class PrismaStorage implements IDriveStorage {
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown> {
+  ): Promise<string | undefined> {
     const operation = await this.db.operation.findUnique({
       where: {
         unique_operation: {
@@ -577,7 +577,7 @@ export class PrismaStorage implements IDriveStorage {
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown> {
+  ): Promise<string | undefined> {
     return this.getOperationResultingState(
       "drives",
       drive,

@@ -1,20 +1,17 @@
+import { Listener } from "@prisma/client";
+import { Operation, OperationScope } from "document-model";
 import {
   DocumentDriveLocalState,
   DocumentDriveState,
-} from "@drive-document-model";
-import {
-  ITransmitter,
-  StrandUpdateSource,
-} from "@server/listener/transmitter/types";
+} from "../../../drive-document-model/gen/types.js";
 import {
   GetDocumentOptions,
   IBaseDocumentDriveServer,
-  Listener,
   ListenerRevision,
   StrandUpdate,
-} from "@server/types";
-import { logger } from "@utils/logger";
-import { Operation, OperationScope } from "document-model";
+} from "../../types.js";
+import { ITransmitter, StrandUpdateSource } from "./types.js";
+import { logger } from "../../../utils/logger.js";
 
 export interface IReceiver {
   onStrands: <TGlobalState, TLocalState>(

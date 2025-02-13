@@ -1,11 +1,11 @@
-import { BaseAction } from "@document/types.js";
+import { BaseAction } from "../../../document/types.js";
 import {
-    SetStateSchemaInput,
-    SetInitialStateInput,
-    AddStateExampleInput,
-    UpdateStateExampleInput,
-    DeleteStateExampleInput,
-    ReorderStateExamplesInput,
+  AddStateExampleInput,
+  DeleteStateExampleInput,
+  ReorderStateExamplesInput,
+  SetInitialStateInput,
+  SetStateSchemaInput,
+  UpdateStateExampleInput,
 } from "../schema/types.js";
 
 export type SetStateSchemaAction = BaseAction<

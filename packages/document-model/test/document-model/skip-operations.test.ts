@@ -5,12 +5,12 @@ import {
   setModelExtension,
   setModelId,
   setModelName,
-} from "@document-model/gen/creators.js";
-import { createDocument } from "@document-model/gen/document-model-utils.js";
-import { reducer, stateReducer } from "@document-model/gen/reducer.js";
-import { createExtendedState } from "@document-model/index.js";
-import { replayOperations } from "@document/utils/base.js";
-import { garbageCollectDocumentOperations } from "@document/utils/document-helpers.js";
+} from "../../src/document-model/gen/creators.js";
+import { createDocument } from "../../src/document-model/gen/document-model-utils.js";
+import { reducer, stateReducer } from "../../src/document-model/gen/reducer.js";
+import { createExtendedState } from "../../src/document-model/index.js";
+import { replayOperations } from "../../src/document/utils/base.js";
+import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
 
 describe("Document Operations", () => {
   describe("Skip header operations", () => {

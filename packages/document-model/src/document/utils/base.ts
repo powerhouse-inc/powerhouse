@@ -1,26 +1,23 @@
+import stringifyJson from "safe-stable-stringify";
+import { ZodError } from "zod";
 import {
-  DocumentAction,
   LOAD_STATE,
   NOOP,
   PRUNE,
   REDO,
   SET_NAME,
   UNDO,
-  UndoAction,
-} from "@document/actions/types.js";
+} from "../actions/types.js";
+import { baseReducer, mutableBaseReducer, updateHeader } from "../reducer.js";
+import { UndoAction, UndoRedoAction } from "../schema/types.js";
+import { SignalDispatch } from "../signal.js";
 import {
-  baseReducer,
-  mutableBaseReducer,
-  updateHeader,
-} from "@document/reducer.js";
-import { UndoRedoAction } from "@document/schema/types.js";
-import { SignalDispatch } from "@document/signal.js";
-import type {
   Action,
   BaseAction,
   BaseDocument,
   BaseState,
   CreateState,
+  DocumentAction,
   DocumentHeader,
   DocumentOperations,
   DocumentOperationsIgnoreMap,
@@ -33,9 +30,7 @@ import type {
   PartialState,
   Reducer,
   ReducerOptions,
-} from "@document/types.js";
-import stringifyJson from "safe-stable-stringify";
-import { ZodError } from "zod";
+} from "../types.js";
 import { sortOperations } from "./document-helpers.js";
 import {
   InvalidActionInputError,

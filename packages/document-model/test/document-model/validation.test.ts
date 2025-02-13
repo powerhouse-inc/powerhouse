@@ -4,21 +4,21 @@ import {
   validateModuleOperation,
   validateModules,
   validateStateSchemaName,
-} from "@document-model/custom/custom-utils.js";
-import { setStateSchema } from "@document-model/gen/creators.js";
-import { createDocument } from "@document-model/gen/document-model-utils.js";
-import { reducer } from "@document-model/gen/reducer.js";
+} from "../../src/document-model/custom/custom-utils.js";
+import { setStateSchema } from "../../src/document-model/gen/creators.js";
+import { createDocument } from "../../src/document-model/gen/document-model-utils.js";
+import { reducer } from "../../src/document-model/gen/reducer.js";
 import {
   DocumentModelLocalState,
   DocumentModelState,
   Module,
   Operation,
-} from "@document-model/gen/schema/types.js";
+} from "../../src/document-model/gen/schema/types.js";
 import {
   ExtendedState,
   PartialState,
   ValidationError,
-} from "@document/types.js";
+} from "../../src/document/types.js";
 
 describe("DocumentModel Validation Error", () => {
   const documentName = "testDocument";

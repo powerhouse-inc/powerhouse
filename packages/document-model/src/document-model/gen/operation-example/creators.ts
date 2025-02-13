@@ -1,11 +1,16 @@
-import { createAction } from "@document/utils/base.js";
+import { createAction } from "../../../document/utils/base.js";
+import {
+  AddOperationExampleInput,
+  DeleteOperationExampleInput,
+  ReorderOperationExamplesInput,
+  UpdateOperationExampleInput,
+} from "../schema/types.js";
 import {
   AddOperationExampleAction,
-  UpdateOperationExampleAction,
   DeleteOperationExampleAction,
   ReorderOperationExamplesAction,
+  UpdateOperationExampleAction,
 } from "./actions.js";
-import { AddOperationExampleInput, UpdateOperationExampleInput, DeleteOperationExampleInput, ReorderOperationExamplesInput } from "../schema/types.js";
 
 export const addOperationExample = (input: AddOperationExampleInput) =>
   createAction<AddOperationExampleAction>("ADD_OPERATION_EXAMPLE", {

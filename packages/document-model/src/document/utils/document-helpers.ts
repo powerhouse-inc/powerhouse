@@ -1,9 +1,5 @@
-import {
-  DocumentOperations,
-  Operation,
-  OperationScope,
-} from "@document/types.js";
 import stringify from "safe-stable-stringify";
+import { DocumentOperations, Operation, OperationScope } from "../types.js";
 
 export type OperationIndex = {
   index: number;

@@ -1,6 +1,13 @@
-import { BaseAction } from "@document/types.js";
-import { AddOperationErrorInput, SetOperationErrorCodeInput, SetOperationErrorNameInput, SetOperationErrorDescriptionInput, SetOperationErrorTemplateInput, DeleteOperationErrorInput, ReorderOperationErrorsInput } from "../schema/types.js";
-
+import { BaseAction } from "../../../document/types.js";
+import {
+  AddOperationErrorInput,
+  DeleteOperationErrorInput,
+  ReorderOperationErrorsInput,
+  SetOperationErrorCodeInput,
+  SetOperationErrorDescriptionInput,
+  SetOperationErrorNameInput,
+  SetOperationErrorTemplateInput,
+} from "../schema/types.js";
 
 export type AddOperationErrorAction = BaseAction<
   "ADD_OPERATION_ERROR",

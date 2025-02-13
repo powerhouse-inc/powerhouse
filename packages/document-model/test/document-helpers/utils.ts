@@ -1,4 +1,4 @@
-import { Operation } from "@document/types.js";
+import { Operation } from "../../src/document/types.js";
 
 export type InputOperation<TGlobalState, TLocalState> = Partial<
   Omit<Operation<TGlobalState, TLocalState>, "index" | "skip">

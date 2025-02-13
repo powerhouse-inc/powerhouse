@@ -1,9 +1,8 @@
-import { ImmutableStateReducer } from "@document/types.js";
 import {
   DocumentModelLocalState,
   DocumentModelState,
-} from "@document-model/gen/types.js";
-import { DocumentModelAction } from "@document-model/gen/actions.js";
+} from "../../document-model/gen/types.js";
+import { DocumentModelAction } from "../../document-model/gen/actions.js";
 import { reducer as HeaderReducer } from "../custom/reducers/header.js";
 import { reducer as VersioningReducer } from "../custom/reducers/versioning.js";
 import { reducer as ModuleReducer } from "../custom/reducers/module.js";
@@ -11,7 +10,7 @@ import { reducer as OperationErrorReducer } from "../custom/reducers/operation-e
 import { reducer as OperationExampleReducer } from "../custom/reducers/operation-example.js";
 import { reducer as OperationReducer } from "../custom/reducers/operation.js";
 import { reducer as StateReducer } from "../custom/reducers/state.js";
-import { isDocumentAction, createReducer } from "@document/utils/base.js";
+import { isDocumentAction, createReducer } from "../../document/utils/base.js";
 import {
   SetModelNameInputSchema,
   SetModelIdInputSchema,
@@ -56,6 +55,7 @@ import {
   DeleteStateExampleInputSchema,
   ReorderStateExamplesInputSchema,
 } from "./schema/zod.js";
+import { ImmutableStateReducer } from "../../document/types.js";
 
 export const stateReducer: ImmutableStateReducer<
   DocumentModelState,

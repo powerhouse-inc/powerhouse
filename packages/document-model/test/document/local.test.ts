@@ -1,6 +1,6 @@
-import { prune, redo, undo } from "@document/actions/creators.js";
-import { baseCreateDocument } from "@document/utils/base.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { prune, redo, undo } from "../../src/document/actions/creators.js";
+import { baseCreateDocument } from "../../src/document/utils/base.js";
 import { countReducer, setLocalName, wrappedEmptyReducer } from "../helpers.js";
 
 describe("Local reducer", () => {

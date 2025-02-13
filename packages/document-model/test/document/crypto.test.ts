@@ -1,7 +1,8 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   baseCreateDocument,
   hashDocumentStateForScope,
-} from "@document/utils/base.js";
+} from "../../src/document/utils/base.js";
 import {
   ab2hex,
   buildOperationSignatureMessage,
@@ -9,8 +10,7 @@ import {
   buildSignedOperation,
   hex2ab,
   verifyOperationSignature,
-} from "@document/utils/crypto.js";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+} from "../../src/document/utils/crypto.js";
 import { CountAction, countReducer, increment } from "../helpers.js";
 
 describe("Crypto utils", () => {

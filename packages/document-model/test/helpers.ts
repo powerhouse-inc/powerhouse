@@ -1,4 +1,4 @@
-import { SignalDispatch } from "@document/signal.js";
+import { SignalDispatch } from "../src/document/signal.js";
 import {
   Action,
   BaseAction,
@@ -8,8 +8,9 @@ import {
   Operation,
   OperationScope,
   ReducerOptions,
-} from "@document/types.js";
-import { createAction, createReducer } from "@document/utils/base.js";
+} from "../src/document/types.js";
+import { createAction, createReducer } from "../src/document/utils/base.js";
+
 // Empty reducer that supports base actions
 export const emptyReducer = <TGlobalState, TLocalState>(
   state: BaseDocument<TGlobalState, TLocalState>,

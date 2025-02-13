@@ -1,11 +1,11 @@
-import type { BaseAction } from "@document/types.js";
+import type { BaseAction } from "../types.js";
 import type {
   LoadStateActionInput,
   PruneActionInput,
   RedoAction as _RedoAction,
   SetNameAction as _SetNameAction,
   UndoAction as _UndoAction,
-} from "@document/schema/types.js";
+} from "../schema/types.js";
 
 export const SET_NAME = "SET_NAME";
 export const UNDO = "UNDO";

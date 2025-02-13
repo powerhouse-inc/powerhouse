@@ -1,6 +1,10 @@
-import { BaseAction } from "@document/types.js";
-import { AddOperationExampleInput, UpdateOperationExampleInput, DeleteOperationExampleInput, ReorderOperationExamplesInput } from "../schema/types.js";
-
+import { BaseAction } from "../../../document/types.js";
+import {
+  AddOperationExampleInput,
+  DeleteOperationExampleInput,
+  ReorderOperationExamplesInput,
+  UpdateOperationExampleInput,
+} from "../schema/types.js";
 
 export type AddOperationExampleAction = BaseAction<
   "ADD_OPERATION_EXAMPLE",

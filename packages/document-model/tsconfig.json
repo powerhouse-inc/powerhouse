@@ -2,10 +2,6 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "types": ["node", "vitest/globals", "jest"],
-    "outDir": "./dist",
-    "paths": {
-      "@document/*": ["./src/document/*"],
-      "@document-model/*": ["./src/document-model/*"]
-    }
+    "outDir": "./dist"
   },
 }

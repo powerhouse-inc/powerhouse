@@ -1,11 +1,11 @@
-import { BaseDocument, ExtendedState } from "@document/types.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import { BaseDocument, ExtendedState } from "../../src/document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
   replayOperations,
-} from "@document/utils/base.js";
-import { garbageCollectDocumentOperations } from "@document/utils/document-helpers.js";
-import { beforeEach, describe, expect, it } from "vitest";
+} from "../../src/document/utils/base.js";
+import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
 import {
   baseCountReducer,
   CountLocalState,

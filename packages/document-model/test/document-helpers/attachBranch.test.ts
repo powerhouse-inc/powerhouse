@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   attachBranch,
   checkCleanedOperationsIntegrity,
-} from "@document/utils/document-helpers.js";
+} from "../../src/document/utils/document-helpers.js";
 import { buildOperations } from "./utils.js";
 
 describe("attachBranch", () => {
