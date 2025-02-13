@@ -2,9 +2,10 @@ import { DependencyVersions } from "../settings-modal/dependency-versions/depend
 
 type Props = {
   packageJson: unknown;
+  phCliVersion?: string;
 };
 export function About(props: Props) {
-  const { packageJson } = props;
+  const { packageJson, phCliVersion } = props;
   return (
     <div className="bg-white p-3">
       <h2 className="font-semibold">About</h2>
@@ -14,7 +15,10 @@ export function About(props: Props) {
         Connect.
       </p>
       <div className="my-4">
-        <DependencyVersions packageJson={packageJson} />
+        <DependencyVersions
+          packageJson={packageJson}
+          phCliVersion={phCliVersion}
+        />
       </div>
     </div>
   );
