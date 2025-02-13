@@ -20,9 +20,9 @@ import {
 } from "./types";
 
 /**
- * Builder class for constructing BaseDocumentDriveServer instances with proper configuration
+ * Builder class for constructing Reactor instances with proper configuration
  */
-export class DocumentDriveServerBuilder {
+export class ReactorBuilder {
   private documentModels: DocumentModel[] = [];
 
   private storage?: IDriveStorage;

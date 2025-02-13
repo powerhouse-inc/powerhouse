@@ -7,7 +7,7 @@ import {
 } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveServerBuilder, IOperationResult } from "../../src";
+import { IOperationResult, ReactorBuilder } from "../../src";
 import { DriveBasicClient } from "../utils";
 
 function sortNodes(nodes: DocumentDrive.Node[]) {
@@ -20,9 +20,9 @@ describe("Drive Operations", () => {
     ...Object.values(DocumentModelsLibs),
   ] as BaseDocumentModel[];
 
-  let server = new DocumentDriveServerBuilder(documentModels).build();
+  let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
-    server = new DocumentDriveServerBuilder(documentModels).build();
+    server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
 

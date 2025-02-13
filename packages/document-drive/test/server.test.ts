@@ -20,7 +20,7 @@ import {
 import fs from "fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { DocumentDriveServerBuilder } from "../src/server";
+import { ReactorBuilder } from "../src/server";
 import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
@@ -89,7 +89,7 @@ describe.each(storageLayers)(
     });
 
     it("adds drive to server", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -129,7 +129,7 @@ describe.each(storageLayers)(
     });
 
     it("adds file to server", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -193,7 +193,7 @@ describe.each(storageLayers)(
     it("creates new document of the correct document type when file is added to server", async ({
       expect,
     }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -237,7 +237,7 @@ describe.each(storageLayers)(
     });
 
     it("deletes file from server", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -292,7 +292,7 @@ describe.each(storageLayers)(
     it("deletes document when file is removed from server", async ({
       expect,
     }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -346,7 +346,7 @@ describe.each(storageLayers)(
     it("deletes documents inside a folder when it is removed from a drive", async ({
       expect,
     }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -408,7 +408,7 @@ describe.each(storageLayers)(
     });
 
     it("deletes drive from server", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -435,7 +435,7 @@ describe.each(storageLayers)(
     it("deletes documents when drive is deleted from server", async ({
       expect,
     }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -480,7 +480,7 @@ describe.each(storageLayers)(
     });
 
     it("renames drive", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -516,7 +516,7 @@ describe.each(storageLayers)(
     });
 
     it("copies document when file is copied drive", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -585,7 +585,7 @@ describe.each(storageLayers)(
     });
 
     it("adds document operation", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -641,7 +641,7 @@ describe.each(storageLayers)(
     });
 
     it("saves operation context", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({
@@ -698,7 +698,7 @@ describe.each(storageLayers)(
     });
 
     it("get drives by slug", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       const addDrive = (driveId: string, slug: string) =>
@@ -734,7 +734,7 @@ describe.each(storageLayers)(
 
     it.skipIf(!file)("import document from zip", async ({ expect }) => {
       const storage = await buildStorage();
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(storage)
         .build();
       const drive = await server.addDrive({
@@ -772,7 +772,7 @@ describe.each(storageLayers)(
 
     it("should get synchronization units revision", async ({ expect }) => {
       const storage = await buildStorage();
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(storage)
         .build();
       await server.addDrive({
@@ -855,7 +855,7 @@ describe.each(storageLayers)(
 
     it("should store all operation attributes", async ({ expect }) => {
       const storage = await buildStorage();
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(storage)
         .build();
       await server.addDrive({
@@ -911,7 +911,7 @@ describe.each(storageLayers)(
     });
 
     it("gets document at specific revision", async ({ expect }) => {
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
       await server.addDrive({

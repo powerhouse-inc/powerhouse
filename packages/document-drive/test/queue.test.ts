@@ -15,7 +15,7 @@ import InMemoryCache from "../src/cache/memory";
 import { BaseQueueManager } from "../src/queue/base";
 import { RedisQueueManager } from "../src/queue/redis";
 import { IQueueManager } from "../src/queue/types";
-import { DocumentDriveServerBuilder } from "../src/server/builder";
+import { ReactorBuilder } from "../src/server/builder";
 import { IBaseDocumentDriveServer } from "../src/server/types";
 import { MemoryStorage } from "../src/storage/memory";
 import { buildOperation, buildOperations } from "./utils";
@@ -110,7 +110,7 @@ describe.each(queueLayers)(
     it.skipIf(!queueValid)(
       "block document queue until ADD_FILE is processed",
       async ({ expect }) => {
-        const server = new DocumentDriveServerBuilder(documentModels)
+        const server = new ReactorBuilder(documentModels)
           .withStorage(new MemoryStorage())
           .build();
         await server.initialize();
@@ -186,7 +186,7 @@ describe.each(queueLayers)(
 
     it.skipIf(!queueValid)("orders strands correctly", async ({ expect }) => {
       const queue = await buildQueue();
-      const server = new DocumentDriveServerBuilder(documentModels)
+      const server = new ReactorBuilder(documentModels)
         .withStorage(new MemoryStorage())
         .withCache(new InMemoryCache())
         .withQueueManager(queue)
@@ -286,7 +286,7 @@ describe.each(queueLayers)(
       "it blocks a document queue when the drive queue processes a delete node operation",
       async ({ expect }) => {
         const queue = await buildQueue();
-        const server = new DocumentDriveServerBuilder(documentModels)
+        const server = new ReactorBuilder(documentModels)
           .withStorage(new MemoryStorage())
           .withCache(new InMemoryCache())
           .withQueueManager(queue)
@@ -364,7 +364,7 @@ describe.each(queueLayers)(
       "produces error on addDriveOperations with wrong index",
       async ({ expect }) => {
         const queue = await buildQueue();
-        const server = new DocumentDriveServerBuilder(documentModels)
+        const server = new ReactorBuilder(documentModels)
           .withStorage(new MemoryStorage())
           .withCache(new InMemoryCache())
           .withQueueManager(queue)
@@ -392,7 +392,7 @@ describe.each(queueLayers)(
       "produces no errors on queueDriveOperations",
       async ({ expect }) => {
         const queue = await buildQueue();
-        const server = new DocumentDriveServerBuilder(documentModels)
+        const server = new ReactorBuilder(documentModels)
           .withStorage(new MemoryStorage())
           .withCache(new InMemoryCache())
           .withQueueManager(queue)
@@ -420,7 +420,7 @@ describe.each(queueLayers)(
       "adds operations with queueDriveAction",
       async ({ expect }) => {
         const queue = await buildQueue();
-        const server = new DocumentDriveServerBuilder(documentModels)
+        const server = new ReactorBuilder(documentModels)
           .withStorage(new MemoryStorage())
           .withCache(new InMemoryCache())
           .withQueueManager(queue)
