@@ -1,10 +1,10 @@
-import {
-  startConnectStudio,
-  ConnectStudioOptions,
-} from "@powerhousedao/connect";
 import { getConfig } from "@powerhousedao/config/powerhouse";
+import {
+  ConnectStudioOptions,
+  startConnectStudio,
+} from "@powerhousedao/connect";
 import { Command } from "commander";
-
+import { version } from "../../package.json";
 export type ConnectOptions = ConnectStudioOptions;
 
 export async function startConnect(connectOptions: ConnectOptions) {
@@ -36,10 +36,10 @@ export function connectCommand(program: Command) {
     .action(async (...args: [ConnectOptions]) => {
       const connectOptions = args.at(0) || {};
       const { documentModelsDir, editorsDir, packages, studio } = getConfig();
-
       await startConnectStudio({
         port: studio?.port?.toString() || undefined,
         packages,
+        phCliVersion: typeof version === "string" ? version : undefined,
         localDocuments: documentModelsDir || undefined,
         localEditors: editorsDir || undefined,
         open: studio?.openBrowser,
