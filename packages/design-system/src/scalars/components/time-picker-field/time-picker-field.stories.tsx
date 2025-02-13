@@ -49,6 +49,15 @@ const meta: Meta<typeof TimePickerField> = {
       },
       defaultValue: { summary: 1 },
     },
+    timeZone: {
+      control: {
+        type: "text",
+        description: "The timezone to display in the time picker",
+        table: {
+          category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        },
+      },
+    },
   },
 
   args: {

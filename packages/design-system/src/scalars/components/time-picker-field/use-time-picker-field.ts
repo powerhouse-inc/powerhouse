@@ -15,6 +15,8 @@ interface TimePickerFieldProps {
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   timeFormat?: string;
   dateIntervals?: number;
+  timeZone?: string;
+  showTimezoneSelect?: boolean;
 }
 
 export const useTimePickerField = ({
@@ -24,6 +26,8 @@ export const useTimePickerField = ({
   onBlur,
   timeFormat = "hh:mm a",
   dateIntervals = 1,
+  timeZone,
+  showTimezoneSelect = true,
 }: TimePickerFieldProps) => {
   const now = new Date();
   const currentHour = getHours(now);
@@ -51,7 +55,7 @@ export const useTimePickerField = ({
   );
   const [selectedTimeZone, setSelectedTimeZone] = useState<
     string | string[] | undefined
-  >(undefined);
+  >();
 
   const inputValue = value ?? defaultValue ?? "";
   const [isOpen, setIsOpen] = useState(false);
@@ -103,6 +107,7 @@ export const useTimePickerField = ({
       for (let i = 0; i < 60; i += dateIntervals) {
         arr.push(String(i).padStart(2, "0"));
       }
+      console.log(arr, dateIntervals);
       return arr;
     }
     return Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
@@ -142,7 +147,7 @@ export const useTimePickerField = ({
     return offsetPart ? offsetPart.value : "";
   };
 
-  const timeZonesOptions = useMemo(() => {
+  const options = useMemo(() => {
     const timeZones = Intl.supportedValuesOf("timeZone");
     return timeZones.map((timeZone) => {
       const offset = getTimeZoneOffset(timeZone);
@@ -150,6 +155,12 @@ export const useTimePickerField = ({
       return { value: timeZone, label };
     });
   }, []);
+
+  // if timeZone, then the options of select will be that timeZone and the offset
+  const isDisableSelect = timeZone || !showTimezoneSelect ? true : false;
+  const timeZonesOptions = timeZone
+    ? [{ label: timeZone, value: timeZone }]
+    : options;
 
   return {
     selectedHour,
@@ -172,5 +183,6 @@ export const useTimePickerField = ({
     is12HourFormat,
     selectedTimeZone,
     setSelectedTimeZone,
+    isDisableSelect,
   };
 };
