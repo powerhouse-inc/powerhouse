@@ -1,12 +1,11 @@
+import { Button } from "@powerhousedao/design-system";
 import { EditorProps } from "document-model/document";
 import {
-  DocumentDriveState,
   DocumentDriveAction,
   DocumentDriveLocalState,
-  actions,
+  DocumentDriveState,
 } from "../../document-models/document-drive";
-import { utils as documentModelUtils } from "document-model/document";
-import { Button } from "@powerhousedao/design-system";
+import { DriveLayout } from "./components/layout";
 
 export type IProps = EditorProps<
   DocumentDriveState,
@@ -19,8 +18,29 @@ export default function Editor(props: IProps) {
   // const id = documentModelUtils.hashKey();
 
   return (
-    <div>
-      <Button onClick={() => console.log("Hello world!")}>My Button</Button>
-    </div>
+    <DriveLayout>
+      <FolderView {...uiNodes} />
+      {isAllowedToCreateDocuments && (
+        <>
+          <h3 className="mb-3 mt-4 text-xl font-bold text-gray-600">
+            New document
+          </h3>
+          <div className="flex w-full flex-wrap gap-4">
+            {documentModels?.map((doc) => (
+              <Button
+                key={doc.documentModel.id}
+                aria-details={doc.documentModel.description}
+                className="bg-gray-200 text-slate-800"
+                onClick={() => createDocument(doc)}
+              >
+                <span className="text-sm">
+                  {getDocumentModelName(doc.documentModel.name)}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </>
+      )}
+    </DriveLayout>
   );
 }
