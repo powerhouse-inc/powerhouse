@@ -1,3 +1,4 @@
+import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { Command } from "commander";
 import path from "node:path";
 import { CommandActionType } from "../types.js";
@@ -23,7 +24,7 @@ export const list: CommandActionType<
   try {
     const phConfig = (await import(
       path.join(projectInfo.path, "powerhouse.config.json")
-    )) as { packages: { packageName: string }[] };
+    )) as Pick<PowerhouseConfig, "packages">;
 
     if (!phConfig.packages || phConfig.packages.length === 0) {
       console.log("No packages found in the project");
