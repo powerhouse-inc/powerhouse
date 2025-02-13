@@ -9,7 +9,7 @@
       "@document-models/*": ["./document-models/*"],
       "@editors/*": ["./editors/*"],
       "@utils/*": ["./editors/utils/*"]
-    }
+    },
   },
   "references": [
     {
@@ -18,5 +18,9 @@
     { "path": "../codegen" },
     { "path": "../design-system"},
     { "path": "../scalars"}
-  ]
+  ],
+  "files": [
+    "powerhouse.manifest.json",
+    "powerhouse.config.json"
+  ],
 }

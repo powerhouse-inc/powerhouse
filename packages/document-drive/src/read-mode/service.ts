@@ -1,35 +1,33 @@
-import {
-    DocumentDriveAction,
-    DocumentDriveLocalState,
-    DocumentDriveState,
-    driveDocumentType,
-} from "@drive-document-model";
-import { module as driveDocumentModelModule } from "@drive-document-model/module";
-import {
-    ReadDocumentNotFoundError,
-    ReadDriveError,
-    ReadDriveNotFoundError,
-    ReadDriveSlugNotFoundError,
-} from "@read-mode/errors";
-import {
-    GetDocumentModel,
-    IReadModeDriveService,
-    ReadDrive,
-    ReadDriveContext,
-    ReadDriveOptions,
-} from "@read-mode/types";
-import { DocumentModelNotFoundError } from "@server/error";
-import {
-    DocumentGraphQLResult,
-    fetchDocument,
-    requestPublicDrive,
-} from "@utils/graphql";
-import type { DocumentModelModule } from "document-model";
+import type { Action, DocumentModelModule } from "document-model";
 import { GraphQLError } from "graphql";
+import { driveDocumentType } from "../drive-document-model/constants.js";
+import {
+  DocumentDriveAction,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "../drive-document-model/gen/types.js";
+import { driveDocumentModelModule } from "../drive-document-model/module.js";
+import { DocumentModelNotFoundError } from "../server/error.js";
+import {
+  DocumentGraphQLResult,
+  fetchDocument,
+  requestPublicDrive,
+} from "../utils/graphql.js";
+import {
+  ReadDocumentNotFoundError,
+  ReadDriveError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
+} from "./errors.js";
+import {
+  GetDocumentModel,
+  IReadModeDriveService,
+  ReadDrive,
+  ReadDriveContext,
+  ReadDriveOptions,
+} from "./types.js";
 
-export class ReadModeService<TGlobalState, TLocalState, >
-  implements IReadModeDriveService
-{
+export class ReadModeService implements IReadModeDriveService {
   #getDocumentModel: GetDocumentModel;
   #drives = new Map<
     string,
@@ -89,12 +87,12 @@ export class ReadModeService<TGlobalState, TLocalState, >
     return result;
   }
 
-  async fetchDocument<TGlobalState, TLocalState, >(
+  async fetchDocument<TGlobalState, TLocalState, TAction extends Action>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | DocumentGraphQLResult<TGlobalState, TLocalState, TAction>
+    | DocumentGraphQLResult<TGlobalState, TLocalState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError

@@ -1,26 +1,17 @@
 import stringify from "json-stringify-deterministic";
 import { gql, requestGraphql } from "@utils/graphql";
 import { logger } from "@utils/logger";
-import {
-  IBaseDocumentDriveServer,
-  Listener,
-  ListenerRevision,
-  StrandUpdate,
-} from "@server/types";
+import { ListenerRevision, StrandUpdate } from "@server/types";
 import {
   ITransmitter,
   StrandUpdateSource,
 } from "@server/listener/transmitter/types";
 
 export class SwitchboardPushTransmitter implements ITransmitter {
-  private drive: IBaseDocumentDriveServer;
-  private listener: Listener;
   private targetURL: string;
 
-  constructor(listener: Listener, drive: IBaseDocumentDriveServer) {
-    this.listener = listener;
-    this.drive = drive;
-    this.targetURL = listener.callInfo!.data!;
+  constructor(targetURL: string) {
+    this.targetURL = targetURL;
   }
 
   async transmit(

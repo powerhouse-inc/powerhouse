@@ -1,5 +1,4 @@
 import {
-  BaseAction,
   DocumentOperations,
   Operation,
   OperationScope,
@@ -323,11 +322,11 @@ export function split(
 // Split            => [0:0, 1:0] + [2:0, A3:0, A4:0, A5:0] + [B4:2, B5:0]
 // Reshuffle(6:4)   => [6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
 // merge            => [0:0, 1:0, 6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
-export function merge(
-  sortedTargetOperations: OperationIndex[],
-  sortedMergeOperations: OperationIndex[],
+export function merge<TOperation extends OperationIndex>(
+  sortedTargetOperations: TOperation[],
+  sortedMergeOperations: TOperation[],
   reshuffle: Reshuffle,
-): OperationIndex[] {
+): TOperation[] {
   const [_commonOperations, _targetOperations, _mergeOperations] = split(
     garbageCollect(sortedTargetOperations),
     garbageCollect(sortedMergeOperations),
@@ -356,7 +355,7 @@ export function merge(
     filteredMergeOperations,
   );
 
-  return _commonOperations.concat(newOperationHistory);
+  return _commonOperations.concat(newOperationHistory) as TOperation[];
 }
 
 function getMaxIndex(sortedOperations: OperationIndex[]) {

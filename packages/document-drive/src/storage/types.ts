@@ -1,24 +1,15 @@
 import type {
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "@drive-document-model";
-import type { SynchronizationUnitQuery } from "@server/types";
-import type {
   BaseDocument,
   DocumentHeader,
   DocumentOperations,
   Operation,
 } from "document-model";
-
-export type DocumentStorage<TGlobalState, TLocalState> = Omit<
-  BaseDocument<TGlobalState, TLocalState>,
-  "attachments"
->;
-
-export type DocumentDriveStorage = DocumentStorage<
+import {
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
   DocumentDriveState,
-  DocumentDriveLocalState
->;
+} from "../drive-document-model/gen/types.js";
+import { SynchronizationUnitQuery } from "../server/types.js";
 
 export interface IStorageDelegate {
   getCachedOperations<TGlobalState, TLocalState>(
@@ -33,11 +24,11 @@ export interface IStorage {
   getDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-  ): Promise<DocumentStorage<TGlobalState, TLocalState>>;
+  ): Promise<BaseDocument<TGlobalState, TLocalState>>;
   createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState>,
+    document: BaseDocument<TGlobalState, TLocalState>,
   ): Promise<void>;
   addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
@@ -48,21 +39,19 @@ export interface IStorage {
   addDocumentOperationsWithTransaction?<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    callback: (
-      document: DocumentStorage<TGlobalState, TLocalState>,
-    ) => Promise<{
+    callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
       operations: Operation<TGlobalState, TLocalState>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;
   deleteDocument(drive: string, id: string): Promise<void>;
-  getOperationResultingState?(
+  getOperationResultingState?<TGlobalState, TLocalState>(
     drive: string,
     id: string,
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown>;
+  ): Promise<TGlobalState | TLocalState | undefined>;
   setStorageDelegate?(delegate: IStorageDelegate): void;
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
@@ -77,9 +66,9 @@ export interface IStorage {
 }
 export interface IDriveStorage extends IStorage {
   getDrives(): Promise<string[]>;
-  getDrive(id: string): Promise<DocumentDriveStorage>;
-  getDriveBySlug(slug: string): Promise<DocumentDriveStorage>;
-  createDrive(id: string, drive: DocumentDriveStorage): Promise<void>;
+  getDrive(id: string): Promise<DocumentDriveDocument>;
+  getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
+  createDrive(id: string, drive: DocumentDriveDocument): Promise<void>;
   deleteDrive(id: string): Promise<void>;
   clearStorage?(): Promise<void>;
   addDriveOperations(
@@ -89,15 +78,15 @@ export interface IDriveStorage extends IStorage {
   ): Promise<void>;
   addDriveOperationsWithTransaction?(
     drive: string,
-    callback: (document: DocumentDriveStorage) => Promise<{
+    callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation<DocumentDriveState, DocumentDriveLocalState>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;
-  getDriveOperationResultingState?(
+  getDriveOperationResultingState?<TGlobalState, TLocalState>(
     drive: string,
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown>;
+  ): Promise<TGlobalState | TLocalState | undefined>;
 }

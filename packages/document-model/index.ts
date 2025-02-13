@@ -35,6 +35,8 @@ export type {
   DocumentOperations,
   DocumentHeader,
   ReducerOptions,
+  DocumentModelLib,
+  Manifest,
 } from "@document/types.js";
 export {
   baseCreateDocument,
@@ -43,6 +45,7 @@ export {
   createReducer,
   hashKey,
   isDocumentAction,
+  replayDocument,
 } from "@document/utils/base.js";
 export { generateId } from "@document/utils/crypto.js";
 export {
@@ -60,4 +63,6 @@ export {
   removeExistingOperations,
   reshuffleByTimestamp,
   sortOperations,
+  garbageCollectDocumentOperations,
+  skipHeaderOperations,
 } from "@document/utils/document-helpers.js";

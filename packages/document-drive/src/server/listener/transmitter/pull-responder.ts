@@ -1,15 +1,9 @@
 import { ListenerFilter, Trigger } from "@drive-document-model";
 import { PULL_DRIVE_INTERVAL } from "@server/base";
 import { OperationError } from "@server/error";
-import { ListenerManager } from "@server/listener/manager";
-import {
-  ITransmitter,
-  PullResponderTrigger,
-  StrandUpdateSource,
-} from "@server/listener/transmitter/types";
 import {
   GetStrandsOptions,
-  IBaseDocumentDriveServer,
+  IListenerManager,
   IOperationResult,
   Listener,
   ListenerRevision,
@@ -18,11 +12,15 @@ import {
   RemoteDriveOptions,
   StrandUpdate,
 } from "@server/types";
-import { gql, requestGraphql } from "@utils/graphql";
-import { logger as defaultLogger } from "@utils/logger";
+import { requestGraphql } from "@utils/graphql";
 import { generateUUID } from "@utils/misc";
-import { Action } from "document-model";
-
+import { gql } from "graphql-request";
+import {
+  ITransmitter,
+  PullResponderTrigger,
+  StrandUpdateSource,
+} from "./types.js";
+import { logger as defaultLogger } from "@utils/logger";
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
 };
@@ -46,17 +44,11 @@ export interface IPullResponderTransmitter extends ITransmitter {
 }
 
 export class PullResponderTransmitter implements IPullResponderTransmitter {
-  private drive: IBaseDocumentDriveServer;
   private listener: Listener;
-  private manager: ListenerManager;
+  private manager: IListenerManager;
 
-  constructor(
-    listener: Listener,
-    drive: IBaseDocumentDriveServer,
-    manager: ListenerManager,
-  ) {
+  constructor(listener: Listener, manager: IListenerManager) {
     this.listener = listener;
-    this.drive = drive;
     this.manager = manager;
   }
 

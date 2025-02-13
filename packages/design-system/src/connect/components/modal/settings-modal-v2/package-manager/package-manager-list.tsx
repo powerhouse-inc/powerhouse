@@ -11,15 +11,18 @@ export type PackageDetails = {
   publisher: string;
   publisherUrl: string;
   modules: string[];
+  removable: boolean;
 };
 
 export type PackageManagerListProps = {
+  mutable: boolean;
   packages: PackageDetails[];
   onUninstall: (id: string) => void;
   className?: string;
 };
 
 export type PackageManagerListItemProps = {
+  mutable: boolean;
   package: PackageDetails;
   onUninstall: (id: string) => void;
   className?: string;
@@ -49,7 +52,9 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
       publisherUrl,
       modules,
       id,
+      removable,
     },
+    mutable,
     onUninstall,
     className,
   } = props;
@@ -81,36 +86,38 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
           </li>
         ))}
       </ul>
-      <ConnectDropdownMenu
-        items={[
-          {
-            id: "uninstall",
-            label: "Uninstall",
-            icon: <Icon name="Trash" />,
-            className: "text-red-900",
-          },
-        ]}
-        onItemClick={(optionId) => {
-          if (optionId === "uninstall") {
-            onUninstall(id);
-          }
-        }}
-        onOpenChange={setIsDropdownMenuOpen}
-        open={isDropdownMenuOpen}
-      >
-        <button
-          className="group absolute right-3 top-3"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsDropdownMenuOpen(true);
+      {mutable && removable && (
+        <ConnectDropdownMenu
+          items={[
+            {
+              id: "uninstall",
+              label: "Uninstall",
+              icon: <Icon name="Trash" />,
+              className: "text-red-900",
+            },
+          ]}
+          onItemClick={(optionId) => {
+            if (optionId === "uninstall") {
+              onUninstall(id);
+            }
           }}
+          onOpenChange={setIsDropdownMenuOpen}
+          open={isDropdownMenuOpen}
         >
-          <Icon
-            className="text-gray-600 group-hover:text-gray-900"
-            name="VerticalDots"
-          />
-        </button>
-      </ConnectDropdownMenu>
+          <button
+            className="group absolute right-3 top-3"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDropdownMenuOpen(true);
+            }}
+          >
+            <Icon
+              className="text-gray-600 group-hover:text-gray-900"
+              name="VerticalDots"
+            />
+          </button>
+        </ConnectDropdownMenu>
+      )}
     </li>
   );
 };
@@ -118,7 +125,7 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
 export const PackageManagerList: React.FC<PackageManagerListProps> = (
   props,
 ) => {
-  const { className, packages, onUninstall, ...rest } = props;
+  const { className, packages, onUninstall, mutable, ...rest } = props;
 
   const handleUninstall = useCallback(
     (id: string) => {
@@ -143,6 +150,7 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
               key={pkg.id}
               package={pkg}
               onUninstall={handleUninstall}
+              mutable={mutable}
             />
           ))}
         </ul>

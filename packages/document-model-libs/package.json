@@ -9,6 +9,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "require": "./dist/cjs/manifest.cjs",
+      "import": "./dist/es/manifest.js"
+    },
     "./editors": {
       "types": "./dist/editors/index.d.ts",
       "import": "./dist/editors/index.js"

@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16.4-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5444:5432"
+    volumes:
+      - .db/:/var/lib/postgresql/data
+    command: postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c max_connections=200

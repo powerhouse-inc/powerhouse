@@ -1,6 +1,6 @@
-import type { AddOperationOptions, IOperationResult } from "@server/types";
 import type { Action, BaseAction, Operation } from "document-model";
 import type { Unsubscribe } from "nanoevents";
+import { AddOperationOptions, IOperationResult } from "../server/types.js";
 
 export interface BaseJob {
   driveId: string;

@@ -1,25 +1,24 @@
 import { DocumentDriveDocument, ListenerFilter } from "@drive-document-model";
-import { OperationScope } from "document-model";
-import { logger } from "@utils/logger";
 import { OperationError } from "@server/error";
 import {
-  BaseListenerManager,
+  DefaultListenerManagerOptions,
+  DriveUpdateErrorHandler,
   ErrorStatus,
   GetStrandsOptions,
+  IBaseDocumentDriveServer,
+  IListenerManager,
   Listener,
+  ListenerManagerOptions,
   ListenerState,
   ListenerUpdate,
   OperationUpdate,
   StrandUpdate,
   SynchronizationUnit,
+  SynchronizationUnitQuery,
 } from "@server/types";
-import { InternalTransmitter } from "@server/listener/transmitter/internal";
-import { PullResponderTransmitter } from "@server/listener/transmitter/pull-responder";
-import { SwitchboardPushTransmitter } from "@server/listener/transmitter/switchboard-push";
-import {
-  ITransmitter,
-  StrandUpdateSource,
-} from "@server/listener/transmitter/types";
+import { logger } from "@utils/logger";
+import { OperationScope } from "document-model";
+import { StrandUpdateSource } from "./transmitter/types.js";
 
 function debounce<T extends unknown[], R>(
   func: (...args: T) => Promise<R>,
@@ -45,30 +44,60 @@ function debounce<T extends unknown[], R>(
     });
   };
 }
-export class ListenerManager extends BaseListenerManager {
+
+export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
 
-  async getTransmitter(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ITransmitter | undefined> {
-    return Promise.resolve(this.transmitters[driveId][listenerId]);
+  protected driveServer: IBaseDocumentDriveServer;
+  // driveId -> listenerId -> listenerState
+  protected listenerStateByDriveId = new Map<
+    string,
+    Map<string, ListenerState>
+  >();
+  protected options: ListenerManagerOptions;
+
+  constructor(
+    drive: IBaseDocumentDriveServer,
+    listenerState = new Map<string, Map<string, ListenerState>>(),
+    options: ListenerManagerOptions = DefaultListenerManagerOptions,
+  ) {
+    this.driveServer = drive;
+    this.listenerStateByDriveId = listenerState;
+    this.options = { ...DefaultListenerManagerOptions, ...options };
+  }
+
+  async initialize(handler: DriveUpdateErrorHandler) {
+    // if network connect comes back online
+    // then triggers the listeners update
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => {
+        this.triggerUpdate(false, { type: "local" }, handler).catch((error) => {
+          logger.error("Non handled error updating listeners", error);
+        });
+      });
+    }
   }
 
   driveHasListeners(driveId: string) {
-    return this.listenerState.has(driveId);
+    return this.listenerStateByDriveId.has(driveId);
   }
 
-  async addListener(listener: Listener) {
-    const drive = listener.driveId;
-
-    if (!this.listenerState.has(drive)) {
-      this.listenerState.set(drive, new Map());
+  async setListener(driveId: string, listener: Listener) {
+    // slight code smell -- drive id may not need to be on listener or not passed in
+    if (driveId !== listener.driveId) {
+      throw new Error("Drive ID mismatch");
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const driveMap = this.listenerState.get(drive)!;
-    driveMap.set(listener.listenerId, {
+    let existingState;
+    try {
+      existingState = this.getListenerState(driveId, listener.listenerId);
+    } catch {
+      existingState = {};
+    }
+
+    // keep existing state if it exists
+    this.setListenerState(driveId, listener.listenerId, {
+      ...existingState,
       block: listener.block,
       driveId: listener.driveId,
       pendingTimeout: "0",
@@ -77,38 +106,11 @@ export class ListenerManager extends BaseListenerManager {
       syncUnits: new Map(),
     });
 
-    let transmitter: ITransmitter | undefined;
-
-    switch (listener.callInfo?.transmitterType) {
-      case "SwitchboardPush": {
-        transmitter = new SwitchboardPushTransmitter(listener, this.drive);
-        break;
-      }
-
-      case "PullResponder": {
-        transmitter = new PullResponderTransmitter(listener, this.drive, this);
-        break;
-      }
-      case "Internal": {
-        transmitter = new InternalTransmitter(listener, this.drive);
-        break;
-      }
-    }
-
-    if (!transmitter) {
-      throw new Error("Transmitter not found");
-    }
-
-    const driveTransmitters = this.transmitters[drive] || {};
-    driveTransmitters[listener.listenerId] = transmitter;
-    this.transmitters[drive] = driveTransmitters;
-
     this.triggerUpdate(true, { type: "local" });
-    return Promise.resolve(transmitter);
   }
 
   async removeListener(driveId: string, listenerId: string) {
-    const driveMap = this.listenerState.get(driveId);
+    const driveMap = this.listenerStateByDriveId.get(driveId);
     if (!driveMap) {
       return false;
     }
@@ -119,8 +121,8 @@ export class ListenerManager extends BaseListenerManager {
   async removeSyncUnits(
     driveId: string,
     syncUnits: Pick<SynchronizationUnit, "syncId">[],
-  ) {
-    const listeners = this.listenerState.get(driveId);
+  ): Promise<void> {
+    const listeners = this.listenerStateByDriveId.get(driveId);
     if (!listeners) {
       return;
     }
@@ -140,38 +142,35 @@ export class ListenerManager extends BaseListenerManager {
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     forceSync = false,
   ) {
-    const drive = this.listenerState.get(driveId);
-    if (!drive) {
+    const listenerIdToListenerState = this.listenerStateByDriveId.get(driveId);
+    if (!listenerIdToListenerState) {
       return [];
     }
 
     const outdatedListeners: Listener[] = [];
-    for (const [, listener] of drive) {
+    for (const [, listenerState] of listenerIdToListenerState) {
       if (
         outdatedListeners.find(
-          (l) => l.listenerId === listener.listener.listenerId,
+          (l) => l.listenerId === listenerState.listener.listenerId,
         )
       ) {
         continue;
       }
 
-      const transmitter = await this.getTransmitter(
-        driveId,
-        listener.listener.listenerId,
-      );
+      const transmitter = listenerState.listener.transmitter;
       if (!transmitter?.transmit) {
         continue;
       }
 
       for (const syncUnit of syncUnits) {
-        if (!this._checkFilter(listener.listener.filter, syncUnit)) {
+        if (!this._checkFilter(listenerState.listener.filter, syncUnit)) {
           continue;
         }
 
-        const listenerRev = listener.syncUnits.get(syncUnit.syncId);
+        const listenerRev = listenerState.syncUnits.get(syncUnit.syncId);
 
         if (!listenerRev || listenerRev.listenerRev < syncUnit.revision) {
-          outdatedListeners.push(listener.listener);
+          outdatedListeners.push(listenerState.listener);
           break;
         }
       }
@@ -190,7 +189,7 @@ export class ListenerManager extends BaseListenerManager {
     syncId: string,
     listenerRev: number,
   ): Promise<void> {
-    const drive = this.listenerState.get(driveId);
+    const drive = this.listenerStateByDriveId.get(driveId);
     if (!drive) {
       return;
     }
@@ -222,22 +221,22 @@ export class ListenerManager extends BaseListenerManager {
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
   ) {
     const listenerUpdates: ListenerUpdate[] = [];
-    for (const [driveId, drive] of this.listenerState) {
-      for (const [id, listener] of drive) {
-        const transmitter = await this.getTransmitter(driveId, id);
+    for (const [driveId, drive] of this.listenerStateByDriveId) {
+      for (const [_, listenerState] of drive) {
+        const transmitter = listenerState.listener.transmitter;
         if (!transmitter?.transmit) {
           continue;
         }
 
         const syncUnits = await this.getListenerSyncUnits(
           driveId,
-          listener.listener.listenerId,
+          listenerState.listener.listenerId,
         );
 
         const strandUpdates: StrandUpdate[] = [];
         // TODO change to push one after the other, reusing operation data
         const tasks = syncUnits.map((syncUnit) => async () => {
-          const unitState = listener.syncUnits.get(syncUnit.syncId);
+          const unitState = listenerState.syncUnits.get(syncUnit.syncId);
 
           if (unitState && unitState.listenerRev >= syncUnit.revision) {
             return;
@@ -245,7 +244,7 @@ export class ListenerManager extends BaseListenerManager {
 
           const opData: OperationUpdate[] = [];
           try {
-            const data = await this.drive.getOperationData(
+            const data = await this.driveServer.getOperationData(
               // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
               driveId,
               syncUnit.syncId,
@@ -282,10 +281,10 @@ export class ListenerManager extends BaseListenerManager {
           continue;
         }
 
-        listener.pendingTimeout = new Date(
+        listenerState.pendingTimeout = new Date(
           new Date().getTime() / 1000 + 300,
         ).toISOString();
-        listener.listenerStatus = "PENDING";
+        listenerState.listenerStatus = "PENDING";
 
         // TODO update listeners in parallel, blocking for listeners with block=true
         try {
@@ -294,8 +293,8 @@ export class ListenerManager extends BaseListenerManager {
             source,
           );
 
-          listener.pendingTimeout = "0";
-          listener.listenerStatus = "PENDING";
+          listenerState.pendingTimeout = "0";
+          listenerState.listenerStatus = "PENDING";
 
           const lastUpdated = new Date().toISOString();
 
@@ -307,13 +306,13 @@ export class ListenerManager extends BaseListenerManager {
                 revision.branch === unit.branch,
             );
             if (syncUnit) {
-              listener.syncUnits.set(syncUnit.syncId, {
+              listenerState.syncUnits.set(syncUnit.syncId, {
                 lastUpdated,
                 listenerRev: revision.revision,
               });
             } else {
               logger.warn(
-                `Received revision for untracked unit for listener ${listener.listener.listenerId}`,
+                `Received revision for untracked unit for listener ${listenerState.listener.listenerId}`,
                 revision,
               );
             }
@@ -326,7 +325,7 @@ export class ListenerManager extends BaseListenerManager {
               listenerUpdates.push(...updates);
             } else {
               listenerUpdates.push({
-                listenerId: listener.listener.listenerId,
+                listenerId: listenerState.listener.listenerId,
                 listenerRevisions,
               });
               if (error) {
@@ -339,11 +338,11 @@ export class ListenerManager extends BaseListenerManager {
               }
             }
           }
-          listener.listenerStatus = "SUCCESS";
+          listenerState.listenerStatus = "SUCCESS";
         } catch (e) {
           // TODO: Handle error based on listener params (blocking, retry, etc)
-          onError?.(e as Error, driveId, listener);
-          listener.listenerStatus =
+          onError?.(e as Error, driveId, listenerState);
+          listenerState.listenerStatus =
             e instanceof OperationError ? e.status : "ERROR";
         }
       }
@@ -378,12 +377,12 @@ export class ListenerManager extends BaseListenerManager {
     listenerId: string,
     loadedDrive?: DocumentDriveDocument,
   ) {
-    const listener = this.listenerState.get(driveId)?.get(listenerId);
+    const listener = this.listenerStateByDriveId.get(driveId)?.get(listenerId);
     if (!listener) {
       return [];
     }
     const filter = listener.listener.filter;
-    return this.drive.getSynchronizationUnits(
+    return this.driveServer.getSynchronizationUnits(
       driveId,
       filter.documentId ?? ["*"],
       filter.scope ?? ["*"],
@@ -393,13 +392,16 @@ export class ListenerManager extends BaseListenerManager {
     );
   }
 
-  getListenerSyncUnitIds(driveId: string, listenerId: string) {
-    const listener = this.listenerState.get(driveId)?.get(listenerId);
+  getListenerSyncUnitIds(
+    driveId: string,
+    listenerId: string,
+  ): Promise<SynchronizationUnitQuery[]> {
+    const listener = this.listenerStateByDriveId.get(driveId)?.get(listenerId);
     if (!listener) {
-      return [];
+      return Promise.resolve([]);
     }
     const filter = listener.listener.filter;
-    return this.drive.getSynchronizationUnitsIds(
+    return this.driveServer.getSynchronizationUnitsIds(
       driveId,
       filter.documentId ?? ["*"],
       filter.scope ?? ["*"],
@@ -408,47 +410,23 @@ export class ListenerManager extends BaseListenerManager {
     );
   }
 
-  async initDrive(drive: DocumentDriveDocument) {
-    const {
-      state: {
-        local: { listeners },
-      },
-    } = drive;
-
-    for (const listener of listeners) {
-      await this.addListener({
-        block: listener.block,
-        driveId: drive.state.global.id,
-        filter: {
-          branch: listener.filter.branch ?? [],
-          documentId: listener.filter.documentId ?? [],
-          documentType: listener.filter.documentType,
-          scope: listener.filter.scope ?? [],
-        },
-        listenerId: listener.listenerId,
-        system: listener.system,
-        callInfo: listener.callInfo ?? undefined,
-        label: listener.label ?? "",
-      });
-    }
-  }
-
   async removeDrive(driveId: string): Promise<void> {
-    this.listenerState.delete(driveId);
-    const transmitters = this.transmitters[driveId];
-    if (transmitters) {
-      await Promise.all(
-        Object.values(transmitters).map((t) => t.disconnect?.()),
-      );
+    const listenerIdToListenerState = this.listenerStateByDriveId.get(driveId);
+    if (!listenerIdToListenerState) {
+      return;
     }
-  }
 
-  getListener(driveId: string, listenerId: string): Promise<ListenerState> {
-    const drive = this.listenerState.get(driveId);
-    if (!drive) throw new Error("Drive not found");
-    const listener = drive.get(listenerId);
-    if (!listener) throw new Error("Listener not found");
-    return Promise.resolve(listener);
+    // delete first
+    this.listenerStateByDriveId.delete(driveId);
+
+    for (const [_, listenerState] of listenerIdToListenerState) {
+      // guarantee that all disconnects are called
+      try {
+        await listenerState.listener.transmitter?.disconnect?.();
+      } catch (error) {
+        logger.error(error);
+      }
+    }
   }
 
   async getStrands(
@@ -456,13 +434,13 @@ export class ListenerManager extends BaseListenerManager {
     listenerId: string,
     options?: GetStrandsOptions,
   ): Promise<StrandUpdate[]> {
-    // fetch listenerState from listenerManager
-    const listener = await this.getListener(driveId, listenerId);
+    // this will throw if listenerState is not found
+    const listenerState = this.getListenerState(driveId, listenerId);
 
     // fetch operations from drive  and prepare strands
     const strands: StrandUpdate[] = [];
 
-    const drive = await this.drive.getDrive(driveId);
+    const drive = await this.driveServer.getDrive(driveId);
     const syncUnits = await this.getListenerSyncUnits(
       driveId,
       listenerId,
@@ -480,14 +458,14 @@ export class ListenerManager extends BaseListenerManager {
       if (syncUnit.revision < 0) {
         return;
       }
-      const entry = listener.syncUnits.get(syncUnit.syncId);
+      const entry = listenerState.syncUnits.get(syncUnit.syncId);
       if (entry && entry.listenerRev >= syncUnit.revision) {
         return;
       }
 
       const { documentId, driveId, scope, branch } = syncUnit;
       try {
-        const operations = await this.drive.getOperationData(
+        const operations = await this.driveServer.getOperationData(
           // DEAL WITH INVALID SYNC ID ERROR
           driveId,
           syncUnit.syncId,
@@ -527,5 +505,34 @@ export class ListenerManager extends BaseListenerManager {
     }
 
     return strands;
+  }
+
+  getListenerState(driveId: string, listenerId: string) {
+    let listenerStateByListenerId = this.listenerStateByDriveId.get(driveId);
+    if (!listenerStateByListenerId) {
+      listenerStateByListenerId = new Map();
+      this.listenerStateByDriveId.set(driveId, listenerStateByListenerId);
+    }
+
+    const listenerState = listenerStateByListenerId.get(listenerId);
+    if (!listenerState) {
+      throw new Error("Listener not found");
+    }
+
+    return listenerState;
+  }
+
+  setListenerState(
+    driveId: string,
+    listenerId: string,
+    listenerState: ListenerState,
+  ) {
+    let listenerStateByListenerId = this.listenerStateByDriveId.get(driveId);
+    if (!listenerStateByListenerId) {
+      listenerStateByListenerId = new Map();
+      this.listenerStateByDriveId.set(driveId, listenerStateByListenerId);
+    }
+
+    listenerStateByListenerId.set(listenerId, listenerState);
   }
 }

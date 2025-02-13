@@ -1,22 +1,19 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "@drive-document-model";
-import type { SynchronizationUnitQuery } from "@server/types";
-import {
-  DocumentDriveStorage,
-  DocumentStorage,
-  IDriveStorage,
-} from "@storage/types";
-import {
   AttachmentInput,
+  BaseDocument,
   DocumentHeader,
   ExtendedState,
   Operation,
   OperationScope,
 } from "document-model";
 import { DataTypes, Options, Sequelize } from "sequelize";
+import {
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "../drive-document-model/gen/types.js";
+import { SynchronizationUnitQuery } from "../server/types.js";
+import { IDriveStorage } from "./types.js";
 
 export class SequelizeStorage implements IDriveStorage {
   private db: Sequelize;
@@ -128,7 +125,7 @@ export class SequelizeStorage implements IDriveStorage {
     return this.db.sync({ force: true });
   }
 
-  async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
+  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
     await this.createDocument("drives", id, drive);
     const Drive = this.db.models.drive;
     await Drive.upsert({ id, slug: drive.initialState.state.global.slug });
@@ -143,7 +140,7 @@ export class SequelizeStorage implements IDriveStorage {
   async createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState>,
+    document: BaseDocument<TGlobalState, TLocalState>,
   ): Promise<void> {
     const Document = this.db.models.document;
 
@@ -304,7 +301,7 @@ export class SequelizeStorage implements IDriveStorage {
   async getDocument<TGlobalState, TLocalState>(
     driveId: string,
     id: string,
-  ): Promise<DocumentStorage<TGlobalState, TLocalState>> {
+  ): Promise<BaseDocument<TGlobalState, TLocalState>> {
     const Document = this.db.models.document;
     if (!Document) {
       throw new Error("Document model not found");
@@ -378,7 +375,7 @@ export class SequelizeStorage implements IDriveStorage {
       revision: document.revision,
     };
 
-    return doc as DocumentStorage<TGlobalState, TLocalState>;
+    return doc as BaseDocument<TGlobalState, TLocalState>;
   }
 
   async deleteDocument(drive: string, id: string) {
@@ -401,7 +398,7 @@ export class SequelizeStorage implements IDriveStorage {
 
   async getDrive(id: string) {
     const doc = await this.getDocument("drives", id);
-    return doc as DocumentDriveStorage;
+    return doc as DocumentDriveDocument;
   }
 
   async getDriveBySlug(slug: string) {

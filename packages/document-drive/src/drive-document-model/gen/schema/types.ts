@@ -72,7 +72,7 @@ export type DocumentDriveLocalState = {
   triggers: Array<Trigger>;
 };
 
-export type DocumentDriveState = DocumentModelState & {
+export type DocumentDriveState = {
   icon: Maybe<Scalars["String"]["output"]>;
   id: Scalars["ID"]["output"];
   name: Scalars["String"]["output"];

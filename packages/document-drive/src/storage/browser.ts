@@ -1,19 +1,20 @@
+import type {
+  BaseDocument,
+  DocumentHeader,
+  Operation,
+  OperationScope,
+} from "document-model";
+import LocalForage from "localforage";
 import {
-  DocumentDriveAction,
+  DocumentDriveDocument,
   DocumentDriveLocalState,
   DocumentDriveState,
-} from "@drive-document-model";
-import { DriveNotFoundError } from "@server/error";
-import type { SynchronizationUnitQuery } from "@server/types";
-import type {
-  DocumentDriveStorage,
-  DocumentStorage,
-  IDriveStorage,
-} from "@storage/types";
-import { migrateDocumentOperationSignatures } from "@utils/migrations";
-import { mergeOperations } from "@utils/misc";
-import type { DocumentHeader, Operation, OperationScope } from "document-model";
-import LocalForage from "localforage";
+} from "../drive-document-model/gen/types.js";
+import { DriveNotFoundError } from "../server/error.js";
+import { SynchronizationUnitQuery } from "../server/types.js";
+import { migrateDocumentOperationSignatures } from "../utils/migrations.js";
+import { mergeOperations } from "../utils/misc.js";
+import { IDriveStorage } from "./types.js";
 
 export class BrowserStorage implements IDriveStorage {
   private db: Promise<LocalForage>;
@@ -55,7 +56,7 @@ export class BrowserStorage implements IDriveStorage {
   async getDocument<TGlobalState, TLocalState>(driveId: string, id: string) {
     const document = await (
       await this.db
-    ).getItem<DocumentStorage<TGlobalState, TLocalState>>(
+    ).getItem<BaseDocument<TGlobalState, TLocalState>>(
       this.buildKey(driveId, id),
     );
     if (!document) {
@@ -67,7 +68,7 @@ export class BrowserStorage implements IDriveStorage {
   async createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState>,
+    document: BaseDocument<TGlobalState, TLocalState>,
   ) {
     await (await this.db).setItem(this.buildKey(drive, id), document);
   }
@@ -113,7 +114,7 @@ export class BrowserStorage implements IDriveStorage {
 
   async getDrive(id: string) {
     const db = await this.db;
-    const drive = await db.getItem<DocumentDriveStorage>(
+    const drive = await db.getItem<DocumentDriveDocument>(
       this.buildKey(BrowserStorage.DRIVES_KEY, id),
     );
     if (!drive) {
@@ -135,7 +136,7 @@ export class BrowserStorage implements IDriveStorage {
     throw new Error(`Drive with slug ${slug} not found`);
   }
 
-  async createDrive(id: string, drive: DocumentDriveStorage) {
+  async createDrive(id: string, drive: DocumentDriveDocument) {
     const db = await this.db;
     await db.setItem(this.buildKey(BrowserStorage.DRIVES_KEY, id), drive);
   }

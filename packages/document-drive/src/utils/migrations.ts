@@ -1,9 +1,13 @@
-import type { DocumentStorage } from "@storage/types";
-import { DocumentOperations, Operation, OperationScope } from "document-model";
+import {
+  BaseDocument,
+  DocumentOperations,
+  Operation,
+  OperationScope,
+} from "document-model";
 
 export function migrateDocumentOperationSignatures<TGlobalState, TLocalState>(
-  document: DocumentStorage<TGlobalState, TLocalState>,
-): DocumentStorage<TGlobalState, TLocalState> | undefined {
+  document: BaseDocument<TGlobalState, TLocalState>,
+): BaseDocument<TGlobalState, TLocalState> | undefined {
   let legacy = false;
   const operations = Object.entries(document.operations).reduce<
     DocumentOperations<TGlobalState, TLocalState>

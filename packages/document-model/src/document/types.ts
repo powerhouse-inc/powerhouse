@@ -413,7 +413,31 @@ export type EditorModule<
       Record<string, unknown>
   >;
   documentTypes: string[];
-  config?: Partial<TEditorConfig>;
+};
+
+export type Manifest = {
+  name: string;
+  description: string;
+  category: string;
+  publisher: {
+    name: string;
+    url: string;
+  };
+  documentModels: {
+    id: string;
+    name: string;
+  }[];
+  editors: {
+    id: string;
+    name: string;
+    documentTypes: string[];
+  }[];
+};
+
+export type DocumentModelLib = {
+  manifest: Manifest;
+  documentModels: DocumentModelModule<any, any, any>[];
+  editors: EditorModule<any, any, any>[];
 };
 export type UndoRedoProcessResult<TGlobalState, TLocalState> = {
   document: BaseDocument<TGlobalState, TLocalState>;

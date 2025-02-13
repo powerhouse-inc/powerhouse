@@ -1,18 +1,5 @@
-import {
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "@drive-document-model";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { ConflictOperationError, DriveNotFoundError } from "@server/error";
-import type { SynchronizationUnitQuery } from "@server/types";
-import type {
-  DocumentDriveStorage,
-  DocumentStorage,
-  IDriveStorage,
-  IStorageDelegate,
-} from "@storage/types";
-import { logger } from "@utils/logger";
 import type {
   AttachmentInput,
   BaseDocument,
@@ -25,6 +12,15 @@ import type {
   OperationScope,
 } from "document-model";
 import { IBackOffOptions, backOff } from "exponential-backoff";
+import {
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "../drive-document-model/gen/types.js";
+import { ConflictOperationError, DriveNotFoundError } from "../server/error.js";
+import { SynchronizationUnitQuery } from "../server/types.js";
+import { logger } from "../utils/logger.js";
+import { IDriveStorage, IStorageDelegate } from "./types.js";
 
 type Transaction =
   | Omit<
@@ -107,7 +103,7 @@ export class PrismaStorage implements IDriveStorage {
     this.delegate = delegate;
   }
 
-  async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
+  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
     // drive for all drive documents
     await this.createDocument("drives", id, drive);
     await this.db.drive.upsert({
@@ -133,7 +129,7 @@ export class PrismaStorage implements IDriveStorage {
 
   async addDriveOperationsWithTransaction<TGlobalState, TLocalState>(
     drive: string,
-    callback: (document: DocumentDriveStorage) => Promise<{
+    callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation<TGlobalState, TLocalState>[];
       header: DocumentHeader;
     }>,
@@ -141,14 +137,14 @@ export class PrismaStorage implements IDriveStorage {
     return this.addDocumentOperationsWithTransaction(
       "drives",
       drive,
-      (document) => callback(document as DocumentDriveStorage),
+      (document) => callback(document as DocumentDriveDocument),
     );
   }
 
   async createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState>,
+    document: BaseDocument<TGlobalState, TLocalState>,
   ): Promise<void> {
     await this.db.document.upsert({
       where: {
@@ -273,9 +269,7 @@ export class PrismaStorage implements IDriveStorage {
   async addDocumentOperationsWithTransaction<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    callback: (
-      document: DocumentStorage<TGlobalState, TLocalState>,
-    ) => Promise<{
+    callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
       operations: Operation<TGlobalState, TLocalState>[];
       header: DocumentHeader;
       newState?: BaseState<TGlobalState, TLocalState> | undefined;
@@ -354,7 +348,7 @@ export class PrismaStorage implements IDriveStorage {
     driveId: string,
     id: string,
     tx?: Transaction,
-  ): Promise<DocumentStorage<TGlobalState, TLocalState>> {
+  ): Promise<BaseDocument<TGlobalState, TLocalState>> {
     const prisma = tx ?? this.db;
     const result = await prisma.document.findUnique({
       where: {
@@ -483,7 +477,7 @@ export class PrismaStorage implements IDriveStorage {
       revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
       attachments: {},
     };
-    return doc as DocumentStorage<TGlobalState, TLocalState>;
+    return doc;
   }
 
   async deleteDocument(drive: string, id: string) {
@@ -517,7 +511,7 @@ export class PrismaStorage implements IDriveStorage {
   async getDrive(id: string) {
     try {
       const doc = await this.getDocument("drives", id);
-      return doc as DocumentDriveStorage;
+      return doc as DocumentDriveDocument;
     } catch (e) {
       logger.error(e);
       throw new DriveNotFoundError(id);

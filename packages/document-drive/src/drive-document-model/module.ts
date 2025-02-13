@@ -11,7 +11,7 @@ import { DriveDocumentModelModule } from "./gen/types.js";
 import * as documentModelUtils from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
 
-export const module: DriveDocumentModelModule = {
+export const driveDocumentModelModule: DriveDocumentModelModule = {
   documentModelName,
   documentType,
   fileExtension,

@@ -1,13 +1,19 @@
-import { DocumentDriveDocument, ListenerFilter } from "@drive-document-model";
+import { Action, BaseDocument, DocumentModelModule } from "document-model";
+import {
+  DocumentDriveDocument,
+  ListenerFilter,
+} from "../drive-document-model/gen/types.js";
+import { DocumentModelNotFoundError } from "../server/error.js";
+import {
+  DocumentDriveServerMixin,
+  RemoteDriveOptions,
+} from "../server/types.js";
+import { DriveInfo } from "../utils/graphql.js";
 import {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
   ReadDriveSlugNotFoundError,
-} from "@read-mode/errors";
-import { DocumentModelNotFoundError } from "@server/error";
-import { DocumentDriveServerMixin, RemoteDriveOptions } from "@server/types";
-import { DriveInfo } from "@utils/graphql";
-import { Action, BaseDocument, DocumentModelModule } from "document-model";
+} from "./errors.js";
 
 export type ReadModeDriveServerMixin =
   DocumentDriveServerMixin<IReadModeDriveServer>;
@@ -76,7 +82,7 @@ export interface IReadModeDriveService {
 export type GetDocumentModel = <
   TGlobalState,
   TLocalState,
-  ,
+  TAction extends Action,
 >(
   documentType: string,
 ) => DocumentModelModule<TGlobalState, TLocalState, TAction>;

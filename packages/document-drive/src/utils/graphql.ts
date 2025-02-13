@@ -1,8 +1,3 @@
-import {
-  DocumentDriveLocalState,
-  FileNode,
-  FolderNode,
-} from "@drive-document-model";
 import { pascalCase } from "change-case";
 import {
   Action,
@@ -24,7 +19,12 @@ import {
   buildSchema,
 } from "graphql";
 import request, { GraphQLClient, gql } from "graphql-request";
-import { logger } from "@utils/logger";
+import {
+  DocumentDriveLocalState,
+  FileNode,
+  FolderNode,
+} from "../drive-document-model/gen/types.js";
+import { logger } from "./logger.js";
 
 export { gql } from "graphql-request";
 
@@ -181,7 +181,7 @@ export type DocumentGraphQLResult<TGlobalState, TLocalState> = BaseDocument<
 export async function fetchDocument<
   TGlobalState,
   TLocalState,
-  ,
+  TAction extends Action,
 >(
   url: string,
   documentId: string,

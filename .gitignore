@@ -5,3 +5,5 @@ node_modules/
 .next
 *.tsbuildinfo
 dev.db
+**/vite.config.ts.timestamp-*.mjs
+.DS_Store

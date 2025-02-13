@@ -25,7 +25,6 @@ export type {
   Author,
   Operation as DocumentModelOperation,
   Module,
-  OperationError,
 } from "./gen/schema/types.js";
 export type {
   DocumentModelAction,

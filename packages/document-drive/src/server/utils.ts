@@ -1,9 +1,9 @@
-import { RevisionsFilter, StrandUpdate } from "@server/types";
 import type {
   BaseDocument,
   DocumentOperations,
   OperationScope,
 } from "document-model";
+import { RevisionsFilter, StrandUpdate } from "./types.js";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],

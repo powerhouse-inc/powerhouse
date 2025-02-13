@@ -1,17 +1,9 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "@drive-document-model";
-import { DriveNotFoundError } from "@server/error";
-import type { SynchronizationUnitQuery } from "@server/types";
-import type {
-  DocumentDriveStorage,
-  DocumentStorage,
-  IDriveStorage,
-} from "@storage/types";
-import { mergeOperations } from "@utils/misc";
-import { DocumentHeader, Operation, OperationScope } from "document-model";
+  BaseDocument,
+  DocumentHeader,
+  Operation,
+  OperationScope,
+} from "document-model";
 import type { Dirent } from "fs";
 import {
   existsSync,
@@ -24,6 +16,15 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import sanitize from "sanitize-filename";
+import {
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "../drive-document-model/gen/types.js";
+import { DriveNotFoundError } from "../server/error.js";
+import { SynchronizationUnitQuery } from "../server/types.js";
+import { mergeOperations } from "../utils/misc.js";
+import { IDriveStorage } from "./types.js";
 
 type FSError = {
   errno: number;
@@ -94,7 +95,7 @@ export class FilesystemStorage implements IDriveStorage {
       const content = readFileSync(this._buildDocumentPath(drive, id), {
         encoding: "utf-8",
       });
-      return JSON.parse(content) as DocumentStorage<TGlobalState, TLocalState>;
+      return JSON.parse(content) as BaseDocument<TGlobalState, TLocalState>;
     } catch (error) {
       throw new Error(`Document with id ${id} not found`);
     }
@@ -103,7 +104,7 @@ export class FilesystemStorage implements IDriveStorage {
   async createDocument<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    document: DocumentStorage<TGlobalState, TLocalState>,
+    document: BaseDocument<TGlobalState, TLocalState>,
   ) {
     const documentPath = this._buildDocumentPath(drive, id);
     ensureDir(path.dirname(documentPath));
@@ -196,7 +197,7 @@ export class FilesystemStorage implements IDriveStorage {
       return (await this.getDocument(
         FilesystemStorage.DRIVES_DIR,
         id,
-      )) as DocumentDriveStorage;
+      )) as DocumentDriveDocument;
     } catch {
       throw new DriveNotFoundError(id);
     }
@@ -220,7 +221,7 @@ export class FilesystemStorage implements IDriveStorage {
     throw new Error(`Drive with slug ${slug} not found`);
   }
 
-  createDrive(id: string, drive: DocumentDriveStorage) {
+  createDrive(id: string, drive: DocumentDriveDocument) {
     return this.createDocument(FilesystemStorage.DRIVES_DIR, id, drive);
   }
 

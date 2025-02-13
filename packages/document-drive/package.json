@@ -3,50 +3,22 @@
   "version": "1.17.2",
   "license": "AGPL-3.0-only",
   "type": "module",
-  "exports": {
-    "./server/*": {
-      "import": "./dist/src/server/*.js",
-      "types": "./dist/src/server/*.d.ts"
-    },
-    "./storage/*": {
-      "import": "./dist/src/storage/*.js",
-      "types": "./dist/src/storage/*.d.ts"
-    },
-    "./cache/*": {
-      "import": "./dist/src/cache/*.js",
-      "types": "./dist/src/cache/*.d.ts"
-    },
-    "./queue/*": {
-      "import": "./dist/src/queue/*.js",
-      "types": "./dist/src/queue/*.d.ts"
-    },
-    "./utils/*": {
-      "import": "./dist/src/utils/*.js",
-      "types": "./dist/src/utils/*.d.ts"
-    },
-    "./read-mode/*": {
-      "import": "./dist/src/read-mode/*.js",
-      "types": "./dist/src/read-mode/*.d.ts"
-    },
-    "./types": {
-      "import": "./dist/src/types.js",
-      "types": "./dist/src/types.d.ts"
-    }
-  },
   "files": [
     "./dist"
   ],
   "scripts": {
     "check-types": "tsc --build",
+    "check-types:watch": "tsc --build --watch",
     "postlint": "npm run check-types",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --project tsconfig.build.json",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
-    "test:watch": "vitest watch",
+    "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
     "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "clean:node_modules": "rimraf node_modules",
+    "migrate": "prisma generate && prisma db push"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",

@@ -1,15 +1,13 @@
 import {
-  type DocumentDriveDocument,
-  driveDocumentType,
-} from "@drive-document-model";
-import { OperationError } from "@server/error";
-import {
   BaseDocument,
   DocumentOperations,
   Operation,
   OperationScope,
   generateId,
 } from "document-model";
+import { driveDocumentType } from "../drive-document-model/constants.js";
+import { DocumentDriveDocument } from "../drive-document-model/gen/types.js";
+import { OperationError } from "../server/error.js";
 import { RunAsap } from "./run-asap.js";
 
 export const runAsap = RunAsap.runAsap;

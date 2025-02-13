@@ -1,25 +1,20 @@
-import { ReadDriveSlugNotFoundError } from "@read-mode/errors";
-import { ReadModeService } from "@read-mode/service";
-import type {
+import {
+  DocumentDriveServerConstructor,
+  RemoteDriveOptions,
+} from "../server/types.js";
+import { logger } from "../utils/logger.js";
+import { ReadDriveSlugNotFoundError } from "./errors.js";
+import { ReadModeService } from "./service.js";
+import {
   IReadModeDriveServer,
   IReadModeDriveService,
   ReadDrive,
   ReadDriveOptions,
   ReadDrivesListener,
-} from "@read-mode/types";
-import {
-  DocumentDriveServerConstructor,
-  RemoteDriveOptions,
-} from "@server/types";
-import { logger } from "@utils/logger";
-import { Action } from "document-model";
+} from "./types.js";
 
-export function ReadModeServer<
-  TGlobalState,
-  TLocalState,
-  ,
->(
-  Base: DocumentDriveServerConstructor<TGlobalState, TLocalState, TAction>,
+export function ReadModeServer(
+  Base: DocumentDriveServerConstructor,
 ): new (
   ...args: ConstructorParameters<typeof Base>
 ) => InstanceType<typeof Base> & IReadModeDriveServer {
@@ -27,8 +22,8 @@ export function ReadModeServer<
     #readModeStorage: IReadModeDriveService;
     #listeners = new Set<ReadDrivesListener>();
 
-    constructor(...args: any[]) {
-      super(...args);
+    constructor() {
+      super();
 
       this.#readModeStorage = new ReadModeService(
         this.getDocumentModel.bind(this),
