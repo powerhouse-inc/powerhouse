@@ -2,7 +2,7 @@ import InMemoryCache from "document-drive/cache/memory";
 import { BaseQueueManager } from "document-drive/queue/base";
 import {
   DefaultRemoteDriveInput,
-  DocumentDriveServer,
+  DocumentDriveServerBuilder,
   DocumentDriveServerOptions,
 } from "document-drive/server";
 import { BrowserStorage } from "document-drive/storage/browser";
@@ -67,11 +67,13 @@ export function createBrowserDocumentDriveServer(
   routerBasename: string,
   documentDriveServerOptions?: DocumentDriveServerOptions,
 ) {
-  return new DocumentDriveServer(
-    documentModels,
-    new BrowserStorage(routerBasename),
-    new InMemoryCache(),
-    new BaseQueueManager(1, 10),
-    documentDriveServerOptions,
-  );
+  const builder = new DocumentDriveServerBuilder(documentModels)
+    .withStorage(new BrowserStorage(routerBasename))
+    .withCache(new InMemoryCache())
+    .withQueueManager(new BaseQueueManager(1, 10));
+  if (documentDriveServerOptions) {
+    builder.withOptions(documentDriveServerOptions);
+  }
+
+  return builder.build();
 }

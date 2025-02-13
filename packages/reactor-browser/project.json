@@ -22,20 +22,6 @@
         "command": "tsc --noEmit",
         "cwd": "packages/reactor-browser"
       }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest run --passWithNoTests",
-        "cwd": "packages/reactor-browser"
-      }
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "eslint .",
-        "cwd": "packages/reactor-browser"
-      }
     }
   },
   "tags": []
