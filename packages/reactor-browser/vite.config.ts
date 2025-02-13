@@ -22,9 +22,6 @@ export default defineConfig(() => {
       dts({
         include: ["src/**"],
         exclude: ["src/**/*.stories.*"],
-        rollupTypes: true,
-        insertTypesEntry: true,
-        strictOutput: true,
       }),
     ],
     resolve: {
