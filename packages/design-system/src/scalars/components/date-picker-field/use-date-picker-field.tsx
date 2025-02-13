@@ -21,7 +21,7 @@ export const useDatePickerField = ({
   onBlur,
   disablePastDates,
   disableFutureDates,
-  dateFormat = "yyyy-MM-dd",
+  dateFormat,
   weekStart = "Monday",
   autoClose = false,
 }: DatePickerFieldProps) => {
@@ -39,7 +39,7 @@ export const useDatePickerField = ({
   const handleDateSelect = useCallback(
     (date?: Date) => {
       if (date && isValid(date)) {
-        const formattedDate = format(date, dateFormat);
+        const formattedDate = format(date, dateFormat ?? "yyyy-MM-dd");
         const changeEvent = createChangeEvent(formattedDate);
         onChange?.(changeEvent);
       } else {
@@ -59,21 +59,21 @@ export const useDatePickerField = ({
       if (typeof value === "number") {
         const date = new Date(value);
         if (isValid(date)) {
-          const newValue = format(date, dateFormat);
+          const newValue = format(date, dateFormat ?? "");
           const changeEvent = createChangeEvent(newValue);
           onChange?.(changeEvent);
         }
       }
       if (typeof value === "object" && isValid(value)) {
-        return format(value, dateFormat);
+        return format(value, dateFormat ?? "");
       }
 
       return "";
     },
     [dateFormat, onChange],
   );
-  const inputValue = formatDate(value ?? defaultValue ?? "");
-  const parsedDate = parse(inputValue, dateFormat, new Date());
+  const inputValue = formatDate(value ?? defaultValue ?? "").toUpperCase();
+  const parsedDate = parse(inputValue, dateFormat ?? "", new Date());
   const date = isValid(parsedDate) ? parsedDate : undefined;
 
   const today = useMemo(() => startOfDay(new Date()), []);

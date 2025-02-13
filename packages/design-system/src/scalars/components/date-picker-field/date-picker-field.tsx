@@ -59,7 +59,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       inputProps,
       disablePastDates,
       disableFutureDates,
-      dateFormat = "yyyy-MM-dd",
+      dateFormat,
       weekStart,
       autoClose = false,
       ...props
