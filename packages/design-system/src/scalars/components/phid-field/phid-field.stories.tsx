@@ -170,7 +170,7 @@ export const Filled: Story = {
     label: "PHID field",
     placeholder: "phd:",
     variant: "withIdTitleAndDescription",
-    defaultValue: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea7:main:public",
+    defaultValue: mockedOptions[0].phid,
     initialOptions: mockedOptions,
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
