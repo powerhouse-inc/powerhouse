@@ -58,7 +58,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
           onKeyDown={handleKeyDown}
           tabIndex={1}
           placeholder="Search"
-          className="w-full appearance-none pl-8 [&::-webkit-search-cancel-button]:hidden"
+          className="w-full appearance-none !pl-8 [&::-webkit-search-cancel-button]:hidden"
           style={{
             paddingRight: (ref.current?.clientWidth ?? 0) + 16,
           }}
