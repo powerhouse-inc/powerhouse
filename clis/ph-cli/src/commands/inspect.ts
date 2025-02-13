@@ -59,7 +59,11 @@ export const inspect: CommandActionType<
       });
     }
   } catch (e) {
-    console.log("No manifest found in the package");
+    if (options.debug) {
+      console.error(e);
+    } else {
+      console.log("No manifest found in the package");
+    }
   }
 };
 
