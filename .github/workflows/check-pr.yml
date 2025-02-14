@@ -19,26 +19,25 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-24.04
-    container: node:20
     permissions:
       contents: read
       actions: read
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Set up Nx SHAs
         uses: nrwl/nx-set-shas@v4
 
-      - name: Install PNPM
+      - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
-      
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
