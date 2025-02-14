@@ -30,9 +30,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Nx SHAs
-        uses: nrwl/nx-set-shas@v4
-
       - name: Install PNPM
         uses: pnpm/action-setup@v4
         with:
@@ -41,6 +38,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      - name: Set up Nx SHAs
+        uses: nrwl/nx-set-shas@v4
 
       - name: Run checks for affected projects
         run: pnpm affected:check:ci
