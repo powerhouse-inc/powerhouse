@@ -45,7 +45,7 @@ exports[`Sidebar Component > should match snapshot 1`] = `
       class="flex flex-1 flex-col gap-1 overflow-y-auto"
     >
       <div
-        class="flex-1 overflow-y-hidden"
+        class="flex-1 overflow-hidden"
       >
         <div
           style="overflow: visible; height: 0px; width: 0px;"
