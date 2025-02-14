@@ -1,7 +1,7 @@
 import { FILE, NodeProps, UI_NODE, UiNode } from "@/connect";
 import { DragEvent, useCallback, useMemo, useState } from "react";
 
-type Props = NodeProps & {
+type Props = Pick<NodeProps, "onAddFile" | "onCopyNode" | "onMoveNode"> & {
   uiNode: UiNode | null;
 };
 export function useDrop(props: Props) {

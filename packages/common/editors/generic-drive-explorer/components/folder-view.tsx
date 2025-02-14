@@ -1,70 +1,82 @@
+import { BaseProps, sortUiNodesByName } from "@editors/utils";
 import {
   FILE,
   FOLDER,
   FolderItem,
   UiDriveNode,
   UiFolderNode,
-  useDrop,
+  UiNode,
 } from "@powerhousedao/design-system";
 import { useTranslation } from "react-i18next";
-import { sortUiNodesByName } from "src/utils";
 import { twMerge } from "tailwind-merge";
-import { ContentSection } from "./content";
 import FileContentView from "./file-content-view";
+import { DriveLayout } from "./layout";
 
-interface IFolderViewProps {
+interface IFolderViewProps extends BaseProps {
   node: UiDriveNode | UiFolderNode;
+  isDropTarget: boolean;
+  onSelectNode: (uiNode: UiNode) => void;
+  onRenameNode: (name: string, uiNode: UiNode) => void;
+  onDuplicateNode: (uiNode: UiNode) => void;
+  onDeleteNode: (uiNode: UiNode) => void;
+  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
+  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  isAllowedToCreateDocuments: boolean;
 }
 
 export function FolderView(props: IFolderViewProps) {
-  const { node } = props;
+  const { node, className, isDropTarget, containerProps, ...nodeProps } = props;
   const { t } = useTranslation();
-  const { isDropTarget, dropProps } = useDrop({
-    uiNode: node,
-  });
 
   const folderNodes =
-    selectedParentNode?.children
+    node?.children
       .filter((node) => node.kind === FOLDER)
       .sort(sortUiNodesByName) ?? [];
 
   const fileNodes =
-    selectedParentNode?.children
+    node?.children
       .filter((node) => node.kind === FILE)
       .sort(sortUiNodesByName) ?? [];
 
   return (
     <div
-      {...dropProps}
       className={twMerge(
         "rounded-md border-2 border-transparent p-2",
         isDropTarget && "border-dashed border-blue-100",
       )}
+      {...containerProps}
     >
-      <ContentSection
+      <DriveLayout.ContentSection
         title={t("folderView.sections.folders.title")}
         className="mb-4"
       >
         {folderNodes.length > 0 ? (
           folderNodes.map((folderNode) => (
-            <FolderItem {...props} key={folderNode.id} uiNode={folderNode} />
+            <FolderItem
+              {...nodeProps}
+              key={folderNode.id}
+              uiNode={folderNode}
+            />
           ))
         ) : (
           <div className="mb-8 text-sm text-gray-400">
             {t("folderView.sections.folders.empty")}
           </div>
         )}
-      </ContentSection>
-      <ContentSection title={t("folderView.sections.documents.title")}>
+      </DriveLayout.ContentSection>
+      <DriveLayout.ContentSection
+        title={t("folderView.sections.documents.title")}
+      >
         <div
           className={twMerge(
             "w-full",
             fileNodes.length > 0 ? "min-h-[400px]" : "min-h-14",
           )}
         >
-          <FileContentView {...props} fileNodes={fileNodes} />
+          <FileContentView {...nodeProps} fileNodes={fileNodes} />
         </div>
-      </ContentSection>
+      </DriveLayout.ContentSection>
     </div>
   );
 }

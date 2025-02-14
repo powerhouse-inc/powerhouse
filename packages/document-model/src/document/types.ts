@@ -365,12 +365,14 @@ export type EditorContext = {
 
 export type ActionErrorCallback = (error: unknown) => void;
 
+export type EditorDispatch<A extends Action> = (
+  action: A | BaseAction,
+  onErrorCallback?: ActionErrorCallback,
+) => void;
+
 export type EditorProps<S, A extends Action, L> = {
   document: Document<S, A, L>;
-  dispatch: (
-    action: A | BaseAction,
-    onErrorCallback?: ActionErrorCallback,
-  ) => void;
+  dispatch: EditorDispatch<A>;
   context: EditorContext;
   error?: unknown;
   documentNodeName?: string;

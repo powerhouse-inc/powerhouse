@@ -1,4 +1,19 @@
+import {
+  DRIVE,
+  FILE,
+  LOCAL,
+  SharingType,
+  UiDriveNode,
+  UiFileNode,
+  UiFolderNode,
+  type UiNode,
+} from "@powerhousedao/design-system";
 import { clsx, type ClassValue } from "clsx";
+import {
+  DocumentDriveDocument,
+  isFolderNode,
+  Node,
+} from "document-models/document-drive";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -12,3 +27,70 @@ export type BaseProps<T extends HTMLElement = HTMLDivElement> = {
   children?: React.ReactNode;
   containerProps?: Omit<React.HTMLAttributes<T>, "className" | "style" | "id">;
 };
+
+export function sortUiNodesByName(a: UiNode, b: UiNode) {
+  return a.name.localeCompare(b.name);
+}
+
+export function makeNodeSlugFromNodeName(name: string) {
+  return name.replaceAll(/\s/g, "-");
+}
+
+export function makeUiNode(
+  node: Node | undefined,
+  drive: DocumentDriveDocument,
+  withChildren: boolean,
+): UiNode {
+  const { id, name, icon, slug, nodes } = drive.state.global;
+  const { sharingType: _sharingType, availableOffline } = drive.state.local;
+  const __sharingType = _sharingType?.toUpperCase();
+  const sharingType = (
+    __sharingType === "PRIVATE" ? LOCAL : __sharingType
+  ) as SharingType;
+
+  // const normalizedDriveSyncStatus =
+  //               syncStatus === 'INITIAL_SYNC'
+  //                   ? 'SYNCING'
+  //                   : syncStatus;
+
+  if (node) {
+    const uiNode = {
+      ...node,
+      slug: makeNodeSlugFromNodeName(node.name),
+      driveId: id,
+      parentFolder: node.parentFolder || id,
+      kind: node.kind.toUpperCase(),
+      syncStatus: undefined,
+      sharingType,
+    };
+    if (node.kind === FILE) {
+      return uiNode as UiFileNode;
+    } else if (isFolderNode(node)) {
+      return {
+        ...uiNode,
+        children: withChildren
+          ? nodes
+              .filter((n) => n.parentFolder === node.id)
+              .map((n) => makeUiNode(n, drive, false))
+          : [],
+      } as UiFolderNode;
+    }
+  }
+
+  return {
+    id,
+    name,
+    slug: slug || null,
+    kind: DRIVE,
+    nodeMap: {},
+    sharingType,
+    syncStatus: undefined,
+    availableOffline,
+    icon,
+    parentFolder: null,
+    driveId: id,
+    children: nodes
+      .filter((n) => n.parentFolder === id)
+      .map((n) => makeUiNode(n, drive, false)),
+  } as UiDriveNode;
+}
