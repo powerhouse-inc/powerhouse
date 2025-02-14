@@ -58,6 +58,25 @@ DriveLayout.Content = function DriveLayoutContent({
   );
 };
 
+DriveLayout.ContentSection = function DriveLayoutContentSection({
+  title,
+  children,
+  className,
+  containerProps,
+  ...props
+}: BaseProps & { title?: string }) {
+  return (
+    <div className={cn(className)} {...containerProps} {...props}>
+      {title && (
+        <div className="mb-4 text-base font-semibold text-gray-600">
+          {title}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+};
+
 DriveLayout.Footer = function DriveLayoutFooter({
   children,
   className,

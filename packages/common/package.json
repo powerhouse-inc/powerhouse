@@ -103,6 +103,7 @@
   },
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "dependencies": {
+    "@tanstack/react-virtual": "^3.8.1",
     "react-i18next": "^13.5.0"
   }
 }

@@ -19,19 +19,11 @@ export const REMOVE_TRIGGER = "REMOVE_TRIGGER";
 export const ADD_TRIGGER = "ADD_TRIGGER";
 export const ADD_INVALID_TRIGGER = "ADD_INVALID_TRIGGER";
 
-export const defaultDriveOptions: NodeOption[] = [
-  NEW_FOLDER,
-  RENAME,
-  SETTINGS,
-] as const;
+export const defaultDriveOptions = [NEW_FOLDER, RENAME, SETTINGS] as const;
 
-export const defaultFileOptions: NodeOption[] = [
-  RENAME,
-  DELETE,
-  DUPLICATE,
-] as const;
+export const defaultFileOptions = [RENAME, DELETE, DUPLICATE] as const;
 
-export const defaultFolderOptions: NodeOption[] = [
+export const defaultFolderOptions = [
   NEW_FOLDER,
   RENAME,
   DELETE,

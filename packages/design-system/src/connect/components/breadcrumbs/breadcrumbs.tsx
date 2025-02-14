@@ -1,38 +1,46 @@
-import { NodeInput, NodeProps, TUiNodesContext, UiNode } from "@/connect";
+import { NodeInput } from "@/connect";
 import { Icon } from "@/powerhouse";
 import { useState } from "react";
 
-export type BreadcrumbsProps = NodeProps & TUiNodesContext;
+export type BreadcrumbNode = {
+  id: string;
+  name: string;
+};
+
+export type BreadcrumbsProps = {
+  breadcrumbs: BreadcrumbNode[];
+  onBreadcrumbSelected: (node: BreadcrumbNode) => void;
+} & (
+  | { createEnabled: true; onCreate: (name: string) => void }
+  | { createEnabled: false }
+);
 
 export function Breadcrumbs(props: BreadcrumbsProps) {
-  const {
-    selectedNodePath,
-    isAllowedToCreateDocuments,
-    onAddAndSelectNewFolder,
-  } = props;
-  const [isAddingNewItem, setIsAddingNewFolder] = useState(false);
+  const { breadcrumbs, createEnabled, onBreadcrumbSelected } = props;
+  const [isCreating, setIsCreating] = useState(false);
 
   function onAddNew() {
-    setIsAddingNewFolder(true);
+    setIsCreating(true);
   }
 
-  async function onSubmit(name: string) {
-    await onAddAndSelectNewFolder(name);
-    setIsAddingNewFolder(false);
+  function onSubmit(name: string) {
+    if (!createEnabled) return;
+    props.onCreate(name);
+    setIsCreating(false);
   }
 
   function onCancel() {
-    setIsAddingNewFolder(false);
+    setIsCreating(false);
   }
 
   return (
     <div className="flex h-9 flex-row items-center gap-2 p-6 text-gray-500">
-      {selectedNodePath.map((node) => (
-        <Breadcrumb {...props} key={node.id} node={node} />
+      {breadcrumbs.map((node) => (
+        <Breadcrumb key={node.id} node={node} onClick={onBreadcrumbSelected} />
       ))}
-      {isAllowedToCreateDocuments ? (
+      {createEnabled && (
         <>
-          {isAddingNewItem ? (
+          {isCreating ? (
             <NodeInput
               className="text-gray-800"
               defaultValue="New Folder"
@@ -50,23 +58,24 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
             </button>
           )}
         </>
-      ) : null}
+      )}
     </div>
   );
 }
 
-export type BreadcrumbProps = BreadcrumbsProps & {
-  readonly node: UiNode;
+export type BreadcrumbProps = {
+  node: BreadcrumbNode;
+  onClick: (node: BreadcrumbNode) => void;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {
-  const { node, setSelectedNode } = props;
+  const { node, onClick } = props;
 
   return (
     <>
       <div
         className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
-        onClick={() => setSelectedNode(node)}
+        onClick={() => onClick(node)}
         role="button"
       >
         {node.name}
