@@ -1,11 +1,14 @@
-import { Button } from "@powerhousedao/design-system";
+import { Breadcrumbs } from "@powerhousedao/design-system";
 import { EditorProps } from "document-model/document";
+import { useDriveSettings } from "editors/hooks/use-drive-settings";
 import {
   DocumentDriveAction,
   DocumentDriveLocalState,
   DocumentDriveState,
 } from "../../document-models/document-drive";
+import { CreateDocument } from "./components/create-document";
 import { DriveLayout } from "./components/layout";
+import { SearchBar } from "./components/search-bar";
 
 export type IProps = EditorProps<
   DocumentDriveState,
@@ -16,31 +19,27 @@ export type IProps = EditorProps<
 export default function Editor(props: IProps) {
   // generate a random id
   // const id = documentModelUtils.hashKey();
+  const { showSearchBar, isAllowedToCreateDocuments, documentModels } =
+    useDriveSettings();
 
   return (
     <DriveLayout>
-      <FolderView {...uiNodes} />
-      {isAllowedToCreateDocuments && (
-        <>
-          <h3 className="mb-3 mt-4 text-xl font-bold text-gray-600">
-            New document
-          </h3>
-          <div className="flex w-full flex-wrap gap-4">
-            {documentModels?.map((doc) => (
-              <Button
-                key={doc.documentModel.id}
-                aria-details={doc.documentModel.description}
-                className="bg-gray-200 text-slate-800"
-                onClick={() => createDocument(doc)}
-              >
-                <span className="text-sm">
-                  {getDocumentModelName(doc.documentModel.name)}
-                </span>
-              </Button>
-            ))}
-          </div>
-        </>
-      )}
+      <DriveLayout.Header>
+        <Breadcrumbs {...uiNodes} />
+        {showSearchBar && <SearchBar />}
+      </DriveLayout.Header>
+      <DriveLayout.Content>
+        <FolderView {...uiNodes} />
+      </DriveLayout.Content>
+      <DriveLayout.Footer>
+        {isAllowedToCreateDocuments && (
+          <CreateDocument
+            documentModels={documentModels}
+            createDocument={() => {}}
+            getDocumentModelName={() => ""}
+          />
+        )}
+      </DriveLayout.Footer>
     </DriveLayout>
   );
 }

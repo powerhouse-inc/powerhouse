@@ -64,6 +64,7 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@types/eslint__js": "^8.42.3",
@@ -100,5 +101,8 @@
     "vitest": "^2.1.8",
     "zod": "^3.24.1"
   },
-  "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps."
+  "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
+  "dependencies": {
+    "react-i18next": "^13.5.0"
+  }
 }
