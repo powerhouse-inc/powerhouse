@@ -41,6 +41,7 @@
     "@powerhousedao/scalars": "workspace:*",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
+    "document-model": "workspace:*",
     "document-model-libs": "workspace:*",
     "graphql": "^16.9.0",
     "pm2": "^5.4.3",
