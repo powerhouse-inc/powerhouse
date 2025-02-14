@@ -1,5 +1,6 @@
 import { module as DocumentDrive } from 'document-model-libs/document-drive';
 import { Action, DocumentModel } from 'document-model/document';
+import { module as DocumentModelModule } from 'document-model/document-model';
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { atomWithLazy, unwrap } from 'jotai/utils';
@@ -10,7 +11,10 @@ import { externalPackagesAtom } from './external-packages';
 
 export const LOCAL_DOCUMENT_MODELS = import.meta.env.LOCAL_DOCUMENT_MODELS;
 
-export const baseDocumentModels = [DocumentDrive as DocumentModel];
+export const baseDocumentModels = [
+    DocumentDrive,
+    DocumentModelModule,
+] as const as DocumentModel[];
 
 // removes document models with the same id, keeping the one that appears later
 function getUniqueDocumentModels(
