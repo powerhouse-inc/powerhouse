@@ -16,7 +16,7 @@ exports[`PHIDField Component > should match snapshot 1`] = `
         PHID Field
       </label>
       <div
-        class="flex size-full flex-col [&_[cmdk-label]]:hidden dark:bg-charcoal-900 rounded-md bg-gray-100"
+        class="flex size-full flex-col rounded-md [&_[cmdk-label]]:hidden dark:bg-charcoal-900 bg-gray-100"
         cmdk-root=""
         tabindex="-1"
       >

@@ -184,7 +184,7 @@ describe("PHIDField Component", () => {
       />,
     );
 
-    expect(screen.getByText("Title Unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Title not available")).toBeInTheDocument();
 
     rerender(
       <PHIDField
@@ -196,13 +196,9 @@ describe("PHIDField Component", () => {
       />,
     );
 
-    expect(screen.getByText("Title Unavailable")).toBeInTheDocument();
-    expect(screen.getByText("aha/hah-lorem")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Lorem ipsum dolor sit amet consectetur. Sed elementum tempor.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Title not available")).toBeInTheDocument();
+    expect(screen.getByText("Path not available")).toBeInTheDocument();
+    expect(screen.getByText("Description not available")).toBeInTheDocument();
   });
 
   it("should handle autoComplete disabled", () => {

@@ -3,13 +3,12 @@ import type { IconName } from "@/powerhouse/components/icon";
 export interface PHIDBaseProps {
   onChange?: (value: string) => void;
   placeholder?: string;
-  defaultBranch?: string;
-  defaultScope?: string;
   allowedScopes?: string[];
-  allowedDocumentTypes?: string[];
   allowUris?: boolean;
   allowDataObjectReference?: boolean;
   maxLength?: number;
+  isOpenByDefault?: boolean;
+  initialOptions?: PHIDItem[];
 }
 
 export type PHIDProps = PHIDBaseProps &

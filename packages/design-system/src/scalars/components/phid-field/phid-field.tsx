@@ -57,10 +57,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onBlur,
       onClick,
       onMouseDown,
-      defaultBranch = "main", // verify with PH
-      defaultScope = "public", // verify with PH
       allowedScopes, // used in field validation
-      allowedDocumentTypes, // verify with PH
       allowUris, // used in field validation
       autoComplete = true,
       allowDataObjectReference = false, // allways false for now
@@ -68,6 +65,8 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       maxLength,
       fetchOptionsCallback,
       fetchSelectedOptionCallback,
+      isOpenByDefault, // to be used only in stories
+      initialOptions, // to be used only in stories
       ...props
     },
     ref,
@@ -99,6 +98,8 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       autoComplete,
       defaultValue,
       value,
+      isOpenByDefault,
+      initialOptions,
       onChange,
       onBlur,
       fetchOptions: fetchOptionsCallback,
@@ -130,7 +131,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
               shouldFilter={false}
               value={commandValue}
               onValueChange={handleCommandValue}
-              className={cn("dark:bg-charcoal-900 rounded-md bg-gray-100")}
+              className={cn("dark:bg-charcoal-900 bg-gray-100")}
             >
               <PopoverAnchor asChild={true}>
                 <PHIDInputContainer
@@ -179,11 +180,6 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
               )}
               <PopoverContent
                 align="start"
-                className={cn(
-                  "w-[--radix-popover-trigger-width] p-0",
-                  "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
-                  "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
-                )}
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 onInteractOutside={(e) => {
                   if (e.target instanceof Element && e.target.id === id) {
@@ -259,7 +255,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         }
 
         // URI patterns
-        const branchScopePattern = "[a-zA-Z][a-zA-Z0-9\\-/_]*[a-zA-Z]";
+        const branchScopePattern = "[a-zA-Z][a-zA-Z0-9\\-/_]*[a-zA-Z0-9]";
 
         // Valid URI formats
         const URIFormats = [
