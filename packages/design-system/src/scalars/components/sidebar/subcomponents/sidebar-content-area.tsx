@@ -78,7 +78,6 @@ export const SidebarContentArea = ({
       className={cn(
         "flex flex-1 flex-col gap-1 overflow-y-auto",
         hasPinnedItems && "pt-0.5",
-        "",
       )}
     >
       {flattenedNodes.length === 0 ? (
@@ -87,7 +86,7 @@ export const SidebarContentArea = ({
           <span className="truncate">This node is empty</span>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-hidden">
+        <div className="flex-1 overflow-hidden">
           <AutoSizer>
             {({ width, height }) => (
               <List
