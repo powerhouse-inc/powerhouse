@@ -11,7 +11,9 @@ export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 async function loadBaseEditors() {
     const JsonEditor = (await import('document-model-libs/editors/json'))
         .default as unknown as ExtendedEditor;
-    return [JsonEditor as unknown as ExtendedEditor];
+    const DocumentModelEditor = (await import('document-model-libs/editors'))
+        .DocumentModel2 as unknown as ExtendedEditor;
+    return [JsonEditor, DocumentModelEditor];
 }
 
 function getEditorsFromModules(modules: DocumentModelsModule[]) {
