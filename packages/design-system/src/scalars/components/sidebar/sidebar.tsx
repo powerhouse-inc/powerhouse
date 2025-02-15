@@ -118,7 +118,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (defaultLevel > 1) {
       openLevel(defaultLevel);
     }
-  }, [defaultLevel, openLevel]);
+    // openLevel can not be added as dependency because
+    // it will cause an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultLevel]);
 
   // sync activeNodeId and onActiveNodeChange with provider state
   useEffect(() => {

@@ -7,7 +7,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  useTransition,
 } from "react";
 import { type SidebarNode, type FlattenedNode, NodeStatus } from "../types";
 import {
@@ -250,10 +249,16 @@ const SidebarProvider = ({
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<SidebarNode[]>([]);
   const [activeSearchIndex, setActiveSearchIndex] = useState<number>(0);
-  const [isSearching, startSearch] = useTransition();
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
+    const debounceTimeout = 300; // Adjust the debounce delay as needed
+    let timeoutId: NodeJS.Timeout;
+
     if (searchTerm) {
+      // Set isSearching to true when starting the search
+      setIsSearching(true);
+
       // callback to search the nodes
       const searchAction = () => {
         const results = nodesSearch(currentRoots, searchTerm, "dfs");
@@ -262,13 +267,19 @@ const SidebarProvider = ({
         if (results.length > 0) {
           openPathToNode(results[0].id);
         }
+        // Set isSearching to false after search completes
+        setIsSearching(false);
       };
 
-      // trigger the search
-      startSearch(searchAction);
+      // trigger the search with a debounce
+      timeoutId = setTimeout(searchAction, debounceTimeout);
     } else {
       setSearchResults([]);
+      setIsSearching(false); // Ensure isSearching is false if there's no search term
     }
+
+    // Cleanup the timeout on component unmount or when dependencies change
+    return () => clearTimeout(timeoutId);
   }, [currentRoots, searchTerm, openPathToNode]);
 
   useEffect(() => {
