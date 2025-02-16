@@ -22,6 +22,8 @@ import {
   StrandUpdateSource,
 } from "./types";
 
+const ENABLE_SYNC_DEBUG = false;
+
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
 };
@@ -47,6 +49,10 @@ export interface IPullResponderTransmitter extends ITransmitter {
 const STATIC_DEBUG_ID = `[PRT #static]`;
 
 function staticDebugLog(...data: any[]) {
+  if (!ENABLE_SYNC_DEBUG) {
+    return;
+  }
+
   if (data.length > 0 && typeof data[0] === "string") {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     console.log(`${STATIC_DEBUG_ID} ${data[0]}`, ...data.slice(1));
@@ -68,6 +74,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
   }
 
   private debugLog(...data: any[]) {
+    if (!ENABLE_SYNC_DEBUG) {
+      return;
+    }
+
     if (data.length > 0 && typeof data[0] === "string") {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));

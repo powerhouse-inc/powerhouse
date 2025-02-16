@@ -23,6 +23,8 @@ import {
 } from "../types";
 import { StrandUpdateSource } from "./transmitter/types";
 
+const ENABLE_SYNC_DEBUG = false;
+
 function debounce<T extends unknown[], R>(
   func: (...args: T) => Promise<R>,
   delay = 250,
@@ -72,6 +74,10 @@ export class ListenerManager implements IListenerManager {
   }
 
   private debugLog(...data: any[]) {
+    if (!ENABLE_SYNC_DEBUG) {
+      return;
+    }
+
     if (data.length > 0 && typeof data[0] === "string") {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
