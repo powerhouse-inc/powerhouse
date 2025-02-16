@@ -662,7 +662,15 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     for (const zodListener of drive.state.local.listeners) {
       const transmitter = this.transmitterFactory.instance(
         zodListener.callInfo?.transmitterType ?? "",
-        zodListener as any,
+        {
+          driveId,
+          listenerId: zodListener.listenerId,
+          block: zodListener.block,
+          filter: zodListener.filter,
+          system: zodListener.system,
+          label: zodListener.label || undefined,
+          callInfo: zodListener.callInfo || undefined,
+        },
         this,
       );
 
