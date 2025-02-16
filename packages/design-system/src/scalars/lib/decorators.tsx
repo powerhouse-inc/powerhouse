@@ -6,6 +6,8 @@ import { useState, useId } from "react";
 import { useCallback } from "react";
 import { useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
+import React from "react";
+import { Args, DecoratorFunction } from "@storybook/types";
 
 function _isValidRegex(pattern: unknown): boolean {
   try {
@@ -122,4 +124,31 @@ export const withForm: Decorator = (Story, context) => {
       )}
     </div>
   );
+};
+
+export const withTimestampsAsISOStrings: DecoratorFunction<any> = (
+  Story,
+  context,
+) => {
+  const { args } = context;
+
+  // Function to convert timestamps to Date objects
+  const convertTimestampsToDates = (args: Args) => {
+    const newArgs = { ...args };
+
+    // Iterate through all args properties
+    Object.keys(newArgs).forEach((key) => {
+      const value = newArgs[key] as unknown;
+
+      // If the value is a number and looks like a timestamp (milliseconds since 1970)
+      if (typeof value === "number" && value > 1609459200000) {
+        newArgs[key] = new Date(value).toISOString();
+      }
+    });
+
+    return newArgs;
+  };
+  const convertedArgs = convertTimestampsToDates(args);
+
+  return <Story {...context} args={convertedArgs} />;
 };

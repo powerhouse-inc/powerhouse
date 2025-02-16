@@ -1,7 +1,14 @@
+import { startOfDay } from "date-fns";
 import React, { useCallback, useMemo } from "react";
-import { DateFieldValue, WeekStartDayNumber } from "./types";
-import { format, isValid, parse, startOfDay } from "date-fns";
 import { createChangeEvent } from "../time-picker-field/utils";
+import { DateFieldValue, WeekStartDayNumber } from "./types";
+import {
+  formatDateToValue,
+  getDateFromValue,
+  isDateFormatAllowed,
+  parseInputString,
+} from "./utils";
+
 interface DatePickerFieldProps {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
@@ -26,10 +33,15 @@ export const useDatePickerField = ({
   autoClose = false,
 }: DatePickerFieldProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [inputDisplay, setInputDisplay] = React.useState<string | undefined>(
+    parseInputString(getDateFromValue(value ?? defaultValue ?? ""), dateFormat),
+  );
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    const changeEvent = createChangeEvent(newValue);
-    onChange?.(changeEvent);
+    const inputValue = e.target.value;
+    setInputDisplay(inputValue);
+    const newValue = formatDateToValue(inputValue);
+    onChange?.(createChangeEvent(newValue));
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -38,43 +50,20 @@ export const useDatePickerField = ({
 
   const handleDateSelect = useCallback(
     (date?: Date) => {
-      if (date && isValid(date)) {
-        const formattedDate = format(date, dateFormat ?? "yyyy-MM-dd");
-        const changeEvent = createChangeEvent(formattedDate);
-        onChange?.(changeEvent);
-      } else {
-        const changeEvent = createChangeEvent("");
-        onChange?.(changeEvent);
-      }
+      if (!date) return;
+      const stringDate = date.toISOString();
+      const stringDateFromValue = getDateFromValue(
+        stringDate as DateFieldValue,
+      );
+
+      const newInputValue = parseInputString(stringDateFromValue, dateFormat);
+      setInputDisplay(newInputValue);
+
+      const newValue = formatDateToValue(newInputValue);
+      onChange?.(createChangeEvent(newValue));
     },
     [dateFormat, onChange],
   );
-
-  const formatDate = React.useCallback(
-    (value: DateFieldValue): string => {
-      if (!value) return "";
-      if (typeof value === "string") {
-        return value;
-      }
-      if (typeof value === "number") {
-        const date = new Date(value);
-        if (isValid(date)) {
-          const newValue = format(date, dateFormat ?? "");
-          const changeEvent = createChangeEvent(newValue);
-          onChange?.(changeEvent);
-        }
-      }
-      if (typeof value === "object" && isValid(value)) {
-        return format(value, dateFormat ?? "");
-      }
-
-      return "";
-    },
-    [dateFormat, onChange],
-  );
-  const inputValue = formatDate(value ?? defaultValue ?? "").toUpperCase();
-  const parsedDate = parse(inputValue, dateFormat ?? "", new Date());
-  const date = isValid(parsedDate) ? parsedDate : undefined;
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -96,6 +85,7 @@ export const useDatePickerField = ({
             : undefined,
     [disablePastDates, disableFutureDates, today],
   );
+
   const weekStartDay = useMemo(() => {
     const days = [
       "sunday",
@@ -116,14 +106,33 @@ export const useDatePickerField = ({
       setIsOpen(false);
     }
   };
+
+  const date = useMemo(() => {
+    if (!value) return undefined;
+
+    const dateString = getDateFromValue(value);
+    const isValidDate = isDateFormatAllowed(dateString);
+    if (!isValidDate) return undefined;
+
+    const dateStringFormatted = parseInputString(dateString, "yyyy-MM-dd");
+    // Convert the local time to UTC
+    const fechaUTC = new Date(dateStringFormatted);
+    const fechaLocalSinZona = new Date(fechaUTC);
+    const offsetMinutos = fechaLocalSinZona.getTimezoneOffset();
+    fechaLocalSinZona.setTime(
+      fechaLocalSinZona.getTime() + offsetMinutos * 60 * 1000,
+    );
+
+    return fechaLocalSinZona;
+  }, [value]);
+
   return {
     date,
-    inputValue,
+    inputValue: inputDisplay,
     handleDateSelect,
     handleInputChange,
     isOpen,
     setIsOpen,
-    formatDate,
     handleBlur,
     disabledDates,
     weekStartDay,
