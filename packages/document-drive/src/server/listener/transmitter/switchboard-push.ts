@@ -6,9 +6,20 @@ import { ITransmitter, StrandUpdateSource } from "./types";
 
 export class SwitchboardPushTransmitter implements ITransmitter {
   private targetURL: string;
+  private debugID = `[SPT #${Math.floor(Math.random() * 999)}]`;
 
   constructor(targetURL: string) {
     this.targetURL = targetURL;
+  }
+
+  private debugLog(...data: any[]) {
+    if (data.length > 0 && typeof data[0] === "string") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(this.debugID, ...data);
+    }
   }
 
   async transmit(
@@ -19,6 +30,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       source.type === "trigger" &&
       source.trigger.data?.url === this.targetURL
     ) {
+      this.debugLog(`Cutting trigger loop from ${this.targetURL}.`);
       return strands.map((strand) => ({
         driveId: strand.driveId,
         documentId: strand.documentId,
