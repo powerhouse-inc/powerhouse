@@ -38,12 +38,29 @@ import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useDocumentDrives } from './useDocumentDrives';
 import { useUserPermissions } from './useUserPermissions';
 
+const ENABLE_SYNC_DEBUG = false;
+
 // TODO this should be added to the document model
 export interface SortOptions {
     afterNodePath?: string;
 }
 
 export function useDocumentDriveServer() {
+    const debugID = `[uDDS #${Math.floor(Math.random() * 999)}]`;
+    const debugLog = (...data: any[]) => {
+        if (!ENABLE_SYNC_DEBUG) {
+            return;
+        }
+
+        if (data.length > 0 && typeof data[0] === 'string') {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            console.log(`${debugID} ${data[0]}`, ...data.slice(1));
+        } else {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            console.log(debugID, ...data);
+        }
+    };
+
     const { isAllowedToCreateDocuments, isAllowedToEditDocuments } =
         useUserPermissions() || {
             isAllowedToCreateDocuments: false,
@@ -226,6 +243,9 @@ export function useDocumentDriveServer() {
             name?: string,
             parentFolder?: string,
         ) => {
+            debugLog(
+                `addFile(drive: ${drive}, name: ${name}, folder: ${parentFolder})`,
+            );
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
