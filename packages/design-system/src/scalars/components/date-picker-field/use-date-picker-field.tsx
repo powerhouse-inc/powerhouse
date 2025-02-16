@@ -92,7 +92,6 @@ export const useDatePickerField = ({
     const inputValue = e.target.value;
     setInputDisplay(inputValue);
     const newValue = formatDateToValue(inputValue);
-    console.log("newValue", newValue);
     onChange?.(createChangeEvent(newValue));
   };
 
