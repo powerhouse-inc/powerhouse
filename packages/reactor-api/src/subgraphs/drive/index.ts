@@ -28,6 +28,8 @@ import { Subgraph } from "../base";
 import { Context, SubgraphArgs } from "../types";
 import { Asset } from "./temp-hack-rwa-type-defs";
 
+const ENABLE_SYNC_DEBUG = false;
+
 const driveKindTypeNames: Record<string, string> = {
   file: "DocumentDrive_FileNode",
   folder: "DocumentDrive_FolderNode",
@@ -42,6 +44,10 @@ export class DriveSubgraph extends Subgraph {
   }
 
   private debugLog(...data: any[]) {
+    if (!ENABLE_SYNC_DEBUG) {
+      return;
+    }
+
     if (data.length > 0 && typeof data[0] === "string") {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));

@@ -4,6 +4,8 @@ import { logger } from "../../../utils/logger";
 import { ListenerRevision, StrandUpdate } from "../../types";
 import { ITransmitter, StrandUpdateSource } from "./types";
 
+const ENABLE_SYNC_DEBUG = false;
+
 export class SwitchboardPushTransmitter implements ITransmitter {
   private targetURL: string;
   private debugID = `[SPT #${Math.floor(Math.random() * 999)}]`;
@@ -13,6 +15,10 @@ export class SwitchboardPushTransmitter implements ITransmitter {
   }
 
   private debugLog(...data: any[]) {
+    if (!ENABLE_SYNC_DEBUG) {
+      return false;
+    }
+
     if (data.length > 0 && typeof data[0] === "string") {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
