@@ -6,8 +6,18 @@ export const ALLOWED_FORMATS = [
   "MMM-dd-yyyy",
 ];
 
-export const isFormatAllowed = (format: string) =>
-  ALLOWED_FORMATS.includes(format);
+export const isFormatAllowed = (dateString: string) =>
+  Object.values(dateFormatRegexes).some((regex) => regex.test(dateString));
+
+export const isDateFormatAllowed = (
+  dateString: string,
+  dateFormat?: string,
+) => {
+  if (!dateFormat) return isFormatAllowed(dateString);
+  const regex = dateFormatRegexes[dateFormat as keyof typeof dateFormatRegexes];
+  if (!regex) return false;
+  return regex.test(dateString);
+};
 
 export const dateFormatRegexes = {
   "yyyy-MM-dd": /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,

@@ -1,11 +1,13 @@
 import { AmountValue } from "../components/amount-field/types";
+import { getDateFromValue, parseInputString } from "../components/date-picker-field/use-date-picker-field";
 
 export type ValueCast =
   | "BigInt"
   | "Number"
   | "URLTrim"
   | "AmountNumber"
-  | "AmountBigInt";
+  | "AmountBigInt"
+  | "DateString";
 
 export const castFunctions: Record<ValueCast, (value: any) => any> = {
   BigInt: (value: string) => BigInt(value),
@@ -32,6 +34,13 @@ export const castFunctions: Record<ValueCast, (value: any) => any> = {
         currency: value.currency !== "" ? value.currency : null,
       };
     }
+  },
+  DateString: (value: string) => {
+    // console.log(">>>>>", value);
+    const date = getDateFromValue(value);
+    const newValue = parseInputString(date, "yyyy-MM-dd");
+    console.log(">>>>>", newValue);
+    return new Date(newValue).toISOString();
   },
 };
 

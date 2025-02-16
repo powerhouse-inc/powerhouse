@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
+import { withTimestampsAsISOStrings, withForm } from "@/scalars/lib/decorators";
 import { DatePickerField } from "./date-picker-field";
 import {
   getDefaultArgTypes,
@@ -13,7 +13,7 @@ const meta: Meta<typeof DatePickerField> = {
   parameters: {
     layout: "centered",
   },
-  decorators: [withForm],
+  decorators: [withForm, withTimestampsAsISOStrings],
   tags: ["autodocs"],
   argTypes: {
     ...getDefaultArgTypes({

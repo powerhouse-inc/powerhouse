@@ -1,6 +1,8 @@
-import { format, parse, isValid } from "date-fns";
+import { format } from "date-fns";
 import { DatePickerFieldProps } from "./date-picker-field";
-import { ALLOWED_FORMATS, dateFormatRegexes, isFormatAllowed } from "./utils";
+import { isDateFormatAllowed } from "./utils";
+import { getDateFromValue } from "./use-date-picker-field";
+import { DateFieldValue } from "./types";
 
 export const validateDatePicker =
   ({ minDate, maxDate, dateFormat }: DatePickerFieldProps) =>
@@ -8,37 +10,15 @@ export const validateDatePicker =
     if (value === "" || value === undefined) {
       return true;
     }
+    const stringDate = getDateFromValue(value as DateFieldValue);
+    const isValid = isDateFormatAllowed(stringDate, dateFormat);
 
-    if (dateFormat) {
-      if (!isFormatAllowed(dateFormat)) {
-        return `Invalid date format. Please use a valid format`;
-      }
-      const parsedDate = parse(value as string, dateFormat, new Date());
-      if (!isValid(parsedDate)) {
-        return `Invalid date. Please use a valid format`;
-      }
-    }
-    const isValidFormat = Object.values(dateFormatRegexes).some((regex) =>
-      regex.test(value as string),
-    );
-    if (!isValidFormat) {
-      return `Invalid date. Please use a valid format`;
+    if (!isValid) {
+      return `Invalid date format. Please use a valid format`;
     }
 
-    // Intentar con todos los formatos permitidos
-    let validDate: Date | null = null;
-    for (const format of ALLOWED_FORMATS) {
-      const attemptParse = parse(value as string, format, new Date());
-      if (isValid(attemptParse)) {
-        validDate = attemptParse;
-        break;
-      }
-    }
+    const validDate = new Date(value as string);
 
-    // Si ningún formato funcionó
-    if (!validDate) {
-      return `Invalid date. Please use a valid format`;
-    }
     if (minDate) {
       const minDateValue = new Date(minDate);
       if (validDate < minDateValue) {
