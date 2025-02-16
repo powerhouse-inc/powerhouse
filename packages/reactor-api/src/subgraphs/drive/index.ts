@@ -28,6 +28,11 @@ import { Subgraph } from "../base";
 import { Context } from "../types";
 import { Asset } from "./temp-hack-rwa-type-defs";
 
+const driveKindTypeNames: Record<string, string> = {
+  file: "DocumentDrive_FileNode",
+  folder: "DocumentDrive_FolderNode",
+};
+
 export class DriveSubgraph extends Subgraph {
   name = "d/:drive";
   typeDefs = gql`
@@ -199,7 +204,13 @@ export class DriveSubgraph extends Subgraph {
       drive: async (_: unknown, args: unknown, ctx: Context) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const drive = await this.reactor.getDrive(ctx.driveId);
-        return drive.state.global;
+        return {
+          ...drive.state.global,
+          nodes: drive.state.global.nodes.map((n) => ({
+            ...n,
+            __typename: driveKindTypeNames[n.kind] || "UnkownDriveNode",
+          })),
+        };
       },
       documents: async (_: unknown, args: unknown, ctx: Context) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
