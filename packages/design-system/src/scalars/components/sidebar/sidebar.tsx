@@ -102,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     pinnedNodePath,
     setNodes,
     openLevel,
+    togglePin,
     syncActiveNodeId,
     setActiveNodeChangeCallback,
   } = useSidebar();
@@ -132,6 +133,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setActiveNodeChangeCallback(onActiveNodeChange);
     }
   }, [onActiveNodeChange, setActiveNodeChangeCallback]);
+
+  // unpin nodes if allowPinning changes to false
+  useEffect(() => {
+    if (!allowPinning && pinnedNodePath.length > 0) {
+      togglePin(pinnedNodePath[pinnedNodePath.length - 1].id);
+    }
+  }, [allowPinning, pinnedNodePath, togglePin]);
 
   return (
     <aside
