@@ -1,7 +1,6 @@
 import { format } from "date-fns";
 import { DatePickerFieldProps } from "./date-picker-field";
-import { isDateFormatAllowed } from "./utils";
-import { getDateFromValue } from "./use-date-picker-field";
+import { getDateFromValue, isDateFormatAllowed } from "./utils";
 import { DateFieldValue } from "./types";
 
 export const validateDatePicker =

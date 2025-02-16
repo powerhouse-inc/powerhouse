@@ -1,11 +1,12 @@
-import { format, isValid, parse, startOfDay } from "date-fns";
+import { startOfDay } from "date-fns";
 import React, { useCallback, useMemo } from "react";
 import { createChangeEvent } from "../time-picker-field/utils";
 import { DateFieldValue, WeekStartDayNumber } from "./types";
 import {
-  ALLOWED_FORMATS,
-  dateFormatRegexes,
+  formatDateToValue,
+  getDateFromValue,
   isDateFormatAllowed,
+  parseInputString,
 } from "./utils";
 
 interface DatePickerFieldProps {
@@ -19,58 +20,6 @@ interface DatePickerFieldProps {
   weekStart?: string;
   autoClose?: boolean;
 }
-
-const splitDateTime = (
-  value: DateFieldValue,
-): { date: string; time: string } => {
-  const defaultResult = { date: "", time: "" };
-
-  if (!value) {
-    return defaultResult;
-  }
-
-  if (typeof value === "string") {
-    const [date, time] = value.split("T");
-    return { date, time };
-  }
-
-  if (isValid(value)) {
-    const dateString = value.toISOString();
-    const [date, time] = dateString.split("T");
-    return { date, time };
-  }
-
-  return defaultResult;
-};
-
-export const getDateFromValue = (value: DateFieldValue): string => {
-  const { date } = splitDateTime(value);
-  return date;
-};
-
-export const parseInputString = (
-  inputString: string,
-  dateFormat = ALLOWED_FORMATS[0],
-): string => {
-  if (!dateFormat || !inputString) return inputString;
-
-  for (const [formatStr, regex] of Object.entries(dateFormatRegexes)) {
-    if (regex.test(inputString)) {
-      const parsedDate = parse(inputString, formatStr, new Date());
-      if (isValid(parsedDate)) {
-        const newValue = format(parsedDate, dateFormat || formatStr);
-        return newValue;
-      }
-    }
-  }
-  return inputString;
-};
-
-const formatDateToValue = (inputString: string): string => {
-  // Add the time and the timezone to the date to split it later by T
-  const stringDate = `${inputString}T00:00-00:00`;
-  return stringDate;
-};
 
 export const useDatePickerField = ({
   value,
