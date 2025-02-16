@@ -5,6 +5,7 @@ import { ListenerRevision, StrandUpdate } from "../../types";
 import { ITransmitter, StrandUpdateSource } from "./types";
 
 const ENABLE_SYNC_DEBUG = false;
+const SYNC_OPS_BATCH_LIMIT = 10;
 
 export class SwitchboardPushTransmitter implements ITransmitter {
   private targetURL: string;
@@ -47,15 +48,18 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       }));
     }
 
-    const OPS_LIMIT = 50;
     const culledStrands: StrandUpdate[] = [];
     let opsCounter = 0;
 
-    for (let s = 0; opsCounter <= OPS_LIMIT && s < strands.length; s++) {
+    for (
+      let s = 0;
+      opsCounter <= SYNC_OPS_BATCH_LIMIT && s < strands.length;
+      s++
+    ) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       const currentStrand = strands[s] as StrandUpdate;
       const newOps = Math.min(
-        OPS_LIMIT - opsCounter,
+        SYNC_OPS_BATCH_LIMIT - opsCounter,
         currentStrand.operations.length,
       );
 

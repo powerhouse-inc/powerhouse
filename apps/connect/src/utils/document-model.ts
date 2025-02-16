@@ -174,17 +174,24 @@ export async function uploadDocumentOperations(
             }
             const { scope } = operation;
 
+            /*
+            TODO: check why the waitForUpdate promise does not resolve after the first iteration
+            if (options?.waitForSync) {
+                void pushOperations(drive, documentId, chunk);
+                await waitForUpdate(
+                    10000,
+                    documentId,
+                    scope,
+                    operation.index,
+                    reactor,
+                );
+            } else {
+                await pushOperations(drive, documentId, chunk);
+            }
+            */
+
             await pushOperations(drive, documentId, chunk);
 
-            if (!options?.waitForSync) {
-                continue;
-            }
-            await waitForUpdate(
-                10000,
-                documentId,
-                scope,
-                operation.index,
-                reactor,
             );
         }
     }

@@ -416,8 +416,6 @@ export class ListenerManager implements IListenerManager {
             }
           }
 
-          this.debugLog(`Updated listener state`, listenerState);
-
           for (const revision of listenerRevisions) {
             const error = revision.status === "ERROR";
             if (revision.error?.includes("Missing operations")) {
@@ -455,6 +453,12 @@ export class ListenerManager implements IListenerManager {
         }
       }
     }
+
+    this.debugLog(
+      `Returning listener updates (maxContinues: ${maxContinues})`,
+      listenerUpdates,
+    );
+
     return listenerUpdates;
   }
 
