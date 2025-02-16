@@ -102,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     pinnedNodePath,
     setNodes,
     openLevel,
+    togglePin,
     syncActiveNodeId,
     setActiveNodeChangeCallback,
   } = useSidebar();
@@ -118,7 +119,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (defaultLevel > 1) {
       openLevel(defaultLevel);
     }
-  }, [defaultLevel, openLevel]);
+    // openLevel can not be added as dependency because
+    // it will cause an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultLevel]);
 
   // sync activeNodeId and onActiveNodeChange with provider state
   useEffect(() => {
@@ -129,6 +133,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setActiveNodeChangeCallback(onActiveNodeChange);
     }
   }, [onActiveNodeChange, setActiveNodeChangeCallback]);
+
+  // unpin nodes if allowPinning changes to false
+  useEffect(() => {
+    if (!allowPinning && pinnedNodePath.length > 0) {
+      togglePin(pinnedNodePath[pinnedNodePath.length - 1].id);
+    }
+  }, [allowPinning, pinnedNodePath, togglePin]);
 
   return (
     <aside
