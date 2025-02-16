@@ -41,6 +41,34 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       }));
     }
 
+    const OPS_LIMIT = 50;
+    const culledStrands: StrandUpdate[] = [];
+    let opsCounter = 0;
+
+    for (let s = 0; opsCounter <= OPS_LIMIT && s < strands.length; s++) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      const currentStrand = strands[s] as StrandUpdate;
+      const newOps = Math.min(
+        OPS_LIMIT - opsCounter,
+        currentStrand.operations.length,
+      );
+
+      culledStrands.push({
+        ...currentStrand,
+        operations: currentStrand.operations.slice(0, newOps),
+      });
+
+      opsCounter += newOps;
+    }
+
+    this.debugLog(
+      ` Total update: [${strands.map((s) => s.operations.length).join(", ")}] operations`,
+    );
+
+    this.debugLog(
+      `Culled update: [${culledStrands.map((s) => s.operations.length).join(", ")}] operations`,
+    );
+
     // Send Graphql mutation to switchboard
     try {
       const { pushUpdates } = await requestGraphql<{
@@ -61,7 +89,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
           }
         `,
         {
-          strands: strands.map((strand) => ({
+          strands: culledStrands.map((strand) => ({
             ...strand,
             operations: strand.operations.map((op) => ({
               ...op,

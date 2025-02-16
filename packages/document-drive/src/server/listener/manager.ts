@@ -241,7 +241,17 @@ export class ListenerManager implements IListenerManager {
   private async _triggerUpdate(
     source: StrandUpdateSource,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
+    maxContinues = 500,
   ) {
+    this.debugLog(
+      `_triggerUpdate(source: ${source.type}, maxContinues: ${maxContinues})`,
+      this.listenerStateByDriveId,
+    );
+
+    if (maxContinues < 0) {
+      throw new Error("Maximum retries exhausted.");
+    }
+
     const listenerUpdates: ListenerUpdate[] = [];
 
     for (const [driveId, drive] of this.listenerStateByDriveId) {
@@ -349,6 +359,7 @@ export class ListenerManager implements IListenerManager {
           listenerState.listenerStatus = "PENDING";
 
           const lastUpdated = new Date().toISOString();
+          let continuationNeeded = false;
 
           for (const revision of listenerRevisions) {
             const syncUnit = syncUnits.find(
@@ -357,11 +368,40 @@ export class ListenerManager implements IListenerManager {
                 revision.scope === unit.scope &&
                 revision.branch === unit.branch,
             );
+
             if (syncUnit) {
               listenerState.syncUnits.set(syncUnit.syncId, {
                 lastUpdated,
                 listenerRev: revision.revision,
               });
+
+              // Check for revision status vv
+              const su = strandUpdates.find(
+                (su) =>
+                  su.driveId === revision.driveId &&
+                  su.documentId === revision.documentId &&
+                  su.scope === revision.scope &&
+                  su.branch === revision.branch,
+              );
+
+              if (su && su.operations.length > 0) {
+                const suIndex = su.operations[su.operations.length - 1].index;
+                if (suIndex !== revision.revision) {
+                  this.debugLog(
+                    `Revision still out-of-date for ${su.documentId}:${su.scope}:${su.branch} ${suIndex} <> ${revision.revision}`,
+                  );
+                  continuationNeeded = true;
+                } else {
+                  this.debugLog(
+                    `Revision match for ${su.documentId}:${su.scope}:${su.branch} ${suIndex}`,
+                  );
+                }
+              } else {
+                this.debugLog(
+                  `Cannot find strand update for (${revision.documentId}:${revision.scope}:${revision.branch} in drive ${revision.driveId})`,
+                );
+              }
+              // Check for revision status ^^
             } else {
               logger.warn(
                 `Received revision for untracked unit for listener ${listenerState.listener.listenerId}`,
@@ -375,23 +415,31 @@ export class ListenerManager implements IListenerManager {
           for (const revision of listenerRevisions) {
             const error = revision.status === "ERROR";
             if (revision.error?.includes("Missing operations")) {
-              const updates = await this._triggerUpdate(source, onError);
-              listenerUpdates.push(...updates);
-            } else {
-              listenerUpdates.push({
-                listenerId: listenerState.listener.listenerId,
-                listenerRevisions,
-              });
-              if (error) {
-                throw new OperationError(
-                  revision.status as ErrorStatus,
-                  undefined,
-                  revision.error,
-                  revision.error,
-                );
-              }
+              continuationNeeded = true;
+            } else if (error) {
+              throw new OperationError(
+                revision.status as ErrorStatus,
+                undefined,
+                revision.error,
+                revision.error,
+              );
             }
           }
+
+          if (!continuationNeeded) {
+            listenerUpdates.push({
+              listenerId: listenerState.listener.listenerId,
+              listenerRevisions,
+            });
+          } else {
+            const updates = await this._triggerUpdate(
+              source,
+              onError,
+              maxContinues - 1,
+            );
+            listenerUpdates.push(...updates);
+          }
+
           listenerState.listenerStatus = "SUCCESS";
         } catch (e) {
           // TODO: Handle error based on listener params (blocking, retry, etc)
