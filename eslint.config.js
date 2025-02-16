@@ -21,7 +21,12 @@ const reactRuleOverrides = {
     "react/no-unused-prop-types": "warn",
     "react/jsx-max-depth": "warn",
     "react/no-array-index-key": "warn",
-    "react/jsx-no-bind": "warn",
+    "react/jsx-no-bind": [
+      "warn",
+      {
+        ignoreDOMComponents: true,
+      },
+    ],
     "react/button-has-type": "warn",
     "react/hook-use-state": "warn",
     "react/jsx-no-useless-fragment": "warn",
@@ -108,6 +113,10 @@ export default tseslint.config(
       "**/create-require.js",
       ".nx/",
       "packages/document-drive/test/*",
+      "**/.vite/",
+      "**/out/",
+      "**/forge.config.js",
+      "**/vite.config.ts.timestamp-*.mjs",
     ],
   },
   {
@@ -166,5 +175,5 @@ export default tseslint.config(
       ...reactRuleOverrides.disabled,
       ...reactRuleOverrides.warn,
     },
-  }
+  },
 );

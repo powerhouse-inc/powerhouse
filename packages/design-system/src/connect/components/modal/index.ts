@@ -7,4 +7,5 @@ export * from "./delete-item-modal";
 export * from "./drive-settings-modal";
 export * from "./read-required-modal";
 export * from "./settings-modal";
+export * from "./settings-modal-v2";
 export * from "./upgrade-drive-modal";

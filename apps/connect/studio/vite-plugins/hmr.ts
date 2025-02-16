@@ -47,6 +47,24 @@ const handleExternalPackageEvents = (server: ViteDevServer) => {
 
     server.ws.on('studio:remove-external-package', (data, client) => {
         const { name } = data as { name: string };
-        console.log('Removing external package', name);
+        const uninstallProcess = exec(
+            `ph uninstall ${name}`,
+            {
+                cwd: process.cwd(),
+            },
+            error => {
+                if (error) {
+                    console.error(`\t[${name}]: ${error.message}`);
+                } else {
+                    server.ws.send('studio:external-package-removed', {
+                        name,
+                    });
+                }
+            },
+        );
+        uninstallProcess.stdout?.on('data', (data: Buffer) => {
+            console.log(`\t[${name}]: ${data.toString().trim()}`);
+        });
+        console.log('Removing external package:', name);
     });
 };

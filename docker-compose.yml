@@ -5,9 +5,12 @@ services:
     build:
       context: .
       dockerfile: ./apps/connect/Dockerfile
+      args:
+        BASE_PATH: "/"
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
       - REDIS_TLS_URL=redis://redis:6379
+      - BASE_PATH=/
     ports:
       - "127.0.0.1:8080:80"
   switchboard:

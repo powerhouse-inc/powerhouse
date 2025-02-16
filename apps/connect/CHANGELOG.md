@@ -1,3 +1,67 @@
+## 1.0.0-dev.200 (2025-02-14)
+
+### 🚀 Features
+
+- **connect:** load document model editor by default ([204c7f42](https://github.com/powerhouse-inc/powerhouse/commit/204c7f42))
+- **connect:** prevent reuse of editor components when changing between documents ([35e03fce](https://github.com/powerhouse-inc/powerhouse/commit/35e03fce))
+- testing prettier config and extension ([f62bc03d](https://github.com/powerhouse-inc/powerhouse/commit/f62bc03d))
+- adding initial benchmark for reactor import ([a34d51a6](https://github.com/powerhouse-inc/powerhouse/commit/a34d51a6))
+- **connect,design-system:** add immutable version of package manager ([de4b5ebe](https://github.com/powerhouse-inc/powerhouse/commit/de4b5ebe))
+- **connect:** added error message for missing package ([262555dc](https://github.com/powerhouse-inc/powerhouse/commit/262555dc))
+- **connect:** refactored settings modal ([49d64299](https://github.com/powerhouse-inc/powerhouse/commit/49d64299))
+- export id of external packages ([967f076b](https://github.com/powerhouse-inc/powerhouse/commit/967f076b))
+- **connect:** support removing external packages ([a9b1d59c](https://github.com/powerhouse-inc/powerhouse/commit/a9b1d59c))
+
+### 🩹 Fixes
+
+- **ph-cli:** review comments ([2536bb71](https://github.com/powerhouse-inc/powerhouse/commit/2536bb71))
+- **connect:** checks if hmr module is available before trying to import ([b14e9bed](https://github.com/powerhouse-inc/powerhouse/commit/b14e9bed))
+- **connect:** disabled editors setting ([4c1ba74b](https://github.com/powerhouse-inc/powerhouse/commit/4c1ba74b))
+- **connect:** set / as default base path ([4992a62d](https://github.com/powerhouse-inc/powerhouse/commit/4992a62d))
+- **connect:** use base path on build ([c62574c9](https://github.com/powerhouse-inc/powerhouse/commit/c62574c9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+
+## 1.0.0-dev.199 (2025-02-10)
+
+### 🚀 Features
+
+- **design-system:** add danger zone settings page ([572345bc](https://github.com/powerhouse-inc/powerhouse/commit/572345bc))
+
+### 🩹 Fixes
+
+- **reactor-api:** use pascal case for document model schema prefix ([835da67d](https://github.com/powerhouse-inc/powerhouse/commit/835da67d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
+## 1.0.3 (2025-02-10)
+
+### 🚀 Features
+
+- **design-system:** add danger zone settings page ([572345bc](https://github.com/powerhouse-inc/powerhouse/commit/572345bc))
+
+### 🩹 Fixes
+
+- **reactor-api:** use pascal case for document model schema prefix ([835da67d](https://github.com/powerhouse-inc/powerhouse/commit/835da67d))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model-libs to 1.131.2
+- Updated document-drive to 1.17.2
+- Updated @powerhousedao/design-system to 1.25.0
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
 ## 1.0.0-dev.196 (2025-01-29)
 
 ### 🚀 Features

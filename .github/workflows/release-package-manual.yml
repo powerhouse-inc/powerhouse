@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "The NPM tag to apply to the release"
+        description: "The NPM tag to apply to the release. Use 'latest' for Production release."
         required: false
         type: string
-        default: "latest"
+        default: "dev"
 
 env:
   NX_ISOLATE_PLUGINS: false
@@ -58,7 +58,15 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: pnpm nx release --projects='apps/connect,packages/*,clis/*' --skip-publish
+        run: pnpm nx release --projects='packages/*,clis/*' --skip-publish
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Update pkg version for Connect
+        run: pnpm nx release --projects='apps/connect' --skip-publish
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

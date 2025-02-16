@@ -15,20 +15,29 @@ type Story = StoryObj<typeof meta>;
 
 type Props = ComponentPropsWithoutRef<typeof PackageManager>;
 
+const baseArgs = {
+  reactor: "local-reactor",
+  reactorOptions: mockReactorOptions,
+  packages: mockPackages,
+  mutable: true,
+};
 export function PackageManagerWrapper(
-  args: Props = {
-    reactor: "local-reactor",
-    options: mockReactorOptions,
-    packages: mockPackages,
-  } as unknown as Props,
+  args: Pick<Props, "reactor" | "onReactorChange">,
 ) {
-  const { reactor, onReactorChange, ...rest } = args;
+  const finalArgs = { ...baseArgs, ...args };
+  const { reactor, onReactorChange, ...rest } = finalArgs;
   const [value, setValue] = useState(reactor ?? "");
+  const [packages, setPackages] = useState(finalArgs.packages);
   return (
     <PackageManager
       reactor={value}
       onReactorChange={(value) => (onReactorChange ?? setValue)(value ?? "")}
+      onInstall={() => {}}
+      onUninstall={(name) => {
+        setPackages((prev) => prev.filter((p) => p.id !== name));
+      }}
       {...rest}
+      packages={packages}
     />
   );
 }
@@ -60,3 +69,5 @@ export const WithError: Story = PackageManagerStoryWrapper({
       ),
     ),
 });
+
+export const Immutable: Story = PackageManagerStoryWrapper({ mutable: false });
