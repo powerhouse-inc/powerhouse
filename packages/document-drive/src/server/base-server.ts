@@ -475,6 +475,7 @@ export class BaseDocumentDriveServer
           filter: zodListener.filter,
           system: zodListener.system,
           label: zodListener.label ?? "",
+          callInfo: zodListener.callInfo ?? undefined,
         },
         this,
       );
@@ -489,6 +490,7 @@ export class BaseDocumentDriveServer
           scope: zodListener.filter.scope ?? [],
         },
         listenerId: zodListener.listenerId,
+        callInfo: zodListener.callInfo ?? undefined,
         system: zodListener.system,
         label: zodListener.label ?? "",
         transmitter,
@@ -1730,6 +1732,7 @@ export class BaseDocumentDriveServer
                 filter: zodListener.filter,
                 system: zodListener.system,
                 label: zodListener.label ?? "",
+                callInfo: zodListener.callInfo ?? undefined,
               },
               this,
             );
