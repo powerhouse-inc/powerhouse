@@ -1,14 +1,15 @@
-import {runAsapAsync } from "@utils/misc";
+import { setModelName } from "document-model";
 import { describe, expect, it } from "vitest";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { createDocument } from "../src/drive-document-model/gen/utils.js";
 import {
-    buildDocumentRevisionsFilter,
-    filterOperationsByRevision,
-    isAfterRevision,
-    isAtRevision,
-} from "@server/utils";
-import { RunAsap } from "@utils/run-asap";
-import { createDocument, reducer } from "@drive-document-model";
-import { setModelName } from "document-model/document-model";
+  buildDocumentRevisionsFilter,
+  filterOperationsByRevision,
+  isAfterRevision,
+  isAtRevision,
+} from "../src/server/utils.js";
+import { runAsapAsync } from "../src/utils/misc.js";
+import { RunAsap } from "../src/utils/run-asap.js";
 
 describe("utils", () => {
   it("should run setTimeout", async () => {

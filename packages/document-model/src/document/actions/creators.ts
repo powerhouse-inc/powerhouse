@@ -107,4 +107,4 @@ export const loadState = <S, T>(
   );
 
 export const noop = (scope: OperationScope = "global") =>
-  createAction<NOOPAction>("NOOP", {}, undefined, undefined, scope);
+  createAction<NOOPAction>("NOOP", undefined, undefined, undefined, scope);

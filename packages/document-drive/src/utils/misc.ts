@@ -20,9 +20,9 @@ export function isDocumentDrive(
 }
 
 export function mergeOperations<TGlobalState, TLocalState>(
-  currentOperations: DocumentOperations<TGlobalState, TLocalState>,
-  newOperations: Operation<TGlobalState, TLocalState>[],
-): DocumentOperations<TGlobalState, TLocalState> {
+  currentOperations: DocumentOperations,
+  newOperations: Operation[],
+): DocumentOperations {
   const minIndexByScope = Object.keys(currentOperations).reduce<
     Partial<Record<OperationScope, number>>
   >((acc, curr) => {
@@ -44,7 +44,7 @@ export function mergeOperations<TGlobalState, TLocalState>(
 
   return newOperations
     .sort((a, b) => a.index - b.index)
-    .reduce<DocumentOperations<TGlobalState, TLocalState>>((acc, curr) => {
+    .reduce<DocumentOperations>((acc, curr) => {
       const existingOperations = acc[curr.scope] || [];
       return { ...acc, [curr.scope]: [...existingOperations, curr] };
     }, currentOperations);
@@ -54,9 +54,9 @@ export function generateUUID(): string {
   return generateId();
 }
 
-export function isNoopUpdate<TGlobalState, TLocalState>(
-  operation: Operation<TGlobalState, TLocalState>,
-  latestOperation?: Operation<TGlobalState, TLocalState>,
+export function isNoopUpdate(
+  operation: Operation,
+  latestOperation?: Operation,
 ) {
   if (!latestOperation) {
     return false;

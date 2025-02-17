@@ -14,7 +14,7 @@ export interface DocumentDriveNodeOperations {
   addFileOperation: (
     state: DocumentDriveState,
     action: AddFileAction,
-    dispatch?: SignalDispatch
+    dispatch?: SignalDispatch,
   ) => void;
   addFolderOperation: (
     state: DocumentDriveState,

@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { prune, redo, undo } from "../../src/document/actions/creators.js";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
-import { countReducer, setLocalName, wrappedEmptyReducer } from "../helpers.js";
+import {
+  CountLocalState,
+  countReducer,
+  CountState,
+  setLocalName,
+  wrappedEmptyReducer,
+} from "../helpers.js";
 
 describe("Local reducer", () => {
   beforeAll(() => {
@@ -118,7 +124,7 @@ describe("Local reducer", () => {
   });
 
   it("should undo local operation", async () => {
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

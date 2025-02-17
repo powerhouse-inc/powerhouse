@@ -5,12 +5,15 @@
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./powerhouse": "./dist/powerhouse.js",
-    "./tailwind": "./dist/tailwind.js"
+    "./powerhouse": {
+      "types": "./dist/src/powerhouse.d.ts",
+      "import": "./dist/src/powerhouse.js"
+    },
+    "./tailwind": {
+      "types": "./dist/src/tailwind.d.ts",
+      "import": "./dist/src/tailwind.js"
+    }
   },
   "publishConfig": {
     "access": "public"
@@ -21,11 +24,12 @@
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsc --build",
     "clean": "rimraf dist/",
     "clean:node_modules": "rimraf node_modules"
   },
   "dependencies": {
-    "@microsoft/api-extractor": "^7.48.1"
+    "@microsoft/api-extractor": "^7.48.1",
+    "tailwindcss": "^3.4.16"
   }
 }

@@ -1,5 +1,5 @@
 import { paramCase } from "change-case";
-import { DocumentModelState } from "document-model/document-model";
+import { DocumentModelState } from "document-model";
 
 export type Args = {
   documentModel: string;

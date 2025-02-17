@@ -1,13 +1,8 @@
 import fs from "fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  ImmutableStateReducer,
-  MutableStateReducer,
-} from "../../src/document/types.js";
-import {
   baseCreateDocument,
   createReducer,
-  createUnsafeReducer,
   replayDocument,
 } from "../../src/document/utils/base.js";
 import {
@@ -21,8 +16,6 @@ import {
 } from "../../src/document/utils/node.js";
 import { validateOperations } from "../../src/document/utils/validation.js";
 import {
-  baseCountReducer,
-  CountAction,
   CountLocalState,
   countReducer,
   CountState,
@@ -166,7 +159,7 @@ describe("Base utils", () => {
   });
 
   it("should replay document and keep lastModified timestamp", async () => {
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -187,41 +180,9 @@ describe("Base utils", () => {
     );
   });
 
-  it("should mutate state on unsafeReducer", () => {
-    const unsafeReducer = createUnsafeReducer(
-      baseCountReducer as MutableStateReducer<
-        CountState,
-        CountLocalState,
-        CountAction
-      >,
-    );
-    const document = baseCreateDocument({
-      documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
-
-    const newDocument = countReducer(document, increment());
-    expect(newDocument.state.global.count).toBe(1);
-    expect(document.state.global.count).toBe(0);
-
-    const unsafeDocument = baseCreateDocument({
-      documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
-    const newUnsafeDocument = unsafeReducer(unsafeDocument, increment());
-    expect(newUnsafeDocument.state.global.count).toBe(1);
-    expect(unsafeDocument.state.global.count).toBe(1);
-  });
-
   it("should work with mutable reducer", () => {
-    const reducer = createReducer(
-      mutableCountReducer as ImmutableStateReducer<
-        CountState,
-        CountLocalState,
-        CountAction
-      >,
-    );
-    const document = baseCreateDocument({
+    const reducer = createReducer(mutableCountReducer);
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

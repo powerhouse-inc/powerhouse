@@ -21,7 +21,7 @@ import {
   ListenerFilter,
 } from "document-model-libs/document-drive";
 import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import { module as DocumentModelLib } from "document-model";
 import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";

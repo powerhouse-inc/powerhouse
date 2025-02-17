@@ -1,8 +1,9 @@
 import stringifyJson from "safe-stable-stringify";
 import {
-  Action,
   ActionSigner,
   BaseDocument,
+  CustomAction,
+  DefaultAction,
   Operation,
   OperationSignatureContext,
   OperationSigningHandler,
@@ -25,17 +26,12 @@ export function getUnixTimestamp(date: Date | string): string {
   return (new Date(date).getTime() / 1000).toFixed(0);
 }
 
-export function buildOperationSignatureParams<TGlobalState, TLocalState>({
+export function buildOperationSignatureParams({
   documentId,
   signer,
   operation,
   previousStateHash,
-}: OperationSignatureContext<TGlobalState, TLocalState>): [
-  string,
-  string,
-  string,
-  string,
-] {
+}: OperationSignatureContext): [string, string, string, string] {
   const { timestamp, scope, id, type } = operation;
   return [
     getUnixTimestamp(timestamp), // timestamp,
@@ -73,8 +69,8 @@ export function hex2ab(hex: string) {
   );
 }
 
-export async function buildOperationSignature<TGlobalState, TLocalState>(
-  context: OperationSignatureContext<TGlobalState, TLocalState>,
+export async function buildOperationSignature(
+  context: OperationSignatureContext,
   signMethod: OperationSigningHandler,
 ): Promise<Signature> {
   const params = buildOperationSignatureParams(context);
@@ -83,14 +79,15 @@ export async function buildOperationSignature<TGlobalState, TLocalState>(
   return [...params, `0x${ab2hex(signature)}`];
 }
 
-export async function buildSignedOperation<TGlobalState, TLocalState>(
-  action: Action,
-  reducer: Reducer<TGlobalState, TLocalState, Action>,
+export async function buildSignedOperation<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
+  action: TCustomAction | DefaultAction | Operation,
+  reducer: Reducer<TGlobalState, TLocalState, TCustomAction>,
   document: BaseDocument<TGlobalState, TLocalState>,
-  context: Omit<
-    OperationSignatureContext<TGlobalState, TLocalState>,
-    "operation" | "previousStateHash"
-  >,
+  context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,
   signHandler: OperationSigningHandler,
 ) {
   const result = reducer(document, action, undefined, {
@@ -122,7 +119,7 @@ export async function buildSignedOperation<TGlobalState, TLocalState>(
         signatures: [...(context.signer.signatures ?? []), signature],
       },
     },
-  } as Operation<TGlobalState, TLocalState>;
+  } as Operation;
 }
 
 export async function verifyOperationSignature(

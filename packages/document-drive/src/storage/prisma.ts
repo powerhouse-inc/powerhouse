@@ -29,11 +29,11 @@ type Transaction =
     >
   | ExtendedPrismaClient;
 
-function storageToOperation<TGlobalState, TLocalState>(
+function storageToOperation(
   op: Prisma.$OperationPayload["scalars"] & {
     attachments?: AttachmentInput[];
   },
-): Operation<TGlobalState, TLocalState> {
+): Operation {
   const operation = {
     id: op.opId || undefined,
     skip: op.skip,
@@ -47,7 +47,7 @@ function storageToOperation<TGlobalState, TLocalState>(
       ? op.resultingState.toString()
       : undefined,
     attachments: op.attachments,
-  } as Operation<TGlobalState, TLocalState>;
+  } as Operation;
   if (op.context) {
     operation.context = op.context as Prisma.JsonObject;
   }
@@ -130,7 +130,7 @@ export class PrismaStorage implements IDriveStorage {
   async addDriveOperationsWithTransaction<TGlobalState, TLocalState>(
     drive: string,
     callback: (document: DocumentDriveDocument) => Promise<{
-      operations: Operation<TGlobalState, TLocalState>[];
+      operations: Operation[];
       header: DocumentHeader;
     }>,
   ) {
@@ -170,7 +170,7 @@ export class PrismaStorage implements IDriveStorage {
     tx: Transaction,
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
     try {
@@ -270,13 +270,13 @@ export class PrismaStorage implements IDriveStorage {
     drive: string,
     id: string,
     callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
-      operations: Operation<TGlobalState, TLocalState>[];
+      operations: Operation[];
       header: DocumentHeader;
       newState?: BaseState<TGlobalState, TLocalState> | undefined;
     }>,
   ) {
     let result: {
-      operations: Operation<TGlobalState, TLocalState>[];
+      operations: Operation[];
       header: DocumentHeader;
       newState?: BaseState<TGlobalState, TLocalState> | undefined;
     } | null = null;
@@ -310,7 +310,7 @@ export class PrismaStorage implements IDriveStorage {
   async addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
     return this._addDocumentOperations(this.db, drive, id, operations, header);
@@ -439,9 +439,7 @@ export class PrismaStorage implements IDriveStorage {
     // TODO add attachments from cached operations
     const fileRegistry: FileRegistry = {};
 
-    const operationsByScope = queryOperations.reduce<
-      DocumentOperations<TGlobalState, TLocalState>
-    >(
+    const operationsByScope = queryOperations.reduce<DocumentOperations>(
       (acc, operation) => {
         const scope = operation.scope as OperationScope;
         if (!acc[scope]) {
@@ -454,10 +452,10 @@ export class PrismaStorage implements IDriveStorage {
         result.attachments.forEach(({ hash, ...file }) => {
           fileRegistry[hash] = file;
         });
-        acc[scope].push(result as Operation<TGlobalState, TLocalState>);
+        acc[scope].push(result as Operation);
         return acc;
       },
-      cachedOperations as DocumentOperations<TGlobalState, TLocalState>,
+      cachedOperations as DocumentOperations,
     );
 
     const dbDoc = result;

@@ -1,8 +1,7 @@
-import { describe, expect, it } from "vitest";
-
+import { split } from "change-case";
 import { Operation } from "document-model";
-import { split } from "../../src/utils/document-helpers";
-import { buildOperation, buildOperations } from "./utils";
+import { describe, expect, it } from "vitest";
+import { buildOperation, buildOperations } from "../utils.js";
 
 describe("split", () => {
   const scenarios = [

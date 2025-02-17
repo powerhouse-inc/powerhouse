@@ -1,7 +1,7 @@
 import type {
   Operation,
   Module as TModule,
-} from "document-model/document-model";
+} from "document-model";
 
 import { Icon } from "@powerhousedao/design-system";
 import { ModuleForm } from "./module-form.js";

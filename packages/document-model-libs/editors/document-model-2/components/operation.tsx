@@ -1,4 +1,4 @@
-import type { Module, Operation } from "document-model/document-model";
+import type { Module, Operation } from "document-model";
 import { GraphqlEditor } from "./code-editors/graphql-editor.js";
 import { OperationDescriptionForm } from "./operation-description-form.js";
 import { OperationErrors } from "./operation-errors.js";

@@ -1,63 +1,63 @@
+import { DocumentModelAction } from "../../document-model/gen/actions.js";
 import {
   DocumentModelLocalState,
   DocumentModelState,
 } from "../../document-model/gen/types.js";
-import { DocumentModelAction } from "../../document-model/gen/actions.js";
+import { StateReducer as TStateReducer } from "../../document/types.js";
+import { createReducer, isDocumentAction } from "../../document/utils/base.js";
 import { reducer as HeaderReducer } from "../custom/reducers/header.js";
-import { reducer as VersioningReducer } from "../custom/reducers/versioning.js";
 import { reducer as ModuleReducer } from "../custom/reducers/module.js";
 import { reducer as OperationErrorReducer } from "../custom/reducers/operation-error.js";
 import { reducer as OperationExampleReducer } from "../custom/reducers/operation-example.js";
 import { reducer as OperationReducer } from "../custom/reducers/operation.js";
 import { reducer as StateReducer } from "../custom/reducers/state.js";
-import { isDocumentAction, createReducer } from "../../document/utils/base.js";
+import { reducer as VersioningReducer } from "../custom/reducers/versioning.js";
 import {
-  SetModelNameInputSchema,
-  SetModelIdInputSchema,
-  SetModelExtensionInputSchema,
-  SetModelDescriptionInputSchema,
+  AddChangeLogItemInputSchema,
+  AddModuleInputSchema,
+  AddOperationErrorInputSchema,
+  AddOperationExampleInputSchema,
+  AddOperationInputSchema,
+  AddStateExampleInputSchema,
+  DeleteChangeLogItemInputSchema,
+  DeleteModuleInputSchema,
+  DeleteOperationErrorInputSchema,
+  DeleteOperationExampleInputSchema,
+  DeleteOperationInputSchema,
+  DeleteStateExampleInputSchema,
+  MoveOperationInputSchema,
+  ReorderChangeLogItemsInputSchema,
+  ReorderModuleOperationsInputSchema,
+  ReorderModulesInputSchema,
+  ReorderOperationErrorsInputSchema,
+  ReorderOperationExamplesInputSchema,
+  ReorderStateExamplesInputSchema,
   SetAuthorNameInputSchema,
   SetAuthorWebsiteInputSchema,
-  AddChangeLogItemInputSchema,
-  UpdateChangeLogItemInputSchema,
-  DeleteChangeLogItemInputSchema,
-  ReorderChangeLogItemsInputSchema,
-  AddModuleInputSchema,
-  SetModuleNameInputSchema,
-  SetModuleDescriptionInputSchema,
-  DeleteModuleInputSchema,
-  ReorderModulesInputSchema,
-  AddOperationErrorInputSchema,
-  SetOperationErrorCodeInputSchema,
-  SetOperationErrorNameInputSchema,
-  SetOperationErrorDescriptionInputSchema,
-  SetOperationErrorTemplateInputSchema,
-  DeleteOperationErrorInputSchema,
-  ReorderOperationErrorsInputSchema,
-  AddOperationExampleInputSchema,
-  UpdateOperationExampleInputSchema,
-  DeleteOperationExampleInputSchema,
-  ReorderOperationExamplesInputSchema,
-  AddOperationInputSchema,
-  SetOperationNameInputSchema,
-  SetOperationScopeInputSchema,
-  SetOperationSchemaInputSchema,
-  SetOperationDescriptionInputSchema,
-  SetOperationTemplateInputSchema,
-  SetOperationReducerInputSchema,
-  MoveOperationInputSchema,
-  DeleteOperationInputSchema,
-  ReorderModuleOperationsInputSchema,
-  SetStateSchemaInputSchema,
   SetInitialStateInputSchema,
-  AddStateExampleInputSchema,
+  SetModelDescriptionInputSchema,
+  SetModelExtensionInputSchema,
+  SetModelIdInputSchema,
+  SetModelNameInputSchema,
+  SetModuleDescriptionInputSchema,
+  SetModuleNameInputSchema,
+  SetOperationDescriptionInputSchema,
+  SetOperationErrorCodeInputSchema,
+  SetOperationErrorDescriptionInputSchema,
+  SetOperationErrorNameInputSchema,
+  SetOperationErrorTemplateInputSchema,
+  SetOperationNameInputSchema,
+  SetOperationReducerInputSchema,
+  SetOperationSchemaInputSchema,
+  SetOperationScopeInputSchema,
+  SetOperationTemplateInputSchema,
+  SetStateSchemaInputSchema,
+  UpdateChangeLogItemInputSchema,
+  UpdateOperationExampleInputSchema,
   UpdateStateExampleInputSchema,
-  DeleteStateExampleInputSchema,
-  ReorderStateExamplesInputSchema,
 } from "./schema/zod.js";
-import { ImmutableStateReducer } from "../../document/types.js";
 
-export const stateReducer: ImmutableStateReducer<
+export const stateReducer: TStateReducer<
   DocumentModelState,
   DocumentModelLocalState,
   DocumentModelAction
@@ -157,7 +157,7 @@ export const stateReducer: ImmutableStateReducer<
       SetOperationErrorCodeInputSchema().parse(action.input);
       OperationErrorReducer.setOperationErrorCodeOperation(
         state.global,
-        action
+        action,
       );
       break;
 
@@ -165,7 +165,7 @@ export const stateReducer: ImmutableStateReducer<
       SetOperationErrorNameInputSchema().parse(action.input);
       OperationErrorReducer.setOperationErrorNameOperation(
         state.global,
-        action
+        action,
       );
       break;
 
@@ -173,7 +173,7 @@ export const stateReducer: ImmutableStateReducer<
       SetOperationErrorDescriptionInputSchema().parse(action.input);
       OperationErrorReducer.setOperationErrorDescriptionOperation(
         state.global,
-        action
+        action,
       );
       break;
 
@@ -181,7 +181,7 @@ export const stateReducer: ImmutableStateReducer<
       SetOperationErrorTemplateInputSchema().parse(action.input);
       OperationErrorReducer.setOperationErrorTemplateOperation(
         state.global,
-        action
+        action,
       );
       break;
 
@@ -194,7 +194,7 @@ export const stateReducer: ImmutableStateReducer<
       ReorderOperationErrorsInputSchema().parse(action.input);
       OperationErrorReducer.reorderOperationErrorsOperation(
         state.global,
-        action
+        action,
       );
       break;
 
@@ -202,7 +202,7 @@ export const stateReducer: ImmutableStateReducer<
       AddOperationExampleInputSchema().parse(action.input);
       OperationExampleReducer.addOperationExampleOperation(
         state.global,
-        action
+        action,
       );
       break;
 
@@ -210,7 +210,7 @@ export const stateReducer: ImmutableStateReducer<
       UpdateOperationExampleInputSchema().parse(action.input);
       OperationExampleReducer.updateOperationExampleOperation(
         state.global,
-        action
+        action,
       );
       break;
 
@@ -218,7 +218,7 @@ export const stateReducer: ImmutableStateReducer<
       DeleteOperationExampleInputSchema().parse(action.input);
       OperationExampleReducer.deleteOperationExampleOperation(
         state.global,
-        action
+        action,
       );
       break;
 
@@ -226,7 +226,7 @@ export const stateReducer: ImmutableStateReducer<
       ReorderOperationExamplesInputSchema().parse(action.input);
       OperationExampleReducer.reorderOperationExamplesOperation(
         state.global,
-        action
+        action,
       );
       break;
 

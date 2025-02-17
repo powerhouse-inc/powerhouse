@@ -1,10 +1,10 @@
-import { ImmutableStateReducer, utils } from "document-model";
-import { ScopeFrameworkState, ScopeFrameworkLocalState } from "./types";
+import { StateReducer, utils } from "document-model";
 import { ScopeFrameworkAction } from "./actions.js";
+import { ScopeFrameworkLocalState, ScopeFrameworkState } from "./types";
 
 import { reducer as MainReducer } from "../src/reducers/main";
 
-const stateReducer: ImmutableStateReducer<
+const stateReducer: StateReducer<
   ScopeFrameworkState,
   ScopeFrameworkAction,
   ScopeFrameworkLocalState

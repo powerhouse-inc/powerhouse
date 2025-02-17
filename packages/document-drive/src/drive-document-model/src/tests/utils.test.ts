@@ -214,13 +214,6 @@ describe("DocumentDrive Utils", () => {
         name: "",
         nodes: [],
         slug: null,
-        author: {
-          name: "",
-          website: "",
-        },
-        description: "",
-        extension: "",
-        specifications: [],
       };
       const id = generateSynchronizationUnitId(state.nodes);
       expect(validate(id)).toBe(true);
@@ -233,13 +226,6 @@ describe("DocumentDrive Utils", () => {
         name: "",
         nodes: [],
         slug: null,
-        author: {
-          name: "",
-          website: "",
-        },
-        description: "",
-        extension: "",
-        specifications: [],
       };
       const units = generateSynchronizationUnits(state, ["global", "local"]);
       expect(units).toStrictEqual([

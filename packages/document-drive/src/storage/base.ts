@@ -27,7 +27,7 @@ abstract class BaseStorage implements IStorage {
   abstract addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     header: DocumentHeader,
   ): Promise<void>;
 
@@ -35,7 +35,7 @@ abstract class BaseStorage implements IStorage {
     drive: string,
     id: string,
     callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
-      operations: Operation<TGlobalState, TLocalState>[];
+      operations: Operation[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;

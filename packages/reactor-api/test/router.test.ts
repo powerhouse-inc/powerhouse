@@ -1,7 +1,7 @@
 import { DocumentDriveServer } from "document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import { module as DocumentModelLib } from "document-model";
 import express from "express";
 import { SubgraphManager } from "src";
 import { getDbClient } from "src/utils/db";

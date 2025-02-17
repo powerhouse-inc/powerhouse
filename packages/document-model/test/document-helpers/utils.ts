@@ -1,16 +1,14 @@
 import { Operation } from "../../src/document/types.js";
 
-export type InputOperation<TGlobalState, TLocalState> = Partial<
-  Omit<Operation<TGlobalState, TLocalState>, "index" | "skip">
-> & {
+export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;
   skip: number;
 };
 
-export const buildOperation = <TGlobalState, TLocalState>(
-  input: InputOperation<TGlobalState, TLocalState>,
+export const buildOperation = (
+  input: InputOperation,
   shuffled = false,
-): Operation<TGlobalState, TLocalState> => {
+): Operation => {
   if (shuffled) {
     return {
       scope: "global",
@@ -19,7 +17,7 @@ export const buildOperation = <TGlobalState, TLocalState>(
       input: {},
       hash: `hash-${input.index}`,
       ...input,
-    } as Operation<TGlobalState, TLocalState>;
+    } as Operation;
   }
 
   return {
@@ -29,11 +27,10 @@ export const buildOperation = <TGlobalState, TLocalState>(
     scope: "global",
     type: "TEST",
     ...input,
-  } as Operation<TGlobalState, TLocalState>;
+  } as Operation;
 };
 
-export const buildOperations = <TGlobalState, TLocalState>(
-  inputs: InputOperation<TGlobalState, TLocalState>[],
+export const buildOperations = (
+  inputs: InputOperation[],
   shuffled = false,
-): Operation<TGlobalState, TLocalState>[] =>
-  inputs.map((i) => buildOperation(i, shuffled));
+): Operation[] => inputs.map((i) => buildOperation(i, shuffled));

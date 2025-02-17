@@ -96,9 +96,7 @@ describe("groupOperationsByScope", () => {
   it.each(scenarios)(
     "should group operations by scope: $title",
     (testInput) => {
-      const operations = buildOperations(
-        testInput.operations as Operation<unknown, unknown>[],
-      );
+      const operations = buildOperations(testInput.operations as Operation[]);
 
       const result = groupOperationsByScope(operations);
 

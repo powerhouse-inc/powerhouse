@@ -1,4 +1,4 @@
-import type { Operation } from "document-model/document-model";
+import type { Operation } from "document-model";
 import { useEffect, useRef } from "react";
 import { TextField } from "./text-field.js";
 

@@ -1,22 +1,18 @@
-import * as DocumentDrive from "@drive-document-model";
-import { Operation, PrismaClient } from "@prisma/client";
-import { module as DocumentModelLib, DocumentModelModule } from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+import { PrismaClient } from "@prisma/client";
+import { DocumentModelModule, Operation } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import InMemoryCache from "../../src/cache/memory.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { PullResponderTransmitter } from "../../src/server/listener/transmitter/pull-responder.js";
+import { MemoryStorage } from "../../src/storage/memory.js";
+import { PrismaStorage } from "../../src/storage/prisma.js";
+import { generateUUID } from "../../src/utils/misc.js";
 import {
-    DocumentDriveServer,
-    PullResponderTransmitter,
-    generateUUID,
-} from "../src";
-import InMemoryCache from "../src/cache/memory";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaStorage } from "../src/storage/prisma";
-import {
-    buildOperation,
-    buildOperations,
-    expectUTCTimestamp,
-    expectUUID,
-} from "./utils";
+  buildOperation,
+  buildOperations,
+  expectUTCTimestamp,
+  expectUUID,
+} from "../utils.js";
 
 describe("Synchronization Units", () => {
   const documentModels = [

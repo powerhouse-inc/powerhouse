@@ -1,11 +1,11 @@
 import { pascalCase } from "change-case";
 import {
-  Action,
   BaseDocument,
+  CustomAction,
   DocumentModelModule,
+  DocumentModelState,
   Operation,
 } from "document-model";
-import { DocumentModelState } from "document-model/document-model";
 import {
   BuildSchemaOptions,
   GraphQLError,
@@ -173,7 +173,7 @@ export type DocumentGraphQLResult<TGlobalState, TLocalState> = BaseDocument<
   TGlobalState,
   TLocalState
 > & {
-  operations: (Operation<TGlobalState, TLocalState> & {
+  operations: (Operation & {
     inputText: string;
   })[];
 };
@@ -181,7 +181,7 @@ export type DocumentGraphQLResult<TGlobalState, TLocalState> = BaseDocument<
 export async function fetchDocument<
   TGlobalState,
   TLocalState,
-  TAction extends Action,
+  TAction extends CustomAction = never,
 >(
   url: string,
   documentId: string,

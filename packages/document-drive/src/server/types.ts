@@ -1,7 +1,6 @@
 import {
   Action,
   ActionContext,
-  BaseAction,
   BaseDocument,
   BaseState,
   CreateChildDocumentInput,
@@ -66,18 +65,24 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
   accessLevel?: RemoteDriveAccessLevel;
 };
 
-export type CreateDocumentInput<TGlobalState, TLocalState> =
-  CreateChildDocumentInput<TGlobalState, TLocalState>;
+export type CreateDocumentInput<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+> = CreateChildDocumentInput<TGlobalState, TLocalState>;
 
 export type SignalResult = {
-  signal: Signal<DocumentDriveState, DocumentDriveLocalState>;
+  signal: Signal;
   result: unknown; // infer from return types on document-model
 };
 
-export type IOperationResult<TGlobalState, TLocalState> = {
+export type IOperationResult<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+  TOperation extends Operation<Action> = Operation,
+> = {
   status: UpdateStatus;
-  error?: OperationError<TGlobalState, TLocalState>;
-  operations: Operation<TGlobalState, TLocalState>[];
+  error?: OperationError;
+  operations: TOperation[];
   document: BaseDocument<TGlobalState, TLocalState> | undefined;
   signals: SignalResult[];
 };
@@ -369,106 +374,106 @@ export interface IBaseDocumentDriveServer {
     options?: GetDocumentOptions,
   ): Promise<BaseDocument<TGlobalState, TLocalState>>;
 
-  addOperation<TGlobalState, TLocalState>(
+  addOperation(
     driveId: string,
     documentId: string,
-    operation: Operation<TGlobalState, TLocalState>,
+    operation: Operation,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>>;
+  ): Promise<IOperationResult>;
 
-  addOperations<TGlobalState, TLocalState>(
+  addOperations(
     driveId: string,
     documentId: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>>;
+  ): Promise<IOperationResult>;
 
-  queueOperation<TGlobalState, TLocalState>(
+  queueOperation(
     driveId: string,
     documentId: string,
-    operation: Operation<TGlobalState, TLocalState>,
+    operation: Operation,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>>;
+  ): Promise<IOperationResult>;
 
-  queueOperations<TGlobalState, TLocalState>(
+  queueOperations(
     driveId: string,
     documentId: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>>;
+  ): Promise<IOperationResult>;
 
-  queueAction<TGlobalState, TLocalState>(
+  queueAction(
     driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>>;
+  ): Promise<IOperationResult>;
 
-  queueActions<TGlobalState, TLocalState>(
+  queueActions(
     driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>>;
+  ): Promise<IOperationResult>;
 
   addDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveState, DocumentDriveLocalState>,
+    operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
+  ): Promise<IOperationResult>;
   addDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
+  ): Promise<IOperationResult>;
 
   queueDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveState, DocumentDriveLocalState>,
+    operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
+  ): Promise<IOperationResult>;
 
   queueDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
 
   queueDriveAction(
     driveId: string,
-    action: DocumentDriveAction | BaseAction,
+    action: DocumentDriveAction,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
+  ): Promise<IOperationResult>;
 
   queueDriveActions(
     driveId: string,
-    actions: Array<DocumentDriveAction | BaseAction>,
+    actions: DocumentDriveAction[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
+  ): Promise<IOperationResult>;
 
-  addAction<TGlobalState, TLocalState>(
+  addAction(
     driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>>;
-  addActions<TGlobalState, TLocalState>(
+  ): Promise<IOperationResult>;
+  addActions(
     driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>>;
+  ): Promise<IOperationResult>;
 
   addDriveAction(
     driveId: string,
-    action: DocumentDriveAction | BaseAction,
+    action: DocumentDriveAction,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
+  ): Promise<IOperationResult>;
   addDriveActions(
     driveId: string,
-    actions: (DocumentDriveAction | BaseAction)[],
+    actions: DocumentDriveAction[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
+  ): Promise<IOperationResult>;
 
   getSyncStatus(
     syncUnitId: string,

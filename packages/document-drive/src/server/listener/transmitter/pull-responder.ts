@@ -1,4 +1,3 @@
-import { Listener } from "@prisma/client";
 import { gql } from "graphql-request";
 import {
   ListenerFilter,
@@ -13,6 +12,7 @@ import {
   GetStrandsOptions,
   IListenerManager,
   IOperationResult,
+  Listener,
   ListenerRevision,
   ListenerRevisionWithError,
   OperationUpdate,
@@ -238,7 +238,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onStrandUpdate: (
       strand: StrandUpdate,
       source: StrandUpdateSource,
-    ) => Promise<IOperationResult<TGlobalState, TLocalState>>,
+    ) => Promise<IOperationResult>,
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
@@ -320,7 +320,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onStrandUpdate: (
       strand: StrandUpdate,
       source: StrandUpdateSource,
-    ) => Promise<IOperationResult<TGlobalState, TLocalState>>,
+    ) => Promise<IOperationResult>,
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,

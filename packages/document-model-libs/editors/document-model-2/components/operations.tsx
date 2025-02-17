@@ -2,7 +2,7 @@ import { OperationForm } from "./operation-form.js";
 import type {
   Module,
   Operation as TOperation,
-} from "document-model/document-model";
+} from "document-model";
 import { useCallback, useId, useState } from "react";
 import { Operation } from "./operation.js";
 

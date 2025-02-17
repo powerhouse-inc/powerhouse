@@ -1,13 +1,15 @@
 import JSZip from "jszip";
 import mime from "mime/lite";
 import {
-  Action,
   Attachment,
   AttachmentInput,
   BaseDocument,
+  CustomAction,
+  DefaultAction,
   DocumentHeader,
   DocumentOperations,
   ExtendedState,
+  Operation,
   Reducer,
 } from "../types.js";
 import { replayDocument, ReplayDocumentOptions } from "./base.js";
@@ -75,8 +77,8 @@ export function createZip<TGlobalState, TLocalState>(
  * @param extension - The extension to use for the file.
  * @returns A promise that resolves to the path of the saved file.
  */
-export async function baseSaveToFile<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+export async function baseSaveToFile(
+  document: BaseDocument<unknown, unknown>,
   path: string,
   extension: string,
   name?: string,
@@ -97,8 +99,8 @@ export async function baseSaveToFile<TGlobalState, TLocalState>(
   );
 }
 
-export async function baseSaveToFileHandle<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+export async function baseSaveToFileHandle(
+  document: BaseDocument<unknown, unknown>,
   input: FileSystemFileHandle,
 ) {
   const zip = createZip(document);
@@ -123,18 +125,34 @@ export async function baseSaveToFileHandle<TGlobalState, TLocalState>(
  * @returns A promise that resolves to the document state after applying all the operations.
  * @throws An error if the initial state or the operations history is not found in the ZIP file.
  */
-export async function baseLoadFromFile<TGlobalState, TLocalState>(
+export async function baseLoadFromFile<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
   path: string,
-  reducer: Reducer<TGlobalState, TLocalState, Action>,
+  reducer: Reducer<
+    TGlobalState,
+    TLocalState,
+    TCustomAction | DefaultAction | Operation
+  >,
   options?: ReplayDocumentOptions,
 ) {
   const file = readFile(path);
   return baseLoadFromInput(file, reducer, options);
 }
 
-export async function baseLoadFromInput<TGlobalState, TLocalState>(
+export async function baseLoadFromInput<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
   input: FileInput,
-  reducer: Reducer<TGlobalState, TLocalState, Action>,
+  reducer: Reducer<
+    TGlobalState,
+    TLocalState,
+    TCustomAction | DefaultAction | Operation
+  >,
   options?: ReplayDocumentOptions,
 ) {
   const zip = new JSZip();
@@ -142,11 +160,19 @@ export async function baseLoadFromInput<TGlobalState, TLocalState>(
   return loadFromZip(zip, reducer, options);
 }
 
-async function loadFromZip<TGlobalState, TLocalState>(
+async function loadFromZip<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
   zip: JSZip,
-  reducer: Reducer<TGlobalState, TLocalState, Action>,
+  reducer: Reducer<
+    TGlobalState,
+    TLocalState,
+    TCustomAction | DefaultAction | Operation
+  >,
   options?: ReplayDocumentOptions,
-) {
+): Promise<BaseDocument<TGlobalState, TLocalState>> {
   const initialStateZip = zip.file("state.json");
   if (!initialStateZip) {
     throw new Error("Initial state not found");
@@ -169,7 +195,7 @@ async function loadFromZip<TGlobalState, TLocalState>(
   }
   const operations = JSON.parse(
     await operationsZip.async("string"),
-  ) as DocumentOperations<TGlobalState, TLocalState>;
+  ) as DocumentOperations;
 
   const clearedOperations = garbageCollectDocumentOperations(operations);
 

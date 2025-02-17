@@ -9,13 +9,13 @@ export class DocumentModelNotFoundError extends Error {
     super(`Document model "${id}" not found`, { cause });
   }
 }
-export class OperationError<TGlobalState, TLocalState> extends Error {
+export class OperationError extends Error {
   status: ErrorStatus;
-  operation: Operation<TGlobalState, TLocalState> | undefined;
+  operation: Operation | undefined;
 
   constructor(
     status: ErrorStatus,
-    operation?: Operation<TGlobalState, TLocalState>,
+    operation?: Operation,
     message?: string,
     cause?: unknown,
   ) {
@@ -25,14 +25,8 @@ export class OperationError<TGlobalState, TLocalState> extends Error {
   }
 }
 
-export class ConflictOperationError<
-  TGlobalState,
-  TLocalState,
-> extends OperationError<TGlobalState, TLocalState> {
-  constructor(
-    existingOperation: Operation<TGlobalState, TLocalState>,
-    newOperation: Operation<TGlobalState, TLocalState>,
-  ) {
+export class ConflictOperationError extends OperationError {
+  constructor(existingOperation: Operation, newOperation: Operation) {
     super(
       "CONFLICT",
       newOperation,
@@ -42,11 +36,8 @@ export class ConflictOperationError<
   }
 }
 
-export class MissingOperationError<
-  TGlobalState,
-  TLocalState,
-> extends OperationError<TGlobalState, TLocalState> {
-  constructor(index: number, operation: Operation<TGlobalState, TLocalState>) {
+export class MissingOperationError extends OperationError {
+  constructor(index: number, operation: Operation) {
     super("MISSING", operation, `Missing operation on index ${index}`);
   }
 }

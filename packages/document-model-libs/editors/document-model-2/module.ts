@@ -2,7 +2,7 @@ import type {
   DocumentModelAction,
   DocumentModelState,
   DocumentModelLocalState,
-} from "document-model/document-model";
+} from "document-model";
 import { EditorModule } from "document-model";
 import { DocumentModelEditor } from "./editor.js";
 

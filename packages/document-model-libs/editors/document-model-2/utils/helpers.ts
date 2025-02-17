@@ -1,5 +1,5 @@
 import { pascalCase } from "change-case";
-import { Author, DocumentModelDocument } from "document-model/document-model";
+import { Author, DocumentModelDocument } from "document-model";
 import {
   buildASTSchema,
   extendSchema,

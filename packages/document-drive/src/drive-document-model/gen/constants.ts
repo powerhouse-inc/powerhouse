@@ -9,14 +9,7 @@ export const initialGlobalState: DocumentDriveState = {
   name: "",
   nodes: [],
   icon: null,
-  slug: null,
-  author: {
-    name: "",
-    website: "",
-  },
-  description: "",
-  extension: "",
-  specifications: [],
+  slug: null
 };
 
 export const initialLocalState: DocumentDriveLocalState = {

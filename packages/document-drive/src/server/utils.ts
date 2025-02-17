@@ -32,7 +32,7 @@ export function buildDocumentRevisionsFilter<TGlobalState, TLocalState>(
 }
 
 export function filterOperationsByRevision<TGlobalState, TLocalState>(
-  operations: DocumentOperations<TGlobalState, TLocalState>,
+  operations: DocumentOperations,
   revisions?: RevisionsFilter,
 ) {
   if (!revisions) {
@@ -48,7 +48,7 @@ export function filterOperationsByRevision<TGlobalState, TLocalState>(
       }
       return acc;
     },
-    { global: [], local: [] } as DocumentOperations<TGlobalState, TLocalState>,
+    { global: [], local: [] } as DocumentOperations,
   );
 }
 

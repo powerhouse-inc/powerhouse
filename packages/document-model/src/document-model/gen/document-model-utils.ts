@@ -1,7 +1,4 @@
-import {
-  DocumentModelLocalState,
-  DocumentModelState
-} from "./types.js";
+import { DocumentModelLocalState, DocumentModelState } from "./types.js";
 
 import {
   CreateDocument,
@@ -46,7 +43,7 @@ export const createExtendedState: CreateExtendedState<
 > = (extendedState) => {
   return baseCreateExtendedState(
     { ...extendedState, documentType },
-    createState
+    createState,
   );
 };
 

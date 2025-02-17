@@ -1,20 +1,20 @@
 import { DocumentModelModule } from "document-model";
-import * as documentModelsMap from "document-model-libs/document-models";
 import { bench, BenchOptions, describe, vi } from "vitest";
+import { DocumentDriveServer } from "../../src/server/base.js";
 import {
-    DefaultRemoteDriveInput,
-    DocumentDriveServer,
-    DocumentDriveServerOptions,
-    generateUUID,
-    RunAsap,
-} from "../../src";
-import { BrowserStorage } from "../../src/storage/browser";
-import { setLogger } from "../../src/utils/logger";
-import GetDrive from "./getDrive.json";
-import Strands from "./strands.small.json";
+  DefaultRemoteDriveInput,
+  DocumentDriveServerOptions,
+} from "../../src/server/types.js";
+import { BrowserStorage } from "../../src/storage/browser.js";
+import { setLogger } from "../../src/utils/logger.js";
+import { generateUUID } from "../../src/utils/misc.js";
+import { RunAsap } from "../../src/utils/run-asap.js";
+import Strands from "./strands.small.json" assert { type: "json" };
 
 const DRIVE_ID = GetDrive.data.drive.id;
-const documentModels = Object.values(documentModelsMap) as DocumentModelModule[];
+const documentModels = Object.values(
+  documentModelsMap,
+) as DocumentModelModule[];
 
 setLogger({
   log: function (...data: any[]): void {},

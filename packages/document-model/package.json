@@ -7,28 +7,20 @@
     "dist"
   ],
   "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": "./dist/index.js",
   "scripts": {
-    "check-types": "tsc --build --noEmit",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "npm run build:browser && npm run build:node",
     "build:watch": "npm run build:browser -- --watch && npm run build:node -- --watch",
-    "build:browser": "tsc --project tsconfig.build.json",
-    "build:node": "tsc --project tsconfig.build.json",
+    "build:browser": "tsc --build",
+    "build:node": "tsc --build",
     "test": "vitest run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./document-model": {
-      "types": "./dist/src/document-model/index.d.ts",
-      "import": "./dist/src/document-model/index.js"
-    }
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",

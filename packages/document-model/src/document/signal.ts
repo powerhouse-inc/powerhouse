@@ -11,16 +11,19 @@ export type SynchronizationUnitInput = {
   branch: string;
 };
 
-export type CreateChildDocumentInput<TGlobalState, TLocalState> = {
+export type CreateChildDocumentInput<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+> = {
   id: string;
   documentType: string;
   document?: BaseDocument<TGlobalState, TLocalState>;
   synchronizationUnits: SynchronizationUnitInput[];
 };
 
-export type CreateChildDocumentSignal<TGlobalState, TLocalState> = ISignal<
+export type CreateChildDocumentSignal = ISignal<
   "CREATE_CHILD_DOCUMENT",
-  CreateChildDocumentInput<TGlobalState, TLocalState>
+  CreateChildDocumentInput
 >;
 
 export type DeleteChildDocumentInput = {
@@ -43,11 +46,9 @@ export type CopyChildDocumentSignal = ISignal<
   CopyChildDocumentInput
 >;
 
-export type Signal<TGlobalState, TLocalState> =
-  | CreateChildDocumentSignal<TGlobalState, TLocalState>
+export type Signal =
+  | CreateChildDocumentSignal
   | DeleteChildDocumentSignal
   | CopyChildDocumentSignal;
 
-export type SignalDispatch = <TGlobalState, TLocalState>(
-  signal: Signal<TGlobalState, TLocalState>,
-) => void;
+export type SignalDispatch = (signal: Signal) => void;

@@ -1,4 +1,9 @@
-import { createReducer, ImmutableStateReducer, isDocumentAction, Reducer } from "document-model";
+import {
+  createReducer,
+  isDocumentAction,
+  Reducer,
+  StateReducer,
+} from "document-model";
 import { DocumentDriveAction } from "./actions.js";
 import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
 
@@ -22,7 +27,7 @@ import {
   UpdateNodeInputSchema,
 } from "./schema/zod.js";
 
-const stateReducer: ImmutableStateReducer<
+const stateReducer: StateReducer<
   DocumentDriveState,
   DocumentDriveLocalState,
   DocumentDriveAction
@@ -82,7 +87,7 @@ const stateReducer: ImmutableStateReducer<
       DriveReducer.setSharingTypeOperation(
         state[action.scope],
         action,
-        dispatch
+        dispatch,
       );
       break;
 
@@ -91,7 +96,7 @@ const stateReducer: ImmutableStateReducer<
       DriveReducer.setAvailableOfflineOperation(
         state[action.scope],
         action,
-        dispatch
+        dispatch,
       );
       break;
 
@@ -105,7 +110,7 @@ const stateReducer: ImmutableStateReducer<
       DriveReducer.removeListenerOperation(
         state[action.scope],
         action,
-        dispatch
+        dispatch,
       );
       break;
 
@@ -119,7 +124,7 @@ const stateReducer: ImmutableStateReducer<
       DriveReducer.removeTriggerOperation(
         state[action.scope],
         action,
-        dispatch
+        dispatch,
       );
       break;
 

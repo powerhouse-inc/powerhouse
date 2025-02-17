@@ -1,17 +1,17 @@
-import { Listener } from "@prisma/client";
 import { Operation, OperationScope } from "document-model";
 import {
   DocumentDriveLocalState,
   DocumentDriveState,
 } from "../../../drive-document-model/gen/types.js";
+import { logger } from "../../../utils/logger.js";
 import {
   GetDocumentOptions,
   IBaseDocumentDriveServer,
+  Listener,
   ListenerRevision,
   StrandUpdate,
 } from "../../types.js";
 import { ITransmitter, StrandUpdateSource } from "./types.js";
-import { logger } from "../../../utils/logger.js";
 
 export interface IReceiver {
   onStrands: <TGlobalState, TLocalState>(
@@ -21,7 +21,7 @@ export interface IReceiver {
 }
 
 export type InternalOperationUpdate<TGlobalState, TLocalState> = Omit<
-  Operation<TGlobalState, TLocalState>,
+  Operation,
   "scope"
 > & {
   state: TGlobalState | TLocalState;

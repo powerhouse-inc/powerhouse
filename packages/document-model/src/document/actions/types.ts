@@ -1,4 +1,3 @@
-import type { BaseAction } from "../types.js";
 import type {
   LoadStateActionInput,
   PruneActionInput,
@@ -6,6 +5,7 @@ import type {
   SetNameAction as _SetNameAction,
   UndoAction as _UndoAction,
 } from "../schema/types.js";
+import type { BaseAction } from "../types.js";
 
 export const SET_NAME = "SET_NAME";
 export const UNDO = "UNDO";
@@ -19,7 +19,7 @@ export type PruneAction = BaseAction<"PRUNE", PruneActionInput>;
 export type RedoAction = BaseAction<"REDO", _RedoAction["input"]>;
 export type SetNameAction = BaseAction<"SET_NAME", _SetNameAction["input"]>;
 export type UndoAction = BaseAction<"UNDO", _UndoAction["input"]>;
-export type NOOPAction = BaseAction<"NOOP">;
+export type NOOPAction = BaseAction<"NOOP", undefined>;
 
 export type DocumentAction =
   | LoadStateAction

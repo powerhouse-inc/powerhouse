@@ -38,7 +38,7 @@ describe("skip operations", () => {
     });
 
     it("should include skip param in base operations with provided value", () => {
-      let document = baseCreateDocument();
+      let document = baseCreateDocument<CountState, CountLocalState>();
       document = wrappedEmptyReducer(document, setName("TEST_1"), undefined, {
         skip: 1,
         ignoreSkipOperations: true,

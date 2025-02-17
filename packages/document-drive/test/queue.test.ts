@@ -1,22 +1,17 @@
-import {
-    actions,
-    DocumentDriveDocument,
-    utils as DocumentDriveUtils,
-    reducer,
-} from "@drive-document-model";
-import { module as DocumentModelLib, DocumentModelModule } from "document-model";
-import * as BudgetStatement from "document-model-libs/budget-statement";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+import { DocumentModelModule } from "document-model";
 import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
-import { generateUUID, IOperationResult } from "../src";
-import InMemoryCache from "../src/cache/memory";
-import { BaseQueueManager } from "../src/queue/base";
-import { RedisQueueManager } from "../src/queue/redis";
-import { IQueueManager } from "../src/queue/types";
-import { DocumentDriveServer } from "../src/server";
-import { MemoryStorage } from "../src/storage/memory";
-import { buildOperation, buildOperations } from "./utils";
+import InMemoryCache from "../src/cache/memory.js";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { BaseQueueManager } from "../src/queue/base.js";
+import { RedisQueueManager } from "../src/queue/redis.js";
+import { IQueueManager } from "../src/queue/types.js";
+import { DocumentDriveServer } from "../src/server/base.js";
+import { IOperationResult } from "../src/server/types.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { generateUUID } from "../src/utils/misc.js";
+import { buildOperation, buildOperations } from "./utils.js";
 
 const REDIS_TLS_URL = process.env.REDIS_TLS_URL;
 

@@ -1,5 +1,6 @@
 import { BaseDocumentClass } from "../../../document/object.js";
 import { ReducerOptions } from "../../../document/types.js";
+import { DocumentModelAction } from "../actions.js";
 import {
   DocumentModelLocalState,
   DocumentModelState,
@@ -10,7 +11,6 @@ import {
   SetModelIdInput,
   SetModelNameInput,
 } from "../schema/types.js";
-import { DocumentModelHeaderAction } from "./actions.js";
 import {
   setAuthorName,
   setAuthorWebsite,
@@ -23,7 +23,7 @@ import {
 export default class DocumentModel_Header extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,
-  DocumentModelHeaderAction
+  DocumentModelAction
 > {
   public setModelName(input: SetModelNameInput, options?: ReducerOptions) {
     return this.dispatch(setModelName(input), options);

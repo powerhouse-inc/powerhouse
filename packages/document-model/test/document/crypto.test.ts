@@ -11,7 +11,13 @@ import {
   hex2ab,
   verifyOperationSignature,
 } from "../../src/document/utils/crypto.js";
-import { CountAction, countReducer, increment } from "../helpers.js";
+import {
+  CountAction,
+  CountLocalState,
+  countReducer,
+  CountState,
+  increment,
+} from "../helpers.js";
 
 describe("Crypto utils", () => {
   beforeAll(() => {
@@ -118,7 +124,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -182,7 +188,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

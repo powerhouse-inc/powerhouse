@@ -2,7 +2,7 @@ import { Document, ValidationError } from 'document-model/document';
 import {
     DocumentModel as DocumentModelClass,
     utils as documentModelUtils,
-} from 'document-model/document-model';
+} from 'document-model';
 
 export const validateDocument = (document: Document) => {
     const errors: ValidationError[] = [];

@@ -1,4 +1,4 @@
-import type { Operation } from "document-model/document-model";
+import type { Operation } from "document-model";
 import { useCallback, useId, useState } from "react";
 import { OperationErrorForm } from "./operation-error-form.js";
 

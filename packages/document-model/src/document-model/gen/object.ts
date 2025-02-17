@@ -1,6 +1,13 @@
+import {
+  applyMixins,
+  ExtendedState,
+  PartialState,
+  SignalDispatch,
+} from "document-model";
 import { BaseDocumentClass } from "../../document/object.js";
-import { applyMixins, ExtendedState, PartialState, SignalDispatch } from "document-model";
 import { DocumentModelAction } from "./actions.js";
+import { fileExtension } from "./constants.js";
+import { createDocument } from "./document-model-utils.js";
 import DocumentModel_Header from "./header/object.js";
 import DocumentModel_Module from "./module/object.js";
 import DocumentModel_OperationError from "./operation-error/object.js";
@@ -10,8 +17,6 @@ import { reducer } from "./reducer.js";
 import DocumentModel_State from "./state/object.js";
 import { DocumentModelLocalState, DocumentModelState } from "./types.js";
 import DocumentModel_Versioning from "./versioning/object.js";
-import { fileExtension } from "./constants.js";
-import { createDocument } from "./document-model-utils.js";
 
 export * from "./header/object.js";
 export * from "./module/object.js";
@@ -21,7 +26,6 @@ export * from "./operation/object.js";
 export * from "./state/object.js";
 export * from "./versioning/object.js";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface DocumentModelClass
   extends DocumentModel_Header,
     DocumentModel_Versioning,
@@ -31,7 +35,6 @@ interface DocumentModelClass
     DocumentModel_Operation,
     DocumentModel_State {}
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 class DocumentModelClass extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,

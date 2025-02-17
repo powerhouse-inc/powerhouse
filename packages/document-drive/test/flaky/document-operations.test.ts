@@ -1,14 +1,13 @@
-import * as DocumentDrive from "@drive-document-model";
 import {
-    BaseAction, DocumentModelAction,
-    DocumentModelDocument,
-    module as DocumentModelLib, DocumentModelModule, actions,
-    reducer
+  BaseAction,
+  DocumentModelAction,
+  DocumentModelDocument,
+  DocumentModelModule,
 } from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveServer } from "../../src";
-import { buildOperation, buildOperations } from "../utils";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document operations", () => {
   const documentModels = [

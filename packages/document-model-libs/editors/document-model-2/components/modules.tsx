@@ -1,4 +1,4 @@
-import { Module as TModule, Operation } from "document-model/document-model";
+import { Module as TModule, Operation } from "document-model";
 import { useState, useRef, useCallback } from "react";
 import { Module } from "./module.js";
 

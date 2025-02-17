@@ -1,4 +1,4 @@
-import { createExtendedState, reducer } from "document-model/document-model";
+import { createExtendedState, reducer } from "document-model";
 import { DocumentModelEditor } from "./editor.js";
 import { v7 as uuidv7 } from "uuid";
 import { Meta } from "@storybook/react";

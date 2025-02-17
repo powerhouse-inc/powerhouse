@@ -1,5 +1,5 @@
 import {
-  documentModelUtils,
+  documentModelLoadFromFile,
   type DocumentModelDocument,
   type DocumentModelState,
 } from "document-model";
@@ -14,7 +14,7 @@ export async function loadDocumentModel(
     if (!path) {
       throw new Error("Document model file not specified");
     } else if (path.endsWith(".zip")) {
-      const file = await documentModelUtils.loadFromFile(path);
+      const file = await documentModelLoadFromFile(path);
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");

@@ -1,13 +1,8 @@
-import { actions, reducer } from "@drive-document-model";
-import {
-    actions as DocumentModelActions,
-    DocumentModelDocument,
-    module as DocumentModelLib, DocumentModelModule
-} from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+import { DocumentModelDocument, DocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { DocumentDriveServer } from "../../src/server";
-import { MemoryStorage } from "../../src/storage/memory";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { MemoryStorage } from "../../src/storage/memory.js";
 
 const SWITCHBOARD_URL = process.env.SWITCHBOARD_URL ?? "http://localhost:3000/";
 

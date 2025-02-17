@@ -1,9 +1,7 @@
-import { Action, BaseAction } from "document-model";
+import { Action } from "document-model";
 import { createNanoEvents, Unsubscribe } from "nanoevents";
-import {
-  AddFileInput,
-  DeleteNodeInput,
-} from "../drive-document-model/gen/types.js";
+import { DeleteNodeAction } from "../drive-document-model/gen/actions.js";
+import { AddFileInput } from "../drive-document-model/gen/types.js";
 import { logger } from "../utils/logger.js";
 import { generateUUID, runAsap } from "../utils/misc.js";
 import {
@@ -153,8 +151,8 @@ export class BaseQueueManager implements IQueueManager {
 
     // if it has ADD_FILE operations then adds the job as
     // a dependency to the corresponding document queues
-    const actions = isOperationJob(job) ? job.operations : job.actions;
-    const addFileOps = actions.filter((j: BaseAction) => j.type === "ADD_FILE");
+    const actions = isOperationJob(job) ? job.operations : (job.actions ?? []);
+    const addFileOps = actions.filter((j: Action) => j.type === "ADD_FILE");
     for (const addFileOp of addFileOps) {
       const input = addFileOp.input as AddFileInput;
       const q = this.getQueue(job.driveId, input.id);
@@ -163,10 +161,10 @@ export class BaseQueueManager implements IQueueManager {
 
     // remove document if operations contains delete_node
     const removeFileOps = actions.filter(
-      (j: BaseAction) => j.type === "DELETE_NODE",
-    );
+      (j: Action) => j.type === "DELETE_NODE",
+    ) as DeleteNodeAction[];
     for (const removeFileOp of removeFileOps) {
-      const input = removeFileOp.input as DeleteNodeInput;
+      const input = removeFileOp.input;
       const queue = this.getQueue(job.driveId, input.id);
       await queue.setDeleted(true);
     }

@@ -4,7 +4,7 @@ import { setName } from "../../src/document/actions/creators.js";
 import { SET_NAME } from "../../src/document/actions/types.js";
 
 import { CreateChildDocumentInput } from "../../src/document/signal.js";
-import { BaseAction } from "../../src/document/types.js";
+import { CustomAction } from "../../src/document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
@@ -119,7 +119,7 @@ describe("Base reducer", () => {
     const document = baseCreateDocument();
 
     const id = hashKey();
-    const reducer = createReducer((_state, action, dispatch) => {
+    const reducer = createReducer<any, any, any>((_state, action, dispatch) => {
       if (action.type === "CREATE_DOCUMENT") {
         // @ts-expect-error TODO add synchronization units to fix type error
         dispatch?.({
@@ -137,7 +137,7 @@ describe("Base reducer", () => {
       return _state;
     });
 
-    const triggerAction: BaseAction = {
+    const triggerAction: CustomAction = {
       type: "CREATE_DOCUMENT",
       input: "",
       scope: "global",
@@ -145,7 +145,7 @@ describe("Base reducer", () => {
 
     reducer(document, triggerAction, (action) => {
       expect(action.type).toBe("CREATE_CHILD_DOCUMENT");
-      const input = action.input as CreateChildDocumentInput<unknown, unknown>;
+      const input = action.input as CreateChildDocumentInput;
       expect(input.id).toBe(id);
       expect(input.documentType).toBe("test");
       expect(input.document?.initialState.state.global).toStrictEqual({

@@ -6,7 +6,6 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
 import tailwind from "eslint-plugin-tailwindcss";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -79,14 +78,6 @@ export default tseslint.config(
           "scrollbar-track-gray-900",
         ],
       },
-      "import/resolver-next": createTypeScriptImportResolver({
-        project: [
-          "./tsconfig.json",
-          "./packages/*/tsconfig.json",
-          "./apps/*/tsconfig.json",
-          "./clis/*/tsconfig.json",
-        ],
-      }),
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",

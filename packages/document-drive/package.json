@@ -3,6 +3,8 @@
   "version": "1.17.2",
   "license": "AGPL-3.0-only",
   "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": "./dist/index.js",
   "files": [
     "./dist"
   ],
@@ -12,7 +14,7 @@
     "postlint": "npm run check-types",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "build": "tsc --project tsconfig.build.json",
+    "build": "tsc --build",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",

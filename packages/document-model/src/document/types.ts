@@ -1,6 +1,6 @@
-import { DocumentModelHeaderAction } from "../document-model/gen/actions.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
+import { DocumentModelHeaderAction } from "../document-model/gen/actions.js";
 import { DocumentAction } from "./actions/types.js";
 import type {
   CreateChildDocumentInput,
@@ -48,9 +48,9 @@ export type ActionContext = {
  * Defines the basic structure of an action.
  */
 export type BaseAction<
-  TType extends string = string,
-  TInput = unknown,
-  TScope extends OperationScope = OperationScope,
+  TType extends string,
+  TInput,
+  TScope extends OperationScope = "global",
 > = {
   /** The name of the action. */
   type: TType;
@@ -72,14 +72,15 @@ export type BaseActionWithAttachment<
   attachments: AttachmentInput[];
 };
 
+export type DefaultAction = DocumentAction | DocumentModelHeaderAction;
+
+export type CustomAction = BaseAction<string, unknown, OperationScope>;
+
 export type Action<
   TType extends string = string,
   TInput = unknown,
   TScope extends OperationScope = OperationScope,
-> =
-  | BaseAction<TType, TInput, TScope>
-  | DocumentAction
-  | DocumentModelHeaderAction;
+> = DefaultAction | BaseAction<TType, TInput, TScope>;
 
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */
@@ -93,9 +94,9 @@ export type ReducerOptions = {
   /** if true checks the hashes of the operations */
   checkHashes?: boolean;
   /** Optional parser for the operation resulting state, uses JSON.parse by default */
-  operationResultingStateParser?: <TGlobalOrLocalState>(
-    state: string | TGlobalOrLocalState,
-  ) => TGlobalOrLocalState;
+  operationResultingStateParser?: <TState>(
+    state: string | null | undefined,
+  ) => TState;
 };
 
 /**
@@ -105,63 +106,23 @@ export type ReducerOptions = {
 export type Reducer<
   TGlobalState,
   TLocalState,
-  TAllowedAction extends Action,
-> = <TAction extends TAllowedAction>(
-  state: BaseDocument<TGlobalState, TLocalState>,
-  action: TAction,
+  TCustomAction extends CustomAction = never,
+> = <TAction extends TCustomAction>(
+  document: BaseDocument<TGlobalState, TLocalState>,
+  action: TAction | DefaultAction | Operation,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
 ) => BaseDocument<TGlobalState, TLocalState>;
 
-/**
- * A {@link Reducer} that prevents mutable code from changing the previous state.
- *
- * @remarks
- * This reducer is wrapped with {@link https://mutative.js.org/ | Mutative}.
- * This allows the reducer code to be mutable, making it simpler and
- * avoiding unintended changes in the provided state.
- * The returned state will always be a new object.
- *
- * @typeParam State - The type of the document data.
- * @typeParam A - The type of the actions supported by the reducer.
- */
-export type ImmutableReducer<
+export type StateReducer<
   TGlobalState,
   TLocalState,
-  TAllowedAction extends Action,
-> = <TAction extends TAllowedAction>(
-  state: Draft<BaseDocument<TGlobalState, TLocalState>>,
-  action: TAction,
-  dispatch?: SignalDispatch,
-) => BaseDocument<TGlobalState, TLocalState> | undefined;
-
-export type ImmutableStateReducer<
-  TGlobalState,
-  TLocalState,
-  TAllowedAction extends Action,
-> = <TAction extends TAllowedAction>(
+  TCustomAction extends CustomAction = never,
+> = <TAction extends TCustomAction>(
   state: Draft<BaseState<TGlobalState, TLocalState>>,
   action: TAction,
   dispatch?: SignalDispatch,
 ) => BaseState<TGlobalState, TLocalState> | undefined;
-
-export type MutableStateReducer<
-  TGlobalState,
-  TLocalState,
-  TAllowedAction extends Action,
-> = <TAction extends TAllowedAction>(
-  state: BaseState<TGlobalState, TLocalState>,
-  action: TAction,
-  dispatch?: SignalDispatch,
-) => BaseState<TGlobalState, TLocalState> | undefined;
-
-export type StateReducer<
-  TGlobalState,
-  TLocalState,
-  TAllowedAction extends Action,
-> =
-  | ImmutableStateReducer<TGlobalState, TLocalState, TAllowedAction>
-  | MutableStateReducer<TGlobalState, TLocalState, TAllowedAction>;
 
 /**
  * Scope of an operation.
@@ -179,22 +140,23 @@ export type OperationScope = "global" | "local";
  *
  * @typeParam A - The type of the action.
  */
-export type Operation<TGlobalState, TLocalState> = Action & {
-  /** Position of the operation in the history */
-  index: number;
-  /** Timestamp of when the operation was added */
-  timestamp: string;
-  /** Hash of the resulting document data after the operation */
-  hash: string;
-  /** The number of operations skipped with this Operation */
-  skip: number;
-  /** Error message for a failed action */
-  error?: string;
-  /** The resulting state after the operation */
-  resultingState?: TGlobalState | TLocalState;
-  /** Unique operation id */
-  id?: string;
-};
+export type Operation<TAction = CustomAction | DefaultAction> =
+  (TAction extends CustomAction | DefaultAction ? TAction : never) & {
+    /** Position of the operation in the history */
+    index: number;
+    /** Timestamp of when the operation was added */
+    timestamp: string;
+    /** Hash of the resulting document data after the operation */
+    hash: string;
+    /** The number of operations skipped with this Operation */
+    skip: number;
+    /** Error message for a failed action */
+    error?: string;
+    /** The resulting state after the operation */
+    resultingState?: string;
+    /** Unique operation id */
+    id?: string;
+  };
 
 /**
  * The base attributes of a {@link BaseDocument}.
@@ -262,13 +224,13 @@ export type CreateExtendedState<TGlobalState, TLocalState> = (
   createState?: CreateState<TGlobalState, TLocalState>,
 ) => ExtendedState<TGlobalState, TLocalState>;
 
-export type SaveToFileHandle = <TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+export type SaveToFileHandle = (
+  document: BaseDocument<unknown, unknown>,
   input: FileSystemFileHandle,
 ) => void | Promise<void>;
 
-export type SaveToFile = <TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+export type SaveToFile = (
+  document: BaseDocument<unknown, unknown>,
   path: string,
   name?: string,
 ) => string | Promise<string>;
@@ -299,23 +261,21 @@ export type ExtendedState<TGlobalState, TLocalState> = DocumentHeader & {
   attachments?: FileRegistry;
 };
 
-export type DocumentOperations<TGlobalState, TLocalState> = Required<
-  Record<OperationScope, Operation<TGlobalState, TLocalState>[]>
->;
+export type DocumentOperations = Required<Record<OperationScope, Operation[]>>;
 
-export type MappedOperation<TGlobalState, TLocalState> = {
+export type MappedOperation = {
   ignore: boolean;
-  operation: Operation<TGlobalState, TLocalState>;
+  operation: Operation;
 };
 
-export type DocumentOperationsIgnoreMap<TGlobalState, TLocalState> = Required<
-  Record<OperationScope, MappedOperation<TGlobalState, TLocalState>[]>
+export type DocumentOperationsIgnoreMap = Required<
+  Record<OperationScope, MappedOperation[]>
 >;
 
-export type OperationSignatureContext<TGlobalState, TLocalState> = {
+export type OperationSignatureContext = {
   documentId: string;
   signer: Omit<ActionSigner, "signatures"> & { signatures?: Signature[] };
-  operation: Operation<TGlobalState, TLocalState>;
+  operation: Operation;
   previousStateHash: string;
 };
 
@@ -342,11 +302,11 @@ export type BaseDocument<TGlobalState, TLocalState> =
   /** The document model specific state. */
   ExtendedState<TGlobalState, TLocalState> & {
     /** The operations history of the document. */
-    operations: DocumentOperations<TGlobalState, TLocalState>;
+    operations: DocumentOperations;
     /** The initial state of the document, enabling replaying operations. */
     initialState: ExtendedState<TGlobalState, TLocalState>;
     /** A list of undone operations */
-    clipboard: Operation<TGlobalState, TLocalState>[];
+    clipboard: Operation[];
   };
 
 /**
@@ -366,12 +326,6 @@ export type DocumentModelUtils<TGlobalState, TLocalState> = {
   saveToFile: SaveToFile;
   saveToFileHandle: SaveToFileHandle;
 };
-
-export type ActionCreator<TAction extends BaseAction> = // TODO remove any
-
-    | ((input: any) => TAction)
-    | ((input: any, attachments: AttachmentInput[]) => TAction)
-    | ((...input: any) => TAction);
 
 export type ENSInfo = {
   name?: string;
@@ -436,14 +390,12 @@ export type Manifest = {
 
 export type DocumentModelLib = {
   manifest: Manifest;
-  documentModels: DocumentModelModule<any, any, any>[];
-  editors: EditorModule<any, any, any>[];
-};
-export type UndoRedoProcessResult<TGlobalState, TLocalState> = {
-  document: BaseDocument<TGlobalState, TLocalState>;
-  action: Action;
-  skip: number;
-  reuseLastOperationIndex: boolean;
+  documentModels: DocumentModelModule<
+    unknown,
+    unknown,
+    CustomAction | DefaultAction
+  >[];
+  editors: EditorModule[];
 };
 
 export type ValidationError = { message: string; details: object };
@@ -451,13 +403,13 @@ export type ValidationError = { message: string; details: object };
 export type DocumentModelModule<
   TGlobalState,
   TLocalState,
-  TAllowedAction extends Action,
+  TCustomAction extends CustomAction = never,
 > = {
   documentModelName: string;
   documentType: string;
   fileExtension: string;
-  reducer: Reducer<TGlobalState, TLocalState, TAllowedAction>;
-  actions: Record<string, ActionCreator<TAllowedAction>>;
+  reducer: Reducer<TGlobalState, TLocalState, TCustomAction>;
+  actions: Record<string, (input: any) => TCustomAction | DefaultAction>;
   utils: DocumentModelUtils<TGlobalState, TLocalState>;
   documentModelState: TGlobalState;
 };

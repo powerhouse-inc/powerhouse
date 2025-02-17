@@ -2,23 +2,19 @@
 import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/scalars";
 import { paramCase, pascalCase } from "change-case";
-import { DocumentModel } from "document-model/document";
 import { DocumentModelModule, DocumentModelState } from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
-import { generateSchema, generateSchemas } from "./graphql";
+import { generateSchema, generateSchemas } from "./graphql.js";
 import {
   generateEditor as _generateEditor,
   generateImportScript as _generateImportScript,
   generateProcessor as _generateProcessor,
   generateSubgraph as _generateSubgraph,
+  generateAll,
+  generateDocumentModel,
 } from "./hygen.js";
-import { generateSchemas, generateSchema } from "./graphql.js";
-import fs from "node:fs";
-import { join, resolve } from "path";
-import { paramCase, pascalCase } from "change-case";
 import { loadDocumentModel } from "./utils.js";
-import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 
 function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
@@ -48,7 +44,7 @@ function generateGraphqlSchema(documentModel: DocumentModelState) {
 }
 
 export type DocumentTypesMap = Record<
-  DocumentModelModule["initialGlobalState"]["id"],
+  DocumentModelModule<any, any, any>["documentType"],
   { name: string; importPath: string }
 >;
 
@@ -93,8 +89,8 @@ async function getDocumentTypesMap(
     Object.keys(documentModels).forEach((name) => {
       const documentModel = documentModels[
         name as keyof typeof documentModels
-      ] as DocumentModelModule;
-      documentTypesMap[documentModel.initialGlobalState.id] = {
+      ] as DocumentModelModule<any, any, any>;
+      documentTypesMap[documentModel.documentType] = {
         name,
         importPath: `document-model-libs/${paramCase(name)}`,
       };

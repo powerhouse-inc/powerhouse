@@ -16,7 +16,7 @@ import { Document, Operation } from "document-model/document";
 import {
   DocumentModelInput,
   DocumentModelState,
-} from "document-model/document-model";
+} from "document-model";
 import { gql } from "graphql-tag";
 import {
   InternalStrandUpdate,

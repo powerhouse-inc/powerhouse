@@ -4,14 +4,15 @@ import {
   Operation,
   OperationScope,
 } from "document-model";
+import { Signature } from "../../../document-model/src/document/types.js";
 
 export function migrateDocumentOperationSignatures<TGlobalState, TLocalState>(
   document: BaseDocument<TGlobalState, TLocalState>,
 ): BaseDocument<TGlobalState, TLocalState> | undefined {
   let legacy = false;
-  const operations = Object.entries(document.operations).reduce<
-    DocumentOperations<TGlobalState, TLocalState>
-  >(
+  const operations = Object.entries(
+    document.operations,
+  ).reduce<DocumentOperations>(
     (acc, [key, operations]) => {
       const scope = key as OperationScope;
       for (const op of operations) {
@@ -30,8 +31,8 @@ export function migrateDocumentOperationSignatures<TGlobalState, TLocalState>(
 }
 
 export function migrateLegacyOperationSignature<TGlobalState, TLocalState>(
-  operation: Operation<TGlobalState, TLocalState>,
-): Operation<TGlobalState, TLocalState> {
+  operation: Operation,
+): Operation {
   if (!operation.context?.signer || operation.context.signer.signatures) {
     return operation;
   }
@@ -45,7 +46,9 @@ export function migrateLegacyOperationSignature<TGlobalState, TLocalState>(
         signer: {
           user: signer.user,
           app: signer.app,
-          signatures: signature?.length ? [signature] : [],
+          signatures: (signature?.length
+            ? [signature]
+            : []) as unknown as Signature[],
         },
       },
     };

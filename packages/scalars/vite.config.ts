@@ -3,7 +3,7 @@ import { glob } from "glob";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 import generateFile from "vite-plugin-generate-file";
-import pkg from "./package.json";
+import pkg from "./package.json" assert { type: "json" };
 
 const entryObj = glob.sync("src/**/*.ts").reduce(
   (acc, file) => {

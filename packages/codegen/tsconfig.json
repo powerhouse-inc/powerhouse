@@ -9,6 +9,8 @@
     "**/.hygen/**/*"
   ],
   "references": [
-    { "path": "../document-model" }
+    { "path": "../document-model" },
+    { "path": "../scalars" },
+    { "path": "../config" }
   ],
 }

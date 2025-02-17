@@ -1,10 +1,8 @@
-import { actions } from "@drive-document-model";
 import { PrismaClient } from "@prisma/client";
 import { DocumentModelModule } from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { beforeAll, describe, it } from "vitest";
-import { DocumentDriveServer } from "../../src";
-import { PrismaStorage } from "../../src/storage/prisma";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { PrismaStorage } from "../../src/storage/prisma.js";
 
 const prismaClient = new PrismaClient();
 

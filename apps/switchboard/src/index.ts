@@ -9,7 +9,7 @@ import RedisCache from "document-drive/cache/redis";
 import { PrismaStorage } from "document-drive/storage/prisma";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import { module as DocumentModelLib } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
 import http from "http";

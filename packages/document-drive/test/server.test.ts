@@ -1,32 +1,22 @@
-import {
-    utils as DocumentDriveUtils,
-    actions,
-    generateAddNodeAction,
-    reducer,
-} from "@drive-document-model";
 import { PrismaClient } from "@prisma/client";
-import { generateUUID } from "@utils/misc";
 import {
-    ActionContext,
-    Document,
-    actions as DocumentModelActions,
-    DocumentModelDocument,
-    module as DocumentModelLib,
-    DocumentModelModule,
-    utils as DocumentModelUtils,
+  ActionContext,
+  DocumentModelDocument,
+  DocumentModelModule,
 } from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import fs from "fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { DocumentDriveServer } from "../src/server";
-import { BrowserStorage } from "../src/storage/browser";
-import { FilesystemStorage } from "../src/storage/filesystem";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaStorage } from "../src/storage/prisma";
-import { SequelizeStorage } from "../src/storage/sequelize";
-import { IDriveStorage } from "../src/storage/types";
-import { expectUUID } from "./utils";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+import { DocumentDriveServer } from "../src/server/base.js";
+import { BrowserStorage } from "../src/storage/browser.js";
+import { FilesystemStorage } from "../src/storage/filesystem.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { PrismaStorage } from "../src/storage/prisma.js";
+import { SequelizeStorage } from "../src/storage/sequelize.js";
+import { IDriveStorage } from "../src/storage/types.js";
+import { generateUUID } from "../src/utils/misc.js";
+import { expectUUID } from "./utils.js";
 
 const documentModels = [
   DocumentModelLib,

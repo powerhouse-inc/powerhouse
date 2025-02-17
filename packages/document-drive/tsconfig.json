@@ -2,17 +2,14 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "emitDeclarationOnly": true,
-    "outDir": "./dist",
+    "outDir": "./dist"
   },
   "references": [
-    {
-      "path": "../scalars"
-    },
     {
       "path": "../document-model"
     },
     {
       "path": "../codegen"
     }
-  ]
+  ],
 }

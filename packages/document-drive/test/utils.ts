@@ -1,8 +1,12 @@
-import { DocumentDriveAction } from "@drive-document-model";
-import { BaseDocumentDriveServer } from "@server/base";
-import { BaseDocument, BaseAction, NOOPAction, Reducer, Operation } from "document-model";
-import { DocumentModelDocument } from "document-model/document-model";
+import {
+  Action,
+  BaseDocument,
+  DocumentModelDocument,
+  Operation,
+  Reducer,
+} from "document-model";
 import { ExpectStatic } from "vitest";
+import { BaseDocumentDriveServer } from "../src/server/base.js";
 
 export function expectUUID(expect: ExpectStatic): unknown {
   return expect.stringMatching(
@@ -17,37 +21,33 @@ export function expectUTCTimestamp(expect: ExpectStatic): unknown {
 export function buildOperation(
   reducer: Reducer<any, any, any>,
 
-  document: BaseDocument<any, any, any>,
-  action: BaseAction,
+  document: BaseDocument<any, any>,
+  action: Action,
   index?: number,
-): Operation<any, any, NOOPAction & BaseAction> {
+): Operation {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const operation = newDocument.operations[action.scope]
     .slice()
-    .pop()! as Operation<any, any, NOOPAction & BaseAction>;
+    .pop()! as Operation;
 
-  return { ...operation, index: index ?? operation.index } as Operation<
-    any,
-    any,
-    NOOPAction & BaseAction
-  >;
+  return { ...operation, index: index ?? operation.index } as Operation;
 }
 
 export function buildOperations(
   reducer: Reducer<any, any, any>,
 
-  document: BaseDocument<any, any, any>,
+  document: BaseDocument<any, any>,
 
-  actions: Array<BaseAction>,
-): Operation<any, any, NOOPAction & BaseAction>[] {
-  const operations: Operation<any, any, NOOPAction & BaseAction>[] = [];
+  actions: Array<Action>,
+): Operation[] {
+  const operations: Operation[] = [];
   for (const action of actions) {
     document = reducer(document, action);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const operation = document.operations[action.scope]
       .slice()
-      .pop()! as Operation<any, any, NOOPAction & BaseAction>;
+      .pop()! as Operation;
     operations.push(operation);
   }
   return operations;
@@ -56,35 +56,34 @@ export function buildOperations(
 export function buildOperationAndDocument(
   reducer: Reducer<any, any, any>,
 
-  document: BaseDocument<any, any, any>,
-  action: BaseAction,
+  document: BaseDocument<any, any>,
+  action: Action,
   index?: number,
 ) {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const operation = newDocument.operations[action.scope]
     .slice()
-    .pop()! as Operation<any, any, NOOPAction & BaseAction>;
+    .pop()! as Operation;
 
   return {
     document: newDocument,
     operation: {
       ...operation,
       index: index ?? operation.index,
-    } as Operation<any, any, NOOPAction & BaseAction>,
+    } as Operation,
   };
 }
 
 export class BasicClient {
-  private unsyncedOperations: Operation<any, any, NOOPAction & BaseAction>[] =
-    [];
+  private unsyncedOperations: Operation[] = [];
 
   constructor(
     private server: BaseDocumentDriveServer,
     private driveId: string,
     private documentId: string,
 
-    private document: BaseDocument<any, any, any>,
+    private document: BaseDocument<any, any>,
 
     private reducer: Reducer<any, any, any>,
   ) {}
@@ -134,7 +133,7 @@ export class BasicClient {
     return this.document;
   }
 
-  dispatchDocumentAction(action: BaseAction) {
+  dispatchDocumentAction(action: Action) {
     const result = buildOperationAndDocument(
       this.reducer,
       this.document,
@@ -149,14 +148,13 @@ export class BasicClient {
 }
 
 export class DriveBasicClient {
-  private unsyncedOperations: Operation<any, any, DocumentDriveAction | BaseAction>[] =
-    [];
+  private unsyncedOperations: Operation[] = [];
 
   constructor(
     private server: BaseDocumentDriveServer,
     private driveId: string,
 
-    private document: BaseDocument<any, any, any>,
+    private document: BaseDocument<any, any>,
 
     private reducer: Reducer<any, any, any>,
   ) {}
@@ -169,9 +167,7 @@ export class DriveBasicClient {
     return this.unsyncedOperations;
   }
 
-  setUnsyncedOperations(
-    operations: Operation<any, any, DocumentDriveAction | BaseAction>[],
-  ) {
+  setUnsyncedOperations(operations: Operation[]) {
     this.unsyncedOperations = operations;
   }
 
@@ -212,7 +208,7 @@ export class DriveBasicClient {
     return this.document;
   }
 
-  dispatchDriveAction(action: BaseAction) {
+  dispatchDriveAction(action: Action) {
     const result = buildOperationAndDocument(
       this.reducer,
       this.document,

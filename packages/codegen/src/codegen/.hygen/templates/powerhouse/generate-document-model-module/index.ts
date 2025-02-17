@@ -1,10 +1,10 @@
-import { DocumentModelState, Maybe, OperationScope } from "document-model";
+import { DocumentModelState, OperationScope } from "document-model";
 import { paramCase } from "change-case";
 import { Args } from "../generate-document-model/index.js";
 
 type ModuleArgs = Args & { module: string };
 type Actions = {
-  name: Maybe<string>;
+  name: string | null;
   hasInput: boolean;
   hasAttachment: boolean | undefined;
   scope: OperationScope;

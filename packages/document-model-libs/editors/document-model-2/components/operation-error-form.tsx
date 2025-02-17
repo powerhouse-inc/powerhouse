@@ -1,4 +1,4 @@
-import type { Operation, OperationError } from "document-model/document-model";
+import type { Operation, OperationError } from "document-model";
 import { pascalCase } from "change-case";
 import { useRef, useCallback } from "react";
 import { TextField } from "./text-field.js";

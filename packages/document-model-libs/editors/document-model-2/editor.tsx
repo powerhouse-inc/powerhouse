@@ -22,7 +22,7 @@ import {
   addOperationError,
   deleteOperationError,
   setOperationErrorName,
-} from "document-model/document-model";
+} from "document-model";
 import { EditorProps, hashKey } from "document-model";
 import { Divider } from "./components/divider.js";
 import { ModelMetadata } from "./components/model-metadata-form.js";

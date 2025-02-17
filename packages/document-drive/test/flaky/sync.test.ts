@@ -1,38 +1,35 @@
-import {
-    DocumentDriveAction,
-    Trigger,
-    actions,
-    reducer,
-} from "@drive-document-model";
 import { PrismaClient } from "@prisma/client";
 import {
-    actions as DocumentModelActions,
-    DocumentModelDocument,
-    module as DocumentModelLib, DocumentModelModule, Operation
+  DocumentModelDocument,
+  DocumentModelModule,
+  Operation,
 } from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import stringify from "json-stringify-deterministic";
-import { HttpResponse, graphql, http } from "msw";
+import { graphql } from "graphql";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { stringify } from "querystring";
 import {
-    afterAll,
-    afterEach,
-    beforeAll,
-    beforeEach,
-    describe,
-    it,
-    vi,
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  it,
+  vi,
 } from "vitest";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { Trigger } from "../../src/drive-document-model/gen/types.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { ConflictOperationError } from "../../src/server/error.js";
+import { StrandUpdateGraphQL } from "../../src/server/listener/transmitter/pull-responder.js";
 import {
-    DocumentDriveServer,
-    ListenerRevision,
-    StrandUpdateGraphQL,
-    SyncStatus,
-    UpdateStatus,
-} from "../src/server";
-import { ConflictOperationError } from "../src/server/error";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaStorage } from "../src/storage/prisma";
+  ListenerRevision,
+  SyncStatus,
+  UpdateStatus,
+} from "../../src/server/types.js";
+import { MemoryStorage } from "../../src/storage/memory.js";
+import { PrismaStorage } from "../../src/storage/prisma.js";
 
 describe("Document Drive Server with %s", () => {
   const documentModels = [

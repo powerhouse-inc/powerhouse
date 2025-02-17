@@ -1,13 +1,9 @@
-import {
-    DocumentDriveAction,
-    DocumentDriveDocument,
-    actions,
-    reducer,
-} from "@drive-document-model";
-import { BaseAction, module as DocumentModelLib, DocumentModelModule, Operation } from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+import { BaseAction, DocumentModelModule, Operation } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveServer } from "../src";
+import { DocumentDriveAction } from "../src/drive-document-model/gen/actions.js";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { DocumentDriveServer } from "../src/server/base.js";
 
 function buildOperation(
   document: DocumentDriveDocument,

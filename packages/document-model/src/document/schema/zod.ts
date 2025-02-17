@@ -49,7 +49,7 @@ export function OperationScopeSchema(): z.ZodType<OperationScope> {
   return z.literal("global").or(z.literal("local"));
 }
 
-export function BaseActionSchema() {
+export function DocumentActionSchema() {
   return z.union([
     LoadStateActionSchema(),
     PruneActionSchema(),

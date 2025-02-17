@@ -1,26 +1,25 @@
-import * as DocumentDrive from "@drive-document-model";
-import { Document, DocumentModelModule } from "document-model";
-import * as BudgetStatement from "document-model-libs/budget-statement";
-import * as documentModelsMap from "document-model-libs/document-models";
+import { DocumentModelModule } from "document-model";
 import { beforeEach, describe, it, vi } from "vitest";
-import createFetchMock from "vitest-fetch-mock";
-import { DocumentModelNotFoundError } from "../src";
 import {
-    ReadDocumentNotFoundError,
-    ReadDrive,
-    ReadDriveContext,
-    ReadDriveNotFoundError,
-    ReadDriveSlugNotFoundError,
-} from "../src/read-mode";
-import { ReadModeService } from "../src/read-mode/service";
+  ReadDocumentNotFoundError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
+} from "../src/read-mode/errors.js";
+import { ReadModeService } from "../src/read-mode/service.js";
+import { ReadDrive, ReadDriveContext } from "../src/read-mode/types.js";
+import { DocumentModelNotFoundError } from "../src/server/error.js";
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
 
-const documentModels = Object.values(documentModelsMap) as DocumentModelModule[];
+const documentModels = Object.values(
+  documentModelsMap,
+) as DocumentModelModule[];
 
 function getDocumentModel(id: string) {
-  const documentModel = documentModels.find((d) => d.documentModelState.id === id);
+  const documentModel = documentModels.find(
+    (d) => d.documentModelState.id === id,
+  );
   if (!documentModel) {
     throw new Error(`Document model not found for id: ${id}`);
   }

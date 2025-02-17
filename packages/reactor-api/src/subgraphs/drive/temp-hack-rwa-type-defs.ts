@@ -1,4 +1,4 @@
-import { Maybe } from "document-model/document-model";
+type Maybe<T> = T | null;
 
 export type Scalars = {
   ID: { input: string; output: string };

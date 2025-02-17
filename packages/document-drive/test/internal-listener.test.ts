@@ -1,17 +1,12 @@
-import {
-    DocumentDriveDocument,
-    utils,
-} from "@drive-document-model";
-import * as DocumentModelLib from "document-model";
 import { DocumentModelModule } from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { DocumentDriveServer } from "../src/server/base.js";
 import {
-    DocumentDriveServer,
-    InternalTransmitterUpdate,
-    IReceiver,
-} from "../src";
-import { expectUTCTimestamp, expectUUID } from "./utils";
+  IReceiver,
+  InternalTransmitterUpdate,
+} from "../src/server/listener/transmitter/internal.js";
+import { expectUTCTimestamp, expectUUID } from "./utils.js";
 
 describe("Internal Listener", () => {
   const documentModels = [

@@ -1,10 +1,10 @@
-import { ImmutableStateReducer, utils } from "document-model";
-import { ChatRoomState, ChatRoomLocalState } from "./types";
+import { StateReducer, utils } from "document-model";
 import { ChatRoomAction } from "./actions.js";
+import { ChatRoomLocalState, ChatRoomState } from "./types";
 
 import { reducer as GeneralOperationsReducer } from "../src/reducers/general-operations";
 
-const stateReducer: ImmutableStateReducer<
+const stateReducer: StateReducer<
   ChatRoomState,
   ChatRoomAction,
   ChatRoomLocalState

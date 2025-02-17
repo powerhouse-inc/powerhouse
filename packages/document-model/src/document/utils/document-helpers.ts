@@ -24,11 +24,11 @@ type IntegrityIssue = {
   message: string;
 };
 
-type Reshuffle = (
+type Reshuffle<TOp extends OperationIndex> = (
   startIndex: OperationIndex,
-  opsA: OperationIndex[],
-  opsB: OperationIndex[],
-) => OperationIndex[];
+  opsA: TOp[],
+  opsB: TOp[],
+) => TOp[];
 
 export function checkCleanedOperationsIntegrity(
   sortedOperations: OperationIndex[],
@@ -109,10 +109,7 @@ export function garbageCollect<TOpIndex extends OperationIndex>(
 
   return result;
 }
-
-export function addUndo<TGlobalState, TLocalState>(
-  sortedOperations: Operation<TGlobalState, TLocalState>[],
-): Operation<TGlobalState, TLocalState>[] {
+export function addUndo(sortedOperations: Operation[]) {
   const operationsCopy = [...sortedOperations];
   const latestOperation = operationsCopy[operationsCopy.length - 1];
 
@@ -156,11 +153,11 @@ export function sortOperations<TOpIndex extends OperationIndex>(
 // Split            => [0:0, 1:0] + [2:0, A3:0, A4:0, A5:0] + [B4:2, B5:0]
 // Reshuffle(6:4)   => [6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
 // merge            => [0:0, 1:0, 6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
-export function reshuffleByTimestamp(
+export function reshuffleByTimestamp<TOp extends OperationIndex>(
   startIndex: OperationIndex,
-  opsA: OperationIndex[],
-  opsB: OperationIndex[],
-) {
+  opsA: TOp[],
+  opsB: TOp[],
+): TOp[] {
   return [...opsA, ...opsB]
     .sort(
       (a, b) =>
@@ -174,11 +171,11 @@ export function reshuffleByTimestamp(
     }));
 }
 
-export function reshuffleByTimestampAndIndex(
+export function reshuffleByTimestampAndIndex<TOp extends OperationIndex>(
   startIndex: OperationIndex,
-  opsA: OperationIndex[],
-  opsB: OperationIndex[],
-) {
+  opsA: TOp[],
+  opsB: TOp[],
+): TOp[] {
   return [...opsA, ...opsB]
     .sort(
       (a, b) =>
@@ -206,20 +203,17 @@ export function operationsAreEqual<TOp>(op1: TOp, op2: TOp): boolean {
 // [T0:0 T1:0 T2:0 T3:0] + [B3:0 B3:2] = [T0:0 T1:0 T2:0 B3:0 B3:2]
 // [T0:0 T1:0 T2:0 T3:0] + [B2:3 B3:0] = [T0:0 T1:0 B2:3 B3:0]
 
-export function attachBranch<TGlobalState, TLocalState>(
-  trunk: Operation<TGlobalState, TLocalState>[],
-  newBranch: Operation<TGlobalState, TLocalState>[],
-): [
-  Operation<TGlobalState, TLocalState>[],
-  Operation<TGlobalState, TLocalState>[],
-] {
+export function attachBranch<TOp extends OperationIndex>(
+  trunk: TOp[],
+  newBranch: TOp[],
+): [TOp[], TOp[]] {
   const trunkCopy = garbageCollect(sortOperations(trunk.slice()));
   const newOperations = garbageCollect(sortOperations(newBranch.slice()));
   if (trunkCopy.length < 1) {
     return [newOperations, []];
   }
 
-  const result: Operation<TGlobalState, TLocalState>[] = [];
+  const result: TOp[] = [];
   let enteredBranch = false;
 
   while (newOperations.length > 0) {
@@ -273,13 +267,13 @@ export function precedes(op1: OperationIndex, op2: OperationIndex) {
   );
 }
 
-export function split(
-  sortedTargetOperations: OperationIndex[],
-  sortedMergeOperations: OperationIndex[],
-): [OperationIndex[], OperationIndex[], OperationIndex[]] {
-  const commonOperations: OperationIndex[] = [];
-  const targetDiffOperations: OperationIndex[] = [];
-  const mergeDiffOperations: OperationIndex[] = [];
+export function split<TOp extends OperationIndex>(
+  sortedTargetOperations: TOp[],
+  sortedMergeOperations: TOp[],
+): [TOp[], TOp[], TOp[]] {
+  const commonOperations: TOp[] = [];
+  const targetDiffOperations: TOp[] = [];
+  const mergeDiffOperations: TOp[] = [];
 
   // get bigger array length
   const maxLength = Math.max(
@@ -318,11 +312,11 @@ export function split(
 // Split            => [0:0, 1:0] + [2:0, A3:0, A4:0, A5:0] + [B4:2, B5:0]
 // Reshuffle(6:4)   => [6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
 // merge            => [0:0, 1:0, 6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
-export function merge<TOperation extends OperationIndex>(
-  sortedTargetOperations: TOperation[],
-  sortedMergeOperations: TOperation[],
-  reshuffle: Reshuffle,
-): TOperation[] {
+export function merge<TOp extends OperationIndex>(
+  sortedTargetOperations: TOp[],
+  sortedMergeOperations: TOp[],
+  reshuffle: Reshuffle<TOp>,
+): TOp[] {
   const [_commonOperations, _targetOperations, _mergeOperations] = split(
     garbageCollect(sortedTargetOperations),
     garbageCollect(sortedMergeOperations),
@@ -351,7 +345,7 @@ export function merge<TOperation extends OperationIndex>(
     filteredMergeOperations,
   );
 
-  return _commonOperations.concat(newOperationHistory) as TOperation[];
+  return _commonOperations.concat(newOperationHistory);
 }
 
 function getMaxIndex(sortedOperations: OperationIndex[]) {
@@ -398,30 +392,16 @@ export function nextSkipNumber(sortedOperations: OperationIndex[]) {
     : nextSkip;
 }
 
-export function checkOperationsIntegrity<
-  TGlobalState,
-  TLocalState,
-  TOp extends Operation<TGlobalState, TLocalState>,
->(operations: TOp[]): IntegrityIssue[] {
+export function checkOperationsIntegrity(operations: Operation[]) {
   return checkCleanedOperationsIntegrity(
     garbageCollect(sortOperations(operations)),
   );
 }
 
-export type OperationsByScope<
-  TGlobalState,
-  TLocalState,
-  TOp extends Operation<TGlobalState, TLocalState>,
-> = Partial<Record<OperationScope, TOp[]>>;
+export type OperationsByScope = Partial<Record<OperationScope, Operation[]>>;
 
-export function groupOperationsByScope<
-  TGlobalState,
-  TLocalState,
-  TOp extends Operation<TGlobalState, TLocalState>,
->(operations: TOp[]): OperationsByScope<TGlobalState, TLocalState, TOp> {
-  const result = operations.reduce<
-    OperationsByScope<TGlobalState, TLocalState, TOp>
-  >((acc, operation) => {
+export function groupOperationsByScope(operations: Operation[]) {
+  const result = operations.reduce<OperationsByScope>((acc, operation) => {
     if (!acc[operation.scope]) {
       acc[operation.scope] = [];
     }
@@ -434,23 +414,18 @@ export function groupOperationsByScope<
   return result;
 }
 
-type PrepareOperationsResult<
-  TGlobalState,
-  TLocalState,
-  TOp extends Operation<TGlobalState, TLocalState>,
-> = {
-  validOperations: TOp[];
-  invalidOperations: TOp[];
-  duplicatedOperations: TOp[];
+type PrepareOperationsResult = {
+  validOperations: Operation[];
+  invalidOperations: Operation[];
+  duplicatedOperations: Operation[];
   integrityIssues: IntegrityIssue[];
 };
 
-export function prepareOperations<
-  TGlobalState,
-  TLocalState,
-  TOp extends Operation<TGlobalState, TLocalState>,
->(operationsHistory: TOp[], newOperations: TOp[]) {
-  const result: PrepareOperationsResult<TGlobalState, TLocalState, TOp> = {
+export function prepareOperations(
+  operationsHistory: Operation[],
+  newOperations: Operation[],
+) {
+  const result: PrepareOperationsResult = {
     integrityIssues: [],
     validOperations: [],
     invalidOperations: [],
@@ -508,11 +483,10 @@ export function prepareOperations<
   return result;
 }
 
-export function removeExistingOperations<
-  TGlobalState,
-  TLocalState,
-  TOp extends Operation<TGlobalState, TLocalState>,
->(newOperations: TOp[], operationsHistory: TOp[]): TOp[] {
+export function removeExistingOperations(
+  newOperations: Operation[],
+  operationsHistory: Operation[],
+) {
   return newOperations.filter((newOperation) => {
     return !operationsHistory.some((historyOperation) => {
       return (
@@ -565,9 +539,9 @@ export function skipHeaderOperations<TOpIndex extends OperationIndex>(
   return (clearedOperations.at(0) ?? []) as TOpIndex[];
 }
 
-export function garbageCollectDocumentOperations<TGlobalState, TLocalState>(
-  documentOperations: DocumentOperations<TGlobalState, TLocalState>,
-): DocumentOperations<TGlobalState, TLocalState> {
+export function garbageCollectDocumentOperations(
+  documentOperations: DocumentOperations,
+) {
   const clearedOperations = Object.entries(documentOperations).reduce(
     (acc, entry) => {
       const [scope, ops] = entry;
@@ -580,7 +554,7 @@ export function garbageCollectDocumentOperations<TGlobalState, TLocalState>(
     {},
   );
 
-  return clearedOperations as DocumentOperations<TGlobalState, TLocalState>;
+  return clearedOperations as DocumentOperations;
 }
 
 /**
@@ -604,14 +578,11 @@ export function filterDuplicatedOperations<T extends { id?: string | number }>(
   });
 }
 
-export function filterDocumentOperationsResultingState<
-  TGlobalState,
-  TLocalState,
->(
-  documentOperations?: DocumentOperations<TGlobalState, TLocalState>,
-): DocumentOperations<TGlobalState, TLocalState> {
+export function filterDocumentOperationsResultingState(
+  documentOperations?: DocumentOperations,
+) {
   if (!documentOperations) {
-    return {} as DocumentOperations<TGlobalState, TLocalState>;
+    return {} as DocumentOperations;
   }
 
   const entries = Object.entries(documentOperations);
@@ -625,7 +596,7 @@ export function filterDocumentOperationsResultingState<
         return restProps;
       }),
     }),
-    {} as DocumentOperations<TGlobalState, TLocalState>,
+    {} as DocumentOperations,
   );
 }
 
@@ -633,15 +604,15 @@ export function filterDocumentOperationsResultingState<
  * Calculates the difference between two arrays of operations.
  * Returns an array of operations that are present in `clearedOperationsA` but not in `clearedOperationsB`.
  *
- * @template A - The type of the operations.
- * @param {A[]} clearedOperationsA - The first array of operations.
- * @param {A[]} clearedOperationsB - The second array of operations.
- * @returns {A[]} - The difference between the two arrays of operations.
+ * @template TOp - The type of the operations.
+ * @param {TOp[]} clearedOperationsA - The first array of operations.
+ * @param {TOp[]} clearedOperationsB - The second array of operations.
+ * @returns {TOp[]} - The difference between the two arrays of operations.
  */
-export function diffOperations<A extends OperationIndex>(
-  clearedOperationsA: A[],
-  clearedOperationsB: A[],
-): A[] {
+export function diffOperations<TOp extends OperationIndex>(
+  clearedOperationsA: TOp[],
+  clearedOperationsB: TOp[],
+): TOp[] {
   return clearedOperationsA.filter(
     (operationA) =>
       !clearedOperationsB.some(

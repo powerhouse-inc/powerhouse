@@ -4,9 +4,7 @@ import {
   ValidationError,
 } from "../types.js";
 
-export function validateOperations<TGlobalState, TLocalState>(
-  operations: DocumentOperations<TGlobalState, TLocalState>,
-) {
+export function validateOperations(operations: DocumentOperations) {
   const errors: ValidationError[] = [];
   const scopes = Object.keys(operations) as OperationScope[];
 

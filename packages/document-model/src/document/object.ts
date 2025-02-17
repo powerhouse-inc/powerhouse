@@ -1,10 +1,12 @@
 import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
 import { SignalDispatch } from "./signal.js";
 import {
-  Action,
   AttachmentRef,
   BaseDocument,
   BaseState,
+  CustomAction,
+  DefaultAction,
+  Operation,
   OperationScope,
   Reducer,
   ReducerOptions,
@@ -21,10 +23,14 @@ import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";
 export abstract class BaseDocumentClass<
   TGlobalState,
   TLocalState,
-  TAllowedAction extends Action,
+  TCustomAction extends CustomAction = never,
 > {
   protected _document: BaseDocument<TGlobalState, TLocalState>;
-  private _reducer: Reducer<TGlobalState, TLocalState, Action>;
+  private _reducer: Reducer<
+    TGlobalState,
+    TLocalState,
+    TCustomAction | DefaultAction | Operation
+  >;
   private _signalDispatch?: SignalDispatch;
 
   /**
@@ -33,7 +39,11 @@ export abstract class BaseDocumentClass<
    * @param document - The initial state of the document.
    */
   constructor(
-    reducer: Reducer<TGlobalState, TLocalState, TAllowedAction>,
+    reducer: Reducer<
+      TGlobalState,
+      TLocalState,
+      TCustomAction | DefaultAction | Operation
+    >,
     document: BaseDocument<TGlobalState, TLocalState>,
     signalDispatch?: SignalDispatch,
   ) {
@@ -47,7 +57,10 @@ export abstract class BaseDocumentClass<
    * @param action - The action to dispatch.
    * @returns The Document instance.
    */
-  protected dispatch(action: Action, options?: ReducerOptions) {
+  protected dispatch(
+    action: TCustomAction | DefaultAction | Operation,
+    options?: ReducerOptions,
+  ) {
     this._document = this._reducer(
       this._document,
       action,
@@ -81,14 +94,12 @@ export abstract class BaseDocumentClass<
    * @param reducer - The reducer function that updates the state.
    * @returns The state of the document.
    */
-  protected static async stateFromFile<TGlobalState, TLocalState>(
-    path: string,
-    reducer: Reducer<TGlobalState, TLocalState, Action>,
-  ) {
-    const state = await baseLoadFromFile<TGlobalState, TLocalState>(
-      path,
-      reducer,
-    );
+  protected static async stateFromFile<
+    TGlobalState,
+    TLocalState,
+    TCustomAction extends CustomAction = never,
+  >(path: string, reducer: Reducer<TGlobalState, TLocalState, TCustomAction>) {
+    const state = await baseLoadFromFile(path, reducer);
     return state;
   }
 

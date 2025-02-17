@@ -1,30 +1,35 @@
 import { castDraft, create, Draft } from "mutative";
+import { PruneActionInput } from "../schema/types.js";
 import {
-  Action,
   BaseDocument,
   BaseState,
-  ImmutableStateReducer,
+  CustomAction,
+  DefaultAction,
+  Operation,
+  StateReducer,
 } from "../types.js";
 import { hashDocumentStateForScope, replayOperations } from "../utils/base.js";
 import { nextSkipNumber, sortOperations } from "../utils/document-helpers.js";
 import { loadState, noop } from "./creators.js";
-import { PruneAction } from "./types.js";
 
 // updates the name of the document
-export function setNameOperation<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+export function setNameOperation<TDoc extends BaseDocument<unknown, unknown>>(
+  document: TDoc,
   name: string,
 ) {
   return { ...document, name };
 }
 
-export function undoOperation<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: Action,
+export function undoOperation<
+  TDoc extends BaseDocument<unknown, unknown>,
+  TCustomAction extends CustomAction = never,
+>(
+  document: TDoc,
+  action: TCustomAction | DefaultAction | Operation,
   skip: number,
 ) {
   // const scope = action.scope;
-  const { scope, input } = action;
+  const { scope } = action;
 
   const defaultResult = {
     document,
@@ -37,7 +42,9 @@ export function undoOperation<TGlobalState, TLocalState>(
     const operations = [...document.operations[scope]];
     const sortedOperations = sortOperations(operations);
 
-    draft.action = noop(scope) as Draft<Action>;
+    draft.action = noop(scope) as Draft<
+      TCustomAction | DefaultAction | Operation
+    >;
 
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
@@ -70,9 +77,12 @@ export function undoOperation<TGlobalState, TLocalState>(
   });
 }
 
-export function redoOperation<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: Action,
+export function redoOperation<
+  TDoc extends BaseDocument<unknown, unknown>,
+  TCustomAction extends CustomAction = never,
+>(
+  document: TDoc,
+  action: TCustomAction | DefaultAction | Operation,
   skip: number,
 ) {
   const { scope, input } = action;
@@ -118,21 +128,22 @@ export function redoOperation<TGlobalState, TLocalState>(
       type: operation.type,
       scope: operation.scope,
       input: operation.input,
-    } as Action);
+    } as TCustomAction | DefaultAction | Operation);
   });
 }
 
-export function pruneOperation<TGlobalState, TLocalState>(
+export function pruneOperation<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
   document: BaseDocument<TGlobalState, TLocalState>,
-  action: PruneAction,
-  wrappedReducer: ImmutableStateReducer<TGlobalState, TLocalState, Action>,
+  input: PruneActionInput,
+  wrappedReducer: StateReducer<TGlobalState, TLocalState, TCustomAction>,
 ) {
-  const { scope } = action;
-  const operations = document.operations[scope];
+  const operations = document.operations.global;
 
-  let {
-    input: { start, end },
-  } = action;
+  let { start, end } = input;
   start = start || 0;
   end = end || operations.length;
 
@@ -146,7 +157,7 @@ export function pruneOperation<TGlobalState, TLocalState>(
     document.initialState,
     {
       ...document.operations,
-      [scope]: actionsToKeepStart.concat(actionsToPrune),
+      global: actionsToKeepStart.concat(actionsToPrune),
     },
     wrappedReducer,
   );
@@ -169,9 +180,10 @@ export function pruneOperation<TGlobalState, TLocalState>(
     document.initialState,
     {
       ...document.operations,
-      [scope]: [
+      global: [
         ...actionsToKeepStart,
         {
+          skip: 0,
           ...loadState({ name, state: newState }, actionsToPrune.length),
           timestamp: loadStateTimestamp,
           index: loadStateIndex,
@@ -189,15 +201,15 @@ export function pruneOperation<TGlobalState, TLocalState>(
   );
 }
 
-export function loadStateOperation<TGlobalState, TLocalState>(
-  oldDocument: BaseDocument<TGlobalState, TLocalState>,
-  newDocument: { name: string; state?: BaseState<TGlobalState, TLocalState> },
-): BaseDocument<TGlobalState, TLocalState> {
+export function loadStateOperation<TDoc extends BaseDocument<unknown, unknown>>(
+  oldDocument: TDoc,
+  newDocument: { name: string; state?: BaseState<unknown, unknown> },
+): TDoc {
   return {
     ...oldDocument,
     name: newDocument.name,
     state:
       newDocument.state ??
-      ({ global: {}, local: {} } as BaseState<TGlobalState, TLocalState>),
+      ({ global: {}, local: {} } as BaseState<unknown, unknown>),
   };
 }

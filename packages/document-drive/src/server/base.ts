@@ -1,6 +1,5 @@
 import {
   Action,
-  BaseAction,
   BaseDocument,
   DocumentHeader,
   DocumentModelModule,
@@ -20,15 +19,21 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { Unsubscribe, createNanoEvents } from "nanoevents";
-import { addListener, removeListener } from "process";
 import InMemoryCache from "../cache/memory.js";
 import { ICache } from "../cache/types.js";
 import { driveDocumentType } from "../drive-document-model/constants.js";
-import { DocumentDriveAction } from "../drive-document-model/gen/actions.js";
 import {
+  DocumentDriveAction,
+  RemoveListenerAction,
+} from "../drive-document-model/gen/actions.js";
+import { documentType } from "../drive-document-model/gen/constants.js";
+import {
+  addListener,
+  removeListener,
   removeTrigger,
   setSharingType,
 } from "../drive-document-model/gen/creators.js";
+import { AddListenerInputSchema } from "../drive-document-model/gen/schema/zod.js";
 import {
   AddListenerInput,
   DocumentDriveDocument,
@@ -1112,7 +1117,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   protected async createDocument<TGlobalState, TLocalState>(
     driveId: string,
     input: CreateDocumentInput<TGlobalState, TLocalState>,
-  ) {
+  ): Promise<BaseDocument<TGlobalState, TLocalState>> {
     // if a document was provided then checks if it's valid
     let state = undefined;
     if (input.document) {
@@ -1159,14 +1164,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     const operations = Object.values(document.operations).flat();
     if (operations.length) {
       if (isDocumentDrive(document)) {
-        await this.storage.addDriveOperations(
-          driveId,
-          operations as Operation<
-            DocumentDriveState,
-            DocumentDriveLocalState
-          >[],
-          document,
-        );
+        await this.storage.addDriveOperations(driveId, operations, document);
       } else {
         await this.storage.addDocumentOperations(
           driveId,
@@ -1202,9 +1200,9 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     driveId: string,
     documentId: string | undefined,
     documentStorage: BaseDocument<TGlobalState, TLocalState>,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
   ) {
-    const operationsApplied: Operation<TGlobalState, TLocalState>[] = [];
+    const operationsApplied: Operation[] = [];
     const signals: SignalResult[] = [];
 
     const documentStorageWithState = await this._addDocumentResultingStage(
@@ -1216,7 +1214,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     let document = this._buildDocument<TGlobalState, TLocalState>(
       documentStorageWithState,
     );
-    let error: OperationError<TGlobalState, TLocalState> | undefined; // TODO: replace with an array of errors/consistency issues
+    let error: OperationError | undefined; // TODO: replace with an array of errors/consistency issues
     const operationsByScope = groupOperationsByScope(operations);
 
     for (const scope of Object.keys(operationsByScope)) {
@@ -1395,7 +1393,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     driveId: string,
     documentId: string | undefined,
     document: BaseDocument<TGlobalState, TLocalState>,
-    operation: Operation<TGlobalState, TLocalState>,
+    operation: Operation,
     skipHashValidation = false,
   ) {
     const documentModel = this.getDocumentModel<
@@ -1500,19 +1498,19 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     };
   }
 
-  addOperation<TGlobalState, TLocalState>(
+  addOperation(
     driveId: string,
     documentId: string,
-    operation: Operation<TGlobalState, TLocalState>,
+    operation: Operation,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>> {
+  ): Promise<IOperationResult> {
     return this.addOperations(driveId, documentId, [operation], options);
   }
   private async _addOperations<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string,
     callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
-      operations: Operation<TGlobalState, TLocalState>[];
+      operations: Operation[];
       header: DocumentHeader;
     }>,
   ) {
@@ -1540,19 +1538,19 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }
   }
 
-  queueOperation<TGlobalState, TLocalState>(
+  queueOperation(
     driveId: string,
     documentId: string,
-    operation: Operation<TGlobalState, TLocalState>,
+    operation: Operation,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>> {
+  ): Promise<IOperationResult> {
     return this.queueOperations(driveId, documentId, [operation], options);
   }
 
   private async resultIfExistingOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
   ): Promise<IOperationResult<TGlobalState, TLocalState> | undefined> {
     try {
       const document = await this.getDocument<TGlobalState, TLocalState>(
@@ -1576,7 +1574,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
           document,
           operations,
           signals: [],
-        };
+        } satisfies IOperationResult;
       } else {
         return undefined;
       }
@@ -1593,15 +1591,14 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   async queueOperations<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     options?: AddOperationOptions,
-  ) {
+  ): Promise<IOperationResult<TGlobalState, TLocalState>> {
     // if operations are already stored then returns cached document
-    const result = await this.resultIfExistingOperations(
-      driveId,
-      documentId,
-      operations,
-    );
+    const result = await this.resultIfExistingOperations<
+      TGlobalState,
+      TLocalState
+    >(driveId, documentId, operations);
     if (result) {
       return result;
     }
@@ -1621,7 +1618,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
               if (job.jobId === jobId) {
                 unsubscribe();
                 unsubscribeError();
-                resolve(result);
+                resolve(result as IOperationResult<TGlobalState, TLocalState>);
               }
             },
           );
@@ -1649,7 +1646,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<TGlobalState, TLocalState>> {
-    return this.queueActions(driveId, documentId, [action], options);
+    return this.queueActions<TGlobalState, TLocalState>(
+      driveId,
+      documentId,
+      [action],
+      options,
+    );
   }
 
   async queueActions<TGlobalState, TLocalState>(
@@ -1666,7 +1668,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         options,
       });
 
-      return new Promise<IOperationResult<TGlobalState, TLocalState>>(
+      return await new Promise<IOperationResult<TGlobalState, TLocalState>>(
         (resolve, reject) => {
           const unsubscribe = this.queueManager.on(
             "jobCompleted",
@@ -1674,7 +1676,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
               if (job.jobId === jobId) {
                 unsubscribe();
                 unsubscribeError();
-                resolve(result);
+                resolve(
+                  result as unknown as IOperationResult<
+                    TGlobalState,
+                    TLocalState
+                  >,
+                );
               }
             },
           );
@@ -1698,7 +1705,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   async queueDriveAction(
     driveId: string,
-    action: DocumentDriveAction | Action,
+    action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>> {
     return this.queueDriveActions(driveId, [action], options);
@@ -1706,7 +1713,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   async queueDriveActions(
     driveId: string,
-    actions: (DocumentDriveAction | Action)[],
+    actions: DocumentDriveAction[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>> {
     try {
@@ -1715,7 +1722,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         actions,
         options,
       });
-      return new Promise<
+      return await new Promise<
         IOperationResult<DocumentDriveState, DocumentDriveLocalState>
       >((resolve, reject) => {
         const unsubscribe = this.queueManager.on(
@@ -1724,7 +1731,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
             if (job.jobId === jobId) {
               unsubscribe();
               unsubscribeError();
-              resolve(result);
+              resolve(
+                result as IOperationResult<
+                  DocumentDriveState,
+                  DocumentDriveLocalState
+                >,
+              );
             }
           },
         );
@@ -1748,20 +1760,19 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   async addOperations<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     options?: AddOperationOptions,
   ) {
     // if operations are already stored then returns the result
-    const result = await this.resultIfExistingOperations(
-      driveId,
-      documentId,
-      operations,
-    );
+    const result = await this.resultIfExistingOperations<
+      TGlobalState,
+      TLocalState
+    >(driveId, documentId, operations);
     if (result) {
       return result;
     }
     let document: BaseDocument<TGlobalState, TLocalState> | undefined;
-    const operationsApplied: Operation<TGlobalState, TLocalState>[] = [];
+    const operationsApplied: Operation[] = [];
     const signals: SignalResult[] = [];
     let error: Error | undefined;
 
@@ -1906,7 +1917,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         document,
         operations: operationsApplied,
         signals,
-      } satisfies IOperationResult<TGlobalState, TLocalState>;
+      } satisfies IOperationResult;
     } catch (error) {
       const operationError =
         error instanceof OperationError
@@ -1924,13 +1935,13 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         document,
         operations: operationsApplied,
         signals,
-      } satisfies IOperationResult<TGlobalState, TLocalState>;
+      } satisfies IOperationResult;
     }
   }
 
   addDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveState, DocumentDriveLocalState>,
+    operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
   ) {
     return this.addDriveOperations(driveId, [operation], options);
@@ -1947,7 +1958,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   private async _addDriveOperations(
     driveId: string,
     callback: (document: DocumentDriveDocument) => Promise<{
-      operations: Operation<DocumentDriveState, DocumentDriveLocalState>[];
+      operations: Operation[];
       header: DocumentHeader;
     }>,
   ) {
@@ -1970,7 +1981,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   queueDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveState, DocumentDriveLocalState>,
+    operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>> {
     return this.queueDriveOperations(driveId, [operation], options);
@@ -1978,7 +1989,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   private async resultIfExistingDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation[],
   ): Promise<
     IOperationResult<DocumentDriveState, DocumentDriveLocalState> | undefined
   > {
@@ -1999,12 +2010,9 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         return {
           status: "SUCCESS",
           document: drive,
-          operations: operations,
+          operations,
           signals: [],
-        } satisfies IOperationResult<
-          DocumentDriveState,
-          DocumentDriveLocalState
-        >;
+        };
       } else {
         return undefined;
       }
@@ -2016,7 +2024,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   async queueDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>> {
     // if operations are already stored then returns cached document
@@ -2033,7 +2041,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
         operations,
         options,
       });
-      return new Promise<
+      return await new Promise<
         IOperationResult<DocumentDriveState, DocumentDriveLocalState>
       >((resolve, reject) => {
         const unsubscribe = this.queueManager.on(
@@ -2042,7 +2050,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
             if (job.jobId === jobId) {
               unsubscribe();
               unsubscribeError();
-              resolve(result);
+              resolve(
+                result as IOperationResult<
+                  DocumentDriveState,
+                  DocumentDriveLocalState
+                >,
+              );
             }
           },
         );
@@ -2065,14 +2078,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   async addDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation[],
     options?: AddOperationOptions,
   ) {
     let document: DocumentDriveDocument | undefined;
-    const operationsApplied: Operation<
-      DocumentDriveState,
-      DocumentDriveLocalState
-    >[] = [];
+    const operationsApplied: Operation[] = [];
     const signals: SignalResult[] = [];
     let error: Error | undefined;
 
@@ -2111,7 +2121,8 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
       for (const operation of operationsApplied) {
         switch (operation.type) {
           case "ADD_LISTENER": {
-            const zodListener = operation.input.listener as Listener;
+            const zodListener = AddListenerInputSchema().parse(operation.input)
+              .listener as Listener;
 
             // create the transmitter
             const transmitter = this.transmitterFactory.instance(
@@ -2259,16 +2270,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }
   }
 
-  private _buildOperations<TGlobalState, TLocalState>(
-    documentId: BaseDocument<TGlobalState, TLocalState>,
+  private _buildOperations(
+    document: BaseDocument<unknown, unknown>,
     actions: Action[],
-  ): Operation<TGlobalState, TLocalState>[] {
-    const operations: Operation<TGlobalState, TLocalState>[] = [];
-    const { reducer } = this.getDocumentModel<
-      TGlobalState,
-      TLocalState,
-      Action
-    >(documentId.documentType);
+  ): Operation[] {
+    const operations: Operation[] = [];
+    const { reducer } = this.getDocumentModel(documentType);
     for (const action of actions) {
       documentId = reducer(documentId, action);
       const operation = documentId.operations[action.scope].slice().pop();
@@ -2280,21 +2287,21 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     return operations;
   }
 
-  async addAction<TGlobalState, TLocalState>(
+  async addAction(
     driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>> {
+  ): Promise<IOperationResult> {
     return this.addActions(driveId, documentId, [action], options);
   }
 
-  async addActions<TGlobalState, TLocalState>(
+  async addActions(
     driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<TGlobalState, TLocalState>> {
+  ): Promise<IOperationResult> {
     const document = await this.getDocument(driveId, documentId);
     const operations = this._buildOperations(document, actions);
     return this.addOperations(driveId, documentId, operations, options);
@@ -2302,7 +2309,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   async addDriveAction(
     driveId: string,
-    action: DocumentDriveAction | BaseAction,
+    action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>> {
     return this.addDriveActions(driveId, [action], options);
@@ -2310,12 +2317,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   async addDriveActions(
     driveId: string,
-    actions: (DocumentDriveAction | Action)[],
+    actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>> {
     const document = await this.getDrive(driveId);
     const operations = this._buildOperations(document, actions);
-    const result = await this.addDriveOperations(driveId, operations, options);
+    const result = await this.addDriveOperations(driveId, operations);
     return result;
   }
 
@@ -2381,7 +2388,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
 
   private async removeListener<TGlobalState, TLocalState>(
     driveId: string,
-    operation: Operation<TGlobalState, TLocalState>,
+    operation: Operation<TGlobalState, TLocalState, RemoveListenerAction>,
   ) {
     const { listenerId } = operation.input;
     await this.listenerManager.removeListener(driveId, listenerId);
@@ -2391,10 +2398,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     driveId: string,
     listenerId: string,
   ): Promise<ITransmitter | undefined> {
-    const listener = await this.listenerManager.getListenerState(
-      driveId,
-      listenerId,
-    );
+    const listener = this.listenerManager.getListenerState(driveId, listenerId);
     return listener.listener.transmitter;
   }
 

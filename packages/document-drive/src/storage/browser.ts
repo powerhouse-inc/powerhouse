@@ -84,7 +84,7 @@ export class BrowserStorage implements IDriveStorage {
   async addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
     const document = await this.getDocument(drive, id);

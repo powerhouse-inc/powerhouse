@@ -7,14 +7,13 @@ import {
   undoOperation,
 } from "./actions/operations.js";
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from "./actions/types.js";
-import { BaseActionSchema } from "./schema/zod.js";
+import { DocumentActionSchema } from "./schema/zod.js";
 import { SignalDispatch } from "./signal.js";
 import {
-  Action,
   BaseDocument,
   BaseState,
-  ImmutableStateReducer,
-  MutableStateReducer,
+  CustomAction,
+  DefaultAction,
   Operation,
   OperationScope,
   ReducerOptions,
@@ -45,8 +44,8 @@ import {
  * @param operation The action being applied to the document.
  * @returns The next revision number.
  */
-function getNextRevision<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+function getNextRevision(
+  document: BaseDocument<unknown, unknown>,
   operation: { index?: number; scope: OperationScope },
 ) {
   let latestOperationIndex: number | undefined;
@@ -69,10 +68,10 @@ function getNextRevision<TGlobalState, TLocalState>(
  * @param operation The action being applied to the document.
  * @returns The updated document state.
  */
-export function updateHeader<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: Action | Operation<TGlobalState, TLocalState>,
-) {
+export function updateHeader<TDoc extends BaseDocument<unknown, unknown>>(
+  document: TDoc,
+  action: CustomAction | DefaultAction | Operation,
+): TDoc {
   return {
     ...document,
     revision: {
@@ -92,12 +91,12 @@ export function updateHeader<TGlobalState, TLocalState>(
  * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
  * @returns The updated document state.
  */
-function updateOperations<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  actionOrOperation: Action | Operation<TGlobalState, TLocalState>,
+function updateOperations<TDoc extends BaseDocument<unknown, unknown>>(
+  document: TDoc,
+  actionOrOperation: CustomAction | DefaultAction | Operation,
   skip = 0,
   reuseLastOperationIndex = false,
-) {
+): TDoc {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
   if (
@@ -108,7 +107,7 @@ function updateOperations<TGlobalState, TLocalState>(
   }
 
   const { scope } = actionOrOperation;
-  const operations = document.operations[scope].slice();
+  const operations: Operation[] = document.operations[scope].slice();
   let operationId: string | undefined;
 
   const latestOperation = operations.at(-1);
@@ -166,12 +165,12 @@ function updateOperations<TGlobalState, TLocalState>(
  * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
  * @returns The updated document state.
  */
-export function updateDocument<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: Action,
+export function updateDocument<TDoc extends BaseDocument<unknown, unknown>>(
+  document: TDoc,
+  action: CustomAction | DefaultAction | Operation,
   skip = 0,
   reuseLastOperationIndex = false,
-) {
+): TDoc {
   let newDocument = updateOperations(
     document,
     action,
@@ -190,23 +189,27 @@ export function updateDocument<TGlobalState, TLocalState>(
  * @param wrappedReducer The custom reducer function being wrapped by the base reducer.
  * @returns The updated document state.
  */
-function _baseReducer<TGlobalState, TLocalState, TAllowedAction extends Action>(
+function _baseReducer<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
   document: BaseDocument<TGlobalState, TLocalState>,
-  action: TAllowedAction,
-  wrappedReducer: ImmutableStateReducer<
+  action: TCustomAction | DefaultAction | Operation,
+  wrappedReducer: StateReducer<
     TGlobalState,
     TLocalState,
-    TAllowedAction
+    TCustomAction | DefaultAction | Operation
   >,
-) {
+): BaseDocument<TGlobalState, TLocalState> {
   // throws if action is not valid base action
-  const parsedAction = BaseActionSchema().parse(action);
+  const parsedAction = DocumentActionSchema().parse(action);
 
   switch (parsedAction.type) {
     case SET_NAME:
       return setNameOperation(document, parsedAction.input);
     case PRUNE:
-      return pruneOperation(document, parsedAction, wrappedReducer);
+      return pruneOperation(document, parsedAction.input, wrappedReducer);
     case LOAD_STATE:
       return loadStateOperation(document, parsedAction.input.state);
     default:
@@ -220,11 +223,15 @@ function _baseReducer<TGlobalState, TLocalState, TAllowedAction extends Action>(
  * @param document The current state of the document.
  * @param action The action being applied to the document.
  * @param skip The number of operations to skip before applying the action.
- * @returns The updated document, calculated skip value and transformed action (if apply).
+ * @returns The updated document, calculated skip value and transformed action (if applied).
  */
-export function processUndoRedo<TGlobalState, TLocalState>(
+export function processUndoRedo<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
   document: BaseDocument<TGlobalState, TLocalState>,
-  action: Action,
+  action: TCustomAction | DefaultAction | Operation,
   skip: number,
 ) {
   switch (action.type) {
@@ -237,29 +244,17 @@ export function processUndoRedo<TGlobalState, TLocalState>(
   }
 }
 
-/**
- * Processes a skip operation on a document.
- *
- * @template T - The type of the document state.
- * @template A - The type of the document actions.
- * @template L - The type of the document labels.
- * @param {BaseDocument<TGlobalState, TAction, TLocalState>} document - The document to process the skip operation on.
- * @param {A  | TAction} action - The action or operation to process.
- * @param {ImmutableStateReducer<TGlobalState, TAction, TLocalState>} customReducer - The custom reducer function for the document state.
- * @param {number} skipValue - The value to skip.
- * @returns {BaseDocument<TGlobalState, TAction, TLocalState>} - The updated document after processing the skip operation.
- */
 function processSkipOperation<
   TGlobalState,
   TLocalState,
-  TAllowedAction extends Action,
+  TCustomAction extends CustomAction = never,
 >(
   document: BaseDocument<TGlobalState, TLocalState>,
-  action: TAllowedAction,
-  customReducer: ImmutableStateReducer<
+  action: TCustomAction | DefaultAction | Operation,
+  customReducer: StateReducer<
     TGlobalState,
     TLocalState,
-    TAllowedAction
+    TCustomAction | DefaultAction | Operation
   >,
   skipValue: number,
   reuseOperationResultingState = false,
@@ -276,7 +271,7 @@ function processSkipOperation<
     [scope]: skipHeaderOperations(document.operations[scope], latestOperation),
   });
 
-  let scopeState: TGlobalState | TLocalState | undefined = undefined;
+  let scopeState: unknown = undefined;
   const lastRemainingOperation = documentOperations[scope].at(-1);
 
   // if the last operation has the resulting state and
@@ -317,18 +312,18 @@ function processSkipOperation<
 function processUndoOperation<
   TGlobalState,
   TLocalState,
-  TAllowedAction extends Action,
+  TCustomAction extends CustomAction = never,
 >(
   document: BaseDocument<TGlobalState, TLocalState>,
   scope: OperationScope,
-  customReducer: ImmutableStateReducer<
+  customReducer: StateReducer<
     TGlobalState,
     TLocalState,
-    TAllowedAction
+    TCustomAction | DefaultAction | Operation
   >,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
-) {
+): BaseDocument<TGlobalState, TLocalState> {
   const operations = [...document.operations[scope]];
   const sortedOperations = sortOperations(operations);
 
@@ -381,18 +376,18 @@ function processUndoOperation<
 export function baseReducer<
   TGlobalState,
   TLocalState,
-  TAllowedAction extends Action,
+  TCustomAction extends CustomAction = never,
 >(
   document: BaseDocument<TGlobalState, TLocalState>,
-  action: TAllowedAction,
-  customReducer: ImmutableStateReducer<
+  action: TCustomAction | DefaultAction | Operation,
+  customReducer: StateReducer<
     TGlobalState,
     TLocalState,
-    TAllowedAction
+    TCustomAction | DefaultAction | Operation
   >,
   dispatch?: SignalDispatch,
   options: ReducerOptions = {},
-) {
+): BaseDocument<TGlobalState, TLocalState> {
   const {
     skip,
     ignoreSkipOperations = false,
@@ -403,7 +398,7 @@ export function baseReducer<
 
   let _action = { ...action };
   let skipValue = skip || 0;
-  let newDocument: BaseDocument<TGlobalState, TLocalState> = {
+  let newDocument = {
     ...document,
   };
   let reuseLastOperationIndex = false;
@@ -424,7 +419,7 @@ export function baseReducer<
       reuseLastOperationIndex: reuseIndex,
     } = processUndoRedo(document, _action, skipValue);
 
-    _action = transformedAction as TAllowedAction;
+    _action = transformedAction;
     skipValue = calculatedSkip;
     newDocument = processedDocument;
     reuseLastOperationIndex = reuseIndex;
@@ -536,7 +531,7 @@ export function baseReducer<
   const scope = _action.scope || "global";
   const hash =
     reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
-      ? (_action as Operation<TGlobalState, TLocalState>).hash
+      ? (_action as unknown as Operation).hash
       : hashDocumentStateForScope(newDocument, scope);
 
   // updates the last operation with the hash of the resulting state
@@ -545,7 +540,7 @@ export function baseReducer<
     lastOperation.hash = hash;
 
     if (reuseOperationResultingState) {
-      lastOperation.resultingState = newDocument.state[scope];
+      lastOperation.resultingState = JSON.stringify(newDocument.state[scope]);
     }
 
     // if the action has attachments then adds them to the document
@@ -562,133 +557,5 @@ export function baseReducer<
     }
   }
 
-  return newDocument;
-}
-
-/**
- * Base document reducer that wraps a custom document reducer and handles
- * document-level actions such as undo, redo, prune, and set name.
- *
- * @template TGlobalState - The type of the state of the custom reducer.
- * @template A - The type of the actions of the custom reducer.
- * @param state - The current state of the document.
- * @param action - The action object to apply to the state.
- * @param customReducer - The custom reducer that implements the application logic
- * specific to the document's state.
- * @returns The new state of the document.
- */
-export function mutableBaseReducer<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: Action | Operation<TGlobalState, TLocalState>,
-  customReducer: MutableStateReducer<TGlobalState, TLocalState, Action>,
-  dispatch?: SignalDispatch,
-  options: ReducerOptions = {},
-) {
-  const {
-    skip,
-    ignoreSkipOperations = false,
-    reuseHash = false,
-    reuseOperationResultingState = false,
-    operationResultingStateParser,
-  } = options;
-
-  const _action = { ...action };
-  const skipValue = skip || 0;
-  let newDocument = {
-    ...document,
-  };
-  // let clipboard = [...document.clipboard];
-
-  const shouldProcessSkipOperation =
-    !ignoreSkipOperations &&
-    (skipValue > 0 || ("index" in _action && _action.skip > 0));
-
-  // if the action is one the base document actions (SET_NAME, UNDO, REDO, PRUNE)
-  // then runs the base reducer first
-  if (isDocumentAction(_action)) {
-    newDocument = _baseReducer(
-      newDocument,
-      _action,
-      customReducer as ImmutableStateReducer<TGlobalState, TLocalState, Action>,
-    );
-  }
-
-  // updates the document revision number, last modified date
-  // and operation history
-  newDocument = updateDocument(newDocument, _action, skipValue);
-
-  if (shouldProcessSkipOperation) {
-    newDocument = processSkipOperation(
-      newDocument,
-      _action,
-      customReducer as ImmutableStateReducer<TGlobalState, TLocalState, Action>,
-      skipValue,
-      reuseOperationResultingState,
-      operationResultingStateParser,
-    );
-  }
-
-  try {
-    const newState = customReducer(newDocument.state, _action, dispatch);
-    if (newState) {
-      newDocument.state = newState;
-    }
-  } catch (error) {
-    // if the reducer throws an error then we should keep the previous state (before replayOperations)
-    // and remove skip number from action/operation
-    const lastOperationIndex = newDocument.operations[_action.scope].length - 1;
-    newDocument.operations[_action.scope][lastOperationIndex].error = (
-      error as Error
-    ).message;
-    newDocument.operations[_action.scope][lastOperationIndex].skip = 0;
-
-    if (shouldProcessSkipOperation) {
-      newDocument.state = { ...document.state };
-      newDocument.operations = {
-        ...document.operations,
-        [_action.scope]: [
-          ...document.operations[_action.scope],
-          {
-            ...newDocument.operations[_action.scope][lastOperationIndex],
-          },
-        ],
-      };
-    }
-  }
-
-  if ([UNDO, REDO, PRUNE].includes(_action.type)) {
-    return newDocument;
-  }
-
-  // if reuseHash is true, checks if the action has
-  // an hash and uses it instead of generating it
-  const scope = _action.scope || "global";
-  const hash =
-    reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
-      ? (_action as Operation<TGlobalState, TLocalState>).hash
-      : hashDocumentStateForScope(newDocument, scope);
-
-  // updates the last operation with the hash of the resulting state
-  const lastOperation = newDocument.operations[scope].at(-1);
-  if (lastOperation) {
-    lastOperation.hash = hash;
-
-    if (reuseOperationResultingState) {
-      lastOperation.resultingState = newDocument.state[scope];
-    }
-
-    // if the action has attachments then adds them to the document
-    if (!isDocumentAction(_action) && _action.attachments) {
-      _action.attachments.forEach((attachment) => {
-        const { hash, ...file } = attachment;
-        if (!newDocument.attachments) {
-          newDocument.attachments = {};
-        }
-        newDocument.attachments[hash] = {
-          ...file,
-        };
-      });
-    }
-  }
   return newDocument;
 }

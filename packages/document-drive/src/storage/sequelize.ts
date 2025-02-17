@@ -161,7 +161,7 @@ export class SequelizeStorage implements IDriveStorage {
   async addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
     const document = await this.getDocument(drive, id);
@@ -239,7 +239,7 @@ export class SequelizeStorage implements IDriveStorage {
   async _addDocumentOperationAttachments<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string,
-    operation: Operation<TGlobalState, TLocalState>,
+    operation: Operation,
     attachments: AttachmentInput[],
   ) {
     const Attachment = this.db.models.attachment;
@@ -360,7 +360,7 @@ export class SequelizeStorage implements IDriveStorage {
       id: op.opId,
       skip: op.skip,
       // attachments: fileRegistry
-    })) as Operation<TGlobalState, TLocalState>[];
+    })) as Operation[];
 
     const doc = {
       created: document.createdAt.toISOString(),

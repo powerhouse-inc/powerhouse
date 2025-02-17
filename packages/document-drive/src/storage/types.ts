@@ -15,7 +15,7 @@ export interface IStorageDelegate {
   getCachedOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-  ): Promise<DocumentOperations<TGlobalState, TLocalState> | undefined>;
+  ): Promise<DocumentOperations | undefined>;
 }
 
 export interface IStorage {
@@ -33,14 +33,14 @@ export interface IStorage {
   addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    operations: Operation<TGlobalState, TLocalState>[],
+    operations: Operation[],
     header: DocumentHeader,
   ): Promise<void>;
   addDocumentOperationsWithTransaction?<TGlobalState, TLocalState>(
     drive: string,
     id: string,
     callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
-      operations: Operation<TGlobalState, TLocalState>[];
+      operations: Operation[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;
