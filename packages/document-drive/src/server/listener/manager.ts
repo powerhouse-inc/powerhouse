@@ -391,7 +391,9 @@ export class ListenerManager implements IListenerManager {
               );
 
               if (su && su.operations.length > 0) {
-                const suIndex = su.operations[su.operations.length - 1].index;
+                const suIndex = su.operations.at(
+                  su.operations.length - 1,
+                )?.index;
                 if (suIndex !== revision.revision) {
                   this.debugLog(
                     `Revision still out-of-date for ${su.documentId}:${su.scope}:${su.branch} ${suIndex} <> ${revision.revision}`,
