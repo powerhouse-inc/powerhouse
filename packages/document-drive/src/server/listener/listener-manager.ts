@@ -1,16 +1,13 @@
-import {
-  DocumentDriveDocument,
-  ListenerFilter,
-} from "document-model-libs/document-drive";
+import { ListenerFilter } from "document-model-libs/document-drive";
 import { OperationScope } from "document-model/document";
 import { logger } from "../../utils/logger";
 import { OperationError } from "../error";
+import { ISynchronizationManager } from "../index";
 import {
   DefaultListenerManagerOptions,
   DriveUpdateErrorHandler,
   ErrorStatus,
   GetStrandsOptions,
-  IBaseDocumentDriveServer,
   IListenerManager,
   Listener,
   ListenerManagerOptions,
@@ -19,57 +16,30 @@ import {
   OperationUpdate,
   StrandUpdate,
   SynchronizationUnit,
-  SynchronizationUnitQuery,
+  SynchronizationUnitQuery
 } from "../types";
 import { StrandUpdateSource } from "./transmitter/types";
+import { debounce } from "./util";
 
 const ENABLE_SYNC_DEBUG = false;
-
-function debounce<T extends unknown[], R>(
-  func: (...args: T) => Promise<R>,
-  delay = 250,
-) {
-  let timer: number;
-  return (immediate: boolean, ...args: T) => {
-    if (timer) {
-      clearTimeout(timer);
-    }
-    return new Promise<R>((resolve, reject) => {
-      if (immediate) {
-        func(...args)
-          .then(resolve)
-          .catch(reject);
-      } else {
-        timer = setTimeout(() => {
-          func(...args)
-            .then(resolve)
-            .catch(reject);
-        }, delay) as unknown as number;
-      }
-    });
-  };
-}
 
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
   private debugID = `[LM  #${Math.floor(Math.random() * 999)}]`;
-  protected driveServer: IBaseDocumentDriveServer;
-  protected options: ListenerManagerOptions;
-
+  protected syncManager: ISynchronizationManager;
   // driveId -> listenerId -> listenerState
   protected listenerStateByDriveId = new Map<
     string,
     Map<string, ListenerState>
   >();
+  protected options: ListenerManagerOptions;
 
   constructor(
-    drive: IBaseDocumentDriveServer,
-    listenerState = new Map<string, Map<string, ListenerState>>(),
+    syncManager: ISynchronizationManager,
     options: ListenerManagerOptions = DefaultListenerManagerOptions,
   ) {
     this.debugLog(`constructor(...)`);
-    this.driveServer = drive;
-    this.listenerStateByDriveId = listenerState;
+    this.syncManager = syncManager;
     this.options = { ...DefaultListenerManagerOptions, ...options };
   }
 
@@ -291,7 +261,7 @@ export class ListenerManager implements IListenerManager {
 
           const opData: OperationUpdate[] = [];
           try {
-            const data = await this.driveServer.getOperationData(
+            const data = await this.syncManager.getOperationData(
               // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
               driveId,
               syncUnit.syncId,
@@ -391,7 +361,7 @@ export class ListenerManager implements IListenerManager {
               );
 
               if (su && su.operations.length > 0) {
-                const suIndex = su.operations[su.operations.length - 1].index;
+                const suIndex = su.operations[su.operations.length - 1]!.index;
                 if (suIndex !== revision.revision) {
                   this.debugLog(
                     `Revision still out-of-date for ${su.documentId}:${su.scope}:${su.branch} ${suIndex} <> ${revision.revision}`,
@@ -484,23 +454,18 @@ export class ListenerManager implements IListenerManager {
     return false;
   }
 
-  getListenerSyncUnits(
-    driveId: string,
-    listenerId: string,
-    loadedDrive?: DocumentDriveDocument,
-  ) {
+  getListenerSyncUnits(driveId: string, listenerId: string) {
     const listener = this.listenerStateByDriveId.get(driveId)?.get(listenerId);
     if (!listener) {
       return [];
     }
     const filter = listener.listener.filter;
-    return this.driveServer.getSynchronizationUnits(
+    return this.syncManager.getSynchronizationUnits(
       driveId,
       filter.documentId ?? ["*"],
       filter.scope ?? ["*"],
       filter.branch ?? ["*"],
       filter.documentType ?? ["*"],
-      loadedDrive,
     );
   }
 
@@ -513,7 +478,7 @@ export class ListenerManager implements IListenerManager {
       return Promise.resolve([]);
     }
     const filter = listener.listener.filter;
-    return this.driveServer.getSynchronizationUnitsIds(
+    return this.syncManager.getSynchronizationUnitsIds(
       driveId,
       filter.documentId ?? ["*"],
       filter.scope ?? ["*"],
@@ -552,12 +517,7 @@ export class ListenerManager implements IListenerManager {
     // fetch operations from drive  and prepare strands
     const strands: StrandUpdate[] = [];
 
-    const drive = await this.driveServer.getDrive(driveId);
-    const syncUnits = await this.getListenerSyncUnits(
-      driveId,
-      listenerId,
-      drive,
-    );
+    const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
 
     const limit = options?.limit; // maximum number of operations to send across all sync units
     let operationsCount = 0; // total amount of operations that have been retrieved
@@ -577,7 +537,7 @@ export class ListenerManager implements IListenerManager {
 
       const { documentId, driveId, scope, branch } = syncUnit;
       try {
-        const operations = await this.driveServer.getOperationData(
+        const operations = await this.syncManager.getOperationData(
           // DEAL WITH INVALID SYNC ID ERROR
           driveId,
           syncUnit.syncId,
@@ -586,7 +546,6 @@ export class ListenerManager implements IListenerManager {
             fromRevision: options?.fromRevision ?? entry?.listenerRev,
             limit: limit ? limit - operationsCount : undefined,
           },
-          drive,
         );
 
         if (!operations.length) {

@@ -28,10 +28,10 @@
       "dependsOn": ["^build"]
     },
     "check-types": {
-      "dependsOn": ["^build", "generate"]
+      "dependsOn": ["^build"]
     },
     "generate": {
-      "dependsOn": ["^build"]
+      "dependsOn": []
     },
     "dev": {
       "dependsOn": ["^build"]
@@ -41,7 +41,7 @@
     },
     "build": {
       "cache": true,
-      "dependsOn": ["^build", "generate"],
+      "dependsOn": ["^build"],
       "inputs": [
         "noMarkdown",
         "^noMarkdown",
@@ -55,7 +55,7 @@
     },
     "build:studio": {
       "cache": true,
-      "dependsOn": ["^build", "generate"],
+      "dependsOn": ["^build"],
       "inputs": [
         "noMarkdown",
         "^noMarkdown",

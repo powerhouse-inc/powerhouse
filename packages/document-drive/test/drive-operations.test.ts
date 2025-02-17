@@ -8,7 +8,7 @@ import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { BaseAction, DocumentModel, Operation } from "document-model/document";
 import { module as DocumentModelLib } from "document-model/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveServer } from "../src";
+import { ReactorBuilder } from "../src";
 
 function buildOperation(
   document: DocumentDriveDocument,
@@ -39,10 +39,10 @@ describe("Drive operations", () => {
     ...Object.values(DocumentModelsLibs),
   ] as DocumentModel[];
 
-  let server = new DocumentDriveServer(documentModels);
+  let server = new ReactorBuilder(documentModels).build();
 
   beforeEach(async () => {
-    server = new DocumentDriveServer(documentModels);
+    server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
 

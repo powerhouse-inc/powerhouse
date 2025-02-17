@@ -8,12 +8,12 @@ import {
   SubgraphManager,
 } from "@powerhousedao/reactor-api";
 import {
-  DocumentDriveServer,
   DriveAlreadyExistsError,
   DriveInput,
   IDocumentDriveServer,
   InternalTransmitter,
   IReceiver,
+  ReactorBuilder,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import {
@@ -101,10 +101,9 @@ const startServer = async (
   const serverPort = Number(process.env.PORT ?? port);
 
   // start document drive server with all available document models & filesystem storage
-  const driveServer = new DocumentDriveServer(
-    baseDocumentModels,
-    new FilesystemStorage(storagePath),
-  );
+  const driveServer = new ReactorBuilder(baseDocumentModels)
+    .withStorage(new FilesystemStorage(storagePath))
+    .build();
 
   // init drive server
   await driveServer.initialize();

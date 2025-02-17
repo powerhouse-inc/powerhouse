@@ -3,8 +3,9 @@ import {
   ListenerFilter,
 } from "document-model-libs/document-drive";
 import { Action, Document, DocumentModel } from "document-model/document";
-import { DocumentDriveServerMixin, RemoteDriveOptions } from "../server";
+import { DocumentDriveServerMixin } from "../server/base-server";
 import { DocumentModelNotFoundError } from "../server/error";
+import { RemoteDriveOptions } from "../server/types";
 import { DriveInfo } from "../utils/graphql";
 import {
   ReadDocumentNotFoundError,
