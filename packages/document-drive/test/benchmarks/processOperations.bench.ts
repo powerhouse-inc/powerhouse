@@ -9,6 +9,7 @@ import { BrowserStorage } from "../../src/storage/browser.js";
 import { setLogger } from "../../src/utils/logger.js";
 import { generateUUID } from "../../src/utils/misc.js";
 import { RunAsap } from "../../src/utils/run-asap.js";
+// @ts-ignore
 import Strands from "./strands.small.json" assert { type: "json" };
 
 const DRIVE_ID = GetDrive.data.drive.id;

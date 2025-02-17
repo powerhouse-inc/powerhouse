@@ -6,9 +6,8 @@ import type {
 } from "document-model";
 import LocalForage from "localforage";
 import {
+  DocumentDriveAction,
   DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
 } from "../drive-document-model/gen/types.js";
 import { DriveNotFoundError } from "../server/error.js";
 import { SynchronizationUnitQuery } from "../server/types.js";
@@ -151,7 +150,7 @@ export class BrowserStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

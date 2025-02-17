@@ -4,11 +4,7 @@ import {
   Operation,
   OperationScope,
 } from "document-model";
-import {
-  DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "../drive-document-model/gen/types.js";
+import { DocumentDriveAction, DocumentDriveDocument } from "../drive-document-model/gen/types.js";
 import { DriveNotFoundError } from "../server/error.js";
 import { SynchronizationUnitQuery } from "../server/types.js";
 import { mergeOperations } from "../utils/misc.js";
@@ -150,7 +146,7 @@ export class MemoryStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

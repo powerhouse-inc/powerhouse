@@ -8,6 +8,7 @@ import {
 } from "document-model";
 import { DataTypes, Options, Sequelize } from "sequelize";
 import {
+  DocumentDriveAction,
   DocumentDriveDocument,
   DocumentDriveLocalState,
   DocumentDriveState,
@@ -132,7 +133,7 @@ export class SequelizeStorage implements IDriveStorage {
   }
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);

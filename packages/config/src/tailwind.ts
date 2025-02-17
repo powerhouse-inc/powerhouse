@@ -1,8 +1,8 @@
+import scrollbar from "tailwind-scrollbar";
 import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
-import defaultTheme from "tailwindcss/defaultTheme";
-import plugin from "tailwindcss/plugin";
-import scrollbar from "tailwind-scrollbar";
+import defaultTheme from "tailwindcss/defaultTheme.js";
+import plugin from "tailwindcss/plugin.js";
 
 const theme = {
   fontFamily: {

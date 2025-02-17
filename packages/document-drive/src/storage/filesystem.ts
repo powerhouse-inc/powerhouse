@@ -17,9 +17,8 @@ import stringify from "json-stringify-deterministic";
 import path from "path";
 import sanitize from "sanitize-filename";
 import {
+  DocumentDriveAction,
   DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
 } from "../drive-document-model/gen/types.js";
 import { DriveNotFoundError } from "../server/error.js";
 import { SynchronizationUnitQuery } from "../server/types.js";
@@ -235,7 +234,7 @@ export class FilesystemStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

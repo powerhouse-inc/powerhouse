@@ -1,7 +1,7 @@
 import { pascalCase } from "change-case";
 import {
   BaseDocument,
-  CustomAction,
+  Action,
   DocumentModelModule,
   DocumentModelState,
   Operation,
@@ -181,7 +181,7 @@ export type DocumentGraphQLResult<TGlobalState, TLocalState> = BaseDocument<
 export async function fetchDocument<
   TGlobalState,
   TLocalState,
-  TAction extends CustomAction = never,
+  TAction extends Action = never,
 >(
   url: string,
   documentId: string,

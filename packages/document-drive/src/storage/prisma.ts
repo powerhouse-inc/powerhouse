@@ -13,9 +13,8 @@ import type {
 } from "document-model";
 import { IBackOffOptions, backOff } from "exponential-backoff";
 import {
+  DocumentDriveAction,
   DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
 } from "../drive-document-model/gen/types.js";
 import { ConflictOperationError, DriveNotFoundError } from "../server/error.js";
 import { SynchronizationUnitQuery } from "../server/types.js";
@@ -121,13 +120,13 @@ export class PrismaStorage implements IDriveStorage {
   }
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);
   }
 
-  async addDriveOperationsWithTransaction<TGlobalState, TLocalState>(
+  async addDriveOperationsWithTransaction(
     drive: string,
     callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
@@ -307,7 +306,7 @@ export class PrismaStorage implements IDriveStorage {
     return result;
   }
 
-  async addDocumentOperations<TGlobalState, TLocalState>(
+  async addDocumentOperations(
     drive: string,
     id: string,
     operations: Operation[],
@@ -452,7 +451,7 @@ export class PrismaStorage implements IDriveStorage {
         result.attachments.forEach(({ hash, ...file }) => {
           fileRegistry[hash] = file;
         });
-        acc[scope].push(result as Operation);
+        acc[scope].push(result);
         return acc;
       },
       cachedOperations as DocumentOperations,

@@ -1,9 +1,8 @@
 import type { BaseDocument, DocumentHeader, Operation } from "document-model";
 
 import {
+  DocumentDriveAction,
   DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
 } from "../drive-document-model/gen/types.js";
 import { SynchronizationUnitQuery } from "../server/types.js";
 import { IDriveStorage, IStorage, IStorageDelegate } from "./types.js";
@@ -77,7 +76,7 @@ export abstract class BaseDriveStorage
   abstract deleteDrive(id: string): Promise<void>;
   abstract addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void>;
 }

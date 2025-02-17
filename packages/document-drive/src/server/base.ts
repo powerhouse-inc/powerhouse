@@ -2402,9 +2402,9 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     return transmitter;
   }
 
-  private async removeListener<TGlobalState, TLocalState>(
+  private async removeListener(
     driveId: string,
-    operation: Operation<TGlobalState, TLocalState, RemoveListenerAction>,
+    operation: Operation<RemoveListenerAction>,
   ) {
     const { listenerId } = operation.input;
     await this.listenerManager.removeListener(driveId, listenerId);

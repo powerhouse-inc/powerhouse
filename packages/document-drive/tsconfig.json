@@ -2,7 +2,10 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "emitDeclarationOnly": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "paths": {
+      "@powerhousedao/codegen": ["../codegen/index.ts"]
+    }
   },
   "references": [
     {
@@ -12,4 +15,5 @@
       "path": "../codegen"
     }
   ],
+  "exclude": ["**/*.test.ts"]
 }

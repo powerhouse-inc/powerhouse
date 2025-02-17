@@ -32,7 +32,22 @@ export type Args = {
 };
 
 export default {
-  params: ({ args }: { args: Args }) => {
+  params: ({
+    args,
+  }: {
+    args: Args;
+  }): {
+    rootDir: string;
+    documentModel: string;
+    documentTypeId: string;
+    documentType: string;
+    extension: string;
+    modules: Array<{ name: string; [key: string]: any }>;
+    fileExtension: string;
+    hasLocalSchema: boolean;
+    initialGlobalState: string;
+    initialLocalState: string;
+  } => {
     const documentModel = JSON.parse(args.documentModel) as DocumentModelState;
     const latestSpec =
       documentModel.specifications[documentModel.specifications.length - 1];

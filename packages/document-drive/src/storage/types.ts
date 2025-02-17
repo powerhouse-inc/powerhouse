@@ -5,9 +5,8 @@ import type {
   Operation,
 } from "document-model";
 import {
+  DocumentDriveAction,
   DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
 } from "../drive-document-model/gen/types.js";
 import { SynchronizationUnitQuery } from "../server/types.js";
 
@@ -73,13 +72,13 @@ export interface IDriveStorage extends IStorage {
   clearStorage?(): Promise<void>;
   addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveState, DocumentDriveLocalState>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void>;
   addDriveOperationsWithTransaction?(
     drive: string,
     callback: (document: DocumentDriveDocument) => Promise<{
-      operations: Operation<DocumentDriveState, DocumentDriveLocalState>[];
+      operations: Operation<DocumentDriveAction>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;
