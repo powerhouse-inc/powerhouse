@@ -4,11 +4,29 @@ import { logger } from "../../../utils/logger.js";
 import { ListenerRevision, StrandUpdate } from "../../types.js";
 import { ITransmitter, StrandUpdateSource } from "./types.js";
 
+const ENABLE_SYNC_DEBUG = false;
+const SYNC_OPS_BATCH_LIMIT = 10;
+
 export class SwitchboardPushTransmitter implements ITransmitter {
   private targetURL: string;
+  private debugID = `[SPT #${Math.floor(Math.random() * 999)}]`;
 
   constructor(targetURL: string) {
     this.targetURL = targetURL;
+  }
+
+  private debugLog(...data: any[]) {
+    if (!ENABLE_SYNC_DEBUG) {
+      return false;
+    }
+
+    if (data.length > 0 && typeof data[0] === "string") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(this.debugID, ...data);
+    }
   }
 
   async transmit(
@@ -19,6 +37,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       source.type === "trigger" &&
       source.trigger.data?.url === this.targetURL
     ) {
+      this.debugLog(`Cutting trigger loop from ${this.targetURL}.`);
       return strands.map((strand) => ({
         driveId: strand.driveId,
         documentId: strand.documentId,
@@ -28,6 +47,39 @@ export class SwitchboardPushTransmitter implements ITransmitter {
         revision: strand.operations.at(-1)?.index ?? -1,
       }));
     }
+
+    const culledStrands: StrandUpdate[] = [];
+    let opsCounter = 0;
+
+    for (
+      let s = 0;
+      opsCounter <= SYNC_OPS_BATCH_LIMIT && s < strands.length;
+      s++
+    ) {
+      const currentStrand = strands.at(s);
+      if (!currentStrand) {
+        break;
+      }
+      const newOps = Math.min(
+        SYNC_OPS_BATCH_LIMIT - opsCounter,
+        currentStrand.operations.length,
+      );
+
+      culledStrands.push({
+        ...currentStrand,
+        operations: currentStrand.operations.slice(0, newOps),
+      });
+
+      opsCounter += newOps;
+    }
+
+    this.debugLog(
+      ` Total update: [${strands.map((s) => s.operations.length).join(", ")}] operations`,
+    );
+
+    this.debugLog(
+      `Culled update: [${culledStrands.map((s) => s.operations.length).join(", ")}] operations`,
+    );
 
     // Send Graphql mutation to switchboard
     try {
@@ -49,7 +101,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
           }
         `,
         {
-          strands: strands.map((strand) => ({
+          strands: culledStrands.map((strand) => ({
             ...strand,
             operations: strand.operations.map((op) => ({
               ...op,

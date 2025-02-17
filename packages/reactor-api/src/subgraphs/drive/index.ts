@@ -25,10 +25,38 @@ import {
   processPushUpdate,
 } from "src/sync/utils";
 import { Subgraph } from "../base";
-import { Context } from "../types";
+import { Context, SubgraphArgs } from "../types";
 import { Asset } from "./temp-hack-rwa-type-defs";
 
+const ENABLE_SYNC_DEBUG = false;
+
+const driveKindTypeNames: Record<string, string> = {
+  file: "DocumentDrive_FileNode",
+  folder: "DocumentDrive_FolderNode",
+};
+
 export class DriveSubgraph extends Subgraph {
+  private debugID = `[DSG #${Math.floor(Math.random() * 999)}]`;
+
+  constructor(args: SubgraphArgs) {
+    super(args);
+    this.debugLog(`constructor()`);
+  }
+
+  private debugLog(...data: any[]) {
+    if (!ENABLE_SYNC_DEBUG) {
+      return;
+    }
+
+    if (data.length > 0 && typeof data[0] === "string") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(this.debugID, ...data);
+    }
+  }
+
   name = "d/:drive";
   typeDefs = gql`
     type Query {
@@ -197,16 +225,25 @@ export class DriveSubgraph extends Subgraph {
     },
     Query: {
       drive: async (_: unknown, args: unknown, ctx: Context) => {
+        this.debugLog(`drive()`, args);
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const drive = await this.reactor.getDrive(ctx.driveId);
-        return drive.state.global;
+        return {
+          ...drive.state.global,
+          nodes: drive.state.global.nodes.map((n) => ({
+            ...n,
+            __typename: driveKindTypeNames[n.kind] || "UnkownDriveNode",
+          })),
+        };
       },
       documents: async (_: unknown, args: unknown, ctx: Context) => {
+        this.debugLog(`documents(drive: ${ctx.driveId})`, args);
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const documents = await this.reactor.getDocuments(ctx.driveId);
         return documents;
       },
       document: async (_: unknown, { id }: { id: string }, ctx: Context) => {
+        this.debugLog(`document(drive: ${ctx.driveId}, id: ${id})`);
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const document = await this.reactor.getDocument(ctx.driveId, id);
 
@@ -245,6 +282,11 @@ export class DriveSubgraph extends Subgraph {
         { filter }: { filter: ListenerFilter },
         ctx: Context,
       ) => {
+        this.debugLog(
+          `registerPullResponderListener(drive: ${ctx.driveId})`,
+          filter,
+        );
+
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const uuid = generateUUID();
         const listener: Listener = {
@@ -284,6 +326,7 @@ export class DriveSubgraph extends Subgraph {
         ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
+        this.debugLog(`pushUpdates(drive: ${ctx.driveId})`, strandsGql);
 
         // translate data types
         const strands: InternalStrandUpdate[] = strandsGql.map((strandGql) => {
@@ -315,6 +358,11 @@ export class DriveSubgraph extends Subgraph {
         }: { listenerId: string; revisions: ListenerRevision[] },
         ctx: Context,
       ) => {
+        this.debugLog(
+          `acknowledge(drive: ${ctx.driveId}, listenerId: ${listenerId})`,
+          revisions,
+        );
+
         if (!listenerId || !revisions) return false;
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
@@ -349,6 +397,9 @@ export class DriveSubgraph extends Subgraph {
         }: { listenerId: string; since: string | undefined },
         ctx: Context,
       ) => {
+        this.debugLog(
+          `strands(drive: ${ctx.driveId}, listenerId: ${listenerId}, since:${since})`,
+        );
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
         // get the requested strand updates

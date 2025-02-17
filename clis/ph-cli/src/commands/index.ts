@@ -3,7 +3,9 @@ import { connectCommand } from "./connect.js";
 import { devCommand } from "./dev.js";
 import { generateCommand } from "./generate.js";
 import { helpCommand } from "./help.js";
+import { inspectCommand } from "./inspect.js";
 import { installCommand } from "./install.js";
+import { listCommand } from "./list.js";
 import { serviceCommand } from "./service.js";
 import { reactorCommand } from "./switchboard.js";
 import { uninstallCommand } from "./uninstall.js";
@@ -17,6 +19,8 @@ export const commands = [
   installCommand,
   uninstallCommand,
   serviceCommand,
+  listCommand,
+  inspectCommand,
 ];
 
 export default function registerCommands(program: Command) {
@@ -28,6 +32,7 @@ export * from "./dev.js";
 export * from "./generate.js";
 export * from "./help.js";
 export * from "./install.js";
+export * from "./list.js";
 export * from "./service.js";
 export * from "./switchboard.js";
 export * from "./uninstall.js";

@@ -23,6 +23,8 @@ import {
 } from "../types.js";
 import { StrandUpdateSource } from "./transmitter/types.js";
 
+const ENABLE_SYNC_DEBUG = false;
+
 function debounce<T extends unknown[], R>(
   func: (...args: T) => Promise<R>,
   delay = 250,
@@ -50,26 +52,43 @@ function debounce<T extends unknown[], R>(
 
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
-
+  private debugID = `[LM  #${Math.floor(Math.random() * 999)}]`;
   protected driveServer: IBaseDocumentDriveServer;
+  protected options: ListenerManagerOptions;
+
   // driveId -> listenerId -> listenerState
   protected listenerStateByDriveId = new Map<
     string,
     Map<string, ListenerState>
   >();
-  protected options: ListenerManagerOptions;
 
   constructor(
     drive: IBaseDocumentDriveServer,
     listenerState = new Map<string, Map<string, ListenerState>>(),
     options: ListenerManagerOptions = DefaultListenerManagerOptions,
   ) {
+    this.debugLog(`constructor(...)`);
     this.driveServer = drive;
     this.listenerStateByDriveId = listenerState;
     this.options = { ...DefaultListenerManagerOptions, ...options };
   }
 
+  private debugLog(...data: any[]) {
+    if (!ENABLE_SYNC_DEBUG) {
+      return;
+    }
+
+    if (data.length > 0 && typeof data[0] === "string") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(this.debugID, ...data);
+    }
+  }
+
   async initialize(handler: DriveUpdateErrorHandler) {
+    this.debugLog("initialize(...)");
     // if network connect comes back online
     // then triggers the listeners update
     if (typeof window !== "undefined") {
@@ -86,6 +105,10 @@ export class ListenerManager implements IListenerManager {
   }
 
   async setListener(driveId: string, listener: Listener) {
+    this.debugLog(
+      `setListener(drive: ${driveId}, listener: ${listener.listenerId})`,
+    );
+
     // slight code smell -- drive id may not need to be on listener or not passed in
     if (driveId !== listener.driveId) {
       throw new Error("Drive ID mismatch");
@@ -113,6 +136,8 @@ export class ListenerManager implements IListenerManager {
   }
 
   async removeListener(driveId: string, listenerId: string) {
+    this.debugLog("setListener()");
+
     const driveMap = this.listenerStateByDriveId.get(driveId);
     if (!driveMap) {
       return false;
@@ -222,27 +247,46 @@ export class ListenerManager implements IListenerManager {
   private async _triggerUpdate(
     source: StrandUpdateSource,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
+    maxContinues = 500,
   ) {
+    this.debugLog(
+      `_triggerUpdate(source: ${source.type}, maxContinues: ${maxContinues})`,
+      this.listenerStateByDriveId,
+    );
+
+    if (maxContinues < 0) {
+      throw new Error("Maximum retries exhausted.");
+    }
+
     const listenerUpdates: ListenerUpdate[] = [];
+
     for (const [driveId, drive] of this.listenerStateByDriveId) {
-      for (const [_, listenerState] of drive) {
+      for (const [listenerId, listenerState] of drive) {
         const transmitter = listenerState.listener.transmitter;
+
         if (!transmitter?.transmit) {
+          this.debugLog(`Transmitter not set on listener: ${listenerId}`);
           continue;
         }
 
-        const syncUnits = await this.getListenerSyncUnits(
-          driveId,
-          listenerState.listener.listenerId,
-        );
-
+        const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
         const strandUpdates: StrandUpdate[] = [];
+
+        this.debugLog("syncUnits", syncUnits);
+
         // TODO change to push one after the other, reusing operation data
         const tasks = syncUnits.map((syncUnit) => async () => {
           const unitState = listenerState.syncUnits.get(syncUnit.syncId);
 
           if (unitState && unitState.listenerRev >= syncUnit.revision) {
+            this.debugLog(
+              `Abandoning push for sync unit ${syncUnit.syncId}: already up-to-date (${unitState.listenerRev} >= ${syncUnit.revision})`,
+            );
             return;
+          } else {
+            this.debugLog(
+              `Listener out-of-date for sync unit ${syncUnit.syncId}: ${unitState?.listenerRev} < ${syncUnit.revision}`,
+            );
           }
 
           const opData: OperationUpdate[] = [];
@@ -261,6 +305,9 @@ export class ListenerManager implements IListenerManager {
           }
 
           if (!opData.length) {
+            this.debugLog(
+              `Abandoning push for ${syncUnit.syncId}: no operations found`,
+            );
             return;
           }
 
@@ -272,34 +319,53 @@ export class ListenerManager implements IListenerManager {
             scope: syncUnit.scope as OperationScope,
           });
         });
+
         if (this.options.sequentialUpdates) {
+          this.debugLog(
+            `Collecting ${tasks.length} syncUnit strandUpdates in sequence`,
+          );
           for (const task of tasks) {
             await task();
           }
         } else {
+          this.debugLog(
+            `Collecting ${tasks.length} syncUnit strandUpdates in parallel`,
+          );
           await Promise.all(tasks.map((task) => task()));
         }
 
         if (strandUpdates.length == 0) {
+          this.debugLog(`No strandUpdates needed for listener ${listenerId}`);
           continue;
         }
 
         listenerState.pendingTimeout = new Date(
           new Date().getTime() / 1000 + 300,
         ).toISOString();
+
         listenerState.listenerStatus = "PENDING";
 
         // TODO update listeners in parallel, blocking for listeners with block=true
         try {
+          this.debugLog(
+            `_triggerUpdate(source: ${source.type}) > transmitter.transmit`,
+          );
+
           const listenerRevisions = await transmitter.transmit(
             strandUpdates,
             source,
+          );
+
+          this.debugLog(
+            `_triggerUpdate(source: ${source.type}) > transmission succeeded`,
+            listenerRevisions,
           );
 
           listenerState.pendingTimeout = "0";
           listenerState.listenerStatus = "PENDING";
 
           const lastUpdated = new Date().toISOString();
+          let continuationNeeded = false;
 
           for (const revision of listenerRevisions) {
             const syncUnit = syncUnits.find(
@@ -308,11 +374,42 @@ export class ListenerManager implements IListenerManager {
                 revision.scope === unit.scope &&
                 revision.branch === unit.branch,
             );
+
             if (syncUnit) {
               listenerState.syncUnits.set(syncUnit.syncId, {
                 lastUpdated,
                 listenerRev: revision.revision,
               });
+
+              // Check for revision status vv
+              const su = strandUpdates.find(
+                (su) =>
+                  su.driveId === revision.driveId &&
+                  su.documentId === revision.documentId &&
+                  su.scope === revision.scope &&
+                  su.branch === revision.branch,
+              );
+
+              if (su && su.operations.length > 0) {
+                const suIndex = su.operations.at(
+                  su.operations.length - 1,
+                )?.index;
+                if (suIndex !== revision.revision) {
+                  this.debugLog(
+                    `Revision still out-of-date for ${su.documentId}:${su.scope}:${su.branch} ${suIndex} <> ${revision.revision}`,
+                  );
+                  continuationNeeded = true;
+                } else {
+                  this.debugLog(
+                    `Revision match for ${su.documentId}:${su.scope}:${su.branch} ${suIndex}`,
+                  );
+                }
+              } else {
+                this.debugLog(
+                  `Cannot find strand update for (${revision.documentId}:${revision.scope}:${revision.branch} in drive ${revision.driveId})`,
+                );
+              }
+              // Check for revision status ^^
             } else {
               logger.warn(
                 `Received revision for untracked unit for listener ${listenerState.listener.listenerId}`,
@@ -324,23 +421,31 @@ export class ListenerManager implements IListenerManager {
           for (const revision of listenerRevisions) {
             const error = revision.status === "ERROR";
             if (revision.error?.includes("Missing operations")) {
-              const updates = await this._triggerUpdate(source, onError);
-              listenerUpdates.push(...updates);
-            } else {
-              listenerUpdates.push({
-                listenerId: listenerState.listener.listenerId,
-                listenerRevisions,
-              });
-              if (error) {
-                throw new OperationError(
-                  revision.status as ErrorStatus,
-                  undefined,
-                  revision.error,
-                  revision.error,
-                );
-              }
+              continuationNeeded = true;
+            } else if (error) {
+              throw new OperationError(
+                revision.status as ErrorStatus,
+                undefined,
+                revision.error,
+                revision.error,
+              );
             }
           }
+
+          if (!continuationNeeded) {
+            listenerUpdates.push({
+              listenerId: listenerState.listener.listenerId,
+              listenerRevisions,
+            });
+          } else {
+            const updates = await this._triggerUpdate(
+              source,
+              onError,
+              maxContinues - 1,
+            );
+            listenerUpdates.push(...updates);
+          }
+
           listenerState.listenerStatus = "SUCCESS";
         } catch (e) {
           // TODO: Handle error based on listener params (blocking, retry, etc)
@@ -350,6 +455,12 @@ export class ListenerManager implements IListenerManager {
         }
       }
     }
+
+    this.debugLog(
+      `Returning listener updates (maxContinues: ${maxContinues})`,
+      listenerUpdates,
+    );
+
     return listenerUpdates;
   }
 

@@ -1,3 +1,27 @@
+## 1.23.0 (2025-02-14)
+
+### 🚀 Features
+
+- testing prettier config and extension ([f62bc03d](https://github.com/powerhouse-inc/powerhouse/commit/f62bc03d))
+- adding initial benchmark for reactor import ([a34d51a6](https://github.com/powerhouse-inc/powerhouse/commit/a34d51a6))
+- export id of external packages ([967f076b](https://github.com/powerhouse-inc/powerhouse/commit/967f076b))
+- **connect:** support removing external packages ([a9b1d59c](https://github.com/powerhouse-inc/powerhouse/commit/a9b1d59c))
+- **design-system:** add danger zone settings page ([572345bc](https://github.com/powerhouse-inc/powerhouse/commit/572345bc))
+
+### 🩹 Fixes
+
+- **ph-cli:** review comments ([2536bb71](https://github.com/powerhouse-inc/powerhouse/commit/2536bb71))
+- **connect:** set / as default base path ([4992a62d](https://github.com/powerhouse-inc/powerhouse/commit/4992a62d))
+- **connect:** use base path on build ([c62574c9](https://github.com/powerhouse-inc/powerhouse/commit/c62574c9))
+- **reactor-api:** use pascal case for document model schema prefix ([835da67d](https://github.com/powerhouse-inc/powerhouse/commit/835da67d))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Frank
+- ryanwolhuter
+
 ## 1.22.0 (2025-02-06)
 
 ### 🚀 Features
