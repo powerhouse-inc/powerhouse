@@ -2,6 +2,9 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(subgraph) %>/resolvers.ts"
 force: true
 ---
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Subgraph } from "@powerhousedao/reactor-api";
 import { actions } from "../../document-models/<%- h.changeCase.param(documentType) %>";
 import { actions as driveActions } from "document-model-libs/document-drive";
@@ -16,7 +19,7 @@ export const getResolvers = (subgraph: Subgraph, driveId: string) => {
       <%- h.changeCase.pascal(documentType) %>_createDocument: async (_: any, args: any) => {
         const docId = docUtils.generateId();
         
-        reactor.addDriveAction(driveId, driveActions.addFile({
+        await reactor.addDriveAction(driveId, driveActions.addFile({
           id: docId,
           name: args.name,
           documentType: "<%- documentTypeId %>",

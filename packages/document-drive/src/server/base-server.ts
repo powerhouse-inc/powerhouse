@@ -468,7 +468,14 @@ export class BaseDocumentDriveServer
     for (const zodListener of drive.state.local.listeners) {
       const transmitter = this.transmitterFactory.instance(
         zodListener.callInfo?.transmitterType ?? "",
-        zodListener as any,
+        {
+          driveId,
+          listenerId: zodListener.listenerId,
+          block: zodListener.block,
+          filter: zodListener.filter,
+          system: zodListener.system,
+          label: zodListener.label ?? "",
+        },
         this,
       );
 
@@ -1716,10 +1723,16 @@ export class BaseDocumentDriveServer
             // create the transmitter
             const transmitter = this.transmitterFactory.instance(
               zodListener.callInfo?.transmitterType ?? "",
-              zodListener as any,
+              {
+                driveId,
+                listenerId: zodListener.listenerId,
+                block: zodListener.block,
+                filter: zodListener.filter,
+                system: zodListener.system,
+                label: zodListener.label ?? "",
+              },
               this,
             );
-
             // create the listener
             const listener = {
               ...zodListener,

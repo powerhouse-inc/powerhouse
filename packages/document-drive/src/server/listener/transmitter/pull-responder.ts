@@ -22,6 +22,8 @@ import {
   StrandUpdateSource,
 } from "./types";
 
+const ENABLE_SYNC_DEBUG = false;
+
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
 };
@@ -44,16 +46,52 @@ export interface IPullResponderTransmitter extends ITransmitter {
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]>;
 }
 
+const STATIC_DEBUG_ID = `[PRT #static]`;
+
+function staticDebugLog(...data: any[]) {
+  if (!ENABLE_SYNC_DEBUG) {
+    return;
+  }
+
+  if (data.length > 0 && typeof data[0] === "string") {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    console.log(`${STATIC_DEBUG_ID} ${data[0]}`, ...data.slice(1));
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    console.log(STATIC_DEBUG_ID, ...data);
+  }
+}
+
 export class PullResponderTransmitter implements IPullResponderTransmitter {
+  private debugID = `[PRT #${Math.floor(Math.random() * 999)}]`;
   private listener: Listener;
   private manager: IListenerManager;
 
   constructor(listener: Listener, manager: IListenerManager) {
     this.listener = listener;
     this.manager = manager;
+    this.debugLog(`constructor(listener: ${listener.listenerId})`);
+  }
+
+  private debugLog(...data: any[]) {
+    if (!ENABLE_SYNC_DEBUG) {
+      return;
+    }
+
+    if (data.length > 0 && typeof data[0] === "string") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      console.log(this.debugID, ...data);
+    }
   }
 
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]> {
+    this.debugLog(
+      `getStrands(drive: ${this.listener.driveId}, listener: ${this.listener.listenerId})`,
+    );
+
     return this.manager.getStrands(
       this.listener.driveId,
       this.listener.listenerId,
@@ -71,6 +109,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     revisions: ListenerRevision[],
   ): Promise<boolean> {
+    this.debugLog(
+      `processAcknowledge(drive: ${driveId}, listener: ${listenerId})`,
+      revisions,
+    );
+
     const syncUnits = await this.manager.getListenerSyncUnitIds(
       driveId,
       listenerId,
@@ -106,6 +149,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     filter: ListenerFilter,
   ): Promise<Listener["listenerId"]> {
+    staticDebugLog(`registerPullResponder(url: ${url})`, filter);
     // graphql request to switchboard
     const result = await requestGraphql<{
       registerPullResponderListener: {
@@ -141,6 +185,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     options?: GetStrandsOptions, // TODO add support for since
   ): Promise<StrandUpdate[]> {
+    staticDebugLog(`pullStrands(url: ${url}, listener: ${listenerId})`);
     const result = await requestGraphql<PullStrandsGraphQL>(
       url,
       gql`
@@ -207,6 +252,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     revisions: ListenerRevision[],
   ): Promise<boolean> {
+    staticDebugLog(
+      `acknowledgeStrands(url: ${url}, listener: ${listenerId})`,
+      revisions,
+    );
+
     const result = await requestGraphql<{ acknowledge: boolean }>(
       url,
       gql`
@@ -241,6 +291,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
   ) {
+    staticDebugLog(`executePull(driveId: ${driveId}), trigger:`, trigger);
+
     try {
       const { url, listenerId } = trigger.data;
       const strands = await PullResponderTransmitter.pullStrands(
@@ -323,6 +375,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
   ): CancelPullLoop {
+    staticDebugLog(`setupPull(drive: ${driveId}), trigger:`, trigger);
+
     const { interval } = trigger.data;
     let loopInterval = PULL_DRIVE_INTERVAL;
     if (interval) {
@@ -341,6 +395,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
     const executeLoop = async () => {
       while (!isCancelled) {
+        staticDebugLog("Execute loop...");
         await this.executePull(
           driveId,
           trigger,
@@ -350,6 +405,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           onAcknowledge,
         );
         await new Promise((resolve) => {
+          staticDebugLog(`Scheduling next pull in ${loopInterval} ms`);
           timeout = setTimeout(resolve, loopInterval) as unknown as number;
         });
       }
@@ -370,6 +426,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     options: Pick<RemoteDriveOptions, "pullInterval" | "pullFilter">,
   ): Promise<PullResponderTrigger> {
+    staticDebugLog(
+      `createPullResponderTrigger(drive: ${driveId}, url: ${url})`,
+    );
+
     const { pullFilter, pullInterval } = options;
     const listenerId = await PullResponderTransmitter.registerPullResponder(
       driveId,

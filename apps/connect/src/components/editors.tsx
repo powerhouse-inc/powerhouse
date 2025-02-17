@@ -1,8 +1,4 @@
-import {
-    DocumentToolbar,
-    FILE,
-    RevisionHistory,
-} from '@powerhousedao/design-system';
+import { DocumentToolbar, RevisionHistory } from '@powerhousedao/design-system';
 import {
     Action,
     ActionErrorCallback,
@@ -13,13 +9,21 @@ import {
     actions,
 } from 'document-model/document';
 import { useAtomValue } from 'jotai';
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, {
+    Suspense,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
+import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
-import { TUiNodes } from 'src/hooks/useUiNodes';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
 import { logger } from 'src/services/logger';
+import { FileNodeDocument, isSameDocument } from 'src/store/document-drive';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { useGetEditor } from 'src/store/editor';
 import { themeAtom } from 'src/store/theme';
@@ -37,12 +41,17 @@ export type EditorProps<
     T = unknown,
     A extends Action = Action,
     LocalState = unknown,
-> = TUiNodes & {
+> = {
+    fileNodeDocument: FileNodeDocument;
     document: Document<T, A, LocalState> | undefined;
+    onClose: () => void;
     onExport: () => void;
     onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
-    onChange?: (document: Document<T, A, LocalState>) => void;
+    onChange?: (
+        documentId: string,
+        document: Document<T, A, LocalState>,
+    ) => void;
 };
 
 function EditorError({ message }: { message: React.ReactNode }) {
@@ -53,19 +62,26 @@ function EditorError({ message }: { message: React.ReactNode }) {
     );
 }
 
-export function DocumentEditor(props: EditorProps) {
+function FallbackEditorError(props: FallbackProps) {
+    const message =
+        props.error instanceof Error
+            ? props.error.message
+            : (props.error as string);
+    return <EditorError message={message} />;
+}
+
+export const DocumentEditor: React.FC<EditorProps> = props => {
     const {
-        selectedNode,
         fileNodeDocument,
-        selectedParentNode,
         document: initialDocument,
-        setSelectedNode,
+        onClose,
         onChange,
         onExport,
         onAddOperation,
         onOpenSwitchboardLink,
     } = props;
-    const [showRevisionHistory, setShowRevisionHistory] = useState(false);
+    const documentId = fileNodeDocument?.documentId;
+    const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
@@ -94,6 +110,93 @@ export function DocumentEditor(props: EditorProps) {
     );
     const userPermissions = useUserPermissions();
 
+    const currentDocument = useRef({ ...fileNodeDocument, document });
+    useEffect(() => {
+        if (!fileNodeDocument?.documentId || !document) return;
+
+        // if current document ref is undefined or outdated then updates the ref
+        // and doesn't call the onChange callback
+        if (
+            !('documentId' in currentDocument.current) ||
+            currentDocument.current.documentId !== documentId
+        ) {
+            currentDocument.current = { ...fileNodeDocument, document };
+            return;
+        }
+
+        // if the document is different then calls the onChange callback
+        if (!isSameDocument(currentDocument.current.document, document)) {
+            currentDocument.current.document = document;
+            window.documentEditorDebugTools?.setDocument(document);
+            onChange?.(documentId, document);
+        }
+    }, [document, documentId, fileNodeDocument, onChange]);
+
+    const dispatch = useCallback(
+        (
+            action: BaseAction | Action,
+            onErrorCallback?: ActionErrorCallback,
+        ) => {
+            const callback: DocumentDispatchCallback<
+                unknown,
+                Action,
+                unknown
+            > = (operation, state) => {
+                if (!fileNodeDocument?.documentId) return;
+
+                const { prevState } = state;
+
+                signOperation(
+                    operation,
+                    sign,
+                    fileNodeDocument.documentId,
+                    prevState,
+                    documentModel?.reducer,
+                    user,
+                )
+                    .then(op => {
+                        window.documentEditorDebugTools?.pushOperation(
+                            operation,
+                        );
+                        return onAddOperation(op);
+                    })
+                    .catch(logger.error);
+            };
+
+            _dispatch(
+                addActionContext(action, connectDid, user),
+                callback,
+                onErrorCallback,
+            );
+        },
+        [
+            _dispatch,
+            connectDid,
+            documentModel?.reducer,
+            onAddOperation,
+            fileNodeDocument,
+            sign,
+            user,
+        ],
+    );
+
+    const showRevisionHistory = useCallback(
+        () => setRevisionHistoryVisible(true),
+        [],
+    );
+
+    const hideRevisionHistory = useCallback(
+        () => setRevisionHistoryVisible(false),
+        [],
+    );
+    const undo = useCallback(() => {
+        dispatch(actions.undo());
+    }, [dispatch]);
+
+    const redo = useCallback(() => {
+        dispatch(actions.undo());
+    }, [dispatch]);
+
     const isLoadingDocument =
         fileNodeDocument?.status === 'LOADING' || !document;
     const isLoadingEditor =
@@ -109,66 +212,44 @@ export function DocumentEditor(props: EditorProps) {
     const canRedo = !!document?.clipboard.length;
     useUndoRedoShortcuts({ undo, redo, canUndo, canRedo });
 
-    function dispatch(
-        action: BaseAction | Action,
-        onErrorCallback?: ActionErrorCallback,
-    ) {
-        const callback: DocumentDispatchCallback<unknown, Action, unknown> = (
-            operation,
-            state,
-        ) => {
-            if (!selectedNode) return;
-
-            const { prevState } = state;
-
-            signOperation(
-                operation,
-                sign,
-                selectedNode.id,
-                prevState,
-                documentModel?.reducer,
-                user,
-            )
-                .then(op => {
-                    window.documentEditorDebugTools?.pushOperation(operation);
-                    return onAddOperation(op);
-                })
-                .catch(logger.error);
-        };
-
-        _dispatch(
-            addActionContext(action, connectDid, user),
-            callback,
-            onErrorCallback,
-        );
-    }
-
     useEffect(() => {
         return () => {
             window.documentEditorDebugTools?.clear();
         };
     }, []);
 
-    useEffect(() => {
-        if (!document) return;
-        window.documentEditorDebugTools?.setDocument(document);
-        onChange?.(document);
-    }, [document]);
-
-    function undo() {
-        dispatch(actions.undo());
-    }
-
-    function redo() {
-        dispatch(actions.redo());
-    }
-
-    function onClose() {
-        setSelectedNode(selectedParentNode);
-    }
-
     const navigate = useNavigate();
     const { showModal } = useModal();
+
+    const [editorError, setEditorError] = useState<
+        | {
+              error: any;
+              info: React.ErrorInfo;
+              documentId?: string;
+              //   clear: () => void;
+          }
+        | undefined
+    >(undefined);
+
+    useEffect(() => {
+        if (
+            editorError &&
+            editorError.documentId !== fileNodeDocument?.documentId
+        ) {
+            setEditorError(undefined);
+        }
+    }, [editorError, fileNodeDocument, document]);
+
+    const handleEditorError = useCallback(
+        (error: Error, info: React.ErrorInfo) => {
+            setEditorError({
+                error,
+                documentId,
+                info,
+            });
+        },
+        [documentId],
+    );
 
     if (fileNodeDocument?.status === 'ERROR') {
         return <EditorError message={'Error loading document'} />;
@@ -181,7 +262,7 @@ export function DocumentEditor(props: EditorProps) {
         return <EditorLoader message={message} />;
     }
 
-    if (selectedNode?.kind !== FILE) {
+    if (!fileNodeDocument) {
         return null;
     }
 
@@ -252,21 +333,19 @@ export function DocumentEditor(props: EditorProps) {
         showSwitchboardLink,
     } = editor.config || {};
 
+    const handleSwitchboardLinkClick =
+        showSwitchboardLink !== false ? onOpenSwitchboardLink : undefined;
     return (
         <div className="relative h-full" id="document-editor-context">
             {documentToolbarEnabled &&
                 disableExternalControls &&
-                !showRevisionHistory && (
+                !revisionHistoryVisible && (
                     <DocumentToolbar
                         onClose={onClose}
                         onExport={onExport}
-                        onShowRevisionHistory={() =>
-                            setShowRevisionHistory(true)
-                        }
-                        title={document.name}
-                        {...(showSwitchboardLink && {
-                            onSwitchboardLinkClick: onOpenSwitchboardLink,
-                        })}
+                        onShowRevisionHistory={showRevisionHistory}
+                        title={fileNodeDocument.name || document.name}
+                        onSwitchboardLinkClick={handleSwitchboardLinkClick}
                     />
                 )}
             {!disableExternalControls && (
@@ -285,41 +364,53 @@ export function DocumentEditor(props: EditorProps) {
                     </div>
                 </div>
             )}
-            {showRevisionHistory ? (
+            {revisionHistoryVisible ? (
                 <RevisionHistory
+                    key={documentId}
                     documentTitle={document.name}
-                    documentId={selectedNode.id}
+                    documentId={fileNodeDocument.documentId}
                     globalOperations={document.operations.global}
                     localOperations={document.operations.local}
-                    onClose={() => setShowRevisionHistory(false)}
+                    onClose={hideRevisionHistory}
                 />
             ) : (
                 <Suspense fallback={<EditorLoader />}>
-                    <EditorComponent
-                        error={error}
-                        context={context}
-                        document={document}
-                        documentNodeName={selectedNode.name}
-                        dispatch={dispatch}
-                        onClose={onClose}
-                        onExport={onExport}
-                        canUndo={canUndo}
-                        canRedo={canRedo}
-                        undo={undo}
-                        redo={redo}
-                        onSwitchboardLinkClick={onOpenSwitchboardLink}
-                        onShowRevisionHistory={() =>
-                            setShowRevisionHistory(true)
-                        }
-                        isAllowedToCreateDocuments={
-                            userPermissions?.isAllowedToCreateDocuments ?? false
-                        }
-                        isAllowedToEditDocuments={
-                            userPermissions?.isAllowedToEditDocuments ?? false
-                        }
-                    />
+                    <ErrorBoundary
+                        fallbackRender={FallbackEditorError}
+                        key={documentId}
+                        onError={handleEditorError}
+                    >
+                        {!editorError?.error && (
+                            <EditorComponent
+                                key={documentId}
+                                error={error}
+                                context={context}
+                                document={document}
+                                documentNodeName={fileNodeDocument.name}
+                                dispatch={dispatch}
+                                onClose={onClose}
+                                onExport={onExport}
+                                canUndo={canUndo}
+                                canRedo={canRedo}
+                                undo={undo}
+                                redo={redo}
+                                onSwitchboardLinkClick={
+                                    handleSwitchboardLinkClick
+                                }
+                                onShowRevisionHistory={showRevisionHistory}
+                                isAllowedToCreateDocuments={
+                                    userPermissions?.isAllowedToCreateDocuments ??
+                                    false
+                                }
+                                isAllowedToEditDocuments={
+                                    userPermissions?.isAllowedToEditDocuments ??
+                                    false
+                                }
+                            />
+                        )}
+                    </ErrorBoundary>
                 </Suspense>
             )}
         </div>
     );
-}
+};

@@ -1,6 +1,7 @@
 import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
 import { Document, Operation } from 'document-model/document';
-import { atom, useAtom } from 'jotai';
+import { hashDocument } from 'document-model/utils';
+import { atom, useAtom, useSetAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
 import { IReadModeContext } from 'src/context/read-mode';
 import { documentToHash } from 'src/hooks/useDocumentDrives';
@@ -47,11 +48,12 @@ function debounceOperations(
     };
 }
 
-type FileNodeDocument =
+export type FileNodeDocument =
     | {
           driveId: string;
           documentId: string;
           documentType: string;
+          name: string;
           document: Document | undefined;
           status: 'LOADING' | 'ERROR';
       }
@@ -59,6 +61,7 @@ type FileNodeDocument =
           driveId: string;
           documentId: string;
           documentType: string;
+          name: string;
           document: Document;
           status: 'LOADED';
       }
@@ -67,6 +70,24 @@ type FileNodeDocument =
 const documentCacheAtom = atom(new Map<string, Document>());
 
 const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
+
+export function isSameDocument(
+    prev: Document | undefined,
+    next: Document | undefined,
+) {
+    if (prev === next) {
+        return true;
+    }
+    if (!prev || !next) {
+        return false;
+    }
+    if (hashDocument(prev) === hashDocument(next)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 const fileNodeDocumentAtom = atom(
     get => get(singletonFileNodeDocumentAtom),
     (get, set, newValue: FileNodeDocument) => {
@@ -110,18 +131,19 @@ const fileNodeDocumentAtom = atom(
 );
 
 const selectedDocumentAtom = atom(
-    get => get(fileNodeDocumentAtom)?.document,
+    null,
     (get, set, document: Document | undefined) => {
         const fileNodeDocument = get(fileNodeDocumentAtom);
         if (!fileNodeDocument) {
             throw new Error('fileNodeDocument is undefined');
         } else if (!document) {
             set(fileNodeDocumentAtom, undefined);
-        } else {
+        } else if (!isSameDocument(document, fileNodeDocument.document)) {
             set(fileNodeDocumentAtom, { ...fileNodeDocument, document });
         }
     },
 );
+const useSetSelectedDocument = () => useSetAtom(selectedDocumentAtom);
 
 export function useFileNodeDocument(
     props: TUiNodesContext & TDocumentDriveServer & IReadModeContext,
@@ -141,13 +163,12 @@ export function useFileNodeDocument(
         selectedDriveNode?.syncStatus === undefined;
     const driveId = selectedNode?.driveId;
     const documentId = selectedNode?.id;
+    const name = selectedNode?.name;
     const kind = selectedNode?.kind;
     const documentType =
         kind === 'FILE' ? selectedNode?.documentType : undefined;
 
-    const [selectedDocument, setSelectedDocument] =
-        useAtom(selectedDocumentAtom);
-
+    const setSelectedDocument = useSetSelectedDocument();
     const fetchDocument = useCallback(
         async (driveId: string, id: string, documentType: string) => {
             const document = await (isReadMode
@@ -174,12 +195,14 @@ export function useFileNodeDocument(
         if (
             driveId !== fileNodeDocument?.driveId ||
             documentId !== fileNodeDocument.documentId ||
-            documentType !== fileNodeDocument.documentType
+            documentType !== fileNodeDocument.documentType ||
+            name !== fileNodeDocument.name
         ) {
             const changed = setFileNodeDocument({
                 driveId,
                 documentId,
                 documentType,
+                name: name || '',
                 document: undefined,
                 status: 'LOADING',
             });
@@ -195,6 +218,7 @@ export function useFileNodeDocument(
                                       documentId,
                                       documentType,
                                       document,
+                                      name: name || '',
                                       status: 'LOADED',
                                   }
                                 : {
@@ -202,6 +226,7 @@ export function useFileNodeDocument(
                                       documentId,
                                       documentType,
                                       document,
+                                      name: name || '',
                                       status: 'ERROR',
                                   },
                         ),
@@ -212,6 +237,7 @@ export function useFileNodeDocument(
                             driveId,
                             documentId,
                             documentType,
+                            name: name || '',
                             document: undefined,
                             status: 'ERROR',
                         });
@@ -222,6 +248,7 @@ export function useFileNodeDocument(
         selectedNode,
         documentId,
         documentType,
+        name,
         driveId,
         fetchDocument,
         fileNodeDocument,
@@ -275,11 +302,14 @@ export function useFileNodeDocument(
         kind === FILE &&
         fileNodeDocument?.driveId === driveId &&
         fileNodeDocument?.documentId === documentId;
+    const selectedDocument = isSelectedDocument
+        ? fileNodeDocument?.document
+        : undefined;
 
     return useMemo(
         () => ({
             fileNodeDocument,
-            selectedDocument: isSelectedDocument ? selectedDocument : undefined,
+            selectedDocument,
             setSelectedDocument,
             addOperationToSelectedDocument,
         }),
