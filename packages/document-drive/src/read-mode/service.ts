@@ -157,7 +157,7 @@ export class ReadModeService implements IReadModeDriveService {
     return Promise.resolve([...this.#drives.keys()]);
   }
 
-  async getReadDrive(id: string) {
+  async getReadDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError> {
     const result = this.#drives.get(id);
     return Promise.resolve(
       result

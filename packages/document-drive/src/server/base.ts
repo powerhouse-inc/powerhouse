@@ -1172,7 +1172,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     const operations = Object.values(document.operations).flat();
     if (operations.length) {
       if (isDocumentDrive(document)) {
-        await this.storage.addDriveOperations(driveId, operations, document);
+        await this.storage.addDriveOperations(
+          driveId,
+          operations as Operation<DocumentDriveAction>[],
+          document,
+        );
       } else {
         await this.storage.addDocumentOperations(
           driveId,
@@ -1966,7 +1970,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   private async _addDriveOperations(
     driveId: string,
     callback: (document: DocumentDriveDocument) => Promise<{
-      operations: Operation[];
+      operations: Operation<DocumentDriveAction>[];
       header: DocumentHeader;
     }>,
   ) {
@@ -2090,7 +2094,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     options?: AddOperationOptions,
   ) {
     let document: DocumentDriveDocument | undefined;
-    const operationsApplied: Operation[] = [];
+    const operationsApplied: Operation<DocumentDriveAction>[] = [];
     const signals: SignalResult[] = [];
     let error: Error | undefined;
 
@@ -2110,12 +2114,15 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
           DocumentDriveLocalState
         >(driveId, undefined, documentStorage, operations.slice());
         document = result.document;
-        operationsApplied.push(...result.operationsApplied);
+        operationsApplied.push(
+          ...(result.operationsApplied as Operation<DocumentDriveAction>[]),
+        );
         signals.push(...result.signals);
         error = result.error;
 
         return {
-          operations: result.operationsApplied,
+          operations:
+            result.operationsApplied as Operation<DocumentDriveAction>[],
           header: result.document,
         };
       });
@@ -2290,11 +2297,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     document: BaseDocument<unknown, unknown>,
     actions: Action[],
   ): Operation[] {
+    const documentType = document.documentType;
     const operations: Operation[] = [];
     const { reducer } = this.getDocumentModel(documentType);
     for (const action of actions) {
-      documentId = reducer(documentId, action);
-      const operation = documentId.operations[action.scope].slice().pop();
+      document = reducer(document, action);
+      const operation = document.operations[action.scope].slice().pop();
       if (!operation) {
         throw new Error("Error creating operations");
       }

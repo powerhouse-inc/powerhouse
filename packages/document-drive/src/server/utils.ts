@@ -31,10 +31,10 @@ export function buildDocumentRevisionsFilter<TGlobalState, TLocalState>(
   );
 }
 
-export function filterOperationsByRevision<TGlobalState, TLocalState>(
+export function filterOperationsByRevision(
   operations: DocumentOperations,
   revisions?: RevisionsFilter,
-) {
+): DocumentOperations {
   if (!revisions) {
     return operations;
   }
