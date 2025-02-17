@@ -1,11 +1,10 @@
 import { RealWorldAssets } from "@sky-ph/atlas/document-models";
 import {
-  DocumentDriveServer,
   generateUUID,
   InternalTransmitterUpdate,
   IReceiver,
+  ReactorBuilder,
 } from "document-drive";
-import { MemoryStorage } from "document-drive/storage/memory";
 import {
   module as DocumentDrive,
   generateAddNodeAction,
@@ -47,16 +46,10 @@ describe("Document Drive", async () => {
   bench(
     "Load PHDM into Document Drive",
     async () => {
-      const serverA = new DocumentDriveServer(
-        documentModels,
-        new MemoryStorage(),
-      );
+      const serverA = new ReactorBuilder(documentModels).build();
       await serverA.initialize();
 
-      const serverB = new DocumentDriveServer(
-        documentModels,
-        new MemoryStorage(),
-      );
+      const serverB = new ReactorBuilder(documentModels).build();
       await serverB.initialize();
 
       const driveAId = generateUUID();

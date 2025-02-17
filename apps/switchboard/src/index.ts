@@ -4,7 +4,7 @@ import {
 } from "@powerhousedao/analytics-engine-knex";
 import { SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
 import { PrismaClient } from "@prisma/client";
-import { DocumentDriveServer } from "document-drive";
+import { ReactorBuilder } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorage } from "document-drive/storage/prisma";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
@@ -37,14 +37,13 @@ const main = async () => {
     const knex = getDbClient(dbUrl);
     const redisCache = new RedisCache(redis);
     const storage = new PrismaStorage(prismaClient);
-    const driveServer = new DocumentDriveServer(
-      [
-        DocumentModelLib,
-        ...Object.values(DocumentModelsLibs),
-      ] as DocumentModel[],
-      storage,
-      redisCache,
-    );
+    const driveServer = new ReactorBuilder([
+      DocumentModelLib,
+      ...Object.values(DocumentModelsLibs),
+    ] as DocumentModel[])
+      .withStorage(storage)
+      .withCache(redisCache)
+      .build();
 
     // init drive server
     await driveServer.initialize();
