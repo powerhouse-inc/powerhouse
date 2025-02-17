@@ -56,8 +56,10 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       opsCounter <= SYNC_OPS_BATCH_LIMIT && s < strands.length;
       s++
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      const currentStrand = strands[s] as StrandUpdate;
+      const currentStrand = strands.at(s);
+      if (!currentStrand) {
+        break;
+      }
       const newOps = Math.min(
         SYNC_OPS_BATCH_LIMIT - opsCounter,
         currentStrand.operations.length,
