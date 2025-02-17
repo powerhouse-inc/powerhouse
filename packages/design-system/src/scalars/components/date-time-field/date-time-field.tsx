@@ -7,6 +7,7 @@ import {
 } from "../date-picker-field/date-picker-field";
 import { TimePickerField, TimePickerFieldProps } from "../time-picker-field";
 import { TimeFieldValue } from "../time-picker-field/type";
+import DateTimePickerRaw from "./date-time-picker";
 
 type CommonOmittedProps =
   | "name"
@@ -71,6 +72,7 @@ export const DateTimeField: React.FC<
   disableFutureDates,
   autoClose,
   showTimezoneSelect,
+  value,
   ...props
 }) => {
   if (!showDateSelect && !showTimeSelect) {
@@ -95,7 +97,16 @@ export const DateTimeField: React.FC<
 
   return (
     <div>
-      {showDateSelect && showTimeSelect && <div>Place holder</div>}
+      {showDateSelect && showTimeSelect && (
+        <DateTimePickerRaw
+          name={name}
+          value={value}
+          placeholder={placeholder}
+          label={label}
+          //  Add rest props WIP
+          {...props}
+        />
+      )}
       {showDateSelect && !showTimeSelect && (
         <DatePickerField
           name={name}
