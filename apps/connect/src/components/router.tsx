@@ -6,6 +6,7 @@ import {
     createBrowserRouter,
     createMemoryRouter,
 } from 'react-router-dom';
+import { Home } from 'src/pages/home';
 
 const Root = React.lazy(() => import('./root'));
 const Content = React.lazy(() => import('src/pages/content'));
@@ -32,6 +33,10 @@ const RouterAsync = async () => {
                 </Suspense>
             ),
             children: [
+                {
+                    path: '/',
+                    element: <Home />,
+                },
                 {
                     path: 'd?/:driveId?/*?',
                     element: (
