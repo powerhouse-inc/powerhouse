@@ -1,10 +1,223 @@
+import type { DocumentModelState } from "document-model";
 import { documentModelName, documentType, fileExtension } from "./constants.js";
-import { DocumentDriveState } from "./schema/types.js";
 
-export const documentModelState: DocumentDriveState = {
+export const documentModelState: DocumentModelState = {
   id: documentType,
   name: documentModelName,
-  nodes: [],
-  icon: null,
-  slug: null,
+  extension: fileExtension,
+  description: "",
+  author: {
+    name: "Powerhouse Inc",
+    website: "https://www.powerhouse.inc/",
+  },
+  specifications: [
+    {
+      version: 1,
+      changeLog: [],
+      state: {
+        global: {
+          schema:
+            "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype SynchronizationUnit {\n    syncId: ID!\n    scope: String!\n    branch: String!\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n    synchronizationUnits: [SynchronizationUnit!]!\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    id: ID!\n    name: String!\n    nodes: [Node!]!\n    icon: String\n    slug: String\n}",
+          initialValue:
+            '"{\\"id\\":\\"\\",\\"name\\":\\"\\",\\"nodes\\":[],\\"icon\\":null,\\"slug\\":null}"',
+          examples: [],
+        },
+        local: {
+          schema:
+            "type ListenerFilter {\n    documentType: [String!]!\n    documentId: [ID!]\n    scope: [String!]\n    branch: [String!]\n}\n\nenum TransmitterType {\n    Internal,\n    SwitchboardPush,\n    PullResponder,\n    SecureConnect, \n    MatrixConnect,\n    RESTWebhook\n}\n\ntype ListenerCallInfo {\n    transmitterType: TransmitterType\n    name: String\n    data: String\n}\n\ntype Listener {\n    listenerId: ID!\n    label: String\n    block: Boolean!\n    system: Boolean!\n    filter: ListenerFilter!\n    callInfo: ListenerCallInfo\n}\n\nenum TriggerType {\n    PullResponder\n}\n\ntype PullResponderTriggerData {\n    listenerId: ID!\n    url: String!\n    interval: String!\n}\n\nunion TriggerData = PullResponderTriggerData\n\ntype Trigger {\n    id: ID!\n    type: TriggerType!\n    data: TriggerData\n}\n\ntype DocumentDriveLocalState{\n    sharingType: String\n    listeners: [Listener!]!\n    triggers: [Trigger!]!\n    availableOffline: Boolean!\n}",
+          initialValue:
+            '"{ \\"listeners\\": [], \\"triggers\\": [], \\"sharingType\\": \\"private\\", \\"availableOffline\\": false}"',
+          examples: [],
+        },
+      },
+      modules: [
+        {
+          id: "GRzuvv78tBvmB6ciitokLfonNHA=",
+          name: "Node",
+          description: "",
+          operations: [
+            {
+              id: "7xiTdxonc9yEASR8sfV/KnbSV10=",
+              name: "ADD_FILE",
+              description: "",
+              schema:
+                "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    parentFolder: ID\n    synchronizationUnits: [SynchronizationUnit!]!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "4lzNMMKKdIAtEU6i12xLgi9hp+U=",
+              name: "ADD_FOLDER",
+              description: "",
+              schema:
+                "input AddFolderInput {\n    id: ID!\n    name: String!\n    parentFolder: ID\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "53jH2/3TWTTcgCJiv2C+BmuC6i0=",
+              name: "DELETE_NODE",
+              description: "",
+              schema: "input DeleteNodeInput {\n    id: ID!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "pNn+Y1/HVq/GNMk7t0u3g3gtMLE=",
+              name: "UPDATE_FILE",
+              description: "",
+              schema:
+                "input UpdateFileInput {\n    id: ID!\n    parentFolder: ID\n    name: String\n    documentType: String\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "P0x1M8Mnt+Q/+9nggkwgVbfybsc=",
+              name: "UPDATE_NODE",
+              description: "",
+              schema:
+                "input UpdateNodeInput {\n    id: ID!\n    parentFolder: ID\n    name: String\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "vnQ7OB5b3wGLgjhbgJqAIpA+JLE=",
+              name: "COPY_NODE",
+              description: "",
+              schema:
+                "input CopyNodeInput {\n    srcId: ID!\n    targetId: ID!\n    targetName: String\n    targetParentFolder: ID\n    synchronizationUnits: [SynchronizationUnit!]\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "VNyiD/sNGzk6k9A1Qe7s8dmrJxA=",
+              name: "MOVE_NODE",
+              description: "",
+              schema:
+                "input MoveNodeInput {\n    srcFolder: ID!\n    targetParentFolder: ID\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "0dHwHlxOM9x0vMZ+gLnKxf2qTEo=",
+          name: "Drive",
+          description: "",
+          operations: [
+            {
+              id: "qGCiPGpTt/cyz3HzyrBn92z1dsU=",
+              name: "SET_DRIVE_NAME",
+              description: "",
+              schema: "input SetDriveNameInput {\n    name: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "qGCiPGpTt/cyz3HzyrBn92z30dsU=",
+              name: "SET_DRIVE_ICON",
+              description: "",
+              schema: "input SetDriveIconInput {\n    icon: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "qGCiPGpTt/cyz3HzyrBn92z2dsU=",
+              name: "SET_SHARING_TYPE",
+              description: "",
+              schema: "input SetSharingTypeInput {\n    type: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "local",
+            },
+            {
+              id: "qGCiPGpTt/cyz3HzyrBn92z3dsU=",
+              name: "SET_AVAILABLE_OFFLINE",
+              description: "",
+              schema:
+                "input SetAvailableOfflineInput {\n    availableOffline: Boolean!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "local",
+            },
+            {
+              id: "qGCiPGpTt/cyz3HzyrBn92z9dsU=",
+              name: "ADD_LISTENER",
+              description: "",
+              schema: "input AddListenerInput {\n    listener: Listener!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "local",
+            },
+            {
+              id: "qGCiPGpTt/cyz3HzyrBn92z10dsU=",
+              name: "REMOVE_LISTENER",
+              description: "",
+              schema: "input RemoveListenerInput {\n    listenerId: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "local",
+            },
+            {
+              id: "qGCiPGpTt/cyz3HzyrBn92z20dsU=",
+              name: "ADD_TRIGGER",
+              description: "",
+              schema: "input AddTriggerInput {\n    trigger: Trigger!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "local",
+            },
+            {
+              id: "qGCiPGpTt/cyz3HzyrBn92z30dsU=",
+              name: "REMOVE_TRIGGER",
+              description: "",
+              schema: "input RemoveTriggerInput {\n    triggerId: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "local",
+            },
+          ],
+        },
+      ],
+    },
+  ],
 };

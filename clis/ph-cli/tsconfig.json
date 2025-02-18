@@ -1,10 +1,41 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "outDir": "./dist",
-    "isolatedModules": true
+    "outDir": "./dist"
   },
-  "include": ["src/**/*", "*.config.ts"]
+  "references": [
+    {
+      "path": "../../packages/codegen"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/document-drive"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor-local"
+    },
+    {
+      "path": "../../packages/scalars"
+    },
+    {
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/reactor-local"
+    },
+    {
+      "path": "../../packages/builder-tools"
+    }
+  ]
 }

@@ -26,7 +26,7 @@ export const mockPackages = [
     removable: true,
   },
   {
-    id: "@powerhousedao/builder-tooling",
+    id: "@powerhousedao/builder-tools",
     name: "Builder Tooling",
     description:
       "The real world assets portfolio reporting package for the sky ecosystem.",

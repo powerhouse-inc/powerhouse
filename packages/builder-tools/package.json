@@ -1,0 +1,26 @@
+{
+  "name": "@powerhousedao/builder-tools",
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./connect-studio": "./dist/connect-studio/index.js",
+    "./document-model-editor": "./dist/document-model-editor/index.js"
+  },
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "dependencies": {
+    "@powerhousedao/config": "workspace:*",
+    "@vitejs/plugin-basic-ssl": "^1.2.0",
+    "commander": "^12.1.0",
+    "magic-string": "^0.30.17",
+    "vite": "^6.1.0",
+    "vite-envs": "^4.4.5"
+  }
+}

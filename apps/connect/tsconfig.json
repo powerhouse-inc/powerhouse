@@ -2,31 +2,16 @@
     "extends": "../../tsconfig.options.json",
     "compilerOptions": {
         "target": "ESNext",
-        "useDefineForClassFields": true,
         "lib": ["DOM", "DOM.Iterable", "ESNext"],
-        "allowJs": true,
-        "checkJs": true,
-        "allowSyntheticDefaultImports": true,
-        "strict": true,
-        "forceConsistentCasingInFileNames": true,
         "module": "ESNext",
         "moduleResolution": "Bundler",
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "noEmit": true,
         "jsx": "react-jsx",
-        "declaration": true,
-        "skipLibCheck": true,
-        "esModuleInterop": true,
-        "declarationMap": true,
-        "baseUrl": ".",
         "paths": {
-            "@/assets": ["assets"],
-            "connect-config": ["src/connect.config.ts"],
-            "PH:EXTERNAL_PACKAGES": ["custom.d.ts"],
-            "PH:HMR_MODULE": ["studio/hmr.ts"],
-            "LOCAL_DOCUMENT_MODELS": ["custom.d.ts"],
-            "LOCAL_DOCUMENT_EDITORS": ["custom.d.ts"]
+            "@/assets": ["./assets"],
+            "connect-config": ["./src/connect.config.ts"],
+            "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
+            "LOCAL_DOCUMENT_MODELS": ["./custom.d.ts"],
+            "LOCAL_DOCUMENT_EDITORS": ["./custom.d.ts"]
         },
         "types": [
             "vite/client",
@@ -35,18 +20,6 @@
         ],
         "experimentalDecorators": true
     },
-    "include": [
-        "src",
-        "studio",
-        "e2e-tests",
-        "*.config.ts",
-        "*.config.mts",
-        "*.config.js",
-        "custom.d.ts",
-        "reset.d.ts",
-        "esbuild.studio.config.mjs"
-    ],
-    "files": ["studio/hmr.d.ts"],
     "references": [
       {
         "path": "../../packages/document-drive"
@@ -56,6 +29,9 @@
       },
       {
         "path": "../../packages/design-system"
+      },
+      {
+        "path": "../../packages/builder-tools"
       }
     ]
 }

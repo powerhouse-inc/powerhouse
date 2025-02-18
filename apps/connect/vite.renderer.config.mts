@@ -1,3 +1,7 @@
+import {
+    viteConnectDevStudioPlugin,
+    viteLoadExternalPackages,
+} from '../../packages/builder-tools/dist/connect-studio/index.js';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
@@ -9,8 +13,6 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 import pkg from './package.json';
-import { viteLoadExternalPackages } from './studio/vite-plugins/external-packages';
-import { viteConnectDevStudioPlugin } from './studio/vite-plugins/studio';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
 

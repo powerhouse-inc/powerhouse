@@ -17,7 +17,7 @@ export async function getHMRModule() {
     }
 
     try {
-        const module = await import('PH:HMR_MODULE');
+        const module = await import('../../../../packages/builder-tools/connect-studio/hmr');
         const hmr = module.default;
         return hmr;
     } catch {

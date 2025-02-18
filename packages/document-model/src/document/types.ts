@@ -1,3 +1,4 @@
+import { DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
 import { DocumentModelHeaderAction } from "../document-model/gen/actions.js";
@@ -165,7 +166,7 @@ export type DocumentHeader = {
   /** The name of the document. */
   name: string;
   /** The number of operations applied to the document. */
-  revision: Required<Record<OperationScope, number>>;
+  revision: Record<OperationScope, number>;
   /** The type of the document model. */
   documentType: string;
   /** The timestamp of the creation date of the document. */
@@ -261,15 +262,16 @@ export type ExtendedState<TGlobalState, TLocalState> = DocumentHeader & {
   attachments?: FileRegistry;
 };
 
-export type DocumentOperations = Required<Record<OperationScope, Operation[]>>;
+export type DocumentOperations = Record<OperationScope, Operation[]>;
 
 export type MappedOperation = {
   ignore: boolean;
   operation: Operation;
 };
 
-export type DocumentOperationsIgnoreMap = Required<
-  Record<OperationScope, MappedOperation[]>
+export type DocumentOperationsIgnoreMap = Record<
+  OperationScope,
+  MappedOperation[]
 >;
 
 export type OperationSignatureContext = {
@@ -410,9 +412,12 @@ export type DocumentModelModule<
   documentType: string;
   fileExtension: string;
   reducer: Reducer<TGlobalState, TLocalState, TCustomAction>;
-  actions: Record<string, (input: any) => TCustomAction | DefaultAction>;
+  actions: Record<
+    string,
+    (input: any) => TCustomAction | CustomAction | DefaultAction
+  >;
   utils: DocumentModelUtils<TGlobalState, TLocalState>;
-  documentModelState: TGlobalState;
+  documentModelState: DocumentModelState;
 };
 
 export type Maybe<T> = T | null;

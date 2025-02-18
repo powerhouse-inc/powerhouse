@@ -1,13 +1,11 @@
 import {
-  startConnectStudio,
   ConnectStudioOptions,
-} from "@powerhousedao/connect";
+  startConnectStudio,
+} from "../../../../packages/builder-tools/connect-studio/index.js";
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import { Command } from "commander";
 
-export type ConnectOptions = ConnectStudioOptions;
-
-export async function startConnect(connectOptions: ConnectOptions) {
+export async function startConnect(connectOptions: ConnectStudioOptions) {
   const { documentModelsDir, editorsDir } = getConfig();
   const options = { documentModelsDir, editorsDir, ...connectOptions };
   return await startConnectStudio(options);
@@ -33,7 +31,7 @@ export function connectCommand(program: Command) {
       "-ld, --local-documents <localDocuments>",
       "Link local documents path",
     )
-    .action(async (...args: [ConnectOptions]) => {
+    .action(async (...args: [ConnectStudioOptions]) => {
       const connectOptions = args.at(0) || {};
       const { documentModelsDir, editorsDir, packages, studio } = getConfig();
 
@@ -50,7 +48,9 @@ export function connectCommand(program: Command) {
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg ? (JSON.parse(optionsArg) as ConnectOptions) : {};
+  const options = optionsArg
+    ? (JSON.parse(optionsArg) as ConnectStudioOptions)
+    : {};
   startConnect(options).catch((e: unknown) => {
     throw e;
   });
