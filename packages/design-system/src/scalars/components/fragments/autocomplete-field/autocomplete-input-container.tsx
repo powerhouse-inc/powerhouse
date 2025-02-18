@@ -8,9 +8,9 @@ import {
   TooltipProvider,
 } from "@/scalars/components/fragments/tooltip";
 import { cn } from "@/scalars/lib/utils";
-import type { PHIDItem } from "./types";
+import type { AutocompleteOption } from "./types";
 
-interface PHIDInputContainerProps {
+interface AutocompleteInputContainerProps {
   id: string;
   name: string;
   value: string;
@@ -21,7 +21,7 @@ interface PHIDInputContainerProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onClick?: (e: React.MouseEvent<HTMLInputElement>) => void;
-  selectedOption?: PHIDItem;
+  selectedOption?: AutocompleteOption;
   handleOpenChange?: (open: boolean) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLInputElement>) => void;
   placeholder?: string;
@@ -34,9 +34,9 @@ interface PHIDInputContainerProps {
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
 }
 
-export const PHIDInputContainer = React.forwardRef<
+export const AutocompleteInputContainer = React.forwardRef<
   HTMLInputElement,
-  PHIDInputContainerProps
+  AutocompleteInputContainerProps
 >(
   (
     {
@@ -106,7 +106,7 @@ export const PHIDInputContainer = React.forwardRef<
             }}
             placeholder={placeholder}
             aria-invalid={hasError}
-            aria-label={!label ? "PHID field" : undefined}
+            aria-label={!label ? "Autocomplete field" : undefined}
             aria-required={required}
             aria-expanded={isPopoverOpen}
             maxLength={maxLength}
@@ -144,13 +144,13 @@ export const PHIDInputContainer = React.forwardRef<
                   type="button"
                   onClick={() => {
                     navigator.clipboard
-                      .writeText(selectedOption.phid)
+                      .writeText(selectedOption.value)
                       .then(() => {
                         setHasCopied(true);
                         setTimeout(() => setHasCopied(false), 2000);
                       })
                       .catch((error) => {
-                        console.error("Failed to copy PHID: ", error);
+                        console.error("Failed to copy ID: ", error);
                       });
                   }}
                   className={cn(

@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
-import { PHIDField } from "./phid-field";
-import { Form } from "@/scalars/components/form";
+import { AutocompleteField } from "./autocomplete-field";
 
-describe("PHIDField Component", () => {
+describe("AutocompleteField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   window.Element.prototype.scrollTo = vi.fn();
   window.matchMedia = vi.fn().mockImplementation((query) => ({
@@ -24,14 +23,14 @@ describe("PHIDField Component", () => {
       icon: "PowerhouseLogoSmall",
       title: "Document A",
       path: "projects/finance/document-a",
-      value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea7:main:public",
+      value: "document-a",
       description: "Financial report for Q1 2024",
     },
     {
       icon: "PowerhouseLogoSmall",
       title: "Document B",
       path: "projects/legal/document-b",
-      value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8:main:public",
+      value: "document-b",
       description: "Legal compliance documentation",
     },
   ];
@@ -45,10 +44,10 @@ describe("PHIDField Component", () => {
 
   it("should match snapshot", () => {
     const { asFragment } = renderWithForm(
-      <PHIDField
-        name="phid"
-        label="PHID Field"
-        placeholder="phd:"
+      <AutocompleteField
+        name="autocomplete"
+        label="Autocomplete Field"
+        placeholder="Search..."
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -58,8 +57,8 @@ describe("PHIDField Component", () => {
 
   it("should render with label", () => {
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
@@ -70,8 +69,8 @@ describe("PHIDField Component", () => {
 
   it("should render with description", () => {
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         description="Test Description"
         fetchOptionsCallback={defaultGetOptions}
@@ -83,8 +82,8 @@ describe("PHIDField Component", () => {
 
   it("should handle disabled state", () => {
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         disabled
         fetchOptionsCallback={defaultGetOptions}
@@ -96,30 +95,30 @@ describe("PHIDField Component", () => {
 
   it("should display error messages", async () => {
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
-        errors={["Invalid PHID format"]}
+        errors={["Invalid format"]}
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
     await waitFor(() =>
-      expect(screen.getByText("Invalid PHID format")).toBeInTheDocument(),
+      expect(screen.getByText("Invalid format")).toBeInTheDocument(),
     );
   });
 
   it("should display warning messages", () => {
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
-        warnings={["PHID may be deprecated"]}
+        warnings={["Option may be deprecated"]}
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
-    expect(screen.getByText("PHID may be deprecated")).toBeInTheDocument();
+    expect(screen.getByText("Option may be deprecated")).toBeInTheDocument();
   });
 
   it("should show autocomplete options", async () => {
@@ -128,8 +127,8 @@ describe("PHIDField Component", () => {
     Math.random = vi.fn().mockReturnValue(1);
 
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
@@ -155,8 +154,8 @@ describe("PHIDField Component", () => {
 
   it("should have correct ARIA attributes", async () => {
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         required
         errors={["Error message"]}
@@ -173,8 +172,8 @@ describe("PHIDField Component", () => {
 
   it("should show correct placeholders for different variants", () => {
     const { rerender } = renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
@@ -186,8 +185,8 @@ describe("PHIDField Component", () => {
     expect(screen.getByText("Description not available")).toBeInTheDocument();
 
     rerender(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         variant="withIdAndTitle"
         fetchOptionsCallback={defaultGetOptions}
@@ -202,8 +201,8 @@ describe("PHIDField Component", () => {
     ).not.toBeInTheDocument();
 
     rerender(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         variant="withId"
         fetchOptionsCallback={defaultGetOptions}
@@ -220,50 +219,15 @@ describe("PHIDField Component", () => {
 
   it("should handle autoComplete disabled", () => {
     renderWithForm(
-      <PHIDField name="phid" label="Test Label" autoComplete={false} />,
+      <AutocompleteField
+        name="autocomplete"
+        label="Test Label"
+        autoComplete={false}
+      />,
     );
 
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox")).toBeInTheDocument();
-  });
-
-  it("should validate PHID format on submit", async () => {
-    const mockOnSubmit = vi.fn();
-    const user = userEvent.setup();
-    const validPhid = mockedOptions[0].value;
-    const invalidPhid = "invalid-phid";
-
-    render(
-      <Form onSubmit={mockOnSubmit}>
-        <PHIDField
-          name="phid"
-          label="Test Label"
-          fetchOptionsCallback={defaultGetOptions}
-          fetchSelectedOptionCallback={defaultGetSelectedOption}
-        />
-        <button type="submit">Submit</button>
-      </Form>,
-    );
-
-    const input = screen.getByRole("combobox");
-    await user.click(input);
-    await user.type(input, invalidPhid);
-
-    await user.click(screen.getByText("Submit"));
-    await waitFor(() => {
-      expect(mockOnSubmit).not.toHaveBeenCalled();
-      expect(screen.getByText(/Invalid format/)).toBeInTheDocument();
-    });
-
-    await user.clear(input);
-    await user.type(input, validPhid);
-
-    await user.click(screen.getByText("Submit"));
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        phid: validPhid,
-      });
-    });
   });
 
   it("should handle value changes and auto selection", async () => {
@@ -272,8 +236,8 @@ describe("PHIDField Component", () => {
     Math.random = vi.fn().mockReturnValue(1);
 
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
@@ -302,8 +266,8 @@ describe("PHIDField Component", () => {
   it("should not invoke onChange on mount when it has a defaultValue", () => {
     const onChange = vi.fn();
     renderWithForm(
-      <PHIDField
-        name="phid"
+      <AutocompleteField
+        name="autocomplete"
         label="Test Label"
         defaultValue={mockedOptions[0].value}
         fetchOptionsCallback={defaultGetOptions}

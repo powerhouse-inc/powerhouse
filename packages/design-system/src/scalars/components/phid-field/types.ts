@@ -1,38 +1,6 @@
-import type { IconName } from "@/powerhouse/components/icon";
+import type { AutocompleteProps } from "@/scalars/components/fragments/autocomplete-field/types";
 
-export interface PHIDBaseProps {
-  onChange?: (value: string) => void;
-  placeholder?: string;
+export type PHIDProps = Omit<AutocompleteProps, "renderOption"> & {
   allowedScopes?: string[];
   allowUris?: boolean;
-  allowDataObjectReference?: boolean;
-  maxLength?: number;
-  isOpenByDefault?: boolean;
-  initialOptions?: PHIDItem[];
-}
-
-export type PHIDProps = PHIDBaseProps &
-  (
-    | {
-        autoComplete: false;
-        variant?: never;
-        fetchOptionsCallback?: never;
-        fetchSelectedOptionCallback?: never;
-      }
-    | {
-        autoComplete?: true;
-        variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
-        fetchOptionsCallback: (phidFragment: string) => Promise<PHIDItem[]>;
-        fetchSelectedOptionCallback?: (
-          phid: string,
-        ) => Promise<PHIDItem | undefined>;
-      }
-  );
-
-export interface PHIDItem {
-  icon?: IconName | React.ReactElement;
-  title?: string;
-  path?: string;
-  phid: string;
-  description?: string;
-}
+};

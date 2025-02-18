@@ -1,7 +1,7 @@
 import React from "react";
 import { Icon, type IconName } from "@/powerhouse/components/icon";
 import { cn } from "@/scalars/lib/utils";
-import type { PHIDProps, PHIDItem } from "./types";
+import type { AutocompleteProps, AutocompleteOption } from "./types";
 
 const IconRenderer: React.FC<{
   customIcon?: IconName | React.ReactElement;
@@ -23,16 +23,16 @@ const IconRenderer: React.FC<{
 
 const ReloadButton: React.FC<{
   isLoadingSelectedOption?: boolean;
-  handleFetchSelectedOption: (phid: string) => void;
-  phid: string;
-}> = ({ isLoadingSelectedOption, handleFetchSelectedOption, phid }) => (
+  handleFetchSelectedOption: (value: string) => void;
+  value: string;
+}> = ({ isLoadingSelectedOption, handleFetchSelectedOption, value }) => (
   <div>
     <button
       type="button"
       disabled={isLoadingSelectedOption}
       onClick={() => {
         if (!isLoadingSelectedOption) {
-          handleFetchSelectedOption(phid);
+          handleFetchSelectedOption(value);
         }
       }}
       className={cn(
@@ -53,24 +53,24 @@ const ReloadButton: React.FC<{
   </div>
 );
 
-export type PHIDListItemProps = {
-  variant: PHIDProps["variant"];
+export type AutocompleteListOptionProps = {
+  variant: AutocompleteProps["variant"];
   asPlaceholder?: boolean;
-  showPHID?: boolean;
+  showValue?: boolean;
   isLoadingSelectedOption?: boolean;
-  handleFetchSelectedOption?: (phid: string) => void;
+  handleFetchSelectedOption?: (value: string) => void;
   className?: string;
-} & PHIDItem;
+} & AutocompleteOption;
 
-export const PHIDListItem: React.FC<PHIDListItemProps> = ({
-  variant = "withId",
+export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
+  variant = "withIdTitleAndDescription",
   icon,
   title = "Title not available",
   path = "Path not available",
-  phid,
+  value,
   description = "Description not available",
   asPlaceholder,
-  showPHID = true,
+  showValue = true,
   isLoadingSelectedOption,
   handleFetchSelectedOption,
   className,
@@ -79,10 +79,13 @@ export const PHIDListItem: React.FC<PHIDListItemProps> = ({
     <div className={cn("flex w-full items-center")}>
       <span
         className={cn(
-          "truncate text-xs leading-5 text-gray-500 dark:text-gray-600",
+          "truncate text-xs leading-5",
+          asPlaceholder
+            ? "text-gray-400 dark:text-gray-700"
+            : "text-gray-500 dark:text-gray-600",
         )}
       >
-        {phid}
+        {value}
       </span>
     </div>
   );
@@ -113,18 +116,21 @@ export const PHIDListItem: React.FC<PHIDListItemProps> = ({
           <ReloadButton
             isLoadingSelectedOption={isLoadingSelectedOption}
             handleFetchSelectedOption={handleFetchSelectedOption}
-            phid={phid}
+            value={value}
           />
         )}
       </div>
-      {showPHID && (
+      {showValue && (
         <div className={cn("flex max-w-full items-center")}>
           <span
             className={cn(
-              "truncate text-xs leading-5 text-gray-500 dark:text-gray-600",
+              "truncate text-xs leading-5",
+              asPlaceholder
+                ? "text-gray-400 dark:text-gray-700"
+                : "text-gray-500 dark:text-gray-600",
             )}
           >
-            {phid}
+            {value}
           </span>
         </div>
       )}
@@ -169,18 +175,21 @@ export const PHIDListItem: React.FC<PHIDListItemProps> = ({
           <ReloadButton
             isLoadingSelectedOption={isLoadingSelectedOption}
             handleFetchSelectedOption={handleFetchSelectedOption}
-            phid={phid}
+            value={value}
           />
         )}
       </div>
-      {showPHID && (
+      {showValue && (
         <div className={cn("flex max-w-full items-center")}>
           <span
             className={cn(
-              "truncate text-xs leading-5 text-gray-500 dark:text-gray-600",
+              "truncate text-xs leading-5",
+              asPlaceholder
+                ? "text-gray-400 dark:text-gray-700"
+                : "text-gray-500 dark:text-gray-600",
             )}
           >
-            {phid}
+            {value}
           </span>
         </div>
       )}
