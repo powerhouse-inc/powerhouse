@@ -1,10 +1,10 @@
 import { IDocumentDriveServer, IReceiver, Listener } from "document-drive";
-import { Document, OperationScope } from "document-model/document";
+import { Document, OperationScope } from "document-model";
 import { Express } from "express";
+import { IAnalyticsStore } from "./processors/analytics-processor";
 import { ProcessorClass } from "./processors/processor";
 import { SubgraphManager } from "./subgraphs/manager";
 import { Db } from "./utils/db";
-import { IAnalyticsStore } from "./processors/analytics-processor";
 
 export type { Db } from "./utils/db";
 

@@ -1,6 +1,6 @@
 import { TooltipProvider } from "@/connect";
 import { Pagination, usePagination } from "@/powerhouse";
-import { utils } from "document-model/document";
+import { utils } from "document-model";
 import { useMemo, useState } from "react";
 import { Header } from "./header";
 import { Timeline } from "./timeline";

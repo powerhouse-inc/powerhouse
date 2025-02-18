@@ -1,4 +1,4 @@
-import { Document, OperationScope } from "document-model/document";
+import { Document, OperationScope } from "document-model";
 import { Db, ProcessorOptions, ProcessorSetupArgs } from "src/types";
 import { Processor } from "./processor";
 

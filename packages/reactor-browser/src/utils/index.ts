@@ -1,4 +1,4 @@
-import { Document, OperationScope } from "document-model/document";
+import { Document, OperationScope } from "document-model";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
 
 export function documentToHash(drive: Document): string {

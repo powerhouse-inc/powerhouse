@@ -1,4 +1,4 @@
-import { DocumentModelLib } from 'document-model/document';
+import { DocumentModelLib } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
 import { getHMRModule, subscribeExternalPackages } from 'src/services/hmr';

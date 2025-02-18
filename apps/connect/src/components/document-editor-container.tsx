@@ -1,4 +1,4 @@
-import { Document, Operation } from 'document-model/document';
+import { Document, Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal';

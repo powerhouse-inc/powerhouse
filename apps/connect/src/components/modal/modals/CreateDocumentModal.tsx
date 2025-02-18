@@ -6,7 +6,7 @@ import {
     UiFolderNode,
     UiNode,
 } from '@powerhousedao/design-system';
-import { DocumentModel } from 'document-model/document';
+import { DocumentModel } from 'document-model';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { makeNodeSlugFromNodeName } from 'src/utils/slug';
 

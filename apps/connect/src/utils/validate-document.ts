@@ -1,7 +1,8 @@
-import { Document, ValidationError } from 'document-model/document';
 import {
+    Document,
     DocumentModel as DocumentModelClass,
     utils as documentModelUtils,
+    ValidationError,
 } from 'document-model';
 
 export const validateDocument = (document: Document) => {

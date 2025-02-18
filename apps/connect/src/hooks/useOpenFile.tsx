@@ -1,4 +1,4 @@
-import { Document } from 'document-model/document';
+import { Document } from 'document-model';
 import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';

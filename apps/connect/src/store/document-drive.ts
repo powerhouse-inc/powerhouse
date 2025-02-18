@@ -1,5 +1,5 @@
 import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
-import { Document, Operation } from 'document-model/document';
+import { Document, Operation } from 'document-model';
 import { hashDocument } from 'document-model/utils';
 import { atom, useAtom, useSetAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';

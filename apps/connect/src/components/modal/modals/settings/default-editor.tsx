@@ -1,5 +1,5 @@
 import { DefaultEditor as BaseDefaultEditor } from '@powerhousedao/design-system';
-import { DocumentModel } from 'document-model/document';
+import { DocumentModel } from 'document-model';
 import { useCallback } from 'react';
 import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
 

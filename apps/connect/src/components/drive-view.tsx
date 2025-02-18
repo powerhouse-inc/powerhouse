@@ -1,5 +1,5 @@
 import { Breadcrumbs } from '@powerhousedao/design-system';
-import { DocumentModel } from 'document-model/document';
+import { DocumentModel } from 'document-model';
 import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import { useUiNodes } from 'src/hooks/useUiNodes';
 import Button from './button';

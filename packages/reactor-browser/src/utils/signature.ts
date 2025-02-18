@@ -7,7 +7,7 @@ import {
   Reducer,
   User,
   utils,
-} from "document-model/document";
+} from "document-model";
 import type { User as RenownUser } from "../renown/types";
 
 export async function signOperation<

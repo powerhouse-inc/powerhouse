@@ -1,6 +1,6 @@
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
+import { Manifest } from 'document-model';
 import CommonManifest from 'document-model-libs/manifest';
-import { Manifest } from 'document-model/document';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDocumentDrives } from 'src/hooks/useDocumentDrives';
 import { addExternalPackage, removeExternalPackage } from 'src/services/hmr';

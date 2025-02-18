@@ -5,7 +5,7 @@ import type {
   Document,
   Operation,
   Reducer,
-} from "document-model/document";
+} from "document-model";
 import { useEffect, useState } from "react";
 
 export type DocumentDispatchCallback<State, A extends Action, LocalState> = (

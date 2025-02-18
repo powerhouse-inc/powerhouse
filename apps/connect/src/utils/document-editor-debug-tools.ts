@@ -1,4 +1,4 @@
-import { Document, Operation, OperationScope } from 'document-model/document';
+import { Document, Operation, OperationScope } from 'document-model';
 
 export class DocumentEditorDebugTools {
     private document: Document | undefined;

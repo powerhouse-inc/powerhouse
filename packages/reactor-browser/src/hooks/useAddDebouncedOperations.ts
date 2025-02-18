@@ -1,9 +1,9 @@
-import { useMemo, useCallback } from "react";
-import { Document, Operation } from "document-model/document";
+import { Document, Operation } from "document-model";
+import { useCallback, useMemo } from "react";
 
-import { useUserPermissions } from "./useUserPermissions";
-import { useDocumentDrives } from "./useDocumentDrives";
 import { IDocumentDriveServer } from "document-drive";
+import { useDocumentDrives } from "./useDocumentDrives";
+import { useUserPermissions } from "./useUserPermissions";
 
 function debounceOperations(
   callback: (operations: Operation[]) => Promise<Document | undefined>,

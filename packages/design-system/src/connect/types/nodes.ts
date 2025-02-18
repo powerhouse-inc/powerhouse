@@ -6,7 +6,7 @@ import {
   SyncStatus,
   TDocumentType,
 } from "@/connect";
-import { Maybe, Scalars, SynchronizationUnit } from "document-model/document";
+import { Maybe, Scalars, SynchronizationUnit } from "document-model";
 
 export type UiFileNode = {
   kind: typeof FILE;

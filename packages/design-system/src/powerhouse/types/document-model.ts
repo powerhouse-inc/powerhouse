@@ -4,4 +4,4 @@ export type {
   Document,
   ExtendedState,
   Reducer,
-} from "document-model/document";
+} from "document-model";
