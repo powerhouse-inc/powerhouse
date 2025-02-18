@@ -48,6 +48,7 @@ export const transformInputTime = (
   input: string,
   is12HourFormat: boolean,
   defaultPeriod?: TimePeriod,
+  interval = 1,
 ): { hour: string; minute: string; period?: TimePeriod } => {
   input = input.trim();
   let hourStr = "";
@@ -74,14 +75,17 @@ export const transformInputTime = (
   if (isNaN(hourNum)) hourNum = 0;
   if (isNaN(minuteNum)) minuteNum = 0;
 
+  // Apply the minute rounding using the interval
+  minuteNum = roundMinute(minuteNum, interval);
+
   if (is12HourFormat) {
     if (!period) {
-      period = defaultPeriod || "AM";
+      period = defaultPeriod; //|| "AM";
       if (hourNum === 12) period = "PM";
     }
 
     // Convert 24h format to 12h
-    if (hourNum > 12) {
+    if (hourNum > 12 && !period) {
       period = "AM";
       hourNum -= 12;
     }
@@ -92,7 +96,9 @@ export const transformInputTime = (
     }
 
     // Special rule: 12 without period -> PM
-    period = hourNum >= 8 && hourNum <= 11 ? "AM" : "PM";
+    if (!period) {
+      period = hourNum >= 8 && hourNum <= 11 ? "AM" : "PM";
+    }
   } else {
     {
       // Convert any AM/PM designator to 24h
@@ -131,4 +137,195 @@ export const isValidTimeInput = (input: string): boolean => {
     const minuteNum = parseInt(minuteStr, 10);
     return hourNum >= 0 && hourNum <= 23 && minuteNum >= 0 && minuteNum <= 59;
   }
+};
+
+export const getOffset = (timeZone?: string) => {
+  try {
+    const date = new Date();
+    // Format the date in the specified time zone and extract the offset
+    const format = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      timeZoneName: "shortOffset",
+    });
+    const parts = format.formatToParts(date);
+    const offsetPart = parts.find(
+      (part) => part.type === "timeZoneName",
+    )?.value;
+
+    if (!offsetPart) return "±00:00";
+
+    // Convertir GMT±HH a UTC±HH:MM
+    const offsetMatch = /GMT([+-]\d+)(?::(\d+))?/.exec(offsetPart);
+    if (!offsetMatch) return "±00:00";
+    const offsetStr = offsetMatch[1];
+    const sign = offsetStr[0];
+    const num = offsetStr.slice(1);
+    // Add the zero after the sign when necessary
+    const hours = `${sign}${num.padStart(2, "0")}`;
+    const minutes = offsetMatch[2] ? offsetMatch[2].padStart(2, "0") : "00";
+    return `${hours}:${minutes}`;
+  } catch (error) {
+    return "±00:00";
+  }
+};
+
+export const getOffsetToDisplay = (timeZone?: string) => {
+  return `UTC${getOffset(timeZone)}`;
+};
+
+export const getOptions = () => {
+  const timeZones = Intl.supportedValuesOf("timeZone");
+  return timeZones.map((timeZone) => {
+    const offset = getOffsetToDisplay(timeZone);
+    const label = `(${offset}) ${timeZone.replace(/_/g, " ")}`;
+    return { value: timeZone, label };
+  });
+};
+
+export const removeDate = (datetime: string) => {
+  if (!datetime.includes("T")) return datetime;
+  return datetime.replace(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/, "$2");
+};
+
+export const splitDatetime = (datetime?: string) => {
+  if (!datetime) return { hours: "", minutes: "", lastPart: "" };
+  const offsetMatch = /([+-]\d{2}:\d{2})$/.exec(datetime);
+  const lastPart = offsetMatch ? offsetMatch[0] : "";
+
+  const time = removeDate(datetime);
+  const [hours, minutes] = time.split(":");
+
+  return {
+    hours: hours.padStart(2, "0"),
+    minutes: minutes.padStart(2, "0"),
+    lastPart,
+  };
+};
+
+export const getHours = (datetime?: string) => {
+  const { hours } = splitDatetime(datetime);
+  return hours;
+};
+
+export const getMinutes = (datetime?: string) => {
+  const { minutes } = splitDatetime(datetime);
+  return minutes;
+};
+
+export const getLastPart = (datetime?: string) => {
+  const { lastPart } = splitDatetime(datetime);
+  return lastPart;
+};
+
+export const getInputValue = (datetime?: string) => {
+  const { hours, minutes } = splitDatetime(datetime);
+  if (!hours && !minutes) return "";
+  return `${hours}:${minutes}`;
+};
+
+export const getTimezone = (utcOffset: string): string => {
+  if (!utcOffset) return "";
+  const options = getOptions();
+  const { lastPart } = splitDatetime(utcOffset);
+  const findedOption = options.find((option) => {
+    return option.label.includes(lastPart);
+  });
+  return findedOption?.value ?? "";
+};
+
+export const cleanTime = (time: string) => {
+  return time.replace(/\s*(AM|PM)\s*/i, "");
+};
+
+export const formatToValue = (
+  minutes: string,
+  hours: string,
+  lastPart: string,
+) => {
+  const cleanMinutes = cleanTime(minutes);
+
+  const cleanHours = cleanTime(hours);
+
+  const datetime = `${cleanHours}:${cleanMinutes}:00.000${lastPart}`;
+  return datetime;
+};
+
+export const formatInputToValueValid = (input: string) => {
+  // convert from 12 format to 24 format
+  const [hours, minutes] = input.split(":");
+  const period =
+    input.includes("AM") || input.includes("PM") ? input.slice(-2) : undefined;
+  let formattedHours = hours;
+  if (period === "PM" && hours !== "12") {
+    formattedHours = (parseInt(hours, 10) + 12).toString();
+  } else if (period === "AM" && hours === "12") {
+    formattedHours = "00";
+  }
+  return `${formattedHours}:${minutes}`;
+};
+
+export const formatInputToDisplayValid = (
+  input: string,
+  is12HourFormat: boolean,
+  selectedPeriod?: TimePeriod,
+  dateIntervals?: number,
+) => {
+  const { hour, minute, period } = transformInputTime(
+    input,
+    is12HourFormat,
+    selectedPeriod,
+    dateIntervals,
+  );
+
+  return is12HourFormat ? `${hour}:${minute} ${period}` : `${hour}:${minute}`;
+};
+
+export const getHoursAndMinutes = (input: string) => {
+  const [hours, minutes] = input.split(":");
+  const period =
+    input.includes("AM") || input.includes("PM") ? input.slice(-2) : undefined;
+  return { hours, minutes, period };
+};
+
+export const getInitialPeriod = (value: string, timeFormat: string) => {
+  const is12HourFormat = timeFormat.includes("a");
+  return is12HourFormat
+    ? parseInt(getHours(value)) >= 12
+      ? "PM"
+      : "AM"
+    : undefined;
+};
+
+export const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Allow control keys (backspace, delete, arrows, etc)
+  if (
+    e.key === "Backspace" ||
+    e.key === "Delete" ||
+    e.key === "ArrowLeft" ||
+    e.key === "ArrowRight" ||
+    e.key === "Tab" ||
+    e.key === "Enter" ||
+    e.key === " " ||
+    e.key === "Space" ||
+    e.ctrlKey ||
+    e.metaKey
+  ) {
+    return;
+  }
+
+  // Allow numbers
+  if (/^[0-9]$/.test(e.key)) {
+    return;
+  }
+  // Allow ":"
+  if (e.key === ":") {
+    return;
+  }
+  // Allow "A", "M", "P" for AM/PM
+  if (/^[AMP]$/i.test(e.key)) {
+    return;
+  }
+
+  e.preventDefault();
 };

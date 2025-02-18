@@ -58,8 +58,8 @@ const DateTimePickerContent = ({
               "flex items-center justify-center h-full",
               "border-b-2",
               activeTab === "date"
-                ? "border-gray-600 text-gray-900 font-medium"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
+                ? "border-gray-900 text-gray-900 font-medium"
+                : "border-gray-100 text-gray-300 hover:text-gray-300 hover:border-gray-100",
             )}
           >
             <Icon name="CalendarTime" className="h-6 w-6" />
@@ -71,8 +71,8 @@ const DateTimePickerContent = ({
               "flex items-center justify-center h-full",
               "border-b-2",
               activeTab === "time"
-                ? "border-gray-600 text-gray-900 font-medium"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
+                ? "border-gray-900 text-gray-900 font-medium"
+                : "border-transparent text-gray-300 hover:text-gray-300 hover:border-gray-100",
             )}
           >
             <Icon name="Clock" className="h-6 w-6" />
