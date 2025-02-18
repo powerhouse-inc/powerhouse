@@ -1,3 +1,28 @@
+## 0.33.1-dev.0 (2025-02-18)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.201
+
+## 0.33.0 (2025-02-18)
+
+### 🚀 Features
+
+- **ph-cli:** load ph-cli version and pass to connect ([c24232b2](https://github.com/powerhouse-inc/powerhouse/commit/c24232b2))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model-libs to 1.132.1
+- Updated document-drive to 1.19.0
+- Updated @powerhousedao/design-system to 1.27.0
+- Updated @powerhousedao/reactor-local to 1.20.1
+- Updated @powerhousedao/codegen to 0.36.0
+- Updated @powerhousedao/connect to 1.0.5
+
+### ❤️ Thank You
+
+- Frank
+
 ## 0.32.1-dev.0 (2025-02-14)
 
 ### 🧱 Updated Dependencies

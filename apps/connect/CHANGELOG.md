@@ -1,3 +1,44 @@
+## 1.0.0-dev.201 (2025-02-18)
+
+### 🚀 Features
+
+- **connect:** integrate new home screen ([56b93d71](https://github.com/powerhouse-inc/powerhouse/commit/56b93d71))
+- **connect:** added ph-cli var ([80eb482d](https://github.com/powerhouse-inc/powerhouse/commit/80eb482d))
+
+### 🩹 Fixes
+
+- **connect, document-drive:** Fix upload & sync flow ([762286da](https://github.com/powerhouse-inc/powerhouse/commit/762286da))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Wouter Kampmann
+
+## 1.0.5 (2025-02-18)
+
+### 🚀 Features
+
+- **connect:** integrate new home screen ([56b93d71](https://github.com/powerhouse-inc/powerhouse/commit/56b93d71))
+- **connect:** added ph-cli var ([80eb482d](https://github.com/powerhouse-inc/powerhouse/commit/80eb482d))
+
+### 🩹 Fixes
+
+- **connect, document-drive:** Fix upload & sync flow ([762286da](https://github.com/powerhouse-inc/powerhouse/commit/762286da))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model-libs to 1.132.1
+- Updated document-model-libs to 1.132.1
+- Updated document-drive to 1.19.0
+- Updated @powerhousedao/design-system to 1.27.0
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Wouter Kampmann
+
 ## 1.0.0-dev.200 (2025-02-14)
 
 ### 🚀 Features
