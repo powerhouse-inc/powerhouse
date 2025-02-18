@@ -1,25 +1,27 @@
 import PeopleFill from "@/assets/icon-components/PeopleFill";
-import { ComponentPropsWithRef, forwardRef } from "react";
 import { twMerge } from "tailwind-merge";
 
-type InputProps = ComponentPropsWithRef<"input">;
-type HomeScreenItemProps = Omit<InputProps, "className"> & {
+type HomeScreenItemProps = {
   readonly icon?: React.JSX.Element;
   readonly title: string;
   readonly description?: string;
   readonly containerClassName?: string;
-  readonly sharable?: boolean;
+  readonly shareable?: boolean;
+  readonly onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
 };
-export const HomeScreenItem = forwardRef(function HomeScreenItem(
+export const HomeScreenItem = function HomeScreenItem(
   props: HomeScreenItemProps,
 ) {
-  const { icon, title, description, containerClassName, sharable } = props;
+  const { icon, title, description, containerClassName, shareable, onClick } =
+    props;
   return (
     <div
       className={twMerge(
         "relative flex flex-col items-center text-center text-sm text-black",
         containerClassName,
+        onClick && "cursor-pointer",
       )}
+      onClick={onClick}
     >
       <div className="mx-auto pb-4">
         {icon || (
@@ -34,7 +36,7 @@ export const HomeScreenItem = forwardRef(function HomeScreenItem(
         <h3>{title}</h3>
         {description && <p className="text-gray-500">{description}</p>}
       </div>
-      {sharable && (
+      {shareable && (
         <div className="mb-4 flex w-full justify-start">
           <div className="absolute left-8 top-8 ">
             <PeopleFill width={12} height={12} />
@@ -43,4 +45,4 @@ export const HomeScreenItem = forwardRef(function HomeScreenItem(
       )}
     </div>
   );
-});
+};
