@@ -1,6 +1,6 @@
 import { NodeInput } from "@/connect";
 import { Icon } from "@/powerhouse";
-import { useCallback, useState } from "react";
+import { Fragment, useCallback, useState } from "react";
 
 export type BreadcrumbNode = {
   id: string;
@@ -43,7 +43,10 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
   return (
     <div className="flex h-9 flex-row items-center gap-2 p-6 text-gray-500">
       {breadcrumbs.map((node) => (
-        <Breadcrumb key={node.id} node={node} onClick={onBreadcrumbSelected} />
+        <Fragment key={node.id}>
+          <Breadcrumb node={node} onClick={onBreadcrumbSelected} />
+          <span>/</span>
+        </Fragment>
       ))}
       {createEnabled &&
         (isCreating ? (
@@ -77,15 +80,12 @@ export function Breadcrumb(props: BreadcrumbProps) {
   const { node, onClick } = props;
 
   return (
-    <div className="flex items-center">
-      <div
-        className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
-        onClick={() => onClick(node)}
-        role="button"
-      >
-        {node.name}
-      </div>
-      <span>/</span>
+    <div
+      className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
+      onClick={() => onClick(node)}
+      role="button"
+    >
+      {node.name}
     </div>
   );
 }

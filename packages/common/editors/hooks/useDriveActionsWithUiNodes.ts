@@ -75,7 +75,7 @@ function createUiNodeAdapter(driveActions: IDriveActions) {
 }
 
 export function useDriveActionsWithUiNodes(
-  drive: DocumentDriveDocument,
+  document: DocumentDriveDocument,
   dispatch: EditorDispatch<DocumentDriveAction>,
 ) {
   const { selectedNode, selectedDriveNode, setSelectedNode, getNodeById } =
@@ -86,6 +86,7 @@ export function useDriveActionsWithUiNodes(
   const driveContext: DriveActionsContext = useMemo(
     () => ({
       ..._driveContext,
+      document,
       selectedNode: selectedNode,
       onSelectNode: (node: Node) => {
         _driveContext.selectNode(node);
@@ -97,7 +98,7 @@ export function useDriveActionsWithUiNodes(
       selectedDriveNode?.driveId,
       setSelectedNode,
       getNodeById,
-      drive,
+      document,
     ],
   );
   const driveActions = useDriveActions(dispatch, driveContext);

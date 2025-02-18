@@ -8,25 +8,11 @@ import {
   UiFolderNode,
   type UiNode,
 } from "@powerhousedao/design-system";
-import { clsx, type ClassValue } from "clsx";
 import {
   DocumentDriveDocument,
   isFolderNode,
   Node,
 } from "document-models/document-drive";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-export type BaseProps<T extends HTMLElement = HTMLDivElement> = {
-  className?: string;
-  style?: React.CSSProperties;
-  id?: string;
-  children?: React.ReactNode;
-  containerProps?: Omit<React.HTMLAttributes<T>, "className" | "style" | "id">;
-};
 
 export function sortUiNodesByName(a: UiNode, b: UiNode) {
   return a.name.localeCompare(b.name);
@@ -64,7 +50,7 @@ export function makeUiNode(
       syncStatus: undefined,
       sharingType,
     };
-    if (node.kind === FILE) {
+    if (uiNode.kind === FILE) {
       return uiNode as UiFileNode;
     } else if (isFolderNode(node)) {
       return {
@@ -91,7 +77,7 @@ export function makeUiNode(
     parentFolder: null,
     driveId: id,
     children: nodes
-      .filter((n) => !n.parentFolder)
+      .filter((n) => n.parentFolder)
       .map((n) => makeUiNode(n, drive, false)),
   } as UiDriveNode;
 }

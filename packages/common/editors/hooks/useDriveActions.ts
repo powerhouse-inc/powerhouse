@@ -15,7 +15,9 @@ import { IDriveContext } from "./useDriveContext";
 
 const generateId = () => _generateId().toString();
 
-export type DriveActionsContext = IDriveContext;
+export type DriveActionsContext = IDriveContext & {
+  document: DocumentDriveDocument;
+};
 
 function getNode(id: string, drive: DocumentDriveDocument) {
   return drive.state.global.nodes.find((node) => node.id === id);
@@ -25,7 +27,7 @@ function createDriveActions(
   dispatch: EditorDispatch<DocumentDriveAction>,
   context: DriveActionsContext,
 ) {
-  const { drive, selectedNode } = context;
+  const { document: drive, selectedNode } = context;
   const { id: driveId } = drive.state.global;
 
   const addFolder = async (
@@ -152,7 +154,6 @@ function createDriveActions(
   return {
     context,
     selectNode: context.selectNode,
-    createDocument: context.createDocument,
     addFolder,
     addFile,
     addDocument,

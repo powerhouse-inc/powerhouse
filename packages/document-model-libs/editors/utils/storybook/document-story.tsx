@@ -1,6 +1,5 @@
 import { useArgs, useChannel } from "@storybook/preview-api";
-import { Meta, StoryObj } from "@storybook/react";
-import { DecoratorFunction } from "@storybook/types";
+import { Decorator, Meta, StoryObj } from "@storybook/react";
 import {
   Action,
   ActionContext,
@@ -16,7 +15,7 @@ import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
 import { useDocumentReducer } from "../reducer";
 
-type EditorStoryArgs<S, A extends Action, L> = Partial<{
+export type EditorStoryArgs<S, A extends Action, L> = Partial<{
   isAllowedToCreateDocuments: boolean;
   isAllowedToEditDocuments: boolean;
   canUndo: boolean;
@@ -29,10 +28,13 @@ type EditorStoryArgs<S, A extends Action, L> = Partial<{
     backgroundUpdateRate: number;
     backgroundUpdateActions: ((document: Document<S, A, L>) => A)[];
   };
-  decorators?: DecoratorFunction[];
 }>;
 
-type EditorStoryProps<S, A extends Action, L = unknown> = EditorProps<S, A, L> &
+export type EditorStoryProps<S, A extends Action, L = unknown> = EditorProps<
+  S,
+  A,
+  L
+> &
   EditorStoryArgs<S, A, L>;
 
 export type EditorStoryComponent<S, A extends Action, L = unknown> = (
@@ -48,6 +50,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
   reducer: Reducer<S, A, L>,
   initialState: ExtendedState<PartialState<S>, PartialState<L>>,
   additionalStoryArgs?: EditorStoryArgs<S, A, L>,
+  decorators?: Decorator<EditorStoryProps<S, A, L>>[],
 ): { meta: Meta<typeof Editor>; CreateDocumentStory: DocumentStory<S, A, L> } {
   const meta = {
     component: Editor,
@@ -77,7 +80,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
 
         return <Story emit={emit} />;
       },
-      ...(additionalStoryArgs?.decorators ?? []),
+      ...(decorators ?? []),
     ],
     render: function Render(args) {
       const [error, setError] = useState<unknown>();

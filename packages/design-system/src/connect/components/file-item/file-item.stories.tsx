@@ -1,9 +1,5 @@
 import { documentTypes } from "@/connect/constants";
-import {
-  mockNodeOptions,
-  mockUiFileNode,
-  mockUiFolderNode,
-} from "@/connect/utils/mocks";
+import { mockUiFileNode } from "@/connect/utils/mocks";
 import { Meta, StoryObj } from "@storybook/react";
 import { FileItem } from "./file-item";
 
@@ -26,18 +22,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     uiNode: mockUiFileNode,
-    isRemoteDrive: true,
     isAllowedToCreateDocuments: true,
-    nodeOptions: mockNodeOptions,
-    selectedNodePath: [
-      mockUiFolderNode,
-      mockUiFolderNode,
-      mockUiFolderNode,
-      mockUiFileNode,
-    ],
-    onMoveNode: () => Promise.resolve(),
-    onAddFile: () => Promise.resolve(),
-    onCopyNode: () => Promise.resolve(),
   },
   render: function Wrapper(args) {
     const fileNodes = [...documentTypes, "SOME RANDOM DOCUMENT TYPE"].map(
