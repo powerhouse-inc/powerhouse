@@ -1,19 +1,20 @@
 import { useArgs, useChannel } from "@storybook/preview-api";
 import { Meta, StoryObj } from "@storybook/react";
+import { DecoratorFunction } from "@storybook/types";
 import {
   Action,
   ActionContext,
   BaseAction,
+  Document,
   EditorProps,
   ExtendedState,
+  PartialState,
   Reducer,
   utils,
-  Document,
-  PartialState,
 } from "document-model/document";
 import React, { useState } from "react";
-import { useDocumentReducer } from "../reducer";
 import { useInterval } from "usehooks-ts";
+import { useDocumentReducer } from "../reducer";
 
 type EditorStoryArgs<S, A extends Action, L> = Partial<{
   isAllowedToCreateDocuments: boolean;
@@ -28,6 +29,7 @@ type EditorStoryArgs<S, A extends Action, L> = Partial<{
     backgroundUpdateRate: number;
     backgroundUpdateActions: ((document: Document<S, A, L>) => A)[];
   };
+  decorators?: DecoratorFunction[];
 }>;
 
 type EditorStoryProps<S, A extends Action, L = unknown> = EditorProps<S, A, L> &
@@ -75,6 +77,7 @@ export function createDocumentStory<S, A extends Action, L = unknown>(
 
         return <Story emit={emit} />;
       },
+      ...(additionalStoryArgs?.decorators ?? []),
     ],
     render: function Render(args) {
       const [error, setError] = useState<unknown>();

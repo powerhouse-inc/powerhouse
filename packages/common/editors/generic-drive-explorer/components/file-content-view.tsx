@@ -71,7 +71,9 @@ export function FileContentView(props: Props) {
   if (fileNodes.length === 0) {
     return (
       <div className="mb-8 text-sm text-gray-400">
-        {t("folderView.sections.documents.empty")}
+        {t("folderView.sections.documents.empty", {
+          defaultValue: "No documents or files 📄",
+        })}
       </div>
     );
   }
