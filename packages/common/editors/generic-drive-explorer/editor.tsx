@@ -27,6 +27,7 @@ export type IProps = EditorProps<
 
 export default function Editor(props: IProps) {
   const { document, dispatch } = props;
+
   const {
     state: {
       global: { id },
@@ -68,7 +69,7 @@ export default function Editor(props: IProps) {
       const document = documentModel.utils.createDocument();
       await addDocument(
         name,
-        documentModel.documentModel.id,
+        documentModel.documentModel.name,
         document,
         selectedNode?.id,
       );

@@ -17,7 +17,7 @@
     "baseUrl": "./",
     "allowJs": true,
     "paths": {
-      "@editors/utils": ["editors/utils.ts"]
+      "@editors/utils": ["editors/utils/"]
     }
   },
   "include": [

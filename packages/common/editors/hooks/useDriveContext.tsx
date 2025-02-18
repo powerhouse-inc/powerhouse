@@ -1,5 +1,5 @@
 import { DocumentModel } from "document-model/document";
-import { DocumentDriveDocument, Node } from "document-models/document-drive";
+import { Node } from "document-models/document-drive";
 import { createContext, PropsWithChildren, useContext } from "react";
 
 export interface IDriveContext {
@@ -8,7 +8,6 @@ export interface IDriveContext {
   documentModels: DocumentModel[];
   selectedNode: Node | null;
   selectNode: (node: Node) => void;
-  drive: DocumentDriveDocument;
   addFile: (
     file: string | File,
     drive: string,

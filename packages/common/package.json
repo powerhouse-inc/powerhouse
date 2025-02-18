@@ -1,5 +1,5 @@
 {
-  "name": "common",
+  "name": "@powerhousedao/common",
   "version": "1.0.0",
   "license": "AGPL-3.0-only",
   "types": "dist/index.d.ts",
@@ -24,6 +24,11 @@
       "types": "./dist/documentModels.d.ts",
       "import": "./dist/es/documentModels.js",
       "require": "./dist/cjs/documentModels.cjs"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "import": "./dist/es/utils.js",
+      "require": "./dist/cjs/utils.js"
     }
   },
   "scripts": {
@@ -35,7 +40,7 @@
     "postlint": "npm run check-types",
     "lint": "eslint",
     "build": "npm run generate && vite build",
-    "storybook": "npm run install:storybook && npm run generate && storybook dev -p 6006",
+    "storybook": "storybook dev -p 6006",
     "build-storybook": "npm run generate && storybook build",
     "test": "vitest run",
     "test:nogen": "vitest run",
@@ -109,6 +114,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.21.0",
+    "uuid": "^11.0.5",
     "vite": "^6.0.11",
     "vite-plugin-dts": "^4.5.0",
     "vite-plugin-generate-file": "^0.2.0",

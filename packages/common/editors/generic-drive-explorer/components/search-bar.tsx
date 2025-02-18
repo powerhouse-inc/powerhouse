@@ -3,6 +3,7 @@ import {
   ConnectSearchBarProps,
   Icon,
 } from "@powerhousedao/design-system";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const defaultFilterItems: ConnectSearchBarProps["filterItems"] = [
@@ -35,6 +36,7 @@ const defaultFilterItems: ConnectSearchBarProps["filterItems"] = [
 
 export const SearchBar = () => {
   const { t } = useTranslation();
+  const [value, setValue] = useState(""); // TODO
 
   return (
     <ConnectSearchBar
@@ -42,6 +44,8 @@ export const SearchBar = () => {
       placeholder={t("searchbar.placeholder")}
       filterLabel={t("searchbar.filterLabel")}
       filterItems={defaultFilterItems}
+      value={value}
+      onChange={setValue}
     />
   );
 };
