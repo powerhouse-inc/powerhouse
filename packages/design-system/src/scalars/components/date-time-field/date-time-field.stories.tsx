@@ -168,7 +168,7 @@ type Story = StoryObj<typeof meta>;
 
 export const DatePicker: Story = {
   args: {
-    label: "DatePicker Field",
+    label: "Date Picker Field",
     description: "This is a date picker field",
     showDateSelect: true,
     showTimeSelect: false,
@@ -178,7 +178,7 @@ export const DatePicker: Story = {
 
 export const TimePicker: Story = {
   args: {
-    label: "TimePicker Field",
+    label: "Time Picker Field",
     description: "This is a time picker field",
     placeholder: "12:00 AM",
     showDateSelect: false,
@@ -188,7 +188,7 @@ export const TimePicker: Story = {
 
 export const DateTimePicker: Story = {
   args: {
-    label: "DateTimePicker Field",
+    label: "Date Time Picker Field",
     description: "This is a date time picker ield",
     showDateSelect: true,
     showTimeSelect: true,

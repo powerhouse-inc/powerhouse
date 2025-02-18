@@ -155,18 +155,20 @@ export const SidebarItem = ({
                 )}
               </div>
 
-              <div
-                className={cn(
-                  "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
-                  hasStatus ? "right-8" : "right-2",
-                  isPinned
-                    ? "text-gray-700 hover:text-blue-900 dark:text-gray-50 dark:hover:text-blue-900"
-                    : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
-                )}
-                onClick={handleTogglePin}
-              >
-                <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
-              </div>
+              {allowPinning && (
+                <div
+                  className={cn(
+                    "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
+                    hasStatus ? "right-8" : "right-2",
+                    isPinned
+                      ? "text-gray-700 hover:text-blue-900 dark:text-gray-50 dark:hover:text-blue-900"
+                      : "invisible text-gray-300 hover:text-gray-700 group-hover/sidebar-item:visible dark:text-gray-700 dark:hover:text-gray-50",
+                  )}
+                  onClick={handleTogglePin}
+                >
+                  <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
+                </div>
+              )}
               {node.status && hasStatus && (
                 <div
                   className={cn(

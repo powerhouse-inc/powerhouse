@@ -117,6 +117,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           onInputChange={handleInputChange}
           inputProps={inputProps}
           handleBlur={handleBlur}
+          data-cast="DateString"
           className={cn(
             // custom styles
             "pt-3 pr-4 pb-6 pl-4",
