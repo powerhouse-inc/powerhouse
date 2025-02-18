@@ -16,6 +16,7 @@ import { useTimePickerField } from "./use-time-picker-field";
 import { InputNumberProps } from "../number-field/types";
 import { validateTimePicker } from "./time-picker-validations";
 import { cn } from "@/scalars/lib";
+import { handleKeyDown } from "./utils";
 
 export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
@@ -91,6 +92,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       timeZone,
       showTimezoneSelect,
     });
+
     return (
       <FormGroup>
         {label && (
@@ -116,7 +118,10 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
           ref={ref}
           placeholder={placeholder}
           handleBlur={handleBlur}
-          inputProps={inputProps}
+          inputProps={{
+            ...inputProps,
+            onKeyDown: handleKeyDown,
+          }}
           className={cn("pt-3 pr-4 pb-4 pl-4")}
         >
           <TimePickerContent
