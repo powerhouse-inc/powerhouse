@@ -48,6 +48,7 @@ export function makeUiNode(
     __sharingType === "PRIVATE" ? LOCAL : __sharingType
   ) as SharingType;
 
+  // TODO: handle sync status
   // const normalizedDriveSyncStatus =
   //               syncStatus === 'INITIAL_SYNC'
   //                   ? 'SYNCING'
@@ -90,7 +91,19 @@ export function makeUiNode(
     parentFolder: null,
     driveId: id,
     children: nodes
-      .filter((n) => n.parentFolder === id)
+      .filter((n) => !n.parentFolder)
       .map((n) => makeUiNode(n, drive, false)),
   } as UiDriveNode;
+}
+
+export function makeUiDriveNode(drive: DocumentDriveDocument): UiDriveNode {
+  const driveNode = makeUiNode(undefined, drive, true) as UiDriveNode;
+  driveNode.nodeMap = drive.state.global.nodes.reduce(
+    (acc, node) => {
+      acc[node.id] = makeUiNode(node, drive, true);
+      return acc;
+    },
+    {} as Record<string, UiNode>,
+  );
+  return driveNode;
 }

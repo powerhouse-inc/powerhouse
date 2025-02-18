@@ -1,5 +1,3 @@
-import { v4 as generateUUID } from "uuid";
-
 import {
   AddFileInput,
   CopyNodeInput,
@@ -10,6 +8,7 @@ import {
 } from "..";
 
 import { OperationScope, SynchronizationUnit } from "document-model/document";
+import { generateId } from "document-model/utils";
 import { AddFileAction, CopyNodeAction } from "../gen/node/actions";
 import { addFile, copyNode } from "../gen/node/creators";
 
@@ -124,7 +123,7 @@ export function generateSynchronizationUnitId(
         node.synchronizationUnits.find((unit) => unit.syncId === syncId),
     )
   ) {
-    syncId = generateUUID();
+    syncId = generateId();
   }
   return syncId;
 }

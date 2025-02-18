@@ -1,42 +1,29 @@
 import {
-  BreadcrumbNode,
   Breadcrumbs,
   FILE,
-  UiNode,
   useDrop,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
-import { EditorProps } from "document-model/document";
+import { DocumentModel, EditorProps } from "document-model/document";
 import {
-  actions,
   DocumentDriveAction,
   DocumentDriveLocalState,
   DocumentDriveState,
 } from "document-models/document-drive";
-import { useDriveActions } from "editors/hooks/useDriveActions";
-import { useDriveSettings } from "editors/hooks/useDriveSettings";
+import { useDriveActionsWithUiNodes } from "editors/hooks/useDriveActionsWithUiNodes";
+import { useDriveContext } from "editors/hooks/useDriveContext";
 import { useCallback, useMemo } from "react";
 import { CreateDocument } from "./components/create-document";
 import FolderView from "./components/folder-view";
 import { DriveLayout } from "./components/layout";
 import { SearchBar } from "./components/search-bar";
+import { useBreadcrumbs } from "./hooks/useBreadcrumbs";
 
 export type IProps = EditorProps<
   DocumentDriveState,
   DocumentDriveAction,
   DocumentDriveLocalState
 >;
-
-export function useDriveExplorer(dispatch: IProps["dispatch"]) {
-  return useMemo(
-    () => ({
-      onAddFile: (file: AddFileInput) => {
-        dispatch(actions.addFile(file));
-      },
-    }),
-    [dispatch],
-  );
-}
 
 export default function Editor(props: IProps) {
   const { document, dispatch } = props;
@@ -45,21 +32,18 @@ export default function Editor(props: IProps) {
       global: { id },
     },
   } = document;
-  const { showSearchBar, isAllowedToCreateDocuments, documentModels } =
-    useDriveSettings();
+  const {
+    showSearchBar,
+    isAllowedToCreateDocuments,
+    documentModels,
+    showCreateDocumentModal,
+  } = useDriveContext();
   const {
     driveNodes,
     selectedNode,
     selectedNodePath,
-    selectedDriveNode,
-    selectedParentNode,
     getNodeById,
-    getParentNode,
-    setDriveNodes,
     setSelectedNode,
-    getIsSelected,
-    getIsInSelectedNodePath,
-    getSiblings,
   } = useUiNodesContext();
 
   const driveNode = useMemo(
@@ -67,54 +51,49 @@ export default function Editor(props: IProps) {
     [driveNodes, id],
   );
 
-  const { onAddFolder, renameNode, deleteNode, moveNode } = useDriveActions(
-    dispatch,
-    selectedNode,
+  const {
+    addDocument,
+    addFile,
+    addFolder,
+    renameNode,
+    deleteNode,
+    moveNode,
+    copyNode,
+    duplicateNode,
+  } = useDriveActionsWithUiNodes(document, dispatch);
+
+  const onCreateDocument = useCallback(
+    async (documentModel: DocumentModel) => {
+      const { name } = await showCreateDocumentModal(documentModel);
+      const document = documentModel.utils.createDocument();
+      await addDocument(
+        name,
+        documentModel.documentModel.id,
+        document,
+        selectedNode?.id,
+      );
+    },
+    [addDocument, showCreateDocumentModal, selectedNode?.id],
   );
 
   const { isDropTarget, dropProps } = useDrop({
     uiNode: selectedNode,
+    onAddFile: addFile,
+    onCopyNode: copyNode,
+    onMoveNode: moveNode,
   });
 
-  /**
-   * TODO:
-   * - Breadcrumbs
-   *   - selectedNodePath
-   *   - onBreadcrumbSelected (change selected node)
-   *   - createEnabled (isAllowedToCreateDocuments)
-   *   - onCreate (add new folder)
-   * - SearchBar
-   *  - ?????
-   *
-   */
+  const { breadcrumbs, onBreadcrumbSelected } = useBreadcrumbs({
+    selectedNodePath,
+    getNodeById,
+    setSelectedNode,
+  });
 
   if (!driveNode) {
     return <div>Drive not found</div>;
   } else if (selectedNode?.kind === FILE) {
-    return null;
+    return <></>;
   }
-
-  const breadcrumbs = useMemo(
-    () =>
-      selectedNodePath.map((node) => ({
-        id: node.id,
-        name: node.name,
-      })),
-    [selectedNodePath],
-  );
-  const onBreadcrumbSelected = useCallback(
-    (node: BreadcrumbNode) => setSelectedNode(getNodeById(node.id)),
-    [getNodeById, setSelectedNode],
-  );
-
-  const onRenameNode = useCallback(
-    (name: string, node: UiNode) => renameNode(node.id, name),
-    [renameNode],
-  );
-  const onDeleteNode = useCallback(
-    (node: UiNode) => deleteNode(node.id),
-    [deleteNode],
-  );
 
   return (
     <DriveLayout>
@@ -122,7 +101,7 @@ export default function Editor(props: IProps) {
         <Breadcrumbs
           breadcrumbs={breadcrumbs}
           createEnabled={isAllowedToCreateDocuments}
-          onCreate={onAddFolder}
+          onCreate={addFolder}
           onBreadcrumbSelected={onBreadcrumbSelected}
         />
         {showSearchBar && <SearchBar />}
@@ -131,12 +110,12 @@ export default function Editor(props: IProps) {
         <FolderView
           node={selectedNode || driveNode}
           onSelectNode={setSelectedNode}
-          onRenameNode={onRenameNode}
-          onDuplicateNode={() => {}}
-          onDeleteNode={onDeleteNode}
-          onAddFile={}
-          onCopyNode={}
-          onMoveNode={}
+          onRenameNode={renameNode}
+          onDuplicateNode={duplicateNode}
+          onDeleteNode={deleteNode}
+          onAddFile={addFile}
+          onCopyNode={copyNode}
+          onMoveNode={moveNode}
           isDropTarget={isDropTarget}
           isAllowedToCreateDocuments={isAllowedToCreateDocuments}
         />
@@ -145,8 +124,7 @@ export default function Editor(props: IProps) {
         {isAllowedToCreateDocuments && (
           <CreateDocument
             documentModels={documentModels}
-            createDocument={() => {}}
-            getDocumentModelName={() => ""}
+            createDocument={onCreateDocument}
           />
         )}
       </DriveLayout.Footer>
