@@ -2,6 +2,7 @@ import Hdd from "@/assets/icon-components/Hdd";
 import M from "@/assets/icon-components/M";
 import PowerhouseLogoSmall from "@/assets/icon-components/PowerhouseLogoSmall";
 import { Meta, StoryObj } from "@storybook/react";
+import { HomeScreenAddDriveItem } from "../home-screen-add-drive-item";
 import { HomeScreenItem } from "../home-screen-item";
 import { HomeScreen } from "./home-screen";
 
@@ -28,7 +29,7 @@ const Template: Story = {
       <HomeScreenItem
         title="Maker"
         description="Drive Explorer App"
-        sharable
+        shareable
         icon={<M width={32} height={32} />}
       />
       <HomeScreenItem
@@ -41,6 +42,11 @@ const Template: Story = {
         title="Powerhouse Genesis"
         description="POH Admin App"
         icon={<PowerhouseLogoSmall width={32} height={32} />}
+      />
+      <HomeScreenAddDriveItem
+        onClick={() => {
+          alert("clicked");
+        }}
       />
     </HomeScreen>
   ),

@@ -1,16 +1,9 @@
-import { Icon } from "@/powerhouse";
-import { ComponentPropsWithRef, ForwardedRef, forwardRef } from "react";
 import { twMerge } from "tailwind-merge";
-import { HomeScreenItem } from "../home-screen-item";
-type InputProps = ComponentPropsWithRef<"input">;
-type HomeScreenProps = Omit<InputProps, "className"> & {
+type HomeScreenProps = {
   readonly children: React.ReactNode;
   readonly containerClassName?: string;
 };
-export const HomeScreen = forwardRef(function HomeScreen(
-  props: HomeScreenProps,
-  ref: ForwardedRef<HTMLInputElement>,
-) {
+export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
   const { children, containerClassName } = props;
   return (
     <div>
@@ -21,11 +14,7 @@ export const HomeScreen = forwardRef(function HomeScreen(
         )}
       >
         {children}
-        <HomeScreenItem
-          title="Create New Drive"
-          icon={<Icon name="PlusSquare" size={32} />}
-        />
       </div>
     </div>
   );
-});
+};
