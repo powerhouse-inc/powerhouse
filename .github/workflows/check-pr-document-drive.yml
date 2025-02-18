@@ -91,5 +91,3 @@ jobs:
       - name: Run tests
         run: pnpm nx run document-drive:test
 
-      - name: Run benchmarks
-        run: pnpm nx run document-drive:bench

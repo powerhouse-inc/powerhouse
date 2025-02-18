@@ -34,6 +34,7 @@
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
+    "bench": "vitest bench",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "migrate": "prisma generate && prisma db push"
