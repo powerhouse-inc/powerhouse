@@ -1,4 +1,6 @@
+import HomeBg from "@/assets/home-bg.png";
 import { twMerge } from "tailwind-merge";
+
 type HomeScreenProps = {
   readonly children: React.ReactNode;
   readonly containerClassName?: string;
@@ -6,13 +8,18 @@ type HomeScreenProps = {
 export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
   const { children, containerClassName } = props;
   return (
-    <div>
-      <div
-        className={twMerge(
-          "container flex h-screen flex-wrap justify-center gap-4 bg-[url(/home-bg.png)] bg-cover bg-center p-8 text-gray-800 placeholder:text-gray-500",
-          containerClassName,
-        )}
-      >
+    <div
+      className={twMerge(
+        "container relative flex h-full flex-col",
+        containerClassName,
+      )}
+    >
+      <div className="m-8 flex flex-1 flex-wrap justify-center gap-4 pt-12">
+        <img
+          src={HomeBg}
+          alt="background"
+          className="pointer-events-none absolute inset-8 z-0 size-[calc(100%-32px)] object-contain"
+        />
         {children}
       </div>
     </div>

@@ -43,7 +43,7 @@ function getSelectedNodeFromPathname(
     nodeNamesFromPathname: string | undefined,
 ) {
     if (!driveIdFromPathname) {
-        return driveNodes[0];
+        return null;
     }
 
     const driveId = decodeURIComponent(driveIdFromPathname);
@@ -54,7 +54,7 @@ function getSelectedNodeFromPathname(
             node?.name === driveId,
     );
 
-    if (!driveNode) return driveNodes[0];
+    if (!driveNode) return null;
     if (!nodeNamesFromPathname) return driveNode;
 
     const nodeNames = nodeNamesFromPathname
