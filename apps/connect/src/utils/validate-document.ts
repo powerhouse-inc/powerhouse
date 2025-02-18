@@ -1,11 +1,10 @@
 import {
-    Document,
     DocumentModel as DocumentModelClass,
     utils as documentModelUtils,
     ValidationError,
 } from 'document-model';
 
-export const validateDocument = (document: Document) => {
+export const validateDocument = (document: BaseDocument<unknown, unknown>) => {
     const errors: ValidationError[] = [];
 
     if (document.documentType !== 'powerhouse/document-model') {

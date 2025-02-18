@@ -1,11 +1,13 @@
-
-import { AttachmentInput, BaseDocument } from "document-model";
+import { AttachmentInput, BaseDocumentClass } from "document-model";
 import { BudgetStatementAction } from "../actions.js";
-import { AddAuditReportInput, DeleteAuditReportInput } from "../schema/types.js";
-import { BudgetStatementState, BudgetStatementLocalState } from "../types.js";
+import {
+  AddAuditReportInput,
+  DeleteAuditReportInput,
+} from "../schema/types.js";
+import { BudgetStatementLocalState, BudgetStatementState } from "../types.js";
 import { addAuditReport, deleteAuditReport } from "./creators.js";
 
-export default class BudgetStatement_Audit extends BaseDocument<
+export default class BudgetStatement_Audit extends BaseDocumentClass<
   BudgetStatementState,
   BudgetStatementAction,
   BudgetStatementLocalState

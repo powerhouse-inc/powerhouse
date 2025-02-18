@@ -1,6 +1,6 @@
 import { TooltipProvider } from "@/connect";
 import { Pagination, usePagination } from "@/powerhouse";
-import { utils } from "document-model";
+import { garbageCollect, sortOperations } from "document-model";
 import { useMemo, useState } from "react";
 import { Header } from "./header";
 import { Timeline } from "./timeline";
@@ -14,8 +14,6 @@ type Props = {
   readonly onClose: () => void;
   readonly itemsPerPage?: number;
 };
-
-const { garbageCollect, sortOperations } = utils.documentHelpers;
 
 export function RevisionHistory(props: Props) {
   const {

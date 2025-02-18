@@ -45,7 +45,7 @@ const storageLayers = [
   ],
 ] as unknown as [string, () => Promise<IDriveStorage>][];
 
-let file: Document | undefined = undefined;
+let file: BaseDocument<unknown, unknown> | undefined = undefined;
 try {
   file = await DocumentModelsLibs.RealWorldAssets.utils.loadFromFile(
     "./test/rwa-document.zip",

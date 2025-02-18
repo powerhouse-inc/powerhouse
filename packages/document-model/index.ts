@@ -1,3 +1,4 @@
+export { hashDocumentStateForScope } from "#document/utils/base.js";
 export {
   addModule,
   addOperation,
@@ -30,6 +31,7 @@ export type {
   Operation as DocumentModelOperation,
   Module,
   ScopeState,
+  Scalars,
 } from "#document-model/gen/schema/types.js";
 export type {
   DocumentModelAction,
@@ -80,6 +82,8 @@ export type {
   StateReducer,
   SynchronizationUnitInput,
   User,
+  Maybe,
+  InputMaybe,
 } from "#document/types.js";
 export {
   baseCreateDocument,

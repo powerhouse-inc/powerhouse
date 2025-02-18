@@ -1,5 +1,5 @@
 import { IDocumentDriveServer, IReceiver, Listener } from "document-drive";
-import { Document, OperationScope } from "document-model";
+import { BaseDocument, OperationScope } from "document-model";
 import { Express } from "express";
 import { IAnalyticsStore } from "./processors/analytics-processor";
 import { ProcessorClass } from "./processors/processor";

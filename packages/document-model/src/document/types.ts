@@ -414,3 +414,6 @@ export type DocumentModelModule<
   utils: DocumentModelUtils<TGlobalState, TLocalState>;
   documentModelState: TGlobalState;
 };
+
+export type Maybe<T> = T | null;
+export type InputMaybe<T> = T | null | undefined;

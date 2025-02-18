@@ -1,7 +1,7 @@
-import { Document, OperationScope } from "document-model";
+import { BaseDocument, OperationScope } from "document-model";
 import { DocumentDriveDocument } from "document-model-libs/document-drive";
 
-export function documentToHash(drive: Document): string {
+export function documentToHash(drive: BaseDocument<unknown, unknown>): string {
   return Object.keys(drive.operations)
     .map(
       (key) =>

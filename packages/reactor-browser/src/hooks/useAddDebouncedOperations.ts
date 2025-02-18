@@ -1,4 +1,4 @@
-import { Document, Operation } from "document-model";
+import { BaseDocument, Operation } from "document-model";
 import { useCallback, useMemo } from "react";
 
 import { IDocumentDriveServer } from "document-drive";

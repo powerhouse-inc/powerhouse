@@ -1,6 +1,9 @@
 import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
-import { Document, Operation } from 'document-model';
-import { hashDocument } from 'document-model/utils';
+import {
+    BaseDocument,
+    hashDocumentStateForScope,
+    Operation,
+} from 'document-model';
 import { atom, useAtom, useSetAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
 import { IReadModeContext } from 'src/context/read-mode';
@@ -54,7 +57,7 @@ export type FileNodeDocument =
           documentId: string;
           documentType: string;
           name: string;
-          document: Document | undefined;
+          document: BaseDocument<unknown, unknown> | undefined;
           status: 'LOADING' | 'ERROR';
       }
     | {
@@ -62,7 +65,7 @@ export type FileNodeDocument =
           documentId: string;
           documentType: string;
           name: string;
-          document: Document;
+          document: BaseDocument<unknown, unknown>;
           status: 'LOADED';
       }
     | undefined;
@@ -72,8 +75,8 @@ const documentCacheAtom = atom(new Map<string, Document>());
 const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
 
 export function isSameDocument(
-    prev: Document | undefined,
-    next: Document | undefined,
+    prev: BaseDocument<unknown, unknown> | undefined,
+    next: BaseDocument<unknown, unknown> | undefined,
 ) {
     if (prev === next) {
         return true;
@@ -81,7 +84,7 @@ export function isSameDocument(
     if (!prev || !next) {
         return false;
     }
-    if (hashDocument(prev) === hashDocument(next)) {
+    if (hashDocumentStateForScope(prev) === hashDocumentStateForScope(next)) {
         return true;
     } else {
         return false;
@@ -132,7 +135,7 @@ const fileNodeDocumentAtom = atom(
 
 const selectedDocumentAtom = atom(
     null,
-    (get, set, document: Document | undefined) => {
+    (get, set, document: BaseDocument<unknown, unknown> | undefined) => {
         const fileNodeDocument = get(fileNodeDocumentAtom);
         if (!fileNodeDocument) {
             throw new Error('fileNodeDocument is undefined');

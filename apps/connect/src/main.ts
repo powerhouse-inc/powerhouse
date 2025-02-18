@@ -172,8 +172,10 @@ function handleFileSave(path?: string) {
     }
 }
 
-ipcMain.handle('fileSaved', (e, document: Document, path?: string) =>
-    handleFileSave(path),
+ipcMain.handle(
+    'fileSaved',
+    (e, document: BaseDocument<unknown, unknown>, path?: string) =>
+        handleFileSave(path),
 );
 
 ipcMain.handle('openURL', (e, url) => shell.openExternal(url));

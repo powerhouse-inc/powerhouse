@@ -2,9 +2,9 @@ import { IDocumentDriveServer } from "document-drive";
 import {
   Action,
   ActionErrorCallback,
-  BaseAction,
-  Document,
-  DocumentModel,
+  BaseDocument,
+  CustomAction,
+  DocumentModelModule,
   Operation,
 } from "document-model";
 import { User } from "../renown/types";
@@ -13,32 +13,36 @@ import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
 import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
 import { useDocumentDispatch } from "./useDocumentDispatch";
 
-export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
+export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
   operation: Operation,
   state: {
-    prevState: Document<State, A, LocalState>;
-    newState: Document<State, A, LocalState>;
+    prevState: BaseDocument<TGlobalState, TLocalState>;
+    newState: BaseDocument<TGlobalState, TLocalState>;
   },
 ) => void;
 
 export type UseDocumentEditorProps<
-  T = unknown,
-  A extends Action = Action,
-  LocalState = unknown,
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
 > = {
   driveId: string;
   nodeId: string;
-  document: Document<T, A, LocalState> | undefined;
-  documentModel: DocumentModel<unknown, Action>;
+  document: BaseDocument<TGlobalState, TLocalState> | undefined;
+  documentModel: DocumentModelModule<TGlobalState, TLocalState, TCustomAction>;
   user?: User;
   onExport?: () => void;
   onOpenSwitchboardLink?: () => Promise<void>;
-  onChange?: (document: Document<T, A, LocalState>) => void;
+  onChange?: (document: BaseDocument<TGlobalState, TLocalState>) => void;
 };
 
-export function useDocumentEditor(
+export function useDocumentEditor<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
   reactor: IDocumentDriveServer | undefined,
-  props: UseDocumentEditorProps,
+  props: UseDocumentEditorProps<TGlobalState, TLocalState, TCustomAction>,
 ) {
   const {
     nodeId,
@@ -62,10 +66,10 @@ export function useDocumentEditor(
   );
 
   function dispatch(
-    action: BaseAction | Action,
+    action: TCustomAction | Action,
     onErrorCallback?: ActionErrorCallback,
   ) {
-    const callback: DocumentDispatchCallback<unknown, Action, unknown> = (
+    const callback: DocumentDispatchCallback<TGlobalState, TLocalState> = (
       operation,
       state,
     ) => {

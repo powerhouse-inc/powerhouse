@@ -204,7 +204,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     // todo: pull this into the constructor, depends on listenerManager
     this.transmitterFactory = new TransmitterFactory(this.listenerManager);
 
-    this.documentModels = documentModels;
+    this.documentModels = documentModels as DocumentModelModule<any, any>[];
     this.storage = storage;
     this.cache = cache;
     this.queueManager = queueManager;

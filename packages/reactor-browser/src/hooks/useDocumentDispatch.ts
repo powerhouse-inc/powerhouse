@@ -1,36 +1,46 @@
 import type {
   Action,
   ActionErrorCallback,
-  BaseAction,
-  Document,
+  BaseDocument,
+  CustomAction,
   Operation,
   Reducer,
 } from "document-model";
 import { useEffect, useState } from "react";
 
-export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
+export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
   operation: Operation,
   state: {
-    prevState: Document<State, A, LocalState>;
-    newState: Document<State, A, LocalState>;
+    prevState: BaseDocument<TGlobalState, TLocalState>;
+    newState: BaseDocument<TGlobalState, TLocalState>;
   },
 ) => void;
 
-export type DocumentDispatch<State, A extends Action, LocalState> = (
-  action: A | BaseAction,
-  callback?: DocumentDispatchCallback<State, A, LocalState>,
+export type DocumentDispatch<
+  TGlobalState,
+  TLocalState,
+  TAction extends CustomAction = never,
+> = (
+  action: TAction | Action | CustomAction,
+  callback?: DocumentDispatchCallback<TGlobalState, TLocalState>,
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
 type OnErrorHandler = (error: unknown) => void;
 
-export function useDocumentDispatch<State, A extends Action, LocalState>(
-  documentReducer: Reducer<State, A, LocalState> | undefined,
-  initialState: Document<State, A, LocalState> | undefined,
+export function useDocumentDispatch<
+  TGlobalState,
+  TLocalState,
+  TAction extends CustomAction = never,
+>(
+  documentReducer:
+    | Reducer<TGlobalState, TLocalState, TAction | Action | CustomAction>
+    | undefined,
+  initialState: BaseDocument<TGlobalState, TLocalState> | undefined,
   onError: OnErrorHandler = console.error,
 ): readonly [
-  Document<State, A, LocalState> | undefined,
-  DocumentDispatch<State, A, LocalState>,
+  BaseDocument<TGlobalState, TLocalState> | undefined,
+  DocumentDispatch<TGlobalState, TLocalState, TAction>,
   unknown,
 ] {
   const [state, setState] = useState(initialState);
@@ -45,7 +55,7 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
     setState(initialState);
   }, [initialState]);
 
-  const dispatch: DocumentDispatch<State, A, LocalState> = (
+  const dispatch: DocumentDispatch<TGlobalState, TLocalState, TAction> = (
     action,
     callback,
     onErrorCallback?: ActionErrorCallback,

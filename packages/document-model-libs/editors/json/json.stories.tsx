@@ -1,17 +1,17 @@
-import { createDocumentStory } from "document-model-libs/utils";
-import {
-    SignalDispatch,
-    baseReducer,
-    utils,
-    type Document,
-} from "document-model";
-import Editor from "./editor";
 import { Meta } from "@storybook/react";
+import {
+  BaseDocument,
+  SignalDispatch,
+  baseReducer,
+  utils,
+} from "document-model";
+import { createDocumentStory } from "document-model-libs/utils";
+import Editor from "./editor";
 
 const { meta, CreateDocumentStory: JSONEditor } = createDocumentStory(
   Editor,
   (
-    state: Document<unknown, any>,
+    state: BaseDocument<unknown, unknown>,
     action: any,
     dispatch: SignalDispatch | undefined,
   ) => baseReducer(state, action, (document) => document, dispatch),

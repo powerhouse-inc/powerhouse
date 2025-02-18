@@ -1,4 +1,4 @@
-import { Document, Operation } from 'document-model';
+import { BaseDocument, Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal';
@@ -38,7 +38,7 @@ export function DocumentEditorContainer() {
     );
 
     const onDocumentChangeHandler = useCallback(
-        (documentId: string, document: Document) => {
+        (documentId: string, document: BaseDocument<unknown, unknown>) => {
             if (documentId !== fileNodeDocument?.documentId) {
                 return;
             }
@@ -69,7 +69,7 @@ export function DocumentEditorContainer() {
     }, [selectedParentNode, setSelectedNode]);
 
     const exportDocument = useCallback(
-        (document: Document) => {
+        (document: BaseDocument<unknown, unknown>) => {
             const validationErrors = validateDocument(document);
 
             if (validationErrors.length) {
