@@ -1,6 +1,8 @@
-import { module as DocumentDrive } from 'document-model-libs/document-drive';
-import { Action, DocumentModel } from 'document-model/document';
-import { module as DocumentModelModule } from 'document-model/document-model';
+import { driveDocumentModelModule } from 'document-drive';
+import {
+    documentModelDocumentModelModule,
+    DocumentModelModule,
+} from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { atomWithLazy, unwrap } from 'jotai/utils';
@@ -12,20 +14,18 @@ import { externalPackagesAtom } from './external-packages';
 export const LOCAL_DOCUMENT_MODELS = import.meta.env.LOCAL_DOCUMENT_MODELS;
 
 export const baseDocumentModels = [
-    DocumentDrive,
-    DocumentModelModule,
-] as const as DocumentModel[];
+    driveDocumentModelModule,
+    documentModelDocumentModelModule,
+] as DocumentModelModule<any, any>[];
 
 // removes document models with the same id, keeping the one that appears later
 function getUniqueDocumentModels(
-    ...documentModels: DocumentModel[][]
-): DocumentModel[] {
-    const uniqueModels = new Map<string, DocumentModel>();
+    ...documentModels: DocumentModelModule<any, any>[]
+): DocumentModelModule<any, any>[] {
+    const uniqueModels = new Map<string, DocumentModelModule<any, any>>();
 
-    for (const models of documentModels) {
-        for (const model of models) {
-            uniqueModels.set(model.documentModel.id, model);
-        }
+    for (const model of documentModels) {
+        uniqueModels.set(model.documentType, model);
     }
 
     return Array.from(uniqueModels.values());
@@ -44,7 +44,7 @@ async function loadDynamicModels() {
     try {
         const localModules = (await import(
             'LOCAL_DOCUMENT_MODELS'
-        )) as unknown as Record<string, DocumentModel>;
+        )) as unknown as Record<string, DocumentModelModule<any, any>>;
         console.log('Loaded local document models:', localModules);
         return Object.values(localModules);
     } catch (e) {
@@ -57,14 +57,16 @@ const dynamicDocumentModelsAtom = atomWithLazy(loadDynamicModels);
 
 export const documentModelsAtom = atom(async get => {
     const dynamicDocumentModels = await get(dynamicDocumentModelsAtom);
-    const externalModules = await get(externalPackagesAtom);
+    const externalModules = (await get(
+        externalPackagesAtom,
+    )) as DocumentModelsModule[];
     const externalDocumentModels =
         getDocumentModelsFromModules(externalModules);
 
     const result = getUniqueDocumentModels(
-        baseDocumentModels,
-        externalDocumentModels,
-        dynamicDocumentModels,
+        ...baseDocumentModels,
+        ...externalDocumentModels,
+        ...dynamicDocumentModels,
     );
     return result;
 });
@@ -79,7 +81,7 @@ export const useUnwrappedDocumentModels = () =>
     useAtomValue(unrappedDocumentModelsAtom);
 
 export const subscribeDocumentModels = function (
-    listener: (documentModels: DocumentModel[]) => void,
+    listener: (documentModels: DocumentModelModule<any, any>[]) => void,
 ) {
     // activate the effect on the default store
     const unobserve = observe(get => {
@@ -93,26 +95,32 @@ export const subscribeDocumentModels = function (
     return () => unobserve();
 };
 
-function getDocumentModel<S = unknown, A extends Action = Action>(
+function getDocumentModel<TGlobalState, TLocalState>(
     documentType: string,
-    documentModels: DocumentModel[] | undefined,
+    documentModels:
+        | DocumentModelModule<TGlobalState, TLocalState>[]
+        | undefined,
 ) {
-    return documentModels?.find(d => d.documentModel.id === documentType) as
-        | DocumentModel<S, A>
-        | undefined;
+    return documentModels?.find(d => d.documentModelName === documentType);
 }
 
-export function useDocumentModel<S = unknown, A extends Action = Action>(
+export function useDocumentModel<TGlobalState, TLocalState>(
     documentType: string,
 ) {
     const documentModels = useUnwrappedDocumentModels();
-    return getDocumentModel<S, A>(documentType, documentModels);
+    return getDocumentModel<TGlobalState, TLocalState>(
+        documentType,
+        documentModels,
+    );
 }
 
-export const useGetDocumentModel = () => {
+export const useGetDocumentModel = <TGlobalState, TLocalState>() => {
     const documentModels = useUnwrappedDocumentModels();
     return (documentType: string) =>
-        getDocumentModel(documentType, documentModels);
+        getDocumentModel<TGlobalState, TLocalState>(
+            documentType,
+            documentModels,
+        );
 };
 
 /**
@@ -133,7 +141,7 @@ export const useFilteredDocumentModels = () => {
     }
 
     const filteredDocumentModels = documentModels.filter(
-        model => model.documentModel.id !== 'powerhouse/document-drive',
+        model => model.documentModelName !== 'powerhouse/document-drive',
     );
 
     if (enabledEditors === '*') {
@@ -146,13 +154,13 @@ export const useFilteredDocumentModels = () => {
 
     if (disabledEditors) {
         return filteredDocumentModels.filter(
-            d => !disabledEditors.includes(d.documentModel.id),
+            d => !disabledEditors.includes(d.documentModelName),
         );
     }
 
     if (enabledEditors) {
         return filteredDocumentModels.filter(d =>
-            enabledEditors.includes(d.documentModel.id),
+            enabledEditors.includes(d.documentModelName),
         );
     }
 

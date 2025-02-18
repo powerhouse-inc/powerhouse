@@ -4,9 +4,9 @@ import type {
   ScopeFrameworkLocalState,
   ScopeFrameworkState,
 } from "../../document-models/scope-framework";
-import type { ExtendedEditor } from "../types";
+import type { EditorModule } from "../types";
 
-export const module: ExtendedEditor<
+export const module: EditorModule<
   ScopeFrameworkState,
   ScopeFrameworkAction,
   ScopeFrameworkLocalState

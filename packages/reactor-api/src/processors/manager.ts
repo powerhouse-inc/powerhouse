@@ -1,5 +1,4 @@
-import { IDocumentDriveServer } from "document-drive";
-import { DocumentDriveDocument } from "document-model-libs/document-drive";
+import { DocumentDriveDocument, IDocumentDriveServer } from "document-drive";
 
 import {
   Db,

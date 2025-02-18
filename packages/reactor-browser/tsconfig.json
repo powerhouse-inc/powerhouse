@@ -15,5 +15,13 @@
     "test/**/*.ts",
     "*.ts",
     "package.json"
+  ],
+  "references": [
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../document-model"
+    }
   ]
 }

@@ -5,12 +5,9 @@ import type {
     IDocumentDriveServer,
     RemoteDriveOptions,
     SyncStatus,
-} from 'document-drive/server';
-import {
-    DocumentDriveAction,
-    DocumentDriveDocument,
-} from 'document-model-libs/document-drive';
-import { BaseAction, Document, Operation } from 'document-model/document';
+} from 'document-drive';
+import { DocumentDriveAction, DocumentDriveDocument } from 'document-drive';
+import { Action, BaseDocument, Operation } from 'document-model';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { platformInfo } from './app/detect-platform';
 import type { IConnectCrypto } from './services/crypto';
@@ -43,7 +40,7 @@ const electronApi = {
     ready: () => ipcRenderer.send('ready'),
     protocol: () => ipcRenderer.invoke('protocol') as Promise<string>,
     isPackaged: () => ipcRenderer.invoke('isPackaged') as Promise<boolean>,
-    fileSaved: (document: Document, path?: string) =>
+    fileSaved: (document: BaseDocument<unknown, unknown>, path?: string) =>
         ipcRenderer.invoke('fileSaved', document, path),
     handleFileOpen: (
         listener: (file: { name: string; content: string }) => void,
@@ -167,7 +164,7 @@ const electronApi = {
         },
         addDriveOperation: (
             drive: string,
-            operation: Operation<DocumentDriveAction | BaseAction>,
+            operation: Operation<DocumentDriveAction | Action>,
         ) =>
             ipcRenderer.invoke(
                 'documentDrive:addDriveOperation',
@@ -177,7 +174,7 @@ const electronApi = {
         clearStorage: () => ipcRenderer.invoke('documentDrive:clearStorage'),
         addDriveOperations: (
             drive: string,
-            operations: Operation<DocumentDriveAction | BaseAction>[],
+            operations: Operation<DocumentDriveAction | Action>[],
         ) =>
             ipcRenderer.invoke(
                 'documentDrive:addDriveOperations',
@@ -188,8 +185,10 @@ const electronApi = {
             ipcRenderer.invoke('documentDrive:getSyncStatus', drive),
         on: (event, cb) => {
             function listener(_event: IpcRendererEvent, arg: any) {
-                // eslint-disable-next-line
+                /* eslint-disable */
+                // @ts-expect-error
                 Array.isArray(arg) ? cb(...arg) : cb(arg);
+                /* eslint-enable */
             }
             ipcRenderer.on(`documentDrive:event:${event}`, listener);
             return () =>

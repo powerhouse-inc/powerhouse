@@ -1,16 +1,19 @@
 import { RealWorldAssets } from "@sky-ph/atlas/document-models";
 import { DocumentDriveServer, generateUUID } from "document-drive";
-import { MemoryStorage } from "document-drive/storage/memory";
+import { MemoryStorage } from "document-drive";
 import {
-  module as DocumentDrive,
+  driveDocumentModelModule,
   generateAddNodeAction,
-} from "document-model-libs/document-drive";
-import { DocumentModel } from "document-model/document";
+} from "document-drive";
+import { DocumentModelModule } from "document-model";
 
 import { bench, describe } from "vitest";
 
 describe("Document Drive", async () => {
-  const documentModels = [DocumentDrive, RealWorldAssets] as DocumentModel[];
+  const documentModels = [
+    driveDocumentModelModule,
+    RealWorldAssets,
+  ] as DocumentModelModule<any, any>[];
   const document = await RealWorldAssets.utils.loadFromFile(
     "test/data/BlocktowerAndromeda.zip",
   );

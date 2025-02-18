@@ -1,5 +1,5 @@
 import { captureException } from '@sentry/react';
-import { ILogger, setLogger } from 'document-drive/logger';
+import { ILogger, setLogger } from 'document-drive';
 
 function captureSentryException(...data: any[]) {
     let error: unknown;

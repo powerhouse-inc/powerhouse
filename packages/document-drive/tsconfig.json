@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "emitDeclarationOnly": true,
     "outDir": "./dist",
     "paths": {
       "@powerhousedao/codegen": ["../codegen/index.ts"]

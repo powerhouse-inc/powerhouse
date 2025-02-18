@@ -6,7 +6,7 @@ import {
     toast,
     UiDriveNode,
 } from '@powerhousedao/design-system';
-import { DocumentDriveDocument } from 'document-model-libs/document-drive';
+import { DocumentDriveDocument } from 'document-drive';
 import { TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

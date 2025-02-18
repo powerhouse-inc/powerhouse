@@ -1,30 +1,22 @@
 import { RealWorldAssets } from "@sky-ph/atlas/document-models";
 import {
   DocumentDriveServer,
+  driveDocumentModelModule,
+  generateAddNodeAction,
   generateUUID,
   InternalTransmitterUpdate,
   IReceiver,
-} from "document-drive";
-import { MemoryStorage } from "document-drive/storage/memory";
-import {
-  module as DocumentDrive,
-  generateAddNodeAction,
   ListenerFilter,
-} from "document-model-libs/document-drive";
-import {
-  Document,
-  DocumentModel,
-  OperationScope,
-} from "document-model/document";
+  MemoryStorage,
+} from "document-drive";
+import { DocumentModelModule } from "document-model";
 
 import { beforeAll, bench, describe } from "vitest";
 
-class TestReceiver<
-  T extends Document = Document,
-  S extends OperationScope = OperationScope,
-> implements IReceiver<T, S>
-{
-  async onStrands(strands: InternalTransmitterUpdate<T, S>[]) {
+class TestReceiver<TGlobalState, TLocalState> implements IReceiver {
+  async onStrands<TGlobalState, TLocalState>(
+    strands: InternalTransmitterUpdate<TGlobalState, TLocalState>[],
+  ) {
     return Promise.resolve();
   }
 
@@ -37,9 +29,9 @@ beforeAll(async () => {});
 
 describe("Document Drive", async () => {
   const documentModels = Object.values([
-    DocumentDrive,
+    driveDocumentModelModule,
     RealWorldAssets,
-  ]) as DocumentModel[];
+  ]) as DocumentModelModule<any, any>[];
   const document = await RealWorldAssets.utils.loadFromFile(
     "test/data/BlocktowerAndromeda.zip",
   );

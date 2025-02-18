@@ -1,7 +1,6 @@
-import type { ExtendedEditor } from 'document-model-libs';
-import type { DocumentModel } from 'document-model/document';
+import type { DocumentModelModule, EditorModule } from 'document-model';
 
 export type DocumentModelsModule = {
-    documentModels: DocumentModel[];
-    editors: ExtendedEditor[];
+    documentModels: DocumentModelModule<any, any>[];
+    editors: EditorModule<any, any>[];
 };

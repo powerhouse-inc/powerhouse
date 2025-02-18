@@ -236,7 +236,7 @@ export type GetDocumentOptions = ReducerOptions & {
 
 export type AddOperationOptions = {
   forceSync?: boolean;
-  source: StrandUpdateSource;
+  source?: StrandUpdateSource;
 };
 
 export type DefaultRemoteDriveInput = {
@@ -522,7 +522,7 @@ export interface IBaseDocumentDriveServer {
   ): Promise<OperationUpdate[]>;
 
   /** Internal methods **/
-  getDocumentModels(): DocumentModelModule<any, any, any>[];
+  getDocumentModels(): DocumentModelModule<any, any>[];
 
   getTransmitter(
     driveId: string,

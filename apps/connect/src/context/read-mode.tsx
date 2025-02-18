@@ -1,8 +1,6 @@
 import {
+    DocumentModelNotFoundError,
     IDocumentDriveServer,
-    InferDocumentLocalState,
-    InferDocumentOperation,
-    InferDocumentState,
     IReadModeDriveServer,
     ReadDocumentNotFoundError,
     ReadDrive,
@@ -13,8 +11,7 @@ import {
     ReadDriveSlugNotFoundError,
     RemoteDriveOptions,
 } from 'document-drive';
-import { Document, DocumentModel } from 'document-model/document';
-import { DocumentModelNotFoundError } from 'node_modules/document-drive/src/server/error';
+import { BaseDocument } from 'document-model';
 import {
     createContext,
     FC,
@@ -129,25 +126,17 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     }
 
     @checkServer
-    fetchDocument<D extends Document>(
+    fetchDocument<TGlobalState, TLocalState>(
         driveId: string,
         documentId: string,
-        documentType: DocumentModel<
-            InferDocumentState<D>,
-            InferDocumentOperation<D>,
-            InferDocumentLocalState<D>
-        >['documentModel']['id'],
+        documentType: string,
     ): Promise<
-        | Document<
-              InferDocumentState<D>,
-              InferDocumentOperation<D>,
-              InferDocumentLocalState<D>
-          >
+        | BaseDocument<TGlobalState, TLocalState>
         | DocumentModelNotFoundError
         | ReadDriveNotFoundError
         | ReadDocumentNotFoundError
     > {
-        return this.server!.fetchDocument<D>(driveId, documentId, documentType);
+        return this.server!.fetchDocument(driveId, documentId, documentType);
     }
 
     @checkServer

@@ -1,4 +1,4 @@
-export const module: ExtendedEditor<
+export const module: EditorModule<
   BudgetStatementState,
   BudgetStatementAction,
   BudgetStatementLocalState

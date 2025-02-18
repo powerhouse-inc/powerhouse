@@ -1,16 +1,12 @@
-import { DocumentDriveServer } from "document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model";
-import express from "express";
-import { SubgraphManager } from "src";
-import { getDbClient } from "src/utils/db";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
 import { describe, expect, it } from "vitest";
 
 const documentModels = [
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
-] as DocumentModel[];
+  documentModelDocumentModelModule,
+] as DocumentModelModule<any, any>[];
 
 describe("Reactor Router", () => {
   it("should be initialized", () => {

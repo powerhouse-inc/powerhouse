@@ -1,9 +1,9 @@
 import { Action } from "document-model";
 import { createNanoEvents, Unsubscribe } from "nanoevents";
-import { DeleteNodeAction } from "../drive-document-model/gen/actions.js";
-import { AddFileInput } from "../drive-document-model/gen/types.js";
-import { logger } from "../utils/logger.js";
-import { generateUUID, runAsap } from "../utils/misc.js";
+import { DeleteNodeAction } from "#drive-document-model/gen/actions.js";
+import { AddFileInput } from "#drive-document-model/gen/types.js";
+import { logger } from "#utils/logger.js";
+import { generateUUID, runAsap } from "#utils/misc.js";
 import {
   IJob,
   IJobQueue,

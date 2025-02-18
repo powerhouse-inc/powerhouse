@@ -367,6 +367,7 @@ export type EditorModule<
       Record<string, unknown>
   >;
   documentTypes: string[];
+  config?: TEditorConfig;
 };
 
 export type Manifest = {

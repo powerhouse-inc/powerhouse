@@ -1,9 +1,13 @@
-import type { Document, DocumentModel } from 'document-model/document';
-import { utils } from 'document-model/document';
+import {
+    BaseDocument,
+    baseLoadFromInput,
+    createZip,
+    DocumentModelModule,
+} from 'document-model';
 import { logger } from 'src/services/logger';
 
-const downloadFile = async (document: Document) => {
-    const zip = await utils.createZip(document);
+const downloadFile = async (document: BaseDocument<unknown, unknown>) => {
+    const zip = createZip(document);
     zip.generateAsync({ type: 'blob' })
         .then(blob => {
             const link = window.document.createElement('a');
@@ -20,8 +24,10 @@ const downloadFile = async (document: Document) => {
 };
 
 export async function exportFile(
-    document: Document,
-    getDocumentModel: (documentType: string) => DocumentModel | undefined,
+    document: BaseDocument<unknown, unknown>,
+    getDocumentModel: (
+        documentType: string,
+    ) => DocumentModelModule<unknown, unknown> | undefined,
 ) {
     const documentModel = getDocumentModel(document.documentType);
     if (!documentModel) {
@@ -30,7 +36,7 @@ export async function exportFile(
         );
     }
 
-    const extension = documentModel.utils.fileExtension;
+    const extension = documentModel.fileExtension;
 
     // Fallback for browsers that don't support showSaveFilePicker
     if (!window.showSaveFilePicker) {
@@ -61,11 +67,13 @@ export async function exportFile(
 
 export async function loadFile(
     path: string | File,
-    getDocumentModel: (documentType: string) => DocumentModel | undefined,
+    getDocumentModel: (
+        documentType: string,
+    ) => DocumentModelModule<unknown, unknown> | undefined,
 ) {
-    const baseDocument = await utils.loadFromInput(
+    const baseDocument = await baseLoadFromInput(
         path,
-        (state: Document) => state,
+        (document: BaseDocument<unknown, unknown>) => document,
         { checkHashes: true },
     );
     const documentModel = getDocumentModel(baseDocument.documentType);

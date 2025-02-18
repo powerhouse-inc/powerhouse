@@ -10,18 +10,18 @@ import {
 import {
   DocumentDriveServer,
   DriveAlreadyExistsError,
+  driveDocumentModelModule,
   DriveInput,
+  FilesystemStorage,
   IDocumentDriveServer,
   InternalTransmitter,
   IReceiver,
-} from "document-drive";
-import { FilesystemStorage } from "document-drive/storage/filesystem";
-import {
-  module as DocumentDrive,
   ListenerFilter,
-} from "document-model-libs/document-drive";
-import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model";
+} from "document-drive";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
 import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";
@@ -88,7 +88,10 @@ export type LocalReactor = {
   ) => Promise<InternalTransmitter>;
 };
 
-const baseDocumentModels = [DocumentModelLib, DocumentDrive] as DocumentModel[];
+const baseDocumentModels = [
+  documentModelDocumentModelModule,
+  driveDocumentModelModule,
+] as DocumentModelModule<any, any>[];
 
 const startServer = async (
   options?: StartServerOptions,
@@ -217,7 +220,7 @@ async function loadDocumentModels(
     await access(path);
     const localDMs = (await vite.ssrLoadModule(path)) as Record<
       string,
-      DocumentModel
+      DocumentModelModule<any, any>
     >;
     const localDocumentModels = Object.values(localDMs);
     driveServer.setDocumentModels(
@@ -282,13 +285,15 @@ async function loadSubgraphs(
   }
 }
 
-function joinDocumentModels(...documentModels: DocumentModel[][]) {
+function joinDocumentModels(
+  ...documentModels: DocumentModelModule<any, any>[][]
+) {
   return documentModels
     .flat()
     .toReversed()
-    .reduce<DocumentModel[]>(
+    .reduce<DocumentModelModule<any, any>[]>(
       (acc, curr) =>
-        acc.find((dm) => dm.documentModel.id === curr.documentModel.id)
+        acc.find((dm) => dm.documentType === curr.documentType)
           ? acc
           : [...acc, curr],
       [],

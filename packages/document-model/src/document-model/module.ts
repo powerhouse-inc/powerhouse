@@ -11,12 +11,13 @@ import { documentModelState } from "./gen/document-model.js";
 import { reducer } from "./gen/reducer.js";
 import { type DocumentModelDocumentModelModule } from "./types.js";
 
-export const module: DocumentModelDocumentModelModule = {
-  documentModelName,
-  documentType,
-  fileExtension,
-  reducer,
-  documentModelState,
-  actions: { ...creators, ...actions },
-  utils: { ...documentModelUtils, ...customUtils },
-};
+export const documentModelDocumentModelModule: DocumentModelDocumentModelModule =
+  {
+    documentModelName,
+    documentType,
+    fileExtension,
+    reducer,
+    documentModelState,
+    actions: { ...creators, ...actions },
+    utils: { ...documentModelUtils, ...customUtils },
+  };

@@ -1,4 +1,4 @@
-import { createAction } from "../../../document/utils/base.js";
+import { createAction } from "#document/utils/base.js";
 import {
   AddStateExampleInput,
   DeleteStateExampleInput,

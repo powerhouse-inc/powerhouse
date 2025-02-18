@@ -1,4 +1,4 @@
-import type { ExtendedEditor } from 'document-model-libs';
+import { EditorModule } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
@@ -10,9 +10,9 @@ export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 
 async function loadBaseEditors() {
     const JsonEditor = (await import('document-model-libs/editors/json'))
-        .default as unknown as ExtendedEditor;
+        .default as unknown as EditorModule;
     const DocumentModelEditor = (await import('document-model-libs/editors'))
-        .DocumentModel2 as unknown as ExtendedEditor;
+        .DocumentModel2 as unknown as EditorModule;
     return [JsonEditor, DocumentModelEditor];
 }
 
@@ -29,7 +29,7 @@ async function loadDynamicEditors() {
     try {
         const localEditors = (await import(
             'LOCAL_DOCUMENT_EDITORS'
-        )) as unknown as Record<string, ExtendedEditor>;
+        )) as unknown as Record<string, EditorModule>;
         console.log('Loaded local document editors:', localEditors);
         return Object.values(localEditors);
     } catch (e) {
@@ -71,10 +71,10 @@ export const useLoadableEditors = () => {
 export const useEditorsAsync = () => {
     const editorsPromise = useRef(
         (() => {
-            let resolveFn!: (value: ExtendedEditor[]) => void;
+            let resolveFn!: (value: EditorModule[]) => void;
             let rejectFn!: (reason?: any) => void;
 
-            const promise = new Promise<ExtendedEditor[]>((resolve, reject) => {
+            const promise = new Promise<EditorModule[]>((resolve, reject) => {
                 resolveFn = resolve;
                 rejectFn = reject;
             });
@@ -97,7 +97,7 @@ export const useEditorsAsync = () => {
 
 const getEditor = (
     documentType: string,
-    editors: ExtendedEditor[],
+    editors: EditorModule[],
     preferredEditorId?: string,
 ) => {
     const preferredEditor = editors.find(

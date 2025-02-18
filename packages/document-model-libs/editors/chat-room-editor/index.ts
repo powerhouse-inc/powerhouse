@@ -4,9 +4,9 @@ import {
   ChatRoomAction,
   ChatRoomLocalState,
 } from "../../document-models/chat-room";
-import type { EditorContextProps, ExtendedEditor } from "../types";
+import type { EditorContextProps, EditorModule } from "../types";
 
-export const module: ExtendedEditor<
+export const module: EditorModule<
   ChatRoomState,
   ChatRoomAction,
   ChatRoomLocalState,

@@ -1,6 +1,6 @@
-import type { IDocumentDriveServer } from 'document-drive/server';
-import { DocumentDriveDocument } from 'document-model-libs/document-drive';
-import { Document, OperationScope } from 'document-model/document';
+import type { IDocumentDriveServer } from 'document-drive';
+import { DocumentDriveDocument } from 'document-drive';
+import { BaseDocument, OperationScope } from 'document-model';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
@@ -13,7 +13,7 @@ const documentDrivesAtom = atom(
     new Map<IDocumentDriveServer, DocumentDriveDocument[]>(),
 );
 
-export function documentToHash(drive: Document): string {
+export function documentToHash(drive: BaseDocument<unknown, unknown>): string {
     return Object.keys(drive.operations)
         .map(
             key =>

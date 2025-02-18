@@ -18,31 +18,33 @@ export {
   setOperationName,
   setOperationSchema,
   setStateSchema,
-} from "./src/document-model/gen/creators.js";
+} from "#document-model/gen/creators.js";
 export {
   createExtendedState as documentModelCreateExtendedState,
   loadFromFile as documentModelLoadFromFile,
-} from "./src/document-model/gen/document-model-utils.js";
-export { reducer as documentModelReducer } from "./src/document-model/gen/reducer.js";
+} from "#document-model/gen/document-model-utils.js";
+export { reducer as documentModelReducer } from "#document-model/gen/reducer.js";
 export type {
   Author,
+  DocumentModelInput,
   Operation as DocumentModelOperation,
   Module,
   ScopeState,
-} from "./src/document-model/gen/schema/types.js";
+} from "#document-model/gen/schema/types.js";
 export type {
   DocumentModelAction,
   DocumentModelDocument,
   DocumentModelLocalState,
   DocumentModelState,
-} from "./src/document-model/gen/types.js";
-export { applyMixins, BaseDocumentClass } from "./src/document/object.js";
+} from "#document-model/gen/types.js";
+export { applyMixins, BaseDocumentClass } from "#document/object.js";
 export type {
+  Action,
   ActionContext,
   ActionErrorCallback,
+  ActionSigner,
   AttachmentInput,
   BaseAction,
-  Action,
   BaseActionWithAttachment,
   BaseDocument,
   BaseState,
@@ -50,6 +52,7 @@ export type {
   CreateDocument,
   CreateExtendedState,
   CreateState,
+  CustomAction,
   DocumentAction,
   DocumentHeader,
   DocumentModelLib,
@@ -66,6 +69,7 @@ export type {
   NOOPAction,
   Operation,
   OperationScope,
+  OperationSignatureContext,
   PartialState,
   Reducer,
   ReducerOptions,
@@ -75,7 +79,8 @@ export type {
   SignalDispatch,
   StateReducer,
   SynchronizationUnitInput,
-} from "./src/document/types.js";
+  User,
+} from "#document/types.js";
 export {
   baseCreateDocument,
   baseCreateExtendedState,
@@ -84,15 +89,23 @@ export {
   hashKey,
   isDocumentAction,
   replayDocument,
-} from "./src/document/utils/base.js";
-export { generateId } from "./src/document/utils/crypto.js";
+} from "#document/utils/base.js";
+export {
+  buildOperationSignature,
+  buildOperationSignatureMessage,
+  buildSignedOperation,
+  generateId,
+} from "#document/utils/crypto.js";
 export {
   baseLoadFromFile,
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
-} from "./src/document/utils/file.js";
+  createZip,
+} from "#document/utils/file.js";
 
+export { documentModelDocumentModelModule } from "#document-model/module.js";
+export type { EditorContext } from "#document/types.js";
 export {
   attachBranch,
   garbageCollect,
@@ -104,4 +117,5 @@ export {
   reshuffleByTimestamp,
   skipHeaderOperations,
   sortOperations,
-} from "./src/document/utils/document-helpers.js";
+} from "#document/utils/document-helpers.js";
+export { undo, redo } from "#document/actions/creators.js";

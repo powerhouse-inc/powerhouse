@@ -4,12 +4,7 @@
     "types": ["node", "vitest/globals", "@storybook/types"],
     "outDir": "./dist",
     "jsx": "react-jsx",
-    "lib": ["ESNext", "dom", "dom.iterable"],
-    "paths": {
-      "@document-models/*": ["./document-models/*"],
-      "@editors/*": ["./editors/*"],
-      "@utils/*": ["./editors/utils/*"]
-    },
+    "lib": ["ESNext", "dom", "dom.iterable"]
   },
   "references": [
     {
@@ -18,9 +13,5 @@
     { "path": "../codegen" },
     { "path": "../design-system"},
     { "path": "../scalars"}
-  ],
-  "files": [
-    "powerhouse.manifest.json",
-    "powerhouse.config.json"
-  ],
+  ]
 }

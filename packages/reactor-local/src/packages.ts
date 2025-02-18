@@ -1,5 +1,5 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
-import { DocumentModel } from "document-model/document";
+import { DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import { existsSync, readFileSync, StatWatcher, watchFile } from "node:fs";
 import { createRequire } from "node:module";
@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 
 interface IPackagesManager {
   onDocumentModelsChange(
-    handler: (documentModels: DocumentModel[]) => void,
+    handler: (documentModels: DocumentModelModule<any, any>[]) => void,
   ): void;
 }
 
@@ -46,13 +46,13 @@ async function loadDependency(packageName: string, subPath = "") {
   );
 
   const module = (await import(esmPath)) as unknown as
-    | { [key: string]: DocumentModel }
+    | { [key: string]: DocumentModelModule<any, any> }
     | undefined;
   return module;
 }
 
 async function loadPackagesDocumentModels(packages: string[]) {
-  const loadedPackages = new Map<string, DocumentModel[]>();
+  const loadedPackages = new Map<string, DocumentModelModule<any, any>[]>();
   for (const pkg of packages) {
     try {
       console.log("> Loading package:", pkg);
@@ -71,13 +71,13 @@ async function loadPackagesDocumentModels(packages: string[]) {
 }
 
 function getUniqueDocumentModels(
-  ...documentModels: DocumentModel[][]
-): DocumentModel[] {
-  const uniqueModels = new Map<string, DocumentModel>();
+  ...documentModels: DocumentModelModule<any, any>[][]
+): DocumentModelModule<any, any>[] {
+  const uniqueModels = new Map<string, DocumentModelModule<any, any>>();
 
   for (const models of documentModels) {
     for (const model of models) {
-      uniqueModels.set(model.documentModel.id, model);
+      uniqueModels.set(model.documentType, model);
     }
   }
 
@@ -85,10 +85,10 @@ function getUniqueDocumentModels(
 }
 
 export class PackagesManager implements IPackagesManager {
-  private packagesMap = new Map<string, DocumentModel[]>();
+  private packagesMap = new Map<string, DocumentModelModule<any, any>[]>();
   private configWatcher: StatWatcher | undefined;
   private eventEmitter = new EventEmitter<{
-    documentModelsChange: DocumentModel[][];
+    documentModelsChange: DocumentModelModule<any, any>[][];
   }>();
 
   constructor(
@@ -137,7 +137,9 @@ export class PackagesManager implements IPackagesManager {
     return result;
   }
 
-  private updatePackagesMap(packagesMap: Map<string, DocumentModel[]>) {
+  private updatePackagesMap(
+    packagesMap: Map<string, DocumentModelModule<any, any>[]>,
+  ) {
     const oldPackages = Array.from(this.packagesMap.keys());
     const newPackages = Array.from(packagesMap.keys());
     oldPackages
@@ -153,7 +155,7 @@ export class PackagesManager implements IPackagesManager {
   }
 
   onDocumentModelsChange(
-    handler: (documentModels: DocumentModel[]) => void,
+    handler: (documentModels: DocumentModelModule<any, any>[]) => void,
   ): void {
     this.eventEmitter.on("documentModelsChange", handler);
   }

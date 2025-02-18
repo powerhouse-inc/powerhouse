@@ -26,7 +26,6 @@ import {
   DocumentDriveAction,
   RemoveListenerAction,
 } from "../drive-document-model/gen/actions.js";
-import { documentType } from "../drive-document-model/gen/constants.js";
 import {
   addListener,
   removeListener,
@@ -152,7 +151,7 @@ export class TransmitterFactory implements ITransmitterFactory {
 export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   private emitter = createNanoEvents<DriveEvents>();
   private cache: ICache<any, any>;
-  private documentModels: DocumentModelModule<any, any, any>[];
+  private documentModels: DocumentModelModule<any, any>[];
   private storage: IDriveStorage;
   private transmitterFactory: ITransmitterFactory;
   private listenerManager: IListenerManager;
@@ -230,7 +229,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     this.initializePromise = this._initialize();
   }
 
-  setDocumentModels(models: DocumentModelModule<any, any, any>[]): void {
+  setDocumentModels(models: DocumentModelModule<any, any>[]): void {
     this.documentModels = [...models];
     this.emit("documentModels", [...models]);
   }

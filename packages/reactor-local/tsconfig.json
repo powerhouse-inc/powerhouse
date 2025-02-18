@@ -16,10 +16,13 @@
     "noEmit": true,
     "lib": ["ESNext"],
     "types": ["node", "./types.d.ts"],
-    "paths": {
-      "document-drive": ["../document-drive/src/index.ts"],
-      "@powerhousedao/reactor-api": ["../reactor-api/src/index.ts"]
-    }
   },
-  "include": ["./"]
+  "references": [
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../reactor-api"
+    }
+  ]
 }

@@ -1,13 +1,10 @@
 /* eslint-disable react/jsx-props-no-spreading */
-/* eslint-disable @typescript-eslint/use-unknown-in-catch-callback-variable */
+
 /* eslint-disable @typescript-eslint/no-unnecessary-type-parameters */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
   BaseDocumentDriveServer,
   IDocumentDriveServer,
-  InferDocumentLocalState,
-  InferDocumentOperation,
-  InferDocumentState,
   IReadModeDriveServer,
   ReadDocumentNotFoundError,
   ReadDrive,
@@ -18,7 +15,7 @@ import {
   ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
 } from "document-drive";
-import { Document, DocumentModel } from "document-model/document";
+import { BaseDocument } from "document-model";
 import {
   createContext,
   FC,
@@ -28,8 +25,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import { drivesToHash } from "../utils";
-import { useUserPermissions } from "../hooks";
+import { useUserPermissions } from "../hooks/useUserPermissions.js";
+import { drivesToHash } from "../utils/index.js";
 
 const logger = {
   error: console.error,
@@ -145,25 +142,17 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
   }
 
   @checkServer
-  fetchDocument<D extends Document>(
+  fetchDocument<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string,
-    documentType: DocumentModel<
-      InferDocumentState<D>,
-      InferDocumentOperation<D>,
-      InferDocumentLocalState<D>
-    >["documentModel"]["id"],
+    documentType: string,
   ): Promise<
-    | Document<
-        InferDocumentState<D>,
-        InferDocumentOperation<D>,
-        InferDocumentLocalState<D>
-      >
+    | BaseDocument<TGlobalState, TLocalState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError
   > {
-    return this.server!.fetchDocument<D>(driveId, documentId, documentType);
+    return this.server!.fetchDocument(driveId, documentId, documentType);
   }
 
   @checkServer

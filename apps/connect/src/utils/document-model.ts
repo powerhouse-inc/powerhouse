@@ -2,12 +2,12 @@ import { IDocumentDriveServer } from 'document-drive';
 import type {
     Action,
     ActionErrorCallback,
-    BaseAction,
-    Document,
+    BaseDocument,
+    CustomAction,
     Operation,
     OperationScope,
     Reducer,
-} from 'document-model/document';
+} from 'document-model';
 import { useEffect, useState } from 'react';
 import { logger } from 'src/services/logger';
 import { Unsubscribe } from 'src/services/renown/types';
@@ -18,24 +18,38 @@ export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
     (import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE as string) || '50',
 );
 
-export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
+export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
     operation: Operation,
     state: {
-        prevState: Document<State, A, LocalState>;
-        newState: Document<State, A, LocalState>;
+        prevState: BaseDocument<TGlobalState, TLocalState>;
+        newState: BaseDocument<TGlobalState, TLocalState>;
     },
 ) => void;
 
-export type DocumentDispatch<State, A extends Action, LocalState> = (
-    action: A | BaseAction,
-    callback?: DocumentDispatchCallback<State, A, LocalState>,
+export type DocumentDispatch<
+    TGlobalState,
+    TLocalState,
+    TCustomAction extends CustomAction = never,
+> = (
+    action: TCustomAction | CustomAction | Action,
+    callback?: DocumentDispatchCallback<TGlobalState, TLocalState>,
     onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-export function wrapReducer<State, A extends Action, LocalState>(
-    reducer: Reducer<State, A, LocalState> | undefined,
+export function wrapReducer<
+    TGlobalState,
+    TLocalState,
+    TCustomAction extends CustomAction = never,
+>(
+    reducer:
+        | Reducer<
+              TGlobalState,
+              TLocalState,
+              TCustomAction | CustomAction | Action
+          >
+        | undefined,
     onError?: (error: unknown) => void,
-): Reducer<State, A, LocalState> {
+): Reducer<TGlobalState, TLocalState, TCustomAction | CustomAction | Action> {
     return (state, action) => {
         if (!reducer) return state;
         try {
@@ -49,13 +63,23 @@ export function wrapReducer<State, A extends Action, LocalState>(
 
 type OnErrorHandler = (error: unknown) => void;
 
-export function useDocumentDispatch<State, A extends Action, LocalState>(
-    documentReducer: Reducer<State, A, LocalState> | undefined,
-    initialState: Document<State, A, LocalState> | undefined,
+export function useDocumentDispatch<
+    TGlobalState,
+    TLocalState,
+    TCustomAction extends CustomAction = never,
+>(
+    documentReducer:
+        | Reducer<
+              TGlobalState,
+              TLocalState,
+              TCustomAction | CustomAction | Action
+          >
+        | undefined,
+    initialState: BaseDocument<TGlobalState, TLocalState> | undefined,
     onError: OnErrorHandler = logger.error,
 ): readonly [
-    Document<State, A, LocalState> | undefined,
-    DocumentDispatch<State, A, LocalState>,
+    BaseDocument<TGlobalState, TLocalState> | undefined,
+    DocumentDispatch<TGlobalState, TLocalState, TCustomAction>,
     unknown,
 ] {
     const [state, setState] = useState(initialState);
@@ -71,11 +95,11 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
         setError(undefined);
     }, [initialState]);
 
-    const dispatch: DocumentDispatch<State, A, LocalState> = (
-        action,
-        callback,
-        onErrorCallback?: ActionErrorCallback,
-    ) => {
+    const dispatch: DocumentDispatch<
+        TGlobalState,
+        TLocalState,
+        TCustomAction
+    > = (action, callback, onErrorCallback?: ActionErrorCallback) => {
         setError(undefined);
         setState(_state => {
             if (!documentReducer || !_state) return _state;
@@ -183,13 +207,13 @@ const debugLog = (...data: any[]) => {
 export async function uploadDocumentOperations(
     drive: string,
     documentId: string,
-    document: Document,
+    document: BaseDocument<unknown, unknown>,
     reactor: IDocumentDriveServer,
     pushOperations: (
         driveId: string,
         id: string,
         operations: Operation[],
-    ) => Promise<Document | undefined>,
+    ) => Promise<BaseDocument<unknown, unknown> | undefined>,
     options?: { waitForSync?: boolean; operationsLimit?: number },
 ) {
     const operationsLimit =

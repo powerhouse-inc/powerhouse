@@ -16,8 +16,7 @@ import {
     UiNode,
     useUiNodesContext,
 } from '@powerhousedao/design-system';
-import { ReadDrive } from 'document-drive';
-import { DocumentDriveDocument } from 'document-model-libs/document-drive';
+import { DocumentDriveDocument, ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';

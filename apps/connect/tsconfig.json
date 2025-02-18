@@ -1,4 +1,5 @@
 {
+    "extends": "../../tsconfig.options.json",
     "compilerOptions": {
         "target": "ESNext",
         "useDefineForClassFields": true,
@@ -45,5 +46,16 @@
         "reset.d.ts",
         "esbuild.studio.config.mjs"
     ],
-    "files": ["studio/hmr.d.ts"]
+    "files": ["studio/hmr.d.ts"],
+    "references": [
+      {
+        "path": "../../packages/document-drive"
+      },
+      {
+        "path": "../../packages/document-model"
+      },
+      {
+        "path": "../../packages/design-system"
+      }
+    ]
 }

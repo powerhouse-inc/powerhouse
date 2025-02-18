@@ -9,6 +9,9 @@
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": "./dist/index.js",
+  "imports": {
+    "#*": "./dist/src/*"
+  },
   "scripts": {
     "check-types": "tsc --build",
     "postlint": "npm run check-types",

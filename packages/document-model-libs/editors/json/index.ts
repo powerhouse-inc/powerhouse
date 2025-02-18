@@ -1,7 +1,7 @@
 import { lazyWithPreload } from "document-model-libs/utils";
-import type { ExtendedEditor } from "../types";
+import type { EditorModule } from "../types";
 
-export const module: ExtendedEditor = {
+export const module: EditorModule = {
   Component: lazyWithPreload(() => import("./editor")),
   documentTypes: ["*"],
   config: {
