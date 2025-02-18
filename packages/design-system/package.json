@@ -63,6 +63,7 @@
   },
   "homepage": "https://github.com/powerhouse-inc/design-system#readme",
   "devDependencies": {
+    "tailwindcss": "^3.4.16",
     "@hookform/devtools": "^4.3.1",
     "@powerhousedao/config": "workspace:*",
     "@prettier/sync": "^0.5.2",

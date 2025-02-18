@@ -13,7 +13,7 @@ export type ProcessorUpdate<
 export abstract class Processor<
   D extends BaseDocument<unknown, unknown> = BaseDocument<unknown, unknown>,
   S extends OperationScope = OperationScope,
-> implements IProcessor<D, S>
+> implements IProcessor
 {
   protected reactor: IDocumentDriveServer;
   protected processorOptions: ProcessorOptions = {

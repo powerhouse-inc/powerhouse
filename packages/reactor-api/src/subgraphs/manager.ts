@@ -1,19 +1,19 @@
-import { ApolloServer } from "@apollo/server";
-import { expressMiddleware } from "@apollo/server/express4";
-import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
+import { Db } from "#types.js";
+import { createSchema } from "#utils/create-schema.js";
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
-import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
-import express, { IRouter, Router } from "express";
-import { Db } from "src/types";
-import { authSubgraph, Context, SubgraphArgs, SubgraphClass } from ".";
-import { createSchema } from "../utils/create-schema";
-import { AnalyticsSubgraph } from "./analytics";
-import { Subgraph } from "./base";
-import { DriveSubgraph } from "./drive";
-import { SystemSubgraph } from "./system";
-import { AuthSubgraph } from "./auth";
+import { IRouter, Router } from "express";
+import { AnalyticsSubgraph } from "./analytics/index.js";
+import { AuthSubgraph } from "./auth/index.js";
+import { DriveSubgraph } from "./drive/index.js";
+import { Subgraph, SubgraphClass } from "./index.js";
+import { SystemSubgraph } from "./system/index.js";
+import express from "express";
+import cors from "cors";
+import { ApolloServer } from "@apollo/server";
+import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
+import { Context } from "./types.js";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();

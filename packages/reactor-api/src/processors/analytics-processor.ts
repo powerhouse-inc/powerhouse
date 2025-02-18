@@ -1,12 +1,12 @@
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { BaseDocument, OperationScope } from "document-model";
-import { ProcessorOptions, ProcessorSetupArgs } from "../types";
-import { Processor } from "./processor";
+import { ProcessorOptions, ProcessorSetupArgs } from "#types.js";
+import { Processor } from "./processor.js";
 
 export * from "@powerhousedao/analytics-engine-core";
 
 export abstract class AnalyticsProcessor<
-  D extends Document = Document,
+  D extends BaseDocument<unknown, unknown> = BaseDocument<unknown, unknown>,
   S extends OperationScope = OperationScope,
 > extends Processor<D, S> {
   protected analyticsStore: IAnalyticsStore;

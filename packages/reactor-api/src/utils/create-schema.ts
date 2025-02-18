@@ -5,7 +5,7 @@ import { pascalCase } from "change-case";
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentNode } from "graphql";
 import gql from "graphql-tag";
-import { Context } from "src/subgraphs";
+import { Context } from "#subgraphs/types.js";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,

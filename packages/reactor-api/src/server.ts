@@ -9,10 +9,10 @@ import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
 import { Pool } from "pg";
-import { IAnalyticsStore, ProcessorManager } from "./processors";
-import { SubgraphManager } from "./subgraphs/manager";
-import { API } from "./types";
-import { getDbClient } from "./utils/db";
+import { IAnalyticsStore, ProcessorManager } from "#processors/index.js";
+import { SubgraphManager } from "#subgraphs/manager.js";
+import { API } from "./types.js";
+import { getDbClient } from "./utils/db.js";
 
 type Options = {
   express?: Express;

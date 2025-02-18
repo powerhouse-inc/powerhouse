@@ -9,7 +9,6 @@ const theme = {
     sans: ["Inter", ...defaultTheme.fontFamily.sans],
   },
   fontSize: {
-    ...defaultTheme.fontSize,
     xs: ["0.75rem", "1.125rem"],
     sm: ["0.875rem", "1.5rem"],
     base: ["1rem", "1.5rem"],
@@ -111,7 +110,6 @@ const theme = {
     "charcoal-900": "hsl(var(--color-charcoal-900) / <alpha-value>)",
   },
   boxShadow: {
-    ...defaultTheme.boxShadow,
     sidebar: "var(--shadow-sidebar)",
     tooltip: "var(--shadow-tooltip)",
     button: "var(--shadow-button)",
