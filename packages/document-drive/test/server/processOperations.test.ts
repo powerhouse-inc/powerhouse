@@ -12,7 +12,7 @@ import {
   reducer,
 } from "document-model/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveServer, IOperationResult } from "../../src";
+import { IOperationResult, ReactorBuilder } from "../../src";
 import { OperationError } from "../../src/server/error";
 import { garbageCollect } from "../../src/utils/document-helpers";
 import { BasicClient, buildOperation, buildOperations } from "../utils";
@@ -29,9 +29,9 @@ describe("processOperations", () => {
     ...Object.values(DocumentModelsLibs),
   ] as BaseDocumentModel[];
 
-  let server = new DocumentDriveServer(documentModels);
+  let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
-    server = new DocumentDriveServer(documentModels);
+    server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
 

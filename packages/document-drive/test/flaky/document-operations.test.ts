@@ -9,7 +9,7 @@ import {
   reducer,
 } from "document-model/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveServer } from "../../src";
+import { ReactorBuilder } from "../../src";
 import { buildOperation, buildOperations } from "../utils";
 
 describe("Document operations", () => {
@@ -18,9 +18,9 @@ describe("Document operations", () => {
     ...Object.values(DocumentModelsLibs),
   ] as DocumentModel[];
 
-  let server = new DocumentDriveServer(documentModels);
+  let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
-    server = new DocumentDriveServer(documentModels);
+    server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
 

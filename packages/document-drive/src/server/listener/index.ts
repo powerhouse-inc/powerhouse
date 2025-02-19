@@ -1,2 +1,2 @@
-export * from "./manager";
+export * from "./listener-manager";
 export * from "./transmitter";
