@@ -47,7 +47,6 @@ type ImportMetaEnv = {
   LOCAL_DOCUMENT_MODELS: string
   LOCAL_DOCUMENT_EDITORS: string
   LOAD_EXTERNAL_PACKAGES: string
-  PH_CONNECT_CLI_VERSION: string
   // @user-defined-start
   /*
    *  You can use this section to explicitly extend the type definition of `import.meta.env`
