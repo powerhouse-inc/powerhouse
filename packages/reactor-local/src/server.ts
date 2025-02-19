@@ -91,7 +91,7 @@ export type LocalReactor = {
 const baseDocumentModels = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
-] as DocumentModelModule<any, any>[];
+] as DocumentModelModule[];
 
 export const startServer = async (
   options?: StartServerOptions,
@@ -220,7 +220,7 @@ async function loadDocumentModels(
     await access(path);
     const localDMs = (await vite.ssrLoadModule(path)) as Record<
       string,
-      DocumentModelModule<any, any>
+      DocumentModelModule
     >;
     const localDocumentModels = Object.values(localDMs);
     driveServer.setDocumentModels(
@@ -285,13 +285,11 @@ async function loadSubgraphs(
   }
 }
 
-function joinDocumentModels(
-  ...documentModels: DocumentModelModule<any, any>[][]
-) {
+function joinDocumentModels(...documentModels: DocumentModelModule[][]) {
   return documentModels
     .flat()
     .toReversed()
-    .reduce<DocumentModelModule<any, any>[]>(
+    .reduce<DocumentModelModule[]>(
       (acc, curr) =>
         acc.find((dm) => dm.documentType === curr.documentType)
           ? acc

@@ -64,7 +64,7 @@ export const getReactorDefaultDrivesConfig = (
 };
 
 export function createBrowserDocumentDriveServer(
-  documentModels: DocumentModelModule<any, any>[],
+  documentModels: DocumentModelModule[],
   routerBasename: string,
   documentDriveServerOptions?: DocumentDriveServerOptions,
 ): IDocumentDriveServer {

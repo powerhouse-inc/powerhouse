@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 
 interface IPackagesManager {
   onDocumentModelsChange(
-    handler: (documentModels: DocumentModelModule<any, any>[]) => void,
+    handler: (documentModels: DocumentModelModule[]) => void,
   ): void;
 }
 
@@ -46,13 +46,13 @@ async function loadDependency(packageName: string, subPath = "") {
   );
 
   const module = (await import(esmPath)) as unknown as
-    | { [key: string]: DocumentModelModule<any, any> }
+    | { [key: string]: DocumentModelModule }
     | undefined;
   return module;
 }
 
 async function loadPackagesDocumentModels(packages: string[]) {
-  const loadedPackages = new Map<string, DocumentModelModule<any, any>[]>();
+  const loadedPackages = new Map<string, DocumentModelModule[]>();
   for (const pkg of packages) {
     try {
       console.log("> Loading package:", pkg);
@@ -71,9 +71,9 @@ async function loadPackagesDocumentModels(packages: string[]) {
 }
 
 function getUniqueDocumentModels(
-  ...documentModels: DocumentModelModule<any, any>[][]
-): DocumentModelModule<any, any>[] {
-  const uniqueModels = new Map<string, DocumentModelModule<any, any>>();
+  ...documentModels: DocumentModelModule[][]
+): DocumentModelModule[] {
+  const uniqueModels = new Map<string, DocumentModelModule>();
 
   for (const models of documentModels) {
     for (const model of models) {
@@ -85,10 +85,10 @@ function getUniqueDocumentModels(
 }
 
 export class PackagesManager implements IPackagesManager {
-  private packagesMap = new Map<string, DocumentModelModule<any, any>[]>();
+  private packagesMap = new Map<string, DocumentModelModule[]>();
   private configWatcher: StatWatcher | undefined;
   private eventEmitter = new EventEmitter<{
-    documentModelsChange: DocumentModelModule<any, any>[][];
+    documentModelsChange: DocumentModelModule[][];
   }>();
 
   constructor(
@@ -137,9 +137,7 @@ export class PackagesManager implements IPackagesManager {
     return result;
   }
 
-  private updatePackagesMap(
-    packagesMap: Map<string, DocumentModelModule<any, any>[]>,
-  ) {
+  private updatePackagesMap(packagesMap: Map<string, DocumentModelModule[]>) {
     const oldPackages = Array.from(this.packagesMap.keys());
     const newPackages = Array.from(packagesMap.keys());
     oldPackages
@@ -155,7 +153,7 @@ export class PackagesManager implements IPackagesManager {
   }
 
   onDocumentModelsChange(
-    handler: (documentModels: DocumentModelModule<any, any>[]) => void,
+    handler: (documentModels: DocumentModelModule[]) => void,
   ): void {
     this.eventEmitter.on("documentModelsChange", handler);
   }

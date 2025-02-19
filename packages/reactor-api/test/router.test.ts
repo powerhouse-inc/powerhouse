@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const documentModels = [
   documentModelDocumentModelModule,
-] as DocumentModelModule<any, any>[];
+] as DocumentModelModule[];
 
 describe("Reactor Router", () => {
   it("should be initialized", () => {

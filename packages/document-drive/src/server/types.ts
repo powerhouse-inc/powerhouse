@@ -522,7 +522,7 @@ export interface IBaseDocumentDriveServer {
   ): Promise<OperationUpdate[]>;
 
   /** Internal methods **/
-  getDocumentModels(): DocumentModelModule<any, any>[];
+  getDocumentModels(): DocumentModelModule[];
 
   getTransmitter(
     driveId: string,

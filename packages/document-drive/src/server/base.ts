@@ -205,7 +205,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     // todo: pull this into the constructor, depends on listenerManager
     this.transmitterFactory = new TransmitterFactory(this.listenerManager);
 
-    this.documentModels = documentModels as DocumentModelModule<any, any>[];
+    this.documentModels = documentModels as DocumentModelModule[];
     this.storage = storage;
     this.cache = cache;
     this.queueManager = queueManager;
@@ -237,7 +237,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     this.initializePromise = this._initialize();
   }
 
-  setDocumentModels(models: DocumentModelModule<any, any>[]): void {
+  setDocumentModels(models: DocumentModelModule[]): void {
     this.documentModels = [...models];
     this.emit("documentModels", [...models]);
   }

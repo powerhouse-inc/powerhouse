@@ -31,7 +31,7 @@ describe("Document Drive", async () => {
   const documentModels = Object.values([
     driveDocumentModelModule,
     RealWorldAssets,
-  ]) as DocumentModelModule<any, any>[];
+  ]) as DocumentModelModule[];
   const document = await RealWorldAssets.utils.loadFromFile(
     "test/data/BlocktowerAndromeda.zip",
   );

@@ -44,7 +44,7 @@ function generateGraphqlSchema(documentModel: DocumentModelState) {
 }
 
 export type DocumentTypesMap = Record<
-  DocumentModelModule<any, any>["documentType"],
+  DocumentModelModule["documentType"],
   { name: string; importPath: string }
 >;
 
@@ -89,7 +89,7 @@ async function getDocumentTypesMap(
     Object.keys(documentModels).forEach((name) => {
       const documentModel = documentModels[
         name as keyof typeof documentModels
-      ] as DocumentModelModule<any, any>;
+      ] as DocumentModelModule;
       documentTypesMap[documentModel.documentType] = {
         name,
         importPath: `document-model-libs/${paramCase(name)}`,
