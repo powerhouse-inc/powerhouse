@@ -1,3 +1,45 @@
+## 1.0.0-dev.202 (2025-02-19)
+
+### 🚀 Features
+
+- **connect:** use updated drive explorer components ([26b60599](https://github.com/powerhouse-inc/powerhouse/commit/26b60599))
+- **common:** improved drive story ([ec96a6b7](https://github.com/powerhouse-inc/powerhouse/commit/ec96a6b7))
+- **common:** document drive generic layout ([e7518094](https://github.com/powerhouse-inc/powerhouse/commit/e7518094))
+- **common:** initial commit ([f561b8c9](https://github.com/powerhouse-inc/powerhouse/commit/f561b8c9))
+
+### 🩹 Fixes
+
+- **connect:** fix FileItem props ([9cb113f8](https://github.com/powerhouse-inc/powerhouse/commit/9cb113f8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 1.0.6 (2025-02-19)
+
+### 🚀 Features
+
+- **connect:** use updated drive explorer components ([26b60599](https://github.com/powerhouse-inc/powerhouse/commit/26b60599))
+- **common:** improved drive story ([ec96a6b7](https://github.com/powerhouse-inc/powerhouse/commit/ec96a6b7))
+- **common:** document drive generic layout ([e7518094](https://github.com/powerhouse-inc/powerhouse/commit/e7518094))
+- **common:** initial commit ([f561b8c9](https://github.com/powerhouse-inc/powerhouse/commit/f561b8c9))
+
+### 🩹 Fixes
+
+- **connect:** fix FileItem props ([9cb113f8](https://github.com/powerhouse-inc/powerhouse/commit/9cb113f8))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model-libs to 1.133.0
+- Updated document-model-libs to 1.133.0
+- Updated document-drive to 1.19.1
+- Updated @powerhousedao/design-system to 1.28.0
+- Updated @powerhousedao/scalars to 1.24.0
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.201 (2025-02-18)
 
 ### 🚀 Features
