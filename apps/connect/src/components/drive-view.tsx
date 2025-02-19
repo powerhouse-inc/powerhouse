@@ -37,7 +37,7 @@ export function DriveView() {
     }
 
     return (
-        <div className="grow overflow-auto rounded-2xl bg-gray-50 p-2">
+        <div className="grow overflow-auto rounded-2xl p-2">
             <Breadcrumbs {...uiNodes} />
             {connectConfig.content.showSearchBar && <SearchBar />}
             <div className="px-4">

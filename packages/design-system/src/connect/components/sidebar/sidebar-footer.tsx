@@ -19,7 +19,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   return (
     <SidebarFooter
       {...props}
-      className={twMerge("border-t border-gray-300 p-4 px-1", className)}
+      className={twMerge("border-t border-gray-300 px-1 py-4", className)}
     >
       <div className="">
         {address ? (

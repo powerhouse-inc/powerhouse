@@ -6,14 +6,10 @@ import {
   UiDriveNode,
 } from "@/connect";
 import { Icon } from "@/powerhouse";
-import { ReactNode } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 export type DriveViewProps = TUiNodesContext &
   NodeProps & {
-    readonly label: ReactNode;
-    readonly groupSharingType: SharingType;
-    readonly disableAddDrives: boolean;
     readonly className?: string;
     readonly showAddDriveModal: (groupSharingType: SharingType) => void;
     readonly showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
@@ -23,19 +19,15 @@ export function DriveView(props: DriveViewProps) {
   const {
     driveNodes,
     selectedDriveNode,
-    label,
-    groupSharingType,
     className,
-    disableAddDrives,
     isAllowedToCreateDocuments,
     showAddDriveModal,
   } = props;
   const hasDriveNodes = driveNodes.length > 0;
-  const isContainerHighlighted =
-    selectedDriveNode?.sharingType === groupSharingType;
+  const isContainerHighlighted = true;
 
   function onShowAddDriveModal() {
-    showAddDriveModal(groupSharingType);
+    // showAddDriveModal(false);
   }
 
   return (
@@ -50,7 +42,7 @@ export function DriveView(props: DriveViewProps) {
       <div className={twJoin("flex items-center justify-between py-1.5 pr-2")}>
         <p className="text-sm font-medium leading-6 text-gray-500">{label}</p>
         <div className="size-4 text-gray-600">
-          {!disableAddDrives && isAllowedToCreateDocuments ? (
+          {isAllowedToCreateDocuments ? (
             <button
               className={twMerge("mr-2 transition hover:text-gray-800")}
               onClick={onShowAddDriveModal}

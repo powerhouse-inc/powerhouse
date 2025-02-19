@@ -1,12 +1,6 @@
 import connectLogo from "@/assets/connect.png";
-import {
-  UiDriveNode,
-  UiNode,
-  UiNodesContextProvider,
-  useUiNodesContext,
-} from "@/connect";
+import { UiDriveNode, UiNode, useUiNodesContext } from "@/connect";
 import { SharingType } from "@/connect/types";
-import { mockDriveNodes } from "@/connect/utils/mocks/ui-drive-node";
 import { useEffect } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ComponentPropsWithoutRef } from "react";
@@ -32,11 +26,9 @@ const user = {
 export const Expanded: Story = {
   decorators: [
     (Story) => (
-      <UiNodesContextProvider>
-        <div className="relative h-screen">
-          <Story />
-        </div>
-      </UiNodesContextProvider>
+      <div className="relative h-screen">
+        <Story />
+      </div>
     ),
   ],
   render: function Wrapper(args) {
@@ -105,29 +97,5 @@ export const Expanded: Story = {
         <SidebarItem title="Home" />
       </ConnectSidebar>
     );
-  },
-};
-
-export const ExpandedWithUser: Story = {
-  ...Expanded,
-  args: {
-    ...Expanded.args,
-    ...user,
-  },
-};
-export const ExpandedWithDrives: Story = {
-  ...Expanded,
-  args: {
-    ...Expanded.args,
-    driveNodes: mockDriveNodes,
-  },
-};
-
-export const ExpandedWithDrivesAndUser: Story = {
-  ...Expanded,
-  args: {
-    ...Expanded.args,
-    ...user,
-    driveNodes: mockDriveNodes,
   },
 };
