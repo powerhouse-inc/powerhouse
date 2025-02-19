@@ -4,6 +4,7 @@ import { generateId as _generateId } from "document-model/utils";
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
+  Node,
   actions,
   generateAddNodeAction,
   generateNodesCopy,
@@ -26,6 +27,89 @@ function getNode(id: string, drive: DocumentDriveDocument) {
 }
 
 /**
+ * Actions for managing a document drive
+ */
+export interface IDriveActions {
+  /** The drive context provided by the host application */
+  context: IDriveContext;
+
+  /** Selects a node in the drive */
+  selectNode: (node: Node) => void;
+
+  /**
+   * Creates a new folder in the drive
+   * @param name - Name of the folder
+   * @param parentFolder - Optional ID of parent folder
+   * @param id - Optional custom ID for the folder
+   */
+  addFolder: (
+    name: string,
+    parentFolder?: string | null,
+    id?: string,
+  ) => Promise<void>;
+
+  /**
+   * Adds a file to the drive
+   * @param file - File to be added
+   * @param parentFolder - Optional ID of parent folder (defaults to selected folder)
+   * @param name - Optional custom name for the file
+   */
+  addFile: (file: File, parentFolder?: string, name?: string) => Promise<void>;
+
+  /**
+   * Creates a new document in the drive
+   * @param name - Name of the document
+   * @param documentType - Type of document to create
+   * @param document - Optional document content
+   * @param parentFolder - Optional ID of parent folder
+   * @param id - Optional custom ID for the document
+   */
+  addDocument: (
+    name: string,
+    documentType: string,
+    document?: Document,
+    parentFolder?: string,
+    id?: string,
+  ) => Promise<void>;
+
+  /**
+   * Deletes a node from the drive
+   * @param id - ID of the node to delete
+   */
+  deleteNode: (id: string) => Promise<void>;
+
+  /**
+   * Renames a node in the drive
+   * @param id - ID of the node to rename
+   * @param name - New name for the node
+   */
+  renameNode: (id: string, name: string) => Promise<void>;
+
+  /**
+   * Moves a node to a new parent folder
+   * @param sourceId - ID of the node to move
+   * @param targetId - ID of the target parent folder
+   */
+  moveNode: (sourceId: string, targetId: string) => Promise<void>;
+
+  /**
+   * Copies a node to a new location
+   * @param sourceId - ID of the node to copy
+   * @param targetFolderId - Optional ID of the target folder
+   */
+  copyNode: (
+    sourceId: string,
+    targetFolderId: string | undefined,
+  ) => Promise<void>;
+
+  /**
+   * Creates a copy of a node in the same folder
+   * @param sourceId - ID of the node to duplicate
+   */
+  duplicateNode: (sourceId: string) => Promise<void>;
+}
+
+/**
  * Creates an object containing actions for managing a document drive
  * @param document - The document drive document
  * @param dispatch - Function to dispatch drive actions
@@ -35,18 +119,12 @@ function createDriveActions(
   document: DocumentDriveDocument,
   dispatch: EditorDispatch<DocumentDriveAction>,
   context: IDriveContext,
-) {
+): IDriveActions {
   const drive = document;
   const { id: driveId } = drive.state.global;
 
   const { selectedNode } = context;
 
-  /**
-   * Creates a new folder in the drive
-   * @param name - Name of the folder
-   * @param parentFolder - Optional ID of parent folder
-   * @param id - Optional custom ID for the folder
-   */
   const addFolder = async (
     name: string,
     parentFolder?: string | null,
@@ -61,14 +139,6 @@ function createDriveActions(
     );
   };
 
-  /**
-   * Creates a new document in the drive
-   * @param name - Name of the document
-   * @param documentType - Type of document to create
-   * @param document - Optional document content
-   * @param parentFolder - Optional ID of parent folder
-   * @param id - Optional custom ID for the document
-   */
   const addDocument = async (
     name: string,
     documentType: string,
@@ -90,12 +160,6 @@ function createDriveActions(
     dispatch(action);
   };
 
-  /**
-   * Adds a file to the drive
-   * @param file - File to be added
-   * @param parentFolder - Optional ID of parent folder (defaults to selected folder)
-   * @param name - Optional custom name for the file
-   */
   const addFile = async (
     file: File,
     parentFolder = selectedNode && isFileNode(selectedNode)
@@ -118,28 +182,14 @@ function createDriveActions(
     await context.addFile(file, driveId, name, parentFolder);
   };
 
-  /**
-   * Deletes a node from the drive
-   * @param id - ID of the node to delete
-   */
   const deleteNode = async (id: string) => {
     dispatch(actions.deleteNode({ id }));
   };
 
-  /**
-   * Renames a node in the drive
-   * @param id - ID of the node to rename
-   * @param name - New name for the node
-   */
   const renameNode = async (id: string, name: string) => {
     dispatch(actions.updateNode({ id, name }));
   };
 
-  /**
-   * Moves a node to a new parent folder
-   * @param sourceId - ID of the node to move
-   * @param targetId - ID of the target parent folder
-   */
   const moveNode = async (sourceId: string, targetId: string) => {
     dispatch(
       actions.moveNode({
@@ -149,11 +199,6 @@ function createDriveActions(
     );
   };
 
-  /**
-   * Copies a node to a new location
-   * @param sourceId - ID of the node to copy
-   * @param targetFolderId - Optional ID of the target folder
-   */
   const copyNode = async (
     sourceId: string,
     targetFolderId: string | undefined,
@@ -192,10 +237,6 @@ function createDriveActions(
     }
   };
 
-  /**
-   * Creates a copy of a node in the same folder
-   * @param sourceId - ID of the node to duplicate
-   */
   const duplicateNode = async (sourceId: string) => {
     const node = getNode(sourceId, drive);
     if (!node) {
@@ -239,11 +280,9 @@ export function useDriveActions(
   document: DocumentDriveDocument,
   dispatch: EditorDispatch<DocumentDriveAction>,
   context: IDriveContext,
-) {
+): IDriveActions {
   return useMemo(
     () => createDriveActions(document, dispatch, context),
     [document, dispatch, context],
   );
 }
-
-export type IDriveActions = ReturnType<typeof createDriveActions>;
