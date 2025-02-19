@@ -130,6 +130,7 @@ describe("AutocompleteField Component", () => {
       <AutocompleteField
         name="autocomplete"
         label="Test Label"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -175,6 +176,7 @@ describe("AutocompleteField Component", () => {
       <AutocompleteField
         name="autocomplete"
         label="Test Label"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -188,7 +190,7 @@ describe("AutocompleteField Component", () => {
       <AutocompleteField
         name="autocomplete"
         label="Test Label"
-        variant="withIdAndTitle"
+        variant="withValueAndTitle"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -204,7 +206,7 @@ describe("AutocompleteField Component", () => {
       <AutocompleteField
         name="autocomplete"
         label="Test Label"
-        variant="withId"
+        variant="withValue"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -239,6 +241,7 @@ describe("AutocompleteField Component", () => {
       <AutocompleteField
         name="autocomplete"
         label="Test Label"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,

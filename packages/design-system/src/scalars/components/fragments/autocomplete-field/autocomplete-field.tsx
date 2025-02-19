@@ -61,7 +61,7 @@ export const AutocompleteFieldRaw = React.forwardRef<
       onClick,
       onMouseDown,
       autoComplete = true,
-      variant = "withIdTitleAndDescription",
+      variant = "withValue",
       maxLength,
       fetchOptionsCallback,
       fetchSelectedOptionCallback,
@@ -108,7 +108,8 @@ export const AutocompleteFieldRaw = React.forwardRef<
     });
 
     const asCard =
-      variant === "withIdAndTitle" || variant === "withIdTitleAndDescription";
+      variant === "withValueAndTitle" ||
+      variant === "withValueTitleAndDescription";
 
     return (
       <FormGroup>

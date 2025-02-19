@@ -19,7 +19,10 @@ export type AutocompleteProps = AutocompleteBaseProps &
       }
     | {
         autoComplete?: true;
-        variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
+        variant?:
+          | "withValue"
+          | "withValueAndTitle"
+          | "withValueTitleAndDescription";
         isOpenByDefault?: boolean;
         initialOptions?: AutocompleteOption[];
         fetchOptionsCallback: (

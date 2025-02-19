@@ -51,45 +51,6 @@ exports[`PHIDField Component > should match snapshot 1`] = `
             class="absolute right-3 top-1/2 flex size-4 -translate-y-1/2 items-center pointer-events-none"
           />
         </div>
-        <div
-          class="max-w-full rounded-md bg-transparent px-3 pb-2 rounded-t-none pt-2"
-        >
-          <div
-            class="flex w-full flex-col gap-1"
-          >
-            <div
-              class="flex gap-2"
-            >
-              <div
-                data-testid="icon-fallback"
-                style="width: 24px; height: 24px;"
-              />
-              <div
-                class="flex min-w-0 grow flex-col gap-[-2px]"
-              >
-                <span
-                  class="truncate text-sm font-bold leading-5 text-gray-400 dark:text-gray-700"
-                >
-                  Title not available
-                </span>
-                <span
-                  class="truncate text-xs leading-5 text-gray-400 dark:text-gray-700"
-                >
-                  Path not available
-                </span>
-              </div>
-            </div>
-            <div
-              class="flex flex-col"
-            >
-              <p
-                class="line-clamp-2 text-xs leading-5 text-gray-400 dark:text-gray-700"
-              >
-                Description not available
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </form>

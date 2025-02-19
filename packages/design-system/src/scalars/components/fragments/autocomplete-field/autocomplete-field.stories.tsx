@@ -83,14 +83,19 @@ const meta: Meta<typeof AutocompleteField> = {
 
     variant: {
       control: "radio",
-      options: ["withIdTitleAndDescription", "withIdAndTitle", "withId"],
+      options: [
+        "withValue",
+        "withValueAndTitle",
+        "withValueTitleAndDescription",
+      ],
       description:
-        "Controls the amount of information displayed for each option: Id with title and description, Id with title, or Id only",
+        "Controls the amount of information displayed for each option: value only, value with title, or value with title and description",
       table: {
         type: {
-          summary: '"withIdTitleAndDescription" | "withIdAndTitle" | "withId"',
+          summary:
+            '"withValue" | "withValueAndTitle" | "withValueTitleAndDescription"',
         },
-        defaultValue: { summary: "withIdTitleAndDescription" },
+        defaultValue: { summary: "withValue" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "autoComplete", neq: false },
@@ -150,6 +155,7 @@ export const Empty: Story = {
     placeholder: "Search...",
     isOpenByDefault: true,
     defaultValue: "with no matching options",
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -162,6 +168,7 @@ export const Open: Story = {
     isOpenByDefault: true,
     defaultValue: "with matching options",
     initialOptions: mockedOptions,
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -173,6 +180,7 @@ export const Filled: Story = {
     placeholder: "Search...",
     defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },

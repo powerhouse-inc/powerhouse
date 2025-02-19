@@ -45,7 +45,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       allowedScopes, // used in field validation
       allowUris = true, // used in field validation
       autoComplete: autoCompleteProp,
-      variant = "withIdTitleAndDescription",
+      variant = "withValue",
       maxLength,
       fetchOptionsCallback,
       fetchSelectedOptionCallback,

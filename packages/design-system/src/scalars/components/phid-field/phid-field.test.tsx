@@ -131,6 +131,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -176,6 +177,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -189,7 +191,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
-        variant="withIdAndTitle"
+        variant="withValueAndTitle"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -205,7 +207,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
-        variant="withId"
+        variant="withValue"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -275,6 +277,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,

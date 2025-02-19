@@ -63,7 +63,7 @@ export type AutocompleteListOptionProps = {
 } & AutocompleteOption;
 
 export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
-  variant = "withIdTitleAndDescription",
+  variant = "withValue",
   icon,
   title = "Title not available",
   path = "Path not available",
@@ -75,7 +75,7 @@ export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
   handleFetchSelectedOption,
   className,
 }) => {
-  const renderWithId = () => (
+  const renderWithValue = () => (
     <div className={cn("flex w-full items-center")}>
       <span
         className={cn(
@@ -90,7 +90,7 @@ export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
     </div>
   );
 
-  const renderWithIdAndTitle = () => (
+  const renderWithValueAndTitle = () => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex items-center gap-2")}>
         {asPlaceholder ? (
@@ -137,7 +137,7 @@ export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
     </div>
   );
 
-  const renderWithIdTitleAndDescription = () => (
+  const renderWithValueTitleAndDescription = () => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex gap-2")}>
         {asPlaceholder ? (
@@ -212,14 +212,14 @@ export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
     <div
       className={cn(
         "max-w-full rounded-md bg-transparent px-3 pb-2",
-        variant === "withId" ? "pt-2" : "pt-3",
+        variant === "withValue" ? "pt-2" : "pt-3",
         className,
       )}
     >
-      {variant === "withId" && renderWithId()}
-      {variant === "withIdAndTitle" && renderWithIdAndTitle()}
-      {variant === "withIdTitleAndDescription" &&
-        renderWithIdTitleAndDescription()}
+      {variant === "withValue" && renderWithValue()}
+      {variant === "withValueAndTitle" && renderWithValueAndTitle()}
+      {variant === "withValueTitleAndDescription" &&
+        renderWithValueTitleAndDescription()}
     </div>
   );
 };

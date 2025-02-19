@@ -102,14 +102,19 @@ const meta: Meta<typeof PHIDField> = {
 
     variant: {
       control: "radio",
-      options: ["withIdTitleAndDescription", "withIdAndTitle", "withId"],
+      options: [
+        "withValue",
+        "withValueAndTitle",
+        "withValueTitleAndDescription",
+      ],
       description:
-        "Controls the amount of information displayed for each option: Id with title and description, Id with title, or Id only",
+        "Controls the amount of information displayed for each option: value only, value with title, or value with title and description",
       table: {
         type: {
-          summary: '"withIdTitleAndDescription" | "withIdAndTitle" | "withId"',
+          summary:
+            '"withValue" | "withValueAndTitle" | "withValueTitleAndDescription"',
         },
-        defaultValue: { summary: "withIdTitleAndDescription" },
+        defaultValue: { summary: "withValue" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "autoComplete", neq: false },
@@ -140,7 +145,8 @@ export const Empty: Story = {
     label: "PHID field",
     placeholder: "phd:",
     isOpenByDefault: true,
-    defaultValue: "with no matching options",
+    defaultValue: "phd:",
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -151,7 +157,8 @@ export const Open: Story = {
     label: "PHID field",
     placeholder: "phd:",
     isOpenByDefault: true,
-    defaultValue: "with matching options",
+    defaultValue: "phd:",
+    variant: "withValueTitleAndDescription",
     initialOptions: mockedOptions,
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
@@ -164,6 +171,7 @@ export const Filled: Story = {
     placeholder: "phd:",
     defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
