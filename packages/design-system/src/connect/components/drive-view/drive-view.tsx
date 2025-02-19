@@ -13,6 +13,9 @@ export type DriveViewProps = TUiNodesContext &
   NodeProps & {
     readonly label: ReactNode;
     readonly className?: string;
+    readonly groupSharingType: SharingType;
+    readonly disableAddDrives: boolean;
+
     readonly showAddDriveModal: (groupSharingType: SharingType) => void;
     readonly showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
   };
@@ -21,6 +24,8 @@ export function DriveView(props: DriveViewProps) {
   const {
     driveNodes,
     selectedDriveNode,
+    groupSharingType,
+    disableAddDrives,
     label,
     className,
     isAllowedToCreateDocuments,
@@ -30,7 +35,7 @@ export function DriveView(props: DriveViewProps) {
   const isContainerHighlighted = true;
 
   function onShowAddDriveModal() {
-    showAddDriveModal(false);
+    showAddDriveModal(groupSharingType);
   }
 
   return (
@@ -45,7 +50,7 @@ export function DriveView(props: DriveViewProps) {
       <div className={twJoin("flex items-center justify-between py-1.5 pr-2")}>
         <p className="text-sm font-medium leading-6 text-gray-500">{label}</p>
         <div className="size-4 text-gray-600">
-          {isAllowedToCreateDocuments ? (
+          {!disableAddDrives && isAllowedToCreateDocuments ? (
             <button
               className={twMerge("mr-2 transition hover:text-gray-800")}
               onClick={onShowAddDriveModal}
