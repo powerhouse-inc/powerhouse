@@ -1,6 +1,5 @@
 import { useDefaultDocumentModelEditor } from '#hooks/useDefaultDocumentModelEditor/index';
-import { DocumentModelsModule } from '#utils/types';
-import { EditorModule } from 'document-model';
+import { DocumentModelLib, EditorModule } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
@@ -15,7 +14,7 @@ async function loadBaseEditors() {
     return [DocumentModelEditor];
 }
 
-function getEditorsFromModules(modules: DocumentModelsModule[]) {
+function getEditorsFromModules(modules: DocumentModelLib[]) {
     return modules
         .map(module => module.editors)
         .reduce((acc, val) => acc.concat(val), []);

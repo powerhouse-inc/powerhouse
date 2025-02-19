@@ -409,14 +409,18 @@ export type Manifest = {
   }[];
 };
 
-export type DocumentModelLib = {
+export type DocumentModelLib<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+  TCustomAction extends CustomAction | Action = Action,
+> = {
   manifest: Manifest;
   documentModels: DocumentModelModule<
-    unknown,
-    unknown,
-    CustomAction | DefaultAction
+    TGlobalState,
+    TLocalState,
+    TCustomAction
   >[];
-  editors: EditorModule[];
+  editors: EditorModule<TGlobalState, TLocalState, TCustomAction>[];
 };
 
 export type ValidationError = { message: string; details: object };

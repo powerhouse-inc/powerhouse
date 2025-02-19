@@ -1,8 +1,8 @@
 import { useFeatureFlag } from '#hooks/useFeatureFlags/index';
-import { DocumentModelsModule } from '#utils/types';
 import { driveDocumentModelModule } from 'document-drive';
 import {
     documentModelDocumentModelModule,
+    DocumentModelLib,
     DocumentModelModule,
 } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
@@ -31,7 +31,7 @@ function getUniqueDocumentModels(
     return Array.from(uniqueModels.values());
 }
 
-function getDocumentModelsFromModules(modules: DocumentModelsModule[]) {
+function getDocumentModelsFromModules(modules: DocumentModelLib[]) {
     return modules
         .map(module => module.documentModels)
         .reduce((acc, val) => acc.concat(val), []);
@@ -59,7 +59,7 @@ export const documentModelsAtom = atom(async get => {
     const dynamicDocumentModels = await get(dynamicDocumentModelsAtom);
     const externalModules = (await get(
         externalPackagesAtom,
-    )) as DocumentModelsModule[];
+    )) as DocumentModelLib[];
     const externalDocumentModels =
         getDocumentModelsFromModules(externalModules);
 
