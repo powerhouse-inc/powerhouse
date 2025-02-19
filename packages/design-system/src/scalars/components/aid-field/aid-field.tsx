@@ -44,7 +44,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
       onMouseDown,
       supportedNetworks, // used in field validation
       autoComplete: autoCompleteProp,
-      variant = "withIdTitleAndDescription",
+      variant = "withValue",
       maxLength,
       fetchOptionsCallback,
       fetchSelectedOptionCallback,
