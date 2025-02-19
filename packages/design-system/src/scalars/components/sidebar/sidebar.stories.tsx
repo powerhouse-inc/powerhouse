@@ -132,6 +132,25 @@ const meta: Meta<typeof Sidebar> = {
         readonly: true,
       },
     },
+    initialWidth: {
+      control: "number",
+      description: "The initial width of the sidebar.",
+      table: {
+        defaultValue: { summary: "300" },
+      },
+    },
+    maxWidth: {
+      control: "number",
+      description: "The maximum width of the sidebar.",
+    },
+    onWidthChange: {
+      control: "object",
+      description:
+        "A callback function that is called when the width of the sidebar changes.",
+      table: {
+        readonly: true,
+      },
+    },
   },
   args: {
     sidebarTitle: "Title Sidebar",
@@ -143,6 +162,9 @@ const meta: Meta<typeof Sidebar> = {
     enableMacros: 4,
     onActiveNodeChange: (node) => {
       console.log("onActiveNodeChange", node);
+    },
+    onWidthChange: (width) => {
+      console.log("onWidthChange", width);
     },
   },
 };
