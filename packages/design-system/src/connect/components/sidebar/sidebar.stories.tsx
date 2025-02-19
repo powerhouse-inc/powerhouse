@@ -1,20 +1,11 @@
 import connectLogo from "@/assets/connect.png";
-import {
-  UiDriveNode,
-  UiNode,
-  UiNodesContextProvider,
-  useUiNodesContext,
-} from "@/connect";
-import { CLOUD, LOCAL, PUBLIC } from "@/connect/constants";
+import { UiDriveNode, UiNode, useUiNodesContext } from "@/connect";
 import { SharingType } from "@/connect/types";
 import { useEffect } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ComponentPropsWithoutRef, useState } from "react";
-import { ConnectSidebar, DriveView } from "..";
-import {
-  mockDriveNodes,
-  mockNodeOptions,
-} from "@/connect/utils/mocks/ui-drive-node";
+import { ComponentPropsWithoutRef } from "react";
+import { ConnectSidebar } from "..";
+import { SidebarItem } from "./sidebar-item";
 
 type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
   driveNodes?: UiDriveNode[];
@@ -35,16 +26,12 @@ const user = {
 export const Expanded: Story = {
   decorators: [
     (Story) => (
-      <UiNodesContextProvider>
-        <div className="relative h-screen">
-          <Story />
-        </div>
-      </UiNodesContextProvider>
+      <div className="relative h-screen">
+        <Story />
+      </div>
     ),
   ],
   render: function Wrapper(args) {
-    const [collapsed, setCollapsed] = useState(args.collapsed);
-    const [disableHighlightStyles, setDisableHighlightStyles] = useState(false);
     const uiNodesContext = useUiNodesContext();
     const { driveNodes, setDriveNodes, setSelectedNode } = uiNodesContext;
 
@@ -88,24 +75,9 @@ export const Expanded: Story = {
       onAddInvalidTrigger: (uiNodeDriveId: string) => {},
     };
 
-    const driveNodesByType = driveNodes.reduce<
-      Record<SharingType, UiDriveNode[]>
-    >(
-      (acc, driveNode) => {
-        acc[driveNode.sharingType].push(driveNode);
-        return acc;
-      },
-      {
-        [PUBLIC]: [],
-        [CLOUD]: [],
-        [LOCAL]: [],
-      },
-    );
-
     return (
       <ConnectSidebar
         {...args}
-        collapsed={collapsed}
         headerContent={
           <div className="flex h-full items-center">
             <img
@@ -115,98 +87,15 @@ export const Expanded: Story = {
             />
           </div>
         }
-        onToggle={() => setCollapsed(!collapsed)}
       >
-        <DriveView
-          {...uiNodesContext}
-          {...nodeHandlers}
-          disableAddDrives={false}
-          driveNodes={driveNodesByType[PUBLIC]}
-          groupSharingType={PUBLIC}
-          isAllowedToCreateDocuments
-          isRemoteDrive
-          label="Public Drives"
-          nodeOptions={mockNodeOptions}
-        />
-        <DriveView
-          {...uiNodesContext}
-          {...nodeHandlers}
-          disableAddDrives={false}
-          driveNodes={driveNodesByType[CLOUD]}
-          groupSharingType={CLOUD}
-          isAllowedToCreateDocuments
-          isRemoteDrive
-          label="Secure Cloud Drives"
-          nodeOptions={mockNodeOptions}
-        />
-        <DriveView
-          {...uiNodesContext}
-          {...nodeHandlers}
-          disableAddDrives={false}
-          driveNodes={driveNodesByType[LOCAL]}
-          groupSharingType={LOCAL}
-          isAllowedToCreateDocuments
-          isRemoteDrive={false}
-          label="My Local Drives"
-          nodeOptions={mockNodeOptions}
-        />
+        <SidebarItem title="Home" />
+        <SidebarItem title="Home" />
+        <SidebarItem title="Home" active={true} />
+        <SidebarItem title="Home" />
+        <SidebarItem title="Home" />
+        <SidebarItem title="Home" />
+        <SidebarItem title="Home" />
       </ConnectSidebar>
     );
-  },
-};
-
-export const ExpandedWithUser: Story = {
-  ...Expanded,
-  args: {
-    ...Expanded.args,
-    ...user,
-  },
-};
-export const ExpandedWithDrives: Story = {
-  ...Expanded,
-  args: {
-    ...Expanded.args,
-    driveNodes: mockDriveNodes,
-  },
-};
-
-export const ExpandedWithDrivesAndUser: Story = {
-  ...Expanded,
-  args: {
-    ...Expanded.args,
-    ...user,
-    driveNodes: mockDriveNodes,
-  },
-};
-
-export const Collapsed: Story = {
-  ...Expanded,
-  args: {
-    ...Expanded.args,
-    collapsed: true,
-  },
-};
-
-export const CollapsedWithUser: Story = {
-  ...Collapsed,
-  args: {
-    ...Collapsed.args,
-    ...user,
-  },
-};
-
-export const CollapsedWithDrives: Story = {
-  ...Collapsed,
-  args: {
-    ...Collapsed.args,
-    driveNodes: mockDriveNodes,
-  },
-};
-
-export const CollapsedWithDrivesAndUser: Story = {
-  ...Collapsed,
-  args: {
-    ...Collapsed.args,
-    ...user,
   },
 };
