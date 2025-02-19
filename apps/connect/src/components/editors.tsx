@@ -1,10 +1,26 @@
+import { useConnectCrypto, useConnectDid } from '#hooks/useConnectCrypto';
+import { useUndoRedoShortcuts } from '#hooks/useUndoRedoShortcuts';
+import { useUserPermissions } from '#hooks/useUserPermissions';
+import { logger } from '#services/logger';
+import { FileNodeDocument, isSameDocument } from '#store/document-drive';
+import { useGetDocumentModel } from '#store/document-model';
+import { useGetEditor } from '#store/editor';
+import { themeAtom } from '#store/theme';
+import { useUser } from '#store/user';
+import {
+  DocumentDispatchCallback,
+  useDocumentDispatch,
+} from '#utils/document-model';
+import { addActionContext, signOperation } from '#utils/signature';
 import { DocumentToolbar, RevisionHistory } from '@powerhousedao/design-system';
 import {
   Action,
-  ActionErrorCallback, EditorContext,
+  ActionErrorCallback,
+  EditorContext,
   Operation,
+  PHDocument,
   redo,
-  undo
+  undo,
 } from 'document-model';
 import { useAtomValue } from 'jotai';
 import React, {
@@ -17,20 +33,6 @@ import React, {
 } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
-import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
-import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { logger } from 'src/services/logger';
-import { FileNodeDocument, isSameDocument } from 'src/store/document-drive';
-import { useGetDocumentModel } from 'src/store/document-model';
-import { useGetEditor } from 'src/store/editor';
-import { themeAtom } from 'src/store/theme';
-import { useUser } from 'src/store/user';
-import {
-  DocumentDispatchCallback,
-  useDocumentDispatch,
-} from 'src/utils/document-model';
-import { addActionContext, signOperation } from 'src/utils/signature';
 import Button from './button';
 import { EditorLoader } from './editor-loader';
 import { useModal } from './modal';

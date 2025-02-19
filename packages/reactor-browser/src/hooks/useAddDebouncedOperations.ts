@@ -1,4 +1,4 @@
-import { BaseDocument, Operation } from "document-model";
+import { Operation, PHDocument } from "document-model";
 import { useCallback, useMemo } from "react";
 
 import { IDocumentDriveServer } from "document-drive";
@@ -6,7 +6,7 @@ import { useDocumentDrives } from "./useDocumentDrives";
 import { useUserPermissions } from "./useUserPermissions";
 
 function debounceOperations(
-  callback: (operations: Operation[]) => Promise<Document | undefined>,
+  callback: (operations: Operation[]) => Promise<PHDocument | undefined>,
   timeout = 50,
 ) {
   let timer: number;
@@ -36,7 +36,7 @@ function debounceOperations(
     } else {
       operations.push(operation);
     }
-    return new Promise<Document | undefined>((resolve, reject) => {
+    return new Promise<PHDocument | undefined>((resolve, reject) => {
       timer = setTimeout(() => {
         callback(operations).then(resolve).catch(reject);
       }, timeout) as unknown as number;

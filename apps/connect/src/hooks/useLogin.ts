@@ -1,14 +1,14 @@
-import { atom, useAtom } from 'jotai';
-import { useCallback, useEffect, useMemo } from 'react';
-import { useConnectCrypto } from 'src/hooks/useConnectCrypto';
-import { useRenown } from 'src/hooks/useRenown';
-import { logger } from 'src/services/logger';
+import { useConnectCrypto } from '#hooks/useConnectCrypto';
+import { useRenown } from '#hooks/useRenown';
+import { logger } from '#services/logger';
 import {
     RENOWN_CHAIN_ID,
     RENOWN_NETWORK_ID,
     RENOWN_URL,
-} from 'src/services/renown/constants';
-import { useUser } from 'src/store/user';
+} from '#services/renown/constants';
+import { useUser } from '#store/user';
+import { atom, useAtom } from 'jotai';
+import { useCallback, useEffect, useMemo } from 'react';
 
 type LoginStatus = 'initial' | 'checking' | 'not-authorized' | 'authorized';
 

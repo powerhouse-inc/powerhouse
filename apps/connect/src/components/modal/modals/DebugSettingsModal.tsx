@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+import { useConnectConfig } from '#hooks/useConnectConfig';
+import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
+import serviceWorkerManager from '#utils/registerServiceWorker';
 import {
     Button,
     Combobox,
@@ -7,9 +10,6 @@ import {
     Modal,
 } from '@powerhousedao/design-system';
 import { useEffect, useState } from 'react';
-import { useConnectConfig } from 'src/hooks/useConnectConfig';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import serviceWorkerManager from 'src/utils/registerServiceWorker';
 import { v4 as uuid } from 'uuid';
 export interface DebugSettingsModalProps {
     open: boolean;

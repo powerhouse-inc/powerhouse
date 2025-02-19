@@ -1,4 +1,4 @@
-import { BaseDocument, Operation, OperationScope } from 'document-model';
+import { Operation, OperationScope, PHDocument } from 'document-model';
 
 export class DocumentEditorDebugTools {
     private document: PHDocument | undefined;

@@ -1,13 +1,13 @@
+import { useDocumentDrives } from '#hooks/useDocumentDrives';
+import { addExternalPackage, removeExternalPackage } from '#services/hmr';
+import {
+    useExternalPackages,
+    useMutableExternalPackages,
+} from '#store/external-packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
 import { Manifest } from 'document-model';
 import CommonManifest from 'document-model-libs/manifest';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useDocumentDrives } from 'src/hooks/useDocumentDrives';
-import { addExternalPackage, removeExternalPackage } from 'src/services/hmr';
-import {
-    useExternalPackages,
-    useMutableExternalPackages,
-} from 'src/store/external-packages';
 
 const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';

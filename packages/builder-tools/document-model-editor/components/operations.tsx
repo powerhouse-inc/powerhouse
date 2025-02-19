@@ -1,7 +1,5 @@
 import { OperationForm } from "./operation-form.js";
-import type {
-  Module,
-} from "document-model";
+import type { Module } from "document-model";
 import { useCallback, useId, useState } from "react";
 import { Operation } from "./operation.js";
 

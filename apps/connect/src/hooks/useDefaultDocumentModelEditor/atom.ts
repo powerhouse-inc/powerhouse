@@ -1,4 +1,4 @@
-import { atomWithStorage } from 'src/store/utils';
+import { atomWithStorage } from '#store/utils';
 
 export const DEFAULT_DOCUMENT_MODL_EDITOR = 'defaultDocumentModelEditor';
 

@@ -1,10 +1,10 @@
+import { useLogin } from '#hooks/useLogin';
+import { logger } from '#services/logger';
+import { sidebarCollapsedAtom } from '#store/index';
 import { ConnectSidebar, Icon } from '@powerhousedao/design-system';
 import { useAtom } from 'jotai';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
-import { useLogin } from 'src/hooks/useLogin';
-import { logger } from 'src/services/logger';
-import { sidebarCollapsedAtom } from 'src/store';
 import DriveContainer from './drive-container';
 import { useModal } from './modal';
 

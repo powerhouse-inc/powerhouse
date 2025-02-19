@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as Sentry from '@sentry/browser';
+import { PHDocument } from 'document-model';
 import {
     BrowserWindow,
     Menu,
@@ -29,7 +30,7 @@ const isMac = process.platform === 'darwin';
 async function initApp() {
     // if on mac sets app icon
     if (isMac) {
-        const appIcon = nativeImage.createFromPath('src/assets/icon.png');
+        const appIcon = nativeImage.createFromPath('#assets/icon.png');
         app.dock.setIcon(appIcon);
     }
 
@@ -172,10 +173,8 @@ function handleFileSave(path?: string) {
     }
 }
 
-ipcMain.handle(
-    'fileSaved',
-    (e, document: PHDocument, path?: string) =>
-        handleFileSave(path),
+ipcMain.handle('fileSaved', (e, document: PHDocument, path?: string) =>
+    handleFileSave(path),
 );
 
 ipcMain.handle('openURL', (e, url) => shell.openExternal(url));

@@ -1,7 +1,7 @@
+import { logger } from '#services/logger';
+import { useGetDocumentModel } from '#store/document-model';
+import { loadFile } from '#utils/file';
 import { PHDocument } from 'document-model';
-import { logger } from 'src/services/logger';
-import { useGetDocumentModel } from 'src/store/document-model';
-import { loadFile } from 'src/utils/file';
 
 export function useOpenFile(
     onDocument: (document: PHDocument, file: File) => void,

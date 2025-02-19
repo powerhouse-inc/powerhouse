@@ -1,5 +1,5 @@
 import {
-    BaseDocument,
+    PHDocument,
     validateInitialState,
     validateModules,
     validateStateSchemaName,

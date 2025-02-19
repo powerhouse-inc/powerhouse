@@ -1,10 +1,10 @@
+import { logger } from '#services/logger';
 import {
-    BaseDocument,
     baseLoadFromInput,
     createZip,
     DocumentModelModule,
+    PHDocument,
 } from 'document-model';
-import { logger } from 'src/services/logger';
 
 const downloadFile = async (document: PHDocument) => {
     const zip = createZip(document);
@@ -25,9 +25,7 @@ const downloadFile = async (document: PHDocument) => {
 
 export async function exportFile(
     document: PHDocument,
-    getDocumentModel: (
-        documentType: string,
-    ) => DocumentModelModule<unknown, unknown> | undefined,
+    getDocumentModel: (documentType: string) => DocumentModelModule | undefined,
 ) {
     const documentModel = getDocumentModel(document.documentType);
     if (!documentModel) {
@@ -67,9 +65,7 @@ export async function exportFile(
 
 export async function loadFile(
     path: string | File,
-    getDocumentModel: (
-        documentType: string,
-    ) => DocumentModelModule<unknown, unknown> | undefined,
+    getDocumentModel: (documentType: string) => DocumentModelModule | undefined,
 ) {
     const baseDocument = await baseLoadFromInput(
         path,

@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "build": "tsc --build",
+    "check-types": "tsc --build",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",

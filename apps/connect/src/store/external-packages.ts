@@ -1,7 +1,7 @@
+import { getHMRModule, subscribeExternalPackages } from '#services/hmr';
 import { DocumentModelLib } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
-import { getHMRModule, subscribeExternalPackages } from 'src/services/hmr';
 
 const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
 const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES === 'true';

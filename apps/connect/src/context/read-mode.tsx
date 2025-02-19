@@ -1,3 +1,6 @@
+import { drivesToHash } from '#hooks/useDocumentDrives';
+import { useUserPermissions } from '#hooks/useUserPermissions';
+import { logger } from '#services/logger';
 import {
   DocumentModelNotFoundError,
   IDocumentDriveServer,
@@ -11,6 +14,7 @@ import {
   ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
 } from 'document-drive';
+import { Action, CustomAction, PHDocument } from 'document-model';
 import {
   createContext,
   FC,
@@ -20,9 +24,6 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { drivesToHash } from 'src/hooks/useDocumentDrives';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { logger } from 'src/services/logger';
 import { useAsyncReactor } from '../store/reactor';
 
 export interface IReadModeContext extends IReadModeDriveServer {
@@ -125,12 +126,16 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     }
 
     @checkServer
-    fetchDocument<TGlobalState, TLocalState>(
+    fetchDocument<
+        TGlobalState,
+        TLocalState,
+        TAction extends Action | CustomAction = Action,
+    >(
         driveId: string,
         documentId: string,
         documentType: string,
     ): Promise<
-        | PHDocument<TGlobalState, TLocalState>
+        | PHDocument<TGlobalState, TLocalState, TAction>
         | DocumentModelNotFoundError
         | ReadDriveNotFoundError
         | ReadDocumentNotFoundError

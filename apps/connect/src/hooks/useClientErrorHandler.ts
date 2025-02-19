@@ -1,3 +1,4 @@
+import { logger } from '#services/logger';
 import { LOCAL } from '@powerhousedao/design-system';
 import {
     PullResponderTrigger,
@@ -5,7 +6,6 @@ import {
     Trigger,
 } from 'document-drive';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { logger } from 'src/services/logger';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useSwitchboard } from './useSwitchboard';
 

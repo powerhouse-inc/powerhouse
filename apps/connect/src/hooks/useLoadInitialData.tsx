@@ -1,3 +1,7 @@
+import { ReloadConnectToast } from '#components/toast/reload-connect-toast';
+import { useReadModeContext } from '#context/read-mode';
+import { useUiNodes } from '#hooks/useUiNodes';
+import { useAsyncReactor } from '#store/reactor';
 import {
     CONFLICT,
     ERROR,
@@ -10,10 +14,6 @@ import { DocumentDriveDocument } from 'document-drive';
 import { TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReloadConnectToast } from 'src/components/toast/reload-connect-toast';
-import { useReadModeContext } from 'src/context/read-mode';
-import { useUiNodes } from 'src/hooks/useUiNodes';
-import { useAsyncReactor } from 'src/store/reactor';
 import { useClientErrorHandler } from './useClientErrorHandler';
 import { useConnectConfig } from './useConnectConfig';
 import { useDocumentDrives } from './useDocumentDrives';

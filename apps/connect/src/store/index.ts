@@ -1,5 +1,5 @@
+import { atomWithStorage } from '#store/utils';
 import { atom, createStore } from 'jotai';
-import { atomWithStorage } from 'src/store/utils';
 import { themeAtom } from './theme';
 
 export type Store = ReturnType<typeof createStore>;

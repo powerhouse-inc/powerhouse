@@ -7,6 +7,7 @@
         "module": "ESNext",
         "moduleResolution": "Bundler",
         "jsx": "react-jsx",
+        "resolveJsonModule": true,
         "paths": {
             "@/assets": ["./assets"],
             "connect-config": ["./src/connect.config.ts"],
@@ -34,5 +35,6 @@
       {
         "path": "../../packages/builder-tools"
       }
-    ]
+    ],
+    "include": ["**/*", "**/*.json"]
 }

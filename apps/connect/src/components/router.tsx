@@ -8,7 +8,7 @@ import {
 } from 'react-router-dom';
 
 const Root = React.lazy(() => import('./root'));
-const Content = React.lazy(() => import('src/pages/content'));
+const Content = React.lazy(() => import('#pages/content'));
 
 async function createRouter(routes: RouteObject[]) {
     const isPackaged = await window.electronAPI?.isPackaged();

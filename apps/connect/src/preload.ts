@@ -7,7 +7,7 @@ import type {
     SyncStatus,
 } from 'document-drive';
 import { DocumentDriveAction, DocumentDriveDocument } from 'document-drive';
-import { Action, BaseDocument, Operation } from 'document-model';
+import { Action, Operation, PHDocument } from 'document-model';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { platformInfo } from './app/detect-platform';
 import type { IConnectCrypto } from './services/crypto';

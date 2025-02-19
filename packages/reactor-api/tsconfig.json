@@ -11,5 +11,6 @@
     {
       "path": "../document-drive"
     }
-  ]
+  ],
+  "exclude": ["**/*.test.*", "**/*.bench.*", "dist", "node_modules"]
 }

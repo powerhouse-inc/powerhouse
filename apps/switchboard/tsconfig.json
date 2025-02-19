@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "outDir": "./dist",
     "resolveJsonModule": true,
     "lib": ["es2022"],
     "noEmit": true
@@ -18,9 +19,6 @@
     },
     {
       "path": "../../packages/document-model"
-    },
-    {
-      "path": "../../packages/document-model-libs"
     }
   ]
 }

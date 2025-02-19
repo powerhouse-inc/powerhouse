@@ -14,9 +14,6 @@
       "path": "./packages/document-model"
     },
     {
-      "path": "./packages/document-model-libs"
-    },
-    {
       "path": "./packages/scalars"
     },
     {
@@ -28,5 +25,5 @@
     {
       "path": "./packages/reactor-local"
     }
-  ]
+  ],
 }

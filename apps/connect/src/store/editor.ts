@@ -1,19 +1,18 @@
+import { useDefaultDocumentModelEditor } from '#hooks/useDefaultDocumentModelEditor/index';
+import { DocumentModelsModule } from '#utils/types';
 import { EditorModule } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
-import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
-import { DocumentModelsModule } from 'src/utils/types';
 import { externalPackagesAtom } from './external-packages';
 
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 
 async function loadBaseEditors() {
-    const JsonEditor = (await import('document-model-libs/editors/json'))
-        .default as unknown as EditorModule;
-    const DocumentModelEditor = (await import('document-model-libs/editors'))
-        .DocumentModel2 as unknown as EditorModule;
-    return [JsonEditor, DocumentModelEditor];
+    const DocumentModelEditor = (
+        await import('@powerhousedao/builder-tools/document-model-editor')
+    ).documentModelEditorModule;
+    return [DocumentModelEditor];
 }
 
 function getEditorsFromModules(modules: DocumentModelsModule[]) {

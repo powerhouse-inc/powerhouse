@@ -1,7 +1,7 @@
 import type { User as EditorUser } from "document-model";
-import { CREDENTIAL_TYPES } from "./constants";
-import { IEventEmitter } from "./event/types";
-import { IStorage } from "./storage/common";
+import { CREDENTIAL_TYPES } from "./constants.js";
+import { IEventEmitter } from "./event/types.js";
+import { IStorage } from "./storage/common.js";
 
 export type User = EditorUser & {
   did: string;

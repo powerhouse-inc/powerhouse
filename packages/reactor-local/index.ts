@@ -1,1 +1,6 @@
-export { DefaultStartServerOptions, startServer } from "./src/server.js";
+export {
+  DefaultStartServerOptions,
+  startServer,
+  type LocalReactor,
+  type StartServerOptions,
+} from "./src/server.js";

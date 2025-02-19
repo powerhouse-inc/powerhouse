@@ -1,11 +1,11 @@
+import { logger } from '#services/logger';
+import { useUnwrappedReactor } from '#store/reactor';
 import type { IDocumentDriveServer } from 'document-drive';
 import { DocumentDriveDocument } from 'document-drive';
-import { BaseDocument, OperationScope } from 'document-model';
+import { OperationScope, PHDocument } from 'document-model';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
-import { logger } from 'src/services/logger';
-import { useUnwrappedReactor } from 'src/store/reactor';
 import { ClientErrorHandler } from './useClientErrorHandler';
 
 // map of DocumentDriveServer objects and their Document Drives

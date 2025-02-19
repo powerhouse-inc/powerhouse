@@ -11,8 +11,8 @@ import {
 import { Action, DocumentModelLib, Operation } from 'document-model';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
-import { logger } from 'src/services/logger';
-import { getReactorDefaultDrivesConfig } from 'src/utils/reactor';
+import { logger } from '../services/logger';
+import { getReactorDefaultDrivesConfig } from '../utils/reactor';
 
 export default (
     documentModels: DocumentModelLib[],

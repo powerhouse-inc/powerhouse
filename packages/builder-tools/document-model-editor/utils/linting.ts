@@ -57,7 +57,7 @@ export function ensureValidStateSchemaName(
         doc,
         `${sentenceCase(scope)} state schema must be named ${requiredTypeName}`,
       ),
-    ].filter(Boolean);
+    ].filter((d): d is Diagnostic => !!d);
   }
 
   return [];

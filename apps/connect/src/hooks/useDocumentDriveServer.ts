@@ -1,3 +1,10 @@
+import { logger } from '#services/logger';
+import { useGetDocumentModel } from '#store/document-model';
+import { useUnwrappedReactor } from '#store/reactor';
+import { useUser } from '#store/user';
+import { loadFile } from '#utils/file';
+import { uploadDocumentOperations } from '#utils/index';
+import { addActionContext, signOperation } from '#utils/signature';
 import {
     ERROR,
     FILE,
@@ -34,15 +41,8 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { BaseDocument, Operation, hashKey } from 'document-model';
+import { Operation, PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
-import { logger } from 'src/services/logger';
-import { useGetDocumentModel } from 'src/store/document-model';
-import { useUnwrappedReactor } from 'src/store/reactor';
-import { useUser } from 'src/store/user';
-import { uploadDocumentOperations } from 'src/utils';
-import { loadFile } from 'src/utils/file';
-import { addActionContext, signOperation } from 'src/utils/signature';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useDocumentDrives } from './useDocumentDrives';
 import { useUserPermissions } from './useUserPermissions';

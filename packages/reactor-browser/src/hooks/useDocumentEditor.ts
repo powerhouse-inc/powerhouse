@@ -5,6 +5,7 @@ import {
   CustomAction,
   DocumentModelModule,
   Operation,
+  PHDocument,
 } from "document-model";
 import { User } from "../renown/types";
 import { addActionContext, signOperation } from "../utils/signature";

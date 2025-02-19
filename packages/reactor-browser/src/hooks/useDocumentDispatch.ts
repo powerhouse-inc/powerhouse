@@ -3,6 +3,7 @@ import type {
   ActionErrorCallback,
   CustomAction,
   Operation,
+  PHDocument,
   Reducer,
 } from "document-model";
 import { useEffect, useState } from "react";

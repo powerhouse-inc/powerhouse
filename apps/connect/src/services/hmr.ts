@@ -1,4 +1,4 @@
-import { ExternalPackage } from 'src/store/external-packages';
+import { ExternalPackage } from '#store/external-packages';
 export type PackagesUpdate = {
     url: string;
     timestamp: string;
@@ -17,7 +17,9 @@ export async function getHMRModule() {
     }
 
     try {
-        const module = await import('../../../../packages/builder-tools/connect-studio/hmr');
+        const module = await import(
+            '../../../../packages/builder-tools/connect-studio/hmr'
+        );
         const hmr = module.default;
         return hmr;
     } catch {

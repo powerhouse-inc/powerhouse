@@ -1,3 +1,5 @@
+import { useFeatureFlag } from '#hooks/useFeatureFlags/index';
+import { DocumentModelsModule } from '#utils/types';
 import { driveDocumentModelModule } from 'document-drive';
 import {
     documentModelDocumentModelModule,
@@ -6,8 +8,6 @@ import {
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { atomWithLazy, unwrap } from 'jotai/utils';
-import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
-import { DocumentModelsModule } from 'src/utils/types';
 import { atomStore } from '.';
 import { externalPackagesAtom } from './external-packages';
 

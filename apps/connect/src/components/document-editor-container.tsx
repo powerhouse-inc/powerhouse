@@ -1,4 +1,4 @@
-import { BaseDocument, Operation } from 'document-model';
+import { Operation, PHDocument } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal';

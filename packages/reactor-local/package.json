@@ -6,7 +6,8 @@
     "access": "public"
   },
   "scripts": {
-    "start": "vite-node src/index.ts"
+    "start": "vite-node src/index.ts",
+    "check-types": "tsc --build"
   },
   "exports": {
     ".": "./dist/index.js"

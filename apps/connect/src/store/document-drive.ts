@@ -1,18 +1,18 @@
+import { IReadModeContext } from '#context/read-mode';
+import { documentToHash } from '#hooks/useDocumentDrives';
+import { TDocumentDriveServer } from '#hooks/useDocumentDriveServer';
+import { logger } from '#services/logger';
 import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
 import {
-    BaseDocument,
     hashDocumentStateForScope,
     Operation,
+    PHDocument,
 } from 'document-model';
 import { atom, useAtom, useSetAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
-import { IReadModeContext } from 'src/context/read-mode';
-import { documentToHash } from 'src/hooks/useDocumentDrives';
-import { TDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { logger } from 'src/services/logger';
 
 function debounceOperations(
-    callback: (operations: Operation[]) => Promise<Document | undefined>,
+    callback: (operations: Operation[]) => Promise<PHDocument | undefined>,
     timeout = 50,
 ) {
     let timer: number;
@@ -43,7 +43,7 @@ function debounceOperations(
         } else {
             operations.push(operation);
         }
-        return new Promise<Document | undefined>((resolve, reject) => {
+        return new Promise<PHDocument | undefined>((resolve, reject) => {
             timer = setTimeout(() => {
                 callback(operations).then(resolve).catch(reject);
             }, timeout) as unknown as number;
@@ -70,7 +70,7 @@ export type FileNodeDocument =
       }
     | undefined;
 
-const documentCacheAtom = atom(new Map<string, Document>());
+const documentCacheAtom = atom(new Map<string, PHDocument>());
 
 const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
 
