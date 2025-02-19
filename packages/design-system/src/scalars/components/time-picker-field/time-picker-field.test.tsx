@@ -116,16 +116,13 @@ describe("TimePickerField", () => {
 
   it("should set timezone value and disable select when timeZone prop is provided", async () => {
     const user = userEvent.setup();
-    const timeZoneValue = {
-      value: "America/New_York",
-      label: "America/New_York",
-    };
+    const timeZoneValue = "America/New_York";
 
     renderWithForm(
       <TimePickerField
         name="test-time"
         label="Test Label"
-        timeZone={timeZoneValue.value}
+        timeZone={timeZoneValue}
       />,
     );
 
@@ -138,9 +135,9 @@ describe("TimePickerField", () => {
     const select = await screen.findByRole("combobox");
 
     expect(select).toBeDisabled();
-
-    expect(screen.getByText(timeZoneValue.label)).toBeInTheDocument();
-    await user.click(select);
-    expect(screen.getByText(timeZoneValue.label)).toBeInTheDocument();
+    const expectedTimezone = screen.getByText((content) => {
+      return content.includes("America/New York") && content.includes("(");
+    });
+    expect(expectedTimezone).toBeInTheDocument();
   });
 });
