@@ -82,7 +82,15 @@ export function FileContentView(props: Props) {
                     marginLeft: columnIndex === 0 ? 0 : GAP,
                 }}
             >
-                <FileItem {...props} key={fileNode.id} uiNode={fileNode} />
+                <FileItem
+                    {...props}
+                    key={fileNode.id}
+                    uiNode={fileNode}
+                    onSelectNode={props.setSelectedNode}
+                    isAllowedToCreateDocuments={
+                        props.isAllowedToCreateDocuments ?? false
+                    }
+                />
             </div>
         );
     };
