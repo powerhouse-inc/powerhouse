@@ -169,13 +169,6 @@ export const useTimePickerField = ({
       ]
     : options;
 
-  console.log("states", {
-    selectedHour,
-    selectedMinute,
-    selectedPeriod,
-    inputValue,
-  });
-
   return {
     selectedHour,
     selectedMinute,
