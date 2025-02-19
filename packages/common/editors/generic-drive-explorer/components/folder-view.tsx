@@ -4,6 +4,7 @@ import {
   FOLDER,
   FolderItem,
   UiDriveNode,
+  UiFileNode,
   UiFolderNode,
   UiNode,
 } from "@powerhousedao/design-system";
@@ -34,7 +35,7 @@ export function FolderView(props: IFolderViewProps) {
     .filter((node) => node.kind === FOLDER)
     .sort(sortUiNodesByName);
 
-  const fileNodes = node.children
+  const fileNodes: UiFileNode[] = node.children
     .filter((node) => node.kind === FILE)
     .sort(sortUiNodesByName);
 

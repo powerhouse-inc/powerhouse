@@ -7,16 +7,14 @@ export type BreadcrumbNode = {
   name: string;
 };
 
-export type BreadcrumbsProps = {
+export type BreadcrumbsProps<T extends boolean = boolean> = {
   breadcrumbs: BreadcrumbNode[];
   onBreadcrumbSelected: (node: BreadcrumbNode) => void;
-} & (
-  | {
-      createEnabled: true;
-      onCreate: (name: string, parentFolder: string | undefined) => void;
-    }
-  | { createEnabled: false }
-);
+  createEnabled?: T;
+  onCreate: T extends true
+    ? (name: string, parentFolder: string | undefined) => void
+    : never;
+};
 
 export function Breadcrumbs(props: BreadcrumbsProps) {
   const { breadcrumbs, createEnabled, onBreadcrumbSelected } = props;
