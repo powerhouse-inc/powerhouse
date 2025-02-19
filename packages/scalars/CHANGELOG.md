@@ -1,3 +1,15 @@
+## 1.24.0 (2025-02-19)
+
+### 🚀 Features
+
+- **common:** improved drive story ([ec96a6b7](https://github.com/powerhouse-inc/powerhouse/commit/ec96a6b7))
+- **common:** document drive generic layout ([e7518094](https://github.com/powerhouse-inc/powerhouse/commit/e7518094))
+- **common:** initial commit ([f561b8c9](https://github.com/powerhouse-inc/powerhouse/commit/f561b8c9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.23.0 (2025-02-14)
 
 ### 🚀 Features

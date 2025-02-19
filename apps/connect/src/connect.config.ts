@@ -41,6 +41,8 @@ const PH_CONNECT_SENTRY_TRACING_ENABLED =
     import.meta.env.PH_CONNECT_SENTRY_TRACING_ENABLED || 'false';
 
 const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
+const PH_CONNECT_CLI_VERSION =
+    import.meta.env.PH_CONNECT_CLI_VERSION || undefined;
 
 export default {
     appVersion: APP_VERSION,
@@ -76,4 +78,5 @@ export default {
         },
     },
     gaTrackingId: GA_TRACKING_ID,
+    phCliVersion: PH_CONNECT_CLI_VERSION,
 };

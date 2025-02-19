@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node", "vitest/globals", "@types/wicg-file-system-access"],
+    "declaration": false,
+    "outDir": "./dist",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "baseUrl": "./",
+    "allowJs": true,
+    "paths": {
+      "@editors/utils": ["editors/utils/"]
+    }
+  },
+  "include": [
+    "./index.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "*.config.js",
+    "*.config.ts",
+    ".storybook/**/*"
+  ],
+  "exclude": ["dist/", "node_modules"]
+}

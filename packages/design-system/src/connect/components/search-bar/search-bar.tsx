@@ -5,6 +5,7 @@ import {
   DropdownMenuTrigger,
   Icon,
 } from "@/powerhouse";
+import { cn } from "@/scalars";
 import { ChangeEvent, useMemo } from "react";
 import { twMerge } from "tailwind-merge";
 import { FilterItem, FilterItemType } from "./filter-item";
@@ -17,6 +18,7 @@ export interface ConnectSearchBarProps {
   filterItems?: Array<FilterItemType>;
   selectedFilter?: string;
   onFilterSelect?: (filterId: string) => void;
+  className?: string;
 }
 
 export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
@@ -28,6 +30,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
     filterItems,
     selectedFilter,
     onFilterSelect = () => {},
+    className,
   } = props;
 
   const items = useMemo(
@@ -58,7 +61,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
   }
 
   return (
-    <div className="flex items-center">
+    <div className={cn("flex items-center", className)}>
       <Icon className="mr-3" name="Search" />
       <input
         className={twMerge(

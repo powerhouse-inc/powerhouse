@@ -366,9 +366,18 @@ export type EditorContext = {
 
 export type ActionErrorCallback = (error: unknown) => void;
 
-export type EditorProps<TGlobalState, TLocalState, TAction = Action> = {
+export type EditorDispatch<TAction extends Action | CustomAction = Action> = (
+  action: TAction,
+  onErrorCallback?: ActionErrorCallback,
+) => void;
+
+export type EditorProps<
+  TGlobalState,
+  TLocalState,
+  TAction extends CustomAction | Action = Action,
+> = {
   document: BaseDocument<TGlobalState, TLocalState, TAction>;
-  dispatch: (action: TAction, onErrorCallback?: ActionErrorCallback) => void;
+  dispatch: EditorDispatch<TAction>;
   context: EditorContext;
   error?: unknown;
   documentNodeName?: string;
@@ -377,7 +386,7 @@ export type EditorProps<TGlobalState, TLocalState, TAction = Action> = {
 export type EditorModule<
   TGlobalState = unknown,
   TLocalState = unknown,
-  TAction = Action,
+  TAction extends CustomAction | Action = Action,
   TCustomProps = unknown,
   TEditorConfig extends Record<string, unknown> = Record<string, unknown>,
 > = {

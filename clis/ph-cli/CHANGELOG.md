@@ -1,3 +1,56 @@
+## 0.33.2-dev.0 (2025-02-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.202
+
+## 0.33.1 (2025-02-19)
+
+### 🚀 Features
+
+- **common:** improved drive story ([ec96a6b7](https://github.com/powerhouse-inc/powerhouse/commit/ec96a6b7))
+- **common:** document drive generic layout ([e7518094](https://github.com/powerhouse-inc/powerhouse/commit/e7518094))
+- **common:** initial commit ([f561b8c9](https://github.com/powerhouse-inc/powerhouse/commit/f561b8c9))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model-libs to 1.133.0
+- Updated document-drive to 1.19.1
+- Updated @powerhousedao/design-system to 1.28.0
+- Updated @powerhousedao/reactor-local to 1.20.2
+- Updated @powerhousedao/codegen to 0.36.1
+- Updated @powerhousedao/scalars to 1.24.0
+- Updated @powerhousedao/connect to 1.0.6
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 0.33.1-dev.0 (2025-02-18)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.201
+
+## 0.33.0 (2025-02-18)
+
+### 🚀 Features
+
+- **ph-cli:** load ph-cli version and pass to connect ([c24232b2](https://github.com/powerhouse-inc/powerhouse/commit/c24232b2))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model-libs to 1.132.1
+- Updated document-drive to 1.19.0
+- Updated @powerhousedao/design-system to 1.27.0
+- Updated @powerhousedao/reactor-local to 1.20.1
+- Updated @powerhousedao/codegen to 0.36.0
+- Updated @powerhousedao/connect to 1.0.5
+
+### ❤️ Thank You
+
+- Frank
+
 ## 0.32.1-dev.0 (2025-02-14)
 
 ### 🧱 Updated Dependencies

@@ -169,11 +169,14 @@ export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({
     */
   const setSelectedNode = useCallback(
     (uiNode: UiNode | null) => {
-      if (!uiNode) return;
-
       _setSelectedNode(uiNode);
       setSelectedDriveNode(getSelectedDriveNode(uiNode, driveNodes));
       setSelectedParentNode(getSelectedParentNode(uiNode, driveNodes));
+
+      if (!uiNode) {
+        setSelectedNodePath([]);
+        return;
+      }
 
       if (uiNode.kind === DRIVE) {
         setSelectedNodePath([uiNode]);

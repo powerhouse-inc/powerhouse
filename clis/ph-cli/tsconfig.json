@@ -1,6 +1,13 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+  },
+  "include": ["src/**/*", "*.config.ts", "package.json"]
     "outDir": "./dist"
   },
   "references": [

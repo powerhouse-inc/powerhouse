@@ -15,3 +15,10 @@ export const Default: Story = {
     packageJson: mockPackageJson,
   },
 };
+
+export const WithPhCliVersion: Story = {
+  args: {
+    packageJson: mockPackageJson,
+    phCliVersion: "1.0.0",
+  },
+};

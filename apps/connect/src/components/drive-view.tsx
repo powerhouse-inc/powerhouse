@@ -1,7 +1,8 @@
 import { useConnectConfig } from '#hooks/useConnectConfig';
 import { useUiNodes } from '#hooks/useUiNodes';
-import { Breadcrumbs } from '@powerhousedao/design-system';
+import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import { DocumentModelModule } from 'document-model';
+import { useCallback } from 'react';
 import Button from './button';
 import FolderView from './folder-view';
 import { useModal } from './modal';
@@ -24,21 +25,50 @@ export function DriveView() {
         selectedDriveNode,
         selectedParentNode,
         setSelectedNode,
+        selectedNodePath,
+        getNodeById,
+        addFolder,
     } = uiNodes;
 
-    function createDocument(documentModel: DocumentModelModule) {
-        if (!selectedDriveNode) return;
+    const createFolder = useCallback(
+        (name: string, parentFolder: string | undefined) => {
+            if (!selectedDriveNode) {
+                return;
+            }
+            addFolder(selectedDriveNode.id, name, parentFolder).catch(
+                console.error,
+            );
+        },
+        [selectedDriveNode, addFolder],
+    );
 
-        showModal('createDocument', {
-            documentModel,
-            selectedParentNode,
-            setSelectedNode,
-        });
-    }
+    const { breadcrumbs, onBreadcrumbSelected } = useBreadcrumbs({
+        selectedNodePath,
+        getNodeById,
+        setSelectedNode,
+    });
+
+    const createDocument = useCallback(
+        (documentModel: DocumentModelModule) => {
+            if (!selectedDriveNode) return;
+
+            showModal('createDocument', {
+                documentModel,
+                selectedParentNode,
+                setSelectedNode,
+            });
+        },
+        [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
+    );
 
     return (
         <div className="grow overflow-auto rounded-2xl bg-gray-50 p-2">
-            <Breadcrumbs {...uiNodes} />
+            <Breadcrumbs
+                breadcrumbs={breadcrumbs}
+                onBreadcrumbSelected={onBreadcrumbSelected}
+                createEnabled={isAllowedToCreateDocuments}
+                onCreate={createFolder}
+            />
             {connectConfig.content.showSearchBar && <SearchBar />}
             <div className="px-4">
                 <div className="mb-5">

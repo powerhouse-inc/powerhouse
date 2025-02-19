@@ -1,8 +1,13 @@
 import { useLogin } from '#hooks/useLogin';
 import { logger } from '#services/logger';
 import { sidebarCollapsedAtom } from '#store/index';
-import { ConnectSidebar, Icon } from '@powerhousedao/design-system';
+import {
+  ConnectSidebar,
+  Icon,
+  useUiNodesContext,
+} from '@powerhousedao/design-system';
 import { useAtom } from 'jotai';
+import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import DriveContainer from './drive-container';
@@ -12,6 +17,7 @@ export default function Sidebar() {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
     const { showModal } = useModal();
     const navigate = useNavigate();
+    const { setSelectedNode } = useUiNodesContext();
 
     const { user, openRenown } = useLogin();
 
@@ -25,9 +31,18 @@ export default function Sidebar() {
         showModal('settingsModal', { onRefresh: () => navigate(0) });
     };
 
+    const onRootClick = useCallback(() => {
+        setSelectedNode(null);
+        navigate('/');
+    }, [navigate, setSelectedNode]);
+
     const headerContent = (
         <div className="flex h-full items-center">
-            <Icon name="Connect" className="!h-[30px] !w-[100px]" />
+            <Icon
+                name="Connect"
+                className="!h-[30px] !w-[100px] cursor-pointer"
+                onClick={onRootClick}
+            />
             {connectDebug && (
                 <button
                     id="connect-debug-button"

@@ -1,6 +1,6 @@
 import { useDocumentReducer } from "#editor-utils/reducer";
 import { useArgs, useChannel } from "@storybook/preview-api";
-import { Meta, StoryObj } from "@storybook/react";
+import { Decorator, Meta, StoryObj } from "@storybook/react";
 import {
   Action,
   ActionContext,
@@ -14,6 +14,7 @@ import {
 } from "document-model";
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
+import { useDocumentReducer } from "../reducer";
 
 type EditorStoryArgs<
   TGlobalState,
@@ -69,6 +70,7 @@ export function createDocumentStory<
     PartialState<TLocalState>
   >,
   additionalStoryArgs?: EditorStoryArgs<TGlobalState, TLocalState, TAction>,
+  decorators?: Decorator<EditorStoryProps<S, A, L>>[],
 ): {
   meta: Meta<typeof Editor>;
   CreateDocumentStory: DocumentStory<TGlobalState, TLocalState, TAction>;
@@ -103,6 +105,7 @@ export function createDocumentStory<
 
         return <Story emit={emit} />;
       },
+      ...(decorators ?? []),
     ],
     render: function Render(args) {
       const [error, setError] = useState<unknown>();
