@@ -10,6 +10,11 @@
     "./document-model-editor": "./dist/document-model-editor/index.js",
     "./editor-utils": "./dist/editor-utils/index.js"
   },
+  "imports": {
+    "#editor-utils/*": "./dist/editor-utils/*.js",
+    "#document-model-editor/*": "./dist/document-model-editor/*.js",
+    "#connect-studio/*": "./dist/connect-studio/*.js"
+  },
   "scripts": {
     "build": "tsc --build",
     "storybook": "storybook dev -p 6006",
@@ -26,12 +31,9 @@
     "@storybook/builder-vite": "^8.5.8",
     "@types/react": "^18.3.18",
     "@vitejs/plugin-basic-ssl": "^1.2.0",
-    "browserify-fs": "^1.0.0",
     "esbuild": "^0.24.0",
-    "path-browserify": "^1.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "stream-browserify": "^3.0.0",
     "vite": "^6.1.0",
     "vite-envs": "^4.4.5",
     "vite-plugin-node-polyfills": "^0.23.0"
@@ -87,10 +89,5 @@
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
-  },
-  "imports": {
-    "#editor-utils/*": "./dist/editor-utils/*.js",
-    "#document-model-editor/*": "./dist/document-model-editor/*.js",
-    "#connect-studio/*": "./dist/connect-studio/*.js"
   }
 }

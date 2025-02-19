@@ -37,11 +37,7 @@ const main = async () => {
     const redisCache = new RedisCache(redis);
     const storage = new PrismaStorage(prismaClient);
     const driveServer = new DocumentDriveServer(
-      [documentModelDocumentModelModule] as DocumentModelModule<
-        any,
-        any,
-        any
-      >[],
+      [documentModelDocumentModelModule] as DocumentModelModule[],
       storage,
       redisCache,
     );

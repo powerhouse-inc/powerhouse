@@ -45,7 +45,7 @@ export function Operations({
   const addOperationFormId = useId();
   const allOperationNames = allOperations
     .map((o) => o.name)
-    .filter((n): n is string => !!n);
+    .filter((n) => n !== null);
 
   const onAddOperationAndInitialSchema = useCallback(
     async (moduleId: string, name: string) => {

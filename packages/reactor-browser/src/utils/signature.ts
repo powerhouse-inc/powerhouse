@@ -14,7 +14,7 @@ export async function signOperation(
   operation: Operation,
   sign: (data: Uint8Array) => Promise<Uint8Array>,
   documentId: string,
-  document: BaseDocument<any, any>,
+  document: BaseDocument,
   reducer?: Reducer<any, any, Action>,
   user?: User,
 ): Promise<Operation> {

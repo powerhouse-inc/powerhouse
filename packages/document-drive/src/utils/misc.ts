@@ -14,7 +14,7 @@ export const runAsap = RunAsap.runAsap;
 export const runAsapAsync = RunAsap.runAsapAsync;
 
 export function isDocumentDrive(
-  document: BaseDocument<any, any>,
+  document: BaseDocument,
 ): document is DocumentDriveDocument {
   return document.documentType === driveDocumentType;
 }

@@ -60,7 +60,7 @@ function makeSharedSchemaSdl(
     ].filter(Boolean);
     const asts = sdls
       .map((sdl) => (sdl ? safeParseSdl(sdl) : null))
-      .filter((ast): ast is DocumentNode => ast !== null);
+      .filter((ast) => ast !== null);
     const documentNode = makeSafeDocumentNode(existingSchema, asts);
     const schemaSdl = printSchema(buildASTSchema(documentNode));
     return schemaSdl;

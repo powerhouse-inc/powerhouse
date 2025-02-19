@@ -33,7 +33,7 @@ export function OperationErrorForm({
   const isEdit = !!error;
   const allOperationErrorNames = operation.errors
     .map((o) => o.name)
-    .filter((n): n is string => !!n);
+    .filter((n) => n !== null);
 
   const handleSubmit = useCallback(
     (name: string) => {

@@ -57,7 +57,7 @@ export function ensureValidStateSchemaName(
         doc,
         `${sentenceCase(scope)} state schema must be named ${requiredTypeName}`,
       ),
-    ].filter((d): d is Diagnostic => !!d);
+    ].filter((d) => d !== undefined);
   }
 
   return [];
@@ -82,7 +82,7 @@ export function ensureValidOperationSchemaInputName(
         doc,
         `Operation schema must contain an input type named ${requiredTypeName}`,
       ),
-    ].filter((d): d is Diagnostic => !!d);
+    ].filter((d) => d !== undefined);
   }
 
   return [];

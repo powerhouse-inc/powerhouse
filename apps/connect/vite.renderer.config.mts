@@ -1,3 +1,7 @@
+import {
+    viteConnectDevStudioPlugin,
+    viteLoadExternalPackages,
+} from '@powerhousedao/builder-tools/connect-studio';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
@@ -7,10 +11,6 @@ import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import svgr from 'vite-plugin-svgr';
-import {
-    viteConnectDevStudioPlugin,
-    viteLoadExternalPackages,
-} from '../../packages/builder-tools/dist/connect-studio/index.js';
 import clientConfig from './client.config';
 import pkg from './package.json';
 
