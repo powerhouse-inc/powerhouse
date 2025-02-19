@@ -10,7 +10,7 @@ import {
   ReactionType,
   RemoveEmojiReactionInput,
   Sender,
-} from "./types";
+} from "./types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;

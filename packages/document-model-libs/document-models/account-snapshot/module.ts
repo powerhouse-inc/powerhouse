@@ -5,24 +5,30 @@
 
 import { DocumentModelModule } from "document-model";
 import { AccountSnapshotAction } from "./gen/actions.js";
-import { actions } from "./gen/index.js";
+import {
+  documentModelName,
+  documentType,
+  fileExtension,
+} from "./gen/constants.js";
+import { actions, documentModelState } from "./gen/index.js";
 import { reducer } from "./gen/reducer.js";
 import {
-  AccountSnapshotState,
   AccountSnapshotLocalState,
+  AccountSnapshotState,
 } from "./gen/types.js";
-import * as customUtils from "./src/utils.js";
 import * as genUtils from "./gen/utils.js";
-import { fileExtension } from "./gen/constants.js";
-import { initialGlobalState } from "./gen/utils.js";
+import * as customUtils from "./src/utils.js";
 
-export const documentModelModule: DocumentModelModule<
+export const accountSnapshotDocumentModelModule: DocumentModelModule<
   AccountSnapshotState,
   AccountSnapshotLocalState,
   AccountSnapshotAction
 > = {
+  documentType,
+  documentModelName,
+  fileExtension,
+  documentModelState,
   reducer,
   actions,
-  initialGlobalState,
-  utils: { ...genUtils, ...customUtils, fileExtension },
+  utils: { ...genUtils, ...customUtils },
 };

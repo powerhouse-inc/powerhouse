@@ -1,9 +1,10 @@
 import { DocumentModelState } from "document-model";
+import { documentModelName, documentType, fileExtension } from "./constants.js";
 
-export const documentModel: DocumentModelState = {
-  id: "powerhouse/account-snapshot",
-  name: "AccountSnapshot",
-  extension: "phas",
+export const documentModelState: DocumentModelState = {
+  id: documentType,
+  name: documentModelName,
+  extension: fileExtension,
   description: "",
   author: {
     name: "powerhouse",

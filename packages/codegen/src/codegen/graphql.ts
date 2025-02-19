@@ -32,7 +32,7 @@ export const tsConfig: TypeScriptPluginConfig = {
 export type ValidationSchemaConfigType = Parameters<typeof plugin>[2];
 
 export const validationConfig: ValidationSchemaConfigType = {
-  importFrom: `./types`,
+  importFrom: `./types.js`,
   schema: "zod",
   ...tsConfig,
   scalarSchemas: {
