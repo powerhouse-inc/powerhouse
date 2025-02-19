@@ -67,6 +67,19 @@ export interface SidebarProps {
    */
   extraFooterContent?: React.ReactNode;
   /**
+   * The initial width of the sidebar.
+   * @default 300
+   */
+  initialWidth?: number;
+  /**
+   * The maximum width of the sidebar.
+   */
+  maxWidth?: number;
+  /**
+   * A callback function that is called when the width of the sidebar changes.
+   */
+  onWidthChange?: (width: number) => void;
+  /**
    * Optional className for the sidebar container
    */
   className?: string;
@@ -85,6 +98,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   showSearchBar = true,
   showStatusFilter = false,
   extraFooterContent,
+  initialWidth = 300,
+  maxWidth,
+  onWidthChange,
   className,
 }) => {
   const {
@@ -94,8 +110,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     isSidebarOpen,
     handleToggleSidebar,
   } = useSidebarResize({
-    defaultWidth: 300,
+    defaultWidth: initialWidth,
     minWidth: 220,
+    maxWidth,
+    onWidthChange,
   });
 
   const {
