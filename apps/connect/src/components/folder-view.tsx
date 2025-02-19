@@ -47,6 +47,10 @@ export function FolderView(props: TUiNodes) {
                             {...props}
                             key={folderNode.id}
                             uiNode={folderNode}
+                            onSelectNode={props.setSelectedNode}
+                            isAllowedToCreateDocuments={
+                                props.isAllowedToCreateDocuments ?? false
+                            }
                         />
                     ))
                 ) : (

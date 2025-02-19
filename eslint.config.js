@@ -19,7 +19,7 @@ const reactRuleOverrides = {
   },
   warn: {
     "react/no-unused-prop-types": "warn",
-    "react/jsx-max-depth": "warn",
+    "react/jsx-max-depth": ["warn", { max: 4 }],
     "react/no-array-index-key": "warn",
     "react/jsx-no-bind": [
       "warn",
