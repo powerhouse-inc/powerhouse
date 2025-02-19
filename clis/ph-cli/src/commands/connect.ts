@@ -1,7 +1,7 @@
 import {
   ConnectStudioOptions,
   startConnectStudio,
-} from "../../../../packages/builder-tools/connect-studio/index.js";
+} from "@powerhousedao/builder-tools/connect-studio";
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import { Command } from "commander";
 

@@ -93,7 +93,7 @@ const baseDocumentModels = [
   driveDocumentModelModule,
 ] as DocumentModelModule<any, any>[];
 
-const startServer = async (
+export const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   process.setMaxListeners(0);
@@ -299,5 +299,3 @@ function joinDocumentModels(
       [],
     );
 }
-
-export { startServer };

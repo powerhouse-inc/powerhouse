@@ -1,6 +1,6 @@
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { BaseDocument, OperationScope } from "document-model";
 import { ProcessorOptions, ProcessorSetupArgs } from "#types.js";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { OperationScope, PHDocument } from "document-model";
 import { Processor } from "./processor.js";
 
 export * from "@powerhousedao/analytics-engine-core";

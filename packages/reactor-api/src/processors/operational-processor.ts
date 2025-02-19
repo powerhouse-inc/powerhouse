@@ -1,5 +1,5 @@
 import { Db, ProcessorOptions, ProcessorSetupArgs } from "#types.js";
-import { BaseDocument, OperationScope } from "document-model";
+import { OperationScope, PHDocument } from "document-model";
 import { Processor } from "./processor.js";
 
 export abstract class OperationalProcessor<

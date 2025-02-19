@@ -32,9 +32,6 @@
       "path": "../../packages/reactor-api"
     },
     {
-      "path": "../../packages/reactor-local"
-    },
-    {
       "path": "../../packages/builder-tools"
     }
   ]

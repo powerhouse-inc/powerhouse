@@ -1,11 +1,9 @@
 {
   "compilerOptions": {
-    "outDir": "./dist",
     // required configs for monorepo
     "composite": true,
     "declaration": true,
     "declarationMap": true,
-    "noEmitOnError": true,
     "incremental": true,
     "skipLibCheck": true,
     // required configs for esm interoperability

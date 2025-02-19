@@ -104,6 +104,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "tailwindcss": "^3.4.16",
+    "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@semantic-release/changelog": "^6.0.3",

@@ -8,7 +8,13 @@
   "scripts": {
     "start": "vite-node src/index.ts"
   },
-  "exports": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist"
+  ],
   "author": "",
   "license": "ISC",
   "description": "",
@@ -20,6 +26,7 @@
     "@powerhousedao/scalars": "workspace:*",
     "change-case": "^5.4.4",
     "commander": "^12.1.0",
+    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
@@ -30,8 +37,7 @@
     "nanoevents": "^9.0.0",
     "sanitize-filename": "^1.6.3",
     "uuid": "^11.0.2",
-    "document-drive": "workspace:*"
-
+    "vite": "^6.1.0"
   },
   "devDependencies": {
     "@powerhousedao/analytics-engine-graphql": "^0.2.2",

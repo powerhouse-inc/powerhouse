@@ -2,7 +2,7 @@ import {
   IDocumentDriveServer,
   InternalTransmitterUpdate,
 } from "document-drive";
-import { BaseDocument, OperationScope } from "document-model";
+import { OperationScope, PHDocument } from "document-model";
 import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "../types.js";
 
 export type ProcessorUpdate<
