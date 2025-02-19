@@ -2,8 +2,8 @@ import { TimePickerFieldProps } from "./time-picker-field";
 import {
   isFormatTimeAllowed,
   TIME_PATTERNS,
-  convert12hTo24h,
   getTime,
+  convert24hTo12h,
 } from "./utils";
 
 export const validateTimePicker =
@@ -15,7 +15,7 @@ export const validateTimePicker =
     if (value === undefined) {
       return true;
     }
-
+    // Validate the format of the value
     const time = getTime((value as string).trim());
     if (!timeFormat) {
       const is24HourValid = TIME_PATTERNS.HOURS_24.test(time);
@@ -41,12 +41,13 @@ export const validateTimePicker =
 
     // Validar formato 12-hour (hh:mm a)
     if (timeFormat === "hh:mm a") {
-      const time12 = convert12hTo24h(time);
+      const parse12HorsFormat = convert24hTo12h(time);
+
       // Additional validation for real hours/minutes
-      const [timePart] = time12.split(" ");
+      const [timePart] = parse12HorsFormat.split(" ");
       const [hours, minutes] = timePart.split(":").map(Number);
       if (hours > 12 || hours < 1 || minutes > 59 || minutes < 0) {
-        return "Please enter a valid time in 12-hour";
+        return "Please enter a valid time in 12-hour format";
       }
     }
     return true;

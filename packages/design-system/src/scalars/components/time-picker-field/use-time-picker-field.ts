@@ -81,7 +81,8 @@ export const useTimePickerField = ({
         onBlur?.(e);
         return;
       }
-      const inValid = formatInputsToValueFormat("99", "99", "±09:09");
+      // Create an empty but valid time value that matches the format expected by the value prop
+      const inValid = formatInputsToValueFormat("", "", "±00:00");
       setInputValue(input);
       onChange?.(createChangeEvent(inValid));
       onBlur?.(e);
@@ -91,7 +92,7 @@ export const useTimePickerField = ({
       input,
       is12HourFormat,
       dateIntervals,
-      selectedPeriod,
+      // selectedPeriod,
     );
     setInputValue(validDisplay);
 
@@ -140,14 +141,12 @@ export const useTimePickerField = ({
       selectedMinute,
       offsetUTC,
     );
-    // Value to display in the input
-    const validDisplay = formatInputToDisplayValid(
-      datetime,
-      is12HourFormat,
-      dateIntervals,
-      selectedPeriod,
-    );
-    setInputValue(validDisplay);
+    // Value to display in the input get values from the popover interface
+    const valueToDisplay = is12HourFormat
+      ? `${selectedHour}:${selectedMinute} ${selectedPeriod}`
+      : `${selectedHour}:${selectedMinute}`;
+
+    setInputValue(valueToDisplay);
     onChange?.(createChangeEvent(datetime));
   };
 
@@ -169,6 +168,13 @@ export const useTimePickerField = ({
         },
       ]
     : options;
+
+  console.log("states", {
+    selectedHour,
+    selectedMinute,
+    selectedPeriod,
+    inputValue,
+  });
 
   return {
     selectedHour,
