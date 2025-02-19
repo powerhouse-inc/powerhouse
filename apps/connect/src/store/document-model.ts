@@ -141,7 +141,7 @@ export const useFilteredDocumentModels = () => {
     }
 
     const filteredDocumentModels = documentModels.filter(
-        model => model.documentModelName !== 'powerhouse/document-drive',
+        model => model.documentType !== 'powerhouse/document-drive',
     );
 
     if (enabledEditors === '*') {
@@ -154,13 +154,13 @@ export const useFilteredDocumentModels = () => {
 
     if (disabledEditors) {
         return filteredDocumentModels.filter(
-            d => !disabledEditors.includes(d.documentModelName),
+            d => !disabledEditors.includes(d.documentType),
         );
     }
 
     if (enabledEditors) {
         return filteredDocumentModels.filter(d =>
-            enabledEditors.includes(d.documentModelName),
+            enabledEditors.includes(d.documentType),
         );
     }
 
