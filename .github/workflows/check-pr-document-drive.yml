@@ -38,27 +38,27 @@ jobs:
 
   test:
     name: Test
-    runs-on: ubuntu-latest
-    container: node:22
+    runs-on: ubuntu-24.04
+    container: node:20
 
     services:
       postgres:
-        image: postgres
-        # Provide the password for postgres
+        # same image as in document-drive/docker-compose.test.yml
+        image: postgres:16.4-alpine
         env:
           POSTGRES_PASSWORD: postgres
-        # Set health checks to wait until postgres has started
+        # This sets health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
-          # Maps tcp port 5432 on service container to the host
           - 5432:5432
 
       redis:
-        image: redis
+        # same image as in root docker-compose.yml
+        image: redis:7.2.1
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -68,7 +68,8 @@ jobs:
           - 6379:6379
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install PNPM
         uses: pnpm/action-setup@v4
@@ -76,12 +77,17 @@ jobs:
           version: 9
           run_install: false
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: pnpm install
 
-      - name: Prisma
-        run: pnpm prisma generate && pnpm prisma db push
+      - name: Generate Prisma client
+        run: pnpm prisma generate
         working-directory: packages/document-drive
 
-      - name: Test
+      - name: Push database schema
+        run: pnpm prisma db push
+        working-directory: packages/document-drive
+
+      - name: Run tests
         run: pnpm nx run document-drive:test
+

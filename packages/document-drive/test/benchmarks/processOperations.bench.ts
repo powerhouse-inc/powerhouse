@@ -3,9 +3,9 @@ import { DocumentModel } from "document-model/document";
 import { bench, BenchOptions, describe, vi } from "vitest";
 import {
   DefaultRemoteDriveInput,
-  DocumentDriveServer,
   DocumentDriveServerOptions,
   generateUUID,
+  ReactorBuilder,
   RunAsap,
 } from "../../src";
 import { BrowserStorage } from "../../src/storage/browser";
@@ -126,16 +126,13 @@ describe("Process Operations", () => {
     callback: () => void,
     onError: (error: Error) => void,
   ) {
-    const server = new DocumentDriveServer(
-      documentModels,
-      new BrowserStorage(generateUUID()),
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(new BrowserStorage(generateUUID()))
+      .withOptions({
         defaultDrives: { remoteDrives: defaultRemoteDrives },
         taskQueueMethod: runOnMacroTask,
-      },
-    );
+      })
+      .build();
     let strands = 0;
     server.on("syncStatus", (driveId, status, error, object) => {
       if (status === "SUCCESS") {

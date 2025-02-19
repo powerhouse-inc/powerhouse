@@ -3,7 +3,8 @@ import { actions } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import { DocumentModel } from "document-model/document";
 import { beforeAll, describe, it } from "vitest";
-import { DocumentDriveServer } from "../../src";
+import type { IDocumentDriveServer } from "../../src";
+import { ReactorBuilder } from "../../src";
 import { PrismaStorage } from "../../src/storage/prisma";
 
 const prismaClient = new PrismaClient();
@@ -14,10 +15,10 @@ describe("Document operations", () => {
   ] as DocumentModel[];
 
   const storage = new PrismaStorage(prismaClient);
-  let server: DocumentDriveServer;
+  let server: IDocumentDriveServer;
 
   beforeAll(async () => {
-    server = new DocumentDriveServer(documentModels, storage);
+    server = new ReactorBuilder(documentModels).withStorage(storage).build();
     await server.initialize();
     if ((await server.getDrives()).includes("test")) {
       await server.deleteDrive("test");
