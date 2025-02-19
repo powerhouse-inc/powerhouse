@@ -72,7 +72,6 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",

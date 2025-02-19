@@ -71,6 +71,7 @@
         "@electron-forge/publisher-electron-release-server": "^6.2.1",
         "@electron-forge/publisher-github": "^7.2.0",
         "@playwright/test": "^1.41.2",
+        "@powerhousedao/common": "workspace:*",
         "@powerhousedao/config": "workspace:*",
         "@powerhousedao/design-system": "workspace:*",
         "@powerhousedao/scalars": "workspace:*",
