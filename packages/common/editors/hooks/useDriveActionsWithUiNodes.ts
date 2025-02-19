@@ -13,12 +13,8 @@ import {
   Node,
 } from "document-models/document-drive";
 import { useMemo } from "react";
-import {
-  DriveActionsContext,
-  IDriveActions,
-  useDriveActions,
-} from "./useDriveActions";
-import { useDriveContext } from "./useDriveContext";
+import { IDriveActions, useDriveActions } from "./useDriveActions";
+import { IDriveContext, useDriveContext } from "./useDriveContext";
 
 function toNode(uiNode: UiNode): Node {
   if (uiNode.kind === "DRIVE") {
@@ -91,25 +87,18 @@ export function useDriveActionsWithUiNodes(
 
   const _driveContext = useDriveContext();
 
-  const driveContext: DriveActionsContext = useMemo(
+  const driveContext: IDriveContext = useMemo(
     () => ({
       ..._driveContext,
-      document,
       selectedNode: selectedNode,
       onSelectNode: (node: Node) => {
         _driveContext.selectNode(node);
         setSelectedNode(getNodeById(node.id));
       },
     }),
-    [
-      selectedNode,
-      selectedDriveNode?.driveId,
-      setSelectedNode,
-      getNodeById,
-      document,
-    ],
+    [selectedNode, selectedDriveNode?.driveId, setSelectedNode, getNodeById],
   );
-  const driveActions = useDriveActions(dispatch, driveContext);
+  const driveActions = useDriveActions(document, dispatch, driveContext);
 
   const uiNodeActions = useMemo(
     () => createUiNodeAdapter(driveActions),

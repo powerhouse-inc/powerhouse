@@ -13,7 +13,7 @@ const entry: Record<string, string> = {
   index: "index.ts",
   documentModels: path.resolve(documentModelsDir, "index.ts"),
   editors: path.resolve(editorsDir, "index.ts"),
-  utils: "editors/utils/storybook.tsx",
+  storybook: "storybook.ts",
 };
 
 // add subpackage for each editor

@@ -13,22 +13,27 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/es/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "require": "./dist/cjs/index.js"
     },
     "./editors": {
       "types": "./dist/editors.d.ts",
       "import": "./dist/es/editors.js",
-      "require": "./dist/cjs/editors.cjs"
+      "require": "./dist/cjs/editors.js"
     },
     "./document-models": {
       "types": "./dist/documentModels.d.ts",
       "import": "./dist/es/documentModels.js",
-      "require": "./dist/cjs/documentModels.cjs"
+      "require": "./dist/cjs/documentModels.js"
     },
-    "./utils": {
-      "types": "./dist/utils.d.ts",
-      "import": "./dist/es/utils.js",
-      "require": "./dist/cjs/utils.js"
+    "./document-drive": {
+      "types": "./dist/document-models/document-drive/index.d.ts",
+      "import": "./dist/es/document-drive.js",
+      "require": "./dist/cjs/document-drive.js"
+    },
+    "./storybook": {
+      "types": "./dist/storybook.d.ts",
+      "import": "./dist/es/storybook.js",
+      "require": "./dist/cjs/storybook.js"
     }
   },
   "scripts": {

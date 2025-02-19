@@ -1,6 +1,7 @@
 import {
   Breadcrumbs,
   FILE,
+  useBreadcrumbs,
   useDrop,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
@@ -17,7 +18,6 @@ import { CreateDocument } from "./components/create-document";
 import FolderView from "./components/folder-view";
 import { DriveLayout } from "./components/layout";
 import { SearchBar } from "./components/search-bar";
-import { useBreadcrumbs } from "./hooks/useBreadcrumbs";
 
 export type IProps = EditorProps<
   DocumentDriveState,
