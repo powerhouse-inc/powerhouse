@@ -1,4 +1,4 @@
-import { Maybe } from "document-model/document-model";
+type Maybe<T> = T | null;
 
 export type Scalars = {
   ID: { input: string; output: string };
@@ -16,7 +16,7 @@ export type Cash = {
   currency: Scalars["String"]["output"];
   id: Scalars["ID"]["output"];
   spvId: Scalars["ID"]["output"];
-  type: AssetType | `${AssetType}`;
+  type: AssetType | AssetType;
 };
 export type FixedIncome = {
   CUSIP: Maybe<Scalars["String"]["output"]>;
@@ -35,5 +35,5 @@ export type FixedIncome = {
   salesProceeds: Scalars["Float"]["output"];
   spvId: Scalars["ID"]["output"];
   totalDiscount: Scalars["Float"]["output"];
-  type: AssetType | `${AssetType}`;
+  type: AssetType | AssetType;
 };

@@ -1,4 +1,4 @@
-import { atomWithStorage } from 'src/store/utils';
+import { atomWithStorage } from '#store/utils';
 import defaultConfig, {
     FEATURE_FLAG_KEY_STORAGE,
     FeatureFlag,

@@ -1,12 +1,12 @@
+import { TUiNodes } from '#hooks/useUiNodes';
+import { sortUiNodesByName } from '#utils/index';
 import {
-    FILE,
-    FOLDER,
-    FolderItem,
-    useDrop,
+  FILE,
+  FOLDER,
+  FolderItem,
+  useDrop,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import { TUiNodes } from 'src/hooks/useUiNodes';
-import { sortUiNodesByName } from 'src/utils';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content';
 import FileContentView from './file-content-view';

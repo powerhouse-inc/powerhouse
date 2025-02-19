@@ -1,41 +1,40 @@
-import type {
-  DocumentDriveAction,
+import {
+  Action,
+  ActionContext,
+  BaseState,
+  CreateChildDocumentInput,
+  DocumentModelModule,
+  Operation,
+  OperationScope,
+  PHDocument,
+  ReducerOptions,
+  Signal,
+} from "document-model";
+import { Unsubscribe } from "nanoevents";
+import { DocumentDriveAction } from "../drive-document-model/gen/actions.js";
+import {
   DocumentDriveDocument,
   DocumentDriveLocalState,
   DocumentDriveState,
   ListenerCallInfo,
   ListenerFilter,
   Trigger,
-} from "document-model-libs/document-drive";
-import type {
-  Action,
-  ActionContext,
-  BaseAction,
-  CreateChildDocumentInput,
-  Document,
-  DocumentModel,
-  Operation,
-  OperationScope,
-  ReducerOptions,
-  Signal,
-  State,
-} from "document-model/document";
-import { Unsubscribe } from "nanoevents";
-import { BaseDocumentDriveServer } from ".";
-import { IReadModeDriveServer } from "../read-mode/types";
-import { RunAsap } from "../utils";
-import { IDefaultDrivesManager } from "../utils/default-drives-manager";
-import { DriveInfo } from "../utils/graphql";
-import { OperationError, SynchronizationUnitNotFoundError } from "./error";
+} from "../drive-document-model/gen/types.js";
+import { IReadModeDriveServer } from "../read-mode/types.js";
+import { IDefaultDrivesManager } from "../utils/default-drives-manager.js";
+import { DriveInfo } from "../utils/graphql.js";
+import { RunAsap } from "../utils/run-asap.js";
+import { BaseDocumentDriveServer } from "./base.js";
+import { OperationError, SynchronizationUnitNotFoundError } from "./error.js";
 import {
-  IReceiver as IInternalListener,
   IInternalTransmitter,
-} from "./listener/transmitter/internal";
+  IReceiver,
+} from "./listener/transmitter/internal.js";
 import {
   ITransmitter,
   PullResponderTrigger,
   StrandUpdateSource,
-} from "./listener/transmitter/types";
+} from "./listener/transmitter/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -51,7 +50,7 @@ export type DocumentDriveServerMixin<I> = Mixin<
   I
 >;
 
-export type DriveInput = State<
+export type DriveInput = BaseState<
   Omit<DocumentDriveState, "__typename" | "id" | "nodes"> & { id?: string },
   DocumentDriveLocalState
 >;
@@ -66,18 +65,25 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
   accessLevel?: RemoteDriveAccessLevel;
 };
 
-export type CreateDocumentInput = CreateChildDocumentInput;
+export type CreateDocumentInput<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+> = CreateChildDocumentInput<TGlobalState, TLocalState>;
 
 export type SignalResult = {
   signal: Signal;
   result: unknown; // infer from return types on document-model
 };
 
-export type IOperationResult<T extends Document = Document> = {
+export type IOperationResult<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+  TOperation extends Operation<Action> = Operation,
+> = {
   status: UpdateStatus;
   error?: OperationError;
-  operations: Operation[];
-  document: T | undefined;
+  operations: TOperation[];
+  document: PHDocument<TGlobalState, TLocalState> | undefined;
   signals: SignalResult[];
 };
 
@@ -206,7 +212,13 @@ export interface DriveEvents {
     status: number,
     errorMessage: string,
   ) => void;
-  documentModels: (documentModels: DocumentModel[]) => void;
+  documentModels: (
+    documentModels: DocumentModelModule<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction
+    >[],
+  ) => void;
   driveAdded: (drive: DocumentDriveDocument) => void;
   driveDeleted: (driveId: string) => void;
 }
@@ -224,7 +236,7 @@ export type GetDocumentOptions = ReducerOptions & {
 
 export type AddOperationOptions = {
   forceSync?: boolean;
-  source: StrandUpdateSource;
+  source?: StrandUpdateSource;
 };
 
 export type DefaultRemoteDriveInput = {
@@ -334,7 +346,13 @@ type PublicPart<T> = Pick<T, PublicKeys<T>>;
 
 export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
-  setDocumentModels(models: DocumentModel[]): void;
+  setDocumentModels(
+    models: DocumentModelModule<
+      DocumentDriveState,
+      DocumentDriveLocalState,
+      DocumentDriveAction
+    >[],
+  ): void;
   getDrives(): Promise<string[]>;
   addDrive(input: DriveInput): Promise<DocumentDriveDocument>;
   addRemoteDrive(
@@ -350,11 +368,11 @@ export interface IBaseDocumentDriveServer {
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
 
   getDocuments(driveId: string): Promise<string[]>;
-  getDocument(
+  getDocument<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string,
     options?: GetDocumentOptions,
-  ): Promise<Document>;
+  ): Promise<PHDocument<TGlobalState, TLocalState>>;
 
   addOperation(
     driveId: string,
@@ -400,38 +418,38 @@ export interface IBaseDocumentDriveServer {
 
   addDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveAction | BaseAction>,
+    operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult>;
   addDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<DocumentDriveAction>[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult>;
 
   queueDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveAction | BaseAction>,
+    operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult>;
 
   queueDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<DocumentDriveAction>[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult<DocumentDriveState, DocumentDriveLocalState>>;
 
   queueDriveAction(
     driveId: string,
-    action: DocumentDriveAction | BaseAction,
+    action: DocumentDriveAction,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult>;
 
   queueDriveActions(
     driveId: string,
-    actions: Array<DocumentDriveAction | BaseAction>,
+    actions: DocumentDriveAction[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult>;
 
   addAction(
     driveId: string,
@@ -448,14 +466,14 @@ export interface IBaseDocumentDriveServer {
 
   addDriveAction(
     driveId: string,
-    action: DocumentDriveAction | BaseAction,
+    action: DocumentDriveAction,
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult>;
   addDriveActions(
     driveId: string,
-    actions: (DocumentDriveAction | BaseAction)[],
+    actions: DocumentDriveAction[],
     options?: AddOperationOptions,
-  ): Promise<IOperationResult<DocumentDriveDocument>>;
+  ): Promise<IOperationResult>;
 
   getSyncStatus(
     syncUnitId: string,
@@ -463,7 +481,7 @@ export interface IBaseDocumentDriveServer {
 
   addInternalListener(
     driveId: string,
-    receiver: IInternalListener,
+    receiver: IReceiver,
     options: {
       listenerId: string;
       label: string;
@@ -504,7 +522,7 @@ export interface IBaseDocumentDriveServer {
   ): Promise<OperationUpdate[]>;
 
   /** Internal methods **/
-  getDocumentModels(): DocumentModel[];
+  getDocumentModels(): DocumentModelModule[];
 
   getTransmitter(
     driveId: string,

@@ -1,11 +1,11 @@
+import { useRenown } from '#hooks/useRenown';
+import type { User } from '#services/renown/types';
 import {
     setUser as setSentryUser,
     type User as SentryUser,
 } from '@sentry/react';
 import { atom, useAtom } from 'jotai';
 import { useEffect } from 'react';
-import { useRenown } from 'src/hooks/useRenown';
-import type { User } from 'src/services/renown/types';
 
 let userInit = false;
 

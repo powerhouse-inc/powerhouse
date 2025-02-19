@@ -1,24 +1,19 @@
 import { z } from "zod";
+import { OperationScope } from "../types.js";
 import {
   Action,
   DocumentFile,
-  Load_State,
   LoadStateAction,
   LoadStateActionInput,
   LoadStateActionStateInput,
   Operation,
-  Prune,
   PruneAction,
   PruneActionInput,
-  Redo,
   RedoAction,
-  Set_Name,
   SetNameAction,
   SetNameOperation,
-  Undo,
   UndoAction,
-} from ".";
-import { OperationScope } from "../types";
+} from "./types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;
@@ -54,7 +49,7 @@ export function OperationScopeSchema(): z.ZodType<OperationScope> {
   return z.literal("global").or(z.literal("local"));
 }
 
-export function BaseActionSchema() {
+export function DocumentActionSchema() {
   return z.union([
     LoadStateActionSchema(),
     PruneActionSchema(),

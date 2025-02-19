@@ -5,7 +5,6 @@ import {
   generateImportScript,
   generateProcessor,
   generateSubgraph,
-  promptDirectories,
 } from "@powerhousedao/codegen";
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import { Command } from "commander";
@@ -58,11 +57,6 @@ export const generate: CommandActionType<
     importScript: !!options.importScript,
     importScriptName: options.importScript,
   };
-
-  if (config.interactive) {
-    const result = await promptDirectories(config);
-    Object.assign(config, result);
-  }
 
   if (command.editor) {
     if (!command.editorName) {

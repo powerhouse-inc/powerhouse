@@ -1,29 +1,28 @@
-import { createAction } from "../../../document/utils";
-
+import { createAction } from "../../../document/utils/base.js";
 import {
   AddOperationInput,
-  SetOperationNameInput,
-  SetOperationSchemaInput,
-  SetOperationDescriptionInput,
-  SetOperationTemplateInput,
-  SetOperationReducerInput,
-  MoveOperationInput,
   DeleteOperationInput,
+  MoveOperationInput,
   ReorderModuleOperationsInput,
+  SetOperationDescriptionInput,
+  SetOperationNameInput,
+  SetOperationReducerInput,
+  SetOperationSchemaInput,
   SetOperationScopeInput,
-} from "../types";
+  SetOperationTemplateInput,
+} from "../schema/types.js";
 import {
   AddOperationAction,
-  SetOperationNameAction,
-  SetOperationSchemaAction,
-  SetOperationDescriptionAction,
-  SetOperationTemplateAction,
-  SetOperationReducerAction,
-  MoveOperationAction,
   DeleteOperationAction,
+  MoveOperationAction,
   ReorderModuleOperationsAction,
+  SetOperationDescriptionAction,
+  SetOperationNameAction,
+  SetOperationReducerAction,
+  SetOperationSchemaAction,
   SetOperationScopeAction,
-} from "./actions";
+  SetOperationTemplateAction,
+} from "./actions.js";
 
 export const addOperation = (input: AddOperationInput) =>
   createAction<AddOperationAction>("ADD_OPERATION", { ...input });

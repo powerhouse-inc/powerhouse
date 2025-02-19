@@ -2,18 +2,18 @@ import {
   IDocumentDriveServer,
   InternalTransmitterUpdate,
 } from "document-drive";
-import { Document, OperationScope } from "document-model/document";
-import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "../types";
+import { OperationScope, PHDocument } from "document-model";
+import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "../types.js";
 
 export type ProcessorUpdate<
-  D extends Document = Document,
+  D extends PHDocument = PHDocument,
   S extends OperationScope = OperationScope,
 > = InternalTransmitterUpdate<D, S>;
 
 export abstract class Processor<
-  D extends Document = Document,
+  D extends PHDocument = PHDocument,
   S extends OperationScope = OperationScope,
-> implements IProcessor<D, S>
+> implements IProcessor
 {
   protected reactor: IDocumentDriveServer;
   protected processorOptions: ProcessorOptions = {

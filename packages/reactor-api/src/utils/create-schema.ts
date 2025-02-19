@@ -5,7 +5,7 @@ import { pascalCase } from "change-case";
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentNode } from "graphql";
 import gql from "graphql-tag";
-import { Context } from "src/subgraphs";
+import { Context } from "#subgraphs/types.js";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
@@ -25,10 +25,12 @@ export const getDocumentModelTypeDefs = (
 ) => {
   const documentModels = documentDriveServer.getDocumentModels();
   let dmSchema = "";
-  documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = pascalCase(documentModel.name.replaceAll("/", " "));
+  documentModels.forEach(({ documentModelState }) => {
+    const dmSchemaName = pascalCase(
+      documentModelState.name.replaceAll("/", " "),
+    );
     let tmpDmSchema = `
-          ${documentModel.specifications
+          ${documentModelState.specifications
             .map((specification) =>
               specification.state.global.schema
                 .replaceAll("scalar DateTime", "")
@@ -36,7 +38,7 @@ export const getDocumentModelTypeDefs = (
             )
             .join("\n")};
   
-          ${documentModel.specifications
+          ${documentModelState.specifications
             .map((specification) =>
               specification.state.local.schema
                 .replaceAll("scalar DateTime", "")

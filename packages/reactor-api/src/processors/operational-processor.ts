@@ -1,9 +1,9 @@
-import { Document, OperationScope } from "document-model/document";
-import { Db, ProcessorOptions, ProcessorSetupArgs } from "src/types";
-import { Processor } from "./processor";
+import { Db, ProcessorOptions, ProcessorSetupArgs } from "#types.js";
+import { OperationScope, PHDocument } from "document-model";
+import { Processor } from "./processor.js";
 
 export abstract class OperationalProcessor<
-  D extends Document = Document,
+  D extends PHDocument = PHDocument,
   S extends OperationScope = OperationScope,
 > extends Processor<D, S> {
   protected operationalStore: Db;

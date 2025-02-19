@@ -1,13 +1,12 @@
-import { pascalCase } from "change-case";
-import { DocumentModel } from "document-model";
-import { DocumentModelState } from "document-model/document-model";
-import { Logger, runner } from "hygen";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DocumentTypesMap } from ".";
-import { loadDocumentModel } from "./utils";
+import { Logger, runner } from "hygen";
+import { loadDocumentModel } from "./utils.js";
+import { DocumentTypesMap } from "./index.js";
+import { pascalCase } from "change-case";
+import { DocumentModelState } from "document-model";
 
 const require = createRequire(import.meta.url);
 
@@ -76,7 +75,7 @@ export async function generateAll(
 }
 
 export async function generateDocumentModel(
-  documentModel: DocumentModel.DocumentModelState,
+  documentModelState: DocumentModelState,
   dir: string,
   { watch = false, skipFormat = false } = {},
 ) {
@@ -86,7 +85,7 @@ export async function generateDocumentModel(
       "powerhouse",
       "generate-document-model",
       "--document-model",
-      JSON.stringify(documentModel),
+      JSON.stringify(documentModelState),
       "--root-dir",
       dir,
     ],
@@ -94,7 +93,9 @@ export async function generateDocumentModel(
   );
 
   const latestSpec =
-    documentModel.specifications[documentModel.specifications.length - 1];
+    documentModelState.specifications[
+      documentModelState.specifications.length - 1
+    ];
 
   // Generate the module-specific files for the document model logic
   for (const module of latestSpec.modules) {
@@ -103,7 +104,7 @@ export async function generateDocumentModel(
         "powerhouse",
         "generate-document-model-module",
         "--document-model",
-        JSON.stringify(documentModel),
+        JSON.stringify(documentModelState),
         "--root-dir",
         dir,
         "--module",

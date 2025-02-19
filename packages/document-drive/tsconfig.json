@@ -1,11 +1,18 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "emitDeclarationOnly": true,
     "outDir": "./dist",
+    "paths": {
+      "@powerhousedao/codegen": ["../codegen/index.ts"]
+    }
   },
-  "include": [
-    "src/**/*.ts",
-    "*.ts",
-  ]
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../codegen"
+    }
+  ],
+  "exclude": ["**/*.test.ts", "**/*.bench.ts", "dist", "node_modules"]
 }

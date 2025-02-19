@@ -118,7 +118,7 @@ input LoadStateAction {
     input: LoadStateActionInput!
 }
 
-union BaseAction =
+union DocumentAction =
       SetNameAction
     | UndoAction
     | RedoAction

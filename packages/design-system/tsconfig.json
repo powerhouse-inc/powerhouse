@@ -9,15 +9,22 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.json",
-    "scripts/**/*.ts",
-    "*.ts",
-    "package.json"
-  ]
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../scalars"
+    },
+    {
+      "path": "../config"
+    }
+  ],
+  "include": ["**/*", "**/*.json"],
+  "exclude": ["node_modules", "dist", "storybook-static"]
 }

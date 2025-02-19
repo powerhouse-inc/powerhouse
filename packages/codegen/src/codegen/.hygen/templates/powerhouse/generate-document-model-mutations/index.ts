@@ -1,5 +1,5 @@
 import { paramCase } from "change-case";
-import { DocumentModelState } from "document-model/document-model";
+import type { DocumentModelState } from "document-model";
 
 export type Args = {
   documentModel: string;
@@ -7,8 +7,19 @@ export type Args = {
   subgraph: string;
 };
 
-export default {
-  params: ({ args }: { args: Args }) => {
+const generateDocumentModelMutations = {
+  params: ({
+    args,
+  }: {
+    args: Args;
+  }): {
+    rootDir: string;
+    subgraph: string;
+    documentTypeId: string;
+    documentType: string;
+    schema: any;
+    modules: Array<{ name: string; [key: string]: any }>;
+  } => {
     const documentModel = JSON.parse(args.documentModel) as DocumentModelState;
     const latestSpec =
       documentModel.specifications[documentModel.specifications.length - 1];
@@ -26,3 +37,4 @@ export default {
     };
   },
 };
+export default generateDocumentModelMutations;

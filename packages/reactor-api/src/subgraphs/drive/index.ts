@@ -1,32 +1,26 @@
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
-import { pascalCase } from "change-case";
-import {
-  generateUUID,
-  ListenerRevision,
-  StrandUpdateGraphQL,
-} from "document-drive";
-import {
-  actions,
-  FileNode,
-  Listener,
-  ListenerFilter,
-  TransmitterType,
-} from "document-model-libs/document-drive";
-import { Document, Operation } from "document-model/document";
-import {
-  DocumentModelInput,
-  DocumentModelState,
-} from "document-model/document-model";
-import { gql } from "graphql-tag";
+import { Subgraph } from "#subgraphs/index.js";
+import { Context, SubgraphArgs } from "#subgraphs/types.js";
 import {
   InternalStrandUpdate,
   processAcknowledge,
   processGetStrands,
   processPushUpdate,
-} from "src/sync/utils";
-import { Subgraph } from "../base";
-import { Context, SubgraphArgs } from "../types";
-import { Asset } from "./temp-hack-rwa-type-defs";
+} from "#sync/utils.js";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { pascalCase } from "change-case";
+import {
+  addListener,
+  FileNode,
+  generateUUID,
+  Listener,
+  ListenerFilter,
+  ListenerRevision,
+  StrandUpdateGraphQL,
+  TransmitterType,
+} from "document-drive";
+import { BaseDocument, DocumentModelInput, Operation } from "document-model";
+import { gql } from "graphql-request";
+import { Asset } from "./temp-hack-rwa-type-defs.js";
 
 const ENABLE_SYNC_DEBUG = false;
 
@@ -214,7 +208,7 @@ export class DriveSubgraph extends Subgraph {
     },
     Document: {
       operations: async (
-        obj: Document,
+        obj: BaseDocument,
         { first, skip }: { first: number; skip: number },
         ctx: Context,
       ) => {
@@ -249,13 +243,13 @@ export class DriveSubgraph extends Subgraph {
 
         const dms = this.reactor.getDocumentModels();
         const dm = dms.find(
-          ({ documentModel }: { documentModel: DocumentModelState }) =>
-            documentModel.id === document.documentType,
+          ({ documentModelState }) =>
+            documentModelState.id === document.documentType,
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
         const typeName = pascalCase(
-          (dm?.documentModel.name || "").replaceAll("/", " "),
+          (dm?.documentModelState.name || "").replaceAll("/", " "),
         );
         const response = {
           ...document,
@@ -309,7 +303,7 @@ export class DriveSubgraph extends Subgraph {
 
         const result = await this.reactor.queueDriveAction(
           ctx.driveId,
-          actions.addListener({ listener }),
+          addListener({ listener }),
         );
 
         if (result.status !== "SUCCESS" && result.error) {

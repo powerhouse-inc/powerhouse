@@ -1,21 +1,24 @@
-import { Document, OperationScope } from "./types";
+import { BaseDocument, OperationScope } from "./types.js";
 
-export interface ISignal<T extends string = string, I = unknown> {
-  type: T;
-  input: I;
+export interface ISignal<TType extends string, TInput> {
+  type: TType;
+  input: TInput;
 }
 
-export type SynchronizationUnit = {
+export type SynchronizationUnitInput = {
   syncId: string;
   scope: OperationScope;
   branch: string;
 };
 
-export type CreateChildDocumentInput = {
+export type CreateChildDocumentInput<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+> = {
   id: string;
   documentType: string;
-  document?: Document;
-  synchronizationUnits: SynchronizationUnit[];
+  document?: BaseDocument<TGlobalState, TLocalState>;
+  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CreateChildDocumentSignal = ISignal<
@@ -35,7 +38,7 @@ export type DeleteChildDocumentSignal = ISignal<
 export type CopyChildDocumentInput = {
   id: string;
   newId: string;
-  synchronizationUnits: SynchronizationUnit[];
+  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CopyChildDocumentSignal = ISignal<

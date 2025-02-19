@@ -17,7 +17,7 @@ describe('Navigation', () => {
 
     const validateGraphQLQuery = (retryCount = 0, expectedStatusCode = 200) => {
         cy.wait('@graphqlQuery').then(interception => {
-            if (interception.response.statusCode === expectedStatusCode) {
+            if (interception.response?.statusCode === expectedStatusCode) {
                 assert.equal(
                     interception.response.statusCode,
                     expectedStatusCode,
@@ -25,7 +25,7 @@ describe('Navigation', () => {
                 );
             } else if (retryCount < maxRetries) {
                 cy.log(
-                    `Retry ${retryCount + 1}: GraphQL query failed with status ${interception.response.statusCode}`,
+                    `Retry ${retryCount + 1}: GraphQL query failed with status ${interception.response?.statusCode}`,
                 );
                 validateGraphQLQuery(retryCount + 1, expectedStatusCode);
             } else {

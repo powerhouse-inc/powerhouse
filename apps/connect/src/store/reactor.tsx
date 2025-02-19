@@ -1,14 +1,14 @@
-import connectConfig from 'connect-config';
-import { type IDocumentDriveServer } from 'document-drive';
-import { utils } from 'document-model/document';
-import { atom, useAtomValue } from 'jotai';
-import { atomWithLazy, unwrap } from 'jotai/utils';
-import { logger } from 'src/services/logger';
+import { logger } from '#services/logger';
 import {
     documentModelsAtom,
     subscribeDocumentModels,
-} from 'src/store/document-model';
-import { createBrowserDocumentDriveServer } from 'src/utils/reactor';
+} from '#store/document-model';
+import { createBrowserDocumentDriveServer } from '#utils/reactor';
+import connectConfig from 'connect-config';
+import { type IDocumentDriveServer } from 'document-drive';
+import { hashKey } from 'document-model';
+import { atom, useAtomValue } from 'jotai';
+import { atomWithLazy, unwrap } from 'jotai/utils';
 import { atomStore } from '.';
 
 async function initReactor(reactor: IDocumentDriveServer) {
@@ -23,7 +23,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
         reactor
             .addDrive({
                 global: {
-                    id: utils.hashKey(),
+                    id: hashKey(),
                     name: 'My Local Drive',
                     icon: null,
                     slug: 'my-local-drive',

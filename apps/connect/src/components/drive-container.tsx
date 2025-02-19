@@ -1,6 +1,6 @@
+import { useUiNodes } from '#hooks/useUiNodes';
+import { driveSections } from '#utils/drive-sections';
 import { DriveView } from '@powerhousedao/design-system';
-import { useUiNodes } from 'src/hooks/useUiNodes';
-import { driveSections } from 'src/utils/drive-sections';
 
 export default function DriveContainer() {
     const uiNodes = useUiNodes();

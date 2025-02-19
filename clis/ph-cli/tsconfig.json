@@ -8,4 +8,38 @@
     "resolveJsonModule": true,
   },
   "include": ["src/**/*", "*.config.ts", "package.json"]
+    "outDir": "./dist"
+  },
+  "references": [
+    {
+      "path": "../../packages/codegen"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/document-drive"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor-local"
+    },
+    {
+      "path": "../../packages/scalars"
+    },
+    {
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/builder-tools"
+    }
+  ]
 }

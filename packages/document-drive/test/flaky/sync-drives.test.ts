@@ -8,39 +8,31 @@
  *
  */
 
-import {
-  DocumentDriveAction,
-  Listener,
-  ListenerFilter,
-  actions,
-  reducer,
-} from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import {
-  DocumentModel,
-  Operation,
-  OperationScope,
-} from "document-model/document";
-import * as DocumentModelLib from "document-model/document-model";
-import stringify from "json-stringify-deterministic";
-import { GraphQLQuery, HttpResponse, graphql } from "msw";
+import { Listener } from "@prisma/client";
+import { DocumentModelModule, Operation } from "document-model";
+import { graphql } from "graphql";
+import { GraphQLQuery, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { stringify } from "querystring";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { ListenerFilter } from "../../src/drive-document-model/gen/types.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { PullResponderTransmitter } from "../../src/server/listener/transmitter/pull-responder.js";
 import {
-  DocumentDriveServer,
   ListenerRevision,
-  PullResponderTransmitter,
   StrandUpdate,
   SyncStatus,
-} from "../../src/server";
-import { generateUUID } from "../../src/utils";
-import { buildOperation, buildOperations } from "../utils";
+} from "../../src/server/types.js";
+import { generateUUID } from "../../src/utils/misc.js";
+import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document Drive Server interaction", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   function setupHandlers(server: DocumentDriveServer) {
     const handlers = [

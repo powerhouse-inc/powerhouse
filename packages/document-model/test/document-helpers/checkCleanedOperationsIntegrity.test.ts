@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-
 import {
   checkCleanedOperationsIntegrity,
   IntegrityIssueSubType,
   IntegrityIssueType,
-} from "../../src/document/utils/document-helpers";
-import { buildOperations } from "./utils";
+} from "../../src/document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("checkCleanedOperationsIntegrity", () => {
   const validScenarios = [

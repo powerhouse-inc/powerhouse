@@ -1,39 +1,51 @@
-import { ZodError } from "zod";
 import stringifyJson from "safe-stable-stringify";
-import { baseReducer, mutableBaseReducer, updateHeader } from "../reducer";
-import {
-  Action,
-  BaseAction,
-  UndoRedoAction,
-  Document,
-  ExtendedState,
-  ImmutableStateReducer,
-  Reducer,
-  OperationScope,
-  State,
-  CreateState,
-  PartialState,
-  DocumentOperations,
-  DocumentHeader,
-  DocumentOperationsIgnoreMap,
-  Operation,
-  MappedOperation,
-  ReducerOptions,
-  UndoAction,
-} from "../types";
-import { hash } from "./node";
+import { ZodError } from "zod";
 import {
   LOAD_STATE,
+  NOOP,
   PRUNE,
   REDO,
   SET_NAME,
   UNDO,
-  NOOP,
-} from "../actions/types";
-import { SignalDispatch } from "../signal";
-import { InvalidActionInputError, InvalidActionInputZodError } from "./errors";
+} from "../actions/types.js";
+import { baseReducer, updateHeader } from "../reducer.js";
+import { UndoAction, UndoRedoAction } from "../schema/types.js";
+import { SignalDispatch } from "../signal.js";
+import {
+  Action,
+  BaseAction,
+  BaseDocument,
+  BaseState,
+  CreateState,
+  CustomAction,
+  DefaultAction,
+  DocumentAction,
+  DocumentHeader,
+  DocumentOperations,
+  DocumentOperationsIgnoreMap,
+  ExtendedState,
+  MappedOperation,
+  Operation,
+  OperationScope,
+  PartialState,
+  Reducer,
+  ReducerOptions,
+  StateReducer,
+} from "../types.js";
+import { sortOperations } from "./document-helpers.js";
+import {
+  InvalidActionInputError,
+  InvalidActionInputZodError,
+} from "./errors.js";
+import { hash } from "./node.js";
 
-export function isNoopOperation(op: Partial<Operation>): boolean {
+export function isNoopOperation<
+  TOp extends {
+    type: string;
+    skip: number;
+    hash: string;
+  },
+>(op: Partial<TOp>): boolean {
   return (
     op.type === NOOP &&
     op.skip !== undefined &&
@@ -42,15 +54,21 @@ export function isNoopOperation(op: Partial<Operation>): boolean {
   );
 }
 
-export function isUndoRedo(action: Action): action is UndoRedoAction {
+export function isUndoRedo(
+  action: BaseAction<string, unknown>,
+): action is UndoRedoAction {
   return [UNDO, REDO].includes(action.type);
 }
 
-export function isUndo(action: Action): action is UndoAction {
+export function isUndo(
+  action: BaseAction<string, unknown>,
+): action is UndoAction {
   return action.type === UNDO;
 }
 
-export function isBaseAction(action: Action): action is BaseAction {
+export function isDocumentAction(
+  action: BaseAction<string, unknown>,
+): action is DocumentAction {
   return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
 }
 
@@ -74,13 +92,13 @@ export function isBaseAction(action: Action): action is BaseAction {
  *
  * @returns The new action.
  */
-export function createAction<A extends Action>(
-  type: A["type"],
-  input?: A["input"],
-  attachments?: Action["attachments"],
-  validator?: () => { parse(v: unknown): A["input"] },
+export function createAction<TAction extends BaseAction<string, unknown>>(
+  type: TAction["type"],
+  input?: TAction["input"],
+  attachments?: TAction["attachments"],
+  validator?: () => { parse(v: unknown): TAction["input"] },
   scope: OperationScope = "global",
-): A {
+): TAction {
   if (!type) {
     throw new Error("Empty action type");
   }
@@ -89,7 +107,11 @@ export function createAction<A extends Action>(
     throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
   }
 
-  const action: Action = { type, input, scope };
+  const action: BaseAction<string, unknown> = {
+    type,
+    input,
+    scope,
+  };
 
   if (attachments) {
     action.attachments = attachments;
@@ -105,7 +127,7 @@ export function createAction<A extends Action>(
     }
   }
 
-  return action as A;
+  return action as TAction;
 }
 
 /**
@@ -127,35 +149,32 @@ export function createAction<A extends Action>(
  * @returns The new reducer.
  */
 export function createReducer<
-  S = unknown,
-  A extends Action = Action,
-  L = unknown,
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
 >(
-  reducer: ImmutableStateReducer<S, A, L>,
+  reducer: StateReducer<
+    TGlobalState,
+    TLocalState,
+    TCustomAction | DefaultAction | Operation
+  >,
   documentReducer = baseReducer,
-): Reducer<S, A, L> {
+): Reducer<
+  TGlobalState,
+  TLocalState,
+  TCustomAction | DefaultAction | Operation
+> {
   return (document, action, dispatch, options) => {
     return documentReducer(document, action, reducer, dispatch, options);
   };
 }
 
-export function createUnsafeReducer<
-  S = unknown,
-  A extends Action = Action,
-  L = unknown,
->(
-  reducer: ImmutableStateReducer<S, A, L>,
-  documentReducer = mutableBaseReducer,
-): Reducer<S, A, L> {
-  return (document, action, dispatch, options) => {
-    return documentReducer(document, action, reducer, dispatch, options);
-  };
-}
-
-export const createExtendedState = <S, L>(
-  initialState?: Partial<ExtendedState<PartialState<S>, PartialState<L>>>,
-  createState?: CreateState<S, L>,
-): ExtendedState<S, L> => {
+export function baseCreateExtendedState<TGlobalState, TLocalState>(
+  initialState?: Partial<
+    ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
+  >,
+  createState?: CreateState<TGlobalState, TLocalState>,
+): ExtendedState<TGlobalState, TLocalState> {
   return {
     name: "",
     documentType: "",
@@ -169,47 +188,43 @@ export const createExtendedState = <S, L>(
     ...initialState,
     state:
       createState?.(initialState?.state) ??
-      ((initialState?.state ?? { global: {}, local: {} }) as State<S, L>),
+      ((initialState?.state ?? { global: {}, local: {} }) as BaseState<
+        TGlobalState,
+        TLocalState
+      >),
   };
-};
+}
 
-/**
- * Builds the initial document state from the provided data.
- *
- * @typeParam T - The type of the data.
- * @typeParam A - The type of the actions.
- *
- * @param initialState - The initial state of the document. The `data` property
- *   is required, but all other properties are optional.
- *
- * @returns The new document state.
- */
-export const createDocument = <S, A extends Action, L = unknown>(
-  initialState?: Partial<ExtendedState<PartialState<S>, PartialState<L>>>,
-  createState?: (
-    state?: Partial<State<PartialState<S>, PartialState<L>>>,
-  ) => State<S, L>,
-): Document<S, A, L> => {
-  const state: ExtendedState<S, L> = createExtendedState(
-    initialState,
-    createState,
-  );
+export function baseCreateDocument<
+  TGlobalState,
+  TLocalState,
+  TAction extends Action | CustomAction = Action,
+>(
+  initialState?: Partial<
+    ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
+  >,
+  createState?: CreateState<TGlobalState, TLocalState>,
+): BaseDocument<TGlobalState, TLocalState, TAction> {
+  const state: ExtendedState<TGlobalState, TLocalState> =
+    baseCreateExtendedState(initialState, createState);
   return {
     ...state,
     initialState: state,
     operations: { global: [], local: [] },
     clipboard: [],
   };
-};
+}
 
-// export const stringifyJson = configureStringify
-
-export const hashDocument = (
-  document: Pick<Document, "state">,
+export function hashDocumentStateForScope(
+  document: {
+    state: {
+      [key in OperationScope]: unknown;
+    };
+  },
   scope: OperationScope = "global",
-) => {
+) {
   return hash(stringifyJson(document.state[scope] || ""));
-};
+}
 
 export const hashKey = (date?: Date, randomLimit = 1000) => {
   const random = Math.random() * randomLimit;
@@ -228,16 +243,16 @@ export function readOnly<T>(value: T): Readonly<T> {
  * @returns An array of mapped operations with ignore flag indicating if the operation is skipped.
  * @throws Error if the operation index is invalid and there are missing operations.
  */
-export function mapSkippedOperations<A extends Action>(
-  operations: Operation<BaseAction | A>[],
+export function mapSkippedOperations(
+  operations: Operation[],
   skippedHeadOperations?: number,
-): MappedOperation<A>[] {
+): MappedOperation[] {
   const ops = [...operations];
 
   let skipped = skippedHeadOperations || 0;
   let latestOpIndex = ops.length > 0 ? ops[ops.length - 1].index : 0;
 
-  const scopeOpsWithIgnore = [] as MappedOperation<A>[];
+  const scopeOpsWithIgnore: MappedOperation[] = [];
 
   for (const operation of ops.reverse()) {
     if (skipped > 0) {
@@ -271,24 +286,9 @@ export function mapSkippedOperations<A extends Action>(
   return scopeOpsWithIgnore.reverse();
 }
 
-// Flattens the operations from all scopes into
-// a single array and sorts them by timestamp
-export function sortOperations<A extends Action>(
-  operations: DocumentOperations<A>,
-) {
-  return Object.values(operations)
-    .flatMap((array) => array)
-    .sort(
-      (a, b) =>
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-    );
-}
-
 // Flattens the mapped operations (with ignore flag) from all scopes into
 // a single array and sorts them by timestamp
-export function sortMappedOperations<A extends Action>(
-  operations: DocumentOperationsIgnoreMap<A>,
-) {
+export function sortMappedOperations(operations: DocumentOperationsIgnoreMap) {
   return Object.values(operations)
     .flatMap((array) => array)
     .sort(
@@ -300,8 +300,12 @@ export function sortMappedOperations<A extends Action>(
 
 // gets the last modified timestamp of a document from
 // it's operations, falling back to the initial state
-export function getDocumentLastModified(document: Document) {
-  const sortedOperations = sortOperations(document.operations);
+export function getDocumentLastModified(
+  document: BaseDocument<unknown, unknown>,
+) {
+  const sortedOperations = sortOperations(
+    Object.values(document.operations).flat(),
+  );
   const timestamp =
     sortedOperations.at(-1)?.timestamp || document.initialState.lastModified;
   return timestamp;
@@ -310,16 +314,20 @@ export function getDocumentLastModified(document: Document) {
 // Runs the operations on the initial data using the
 // provided reducer, wrapped with the document reducer.
 // This rebuilds the document according to the provided actions.
-export function replayOperations<T, A extends Action, L>(
-  initialState: ExtendedState<T, L>,
-  clearedOperations: DocumentOperations<A>,
-  reducer: ImmutableStateReducer<T, A, L>,
+export function replayOperations<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
+  initialState: ExtendedState<TGlobalState, TLocalState>,
+  clearedOperations: DocumentOperations,
+  reducer: StateReducer<TGlobalState, TLocalState, TCustomAction>,
   dispatch?: SignalDispatch,
   header?: DocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReducerOptions,
-): Document<T, A, L> {
+) {
   // wraps the provided custom reducer with the
   // base document reducer
   const wrappedReducer = createReducer(reducer, documentReducer);
@@ -345,21 +353,25 @@ export type ReplayDocumentOptions = {
   // a resulting state and uses it as a starting point
   reuseOperationResultingState?: boolean;
   // Optional parser for the operation resulting state, uses JSON.parse by default
-  operationResultingStateParser?: (state: unknown) => object;
+  operationResultingStateParser?: <TState>(state: string) => TState;
 };
 
 // Runs the operations on the initial data using the
 // provided document reducer.
 // This rebuilds the document according to the provided actions.
-export function replayDocument<T, A extends Action, L>(
-  initialState: ExtendedState<T, L>,
-  operations: DocumentOperations<A>,
-  reducer: Reducer<T, A, L>,
+export function replayDocument<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
+  initialState: ExtendedState<TGlobalState, TLocalState>,
+  operations: DocumentOperations,
+  reducer: Reducer<TGlobalState, TLocalState, TCustomAction>,
   dispatch?: SignalDispatch,
   header?: DocumentHeader,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
-): Document<T, A, L> {
+) {
   const {
     checkHashes = true,
     reuseOperationResultingState,
@@ -367,8 +379,8 @@ export function replayDocument<T, A extends Action, L>(
   } = options || {};
 
   let documentState = initialState;
-  const operationsToReplay = [] as Operation<A | BaseAction>[];
-  const initialOperations: DocumentOperations<A> = {
+  const operationsToReplay: Operation[] = [];
+  const initialOperations: DocumentOperations = {
     global: [],
     local: [],
   };
@@ -385,11 +397,11 @@ export function replayDocument<T, A extends Action, L>(
         continue;
       }
       const opWithState = scopeOperations[index];
+      if (!opWithState.resultingState) continue;
       try {
-        const scopeState = operationResultingStateParser(
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unnecessary-type-assertion
-          opWithState.resultingState!,
-        );
+        const scopeState = operationResultingStateParser<
+          TGlobalState | TLocalState
+        >(opWithState.resultingState);
         documentState = {
           ...documentState,
           state: {
@@ -398,7 +410,7 @@ export function replayDocument<T, A extends Action, L>(
             [scope]: scopeState,
           },
         };
-        initialOperations[scope as keyof DocumentOperations<A>].push(
+        initialOperations[scope as keyof typeof initialOperations].push(
           ...scopeOperations.slice(0, index + 1),
         );
         operationsToReplay.push(...scopeOperations.slice(index + 1));
@@ -412,7 +424,7 @@ export function replayDocument<T, A extends Action, L>(
   }
 
   // builds a new document from the initial data
-  const document = createDocument<T, A, L>(documentState);
+  const document = baseCreateDocument<TGlobalState, TLocalState>(documentState);
   document.initialState = initialState;
   document.operations = initialOperations;
 
@@ -451,7 +463,7 @@ export function replayDocument<T, A extends Action, L>(
         if (operation.scope !== scope) {
           continue;
         }
-        if (operation.hash !== hashDocument(result, scope)) {
+        if (operation.hash !== hashDocumentStateForScope(result, scope)) {
           throw new Error(`Hash mismatch for scope ${scope}`);
         } else {
           break;
@@ -461,11 +473,12 @@ export function replayDocument<T, A extends Action, L>(
   }
 
   // reuses operation timestamp if provided
-  const resultOperations: DocumentOperations<A> = Object.keys(
+  const resultOperations: DocumentOperations = Object.keys(
     result.operations,
   ).reduce(
     (acc, key) => {
-      const scope = key as keyof DocumentOperations<A>;
+      const scope = key as keyof DocumentOperations;
+
       return {
         ...acc,
         [scope]: [
@@ -493,16 +506,14 @@ export function replayDocument<T, A extends Action, L>(
   return { ...result, operations: resultOperations, lastModified };
 }
 
-export function isSameDocument(documentA: Document, documentB: Document) {
-  return stringifyJson(documentA) === stringifyJson(documentB);
-}
-
-export function parseResultingState(state: unknown) {
+export function parseResultingState<TState>(
+  state: string | null | undefined,
+): TState {
   const stateType = typeof state;
   if (stateType === "string") {
-    return JSON.parse(state as string) as object;
+    return JSON.parse(state!) as TState;
   } else if (stateType === "object") {
-    return state as object;
+    return state as TState;
   } else {
     throw new Error(`Providing resulting state is of type: ${stateType}`);
   }

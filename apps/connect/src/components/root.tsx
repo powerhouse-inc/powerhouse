@@ -1,3 +1,7 @@
+import { useLoadInitialData } from '#hooks/useLoadInitialData';
+import { useLogin } from '#hooks/useLogin';
+import { isElectron, isMac } from '#hooks/utils';
+import { logger } from '#services/logger';
 import IconConnect from '@/assets/icons/connect.svg?react';
 import IconLogo from '@/assets/icons/logo.svg?react';
 import { Suspense, useEffect } from 'react';

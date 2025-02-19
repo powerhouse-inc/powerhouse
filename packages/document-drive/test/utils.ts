@@ -1,15 +1,13 @@
-import { DocumentDriveAction } from "document-model-libs/document-drive";
 import {
   Action,
-  BaseAction,
-  Document,
-  NOOPAction,
+  CustomAction,
+  DocumentModelDocument,
   Operation,
+  PHDocument,
   Reducer,
-} from "document-model/document";
-import { DocumentModelDocument } from "document-model/document-model";
+} from "document-model";
 import { ExpectStatic } from "vitest";
-import { BaseDocumentDriveServer } from "../src";
+import { BaseDocumentDriveServer } from "../src/server/base.js";
 
 export function expectUUID(expect: ExpectStatic): unknown {
   return expect.stringMatching(
@@ -24,59 +22,63 @@ export function expectUTCTimestamp(expect: ExpectStatic): unknown {
 export function buildOperation(
   reducer: Reducer<any, any, any>,
 
-  document: Document<any, any, any>,
+  document: PHDocument,
   action: Action,
   index?: number,
-): Operation<NOOPAction & Action> {
+): Operation {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const operation = newDocument.operations[action.scope]
     .slice()
     .pop()! as Operation;
 
-  return { ...operation, index: index ?? operation.index } as Operation<
-    NOOPAction & Action
-  >;
+  return { ...operation, index: index ?? operation.index } as Operation;
 }
 
 export function buildOperations(
   reducer: Reducer<any, any, any>,
 
-  document: Document<any, any, any>,
+  document: PHDocument,
 
   actions: Array<Action>,
-): Operation<NOOPAction & Action>[] {
-  const operations: Operation<NOOPAction & Action>[] = [];
+): Operation[] {
+  const operations: Operation[] = [];
   for (const action of actions) {
     document = reducer(document, action);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const operation = document.operations[action.scope]
       .slice()
-      .pop()! as Operation<NOOPAction & Action>;
+      .pop()! as Operation;
     operations.push(operation);
   }
   return operations;
 }
 
-export function buildOperationAndDocument(
-  reducer: Reducer<any, any, any>,
-
-  document: Document<any, any, any>,
-  action: Action,
+export function buildOperationAndDocument<
+  TGlobalState,
+  TLocalState,
+  TAction extends CustomAction = Action,
+>(
+  reducer: Reducer<TGlobalState, TLocalState, TAction>,
+  document: PHDocument<TGlobalState, TLocalState, TAction>,
+  action: TAction,
   index?: number,
-) {
+): {
+  document: PHDocument<TGlobalState, TLocalState, TAction>;
+  operation: Operation<TAction>;
+} {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const operation = newDocument.operations[action.scope]
     .slice()
-    .pop()! as Operation;
+    .pop()! as Operation<TAction>;
 
   return {
-    document: newDocument,
+    document: newDocument as PHDocument<TGlobalState, TLocalState, TAction>,
     operation: {
       ...operation,
       index: index ?? operation.index,
-    } as Operation<NOOPAction & Action>,
+    } as Operation<TAction>,
   };
 }
 
@@ -88,7 +90,7 @@ export class BasicClient {
     private driveId: string,
     private documentId: string,
 
-    private document: Document<any, any, any>,
+    private document: PHDocument,
 
     private reducer: Reducer<any, any, any>,
   ) {}
@@ -153,14 +155,13 @@ export class BasicClient {
 }
 
 export class DriveBasicClient {
-  private unsyncedOperations: Operation<DocumentDriveAction | BaseAction>[] =
-    [];
+  private unsyncedOperations: Operation[] = [];
 
   constructor(
     private server: BaseDocumentDriveServer,
     private driveId: string,
 
-    private document: Document<any, any, any>,
+    private document: PHDocument,
 
     private reducer: Reducer<any, any, any>,
   ) {}
@@ -173,9 +174,7 @@ export class DriveBasicClient {
     return this.unsyncedOperations;
   }
 
-  setUnsyncedOperations(
-    operations: Operation<DocumentDriveAction | BaseAction>[],
-  ) {
+  setUnsyncedOperations(operations: Operation[]) {
     this.unsyncedOperations = operations;
   }
 

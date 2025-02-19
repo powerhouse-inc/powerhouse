@@ -1,10 +1,13 @@
-import { ListenerFilter, Trigger } from "document-model-libs/document-drive";
-import { Operation } from "document-model/document";
-import { PULL_DRIVE_INTERVAL } from "../..";
-import { generateUUID } from "../../../utils";
-import { gql, requestGraphql } from "../../../utils/graphql";
-import { logger as defaultLogger } from "../../../utils/logger";
-import { OperationError } from "../../error";
+import { gql } from "graphql-request";
+import {
+  ListenerFilter,
+  Trigger,
+} from "../../../drive-document-model/gen/types.js";
+import { requestGraphql } from "../../../utils/graphql.js";
+import { logger as defaultLogger } from "../../../utils/logger.js";
+import { generateUUID } from "../../../utils/misc.js";
+import { PULL_DRIVE_INTERVAL } from "../../base.js";
+import { OperationError } from "../../error.js";
 import {
   GetStrandsOptions,
   IListenerManager,
@@ -15,15 +18,14 @@ import {
   OperationUpdate,
   RemoteDriveOptions,
   StrandUpdate,
-} from "../../types";
+} from "../../types.js";
 import {
   ITransmitter,
   PullResponderTrigger,
   StrandUpdateSource,
-} from "./types";
+} from "./types.js";
 
 const ENABLE_SYNC_DEBUG = false;
-
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
 };
@@ -280,7 +282,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     return result.acknowledge;
   }
 
-  private static async executePull(
+  private static async executePull<TGlobalState, TLocalState>(
     driveId: string,
     trigger: PullResponderTrigger,
     onStrandUpdate: (
@@ -311,7 +313,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       const listenerRevisions: ListenerRevisionWithError[] = [];
 
       for (const strand of strands) {
-        const operations: Operation[] = strand.operations.map((op) => ({
+        const operations = strand.operations.map((op) => ({
           ...op,
           scope: strand.scope,
           branch: strand.branch,
@@ -364,7 +366,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }
   }
 
-  static setupPull(
+  static setupPull<TGlobalState, TLocalState>(
     driveId: string,
     trigger: PullResponderTrigger,
     onStrandUpdate: (

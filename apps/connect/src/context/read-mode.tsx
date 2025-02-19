@@ -1,32 +1,29 @@
+import { drivesToHash } from '#hooks/useDocumentDrives';
+import { useUserPermissions } from '#hooks/useUserPermissions';
+import { logger } from '#services/logger';
 import {
-    IDocumentDriveServer,
-    InferDocumentLocalState,
-    InferDocumentOperation,
-    InferDocumentState,
-    IReadModeDriveServer,
-    ReadDocumentNotFoundError,
-    ReadDrive,
-    ReadDriveContext,
-    ReadDriveNotFoundError,
-    ReadDrivesListener,
-    ReadDrivesListenerUnsubscribe,
-    ReadDriveSlugNotFoundError,
-    RemoteDriveOptions,
+  DocumentModelNotFoundError,
+  IDocumentDriveServer,
+  IReadModeDriveServer,
+  ReadDocumentNotFoundError,
+  ReadDrive,
+  ReadDriveContext,
+  ReadDriveNotFoundError,
+  ReadDrivesListener,
+  ReadDrivesListenerUnsubscribe,
+  ReadDriveSlugNotFoundError,
+  RemoteDriveOptions,
 } from 'document-drive';
-import { Document, DocumentModel } from 'document-model/document';
-import { DocumentModelNotFoundError } from 'node_modules/document-drive/src/server/error';
+import { Action, CustomAction, PHDocument } from 'document-model';
 import {
-    createContext,
-    FC,
-    ReactNode,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
+  createContext,
+  FC,
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
 } from 'react';
-import { drivesToHash } from 'src/hooks/useDocumentDrives';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { logger } from 'src/services/logger';
 import { useAsyncReactor } from '../store/reactor';
 
 export interface IReadModeContext extends IReadModeDriveServer {
@@ -129,25 +126,21 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     }
 
     @checkServer
-    fetchDocument<D extends Document>(
+    fetchDocument<
+        TGlobalState,
+        TLocalState,
+        TAction extends Action | CustomAction = Action,
+    >(
         driveId: string,
         documentId: string,
-        documentType: DocumentModel<
-            InferDocumentState<D>,
-            InferDocumentOperation<D>,
-            InferDocumentLocalState<D>
-        >['documentModel']['id'],
+        documentType: string,
     ): Promise<
-        | Document<
-              InferDocumentState<D>,
-              InferDocumentOperation<D>,
-              InferDocumentLocalState<D>
-          >
+        | PHDocument<TGlobalState, TLocalState, TAction>
         | DocumentModelNotFoundError
         | ReadDriveNotFoundError
         | ReadDocumentNotFoundError
     > {
-        return this.server!.fetchDocument<D>(driveId, documentId, documentType);
+        return this.server!.fetchDocument(driveId, documentId, documentType);
     }
 
     @checkServer

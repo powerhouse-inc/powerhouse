@@ -1,5 +1,10 @@
-import type { Document, OperationScope } from "document-model/document";
-import { RevisionsFilter, StrandUpdate } from "./types";
+import type {
+  Action,
+  DocumentOperations,
+  OperationScope,
+  PHDocument,
+} from "document-model";
+import { RevisionsFilter, StrandUpdate } from "./types.js";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],
@@ -15,8 +20,8 @@ export function buildRevisionsFilter(
   }, {});
 }
 
-export function buildDocumentRevisionsFilter(
-  document: Document,
+export function buildDocumentRevisionsFilter<TGlobalState, TLocalState>(
+  document: PHDocument<TGlobalState, TLocalState>,
 ): RevisionsFilter {
   return Object.entries(document.operations).reduce<RevisionsFilter>(
     (acc, [scope, operations]) => {
@@ -28,28 +33,32 @@ export function buildDocumentRevisionsFilter(
 }
 
 export function filterOperationsByRevision(
-  operations: Document["operations"],
+  operations: DocumentOperations,
   revisions?: RevisionsFilter,
-): Document["operations"] {
+): DocumentOperations {
   if (!revisions) {
     return operations;
   }
-  return (Object.keys(operations) as OperationScope[]).reduce<
-    Document["operations"]
-  >(
+  return Object.keys(operations).reduce(
     (acc, scope) => {
-      const revision = revisions[scope];
+      const revision = revisions[scope as OperationScope];
       if (revision !== undefined) {
-        acc[scope] = operations[scope].filter((op) => op.index <= revision);
+        acc[scope as OperationScope] = operations[
+          scope as OperationScope
+        ].filter((op) => op.index <= revision);
       }
       return acc;
     },
-    { global: [], local: [] } as unknown as Document["operations"],
+    { global: [], local: [] } as DocumentOperations,
   );
 }
 
-export function isAtRevision(
-  document: Document,
+export function isAtRevision<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+  TAction = Action,
+>(
+  document: PHDocument<TGlobalState, TLocalState, TAction>,
   revisions?: RevisionsFilter,
 ): boolean {
   return (
@@ -64,8 +73,8 @@ export function isAtRevision(
   );
 }
 
-export function isAfterRevision(
-  document: Document,
+export function isAfterRevision<TGlobalState, TLocalState>(
+  document: PHDocument<TGlobalState, TLocalState>,
   revisions?: RevisionsFilter,
 ): boolean {
   return (

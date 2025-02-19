@@ -1,5 +1,5 @@
-import { CodeExample, ScopeState } from "../../gen";
-import { DocumentModelStateOperations } from "../../gen/state/operations";
+import { CodeExample, ScopeState } from "../../gen/schema/types.js";
+import { DocumentModelStateOperations } from "../../gen/state/operations.js";
 
 const exampleSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};

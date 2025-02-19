@@ -1,10 +1,10 @@
+import { OperationScope } from "document-model";
 import {
   DocumentDriveDocument,
   ListenerFilter,
-} from "document-model-libs/document-drive";
-import { OperationScope } from "document-model/document";
-import { logger } from "../../utils/logger";
-import { OperationError } from "../error";
+} from "../../drive-document-model/gen/types.js";
+import { logger } from "../../utils/logger.js";
+import { OperationError } from "../error.js";
 import {
   DefaultListenerManagerOptions,
   DriveUpdateErrorHandler,
@@ -20,8 +20,8 @@ import {
   StrandUpdate,
   SynchronizationUnit,
   SynchronizationUnitQuery,
-} from "../types";
-import { StrandUpdateSource } from "./transmitter/types";
+} from "../types.js";
+import { StrandUpdateSource } from "./transmitter/types.js";
 
 const ENABLE_SYNC_DEBUG = false;
 

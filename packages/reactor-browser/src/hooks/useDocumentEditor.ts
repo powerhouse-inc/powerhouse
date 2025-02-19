@@ -1,44 +1,48 @@
+import { IDocumentDriveServer } from "document-drive";
 import {
   Action,
-  Document,
-  Operation,
-  BaseAction,
-  DocumentModel,
   ActionErrorCallback,
-} from "document-model/document";
-import { useDocumentDispatch } from "./useDocumentDispatch";
-import { signOperation, addActionContext } from "../utils/signature";
-import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
-import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
-import { IDocumentDriveServer } from "document-drive";
+  CustomAction,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+} from "document-model";
 import { User } from "../renown/types";
+import { addActionContext, signOperation } from "../utils/signature";
+import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
+import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
+import { useDocumentDispatch } from "./useDocumentDispatch";
 
-export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
+export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
   operation: Operation,
   state: {
-    prevState: Document<State, A, LocalState>;
-    newState: Document<State, A, LocalState>;
+    prevState: PHDocument<TGlobalState, TLocalState>;
+    newState: PHDocument<TGlobalState, TLocalState>;
   },
 ) => void;
 
 export type UseDocumentEditorProps<
-  T = unknown,
-  A extends Action = Action,
-  LocalState = unknown,
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
 > = {
   driveId: string;
   nodeId: string;
-  document: Document<T, A, LocalState> | undefined;
-  documentModel: DocumentModel<unknown, Action>;
+  document: PHDocument<TGlobalState, TLocalState> | undefined;
+  documentModel: DocumentModelModule<TGlobalState, TLocalState, TCustomAction>;
   user?: User;
   onExport?: () => void;
   onOpenSwitchboardLink?: () => Promise<void>;
-  onChange?: (document: Document<T, A, LocalState>) => void;
+  onChange?: (document: PHDocument<TGlobalState, TLocalState>) => void;
 };
 
-export function useDocumentEditor(
+export function useDocumentEditor<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends CustomAction = never,
+>(
   reactor: IDocumentDriveServer | undefined,
-  props: UseDocumentEditorProps,
+  props: UseDocumentEditorProps<TGlobalState, TLocalState, TCustomAction>,
 ) {
   const {
     nodeId,
@@ -62,10 +66,10 @@ export function useDocumentEditor(
   );
 
   function dispatch(
-    action: BaseAction | Action,
+    action: TCustomAction | Action,
     onErrorCallback?: ActionErrorCallback,
   ) {
-    const callback: DocumentDispatchCallback<unknown, Action, unknown> = (
+    const callback: DocumentDispatchCallback<TGlobalState, TLocalState> = (
       operation,
       state,
     ) => {

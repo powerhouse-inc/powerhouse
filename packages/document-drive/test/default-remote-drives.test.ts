@@ -1,16 +1,13 @@
-import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel as BaseDocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { DocumentDriveServer } from "../src/server/base.js";
 import {
   DefaultRemoteDriveInput,
-  DocumentDriveServer,
   DocumentDriveServerOptions,
-  generateUUID,
-} from "../src";
-import { MemoryStorage } from "../src/storage/memory";
-import { DriveInfo } from "../src/utils/graphql";
+} from "../src/server/types.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { DriveInfo } from "../src/utils/graphql.js";
+import { generateUUID } from "../src/utils/misc.js";
 
 type DriveInput = {
   url: string;

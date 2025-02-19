@@ -1,4 +1,4 @@
-import { useInitSenty } from 'src/hooks/useInitSentry';
+import { useInitSenty } from '#hooks/useInitSentry';
 
 interface RootProviderProps {
     children?: React.ReactNode;

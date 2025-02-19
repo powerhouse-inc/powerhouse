@@ -1,10 +1,10 @@
-import { Document, Operation, OperationScope } from 'document-model/document';
+import { Operation, OperationScope, PHDocument } from 'document-model';
 
 export class DocumentEditorDebugTools {
-    private document: Document | undefined;
+    private document: PHDocument | undefined;
     private operations: Operation[] = [];
 
-    constructor(document?: Document) {
+    constructor(document?: PHDocument) {
         if (document) {
             this.document = document;
         }
@@ -17,7 +17,7 @@ export class DocumentEditorDebugTools {
         }));
     }
 
-    public setDocument(document: Document) {
+    public setDocument(document: PHDocument) {
         this.document = document;
     }
 

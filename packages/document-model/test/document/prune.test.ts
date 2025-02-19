@@ -1,24 +1,24 @@
 import { describe, expect, it } from "vitest";
+
 import {
   loadState,
   prune,
   redo,
   setName,
   undo,
-} from "../../src/document/actions";
-import { createDocument } from "../../src/document/utils";
+} from "../../src/document/actions/creators.js";
+import { baseCreateDocument } from "../../src/document/utils/base.js";
 import {
-  CountAction,
   CountLocalState,
   countReducer,
   CountState,
   increment,
   mapOperations,
-} from "../helpers";
+} from "../helpers.js";
 
 describe("PRUNE operation", () => {
   it.skip("should prune first 4 operations", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
@@ -54,7 +54,7 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should prune last 3 operations", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
@@ -91,7 +91,7 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should prune 2 operations", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
@@ -129,7 +129,7 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should undo pruned state", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: {} },
     });
@@ -169,7 +169,7 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should redo pruned state", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountState, CountLocalState>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

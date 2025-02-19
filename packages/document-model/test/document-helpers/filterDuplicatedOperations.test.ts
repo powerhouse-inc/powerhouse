@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildOperations } from "./utils";
-import { filterDuplicatedOperations } from "../../src/document/utils/document-helpers";
+import { filterDuplicatedOperations } from "../../src/document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("filterDuplicatedOperations", () => {
   const scenarios = [

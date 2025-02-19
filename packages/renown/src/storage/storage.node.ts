@@ -1,6 +1,6 @@
 import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { BaseStorage } from "./common";
+import { BaseStorage } from "./common.js";
 
 export class NodeStorage<
   T extends Record<string, unknown> = Record<string, unknown>,

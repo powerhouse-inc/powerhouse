@@ -1,17 +1,20 @@
-import { DocumentDriveAction } from "document-model-libs/document-drive";
 import {
-  BaseAction,
-  Document,
+  DocumentDriveAction,
+  DocumentDriveDocument,
+} from "#drive-document-model/gen/types.js";
+import { DriveNotFoundError } from "#server/error.js";
+import { SynchronizationUnitQuery } from "#server/types.js";
+import { migrateDocumentOperationSignatures } from "#utils/migrations.js";
+import { mergeOperations } from "#utils/misc.js";
+import type {
+  Action,
   DocumentHeader,
   Operation,
   OperationScope,
-} from "document-model/document";
+  PHDocument,
+} from "document-model";
 import LocalForage from "localforage";
-import { DriveNotFoundError } from "../server/error";
-import { SynchronizationUnitQuery } from "../server/types";
-import { mergeOperations } from "../utils";
-import { migrateDocumentOperationSigatures } from "../utils/migrations";
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from "./types";
+import { IDriveStorage } from "./types.js";
 
 export class BrowserStorage implements IDriveStorage {
   private db: Promise<LocalForage>;
@@ -50,17 +53,26 @@ export class BrowserStorage implements IDriveStorage {
       .map((key) => key.slice(driveKey.length));
   }
 
-  async getDocument(driveId: string, id: string) {
+  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+    driveId: string,
+    id: string,
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
     const document = await (
       await this.db
-    ).getItem<Document>(this.buildKey(driveId, id));
+    ).getItem<PHDocument<TGlobalState, TLocalState, TAction>>(
+      this.buildKey(driveId, id),
+    );
     if (!document) {
       throw new Error(`Document with id ${id} not found`);
     }
     return document;
   }
 
-  async createDocument(drive: string, id: string, document: DocumentStorage) {
+  async createDocument<TGlobalState, TLocalState, TAction = Action>(
+    drive: string,
+    id: string,
+    document: PHDocument<TGlobalState, TLocalState, TAction>,
+  ) {
     await (await this.db).setItem(this.buildKey(drive, id), document);
   }
 
@@ -105,7 +117,7 @@ export class BrowserStorage implements IDriveStorage {
 
   async getDrive(id: string) {
     const db = await this.db;
-    const drive = await db.getItem<DocumentDriveStorage>(
+    const drive = await db.getItem<DocumentDriveDocument>(
       this.buildKey(BrowserStorage.DRIVES_KEY, id),
     );
     if (!drive) {
@@ -127,7 +139,7 @@ export class BrowserStorage implements IDriveStorage {
     throw new Error(`Drive with slug ${slug} not found`);
   }
 
-  async createDrive(id: string, drive: DocumentDriveStorage) {
+  async createDrive(id: string, drive: DocumentDriveDocument) {
     const db = await this.db;
     await db.setItem(this.buildKey(BrowserStorage.DRIVES_KEY, id), drive);
   }
@@ -142,7 +154,7 @@ export class BrowserStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);
@@ -227,7 +239,7 @@ export class BrowserStorage implements IDriveStorage {
 
   private async migrateDocument(drive: string, id: string) {
     const document = await this.getDocument(drive, id);
-    const migratedDocument = migrateDocumentOperationSigatures(document);
+    const migratedDocument = migrateDocumentOperationSignatures(document);
     if (migratedDocument !== document) {
       return (await this.db).setItem(
         this.buildKey(drive, id),

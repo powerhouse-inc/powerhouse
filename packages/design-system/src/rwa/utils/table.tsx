@@ -19,7 +19,7 @@ import {
   TableName,
   TransactionFeeInput,
 } from "@/rwa";
-import { InputMaybe } from "document-model/document";
+import { InputMaybe } from "document-model";
 
 export function handleDateInTable(
   maybeDate: string | Date,

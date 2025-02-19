@@ -1,16 +1,16 @@
+import { IReadModeDriveServer } from "../read-mode/types.js";
+import { DriveNotFoundError } from "../server/error.js";
 import {
   DefaultRemoteDriveInfo,
   DocumentDriveServerOptions,
   DriveEvents,
   IBaseDocumentDriveServer,
-  IReadModeDriveServer,
   RemoteDriveAccessLevel,
   RemoveDriveStrategy,
   RemoveOldRemoteDrivesOption,
-} from "../server";
-import { DriveNotFoundError } from "../server/error";
-import { requestPublicDrive } from "./graphql";
-import { logger } from "./logger";
+} from "../server/types.js";
+import { requestPublicDrive } from "./graphql.js";
+import { logger } from "./logger.js";
 
 export interface IServerDelegateDrivesManager {
   emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) => void;
@@ -245,7 +245,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
   ) {
     const drives = await this.server.getDrives();
     const readServer = isReadModeDriveServer(this.server)
-      ? (this.server as IReadModeDriveServer)
+      ? this.server
       : undefined;
     const readDrives = await readServer?.getReadDrives();
 

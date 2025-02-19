@@ -1,4 +1,4 @@
-import { OperationScope } from "../../../document";
+import { OperationScope } from "#document/types.js";
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
@@ -27,6 +27,7 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean };
   Int: { input: number; output: number };
   Float: { input: number; output: number };
+  DateTime: { input: string; output: string };
 };
 
 export type AddChangeLogItemInput = {

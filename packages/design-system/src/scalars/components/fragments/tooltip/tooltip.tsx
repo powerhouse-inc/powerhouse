@@ -84,7 +84,7 @@ const Tooltip: React.FC<TooltipProps> = ({
 
 export {
   Tooltip,
-  TooltipProps,
+  type TooltipProps,
   Root as TooltipRoot,
   Trigger as TooltipTrigger,
   TooltipContent,

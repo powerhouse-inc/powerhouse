@@ -1,10 +1,10 @@
-import { DocumentDriveAction } from "document-model-libs/document-drive";
 import {
-  BaseAction,
+  Action,
   DocumentHeader,
   Operation,
   OperationScope,
-} from "document-model/document";
+  PHDocument,
+} from "document-model";
 import type { Dirent } from "fs";
 import {
   existsSync,
@@ -17,10 +17,14 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import sanitize from "sanitize-filename";
-import { DriveNotFoundError } from "../server/error";
-import type { SynchronizationUnitQuery } from "../server/types";
-import { mergeOperations } from "../utils";
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from "./types";
+import {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+} from "../drive-document-model/gen/types.js";
+import { DriveNotFoundError } from "../server/error.js";
+import { SynchronizationUnitQuery } from "../server/types.js";
+import { mergeOperations } from "../utils/misc.js";
+import { IDriveStorage } from "./types.js";
 
 type FSError = {
   errno: number;
@@ -86,18 +90,29 @@ export class FilesystemStorage implements IDriveStorage {
     return Promise.resolve(documentExists);
   }
 
-  async getDocument(drive: string, id: string) {
+  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+    drive: string,
+    id: string,
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
     try {
       const content = readFileSync(this._buildDocumentPath(drive, id), {
         encoding: "utf-8",
       });
-      return JSON.parse(content) as Promise<DocumentStorage>;
+      return JSON.parse(content) as PHDocument<
+        TGlobalState,
+        TLocalState,
+        TAction
+      >;
     } catch (error) {
       throw new Error(`Document with id ${id} not found`);
     }
   }
 
-  async createDocument(drive: string, id: string, document: DocumentStorage) {
+  async createDocument<TGlobalState, TLocalState, TAction = Action>(
+    drive: string,
+    id: string,
+    document: PHDocument<TGlobalState, TLocalState, TAction>,
+  ) {
     const documentPath = this._buildDocumentPath(drive, id);
     ensureDir(path.dirname(documentPath));
     writeFileSync(documentPath, stringify(document), {
@@ -145,7 +160,7 @@ export class FilesystemStorage implements IDriveStorage {
     return fs.rm(this._buildDocumentPath(drive, id));
   }
 
-  async addDocumentOperations(
+  async addDocumentOperations<TGlobalState, TLocalState>(
     drive: string,
     id: string,
     operations: Operation[],
@@ -189,7 +204,7 @@ export class FilesystemStorage implements IDriveStorage {
       return (await this.getDocument(
         FilesystemStorage.DRIVES_DIR,
         id,
-      )) as DocumentDriveStorage;
+      )) as DocumentDriveDocument;
     } catch {
       throw new DriveNotFoundError(id);
     }
@@ -213,7 +228,7 @@ export class FilesystemStorage implements IDriveStorage {
     throw new Error(`Drive with slug ${slug} not found`);
   }
 
-  createDrive(id: string, drive: DocumentDriveStorage) {
+  createDrive(id: string, drive: DocumentDriveDocument) {
     return this.createDocument(FilesystemStorage.DRIVES_DIR, id, drive);
   }
 
@@ -227,7 +242,7 @@ export class FilesystemStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

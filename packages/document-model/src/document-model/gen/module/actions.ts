@@ -1,20 +1,23 @@
-import { Action } from "../../../document";
+import { BaseAction } from "../../../document/types.js";
 import {
   AddModuleInput,
-  SetModuleNameInput,
-  SetModuleDescriptionInput,
   DeleteModuleInput,
   ReorderModulesInput,
-} from "../types";
+  SetModuleDescriptionInput,
+  SetModuleNameInput,
+} from "../schema/types.js";
 
-export type AddModuleAction = Action<"ADD_MODULE", AddModuleInput>;
-export type SetModuleNameAction = Action<"SET_MODULE_NAME", SetModuleNameInput>;
-export type SetModuleDescriptionAction = Action<
+export type AddModuleAction = BaseAction<"ADD_MODULE", AddModuleInput>;
+export type SetModuleNameAction = BaseAction<
+  "SET_MODULE_NAME",
+  SetModuleNameInput
+>;
+export type SetModuleDescriptionAction = BaseAction<
   "SET_MODULE_DESCRIPTION",
   SetModuleDescriptionInput
 >;
-export type DeleteModuleAction = Action<"DELETE_MODULE", DeleteModuleInput>;
-export type ReorderModulesAction = Action<
+export type DeleteModuleAction = BaseAction<"DELETE_MODULE", DeleteModuleInput>;
+export type ReorderModulesAction = BaseAction<
   "REORDER_MODULES",
   ReorderModulesInput
 >;
