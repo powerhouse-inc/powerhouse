@@ -1,12 +1,14 @@
-import { createPublicClient, http, PublicClient, Address } from "viem";
+import { useEffect, useMemo, useState } from "react";
+import { Address, createPublicClient, http, PublicClient } from "viem";
 import { getEnsAvatar, getEnsName } from "viem/actions";
 import * as chains from "viem/chains";
-import { useEffect, useMemo, useState } from "react";
 export type { Address } from "viem";
 export type Chain = chains.Chain;
 
 export function getChain(id: number): Chain | undefined {
-  return Object.values(chains).find((x) => x.id === id);
+  return Object.values(chains).find((x) => "id" in x && x.id === id) as
+    | Chain
+    | undefined;
 }
 
 let client: PublicClient = createPublicClient({

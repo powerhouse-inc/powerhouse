@@ -1,23 +1,24 @@
+import { useDocumentReducer } from "#editor-utils/reducer";
 import { useArgs, useChannel } from "@storybook/preview-api";
 import { Meta, StoryObj } from "@storybook/react";
 import {
+  Action,
   ActionContext,
-  BaseAction,
+  BaseDocument,
+  CustomAction,
   EditorProps,
   ExtendedState,
-  Reducer,
   PartialState,
-  BaseDocument,
+  Reducer,
   baseCreateDocument,
 } from "document-model";
 import React, { useState } from "react";
-import { useDocumentReducer } from "../reducer.js";
 import { useInterval } from "usehooks-ts";
 
 type EditorStoryArgs<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAction extends Action | CustomAction = Action,
 > = Partial<{
   isAllowedToCreateDocuments: boolean;
   isAllowedToEditDocuments: boolean;
@@ -38,14 +39,14 @@ type EditorStoryArgs<
 type EditorStoryProps<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAction extends Action | CustomAction = Action,
 > = EditorProps<TGlobalState, TLocalState, TAction> &
   EditorStoryArgs<TGlobalState, TLocalState, TAction>;
 
 export type EditorStoryComponent<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAction extends Action | CustomAction = Action,
 > = (
   props: EditorStoryProps<TGlobalState, TLocalState, TAction>,
 ) => React.JSX.Element;
@@ -53,13 +54,13 @@ export type EditorStoryComponent<
 export type DocumentStory<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAction extends Action | CustomAction = Action,
 > = StoryObj<EditorStoryComponent<TGlobalState, TLocalState, TAction>>;
 
 export function createDocumentStory<
   TGlobalState,
   TLocalState,
-  TAction extends BaseAction,
+  TAction extends Action | CustomAction = Action,
 >(
   Editor: EditorStoryComponent<TGlobalState, TLocalState, TAction>,
   reducer: Reducer<TGlobalState, TLocalState, TAction>,

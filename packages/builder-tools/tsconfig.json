@@ -3,11 +3,14 @@
   "compilerOptions": {
     "outDir": "./dist",
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client", "react"]
   },
   "references": [
     {
       "path": "../config"
+    },
+    {
+      "path": "../document-model"
     }
   ]
 }

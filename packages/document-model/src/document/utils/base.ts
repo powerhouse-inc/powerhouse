@@ -12,6 +12,7 @@ import { baseReducer, updateHeader } from "../reducer.js";
 import { UndoAction, UndoRedoAction } from "../schema/types.js";
 import { SignalDispatch } from "../signal.js";
 import {
+  Action,
   BaseAction,
   BaseDocument,
   BaseState,
@@ -54,19 +55,19 @@ export function isNoopOperation<
 }
 
 export function isUndoRedo(
-  action: BaseAction<string, unknown, OperationScope>,
+  action: BaseAction<string, unknown>,
 ): action is UndoRedoAction {
   return [UNDO, REDO].includes(action.type);
 }
 
 export function isUndo(
-  action: BaseAction<string, unknown, OperationScope>,
+  action: BaseAction<string, unknown>,
 ): action is UndoAction {
   return action.type === UNDO;
 }
 
 export function isDocumentAction(
-  action: BaseAction<string, unknown, OperationScope>,
+  action: BaseAction<string, unknown>,
 ): action is DocumentAction {
   return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
 }
@@ -91,9 +92,7 @@ export function isDocumentAction(
  *
  * @returns The new action.
  */
-export function createAction<
-  TAction extends BaseAction<string, unknown, OperationScope>,
->(
+export function createAction<TAction extends BaseAction<string, unknown>>(
   type: TAction["type"],
   input?: TAction["input"],
   attachments?: TAction["attachments"],
@@ -108,7 +107,7 @@ export function createAction<
     throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
   }
 
-  const action: BaseAction<string, unknown, OperationScope> = {
+  const action: BaseAction<string, unknown> = {
     type,
     input,
     scope,
@@ -196,12 +195,16 @@ export function baseCreateExtendedState<TGlobalState, TLocalState>(
   };
 }
 
-export function baseCreateDocument<TGlobalState, TLocalState>(
+export function baseCreateDocument<
+  TGlobalState,
+  TLocalState,
+  TAction extends Action | CustomAction = Action,
+>(
   initialState?: Partial<
     ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
   >,
   createState?: CreateState<TGlobalState, TLocalState>,
-): BaseDocument<TGlobalState, TLocalState> {
+): BaseDocument<TGlobalState, TLocalState, TAction> {
   const state: ExtendedState<TGlobalState, TLocalState> =
     baseCreateExtendedState(initialState, createState);
   return {
