@@ -26,7 +26,7 @@ import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, ViteDevServer } from "vite";
-import { PackagesManager } from "./packages";
+import { PackagesManager } from "./packages.js";
 
 type FSError = {
   errno: number;

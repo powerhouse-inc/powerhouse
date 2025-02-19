@@ -6,11 +6,11 @@ import {
   setModelId,
   setModelName,
 } from "../../src/document-model/gen/creators.js";
+import { reducer, stateReducer } from "../../src/document-model/gen/reducer.js";
 import {
   createDocument,
   createExtendedState,
-} from "../../src/document-model/gen/document-model-utils.js";
-import { reducer, stateReducer } from "../../src/document-model/gen/reducer.js";
+} from "../../src/document-model/gen/utils.js";
 import { replayOperations } from "../../src/document/utils/base.js";
 import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
 

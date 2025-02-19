@@ -68,7 +68,7 @@ export function validateStateSchemaName(
   return errors;
 }
 
-export function validateModules(modules: Array<Module>): ValidationError[] {
+export function validateModules(modules: Module[]): ValidationError[] {
   const errors: ValidationError[] = [];
   if (!modules.length) {
     errors.push({

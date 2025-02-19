@@ -1,4 +1,3 @@
-export { hashDocumentStateForScope } from "#document/utils/base.js";
 export {
   addModule,
   addOperation,
@@ -20,18 +19,14 @@ export {
   setOperationSchema,
   setStateSchema,
 } from "#document-model/gen/creators.js";
-export {
-  createExtendedState as documentModelCreateExtendedState,
-  loadFromFile as documentModelLoadFromFile,
-} from "#document-model/gen/document-model-utils.js";
 export { reducer as documentModelReducer } from "#document-model/gen/reducer.js";
 export type {
   Author,
   DocumentModelInput,
   Operation as DocumentModelOperation,
   Module,
-  ScopeState,
   Scalars,
+  ScopeState,
 } from "#document-model/gen/schema/types.js";
 export type {
   DocumentModelAction,
@@ -39,6 +34,10 @@ export type {
   DocumentModelLocalState,
   DocumentModelState,
 } from "#document-model/gen/types.js";
+export {
+  createExtendedState as documentModelCreateExtendedState,
+  loadFromFile as documentModelLoadFromFile,
+} from "#document-model/gen/utils.js";
 export { applyMixins, BaseDocumentClass } from "#document/object.js";
 export type {
   Action,
@@ -65,9 +64,11 @@ export type {
   EditorProps,
   ExtendedState,
   FileRegistry,
+  InputMaybe,
   LoadFromFile,
   LoadFromInput,
   Manifest,
+  Maybe,
   NOOPAction,
   Operation,
   OperationScope,
@@ -82,14 +83,14 @@ export type {
   StateReducer,
   SynchronizationUnitInput,
   User,
-  Maybe,
-  InputMaybe,
+  ValidationError,
 } from "#document/types.js";
 export {
   baseCreateDocument,
   baseCreateExtendedState,
   createAction,
   createReducer,
+  hashDocumentStateForScope,
   hashKey,
   isDocumentAction,
   replayDocument,
@@ -108,7 +109,15 @@ export {
   createZip,
 } from "#document/utils/file.js";
 
+export {
+  validateInitialState,
+  validateModule,
+  validateModuleOperation,
+  validateModules,
+  validateStateSchemaName,
+} from "#document-model/custom/utils.js";
 export { documentModelDocumentModelModule } from "#document-model/module.js";
+export { redo, undo } from "#document/actions/creators.js";
 export type { EditorContext } from "#document/types.js";
 export {
   attachBranch,
@@ -122,4 +131,3 @@ export {
   skipHeaderOperations,
   sortOperations,
 } from "#document/utils/document-helpers.js";
-export { undo, redo } from "#document/actions/creators.js";

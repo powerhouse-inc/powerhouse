@@ -57,9 +57,7 @@
         "vite-envs": "^4.4.5"
     },
     "peerDependencies": {
-        "@powerhousedao/design-system": "workspace:*",
-        "@powerhousedao/scalars": "workspace:*",
-        "document-model-libs": "workspace:*"
+        "@powerhousedao/design-system": "workspace:*"
     },
     "devDependencies": {
         "@electron-forge/cli": "^6.1.1",
@@ -77,7 +75,6 @@
         "@sentry/react": "^7.109.0",
         "@sentry/vite-plugin": "^2.22.2",
         "@tanstack/react-virtual": "^3.8.1",
-        "@total-typescript/ts-reset": "^0.5.1",
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.18",
         "@types/uuid": "^9.0.7",
@@ -91,7 +88,6 @@
         "did-key-creator": "^1.2.0",
         "document-drive": "workspace:*",
         "document-model": "workspace:*",
-        "document-model-libs": "workspace:*",
         "@powerhousedao/builder-tools": "workspace:*",
         "electron": "30.0.0",
         "electron-is-dev": "^3.0.1",
@@ -124,7 +120,6 @@
         "tailwindcss": "^3.4.1",
         "tailwindcss-animate": "^1.0.7",
         "tw-colors": "^1.2.6",
-        "typescript": "^5.3.3",
         "uuid": "^9.0.1",
         "viem": "^2.8.13",
         "vite-plugin-html": "^3.2.2",

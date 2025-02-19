@@ -1,4 +1,4 @@
-import { ConnectStudioOptions } from "../../../../packages/builder-tools/connect-studio/index.js";
+import { ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
 import { blue, green, red } from "colorette";
 import { Command } from "commander";
 import { ChildProcessWithoutNullStreams, fork } from "node:child_process";

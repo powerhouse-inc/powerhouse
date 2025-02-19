@@ -7,7 +7,6 @@ import {
 import { BaseDocumentClass } from "../../document/object.js";
 import { DocumentModelAction } from "./actions.js";
 import { fileExtension } from "./constants.js";
-import { createDocument } from "./document-model-utils.js";
 import DocumentModel_Header from "./header/object.js";
 import DocumentModel_Module from "./module/object.js";
 import DocumentModel_OperationError from "./operation-error/object.js";
@@ -16,6 +15,7 @@ import DocumentModel_Operation from "./operation/object.js";
 import { reducer } from "./reducer.js";
 import DocumentModel_State from "./state/object.js";
 import { DocumentModelLocalState, DocumentModelState } from "./types.js";
+import { createDocument } from "./utils.js";
 import DocumentModel_Versioning from "./versioning/object.js";
 
 export * from "./header/object.js";

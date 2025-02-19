@@ -5,12 +5,12 @@ import {
   setModelId,
   setModelName,
 } from "../../src/document-model/gen/creators.js";
+import { reducer } from "../../src/document-model/gen/reducer.js";
 import {
   createDocument,
   loadFromFile,
   saveToFile,
-} from "../../src/document-model/gen/document-model-utils.js";
-import { reducer } from "../../src/document-model/gen/reducer.js";
+} from "../../src/document-model/gen/utils.js";
 import { undo } from "../../src/document/actions/creators.js";
 
 describe("DocumentModel", () => {
