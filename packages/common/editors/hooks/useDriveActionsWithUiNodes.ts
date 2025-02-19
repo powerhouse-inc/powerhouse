@@ -1,4 +1,9 @@
-import { FILE, UiNode, useUiNodesContext } from "@powerhousedao/design-system";
+import {
+  FILE,
+  UiFileNode,
+  UiNode,
+  useUiNodesContext,
+} from "@powerhousedao/design-system";
 import { EditorDispatch } from "document-model/document";
 import {
   DocumentDriveAction,
@@ -24,13 +29,16 @@ function toNode(uiNode: UiNode): Node {
   if (kind === "FOLDER") {
     return { id, name, parentFolder, kind: "folder" } satisfies FolderNode;
   } else {
+    // Remove after ts reset is fixed
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    const fileNode = uiNode as UiFileNode;
     return {
       id,
       name,
       parentFolder,
       kind: "file",
-      documentType: uiNode.documentType,
-      synchronizationUnits: uiNode.synchronizationUnits,
+      documentType: fileNode.documentType,
+      synchronizationUnits: fileNode.synchronizationUnits,
     } satisfies FileNode;
   }
 }
