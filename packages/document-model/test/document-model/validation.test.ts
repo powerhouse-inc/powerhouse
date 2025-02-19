@@ -6,7 +6,6 @@ import {
   validateStateSchemaName,
 } from "#document-model/custom/utils.js";
 import { setStateSchema } from "#document-model/gen/creators.js";
-import { createDocument } from "#document-model/gen/document-model-utils.js";
 import { reducer } from "#document-model/gen/reducer.js";
 import {
   DocumentModelLocalState,
@@ -14,6 +13,7 @@ import {
   Module,
   Operation,
 } from "#document-model/gen/schema/types.js";
+import { createDocument } from "#document-model/gen/utils.js";
 import {
   ExtendedState,
   PartialState,

@@ -29,7 +29,9 @@ export function useDrop(props: Props) {
       );
       if (droppedFiles.length) {
         for (const file of droppedFiles) {
-          await onAddFile(file, uiNode);
+          if (file) {
+            await onAddFile(file, uiNode);
+          }
         }
       } else {
         const altOrOptionKeyPressed = event.getModifierState("Alt");

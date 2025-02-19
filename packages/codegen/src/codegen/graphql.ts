@@ -1,8 +1,8 @@
+import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
 import { type CodegenConfig, generate } from "@graphql-codegen/cli";
 import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
-import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
-import { readdirSync } from "node:fs";
 import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
+import { readdirSync } from "node:fs";
 import { formatWithPrettierBeforeWrite } from "./utils.js";
 
 const getDirectories = (source: string) =>

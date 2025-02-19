@@ -1,17 +1,9 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "emitDeclarationOnly": true,
     "outDir": "./dist",
     "types": ["vitest/globals"],
     "resolveJsonModule": true
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "*.ts",
-    "package.json"
-  ]
+  "include": ["src/**/*.ts", "test/**/*.ts", "*.ts", "package.json"]
 }

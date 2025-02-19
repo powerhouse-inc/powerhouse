@@ -28,8 +28,8 @@ import {
   UseFormRegister,
   UseFormWatch,
 } from "react-hook-form";
-import { CashBalanceChange } from "../components/table/transactions/cash-balance-change";
 import { EntryTimeLabel } from "../components/inputs/entry-time-label";
+import { CashBalanceChange } from "../components/table/transactions/cash-balance-change";
 
 type Input = {
   label: string;
@@ -83,7 +83,10 @@ export function useFormInputs(props: Props): {
         const { errors } = formState;
 
         const control = _control as Control<Payload>;
-        const derivedInputsToDisplay =
+        const derivedInputsToDisplay: {
+          label: string;
+          Input: () => React.JSX.Element;
+        }[] =
           operation !== "create" && !!tableItem
             ? [
                 {
@@ -251,9 +254,14 @@ export function useFormInputs(props: Props): {
         const { errors } = _formState as FormState<Payload>;
         const control = _control as Control<Payload>;
         const type = watch("type");
-        const isFeesTransaction = !!type && feesTransactions.includes(type);
+        const isFeesTransaction =
+          !!type &&
+          feesTransactions.includes(type as (typeof feesTransactions)[number]);
         const isAssetTransaction =
-          !!type && assetGroupTransactions.includes(type);
+          !!type &&
+          assetGroupTransactions.includes(
+            type as (typeof assetGroupTransactions)[number],
+          );
         const canHaveTransactionFees = !isFeesTransaction;
         const transactionTypeOptions = allGroupTransactionTypes.map((type) => ({
           label: groupTransactionTypeLabels[type],
@@ -408,7 +416,7 @@ export function useFormInputs(props: Props): {
               />
             ),
           },
-        ].filter(Boolean);
+        ].filter(Boolean) as Input[];
 
         const additionalInputs = (
           <>

@@ -80,7 +80,11 @@ export function FolderItem(props: FolderItemProps) {
       ...option,
       id: id as NodeOption,
     }))
-    .filter((option) => defaultFolderOptions.includes(option.id));
+    .filter((option) =>
+      defaultFolderOptions.includes(
+        option.id as (typeof defaultFolderOptions)[number],
+      ),
+    );
 
   function onDropdownMenuOptionClick(itemId: NodeOption) {
     const handler = dropdownMenuHandlers[itemId];
