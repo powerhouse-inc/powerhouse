@@ -123,7 +123,7 @@
         "tailwindcss": "^3.4.1",
         "tailwindcss-animate": "^1.0.7",
         "tw-colors": "^1.2.6",
-        "typescript": "^5.7.3",
+        "typescript": "^5.3.3",
         "uuid": "^9.0.1",
         "viem": "^2.8.13",
         "vite-plugin-html": "^3.2.2",
