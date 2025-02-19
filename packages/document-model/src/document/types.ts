@@ -437,7 +437,7 @@ export type ValidationError = { message: string; details: object };
 export type DocumentModelModule<
   TGlobalState = unknown,
   TLocalState = unknown,
-  TCustomAction extends CustomAction = never,
+  TCustomAction extends CustomAction = Action,
 > = {
   documentModelName: string;
   documentType: string;

@@ -16,13 +16,13 @@ export const LOCAL_DOCUMENT_MODELS = import.meta.env.LOCAL_DOCUMENT_MODELS;
 export const baseDocumentModels = [
     driveDocumentModelModule,
     documentModelDocumentModelModule,
-] as DocumentModelModule<any, any>[];
+] as DocumentModelModule[];
 
 // removes document models with the same id, keeping the one that appears later
 function getUniqueDocumentModels(
-    ...documentModels: DocumentModelModule<any, any>[]
-): DocumentModelModule<any, any>[] {
-    const uniqueModels = new Map<string, DocumentModelModule<any, any>>();
+    ...documentModels: DocumentModelModule[]
+): DocumentModelModule[] {
+    const uniqueModels = new Map<string, DocumentModelModule>();
 
     for (const model of documentModels) {
         uniqueModels.set(model.documentType, model);
@@ -44,7 +44,7 @@ async function loadDynamicModels() {
     try {
         const localModules = (await import(
             'LOCAL_DOCUMENT_MODELS'
-        )) as unknown as Record<string, DocumentModelModule<any, any>>;
+        )) as unknown as Record<string, DocumentModelModule>;
         console.log('Loaded local document models:', localModules);
         return Object.values(localModules);
     } catch (e) {
@@ -81,7 +81,7 @@ export const useUnwrappedDocumentModels = () =>
     useAtomValue(unrappedDocumentModelsAtom);
 
 export const subscribeDocumentModels = function (
-    listener: (documentModels: DocumentModelModule<any, any>[]) => void,
+    listener: (documentModels: DocumentModelModule[]) => void,
 ) {
     // activate the effect on the default store
     const unobserve = observe(get => {
