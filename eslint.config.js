@@ -117,6 +117,7 @@ export default tseslint.config(
       "**/out/",
       "**/forge.config.js",
       "**/vite.config.ts.timestamp-*.mjs",
+      "**/vite.*.config.ts.timestamp-*.mjs",
     ],
   },
   {
