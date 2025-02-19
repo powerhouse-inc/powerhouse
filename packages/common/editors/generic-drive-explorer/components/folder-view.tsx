@@ -31,13 +31,17 @@ export function FolderView(props: IFolderViewProps) {
   const { node, className, isDropTarget, containerProps, ...nodeProps } = props;
   const { t } = useTranslation();
 
+  // Remove after ts reset is fixed
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const folderNodes = node.children
     .filter((node) => node.kind === FOLDER)
-    .sort(sortUiNodesByName);
+    .sort(sortUiNodesByName) as UiFolderNode[];
 
+  // Remove after ts reset is fixed
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const fileNodes: UiFileNode[] = node.children
     .filter((node) => node.kind === FILE)
-    .sort(sortUiNodesByName);
+    .sort(sortUiNodesByName) as UiFileNode[];
 
   return (
     <div
