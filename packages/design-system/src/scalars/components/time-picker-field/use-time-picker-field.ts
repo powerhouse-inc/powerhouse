@@ -1,13 +1,27 @@
-import { format, getHours, getMinutes, parse } from "date-fns";
 import React, { useMemo, useState } from "react";
-import { TimeFieldValue } from "./type";
+import { TimeFieldValue, TimePeriod } from "./type";
 import {
+  cleanTime,
+  getOffsetToDisplay,
+  convert12hTo24h,
   createChangeEvent,
+  formatInputToDisplayValid,
+  formatInputsToValueFormat,
+  getHours,
+  getHoursAndMinutes,
+  getInputValue,
+  getMinutes,
+  getOffset,
+  getOptions,
+  getTimezone,
   isValidTimeInput,
-  roundMinute,
-  transformInputTime,
 } from "./utils";
-
+export const convertTimeFrom24To12Hours = (time: string) => {
+  if (time === "") return "";
+  const hours = Number(time);
+  if (isNaN(hours)) return "";
+  return String(hours % 12 || 12).padStart(2, "0");
+};
 interface TimePickerFieldProps {
   value?: TimeFieldValue;
   defaultValue?: TimeFieldValue;
@@ -29,70 +43,74 @@ export const useTimePickerField = ({
   timeZone,
   showTimezoneSelect = true,
 }: TimePickerFieldProps) => {
-  const now = new Date();
-  const currentHour = getHours(now);
-  const currentMinute = getMinutes(now);
-
-  // Determine if the format is 12-hour or 24-hour
+  const [isOpen, setIsOpen] = useState(false);
   const is12HourFormat = timeFormat.includes("a");
-
-  // Initialize the hour and minutes according to the format
-  const initialHour = is12HourFormat
-    ? String(currentHour % 12 || 12).padStart(2, "0")
-    : String(currentHour).padStart(2, "0");
-
-  const initialMinute = String(currentMinute).padStart(2, "0");
-  const initialPeriod = is12HourFormat
-    ? currentHour >= 12
-      ? "PM"
-      : "AM"
-    : undefined;
-
-  const [selectedHour, setSelectedHour] = useState(initialHour);
-  const [selectedMinute, setSelectedMinute] = useState(initialMinute);
-  const [selectedPeriod, setSelectedPeriod] = useState<"AM" | "PM" | undefined>(
-    initialPeriod,
+  const [inputValue, setInputValue] = useState(
+    getInputValue(value ?? defaultValue),
   );
+
+  const [selectedHour, setSelectedHour] = useState(
+    is12HourFormat
+      ? convertTimeFrom24To12Hours(getHours(value ?? defaultValue ?? ""))
+      : getHours(value ?? defaultValue ?? ""),
+  );
+
+  const [selectedMinute, setSelectedMinute] = useState(
+    getMinutes(value ?? defaultValue ?? ""),
+  );
+
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod | undefined>(
+    undefined,
+  );
+
   const [selectedTimeZone, setSelectedTimeZone] = useState<
     string | string[] | undefined
-  >();
-
-  const inputValue = value ?? defaultValue ?? "";
-  const [isOpen, setIsOpen] = useState(false);
+  >(getTimezone(value ?? defaultValue ?? ""));
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange?.(e);
+    const input = e.target.value;
+    setInputValue(input);
   };
-
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const input = e.target.value;
 
-    // If the transformation fails (empty values), do not make changes
     if (!isValidTimeInput(input)) {
+      if (input === "") {
+        setInputValue(input);
+        onChange?.(createChangeEvent(""));
+        onBlur?.(e);
+        return;
+      }
+      const inValid = formatInputsToValueFormat("99", "99", "±09:09");
+      setInputValue(input);
+      onChange?.(createChangeEvent(inValid));
       onBlur?.(e);
       return;
     }
-    const { hour, minute, period } = transformInputTime(
+    const validDisplay = formatInputToDisplayValid(
       input,
       is12HourFormat,
+      dateIntervals,
       selectedPeriod,
     );
+    setInputValue(validDisplay);
 
-    const minuteNum = parseInt(minute, 10);
-    const roundedMinute = roundMinute(minuteNum, dateIntervals);
-    const formattedRoundedMinute = String(roundedMinute).padStart(2, "0");
+    const validValue = convert12hTo24h(validDisplay);
 
-    setSelectedHour(hour);
-    setSelectedMinute(formattedRoundedMinute);
+    const { minutes, hours, period } = getHoursAndMinutes(validValue);
+
+    const offsetUTC = getOffset(selectedTimeZone as string);
+
     if (is12HourFormat) {
-      setSelectedPeriod(period);
+      setSelectedPeriod(period as TimePeriod);
     }
 
-    const newTimeString = is12HourFormat
-      ? `${hour}:${formattedRoundedMinute} ${period}`
-      : `${hour}:${formattedRoundedMinute}`;
-
-    onChange?.(createChangeEvent(newTimeString));
+    const datetime = formatInputsToValueFormat(hours, minutes, offsetUTC);
+    const clearMinutes = cleanTime(minutes);
+    const clearHours = convertTimeFrom24To12Hours(cleanTime(hours));
+    setSelectedHour(clearHours);
+    setSelectedMinute(clearMinutes);
+    onChange?.(createChangeEvent(datetime));
     onBlur?.(e);
   };
 
@@ -107,59 +125,49 @@ export const useTimePickerField = ({
       for (let i = 0; i < 60; i += dateIntervals) {
         arr.push(String(i).padStart(2, "0"));
       }
-      console.log(arr, dateIntervals);
       return arr;
     }
     return Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
   }, [dateIntervals]);
+
   const handleSave = () => {
-    let timeString: string;
-
-    if (is12HourFormat) {
-      timeString = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
-    } else {
-      // 24-hour format: does not include AM/PM
-      timeString = `${selectedHour}:${selectedMinute}`;
-    }
-
-    // Parse and format the time according to the specified format
-    const parsedTime = parse(timeString, timeFormat, new Date());
-
-    const formattedTime = format(parsedTime, timeFormat);
-
     setIsOpen(false);
-    onChange?.(createChangeEvent(formattedTime));
+    const offsetUTC = getOffset(selectedTimeZone as string);
+
+    // Value to save in the onSubmin
+    const datetime = formatInputsToValueFormat(
+      selectedHour,
+      selectedMinute,
+      offsetUTC,
+    );
+    // Value to display in the input
+    const validDisplay = formatInputToDisplayValid(
+      datetime,
+      is12HourFormat,
+      dateIntervals,
+      selectedPeriod,
+    );
+    setInputValue(validDisplay);
+    onChange?.(createChangeEvent(datetime));
   };
 
   const handleCancel = () => {
     setIsOpen(false);
   };
 
-  const getTimeZoneOffset = (timeZone: string) => {
-    const date = new Date();
-    const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      timeZoneName: "short",
-    });
-
-    const parts = formatter.formatToParts(date);
-    const offsetPart = parts.find((part) => part.type === "timeZoneName");
-    return offsetPart ? offsetPart.value : "";
-  };
-
   const options = useMemo(() => {
-    const timeZones = Intl.supportedValuesOf("timeZone");
-    return timeZones.map((timeZone) => {
-      const offset = getTimeZoneOffset(timeZone);
-      const label = `(${offset}) ${timeZone.replace(/_/g, " ")}`;
-      return { value: timeZone, label };
-    });
+    return getOptions();
   }, []);
 
   // if timeZone, then the options of select will be that timeZone and the offset
   const isDisableSelect = timeZone || !showTimezoneSelect ? true : false;
   const timeZonesOptions = timeZone
-    ? [{ label: timeZone, value: timeZone }]
+    ? [
+        options.find((opt) => opt.value === timeZone) || {
+          label: `(${getOffsetToDisplay(timeZone)}) ${timeZone.replace(/_/g, " ")}`,
+          value: timeZone,
+        },
+      ]
     : options;
 
   return {

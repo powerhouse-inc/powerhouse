@@ -16,6 +16,11 @@ export const createChangeEvent = (
   return nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>;
 };
 
+export const getTime = (value: string) => {
+  const [time] = value.split("±");
+  // Extract only HH:mm from the complete format HH:mm:ss.SSS
+  return time.substring(0, 5);
+};
 export const ALLOWED_TIME_FORMATS = ["hh:mm a", "HH:mm", "hh:mm A"];
 
 export const isFormatTimeAllowed = (format: string): boolean => {
@@ -47,14 +52,13 @@ export const roundMinute = (minute: number, interval: number): number => {
 export const transformInputTime = (
   input: string,
   is12HourFormat: boolean,
-  defaultPeriod?: TimePeriod,
   interval = 1,
+  defaultPeriod?: TimePeriod,
 ): { hour: string; minute: string; period?: TimePeriod } => {
   input = input.trim();
   let hourStr = "";
   let minuteStr = "";
   let period: TimePeriod | undefined = undefined;
-
   if (input.includes(":")) {
     const [hourPart, rest] = input.split(":", 2);
     hourStr = hourPart;
@@ -80,13 +84,13 @@ export const transformInputTime = (
 
   if (is12HourFormat) {
     if (!period) {
-      period = defaultPeriod; //|| "AM";
+      period = hourNum >= 8 && hourNum <= 11 ? "AM" : "PM";
       if (hourNum === 12) period = "PM";
     }
 
     // Convert 24h format to 12h
     if (hourNum > 12 && !period) {
-      period = "AM";
+      // period = "AM";
       hourNum -= 12;
     }
 
@@ -100,16 +104,14 @@ export const transformInputTime = (
       period = hourNum >= 8 && hourNum <= 11 ? "AM" : "PM";
     }
   } else {
-    {
-      // Convert any AM/PM designator to 24h
-      if (period === "PM" && hourNum < 12) {
-        hourNum += 12;
-      } else if (period === "AM" && hourNum === 12) {
-        hourNum = 0;
-      }
-      // Force period to undefined in 24h format
-      period = undefined;
+    // Convert any AM/PM designator to 24h
+    if (period === "PM" && hourNum < 12) {
+      hourNum += 12;
+    } else if (period === "AM" && hourNum === 12) {
+      hourNum = 0;
     }
+    // Force period to undefined in 24h format
+    period = undefined;
   }
 
   return {
@@ -238,9 +240,9 @@ export const cleanTime = (time: string) => {
   return time.replace(/\s*(AM|PM)\s*/i, "");
 };
 
-export const formatToValue = (
-  minutes: string,
+export const formatInputsToValueFormat = (
   hours: string,
+  minutes: string,
   lastPart: string,
 ) => {
   const cleanMinutes = cleanTime(minutes);
@@ -251,7 +253,7 @@ export const formatToValue = (
   return datetime;
 };
 
-export const formatInputToValueValid = (input: string) => {
+export const convert12hTo24h = (input: string) => {
   // convert from 12 format to 24 format
   const [hours, minutes] = input.split(":");
   const period =
@@ -268,16 +270,15 @@ export const formatInputToValueValid = (input: string) => {
 export const formatInputToDisplayValid = (
   input: string,
   is12HourFormat: boolean,
-  selectedPeriod?: TimePeriod,
   dateIntervals?: number,
+  selectedPeriod?: TimePeriod,
 ) => {
   const { hour, minute, period } = transformInputTime(
     input,
     is12HourFormat,
-    selectedPeriod,
     dateIntervals,
+    selectedPeriod,
   );
-
   return is12HourFormat ? `${hour}:${minute} ${period}` : `${hour}:${minute}`;
 };
 
