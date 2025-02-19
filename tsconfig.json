@@ -24,6 +24,15 @@
     },
     {
       "path": "./packages/reactor-local"
+    },
+    {
+      "path": "./apps/connect"
+    },
+    {
+      "path": "./apps/switchboard"
+    },
+    {
+      "path": "./tools/scalar-generator"
     }
   ],
 }

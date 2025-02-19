@@ -5,6 +5,7 @@ import {
   buildSignedOperation,
   Operation,
   OperationSignatureContext,
+  PHDocument,
   Reducer,
   User,
 } from "document-model";
@@ -14,7 +15,7 @@ export async function signOperation(
   operation: Operation,
   sign: (data: Uint8Array) => Promise<Uint8Array>,
   documentId: string,
-  document: BaseDocument,
+  document: PHDocument,
   reducer?: Reducer<any, any, Action>,
   user?: User,
 ): Promise<Operation> {

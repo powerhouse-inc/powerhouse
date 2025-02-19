@@ -18,8 +18,8 @@ import {
   StrandUpdateGraphQL,
   TransmitterType,
 } from "document-drive";
-import { BaseDocument, DocumentModelInput, Operation } from "document-model";
-import { gql } from "graphql-request";
+import { DocumentModelInput, Operation, PHDocument } from "document-model";
+import { gql } from "graphql-tag";
 import { Asset } from "./temp-hack-rwa-type-defs.js";
 
 const ENABLE_SYNC_DEBUG = false;
@@ -208,7 +208,7 @@ export class DriveSubgraph extends Subgraph {
     },
     Document: {
       operations: async (
-        obj: BaseDocument,
+        obj: PHDocument,
         { first, skip }: { first: number; skip: number },
         ctx: Context,
       ) => {

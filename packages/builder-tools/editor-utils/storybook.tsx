@@ -14,7 +14,6 @@ import {
 } from "document-model";
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
-import { useDocumentReducer } from "../reducer";
 
 type EditorStoryArgs<
   TGlobalState,
@@ -70,7 +69,9 @@ export function createDocumentStory<
     PartialState<TLocalState>
   >,
   additionalStoryArgs?: EditorStoryArgs<TGlobalState, TLocalState, TAction>,
-  decorators?: Decorator<EditorStoryProps<S, A, L>>[],
+  decorators?: Decorator<
+    EditorStoryProps<TGlobalState, TLocalState, TAction>
+  >[],
 ): {
   meta: Meta<typeof Editor>;
   CreateDocumentStory: DocumentStory<TGlobalState, TLocalState, TAction>;

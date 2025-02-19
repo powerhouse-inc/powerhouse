@@ -8,10 +8,10 @@ import { externalPackagesAtom } from './external-packages';
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 
 async function loadBaseEditors() {
-    const DocumentModelEditor = (
+    const documentModelEditorModule = (
         await import('@powerhousedao/builder-tools/document-model-editor')
     ).documentModelEditorModule;
-    return [DocumentModelEditor];
+    return [documentModelEditorModule] as EditorModule[];
 }
 
 function getEditorsFromModules(modules: DocumentModelLib[]) {

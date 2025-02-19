@@ -212,13 +212,7 @@ export interface DriveEvents {
     status: number,
     errorMessage: string,
   ) => void;
-  documentModels: (
-    documentModels: DocumentModelModule<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction
-    >[],
-  ) => void;
+  documentModels: (documentModels: DocumentModelModule[]) => void;
   driveAdded: (drive: DocumentDriveDocument) => void;
   driveDeleted: (driveId: string) => void;
 }
@@ -346,13 +340,7 @@ type PublicPart<T> = Pick<T, PublicKeys<T>>;
 
 export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
-  setDocumentModels(
-    models: DocumentModelModule<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction
-    >[],
-  ): void;
+  setDocumentModels(models: DocumentModelModule[]): void;
   getDrives(): Promise<string[]>;
   addDrive(input: DriveInput): Promise<DocumentDriveDocument>;
   addRemoteDrive(

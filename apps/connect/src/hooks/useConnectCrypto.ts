@@ -1,4 +1,4 @@
-import type { DID, IConnectCrypto } from '#services/crypto';
+import { DID, IConnectCrypto } from '#services/crypto/index';
 import { logger } from '#services/logger';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useMemo } from 'react';

@@ -1,11 +1,11 @@
 {
   "extends": "../../tsconfig.options.json",
-  "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ],
   "compilerOptions": {
+    "outDir": "./dist",
     "target": "ESNext",
     "lib": ["ESNext", "DOM"],
     "jsx": "react-jsx"

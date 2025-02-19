@@ -6,6 +6,7 @@
     "clean": "pnpm nx run-many --target=clean --all",
     "clean:node_modules": "pnpm nx run-many --target=clean:node_modules --all && rimraf node_modules",
     "prepare": "husky",
+    "check-types": "tsc --build",
     "check-types:all": "pnpm nx run-many --target=check-types --all",
     "lint:all": "pnpm nx run-many --target=lint:nx --all",
     "affected:build": "pnpm nx affected --target=build",

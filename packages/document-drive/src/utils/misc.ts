@@ -1,8 +1,8 @@
 import {
-  BaseDocument,
   DocumentOperations,
   Operation,
   OperationScope,
+  PHDocument,
   generateId,
 } from "document-model";
 import { driveDocumentType } from "../drive-document-model/constants.js";
@@ -14,7 +14,7 @@ export const runAsap = RunAsap.runAsap;
 export const runAsapAsync = RunAsap.runAsapAsync;
 
 export function isDocumentDrive(
-  document: BaseDocument,
+  document: PHDocument,
 ): document is DocumentDriveDocument {
   return document.documentType === driveDocumentType;
 }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as Sentry from '@sentry/browser';
-import { PHDocument } from 'document-model';
+import { DocumentModelLib, PHDocument } from 'document-model';
 import {
     BrowserWindow,
     Menu,
@@ -55,13 +55,11 @@ async function initApp() {
         });
 
         ipcMain.handle('renown:login', (_e, did: string) => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             Sentry.setUser({ id: did });
             return renown.login(did);
         });
 
         ipcMain.handle('renown:logout', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             Sentry.setUser(null);
             return renown.logout();
         });

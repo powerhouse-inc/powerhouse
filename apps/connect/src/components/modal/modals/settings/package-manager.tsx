@@ -6,7 +6,6 @@ import {
 } from '#store/external-packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
 import { Manifest } from 'document-model';
-import CommonManifest from 'document-model-libs/manifest';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 const LOCAL_REACTOR_VALUE = 'local-reactor';
@@ -83,11 +82,11 @@ export const PackageManager: React.FC = () => {
     }, [reactor, options]);
 
     const packagesInfo = useMemo(() => {
-        return [manifestToDetails(CommonManifest, 'common', false)].concat(
+        return [
             ...packages.map(pkg =>
                 manifestToDetails(pkg.manifest, pkg.id, true),
             ),
-        );
+        ];
     }, [packages]);
 
     const handleReactorChange = useCallback(

@@ -8,28 +8,28 @@ import { useGetEditor } from '#store/editor';
 import { themeAtom } from '#store/theme';
 import { useUser } from '#store/user';
 import {
-  DocumentDispatchCallback,
-  useDocumentDispatch,
+    DocumentDispatchCallback,
+    useDocumentDispatch,
 } from '#utils/document-model';
 import { addActionContext, signOperation } from '#utils/signature';
 import { DocumentToolbar, RevisionHistory } from '@powerhousedao/design-system';
 import {
-  Action,
-  ActionErrorCallback,
-  EditorContext,
-  Operation,
-  PHDocument,
-  redo,
-  undo,
+    Action,
+    ActionErrorCallback,
+    EditorContext,
+    Operation,
+    PHDocument,
+    redo,
+    undo,
 } from 'document-model';
 import { useAtomValue } from 'jotai';
 import React, {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    Suspense,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';

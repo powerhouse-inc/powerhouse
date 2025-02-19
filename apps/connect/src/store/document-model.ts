@@ -110,16 +110,16 @@ export function useDocumentModel<TGlobalState, TLocalState>(
     const documentModels = useUnwrappedDocumentModels();
     return getDocumentModel<TGlobalState, TLocalState>(
         documentType,
-        documentModels,
+        documentModels as DocumentModelModule<TGlobalState, TLocalState>[],
     );
 }
 
 export const useGetDocumentModel = <TGlobalState, TLocalState>() => {
     const documentModels = useUnwrappedDocumentModels();
     return (documentType: string) =>
-        getDocumentModel<TGlobalState, TLocalState>(
+        getDocumentModel(
             documentType,
-            documentModels,
+            documentModels as DocumentModelModule<TGlobalState, TLocalState>[],
         );
 };
 
