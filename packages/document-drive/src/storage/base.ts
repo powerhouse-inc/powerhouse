@@ -1,10 +1,15 @@
-import type { BaseDocument, DocumentHeader, Operation } from "document-model";
+import type {
+  Action,
+  DocumentHeader,
+  Operation,
+  PHDocument,
+} from "document-model";
 
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
-} from "../drive-document-model/gen/types.js";
-import { SynchronizationUnitQuery } from "../server/types.js";
+} from "#drive-document-model/gen/types.js";
+import { SynchronizationUnitQuery } from "#server/types.js";
 import { IDriveStorage, IStorage, IStorageDelegate } from "./types.js";
 
 abstract class BaseStorage implements IStorage {
@@ -12,28 +17,28 @@ abstract class BaseStorage implements IStorage {
 
   abstract getDocuments(drive: string): Promise<string[]>;
 
-  abstract getDocument<TGlobalState, TLocalState>(
+  abstract getDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-  ): Promise<BaseDocument<TGlobalState, TLocalState>>;
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>>;
 
-  abstract createDocument<TGlobalState, TLocalState>(
+  abstract createDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState, TAction>,
   ): Promise<void>;
 
-  abstract addDocumentOperations<TGlobalState, TLocalState>(
+  abstract addDocumentOperations(
     drive: string,
     id: string,
     operations: Operation[],
     header: DocumentHeader,
   ): Promise<void>;
 
-  abstract addDocumentOperationsWithTransaction<TGlobalState, TLocalState>(
+  abstract addDocumentOperationsWithTransaction(
     drive: string,
     id: string,
-    callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
+    callback: (document: PHDocument) => Promise<{
       operations: Operation[];
       header: DocumentHeader;
     }>,

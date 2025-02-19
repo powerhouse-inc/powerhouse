@@ -1,7 +1,6 @@
 import type {
   Action,
   ActionErrorCallback,
-  BaseDocument,
   CustomAction,
   Operation,
   Reducer,
@@ -11,8 +10,8 @@ import { useEffect, useState } from "react";
 export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
   operation: Operation,
   state: {
-    prevState: BaseDocument<TGlobalState, TLocalState>;
-    newState: BaseDocument<TGlobalState, TLocalState>;
+    prevState: PHDocument<TGlobalState, TLocalState>;
+    newState: PHDocument<TGlobalState, TLocalState>;
   },
 ) => void;
 
@@ -36,10 +35,10 @@ export function useDocumentDispatch<
   documentReducer:
     | Reducer<TGlobalState, TLocalState, TAction | Action | CustomAction>
     | undefined,
-  initialState: BaseDocument<TGlobalState, TLocalState> | undefined,
+  initialState: PHDocument<TGlobalState, TLocalState> | undefined,
   onError: OnErrorHandler = console.error,
 ): readonly [
-  BaseDocument<TGlobalState, TLocalState> | undefined,
+  PHDocument<TGlobalState, TLocalState> | undefined,
   DocumentDispatch<TGlobalState, TLocalState, TAction>,
   unknown,
 ] {

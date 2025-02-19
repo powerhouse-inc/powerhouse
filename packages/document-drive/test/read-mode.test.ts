@@ -34,7 +34,7 @@ function buildDrive(state: Partial<DocumentDrive.DocumentDriveState>) {
   });
 }
 
-function buildDocumentResponse(drive: BaseDocument<unknown, unknown>) {
+function buildDocumentResponse(drive: PHDocument) {
   return {
     ...drive,
     revision: drive.revision.global,

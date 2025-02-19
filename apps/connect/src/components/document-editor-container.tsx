@@ -38,7 +38,7 @@ export function DocumentEditorContainer() {
     );
 
     const onDocumentChangeHandler = useCallback(
-        (documentId: string, document: BaseDocument<unknown, unknown>) => {
+        (documentId: string, document: PHDocument) => {
             if (documentId !== fileNodeDocument?.documentId) {
                 return;
             }
@@ -69,7 +69,7 @@ export function DocumentEditorContainer() {
     }, [selectedParentNode, setSelectedNode]);
 
     const exportDocument = useCallback(
-        (document: BaseDocument<unknown, unknown>) => {
+        (document: PHDocument) => {
             const validationErrors = validateDocument(document);
 
             if (validationErrors.length) {

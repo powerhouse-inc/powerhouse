@@ -1,13 +1,12 @@
-import { BaseDocument } from "document-model";
-import {
-    AddVestingInput,
-    UpdateVestingInput,
-    DeleteVestingInput,
-    BudgetStatementState,
-    BudgetStatementLocalState,
-} from "../types.js";
-import { addVesting, updateVesting, deleteVesting } from "./creators";
 import { BudgetStatementAction } from "../actions";
+import {
+  AddVestingInput,
+  BudgetStatementLocalState,
+  BudgetStatementState,
+  DeleteVestingInput,
+  UpdateVestingInput,
+} from "../types.js";
+import { addVesting, deleteVesting, updateVesting } from "./creators";
 
 export default class BudgetStatement_Vesting extends BaseDocument<
   BudgetStatementState,

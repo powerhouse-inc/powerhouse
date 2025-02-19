@@ -5,7 +5,7 @@ import {
     validateStateSchemaName,
     ValidationError,
 } from 'document-model';
-export const validateDocument = (document: BaseDocument<unknown, unknown>) => {
+export const validateDocument = (document: PHDocument) => {
     const errors: ValidationError[] = [];
 
     if (document.documentType !== 'powerhouse/document-model') {

@@ -1,17 +1,21 @@
 import {
-  BaseDocument,
+  DocumentDriveAction,
+  DocumentDriveDocument,
+} from "#drive-document-model/gen/types.js";
+import { DriveNotFoundError } from "#server/error.js";
+import { SynchronizationUnitQuery } from "#server/types.js";
+import { mergeOperations } from "#utils/misc.js";
+import {
+  Action,
   DocumentHeader,
   Operation,
   OperationScope,
+  PHDocument,
 } from "document-model";
-import { DocumentDriveAction, DocumentDriveDocument } from "../drive-document-model/gen/types.js";
-import { DriveNotFoundError } from "../server/error.js";
-import { SynchronizationUnitQuery } from "../server/types.js";
-import { mergeOperations } from "../utils/misc.js";
 import { IDriveStorage } from "./types.js";
 
 export class MemoryStorage implements IDriveStorage {
-  private documents: Record<string, Record<string, BaseDocument<any, any>>>;
+  private documents: Record<string, Record<string, PHDocument>>;
   private drives: Record<string, DocumentDriveDocument>;
   private slugToDriveId: Record<string, string> = {};
 
@@ -28,10 +32,10 @@ export class MemoryStorage implements IDriveStorage {
     return Object.keys(this.documents[drive] ?? {});
   }
 
-  async getDocument<TGlobalState, TLocalState>(
+  async getDocument<TGlobalState, TLocalState, TAction = Action>(
     driveId: string,
     id: string,
-  ): Promise<BaseDocument<TGlobalState, TLocalState>> {
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
     const drive = this.documents[driveId];
     if (!drive) {
       throw new DriveNotFoundError(driveId);
@@ -41,14 +45,10 @@ export class MemoryStorage implements IDriveStorage {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    return document as BaseDocument<TGlobalState, TLocalState>;
+    return document as PHDocument<TGlobalState, TLocalState, TAction>;
   }
 
-  async saveDocument<TGlobalState, TLocalState>(
-    drive: string,
-    id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
-  ) {
+  async saveDocument(drive: string, id: string, document: PHDocument) {
     this.documents[drive] = this.documents[drive] ?? {};
     this.documents[drive][id] = document;
   }
@@ -58,10 +58,10 @@ export class MemoryStorage implements IDriveStorage {
     this.drives = {};
   }
 
-  async createDocument<TGlobalState, TLocalState>(
+  async createDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState, TAction>,
   ) {
     this.documents[drive] = this.documents[drive] ?? {};
     const {
@@ -85,10 +85,10 @@ export class MemoryStorage implements IDriveStorage {
       lastModified,
       clipboard,
       state,
-    };
+    } as PHDocument;
   }
 
-  async addDocumentOperations<TGlobalState, TLocalState>(
+  async addDocumentOperations(
     drive: string,
     id: string,
     operations: Operation[],

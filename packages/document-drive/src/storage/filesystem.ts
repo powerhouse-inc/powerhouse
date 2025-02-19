@@ -1,8 +1,9 @@
 import {
-  BaseDocument,
+  Action,
   DocumentHeader,
   Operation,
   OperationScope,
+  PHDocument,
 } from "document-model";
 import type { Dirent } from "fs";
 import {
@@ -89,21 +90,28 @@ export class FilesystemStorage implements IDriveStorage {
     return Promise.resolve(documentExists);
   }
 
-  async getDocument<TGlobalState, TLocalState>(drive: string, id: string) {
+  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+    drive: string,
+    id: string,
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
     try {
       const content = readFileSync(this._buildDocumentPath(drive, id), {
         encoding: "utf-8",
       });
-      return JSON.parse(content) as BaseDocument<TGlobalState, TLocalState>;
+      return JSON.parse(content) as PHDocument<
+        TGlobalState,
+        TLocalState,
+        TAction
+      >;
     } catch (error) {
       throw new Error(`Document with id ${id} not found`);
     }
   }
 
-  async createDocument<TGlobalState, TLocalState>(
+  async createDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState, TAction>,
   ) {
     const documentPath = this._buildDocumentPath(drive, id);
     ensureDir(path.dirname(documentPath));

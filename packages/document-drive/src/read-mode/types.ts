@@ -1,4 +1,9 @@
-import { Action, BaseDocument, DocumentModelModule } from "document-model";
+import {
+  Action,
+  CustomAction,
+  DocumentModelModule,
+  PHDocument,
+} from "document-model";
 import {
   DocumentDriveDocument,
   ListenerFilter,
@@ -65,12 +70,16 @@ export interface IReadModeDriveService {
 
   fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
 
-  fetchDocument<TGlobalState, TLocalState>(
+  fetchDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action | CustomAction = Action,
+  >(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | BaseDocument<TGlobalState, TLocalState>
+    | PHDocument<TGlobalState, TLocalState, TAction>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError

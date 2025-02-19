@@ -1,8 +1,8 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
+  Action,
   AttachmentInput,
-  BaseDocument,
   BaseState,
   DocumentHeader,
   DocumentOperations,
@@ -10,6 +10,7 @@ import type {
   FileRegistry,
   Operation,
   OperationScope,
+  PHDocument,
 } from "document-model";
 import { IBackOffOptions, backOff } from "exponential-backoff";
 import {
@@ -140,10 +141,10 @@ export class PrismaStorage implements IDriveStorage {
     );
   }
 
-  async createDocument<TGlobalState, TLocalState>(
+  async createDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState, TAction>,
   ): Promise<void> {
     await this.db.document.upsert({
       where: {
@@ -268,7 +269,7 @@ export class PrismaStorage implements IDriveStorage {
   async addDocumentOperationsWithTransaction<TGlobalState, TLocalState>(
     drive: string,
     id: string,
-    callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
+    callback: (document: PHDocument<TGlobalState, TLocalState>) => Promise<{
       operations: Operation[];
       header: DocumentHeader;
       newState?: BaseState<TGlobalState, TLocalState> | undefined;
@@ -343,11 +344,11 @@ export class PrismaStorage implements IDriveStorage {
     return count > 0;
   }
 
-  async getDocument<TGlobalState, TLocalState>(
+  async getDocument<TGlobalState, TLocalState, TAction = Action>(
     driveId: string,
     id: string,
     tx?: Transaction,
-  ): Promise<BaseDocument<TGlobalState, TLocalState>> {
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
     const prisma = tx ?? this.db;
     const result = await prisma.document.findUnique({
       where: {
@@ -438,27 +439,24 @@ export class PrismaStorage implements IDriveStorage {
     // TODO add attachments from cached operations
     const fileRegistry: FileRegistry = {};
 
-    const operationsByScope = queryOperations.reduce<DocumentOperations>(
-      (acc, operation) => {
-        const scope = operation.scope as OperationScope;
-        if (!acc[scope]) {
-          acc[scope] = [];
-        }
-        const result = storageToOperation(operation);
-        result.attachments = attachments.filter(
-          (a) => a.operationId === operation.id,
-        );
-        result.attachments.forEach(({ hash, ...file }) => {
-          fileRegistry[hash] = file;
-        });
-        acc[scope].push(result);
-        return acc;
-      },
-      cachedOperations as DocumentOperations,
-    );
+    const operationsByScope = queryOperations.reduce((acc, operation) => {
+      const scope = operation.scope as OperationScope;
+      if (!acc[scope]) {
+        acc[scope] = [];
+      }
+      const result = storageToOperation(operation);
+      result.attachments = attachments.filter(
+        (a) => a.operationId === operation.id,
+      );
+      result.attachments.forEach(({ hash, ...file }) => {
+        fileRegistry[hash] = file;
+      });
+      acc[scope].push(result);
+      return acc;
+    }, cachedOperations) as DocumentOperations<TAction>;
 
     const dbDoc = result;
-    const doc: BaseDocument<TGlobalState, TLocalState> = {
+    const doc: PHDocument<TGlobalState, TLocalState, TAction> = {
       created: dbDoc.created.toISOString(),
       name: dbDoc.name ? dbDoc.name : "",
       documentType: dbDoc.documentType,

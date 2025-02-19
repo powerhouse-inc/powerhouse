@@ -1,18 +1,19 @@
-import type {
-  BaseDocument,
-  DocumentHeader,
-  Operation,
-  OperationScope,
-} from "document-model";
-import LocalForage from "localforage";
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
-} from "../drive-document-model/gen/types.js";
-import { DriveNotFoundError } from "../server/error.js";
-import { SynchronizationUnitQuery } from "../server/types.js";
-import { migrateDocumentOperationSignatures } from "../utils/migrations.js";
-import { mergeOperations } from "../utils/misc.js";
+} from "#drive-document-model/gen/types.js";
+import { DriveNotFoundError } from "#server/error.js";
+import { SynchronizationUnitQuery } from "#server/types.js";
+import { migrateDocumentOperationSignatures } from "#utils/migrations.js";
+import { mergeOperations } from "#utils/misc.js";
+import type {
+  Action,
+  DocumentHeader,
+  Operation,
+  OperationScope,
+  PHDocument,
+} from "document-model";
+import LocalForage from "localforage";
 import { IDriveStorage } from "./types.js";
 
 export class BrowserStorage implements IDriveStorage {
@@ -52,10 +53,13 @@ export class BrowserStorage implements IDriveStorage {
       .map((key) => key.slice(driveKey.length));
   }
 
-  async getDocument<TGlobalState, TLocalState>(driveId: string, id: string) {
+  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+    driveId: string,
+    id: string,
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
     const document = await (
       await this.db
-    ).getItem<BaseDocument<TGlobalState, TLocalState>>(
+    ).getItem<PHDocument<TGlobalState, TLocalState, TAction>>(
       this.buildKey(driveId, id),
     );
     if (!document) {
@@ -64,10 +68,10 @@ export class BrowserStorage implements IDriveStorage {
     return document;
   }
 
-  async createDocument<TGlobalState, TLocalState>(
+  async createDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState, TAction>,
   ) {
     await (await this.db).setItem(this.buildKey(drive, id), document);
   }
@@ -80,7 +84,7 @@ export class BrowserStorage implements IDriveStorage {
     return (await this.db).clear();
   }
 
-  async addDocumentOperations<TGlobalState, TLocalState>(
+  async addDocumentOperations(
     drive: string,
     id: string,
     operations: Operation[],

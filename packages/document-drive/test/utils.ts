@@ -1,8 +1,9 @@
 import {
   Action,
-  BaseDocument,
+  CustomAction,
   DocumentModelDocument,
   Operation,
+  PHDocument,
   Reducer,
 } from "document-model";
 import { ExpectStatic } from "vitest";
@@ -21,7 +22,7 @@ export function expectUTCTimestamp(expect: ExpectStatic): unknown {
 export function buildOperation(
   reducer: Reducer<any, any, any>,
 
-  document: BaseDocument<any, any>,
+  document: PHDocument,
   action: Action,
   index?: number,
 ): Operation {
@@ -37,7 +38,7 @@ export function buildOperation(
 export function buildOperations(
   reducer: Reducer<any, any, any>,
 
-  document: BaseDocument<any, any>,
+  document: PHDocument,
 
   actions: Array<Action>,
 ): Operation[] {
@@ -53,25 +54,31 @@ export function buildOperations(
   return operations;
 }
 
-export function buildOperationAndDocument(
-  reducer: Reducer<any, any, any>,
-
-  document: BaseDocument<any, any>,
-  action: Action,
+export function buildOperationAndDocument<
+  TGlobalState,
+  TLocalState,
+  TAction extends CustomAction = Action,
+>(
+  reducer: Reducer<TGlobalState, TLocalState, TAction>,
+  document: PHDocument<TGlobalState, TLocalState, TAction>,
+  action: TAction,
   index?: number,
-) {
+): {
+  document: PHDocument<TGlobalState, TLocalState, TAction>;
+  operation: Operation<TAction>;
+} {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const operation = newDocument.operations[action.scope]
     .slice()
-    .pop()! as Operation;
+    .pop()! as Operation<TAction>;
 
   return {
-    document: newDocument,
+    document: newDocument as PHDocument<TGlobalState, TLocalState, TAction>,
     operation: {
       ...operation,
       index: index ?? operation.index,
-    } as Operation,
+    } as Operation<TAction>,
   };
 }
 
@@ -83,7 +90,7 @@ export class BasicClient {
     private driveId: string,
     private documentId: string,
 
-    private document: BaseDocument<any, any>,
+    private document: PHDocument,
 
     private reducer: Reducer<any, any, any>,
   ) {}
@@ -154,7 +161,7 @@ export class DriveBasicClient {
     private server: BaseDocumentDriveServer,
     private driveId: string,
 
-    private document: BaseDocument<any, any>,
+    private document: PHDocument,
 
     private reducer: Reducer<any, any, any>,
   ) {}

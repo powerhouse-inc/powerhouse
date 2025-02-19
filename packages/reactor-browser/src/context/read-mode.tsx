@@ -15,7 +15,6 @@ import {
   ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
 } from "document-drive";
-import { BaseDocument } from "document-model";
 import {
   createContext,
   FC,
@@ -147,7 +146,7 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     documentId: string,
     documentType: string,
   ): Promise<
-    | BaseDocument<TGlobalState, TLocalState>
+    | PHDocument<TGlobalState, TLocalState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError

@@ -2,7 +2,6 @@ import { IDocumentDriveServer } from 'document-drive';
 import type {
     Action,
     ActionErrorCallback,
-    BaseDocument,
     CustomAction,
     Operation,
     OperationScope,
@@ -21,8 +20,8 @@ export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
 export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
     operation: Operation,
     state: {
-        prevState: BaseDocument<TGlobalState, TLocalState>;
-        newState: BaseDocument<TGlobalState, TLocalState>;
+        prevState: PHDocument<TGlobalState, TLocalState>;
+        newState: PHDocument<TGlobalState, TLocalState>;
     },
 ) => void;
 
@@ -75,10 +74,10 @@ export function useDocumentDispatch<
               TCustomAction | CustomAction | Action
           >
         | undefined,
-    initialState: BaseDocument<TGlobalState, TLocalState> | undefined,
+    initialState: PHDocument<TGlobalState, TLocalState> | undefined,
     onError: OnErrorHandler = logger.error,
 ): readonly [
-    BaseDocument<TGlobalState, TLocalState> | undefined,
+    PHDocument<TGlobalState, TLocalState> | undefined,
     DocumentDispatch<TGlobalState, TLocalState, TCustomAction>,
     unknown,
 ] {
@@ -207,13 +206,13 @@ const debugLog = (...data: any[]) => {
 export async function uploadDocumentOperations(
     drive: string,
     documentId: string,
-    document: BaseDocument<unknown, unknown>,
+    document: PHDocument,
     reactor: IDocumentDriveServer,
     pushOperations: (
         driveId: string,
         id: string,
         operations: Operation[],
-    ) => Promise<BaseDocument<unknown, unknown> | undefined>,
+    ) => Promise<PHDocument | undefined>,
     options?: { waitForSync?: boolean; operationsLimit?: number },
 ) {
     const operationsLimit =

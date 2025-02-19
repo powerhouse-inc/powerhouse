@@ -1,7 +1,8 @@
 import type {
-  BaseDocument,
+  Action,
   DocumentOperations,
   OperationScope,
+  PHDocument,
 } from "document-model";
 import { RevisionsFilter, StrandUpdate } from "./types.js";
 
@@ -20,7 +21,7 @@ export function buildRevisionsFilter(
 }
 
 export function buildDocumentRevisionsFilter<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+  document: PHDocument<TGlobalState, TLocalState>,
 ): RevisionsFilter {
   return Object.entries(document.operations).reduce<RevisionsFilter>(
     (acc, [scope, operations]) => {
@@ -52,8 +53,12 @@ export function filterOperationsByRevision(
   );
 }
 
-export function isAtRevision<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+export function isAtRevision<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+  TAction = Action,
+>(
+  document: PHDocument<TGlobalState, TLocalState, TAction>,
   revisions?: RevisionsFilter,
 ): boolean {
   return (
@@ -69,7 +74,7 @@ export function isAtRevision<TGlobalState, TLocalState>(
 }
 
 export function isAfterRevision<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
+  document: PHDocument<TGlobalState, TLocalState>,
   revisions?: RevisionsFilter,
 ): boolean {
   return (

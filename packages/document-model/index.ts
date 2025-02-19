@@ -48,6 +48,7 @@ export type {
   BaseAction,
   BaseActionWithAttachment,
   BaseDocument,
+  PHDocument,
   BaseState,
   CreateChildDocumentInput,
   CreateDocument,

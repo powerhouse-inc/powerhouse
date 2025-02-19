@@ -174,7 +174,7 @@ function handleFileSave(path?: string) {
 
 ipcMain.handle(
     'fileSaved',
-    (e, document: BaseDocument<unknown, unknown>, path?: string) =>
+    (e, document: PHDocument, path?: string) =>
         handleFileSave(path),
 );
 

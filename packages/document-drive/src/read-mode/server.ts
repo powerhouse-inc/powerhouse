@@ -1,3 +1,4 @@
+import { Action, CustomAction } from "document-model";
 import {
   DocumentDriveServerConstructor,
   RemoteDriveOptions,
@@ -77,16 +78,16 @@ export function ReadModeServer(
       return this.#readModeStorage.fetchDrive(id);
     }
 
-    fetchDocument<TGlobalState, TLocalState>(
-      driveId: string,
-      documentId: string,
-      documentType: string,
-    ) {
-      return this.#readModeStorage.fetchDocument<TGlobalState, TLocalState>(
-        driveId,
-        documentId,
-        documentType,
-      );
+    fetchDocument<
+      TGlobalState,
+      TLocalState,
+      TAction extends Action | CustomAction = Action,
+    >(driveId: string, documentId: string, documentType: string) {
+      return this.#readModeStorage.fetchDocument<
+        TGlobalState,
+        TLocalState,
+        TAction
+      >(driveId, documentId, documentType);
     }
 
     async deleteReadDrive(id: string) {

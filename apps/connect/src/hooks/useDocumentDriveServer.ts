@@ -184,7 +184,7 @@ export function useDocumentDriveServer() {
             name: string,
             documentType: string,
             parentFolder?: string,
-            document?: BaseDocument<unknown, unknown>,
+            document?: PHDocument,
         ) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create documents');
@@ -268,7 +268,7 @@ export function useDocumentDriveServer() {
             const document = await loadFile(file, getDocumentModel);
 
             // first create the file with the initial state of document
-            const initialDocument: BaseDocument<unknown, unknown> = {
+            const initialDocument: PHDocument = {
                 ...document.initialState,
                 initialState: document.initialState,
                 operations: {

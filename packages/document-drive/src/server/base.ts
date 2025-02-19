@@ -1,10 +1,11 @@
 import {
   Action,
-  BaseDocument,
+  CustomAction,
   DocumentHeader,
   DocumentModelModule,
   Operation,
   OperationScope,
+  PHDocument,
   attachBranch,
   garbageCollect,
   garbageCollectDocumentOperations,
@@ -150,8 +151,8 @@ export class TransmitterFactory implements ITransmitterFactory {
 
 export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   private emitter = createNanoEvents<DriveEvents>();
-  private cache: ICache<any, any>;
-  private documentModels: DocumentModelModule<any, any>[];
+  private cache: ICache;
+  private documentModels: DocumentModelModule[];
   private storage: IDriveStorage;
   private transmitterFactory: ITransmitterFactory;
   private listenerManager: IListenerManager;
@@ -175,7 +176,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
       DocumentDriveAction
     >[],
     storage: IDriveStorage = new MemoryStorage(),
-    cache: ICache<any, any> = new InMemoryCache(),
+    cache: ICache = new InMemoryCache(),
     queueManager: IQueueManager = new BaseQueueManager(),
     options?: DocumentDriveServerOptions,
   ) {
@@ -215,9 +216,16 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     );
 
     this.storage.setStorageDelegate?.({
-      getCachedOperations: async (drive, id) => {
+      getCachedOperations: async <TAction = Action>(
+        drive: string,
+        id: string,
+      ) => {
         try {
-          const document = await this.cache.getDocument(drive, id);
+          const document = await this.cache.getDocument<
+            unknown,
+            unknown,
+            TAction
+          >(drive, id);
           return document?.operations;
         } catch (error) {
           logger.error(error);
@@ -932,7 +940,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }));
   }
 
-  protected getDocumentModel<TGlobalState, TLocalState, TAction extends Action>(
+  protected getDocumentModel<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action | CustomAction = Action,
+  >(
     documentType: string,
   ): DocumentModelModule<TGlobalState, TLocalState, TAction> {
     const documentModel = this.documentModels.find(
@@ -941,7 +953,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     if (!documentModel) {
       throw new Error(`Document type ${documentType} not supported`);
     }
-    return documentModel;
+    return documentModel as DocumentModelModule<
+      TGlobalState,
+      TLocalState,
+      TAction
+    >;
   }
 
   getDocumentModels() {
@@ -1093,12 +1109,18 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }
   }
 
-  async getDocument<TGlobalState, TLocalState>(
+  async getDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action | CustomAction = Action,
+  >(
     driveId: string,
     documentId: string,
     options?: GetDocumentOptions,
-  ) {
-    let cachedDocument: BaseDocument<TGlobalState, TLocalState> | undefined;
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
+    let cachedDocument:
+      | PHDocument<TGlobalState, TLocalState, TAction>
+      | undefined;
     try {
       cachedDocument = await this.cache.getDocument(driveId, documentId); // TODO support GetDocumentOptions
       if (cachedDocument && isAtRevision(cachedDocument, options?.revisions)) {
@@ -1112,9 +1134,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     const document = this._buildDocument(documentStorage, options);
 
     if (!options?.revisions) {
-      this.cache.setDocument(driveId, documentId, document).catch(logger.error);
+      this.cache
+        .setDocument(driveId, documentId, document as PHDocument)
+        .catch(logger.error);
     }
-    return document;
+    return document as PHDocument<TGlobalState, TLocalState, TAction>;
   }
 
   getDocuments(driveId: string) {
@@ -1124,7 +1148,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   protected async createDocument<TGlobalState, TLocalState>(
     driveId: string,
     input: CreateDocumentInput<TGlobalState, TLocalState>,
-  ): Promise<BaseDocument<TGlobalState, TLocalState>> {
+  ): Promise<PHDocument<TGlobalState, TLocalState>> {
     // if a document was provided then checks if it's valid
     let state = undefined;
     if (input.document) {
@@ -1138,7 +1162,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     // if no document was provided then create a new one
     const document =
       input.document ??
-      this.getDocumentModel<TGlobalState, TLocalState, Action>(
+      this.getDocumentModel<TGlobalState, TLocalState>(
         input.documentType,
       ).utils.createDocument();
 
@@ -1210,7 +1234,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   async _processOperations<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string | undefined,
-    documentStorage: BaseDocument<TGlobalState, TLocalState>,
+    documentStorage: PHDocument<TGlobalState, TLocalState>,
     operations: Operation[],
   ) {
     const operationsApplied: Operation[] = [];
@@ -1317,11 +1341,11 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   private async _addDocumentResultingStage<TGlobalState, TLocalState>(
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState>,
     driveId: string,
     documentId?: string,
     options?: GetDocumentOptions,
-  ): Promise<BaseDocument<TGlobalState, TLocalState>> {
+  ): Promise<PHDocument<TGlobalState, TLocalState>> {
     // apply skip header operations to all scopes
     const operations =
       options?.revisions !== undefined
@@ -1358,8 +1382,12 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     };
   }
 
-  private _buildDocument<TGlobalState, TLocalState>(
-    documentStorage: BaseDocument<TGlobalState, TLocalState>,
+  private _buildDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action | CustomAction = Action,
+  >(
+    documentStorage: PHDocument<TGlobalState, TLocalState, TAction>,
     options?: GetDocumentOptions,
   ) {
     if (
@@ -1373,7 +1401,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     const documentModel = this.getDocumentModel<
       TGlobalState,
       TLocalState,
-      Action
+      TAction
     >(documentStorage.documentType);
 
     const revisionOperations =
@@ -1403,15 +1431,13 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   private async _performOperation<TGlobalState, TLocalState>(
     driveId: string,
     documentId: string | undefined,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState>,
     operation: Operation,
     skipHashValidation = false,
   ) {
-    const documentModel = this.getDocumentModel<
-      TGlobalState,
-      TLocalState,
-      Action
-    >(document.documentType);
+    const documentModel = this.getDocumentModel<TGlobalState, TLocalState>(
+      document.documentType,
+    );
 
     const signalResults: SignalResult[] = [];
     let newDocument = document;
@@ -1517,19 +1543,19 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   ): Promise<IOperationResult> {
     return this.addOperations(driveId, documentId, [operation], options);
   }
-  private async _addOperations<TGlobalState, TLocalState>(
+  private async _addOperations(
     driveId: string,
     documentId: string,
-    callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
+    callback: (document: PHDocument) => Promise<{
       operations: Operation[];
       header: DocumentHeader;
     }>,
   ) {
     if (!this.storage.addDocumentOperationsWithTransaction) {
-      const documentStorage = await this.storage.getDocument<
-        TGlobalState,
-        TLocalState
-      >(driveId, documentId);
+      const documentStorage = await this.storage.getDocument(
+        driveId,
+        documentId,
+      );
       const result = await callback(documentStorage);
       // saves the applied operations to storage
       if (result.operations.length > 0) {
@@ -1768,27 +1794,28 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     }
   }
 
-  async addOperations<TGlobalState, TLocalState>(
+  async addOperations(
     driveId: string,
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ) {
     // if operations are already stored then returns the result
-    const result = await this.resultIfExistingOperations<
-      TGlobalState,
-      TLocalState
-    >(driveId, documentId, operations);
+    const result = await this.resultIfExistingOperations(
+      driveId,
+      documentId,
+      operations,
+    );
     if (result) {
       return result;
     }
-    let document: BaseDocument<TGlobalState, TLocalState> | undefined;
+    let document: PHDocument | undefined;
     const operationsApplied: Operation[] = [];
     const signals: SignalResult[] = [];
     let error: Error | undefined;
 
     try {
-      await this._addOperations<TGlobalState, TLocalState>(
+      await this._addOperations(
         driveId,
         documentId,
         async (documentStorage) => {
@@ -2293,7 +2320,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
   }
 
   private _buildOperations(
-    document: BaseDocument<unknown, unknown>,
+    document: PHDocument,
     actions: Action[],
   ): Operation[] {
     const documentType = document.documentType;

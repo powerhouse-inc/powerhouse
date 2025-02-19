@@ -57,7 +57,7 @@ export type FileNodeDocument =
           documentId: string;
           documentType: string;
           name: string;
-          document: BaseDocument<unknown, unknown> | undefined;
+          document: PHDocument | undefined;
           status: 'LOADING' | 'ERROR';
       }
     | {
@@ -65,7 +65,7 @@ export type FileNodeDocument =
           documentId: string;
           documentType: string;
           name: string;
-          document: BaseDocument<unknown, unknown>;
+          document: PHDocument;
           status: 'LOADED';
       }
     | undefined;
@@ -75,8 +75,8 @@ const documentCacheAtom = atom(new Map<string, Document>());
 const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
 
 export function isSameDocument(
-    prev: BaseDocument<unknown, unknown> | undefined,
-    next: BaseDocument<unknown, unknown> | undefined,
+    prev: PHDocument | undefined,
+    next: PHDocument | undefined,
 ) {
     if (prev === next) {
         return true;
@@ -135,7 +135,7 @@ const fileNodeDocumentAtom = atom(
 
 const selectedDocumentAtom = atom(
     null,
-    (get, set, document: BaseDocument<unknown, unknown> | undefined) => {
+    (get, set, document: PHDocument | undefined) => {
         const fileNodeDocument = get(fileNodeDocumentAtom);
         if (!fileNodeDocument) {
             throw new Error('fileNodeDocument is undefined');

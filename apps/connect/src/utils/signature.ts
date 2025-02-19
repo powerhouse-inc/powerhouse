@@ -1,7 +1,6 @@
 import {
     Action,
     ActionSigner,
-    BaseDocument,
     buildSignedOperation,
     Operation,
     OperationSignatureContext,
@@ -19,7 +18,7 @@ export async function signOperation<
     operation: Operation<TAction>,
     sign: (data: Uint8Array) => Promise<Uint8Array>,
     documentId: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState>,
     reducer?: Reducer<TGlobalState, TLocalState, TAction>,
     user?: User,
 ) {

@@ -1,19 +1,18 @@
-import { BaseDocument } from "document-model";
+import { BudgetStatementAction } from "../actions";
 import {
-    AddAccountInput,
-    UpdateAccountInput,
-    DeleteAccountInput,
-    SortAccountsInput,
-    BudgetStatementState,
-    BudgetStatementLocalState,
+  AddAccountInput,
+  BudgetStatementLocalState,
+  BudgetStatementState,
+  DeleteAccountInput,
+  SortAccountsInput,
+  UpdateAccountInput,
 } from "../types.js";
 import {
-    addAccount,
-    updateAccount,
-    deleteAccount,
-    sortAccounts,
+  addAccount,
+  deleteAccount,
+  sortAccounts,
+  updateAccount,
 } from "./creators";
-import { BudgetStatementAction } from "../actions";
 
 export default class BudgetStatement_Account extends BaseDocument<
   BudgetStatementState,

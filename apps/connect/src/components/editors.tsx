@@ -1,21 +1,19 @@
 import { DocumentToolbar, RevisionHistory } from '@powerhousedao/design-system';
 import {
-    Action,
-    ActionErrorCallback,
-    BaseDocument,
-    EditorContext,
-    Operation,
-    redo,
-    undo,
+  Action,
+  ActionErrorCallback, EditorContext,
+  Operation,
+  redo,
+  undo
 } from 'document-model';
 import { useAtomValue } from 'jotai';
 import React, {
-    Suspense,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
@@ -29,8 +27,8 @@ import { useGetEditor } from 'src/store/editor';
 import { themeAtom } from 'src/store/theme';
 import { useUser } from 'src/store/user';
 import {
-    DocumentDispatchCallback,
-    useDocumentDispatch,
+  DocumentDispatchCallback,
+  useDocumentDispatch,
 } from 'src/utils/document-model';
 import { addActionContext, signOperation } from 'src/utils/signature';
 import Button from './button';
@@ -39,14 +37,14 @@ import { useModal } from './modal';
 
 export type EditorProps<TGlobalState = unknown, TLocalState = unknown> = {
     fileNodeDocument: FileNodeDocument;
-    document: BaseDocument<TGlobalState, TLocalState> | undefined;
+    document: PHDocument<TGlobalState, TLocalState> | undefined;
     onClose: () => void;
     onExport: () => void;
     onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
     onChange?: (
         documentId: string,
-        document: BaseDocument<TGlobalState, TLocalState>,
+        document: PHDocument<TGlobalState, TLocalState>,
     ) => void;
 };
 

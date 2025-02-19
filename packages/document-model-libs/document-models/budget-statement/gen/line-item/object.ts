@@ -1,19 +1,18 @@
-import { BaseDocument } from "document-model";
+import { BudgetStatementAction } from "../actions";
 import {
-    AddLineItemInput,
-    UpdateLineItemInput,
-    DeleteLineItemInput,
-    SortLineItemsInput,
-    BudgetStatementState,
-    BudgetStatementLocalState,
+  AddLineItemInput,
+  BudgetStatementLocalState,
+  BudgetStatementState,
+  DeleteLineItemInput,
+  SortLineItemsInput,
+  UpdateLineItemInput,
 } from "../types.js";
 import {
-    addLineItem,
-    updateLineItem,
-    deleteLineItem,
-    sortLineItems,
+  addLineItem,
+  deleteLineItem,
+  sortLineItems,
+  updateLineItem,
 } from "./creators";
-import { BudgetStatementAction } from "../actions";
 
 export default class BudgetStatement_LineItem extends BaseDocument<
   BudgetStatementState,

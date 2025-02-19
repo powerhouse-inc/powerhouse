@@ -6,12 +6,12 @@ import { BaseDocument, OperationScope } from "document-model";
 import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "../types.js";
 
 export type ProcessorUpdate<
-  D extends BaseDocument<unknown, unknown> = BaseDocument<unknown, unknown>,
+  D extends PHDocument = PHDocument,
   S extends OperationScope = OperationScope,
 > = InternalTransmitterUpdate<D, S>;
 
 export abstract class Processor<
-  D extends BaseDocument<unknown, unknown> = BaseDocument<unknown, unknown>,
+  D extends PHDocument = PHDocument,
   S extends OperationScope = OperationScope,
 > implements IProcessor
 {

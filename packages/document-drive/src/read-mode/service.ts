@@ -1,4 +1,4 @@
-import type { Action, DocumentModelModule } from "document-model";
+import type { Action, CustomAction, DocumentModelModule } from "document-model";
 import { GraphQLError } from "graphql";
 import { driveDocumentType } from "../drive-document-model/constants.js";
 import {
@@ -87,12 +87,16 @@ export class ReadModeService implements IReadModeDriveService {
     return result;
   }
 
-  async fetchDocument<TGlobalState, TLocalState, TAction extends Action>(
+  async fetchDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action | CustomAction = Action,
+  >(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | DocumentGraphQLResult<TGlobalState, TLocalState>
+    | DocumentGraphQLResult<TGlobalState, TLocalState, TAction>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError

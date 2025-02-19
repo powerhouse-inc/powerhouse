@@ -5,6 +5,7 @@ import {
   DocumentModelModule,
   DocumentModelState,
   Operation,
+  CustomAction,
 } from "document-model";
 import {
   BuildSchemaOptions,
@@ -25,6 +26,7 @@ import {
   FolderNode,
 } from "../drive-document-model/gen/types.js";
 import { logger } from "./logger.js";
+import { string } from "zod";
 
 export { gql } from "graphql-request";
 
@@ -169,10 +171,11 @@ export type DriveState = DriveInfo &
     nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
   };
 
-export type DocumentGraphQLResult<TGlobalState, TLocalState> = BaseDocument<
+export type DocumentGraphQLResult<
   TGlobalState,
-  TLocalState
-> & {
+  TLocalState,
+  TAction extends Action | CustomAction = Action,
+> = BaseDocument<TGlobalState, TLocalState, TAction> & {
   operations: (Operation & {
     inputText: string;
   })[];
@@ -181,14 +184,14 @@ export type DocumentGraphQLResult<TGlobalState, TLocalState> = BaseDocument<
 export async function fetchDocument<
   TGlobalState,
   TLocalState,
-  TAction extends Action = never,
+  TAction extends Action | CustomAction = Action,
 >(
   url: string,
   documentId: string,
   documentModelLib: DocumentModelModule<TGlobalState, TLocalState, TAction>,
 ): Promise<
   GraphQLResult<{
-    document: DocumentGraphQLResult<TGlobalState, TLocalState>;
+    document: DocumentGraphQLResult<TGlobalState, TLocalState, TAction>;
   }>
 > {
   const { documentModelState, utils } = documentModelLib;
@@ -283,6 +286,6 @@ export async function fetchDocument<
     ...result,
     document,
   } as GraphQLResult<{
-    document: DocumentGraphQLResult<TGlobalState, TLocalState>;
+    document: DocumentGraphQLResult<TGlobalState, TLocalState, TAction>;
   }>;
 }

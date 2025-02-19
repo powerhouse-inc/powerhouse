@@ -1,8 +1,9 @@
 import type {
-  BaseDocument,
+  Action,
   DocumentHeader,
   DocumentOperations,
   Operation,
+  PHDocument,
 } from "document-model";
 import {
   DocumentDriveAction,
@@ -11,35 +12,35 @@ import {
 import { SynchronizationUnitQuery } from "../server/types.js";
 
 export interface IStorageDelegate {
-  getCachedOperations<TGlobalState, TLocalState>(
+  getCachedOperations<TAction = Action>(
     drive: string,
     id: string,
-  ): Promise<DocumentOperations | undefined>;
+  ): Promise<DocumentOperations<TAction> | undefined>;
 }
 
 export interface IStorage {
   checkDocumentExists(drive: string, id: string): Promise<boolean>;
   getDocuments: (drive: string) => Promise<string[]>;
-  getDocument<TGlobalState, TLocalState>(
+  getDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-  ): Promise<BaseDocument<TGlobalState, TLocalState>>;
-  createDocument<TGlobalState, TLocalState>(
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>>;
+  createDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument<TGlobalState, TLocalState, TAction>,
   ): Promise<void>;
-  addDocumentOperations<TGlobalState, TLocalState>(
+  addDocumentOperations<TAction = Action>(
     drive: string,
     id: string,
-    operations: Operation[],
+    operations: Operation<TAction>[],
     header: DocumentHeader,
   ): Promise<void>;
-  addDocumentOperationsWithTransaction?<TGlobalState, TLocalState>(
+  addDocumentOperationsWithTransaction?<TAction = Action>(
     drive: string,
     id: string,
-    callback: (document: BaseDocument<TGlobalState, TLocalState>) => Promise<{
-      operations: Operation[];
+    callback: (document: PHDocument) => Promise<{
+      operations: Operation<TAction>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;

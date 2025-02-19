@@ -1,12 +1,12 @@
 import {
   Action,
   ActionContext,
-  BaseDocument,
   BaseState,
   CreateChildDocumentInput,
   DocumentModelModule,
   Operation,
   OperationScope,
+  PHDocument,
   ReducerOptions,
   Signal,
 } from "document-model";
@@ -83,7 +83,7 @@ export type IOperationResult<
   status: UpdateStatus;
   error?: OperationError;
   operations: TOperation[];
-  document: BaseDocument<TGlobalState, TLocalState> | undefined;
+  document: PHDocument<TGlobalState, TLocalState> | undefined;
   signals: SignalResult[];
 };
 
@@ -372,7 +372,7 @@ export interface IBaseDocumentDriveServer {
     driveId: string,
     documentId: string,
     options?: GetDocumentOptions,
-  ): Promise<BaseDocument<TGlobalState, TLocalState>>;
+  ): Promise<PHDocument<TGlobalState, TLocalState>>;
 
   addOperation(
     driveId: string,

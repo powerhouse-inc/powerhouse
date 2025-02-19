@@ -1,5 +1,5 @@
 import { ExtendedState, Reducer } from "@/powerhouse";
-import { Action, BaseDocument, CustomAction } from "document-model";
+import { Action, CustomAction } from "document-model";
 import { useReducer } from "react";
 
 export function wrapReducer<
@@ -28,7 +28,7 @@ export function createUseDocumentReducer<
   reducer: Reducer<TGlobalState, TLocalState, TAction | Action | CustomAction>,
   createDocument: (
     document?: Partial<ExtendedState<TGlobalState, TLocalState>>,
-  ) => BaseDocument<TGlobalState, TLocalState>,
+  ) => PHDocument<TGlobalState, TLocalState>,
 ) {
   return (
     document?: Partial<ExtendedState<TGlobalState, TLocalState>>,
@@ -42,10 +42,10 @@ export function useDocumentReducer<
   TAction extends CustomAction = never,
 >(
   reducer: Reducer<TGlobalState, TLocalState, TAction | Action | CustomAction>,
-  initialState: BaseDocument<TGlobalState, TLocalState>,
+  initialState: PHDocument<TGlobalState, TLocalState>,
   onError?: (error: unknown) => void,
 ): readonly [
-  BaseDocument<TGlobalState, TLocalState>,
+  PHDocument<TGlobalState, TLocalState>,
   (action: TAction | Action | CustomAction) => void,
 ] {
   const [state, dispatch] = useReducer(

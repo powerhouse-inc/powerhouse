@@ -1,27 +1,26 @@
-import { BaseDocument } from "document-model";
+import { ScopeFrameworkAction } from "../actions";
 import {
-    SetRootPathInput,
-    AddElementInput,
-    UpdateElementTypeInput,
-    UpdateElementNameInput,
-    UpdateElementComponentsInput,
-    RemoveElementInput,
-    ReorderElementsInput,
-    MoveElementInput,
-    ScopeFrameworkState,
-    ScopeFrameworkLocalState,
+  AddElementInput,
+  MoveElementInput,
+  RemoveElementInput,
+  ReorderElementsInput,
+  ScopeFrameworkLocalState,
+  ScopeFrameworkState,
+  SetRootPathInput,
+  UpdateElementComponentsInput,
+  UpdateElementNameInput,
+  UpdateElementTypeInput,
 } from "../types.js";
 import {
-    setRootPath,
-    addElement,
-    updateElementType,
-    updateElementName,
-    updateElementComponents,
-    removeElement,
-    reorderElements,
-    moveElement,
+  addElement,
+  moveElement,
+  removeElement,
+  reorderElements,
+  setRootPath,
+  updateElementComponents,
+  updateElementName,
+  updateElementType,
 } from "./creators";
-import { ScopeFrameworkAction } from "../actions";
 
 export default class ScopeFramework_Main extends BaseDocument<
   ScopeFrameworkState,

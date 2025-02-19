@@ -1,19 +1,10 @@
-import { BaseDocument } from "document-model";
+import { Action, PHDocument } from "document-model";
 import { ICache } from "./types.js";
 
-class InMemoryCache<TGlobalState, TLocalState>
-  implements ICache<TGlobalState, TLocalState>
-{
-  private cache = new Map<
-    string,
-    Map<string, BaseDocument<TGlobalState, TLocalState>>
-  >();
+class InMemoryCache implements ICache {
+  private cache = new Map<string, Map<string, PHDocument>>();
 
-  async setDocument(
-    drive: string,
-    id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
-  ) {
+  async setDocument(drive: string, id: string, document: PHDocument) {
     const global = document.operations.global.map((e) => {
       delete e.resultingState;
       return e;
@@ -34,8 +25,13 @@ class InMemoryCache<TGlobalState, TLocalState>
     return this.cache.get(drive)?.delete(id) ?? false;
   }
 
-  async getDocument(drive: string, id: string) {
-    return this.cache.get(drive)?.get(id);
+  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+    drive: string,
+    id: string,
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction> | undefined> {
+    return this.cache.get(drive)?.get(id) as
+      | PHDocument<TGlobalState, TLocalState, TAction>
+      | undefined;
   }
 }
 

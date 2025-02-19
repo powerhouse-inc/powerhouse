@@ -1,10 +1,10 @@
-import { BaseDocument } from 'document-model';
+import { PHDocument } from 'document-model';
 import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
 
 export function useOpenFile(
-    onDocument: (document: BaseDocument<unknown, unknown>, file: File) => void,
+    onDocument: (document: PHDocument, file: File) => void,
     onError?: (error: Error) => void,
 ) {
     const getDocumentModel = useGetDocumentModel();

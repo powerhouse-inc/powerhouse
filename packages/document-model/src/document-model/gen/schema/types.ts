@@ -1,4 +1,4 @@
-import { OperationScope } from "../../../document/types.js";
+import { OperationScope } from "#document/types.js";
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;

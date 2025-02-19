@@ -1,25 +1,24 @@
 import {
-    DocumentModelNotFoundError,
-    IDocumentDriveServer,
-    IReadModeDriveServer,
-    ReadDocumentNotFoundError,
-    ReadDrive,
-    ReadDriveContext,
-    ReadDriveNotFoundError,
-    ReadDrivesListener,
-    ReadDrivesListenerUnsubscribe,
-    ReadDriveSlugNotFoundError,
-    RemoteDriveOptions,
+  DocumentModelNotFoundError,
+  IDocumentDriveServer,
+  IReadModeDriveServer,
+  ReadDocumentNotFoundError,
+  ReadDrive,
+  ReadDriveContext,
+  ReadDriveNotFoundError,
+  ReadDrivesListener,
+  ReadDrivesListenerUnsubscribe,
+  ReadDriveSlugNotFoundError,
+  RemoteDriveOptions,
 } from 'document-drive';
-import { BaseDocument } from 'document-model';
 import {
-    createContext,
-    FC,
-    ReactNode,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
+  createContext,
+  FC,
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
 } from 'react';
 import { drivesToHash } from 'src/hooks/useDocumentDrives';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
@@ -131,7 +130,7 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
         documentId: string,
         documentType: string,
     ): Promise<
-        | BaseDocument<TGlobalState, TLocalState>
+        | PHDocument<TGlobalState, TLocalState>
         | DocumentModelNotFoundError
         | ReadDriveNotFoundError
         | ReadDocumentNotFoundError

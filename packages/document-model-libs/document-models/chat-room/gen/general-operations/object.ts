@@ -1,21 +1,20 @@
-import { BaseDocument } from "document-model";
+import { ChatRoomAction } from "../actions";
 import {
-    AddMessageInput,
-    AddEmojiReactionInput,
-    RemoveEmojiReactionInput,
-    EditChatNameInput,
-    EditChatDescriptionInput,
-    ChatRoomState,
-    ChatRoomLocalState,
+  AddEmojiReactionInput,
+  AddMessageInput,
+  ChatRoomLocalState,
+  ChatRoomState,
+  EditChatDescriptionInput,
+  EditChatNameInput,
+  RemoveEmojiReactionInput,
 } from "../types.js";
 import {
-    addMessage,
-    addEmojiReaction,
-    removeEmojiReaction,
-    editChatName,
-    editChatDescription,
+  addEmojiReaction,
+  addMessage,
+  editChatDescription,
+  editChatName,
+  removeEmojiReaction,
 } from "./creators";
-import { ChatRoomAction } from "../actions";
 
 export default class ChatRoom_GeneralOperations extends BaseDocument<
   ChatRoomState,

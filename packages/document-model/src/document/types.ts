@@ -1,7 +1,7 @@
+import { DocumentModelHeaderAction } from "#document-model/gen/actions.js";
 import { DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
-import { DocumentModelHeaderAction } from "../document-model/gen/actions.js";
 import { DocumentAction } from "./actions/types.js";
 import type {
   CreateChildDocumentInput,
@@ -51,7 +51,7 @@ export type ActionContext = {
 export type BaseAction<
   TType extends string,
   TInput,
-  TScope extends OperationScope = "global",
+  TScope extends OperationScope = OperationScope,
 > = {
   /** The name of the action. */
   type: TType;
@@ -75,7 +75,7 @@ export type BaseActionWithAttachment<
 
 export type DefaultAction = DocumentAction | DocumentModelHeaderAction;
 
-export type CustomAction = BaseAction<string, unknown, OperationScope>;
+export type CustomAction = BaseAction<string, unknown>;
 
 export type Action<
   TType extends string = string,
@@ -109,11 +109,19 @@ export type Reducer<
   TLocalState,
   TCustomAction extends CustomAction = never,
 > = <TAction extends TCustomAction>(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: TAction | DefaultAction | Operation,
+  document: BaseDocument<
+    TGlobalState,
+    TLocalState,
+    TAction | Action | Operation<TAction>
+  >,
+  action: TAction | Action | Operation<TAction>,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
-) => BaseDocument<TGlobalState, TLocalState>;
+) => BaseDocument<
+  TGlobalState,
+  TLocalState,
+  TAction | Action | Operation<TAction>
+>;
 
 export type StateReducer<
   TGlobalState,
@@ -236,24 +244,24 @@ export type SaveToFile = (
   name?: string,
 ) => string | Promise<string>;
 
-export type LoadFromInput<TGlobalState, TLocalState> = (
+export type LoadFromInput<TGlobalState, TLocalState, TAction = Action> = (
   input: FileInput,
 ) =>
-  | BaseDocument<TGlobalState, TLocalState>
-  | Promise<BaseDocument<TGlobalState, TLocalState>>;
+  | BaseDocument<TGlobalState, TLocalState, TAction>
+  | Promise<BaseDocument<TGlobalState, TLocalState, TAction>>;
 
-export type LoadFromFile<TGlobalState, TLocalState> = (
+export type LoadFromFile<TGlobalState, TLocalState, TAction = Action> = (
   path: string,
 ) =>
-  | BaseDocument<TGlobalState, TLocalState>
-  | Promise<BaseDocument<TGlobalState, TLocalState>>;
+  | BaseDocument<TGlobalState, TLocalState, TAction>
+  | Promise<BaseDocument<TGlobalState, TLocalState, TAction>>;
 
-export type CreateDocument<TGlobalState, TLocalState> = (
+export type CreateDocument<TGlobalState, TLocalState, TAction = Action> = (
   document?: Partial<
     ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
   >,
   createState?: CreateState<TGlobalState, TLocalState>,
-) => BaseDocument<TGlobalState, TLocalState>;
+) => BaseDocument<TGlobalState, TLocalState, TAction>;
 
 export type ExtendedState<TGlobalState, TLocalState> = DocumentHeader & {
   /** The document model specific state. */
@@ -262,22 +270,25 @@ export type ExtendedState<TGlobalState, TLocalState> = DocumentHeader & {
   attachments?: FileRegistry;
 };
 
-export type DocumentOperations = Record<OperationScope, Operation[]>;
-
-export type MappedOperation = {
-  ignore: boolean;
-  operation: Operation;
-};
-
-export type DocumentOperationsIgnoreMap = Record<
+export type DocumentOperations<TAction = Action> = Record<
   OperationScope,
-  MappedOperation[]
+  Operation<TAction>[]
 >;
 
-export type OperationSignatureContext = {
+export type MappedOperation<TAction = Action> = {
+  ignore: boolean;
+  operation: Operation<TAction>;
+};
+
+export type DocumentOperationsIgnoreMap<TAction = Action> = Record<
+  OperationScope,
+  MappedOperation<TAction>[]
+>;
+
+export type OperationSignatureContext<TAction = Action> = {
   documentId: string;
   signer: Omit<ActionSigner, "signatures"> & { signatures?: Signature[] };
-  operation: Operation;
+  operation: Operation<TAction>;
   previousStateHash: string;
 };
 
@@ -300,16 +311,22 @@ export type OperationVerificationHandler = (
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type BaseDocument<TGlobalState, TLocalState> =
+export type BaseDocument<TGlobalState, TLocalState, TAction = Action> =
   /** The document model specific state. */
   ExtendedState<TGlobalState, TLocalState> & {
     /** The operations history of the document. */
-    operations: DocumentOperations;
+    operations: DocumentOperations<TAction>;
     /** The initial state of the document, enabling replaying operations. */
     initialState: ExtendedState<TGlobalState, TLocalState>;
     /** A list of undone operations */
-    clipboard: Operation[];
+    clipboard: Operation<TAction>[];
   };
+
+export type PHDocument<
+  TGlobalState = unknown,
+  TLocalState = unknown,
+  TAction = Action,
+> = BaseDocument<TGlobalState, TLocalState, TAction>;
 
 /**
  * String type representing an attachment in a Document.
@@ -319,12 +336,12 @@ export type BaseDocument<TGlobalState, TLocalState> =
  */
 export type AttachmentRef = string; // TODO `attachment://${string}`;
 
-export type DocumentModelUtils<TGlobalState, TLocalState> = {
+export type DocumentModelUtils<TGlobalState, TLocalState, TAction = Action> = {
   createState: CreateState<TGlobalState, TLocalState>;
   createExtendedState: CreateExtendedState<TGlobalState, TLocalState>;
-  createDocument: CreateDocument<TGlobalState, TLocalState>;
-  loadFromFile: LoadFromFile<TGlobalState, TLocalState>;
-  loadFromInput: LoadFromInput<TGlobalState, TLocalState>;
+  createDocument: CreateDocument<TGlobalState, TLocalState, TAction>;
+  loadFromFile: LoadFromFile<TGlobalState, TLocalState, TAction>;
+  loadFromInput: LoadFromInput<TGlobalState, TLocalState, TAction>;
   saveToFile: SaveToFile;
   saveToFileHandle: SaveToFileHandle;
 };
@@ -349,9 +366,9 @@ export type EditorContext = {
 
 export type ActionErrorCallback = (error: unknown) => void;
 
-export type EditorProps<TGlobalState, TLocalState> = {
-  document: BaseDocument<TGlobalState, TLocalState>;
-  dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
+export type EditorProps<TGlobalState, TLocalState, TAction = Action> = {
+  document: BaseDocument<TGlobalState, TLocalState, TAction>;
+  dispatch: (action: TAction, onErrorCallback?: ActionErrorCallback) => void;
   context: EditorContext;
   error?: unknown;
   documentNodeName?: string;
@@ -360,11 +377,12 @@ export type EditorProps<TGlobalState, TLocalState> = {
 export type EditorModule<
   TGlobalState = unknown,
   TLocalState = unknown,
+  TAction = Action,
   TCustomProps = unknown,
   TEditorConfig extends Record<string, unknown> = Record<string, unknown>,
 > = {
   Component: FC<
-    EditorProps<TGlobalState, TLocalState> &
+    EditorProps<TGlobalState, TLocalState, TAction> &
       TCustomProps &
       Record<string, unknown>
   >;
@@ -404,8 +422,8 @@ export type DocumentModelLib = {
 export type ValidationError = { message: string; details: object };
 
 export type DocumentModelModule<
-  TGlobalState,
-  TLocalState,
+  TGlobalState = unknown,
+  TLocalState = unknown,
   TCustomAction extends CustomAction = never,
 > = {
   documentModelName: string;

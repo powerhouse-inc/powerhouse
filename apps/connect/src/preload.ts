@@ -40,7 +40,7 @@ const electronApi = {
     ready: () => ipcRenderer.send('ready'),
     protocol: () => ipcRenderer.invoke('protocol') as Promise<string>,
     isPackaged: () => ipcRenderer.invoke('isPackaged') as Promise<boolean>,
-    fileSaved: (document: BaseDocument<unknown, unknown>, path?: string) =>
+    fileSaved: (document: PHDocument, path?: string) =>
         ipcRenderer.invoke('fileSaved', document, path),
     handleFileOpen: (
         listener: (file: { name: string; content: string }) => void,

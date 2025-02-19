@@ -1,14 +1,12 @@
+import { DocumentOperations, Operation, OperationScope } from "document-model";
 import {
-  BaseDocument,
-  DocumentOperations,
-  Operation,
-  OperationScope,
-} from "document-model";
-import { Signature } from "../../../document-model/src/document/types.js";
+  PHDocument,
+  Signature,
+} from "../../../document-model/src/document/types.js";
 
 export function migrateDocumentOperationSignatures<TGlobalState, TLocalState>(
-  document: BaseDocument<TGlobalState, TLocalState>,
-): BaseDocument<TGlobalState, TLocalState> | undefined {
+  document: PHDocument<TGlobalState, TLocalState>,
+): PHDocument<TGlobalState, TLocalState> | undefined {
   let legacy = false;
   const operations = Object.entries(
     document.operations,

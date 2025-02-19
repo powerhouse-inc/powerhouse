@@ -6,7 +6,7 @@ import {
 } from 'document-model';
 import { logger } from 'src/services/logger';
 
-const downloadFile = async (document: BaseDocument<unknown, unknown>) => {
+const downloadFile = async (document: PHDocument) => {
     const zip = createZip(document);
     zip.generateAsync({ type: 'blob' })
         .then(blob => {
@@ -24,7 +24,7 @@ const downloadFile = async (document: BaseDocument<unknown, unknown>) => {
 };
 
 export async function exportFile(
-    document: BaseDocument<unknown, unknown>,
+    document: PHDocument,
     getDocumentModel: (
         documentType: string,
     ) => DocumentModelModule<unknown, unknown> | undefined,
@@ -73,7 +73,7 @@ export async function loadFile(
 ) {
     const baseDocument = await baseLoadFromInput(
         path,
-        (document: BaseDocument<unknown, unknown>) => document,
+        (document: PHDocument) => document,
         { checkHashes: true },
     );
     const documentModel = getDocumentModel(baseDocument.documentType);

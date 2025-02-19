@@ -1,5 +1,5 @@
 import { IDocumentDriveServer, StrandUpdate } from "document-drive";
-import { BaseDocument } from "document-model";
+import { PHDocument } from "document-model";
 import { useCallback, useEffect, useState } from "react";
 
 export type DocumentMeta = {
@@ -14,9 +14,7 @@ export function useDocument(
 ) {
   const { documentId, documentType, driveId } = documentMeta;
 
-  const [document, setDocument] = useState<
-    BaseDocument<unknown, unknown> | undefined
-  >();
+  const [document, setDocument] = useState<PHDocument | undefined>();
 
   const onStrandUpdate = useCallback(
     (cb: (update: StrandUpdate) => void) => {

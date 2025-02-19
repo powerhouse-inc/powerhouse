@@ -13,7 +13,7 @@ const documentDrivesAtom = atom(
     new Map<IDocumentDriveServer, DocumentDriveDocument[]>(),
 );
 
-export function documentToHash(drive: BaseDocument<unknown, unknown>): string {
+export function documentToHash(drive: PHDocument): string {
     return Object.keys(drive.operations)
         .map(
             key =>

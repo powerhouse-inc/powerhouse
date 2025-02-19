@@ -6,7 +6,7 @@ import { Processor } from "./processor.js";
 export * from "@powerhousedao/analytics-engine-core";
 
 export abstract class AnalyticsProcessor<
-  D extends BaseDocument<unknown, unknown> = BaseDocument<unknown, unknown>,
+  D extends PHDocument = PHDocument,
   S extends OperationScope = OperationScope,
 > extends Processor<D, S> {
   protected analyticsStore: IAnalyticsStore;

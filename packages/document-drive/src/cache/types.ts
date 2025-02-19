@@ -1,15 +1,15 @@
-import type { BaseDocument } from "document-model";
+import { Action, PHDocument } from "document-model";
 
-export interface ICache<TGlobalState, TLocalState> {
+export interface ICache {
   setDocument(
     drive: string,
     id: string,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    document: PHDocument,
   ): Promise<boolean>;
-  getDocument(
+  getDocument<TGlobalState, TLocalState, TAction = Action>(
     drive: string,
     id: string,
-  ): Promise<BaseDocument<TGlobalState, TLocalState> | undefined>;
+  ): Promise<PHDocument<TGlobalState, TLocalState, TAction> | undefined>;
 
   // @returns — true if a document existed and has been removed, or false if the document is not cached.
   deleteDocument(drive: string, id: string): Promise<boolean>;

@@ -11,7 +11,7 @@ import Editor from "./editor";
 const { meta, CreateDocumentStory: JSONEditor } = createDocumentStory(
   Editor,
   (
-    state: BaseDocument<unknown, unknown>,
+    state: PHDocument,
     action: any,
     dispatch: SignalDispatch | undefined,
   ) => baseReducer(state, action, (document) => document, dispatch),

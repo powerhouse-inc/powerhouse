@@ -3,7 +3,7 @@ import { BaseDocument, OperationScope } from "document-model";
 import { Processor } from "./processor.js";
 
 export abstract class OperationalProcessor<
-  D extends BaseDocument<unknown, unknown> = BaseDocument<unknown, unknown>,
+  D extends PHDocument = PHDocument,
   S extends OperationScope = OperationScope,
 > extends Processor<D, S> {
   protected operationalStore: Db;

@@ -2,7 +2,6 @@ import { IDocumentDriveServer } from "document-drive";
 import {
   Action,
   ActionErrorCallback,
-  BaseDocument,
   CustomAction,
   DocumentModelModule,
   Operation,
@@ -16,8 +15,8 @@ import { useDocumentDispatch } from "./useDocumentDispatch";
 export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
   operation: Operation,
   state: {
-    prevState: BaseDocument<TGlobalState, TLocalState>;
-    newState: BaseDocument<TGlobalState, TLocalState>;
+    prevState: PHDocument<TGlobalState, TLocalState>;
+    newState: PHDocument<TGlobalState, TLocalState>;
   },
 ) => void;
 
@@ -28,12 +27,12 @@ export type UseDocumentEditorProps<
 > = {
   driveId: string;
   nodeId: string;
-  document: BaseDocument<TGlobalState, TLocalState> | undefined;
+  document: PHDocument<TGlobalState, TLocalState> | undefined;
   documentModel: DocumentModelModule<TGlobalState, TLocalState, TCustomAction>;
   user?: User;
   onExport?: () => void;
   onOpenSwitchboardLink?: () => Promise<void>;
-  onChange?: (document: BaseDocument<TGlobalState, TLocalState>) => void;
+  onChange?: (document: PHDocument<TGlobalState, TLocalState>) => void;
 };
 
 export function useDocumentEditor<
