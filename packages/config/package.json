@@ -7,11 +7,9 @@
   "type": "module",
   "exports": {
     "./powerhouse": {
-      "types": "./dist/src/powerhouse.d.ts",
       "import": "./dist/src/powerhouse.js"
     },
     "./tailwind": {
-      "types": "./dist/src/tailwind.d.ts",
       "import": "./dist/src/tailwind.js"
     }
   },

@@ -1,12 +1,12 @@
 import type {
   DocumentModelAction,
-  DocumentModelState,
   DocumentModelLocalState,
+  DocumentModelState,
 } from "document-model";
 import { EditorModule } from "document-model";
 import { DocumentModelEditor } from "./editor.js";
 
-export const editorModule: EditorModule<
+export const documentModelEditorModule: EditorModule<
   DocumentModelState,
   DocumentModelLocalState,
   DocumentModelAction

@@ -1,10 +1,10 @@
-import { Module as TModule, Operation } from "document-model";
-import { useState, useRef, useCallback } from "react";
+import { Module as TModule } from "document-model";
+import { useCallback, useRef, useState } from "react";
 import { Module } from "./module.js";
 
 type Props = {
   modules: TModule[];
-  allOperations: Operation[];
+  allOperations: TModule["operations"];
   addModule: (name: string) => Promise<string | undefined>;
   updateModuleName: (id: string, name: string) => void;
   deleteModule: (id: string) => void;

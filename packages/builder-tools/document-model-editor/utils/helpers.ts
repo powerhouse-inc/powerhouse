@@ -1,3 +1,4 @@
+import * as customScalars from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
 import { Author, DocumentModelDocument } from "document-model";
 import {
@@ -19,7 +20,6 @@ import {
   visit,
 } from "graphql";
 import { Scope } from "../types/documents.js";
-import * as customScalars from "@powerhousedao/scalars";
 
 export function makeStateObject(modelName: string, scope: Scope) {
   const name = makeStateObjectName(modelName, scope);
@@ -171,6 +171,7 @@ export function getDifferences<T extends object>(
 }
 function isValidScalarValue(typeName: string, value: any): boolean {
   if (typeName in customScalars) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const scalar = customScalars[typeName as keyof typeof customScalars];
     if (scalar instanceof GraphQLScalarType) {
       return scalar.parseValue(value) !== undefined;
@@ -237,6 +238,7 @@ function getMinimalValue(
   if (isListType(nullableType)) {
     if (existingValue !== undefined && Array.isArray(existingValue)) {
       // Optionally, validate each element in the array
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return existingValue;
     }
     return [];
@@ -314,7 +316,17 @@ function removeWhitespace(str: string) {
   return str.replace(/\s+|\\n|\\t/g, "").toLowerCase();
 }
 
-export function compareStringsWithoutWhitespace(str1: string, str2: string) {
+export function compareStringsWithoutWhitespace(
+  str1: string | null | undefined,
+  str2: string | null | undefined,
+) {
+  if (
+    str1 === null ||
+    str2 === null ||
+    str1 === undefined ||
+    str2 === undefined
+  )
+    return false;
   return removeWhitespace(str1) === removeWhitespace(str2);
 }
 

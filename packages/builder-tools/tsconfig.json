@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "jsx": "react-jsx",
-    "types": ["vite/client", "react"]
+    "types": ["vite/client", "react", "@storybook/types"]
   },
   "references": [
     {
@@ -11,6 +11,12 @@
     },
     {
       "path": "../document-model"
+    },
+    {
+      "path": "../scalars"
+    },
+    {
+      "path": "../design-system"
     }
   ]
 }

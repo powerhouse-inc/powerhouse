@@ -1,14 +1,13 @@
 import { OperationForm } from "./operation-form.js";
 import type {
   Module,
-  Operation as TOperation,
 } from "document-model";
 import { useCallback, useId, useState } from "react";
 import { Operation } from "./operation.js";
 
 type Props = {
   module: Module;
-  allOperations: TOperation[];
+  allOperations: Module["operations"];
   shouldFocusNewOperation: boolean;
   updateOperationName: (id: string, name: string) => void;
   deleteOperation: (id: string) => void;
@@ -46,7 +45,9 @@ export function Operations({
     string | null
   >(null);
   const addOperationFormId = useId();
-  const allOperationNames = allOperations.map((o) => o.name).filter(Boolean);
+  const allOperationNames = allOperations
+    .map((o) => o.name)
+    .filter((n): n is string => !!n);
 
   const onAddOperationAndInitialSchema = useCallback(
     async (moduleId: string, name: string) => {

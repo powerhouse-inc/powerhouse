@@ -82,7 +82,7 @@ export function ensureValidOperationSchemaInputName(
         doc,
         `Operation schema must contain an input type named ${requiredTypeName}`,
       ),
-    ].filter(Boolean);
+    ].filter((d): d is Diagnostic => !!d);
   }
 
   return [];

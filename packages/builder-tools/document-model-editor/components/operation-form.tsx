@@ -1,11 +1,11 @@
-import type { Module, Operation } from "document-model";
+import type { Module } from "document-model";
+import { useCallback } from "react";
 import { toConstantCase } from "../schemas/inputs.js";
 import { TextField } from "./text-field.js";
-import { useCallback } from "react";
 
 type Props = {
   module: Module;
-  operation?: Operation;
+  operation?: Module["operations"][number];
   focusOnMount?: boolean;
   allOperationNames: string[];
   onAddOperationAndInitialSchema: (

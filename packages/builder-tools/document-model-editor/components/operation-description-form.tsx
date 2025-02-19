@@ -1,9 +1,9 @@
-import type { Operation } from "document-model";
+import type { Module } from "document-model";
 import { useEffect, useRef } from "react";
 import { TextField } from "./text-field.js";
 
 type Props = {
-  operation: Operation;
+  operation: Module["operations"][number];
   focusOnMount?: boolean;
   setOperationDescription: (id: string, description: string) => void;
 };

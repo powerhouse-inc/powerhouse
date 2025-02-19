@@ -22,7 +22,7 @@ function documentModelToString(documentModel: DocumentModelState) {
       })),
     },
     null,
-    4,
+    2,
   );
 }
 

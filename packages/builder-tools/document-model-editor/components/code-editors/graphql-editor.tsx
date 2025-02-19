@@ -1,22 +1,22 @@
 import { Diagnostic, forceLinting } from "@codemirror/lint";
 import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import { useSchemaContext } from "@editors/document-model-2/context/schema-context.js";
+import { getSchema, graphql } from "cm6-graphql";
 import { buildSchema, printSchema } from "graphql";
-import { graphql, getSchema } from "cm6-graphql";
-import { memo, useRef, useEffect } from "react";
+import { memo, useEffect, useRef } from "react";
 import { ayuLight } from "thememirror";
+import { useSchemaContext } from "../../context/schema-context.js";
 import {
-  useEditorRefs,
   baseEditorExtensions,
   baseKeymap,
-  makeLinter,
-  makeUpdateHandler,
   makeFocusHandler,
+  makeLinter,
   makePasteHandler,
-  useEditorCleanup,
-  useHandlerReconfiguration,
+  makeUpdateHandler,
   useDocumentSync,
+  useEditorCleanup,
+  useEditorRefs,
+  useHandlerReconfiguration,
 } from "./utils.js";
 
 type Props = {
@@ -78,6 +78,7 @@ export const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
+    // @ts-expect-error
     const existingSchema = getSchema(view.state);
     const existingSchemaString = existingSchema
       ? printSchema(existingSchema)

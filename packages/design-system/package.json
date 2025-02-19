@@ -15,16 +15,13 @@
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "require": "./dist/index.js",
       "import": "./dist/index.js"
     },
     "./style.css": {
-      "import": "./dist/style.css",
-      "require": "./dist/style.css"
+      "import": "./dist/style.css"
     },
     "./scalars": {
       "types": "./dist/src/scalars/index.d.ts",
-      "require": "./dist/scalars/index.js",
       "import": "./dist/scalars/index.js"
     }
   },

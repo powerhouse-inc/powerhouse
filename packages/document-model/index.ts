@@ -48,7 +48,6 @@ export type {
   BaseAction,
   BaseActionWithAttachment,
   BaseDocument,
-  PHDocument,
   BaseState,
   CreateChildDocumentInput,
   CreateDocument,
@@ -75,6 +74,7 @@ export type {
   OperationScope,
   OperationSignatureContext,
   PartialState,
+  PHDocument,
   Reducer,
   ReducerOptions,
   SaveToFile,
@@ -117,6 +117,7 @@ export {
   validateModules,
   validateStateSchemaName,
 } from "#document-model/custom/utils.js";
+export type { OperationError } from "#document-model/gen/schema/types.js";
 export { documentModelDocumentModelModule } from "#document-model/module.js";
 export { redo, undo } from "#document/actions/creators.js";
 export type { EditorContext } from "#document/types.js";

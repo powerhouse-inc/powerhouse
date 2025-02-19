@@ -1,15 +1,10 @@
-import type {
-  Operation,
-  Module as TModule,
-} from "document-model";
-
-import { Icon } from "@powerhousedao/design-system";
+import type { Module as TModule } from "document-model";
 import { ModuleForm } from "./module-form.js";
 import { Operations } from "./operations.js";
 type Props = {
   module?: TModule;
   modules?: TModule[];
-  allOperations: Operation[];
+  allOperations: TModule["operations"];
   lastCreatedModuleId: string | null;
   onAddModule: (name: string) => Promise<string | undefined>;
   updateModuleName: (id: string, name: string) => void;
@@ -69,7 +64,13 @@ export function Module(props: Props) {
               deleteModule(module.id);
             }}
           >
-            <Icon name="Xmark" size={32} />
+            <svg className="size-6" viewBox="0 0 24 24" fill="currentcolor">
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M16.9993 8.51506L15.4844 7L11.9994 10.4852L8.51497 7.00057L7 8.51562L10.4844 12.0003L7.00056 15.4843L8.51552 16.9994L11.9994 13.5153L15.4838 17L16.9988 15.4849L13.5144 12.0003L16.9993 8.51506Z"
+              />
+            </svg>
           </button>
         )}
       </div>

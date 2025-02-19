@@ -15,7 +15,7 @@ export type WrappedHandlers = DocumentActionHandlers & {
 };
 type Props = {
   lastCreatedOperationId: string | null;
-  operation: Operation;
+  operation: Module["operations"][number];
   module: Module;
   allOperationNames: string[];
   onAddOperationAndInitialSchema: (

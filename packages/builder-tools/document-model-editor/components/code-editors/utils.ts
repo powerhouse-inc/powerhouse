@@ -1,7 +1,27 @@
-import { isDocumentString, filterSchema } from "@graphql-tools/utils";
+import { updateTimeout } from "#document-model-editor/constants/documents";
+import {
+  autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
+  completionKeymap,
+} from "@codemirror/autocomplete";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from "@codemirror/commands";
+import {
+  bracketMatching,
+  defaultHighlightStyle,
+  foldGutter,
+  foldKeymap,
+  indentOnInput,
+  syntaxHighlighting,
+} from "@codemirror/language";
 import { Diagnostic, forceLinting, linter, lintKeymap } from "@codemirror/lint";
-import { GraphQLError, GraphQLSchema, locatedError, parse } from "graphql";
-import { Transaction, Compartment, EditorState } from "@codemirror/state";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import {
   crosshairCursor,
   drawSelection,
@@ -14,30 +34,10 @@ import {
   rectangularSelection,
   ViewUpdate,
 } from "@codemirror/view";
-import { useEffect, useRef } from "react";
-import {
-  closeBrackets,
-  autocompletion,
-  closeBracketsKeymap,
-  completionKeymap,
-} from "@codemirror/autocomplete";
-import {
-  defaultKeymap,
-  historyKeymap,
-  indentWithTab,
-  history,
-} from "@codemirror/commands";
-import {
-  foldGutter,
-  indentOnInput,
-  syntaxHighlighting,
-  defaultHighlightStyle,
-  bracketMatching,
-  foldKeymap,
-} from "@codemirror/language";
-import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
-import { updateTimeout } from "@editors/document-model-2/constants/documents.js";
+import { filterSchema, isDocumentString } from "@graphql-tools/utils";
+import { GraphQLError, GraphQLSchema, locatedError, parse } from "graphql";
 import { validateSDL } from "graphql/validation/validate.js";
+import { useEffect, useRef } from "react";
 
 /* Converts a GraphQLError to a Diagnostic
    GraphQLError uses a zero-indexed line and column, but the editor uses a one-indexed line and column

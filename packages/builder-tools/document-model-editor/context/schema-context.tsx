@@ -1,10 +1,4 @@
 import { createDefaultRules, isDocumentString } from "@graphql-tools/utils";
-import { createContext, useContext, useEffect, useState } from "react";
-import {
-  hiddenQueryTypeDefDoc,
-  initialSchema,
-  typeDefsDoc,
-} from "../constants/documents.js";
 import {
   buildASTSchema,
   buildSchema,
@@ -21,7 +15,7 @@ import {
   hiddenQueryTypeDefDoc,
   initialSchema,
   typeDefsDoc,
-} from "../constants/documents";
+} from "../constants/documents.js";
 
 /* Required to make the schema "count" as an actual schema */
 const hiddenQueryTypeDefinitions = parse(hiddenQueryTypeDefDoc).definitions;
@@ -64,7 +58,9 @@ function makeSharedSchemaSdl(
       localStateSchemaSdl,
       operationSchemasSdl,
     ].filter(Boolean);
-    const asts = sdls.map((sdl) => safeParseSdl(sdl)).filter(Boolean);
+    const asts = sdls
+      .map((sdl) => (sdl ? safeParseSdl(sdl) : null))
+      .filter((ast): ast is DocumentNode => ast !== null);
     const documentNode = makeSafeDocumentNode(existingSchema, asts);
     const schemaSdl = printSchema(buildASTSchema(documentNode));
     return schemaSdl;

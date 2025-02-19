@@ -4,4 +4,4 @@ force: true
 ---
 import type { DocumentModelState } from "document-model";
 
-export const documentModel: DocumentModelState = <%- documentModel %>;
+export const documentModelState: DocumentModelState = <%- documentModel %>;

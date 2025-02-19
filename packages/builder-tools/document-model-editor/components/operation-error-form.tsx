@@ -1,10 +1,10 @@
-import type { Operation, OperationError } from "document-model";
 import { pascalCase } from "change-case";
-import { useRef, useCallback } from "react";
+import type { Module, OperationError } from "document-model";
+import { useCallback, useRef } from "react";
 import { TextField } from "./text-field.js";
 
 type Props = {
-  operation: Operation;
+  operation: Module["operations"][number];
   error?: OperationError;
   focusOnMount?: boolean;
   onSubmit?: () => void;
@@ -33,7 +33,7 @@ export function OperationErrorForm({
   const isEdit = !!error;
   const allOperationErrorNames = operation.errors
     .map((o) => o.name)
-    .filter(Boolean);
+    .filter((n): n is string => !!n);
 
   const handleSubmit = useCallback(
     (name: string) => {
