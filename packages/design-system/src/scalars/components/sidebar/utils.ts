@@ -197,3 +197,18 @@ export const filterStatuses = (
     return filteredNodes;
   }, []);
 };
+
+// event listener
+export const triggerEvent = (
+  eventType: string,
+  data: unknown,
+  element: HTMLElement | Document | null = document,
+) => {
+  const event = new CustomEvent(eventType, {
+    detail: data,
+    bubbles: true,
+    cancelable: false,
+  });
+  if (!element) element = document;
+  element.dispatchEvent(event);
+};
