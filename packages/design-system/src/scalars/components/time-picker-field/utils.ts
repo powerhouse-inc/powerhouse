@@ -197,17 +197,17 @@ export const getLocalOffset = (): string => {
  * getOffset()                   // Returns local system offset
  */
 export const getOffset = (timeZone?: string) => {
-  // Manejar casos edge primero
+  // Handle edge cases first
   if (!timeZone || typeof timeZone !== "string") return getLocalOffset();
 
-  // Crear formateador de manera segura
+  // Create a formatter in a safe way
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone,
     hour12: false,
     timeZoneName: "shortOffset",
   });
 
-  // Extraer el offset del formato
+  // Extract the offset from the format
   const offsetPart = formatter
     .formatToParts(new Date())
     .find((part) => part.type === "timeZoneName")?.value;
