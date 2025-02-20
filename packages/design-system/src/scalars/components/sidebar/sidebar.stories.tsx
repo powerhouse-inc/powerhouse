@@ -1,9 +1,10 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import type { Meta, StoryObj } from "@storybook/react";
 import { Sidebar } from "./sidebar";
 import { Icon } from "@/powerhouse";
-import { SidebarProvider } from "./subcomponents/sidebar-provider";
+import { SidebarProvider, useSidebar } from "./subcomponents/sidebar-provider";
 import mockedTree from "./mocked_tree.json";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SidebarNode } from "./types";
 
 /**
@@ -43,6 +44,37 @@ import { SidebarNode } from "./types";
  *
  * The `icon` and `expandedIcon` properties are optional and can be used to display an icon in the sidebar item.
  * This icons must be one of the [available icons](?path=/docs/powerhouse-iconography--readme)
+ *
+ * ## Sidebar Events
+ *
+ * The `Sidebar` component emits the following custom events:
+ *
+ * - `sidebar:resize:start`: it is triggered when the sidebar resize starts at the moment the user clicks down in the resizing handle.
+ *  - Data: `{ isSidebarOpen: boolean }`
+ * - `sidebar:resize:active`: it is triggered when the sidebar is being resized while the user is dragging the resizing handle.
+ * It could be triggered multiple times while the user is dragging the resizing handle.
+ *  - Data: `{ isSidebarOpen: boolean, sidebarWidth: number }`
+ * - `sidebar:resize`: it is triggered when the sidebar resize stops at the moment the user releases the resizing handle.
+ *  - Data: `{ isSidebarOpen: boolean, sidebarWidth: number }`
+ * - `sidebar:resize:toggle`: it is triggered when the sidebar is toggled (collapsed or expanded).
+ *  - Data: `{ isSidebarOpen: boolean }`
+ *
+ * ### Example of listening to the events
+ * ```
+ * useEffect(() => {
+ *   const onResize = (event: Event) => {
+ *     console.log("sidebar:resize", event);
+ *   };
+ *
+ *   // you can add the listener directly to the document or add a
+ *   // `className`, get the sidebar element and add the listener to it.
+ *   document.addEventListener("sidebar:resize", onResize);
+ *
+ *   return () => {
+ *     document.removeEventListener("sidebar:resize", onResize);
+ *   };
+ * }, []);
+ * ```
  */
 const meta: Meta<typeof Sidebar> = {
   title: "Document Engineering/Complex Components/Sidebar",
@@ -143,14 +175,6 @@ const meta: Meta<typeof Sidebar> = {
       control: "number",
       description: "The maximum width of the sidebar.",
     },
-    onWidthChange: {
-      control: "object",
-      description:
-        "A callback function that is called when the width of the sidebar changes.",
-      table: {
-        readonly: true,
-      },
-    },
   },
   args: {
     sidebarTitle: "Title Sidebar",
@@ -162,9 +186,6 @@ const meta: Meta<typeof Sidebar> = {
     enableMacros: 4,
     onActiveNodeChange: (node) => {
       console.log("onActiveNodeChange", node);
-    },
-    onWidthChange: (width) => {
-      console.log("onWidthChange", width);
     },
   },
 };
@@ -184,13 +205,58 @@ export const WithinLayoutAndContent: Story = {
     showStatusFilter: true,
   },
   render: (args) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [activeNode, setActiveNode] = useState<string>(
       "4281ab93-ef4f-4974-988d-7dad149a693d",
     );
+
+    // useEffect(() => {
+    //   const sidebarElement = document.querySelector(".sidebar");
+    //   console.log("sidebarElement", sidebarElement);
+    //   if (sidebarElement) {
+    //     document.addEventListener("sidebar:resize", (event) => {
+    //       console.log("sidebar:resize", event);
+    //     });
+    //     document.addEventListener("sidebar:resize:start", (event) => {
+    //       console.log("sidebar:resize:start", event);
+    //     });
+    //     document.addEventListener("sidebar:resize:active", (event) => {
+    //       console.log("sidebar:resize:active", event);
+    //     });
+    //     document.addEventListener("sidebar:resize:toggle", (event) => {
+    //       console.log("sidebar:resize:toggle", event);
+    //     });
+    //   }
+    //   return () => {
+    //     if (sidebarElement) {
+    //       document.removeEventListener("sidebar:resize", (event) => {
+    //         console.log("sidebar:resize", event);
+    //       });
+    //       document.removeEventListener("sidebar:resize:start", (event) => {
+    //         console.log("sidebar:resize:start", event);
+    //       });
+    //       document.removeEventListener("sidebar:resize:active", (event) => {
+    //         console.log("sidebar:resize:active", event);
+    //       });
+    //       document.removeEventListener("sidebar:resize:toggle", (event) => {
+    //         console.log("sidebar:resize:toggle", event);
+    //       });
+    //     }
+    //   };
+    // }, []);
+    useEffect(() => {
+      const onResize = (event: Event) => {
+        console.log("sidebar:resize", event);
+      };
+      document.addEventListener("sidebar:resize", onResize);
+      return () => {
+        document.removeEventListener("sidebar:resize", onResize);
+      };
+    }, []);
+
     return (
       <main className="flex h-svh w-full">
         <Sidebar
+          className="sidebar"
           {...args}
           onActiveNodeChange={(node) => setActiveNode(node.id)}
           activeNodeId={activeNode}
