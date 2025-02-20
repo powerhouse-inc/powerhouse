@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cn } from "@/scalars/lib/utils";
 import { Button } from "../../fragments/button";
+import { useEffect } from "react";
 
 interface TimeSelectorProps {
   options: string[];
@@ -12,28 +13,43 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
   options,
   selectedValue,
   onSelect,
-}) => (
-  <div className="relative w-[43px] overflow-hidden">
-    <div className="absolute inset-0 flex flex-col items-center overflow-y-auto scrollbar-hide gap-1 no-scrollbar">
-      <div className="h-[60px]" />
-      {options.map((value) => (
-        <Button
-          variant="ghost"
-          key={value}
-          onClick={() => onSelect(value)}
-          className={cn(
-            "text-[12px] leading-[20px] flex cursor-pointer items-center justify-center",
-            selectedValue === value
-              ? "rounded-[6px] bg-white border border-gray-300 text-gray-900 font-normal px-3 py-2 "
-              : "text-gray-900 w-[16px] h-[20px] font-normal",
-          )}
-        >
-          {value}
-        </Button>
-      ))}
-      <div className="mb-1" />
+}) => {
+  const selectedRef = React.useRef<HTMLButtonElement>(null);
+
+  // Scroll to the selected value
+  useEffect(() => {
+    if (selectedRef.current) {
+      selectedRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [selectedValue]);
+
+  return (
+    <div className="relative w-[43px] overflow-hidden">
+      <div className="absolute inset-0 flex flex-col items-center overflow-y-auto scrollbar-hide gap-1 no-scrollbar">
+        <div className="h-[60px]" />
+        {options.map((option) => (
+          <Button
+            ref={option === selectedValue ? selectedRef : null}
+            variant="ghost"
+            key={option}
+            onClick={() => onSelect(option)}
+            className={cn(
+              "h-[37px] text-[12px] leading-[20px] flex cursor-pointer items-center justify-center",
+              selectedValue === option
+                ? "rounded-[6px] bg-white border border-gray-300 text-gray-900 font-normal px-3 py-2 "
+                : "text-gray-900 w-[16px] h-[20px] font-normal",
+            )}
+          >
+            {option}
+          </Button>
+        ))}
+        <div className="mb-1" />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default TimeSelector;
