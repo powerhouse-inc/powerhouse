@@ -16,7 +16,7 @@
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "jsxImportSource": "preact",
 
     /* Linting */

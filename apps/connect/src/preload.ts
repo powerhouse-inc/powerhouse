@@ -1,10 +1,10 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import type {
-    DriveInput,
-    IDocumentDriveServer,
-    RemoteDriveOptions,
-    SyncStatus,
+  DriveInput,
+  IDocumentDriveServer,
+  RemoteDriveOptions,
+  SyncStatus,
 } from 'document-drive';
 import { DocumentDriveAction, DocumentDriveDocument } from 'document-drive';
 import { Action, Operation, PHDocument } from 'document-model';
@@ -17,7 +17,8 @@ import type { Theme } from './store';
 const connectCrypto: IConnectCrypto = {
     regenerateDid: (): Promise<void> =>
         ipcRenderer.invoke('crypto:regenerateDid') as Promise<void>,
-    did: () => ipcRenderer.invoke('crypto:did') as Promise<string>,
+    did: () => ipcRenderer.invoke('crypto:did') as Promise<`did:key:${string}`>,
+    sign: message => ipcRenderer.invoke('crypto:sign', message),
 };
 
 const renown: IRenown = {

@@ -5,7 +5,7 @@ const VERSION_CHECK_INTERVAL =
     parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL as string) ||
     60 * 60 * 1000; // 1 hour;
 
-const basePath = connectConfig.routerBasename;
+const basePath = connectConfig.routerBasename as string;
 
 const serviceWorkerScriptPath = [basePath, 'service-worker.js']
     .join('/')

@@ -83,8 +83,10 @@ export class SubgraphManager {
       const path = `/${subgraphConfig.name}`;
       newRouter.use(
         path,
+        /* eslint-disable */
         // @ts-ignore
         expressMiddleware(server, {
+          // @ts-ignore
           context: ({ req }): Context => ({
             headers: req.headers,
             driveId: req.params.drive ?? undefined,
@@ -93,6 +95,7 @@ export class SubgraphManager {
             ...this.getAdditionalContextFields(),
           }),
         }),
+        /* eslint-enable */
       );
     }
 

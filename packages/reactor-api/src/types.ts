@@ -36,4 +36,6 @@ export type IProcessor = IReceiver & {
 //   OPTIONS: ProcessorOptions;
 // }
 
-export type ProcessorOptions = Omit<Listener, "driveId"> & { label: string };
+export type ProcessorOptions = Omit<Listener, "driveId" | "callInfo"> & {
+  label: string;
+};

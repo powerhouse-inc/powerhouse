@@ -15,7 +15,6 @@
     "target": "ESNext",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "forceConsistentCasingInFileNames": true,
-    "jsx": "react-jsx"
+    "forceConsistentCasingInFileNames": true
   }
 }

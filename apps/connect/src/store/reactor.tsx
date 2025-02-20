@@ -48,7 +48,7 @@ async function createReactor() {
             | undefined) ??
         createBrowserDocumentDriveServer(
             documentModels,
-            connectConfig.routerBasename,
+            connectConfig.routerBasename as string,
         );
     await initReactor(server);
     return server;
@@ -58,10 +58,11 @@ const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(createReactor);
 const unwrappedReactor = unwrap(reactorAtom);
 
 // blocks rendering until reactor is initialized.
-export const useReactor = () => useAtomValue(reactorAtom);
+export const useReactor = (): IDocumentDriveServer => useAtomValue(reactorAtom);
 
 // will return undefined until reactor is initialized. Does not block rendering.
-export const useUnwrappedReactor = () => useAtomValue(unwrappedReactor);
+export const useUnwrappedReactor = (): IDocumentDriveServer | undefined =>
+    useAtomValue(unwrappedReactor);
 
 // will return undefined until reactor is initialized. Does not block rendering or trigger the reactor to be initialized.
 export const useAsyncReactor = () => useAtomValue(reactorAsyncAtom);

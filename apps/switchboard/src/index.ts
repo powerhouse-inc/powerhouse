@@ -53,6 +53,7 @@ const main = async () => {
       app,
       driveServer,
       knex,
+      // @ts-expect-error todo update analytics store to use IAnalyticsStore
       analyticsStore,
     );
     // init router

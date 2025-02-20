@@ -29,7 +29,9 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
 
     console.log('autoRegisterPullResponder', autoRegisterPullResponder);
 
-    const [appVersion, setAppVersion] = useState(connectConfig.appVersion);
+    const [appVersion, setAppVersion] = useState(
+        connectConfig.appVersion as string,
+    );
     const [serviceWorkerDebugMode, setServiceWorkerDebugMode] = useState({
         label: serviceWorkerManager.debug ? 'Enabled' : 'Disabled',
         value: serviceWorkerManager.debug,
@@ -315,6 +317,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                             size="small"
                             disabled={appVersion === ''}
                             onClick={() => {
+                                // @ts-expect-error todo add send message method to service worker manager class
                                 serviceWorkerManager.sendMessage({
                                     type: 'SET_APP_VERSION',
                                     version: appVersion,

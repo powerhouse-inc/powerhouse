@@ -8,6 +8,7 @@
     "outDir": "./dist",
     "target": "ESNext",
     "lib": ["ESNext", "DOM"],
-    "jsx": "react-jsx"
+    "jsx": "preserve",
+    "jsxImportSource": "preact"
   }
 }
