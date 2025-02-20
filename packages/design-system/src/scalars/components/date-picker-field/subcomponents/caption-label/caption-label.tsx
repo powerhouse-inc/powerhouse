@@ -32,13 +32,6 @@ const CaptionLabel: React.FC<CaptionLabelProps> = ({
       )}
     >
       <Button
-        className="truncate text-sm font-semibold"
-        variant="ghost"
-        onClick={() => setNavView("months")}
-      >
-        {monthAbbreviation}
-      </Button>
-      <Button
         className={cn(
           "truncate text-sm font-semibold",
           isSelectedYear ? "text-gray-900" : "text-gray-600",
@@ -46,10 +39,23 @@ const CaptionLabel: React.FC<CaptionLabelProps> = ({
         variant="ghost"
         onClick={() => setNavView("years")}
       >
-        {yearNumber}
+        <span
+          className={cn(isSelectedMonth ? "text-gray-900" : "text-gray-600")}
+        >
+          {monthAbbreviation}
+        </span>
+        <span
+          className={cn(isSelectedYear ? "text-gray-900" : "text-gray-600")}
+        >
+          {yearNumber}
+        </span>
       </Button>
       {navView === "days" ? (
-        <Icon className="size-[18px] text-gray-600" name="TriangleDown" />
+        <Icon
+          className="size-[18px] text-gray-600 cursor-pointer"
+          name="TriangleDown"
+          onClick={() => setNavView("years")}
+        />
       ) : (
         <Button variant="ghost" onClick={() => setNavView("days")}>
           <Icon className="size-[18px] text-gray-900" name="CrossCircle" />

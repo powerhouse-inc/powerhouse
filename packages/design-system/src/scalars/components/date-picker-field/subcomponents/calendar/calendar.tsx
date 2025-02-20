@@ -295,6 +295,7 @@ const Calendar = ({
                                 MONTHS.indexOf(actualMonth),
                               ),
                             );
+                            setNavView("months");
                           }}
                           disabled={
                             navView === "years" ? isDisabled : undefined
@@ -334,6 +335,7 @@ const Calendar = ({
                         goToMonth(
                           new Date(parseInt(actualYear), MONTHS.indexOf(month)),
                         );
+                        setNavView("days");
                       }}
                     >
                       {month}

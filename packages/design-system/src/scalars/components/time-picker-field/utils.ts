@@ -171,43 +171,60 @@ export const isValidTimeInput = (input: string): boolean => {
   }
 };
 /**
- * Get the offset of the time zone
- * @param timeZone - The time zone (e.g., "America/New_York", "Europe/London")
- * @returns The offset of the time zone in format "±HH:MM" (e.g., "+05:30", "-04:00")
+ * Get the local system timezone offset in ±HH:MM format
+ * @returns The local timezone offset (e.g., "+02:00", "-05:00")
  * @example
- * getOffset("America/New_York") // Returns "-04:00" or "-05:00" depending on DST
- * getOffset("Asia/Kolkata")     // Returns "+05:30"
- * getOffset()                   // Returns "±00:00" (default/fallback)
+ * getLocalOffset() // Returns "+01:00" for GMT+1
+ * getLocalOffset() // Returns "-05:00" for GMT-5
+ */
+export const getLocalOffset = (): string => {
+  const localOffset = new Date().getTimezoneOffset();
+  const sign = localOffset <= 0 ? "+" : "-";
+  const hours = String(Math.floor(Math.abs(localOffset) / 60)).padStart(2, "0");
+  const minutes = String(Math.abs(localOffset) % 60).padStart(2, "0");
+  return `${sign}${hours}:${minutes}`;
+};
+
+/**
+ * Gets the current UTC offset for a specific time zone
+ * @param timeZone - The IANA time zone name (e.g. "America/New_York", "Europe/London").
+ *                   If not provided or invalid, falls back to local system timezone.
+ * @returns The offset in ISO 8601 format (±HH:mm) based on current DST rules.
+ * @example
+ * getOffset("America/New_York") // Returns "-04:00" (EDT) or "-05:00" (EST)
+ * getOffset("Asia/Kolkata")     // Returns "+05:30" (IST - no DST)
+ * getOffset("Invalid/Zone")     // Returns local system offset (e.g. "-03:00")
+ * getOffset()                   // Returns local system offset
  */
 export const getOffset = (timeZone?: string) => {
-  try {
-    const date = new Date();
-    // Format the date in the specified time zone and extract the offset
-    const format = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      hour12: false,
-      timeZoneName: "shortOffset",
-    });
-    const parts = format.formatToParts(date);
-    const offsetPart = parts.find(
-      (part) => part.type === "timeZoneName",
-    )?.value;
+  // Manejar casos edge primero
+  if (!timeZone || typeof timeZone !== "string") return getLocalOffset();
 
-    if (!offsetPart) return "±00:00";
+  // Crear formateador de manera segura
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    timeZoneName: "shortOffset",
+  });
 
-    // Convertir GMT±HH a UTC±HH:MM
-    const offsetMatch = /GMT([+-]\d+)(?::(\d+))?/.exec(offsetPart);
-    if (!offsetMatch) return "±00:00";
-    const offsetStr = offsetMatch[1];
-    const sign = offsetStr[0];
-    const num = offsetStr.slice(1);
-    // Add the zero after the sign when necessary
-    const hours = `${sign}${num.padStart(2, "0")}`;
-    const minutes = offsetMatch[2] ? offsetMatch[2].padStart(2, "0") : "00";
-    return `${hours}:${minutes}`;
-  } catch (error) {
-    return "±00:00";
-  }
+  // Extraer el offset del formato
+  const offsetPart = formatter
+    .formatToParts(new Date())
+    .find((part) => part.type === "timeZoneName")?.value;
+
+  if (!offsetPart) return getLocalOffset();
+
+  // Handle multiple formats
+  const offsetMatch =
+    /^(?:GMT|UTC)?([+-])(\d{1,2})(?::?(\d{2}))?/i.exec(offsetPart) ||
+    /(UTC|GMT)([+-]\d{2}:\d{2})/.exec(offsetPart);
+
+  if (!offsetMatch) return getLocalOffset();
+  const sign = offsetMatch[1] || "+";
+  const hours = (offsetMatch[2] || "00").padStart(2, "0");
+  const minutes = (offsetMatch[3] || "00").padStart(2, "0");
+
+  return `${sign}${hours}:${minutes}`;
 };
 
 /**
