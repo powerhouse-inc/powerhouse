@@ -1,23 +1,23 @@
-import { DocumentDrive, GenericDriveExplorer } from '@powerhousedao/common';
-import { UiDriveNode, useUiNodesContext } from '@powerhousedao/design-system';
-import { EditorContext } from 'document-model/document';
-import { useAtomValue } from 'jotai';
-import { useMemo } from 'react';
+import {
+    DocumentDrive,
+    DriveContextProvider,
+    GenericDriveExplorer,
+    IDriveContext,
+} from '@powerhousedao/common';
+import { useUiNodesContext } from '@powerhousedao/design-system';
+import { DocumentModel, Operation } from 'document-model/document';
+import { useCallback, useMemo } from 'react';
 import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
-import { themeAtom } from 'src/store/theme';
-import { useUser } from 'src/store/user';
+import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import { useEditorProps } from 'src/hooks/useEditorProps';
+import { useUiNodes } from 'src/hooks/useUiNodes';
+import { useDocumentModels } from 'src/store/document-model';
 import { useDocumentDispatch } from 'src/utils/document-model';
+import { useModal } from './modal';
 
-function useEditorContext(): EditorContext {
-    const theme = useAtomValue(themeAtom);
-    const user = useUser() || undefined;
-    return useMemo(() => ({ theme, user }), [theme, user]);
-}
-
-function useDocumentDrive(driveId: string) {
+function useSelectedDocumentDrive() {
     const { selectedDriveNode } = useUiNodesContext();
 
-    const selectedDriveNode = uiNodes.selectedDriveNode as UiDriveNode | null;
     if (!selectedDriveNode) {
         throw new Error('No drive node selected');
     }
@@ -27,26 +27,76 @@ function useDocumentDrive(driveId: string) {
     if (!documentDrive.drive) {
         throw new Error(`Drive with id "${selectedDriveNode.id}" not found`);
     }
+
+    return documentDrive.drive;
 }
 
 export function DriveEditorContainer() {
-    const editorContext = useEditorContext();
-    const uiNodes = useUiNodesContext();
+    const {
+        selectedDriveNode,
+        setSelectedNode,
+        selectedNode,
+        selectedParentNode,
+    } = useUiNodesContext();
 
-    const selectedDriveNode = uiNodes.selectedDriveNode as UiDriveNode | null;
-    if (!selectedDriveNode) {
-        throw new Error('No drive node selected');
-    }
-
-    const documentDrive = useDocumentDriveById(selectedDriveNode.id);
-
-    if (!documentDrive.drive) {
-        throw new Error(`Drive with id "${selectedDriveNode.id}" not found`);
-    }
-
+    const { addOperationToSelectedDrive } = useUiNodes();
+    const documentDrive = useSelectedDocumentDrive();
     const [document, _dispatch, error] = useDocumentDispatch(
         DocumentDrive.reducer,
-        documentDrive.drive,
+        documentDrive,
+    );
+
+    const handleAddOperationToSelectedDrive = useCallback(
+        async (operation: Operation) => {
+            await addOperationToSelectedDrive(operation);
+        },
+        [addOperationToSelectedDrive],
+    );
+
+    const editorProps = useEditorProps(
+        document,
+        selectedDriveNode,
+        _dispatch,
+        handleAddOperationToSelectedDrive,
+    );
+
+    const { showModal } = useModal();
+    const showCreateDocumentModal = useCallback(
+        (documentModel: DocumentModel) => {
+            if (!selectedDriveNode) {
+                throw new Error('No drive node selected');
+            }
+
+            showModal('createDocument', {
+                documentModel,
+                selectedParentNode,
+                setSelectedNode,
+            });
+            return Promise.resolve({ name: 'New Document' }); // TODO fix this
+        },
+        [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
+    );
+
+    const { addFile } = useDocumentDriveServer();
+    const documentModels = useDocumentModels();
+    const driveContext: IDriveContext = useMemo(
+        () => ({
+            showSearchBar: false,
+            isAllowedToCreateDocuments: editorProps.isAllowedToCreateDocuments,
+            documentModels: documentModels,
+            selectedNode: selectedNode,
+            selectNode: setSelectedNode,
+            addFile,
+            showCreateDocumentModal,
+        }),
+        [
+            editorProps.isAllowedToCreateDocuments,
+            documentModels,
+            selectedNode,
+            setSelectedNode,
+            addFile,
+            showCreateDocumentModal,
+        ],
     );
 
     if (!document) {
@@ -54,11 +104,13 @@ export function DriveEditorContainer() {
     }
 
     return (
-        <GenericDriveExplorer.Component
-            document={document}
-            dispatch={_dispatch}
-            error={error}
-            context={editorContext}
-        />
+        <DriveContextProvider value={driveContext}>
+            <GenericDriveExplorer.Component
+                {...editorProps}
+                onSwitchboardLinkClick={undefined}
+                document={document}
+                error={error}
+            />
+        </DriveContextProvider>
     );
 }

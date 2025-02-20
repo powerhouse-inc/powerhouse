@@ -210,7 +210,11 @@ export function useDocumentDriveServer() {
     );
 
     const addOperations = useCallback(
-        async (driveId: string, id: string, operations: Operation[]) => {
+        async (
+            driveId: string,
+            id: string | undefined,
+            operations: Operation[],
+        ) => {
             if (!isAllowedToEditDocuments) {
                 throw new Error('User is not allowed to edit documents');
             }
@@ -226,12 +230,19 @@ export function useDocumentDriveServer() {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
 
-            const newDocument = await reactor.queueOperations(
-                driveId,
-                id,
-                operations,
-            );
-            return newDocument.document;
+            const result =
+                id !== undefined
+                    ? await reactor.queueOperations(driveId, id, operations)
+                    : await reactor.queueDriveOperations(
+                          driveId,
+                          operations as Operation<DocumentDriveAction>[],
+                      );
+
+            if (result.operations.length) {
+                await refreshDocumentDrives();
+            }
+            refreshDocumentDrives().catch(logger.error);
+            return result.document;
         },
         [documentDrives, isAllowedToEditDocuments, reactor],
     );

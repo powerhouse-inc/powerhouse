@@ -59,6 +59,7 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "peerDependencies": {
+    "@powerhousedao/design-system": "workspace:*",
     "document-model": "workspace:*",
     "document-model-libs": "workspace:*",
     "react": "^18.3.1",
@@ -71,7 +72,6 @@
     "@powerhousedao/analytics-engine-core": "^0.3.2",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",

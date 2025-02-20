@@ -298,6 +298,18 @@ export function useFileNodeDocument(
         }
     }, [addOperations, driveId, documentId, kind]);
 
+    const addOperationToSelectedDrive = useCallback(
+        (operation: Operation) => {
+            if (!selectedDriveNode?.id) {
+                throw new Error('No drive node selected');
+            }
+            return debounceOperations(operations =>
+                addOperations(selectedDriveNode.id, undefined, operations),
+            )(operation);
+        },
+        [addOperations, selectedDriveNode?.id],
+    );
+
     const isSelectedDocument =
         kind === FILE &&
         fileNodeDocument?.driveId === driveId &&
@@ -312,6 +324,7 @@ export function useFileNodeDocument(
             selectedDocument,
             setSelectedDocument,
             addOperationToSelectedDocument,
+            addOperationToSelectedDrive,
         }),
         [
             fileNodeDocument,
@@ -319,6 +332,7 @@ export function useFileNodeDocument(
             selectedDocument,
             setSelectedDocument,
             addOperationToSelectedDocument,
+            addOperationToSelectedDrive,
         ],
     );
 }
