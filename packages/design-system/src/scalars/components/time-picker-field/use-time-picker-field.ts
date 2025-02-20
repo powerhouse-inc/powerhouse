@@ -141,10 +141,33 @@ export const useTimePickerField = ({
       selectedMinute,
       offsetUTC,
     );
+    // If there are no hours and minutes selected, do nothing
+    if (!selectedHour && !selectedMinute) {
+      return;
+    }
+    // Set default values
+    let hourToUse = selectedHour;
+    if (!selectedHour && selectedMinute) {
+      hourToUse = is12HourFormat ? "12" : "00";
+    }
+
+    let periodToUse = selectedPeriod;
+    if (is12HourFormat && !selectedPeriod) {
+      const hourNum = parseInt(selectedHour);
+      periodToUse = hourNum >= 8 && hourNum <= 11 ? "AM" : "PM";
+      setSelectedPeriod(periodToUse);
+    }
+
+    // Condition that if the format is 12 hours and there are no minutes selected and there are no minutes selected adds a 00
+    let minuteToUse = selectedMinute;
+    if (!selectedMinute) {
+      minuteToUse = "00";
+    }
+
     // Value to display in the input get values from the popover interface
     const valueToDisplay = is12HourFormat
-      ? `${selectedHour}:${selectedMinute} ${selectedPeriod}`
-      : `${selectedHour}:${selectedMinute}`;
+      ? `${hourToUse}:${minuteToUse} ${periodToUse}`
+      : `${hourToUse}:${minuteToUse}`;
 
     setInputValue(valueToDisplay);
     onChange?.(createChangeEvent(datetime));
