@@ -10,7 +10,9 @@ import {
 export function isAssetGroupTransactionType(
   type: GroupTransactionType,
 ): type is AssetGroupTransactionType {
-  return assetGroupTransactions.includes(type);
+  return assetGroupTransactions.includes(
+    type as (typeof assetGroupTransactions)[number],
+  );
 }
 
 export function isFixedIncomeAsset(

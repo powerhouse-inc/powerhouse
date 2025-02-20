@@ -64,7 +64,9 @@ export function calculateCashBalanceChange(
 
   const sign = cashTransactionSignByTransactionType[transactionType];
 
-  const feeAmounts = fees?.map((fee) => fee.amount).filter(Boolean) ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  const feeAmounts = (fees?.map((fee) => fee.amount).filter(Boolean) ??
+    []) as number[];
 
   const totalFees = feeAmounts.reduce((acc, fee) => acc + fee, 0);
 
@@ -139,7 +141,9 @@ function makeGroupTransactionsTableData(
       transaction.cashTransaction.amount,
       cashTransactionSign,
     );
-    const totalFees = feesTransactions.includes(transaction.type)
+    const totalFees = feesTransactions.includes(
+      transaction.type as (typeof feesTransactions)[number],
+    )
       ? (maybeAddSignToAmount(
           transaction.cashTransaction.amount,
           transaction.type === FEES_INCOME ? -1 : 1,

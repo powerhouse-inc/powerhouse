@@ -32,7 +32,7 @@ export async function newScalarGenerator(
 
   let newContents = contents.replace(
     namespaceImport,
-    `${namespaceImport}\nimport * as ${options.name} from './${options.name}';`,
+    `${namespaceImport}\nimport * as ${options.name} from './${options.name}.js';`,
   );
 
   newContents = newContents.replace(
@@ -52,7 +52,7 @@ export async function newScalarGenerator(
 
   newContents = newContents.replace(
     exportScalarType,
-    `${exportScalarType}\nexport type { ScalarType as ${options.name}ScalarType } from './${options.name}';`,
+    `${exportScalarType}\nexport type { ScalarType as ${options.name}ScalarType } from './${options.name}.js';`,
   );
 
   newContents = newContents.replace(

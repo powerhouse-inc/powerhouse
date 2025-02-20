@@ -6,12 +6,8 @@
   "private": false,
   "type": "module",
   "exports": {
-    "./powerhouse": {
-      "import": "./dist/src/powerhouse.js"
-    },
-    "./tailwind": {
-      "import": "./dist/src/tailwind.js"
-    }
+    "./powerhouse": "./dist/src/powerhouse.js",
+    "./tailwind": "./dist/src/tailwind.js"
   },
   "publishConfig": {
     "access": "public"
