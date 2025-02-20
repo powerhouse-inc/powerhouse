@@ -128,7 +128,7 @@ export function viteConnectDevStudioPlugin(
               "@powerhousedao/design-system",
               "document-model-libs",
             ]
-          : [externalIds, ...STUDIO_IMPORTS];
+          : STUDIO_IMPORTS;
 
         config.build.rollupOptions.external.push(...buildStudioExternals);
       },

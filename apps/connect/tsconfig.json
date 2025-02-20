@@ -24,18 +24,19 @@
         "experimentalDecorators": true
     },
     "references": [
-      {
-        "path": "../../packages/document-drive"
-      },
-      {
-        "path": "../../packages/document-model"
-      },
-      {
-        "path": "../../packages/design-system"
-      },
-      {
-        "path": "../../packages/builder-tools"
-      }
+        {
+            "path": "../../packages/document-drive"
+        },
+        {
+            "path": "../../packages/document-model"
+        },
+        {
+            "path": "../../packages/design-system"
+        },
+        {
+            "path": "../../packages/builder-tools"
+        }
     ],
-    "include": ["**/*", "**/*.json"]
+    "include": ["**/*", "**/*.json"],
+    "exclude": ["ts-dist/**"]
 }

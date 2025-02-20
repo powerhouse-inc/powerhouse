@@ -1,12 +1,11 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import type {
+    DocumentDriveAction,
+    DocumentDriveDocument,
     DriveInput,
-    IDocumentDriveServer,
     RemoteDriveOptions,
-    SyncStatus,
 } from 'document-drive';
-import { DocumentDriveAction, DocumentDriveDocument } from 'document-drive';
 import { Action, Operation, PHDocument } from 'document-model';
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { platformInfo } from './app/detect-platform';
@@ -35,6 +34,109 @@ const renown: IRenown = {
         },
     },
 };
+
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const electronDocumentDrive = {
+    getDrives: () =>
+        ipcRenderer.invoke('documentDrive:getDrives') as Promise<string[]>,
+    getDrive: (id: string) =>
+        ipcRenderer.invoke(
+            'documentDrive:getDrive',
+            id,
+        ) as Promise<DocumentDriveDocument>,
+    addDrive: (drive: DriveInput) =>
+        ipcRenderer.invoke('documentDrive:addDrive', drive),
+    addRemoteDrive: (url: any, options: any) =>
+        ipcRenderer.invoke('documentDrive:addRemoteDrive', url, options),
+    deleteDrive: (id: string) =>
+        ipcRenderer.invoke('documentDrive:deleteDrive', id),
+    getDocuments: (drive: string) =>
+        ipcRenderer.invoke('documentDrive:getDocuments', drive),
+    getDocument: (drive: string, id: string) =>
+        ipcRenderer.invoke('documentDrive:getDocument', drive, id),
+    addOperation: (drive: string, id: string, operation: Operation) =>
+        ipcRenderer.invoke('documentDrive:addOperation', drive, id, operation),
+    addOperations: (drive: string, id: string, operations: Operation[]) =>
+        ipcRenderer.invoke(
+            'documentDrive:addOperations',
+            drive,
+            id,
+            operations,
+        ),
+    queueOperation(drive: any, id: any, operation: any, forceSync: any) {
+        return ipcRenderer.invoke(
+            'documentDrive:queueOperation',
+            drive,
+            id,
+            operation,
+            forceSync,
+        );
+    },
+    queueOperations(drive: any, id: any, operations: any, forceSync: any) {
+        return ipcRenderer.invoke(
+            'documentDrive:queueOperations',
+            drive,
+            id,
+            operations,
+            forceSync,
+        );
+    },
+    queueDriveOperation(drive: any, operation: any, forceSync: any) {
+        return ipcRenderer.invoke(
+            'documentDrive:queueDriveOperation',
+            drive,
+            operation,
+            forceSync,
+        );
+    },
+    queueDriveOperations(drive: any, operations: any, forceSync: any) {
+        return ipcRenderer.invoke(
+            'documentDrive:queueDriveOperations',
+            drive,
+            operations,
+            forceSync,
+        );
+    },
+    addDriveOperation: (
+        drive: string,
+        operation: Operation<DocumentDriveAction | Action>,
+    ) =>
+        ipcRenderer.invoke('documentDrive:addDriveOperation', drive, operation),
+    clearStorage: () => ipcRenderer.invoke('documentDrive:clearStorage'),
+    addDriveOperations: (
+        drive: string,
+        operations: Operation<DocumentDriveAction | Action>[],
+    ) =>
+        ipcRenderer.invoke(
+            'documentDrive:addDriveOperations',
+            drive,
+            operations,
+        ),
+    getSyncStatus: (drive: any) =>
+        ipcRenderer.invoke('documentDrive:getSyncStatus', drive),
+    on: (event: any, cb: (arg0: any) => any) => {
+        function listener(_event: IpcRendererEvent, arg: any) {
+            /* eslint-disable */
+            // @ts-expect-error
+            Array.isArray(arg) ? cb(...arg) : cb(arg);
+            /* eslint-enable */
+        }
+        ipcRenderer.on(`documentDrive:event:${event}`, listener);
+        return () => ipcRenderer.off(`documentDrive:event:${event}`, listener);
+    },
+    registerPullResponderTrigger: (
+        drive: string,
+        url: string,
+        options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
+    ) => {
+        return ipcRenderer.invoke(
+            'documentDrive:registerPullResponderTrigger',
+            drive,
+            url,
+            options,
+        );
+    },
+} as any;
 
 const electronApi = {
     platformInfo,
@@ -97,120 +199,10 @@ const electronApi = {
         };
     },
     setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
-    documentDrive: {
-        getDrives: () =>
-            ipcRenderer.invoke('documentDrive:getDrives') as Promise<string[]>,
-        getDrive: (id: string) =>
-            ipcRenderer.invoke(
-                'documentDrive:getDrive',
-                id,
-            ) as Promise<DocumentDriveDocument>,
-        addDrive: (drive: DriveInput) =>
-            ipcRenderer.invoke('documentDrive:addDrive', drive),
-        addRemoteDrive: (url, options) =>
-            ipcRenderer.invoke('documentDrive:addRemoteDrive', url, options),
-        deleteDrive: (id: string) =>
-            ipcRenderer.invoke('documentDrive:deleteDrive', id),
-        getDocuments: (drive: string) =>
-            ipcRenderer.invoke('documentDrive:getDocuments', drive),
-        getDocument: (drive: string, id: string) =>
-            ipcRenderer.invoke('documentDrive:getDocument', drive, id),
-        addOperation: (drive: string, id: string, operation: Operation) =>
-            ipcRenderer.invoke(
-                'documentDrive:addOperation',
-                drive,
-                id,
-                operation,
-            ),
-        addOperations: (drive: string, id: string, operations: Operation[]) =>
-            ipcRenderer.invoke(
-                'documentDrive:addOperations',
-                drive,
-                id,
-                operations,
-            ),
-        queueOperation(drive, id, operation, forceSync) {
-            return ipcRenderer.invoke(
-                'documentDrive:queueOperation',
-                drive,
-                id,
-                operation,
-                forceSync,
-            );
-        },
-        queueOperations(drive, id, operations, forceSync) {
-            return ipcRenderer.invoke(
-                'documentDrive:queueOperations',
-                drive,
-                id,
-                operations,
-                forceSync,
-            );
-        },
-        queueDriveOperation(drive, operation, forceSync) {
-            return ipcRenderer.invoke(
-                'documentDrive:queueDriveOperation',
-                drive,
-                operation,
-                forceSync,
-            );
-        },
-        queueDriveOperations(drive, operations, forceSync) {
-            return ipcRenderer.invoke(
-                'documentDrive:queueDriveOperations',
-                drive,
-                operations,
-                forceSync,
-            );
-        },
-        addDriveOperation: (
-            drive: string,
-            operation: Operation<DocumentDriveAction | Action>,
-        ) =>
-            ipcRenderer.invoke(
-                'documentDrive:addDriveOperation',
-                drive,
-                operation,
-            ),
-        clearStorage: () => ipcRenderer.invoke('documentDrive:clearStorage'),
-        addDriveOperations: (
-            drive: string,
-            operations: Operation<DocumentDriveAction | Action>[],
-        ) =>
-            ipcRenderer.invoke(
-                'documentDrive:addDriveOperations',
-                drive,
-                operations,
-            ),
-        getSyncStatus: drive =>
-            ipcRenderer.invoke('documentDrive:getSyncStatus', drive),
-        on: (event, cb) => {
-            function listener(_event: IpcRendererEvent, arg: any) {
-                /* eslint-disable */
-                // @ts-expect-error
-                Array.isArray(arg) ? cb(...arg) : cb(arg);
-                /* eslint-enable */
-            }
-            ipcRenderer.on(`documentDrive:event:${event}`, listener);
-            return () =>
-                ipcRenderer.off(`documentDrive:event:${event}`, listener);
-        },
-        registerPullResponderTrigger: (
-            drive: string,
-            url: string,
-            options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
-        ) => {
-            return ipcRenderer.invoke(
-                'documentDrive:registerPullResponderTrigger',
-                drive,
-                url,
-                options,
-            );
-        },
-        // @ts-expect-error
-    } satisfies Omit<IDocumentDriveServer, 'getSyncStatus'> & {
-        getSyncStatus: (drive: string) => Promise<SyncStatus>;
-    },
+    getSyncStatus: (drive: string) =>
+        ipcRenderer.invoke('documentDrive:getSyncStatus', drive),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    documentDrive: electronDocumentDrive,
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);
