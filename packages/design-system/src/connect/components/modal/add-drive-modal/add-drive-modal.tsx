@@ -1,7 +1,6 @@
 import {
   AddLocalDriveForm,
   AddLocalDriveInput,
-  AddPublicDriveFormProps,
   AddRemoteDriveForm,
   AddRemoteDriveInput,
   TabContent,
@@ -19,7 +18,10 @@ export type AddDriveModalProps = {
   readonly onAddLocalDrive: (data: AddLocalDriveInput) => void;
   readonly modalProps?: ModalProps;
   readonly containerProps?: DivProps;
-} & Pick<AddPublicDriveFormProps, "requestPublicDrive">;
+  readonly requestPublicDrive: (
+    url: string,
+  ) => Promise<{ id: string; name: string }>;
+};
 export function AddDriveModal(props: AddDriveModalProps) {
   function handleCancel() {
     onOpenChange(false);
@@ -49,7 +51,7 @@ export function AddDriveModal(props: AddDriveModalProps) {
           containerProps?.className,
         )}
       >
-        <Tabs>
+        <Tabs defaultValue="Create Drive">
           <TabContent label="Create Drive" description="Create a new drive">
             <AddLocalDriveForm
               onCancel={handleCancel}
@@ -64,7 +66,11 @@ export function AddDriveModal(props: AddDriveModalProps) {
               requestPublicDrive={requestPublicDrive}
             />
           </TabContent>
-          <TabContent label="New Shortcut" description="Create a new shortcut">
+          <TabContent
+            label="New Shortcut"
+            description="Create a new shortcut"
+            disabled
+          >
             test
           </TabContent>
         </Tabs>

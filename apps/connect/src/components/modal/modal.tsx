@@ -35,7 +35,6 @@ export const ModalManager: React.FC<{ children?: React.ReactNode }> = props => {
 
     const showModal: ModalContextValue['showModal'] = useCallback(
         (modalType, props) => {
-            console.log(props);
             setOpen(true);
             setModalProps(props);
             setModalType(modalType);

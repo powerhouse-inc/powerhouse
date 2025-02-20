@@ -24,7 +24,6 @@ type AddLocalDriveFormProps = {
 type CreateDriveFormSubmitHandler = SubmitHandler<AddLocalDriveInput>;
 
 export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
-  console.log(props);
   const {
     register,
     handleSubmit,

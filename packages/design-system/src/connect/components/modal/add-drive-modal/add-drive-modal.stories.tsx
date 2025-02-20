@@ -17,6 +17,9 @@ export const Default: Story = {
     onAddRemoteDrive() {},
     onAddLocalDrive() {},
     onOpenChange() {},
+    requestPublicDrive() {
+      return Promise.resolve({ id: "1", name: "Test Drive" });
+    },
   },
   render: function Wrapper(args) {
     const [, setArgs] = useArgs<typeof args>();
