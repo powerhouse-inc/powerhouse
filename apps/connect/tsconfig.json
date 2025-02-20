@@ -37,6 +37,6 @@
             "path": "../../packages/builder-tools"
         }
     ],
-    "include": ["**/*", "**/*.json"],
-    "exclude": ["ts-dist/**"]
+    "include": ["src", "src/**/*.json", "package.json"],
+    "exclude": ["ts-dist/**", "studio/**"]
 }
