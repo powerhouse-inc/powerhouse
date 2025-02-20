@@ -10,7 +10,11 @@
   "types": "./dist/index.d.ts",
   "exports": "./dist/index.js",
   "imports": {
-    "#*": "./dist/src/*"
+    "#*": "./dist/src/*",
+    "#utils/env": {
+      "node": "./dist/src/document/utils/node.js",
+      "default": "./dist/src/document/utils/browser.js"
+    }
   },
   "scripts": {
     "check-types": "tsc --build",

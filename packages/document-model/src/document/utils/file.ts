@@ -1,3 +1,4 @@
+import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
 import JSZip from "jszip";
 import mime from "mime/lite";
 import {
@@ -17,7 +18,6 @@ import {
   filterDocumentOperationsResultingState,
   garbageCollectDocumentOperations,
 } from "./document-helpers.js";
-import { fetchFile, getFile, hash, readFile, writeFile } from "./node.js";
 import { validateOperations } from "./validation.js";
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;

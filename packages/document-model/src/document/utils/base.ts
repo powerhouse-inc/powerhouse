@@ -1,3 +1,4 @@
+import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
 import {
@@ -37,7 +38,6 @@ import {
   InvalidActionInputError,
   InvalidActionInputZodError,
 } from "./errors.js";
-import { hash } from "./node.js";
 
 export function isNoopOperation<
   TOp extends {

@@ -1,3 +1,4 @@
+import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
   ActionSigner,
@@ -11,7 +12,6 @@ import {
   Reducer,
   Signature,
 } from "../types.js";
-import { generateUUID, hash } from "./node.js";
 
 export function generateId(method?: "UUIDv4"): string {
   if (method && method.toString() !== "UUIDv4") {
