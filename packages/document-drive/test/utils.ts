@@ -145,7 +145,10 @@ export class BasicClient {
       this.reducer,
       this.document,
       action,
-    );
+    ) as {
+      document: PHDocument;
+      operation: Operation;
+    };
 
     this.document = { ...result.document };
     this.unsyncedOperations.push({ ...result.operation });
@@ -220,7 +223,10 @@ export class DriveBasicClient {
       this.reducer,
       this.document,
       action,
-    );
+    ) as {
+      document: PHDocument;
+      operation: Operation;
+    };
 
     this.document = { ...result.document };
     this.unsyncedOperations.push({ ...result.operation });

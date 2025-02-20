@@ -37,7 +37,8 @@ export default tseslint.config(
       "**/postcss.config.mjs",
       "**/create-require.js",
       ".nx/",
-      "packages/document-drive/test/*",
+      "packages/document-drive/**/*.test.ts",
+      "packages/document-drive/**/*.bench.ts",
       "**/.vite/",
       "**/out/",
       "**/forge.config.js",
@@ -54,11 +55,7 @@ export default tseslint.config(
       },
       parserOptions: {
         projectService: {
-          allowDefaultProject: [
-            "*.config.js",
-            "*.config.mjs",
-            "*.config.cjs",
-          ],
+          allowDefaultProject: ["*.config.js", "*.config.mjs", "*.config.cjs"],
         },
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
