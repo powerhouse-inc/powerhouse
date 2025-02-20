@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as Sentry from '@sentry/browser';
-import { DocumentModelLib, PHDocument } from 'document-model';
+import { PHDocument } from 'document-model';
 import {
     BrowserWindow,
     Menu,

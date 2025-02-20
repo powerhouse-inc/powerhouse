@@ -1,10 +1,10 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import type {
-  DriveInput,
-  IDocumentDriveServer,
-  RemoteDriveOptions,
-  SyncStatus,
+    DriveInput,
+    IDocumentDriveServer,
+    RemoteDriveOptions,
+    SyncStatus,
 } from 'document-drive';
 import { DocumentDriveAction, DocumentDriveDocument } from 'document-drive';
 import { Action, Operation, PHDocument } from 'document-model';

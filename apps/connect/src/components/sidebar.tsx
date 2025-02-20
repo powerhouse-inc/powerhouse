@@ -2,9 +2,9 @@ import { useLogin } from '#hooks/useLogin';
 import { logger } from '#services/logger';
 import { sidebarCollapsedAtom } from '#store/index';
 import {
-  ConnectSidebar,
-  Icon,
-  useUiNodesContext,
+    ConnectSidebar,
+    Icon,
+    useUiNodesContext,
 } from '@powerhousedao/design-system';
 import { useAtom } from 'jotai';
 import { useCallback } from 'react';

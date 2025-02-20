@@ -2,10 +2,10 @@ import { Home } from '#pages/home';
 import connectConfig from 'connect-config';
 import React, { Suspense } from 'react';
 import {
-  RouteObject,
-  RouterProvider,
-  createBrowserRouter,
-  createMemoryRouter,
+    RouteObject,
+    RouterProvider,
+    createBrowserRouter,
+    createMemoryRouter,
 } from 'react-router-dom';
 
 const Root = React.lazy(() => import('./root'));
