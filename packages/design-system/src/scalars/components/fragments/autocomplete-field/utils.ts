@@ -1,25 +1,25 @@
-import { AutocompleteOption } from "@/scalars/components/fragments/autocomplete-field/types";
+import { AutocompleteOption } from "./types";
 
 export const mockedOptions: AutocompleteOption[] = [
   {
     icon: "PowerhouseLogoSmall",
     title: "Document A",
     path: "projects/finance/document-a",
-    value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea7:main:public",
+    value: "document-a",
     description: "Financial report for Q1 2024",
   },
   {
     icon: "PowerhouseLogoSmall",
     title: "Document B",
     path: "projects/legal/document-b",
-    value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8:main:public",
+    value: "document-b",
     description: "Legal compliance documentation",
   },
   {
     icon: "PowerhouseLogoSmall",
     title: "Document C",
     path: "projects/operations/document-c",
-    value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc5efc9:main:public",
+    value: "document-c",
     description: "Operational guidelines and procedures",
   },
 ];

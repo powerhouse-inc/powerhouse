@@ -1,3 +1,4 @@
+export * from "./autocomplete-field";
 export * from "./character-counter";
 export * from "./checkbox-field";
 export * from "./form-description";
@@ -10,5 +11,5 @@ export * from "./text-field";
 export * from "./textarea-field";
 export * from "./toggle-field";
 export * from "./tooltip";
-export * from "./with-field-validation";
 export * from "./select-field";
+export * from "./with-field-validation";

@@ -1,20 +1,20 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDebounceCallback } from "usehooks-ts";
-import type { PHIDProps, PHIDItem } from "./types";
+import type { AutocompleteProps, AutocompleteOption } from "./types";
 
-interface UsePHIDFieldParams {
-  autoComplete: PHIDProps["autoComplete"];
+interface UseAutocompleteFieldParams {
+  autoComplete: AutocompleteProps["autoComplete"];
   defaultValue?: string;
   value?: string;
-  isOpenByDefault: PHIDProps["isOpenByDefault"];
-  initialOptions: PHIDProps["initialOptions"];
-  onChange?: PHIDProps["onChange"];
+  isOpenByDefault: AutocompleteProps["isOpenByDefault"];
+  initialOptions: AutocompleteProps["initialOptions"];
+  onChange?: AutocompleteProps["onChange"];
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
-  fetchOptions: PHIDProps["fetchOptionsCallback"];
-  fetchSelectedOption: PHIDProps["fetchSelectedOptionCallback"];
+  fetchOptions: AutocompleteProps["fetchOptionsCallback"];
+  fetchSelectedOption: AutocompleteProps["fetchSelectedOptionCallback"];
 }
 
-export function usePHIDField({
+export function useAutocompleteField({
   autoComplete,
   defaultValue,
   value,
@@ -24,22 +24,24 @@ export function usePHIDField({
   onBlur,
   fetchOptions,
   fetchSelectedOption,
-}: UsePHIDFieldParams) {
+}: UseAutocompleteFieldParams) {
   const shouldFetchOptions = useRef(false);
   const isInternalChange = useRef(false);
   const commandListRef = useRef<HTMLDivElement>(null);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(isOpenByDefault ?? false);
-  const [options, setOptions] = useState<PHIDItem[]>(initialOptions ?? []);
+  const [options, setOptions] = useState<AutocompleteOption[]>(
+    initialOptions ?? [],
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSelectedOption, setIsLoadingSelectedOption] = useState(false);
   const [haveFetchError, setHaveFetchError] = useState(false);
   const [selectedValue, setSelectedValue] = useState(
     value ?? defaultValue ?? "",
   );
-  const [selectedOption, setSelectedOption] = useState<PHIDItem | undefined>(
-    undefined,
-  );
+  const [selectedOption, setSelectedOption] = useState<
+    AutocompleteOption | undefined
+  >(undefined);
   const [commandValue, setCommandValue] = useState("");
   const [haveBeenOpened, setHaveBeenOpened] = useState(false);
 
@@ -69,7 +71,7 @@ export function usePHIDField({
           .then((newOptions) => {
             setOptions(newOptions);
             const matchingOption = newOptions.find(
-              (opt) => opt.phid === newValue,
+              (opt) => opt.value === newValue,
             );
             if (matchingOption) {
               setSelectedOption(matchingOption);
@@ -90,18 +92,18 @@ export function usePHIDField({
   );
 
   const handleFetchSelectedOption = useCallback(
-    (phid: string) => {
+    (value: string) => {
       if (!autoComplete || !fetchSelectedOption) return;
 
       setIsLoadingSelectedOption(true);
 
-      fetchSelectedOption(phid)
+      fetchSelectedOption(value)
         .then((option) => {
           if (option) {
             setSelectedOption(option);
             setOptions((prevOptions) => {
               const optionIndex = prevOptions.findIndex(
-                (opt) => opt.phid === phid,
+                (opt) => opt.value === value,
               );
               if (optionIndex !== -1) {
                 const newOptions = [...prevOptions];
@@ -128,7 +130,7 @@ export function usePHIDField({
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (!open) {
-        setCommandValue(options[0]?.phid ?? "");
+        setCommandValue(options[0]?.value ?? "");
       }
       setIsPopoverOpen(open);
     },
@@ -140,7 +142,7 @@ export function usePHIDField({
       shouldFetchOptions.current = false;
       isInternalChange.current = true;
       setSelectedValue(optionValue);
-      setSelectedOption(options.find((opt) => opt.phid === optionValue));
+      setSelectedOption(options.find((opt) => opt.value === optionValue));
       clear();
       onChange?.(optionValue);
     },
@@ -217,7 +219,7 @@ export function usePHIDField({
   useEffect(() => {
     if (initialOptions?.length && selectedValue) {
       const matchingOption = initialOptions.find(
-        (opt) => opt.phid === selectedValue,
+        (opt) => opt.value === selectedValue,
       );
       if (matchingOption) {
         setSelectedOption(matchingOption);

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
-import { PHIDField } from "./phid-field";
+import { AutocompleteField } from "./autocomplete-field";
 import { mockedOptions, fetchOptions, fetchSelectedOption } from "./utils";
 import {
   getDefaultArgTypes,
@@ -9,9 +9,9 @@ import {
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
 
-const meta: Meta<typeof PHIDField> = {
-  title: "Document Engineering/Simple Components/PHID Field",
-  component: PHIDField,
+const meta: Meta<typeof AutocompleteField> = {
+  title: "Document Engineering/Fragments/Autocomplete Field",
+  component: AutocompleteField,
   decorators: [
     withForm,
     (Story) => (
@@ -28,25 +28,6 @@ const meta: Meta<typeof PHIDField> = {
     ...getDefaultArgTypes(),
     ...PrebuiltArgTypes.placeholder,
     ...PrebuiltArgTypes.maxLength,
-
-    allowedScopes: {
-      control: "object",
-      description: "List of allowed scopes.",
-      table: {
-        type: { summary: "string[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
-    allowUris: {
-      control: "boolean",
-      description: "Enables URI format as valid input in the field",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "true" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
 
     autoComplete: {
       control: "boolean",
@@ -120,21 +101,49 @@ const meta: Meta<typeof PHIDField> = {
       if: { arg: "autoComplete", neq: false },
     },
 
+    renderOption: {
+      control: "object",
+      description:
+        "Custom render function for autocomplete options. " +
+        "Receives the option object and an optional displayProps object with the following properties:\n\n" +
+        "asPlaceholder?: boolean\n\n" +
+        "showValue?: boolean\n\n" +
+        "isLoadingSelectedOption?: boolean\n\n" +
+        "handleFetchSelectedOption?: (value: string) => void\n\n" +
+        "className?: string\n\n" +
+        "Must return a ReactNode.",
+      table: {
+        type: {
+          summary:
+            "(option: AutocompleteOption, displayProps?: {\n" +
+            "  asPlaceholder?: boolean,\n" +
+            "  showValue?: boolean,\n" +
+            "  isLoadingSelectedOption?: boolean,\n" +
+            "  handleFetchSelectedOption?: (value: string) => void,\n" +
+            "  className?: string\n" +
+            "}) => React.ReactNode",
+        },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        readonly: true,
+      },
+      if: { arg: "autoComplete", neq: false },
+    },
+
     ...getValidationArgTypes(),
   },
   args: {
-    name: "phid-field",
+    name: "autocomplete-field",
   },
-} satisfies Meta<typeof PHIDField>;
+} satisfies Meta<typeof AutocompleteField>;
 
 export default meta;
 
-type Story = StoryObj<typeof PHIDField>;
+type Story = StoryObj<typeof AutocompleteField>;
 
 export const Default: Story = {
   args: {
-    label: "PHID field",
-    placeholder: "phd:",
+    label: "Autocomplete field",
+    placeholder: "Search...",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -142,10 +151,10 @@ export const Default: Story = {
 
 export const Empty: Story = {
   args: {
-    label: "PHID field",
-    placeholder: "phd:",
+    label: "Autocomplete field",
+    placeholder: "Search...",
     isOpenByDefault: true,
-    defaultValue: "phd:",
+    defaultValue: "with no matching options",
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
@@ -154,12 +163,12 @@ export const Empty: Story = {
 
 export const Open: Story = {
   args: {
-    label: "PHID field",
-    placeholder: "phd:",
+    label: "Autocomplete field",
+    placeholder: "Search...",
     isOpenByDefault: true,
-    defaultValue: "phd:",
-    variant: "withValueTitleAndDescription",
+    defaultValue: "with matching options",
     initialOptions: mockedOptions,
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -167,8 +176,8 @@ export const Open: Story = {
 
 export const Filled: Story = {
   args: {
-    label: "PHID field",
-    placeholder: "phd:",
+    label: "Autocomplete field",
+    placeholder: "Search...",
     defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
     variant: "withValueTitleAndDescription",
