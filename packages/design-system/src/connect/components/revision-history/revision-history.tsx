@@ -1,10 +1,14 @@
 import { TooltipProvider } from "@/connect";
 import { Pagination, usePagination } from "@/powerhouse";
-import { garbageCollect, sortOperations } from "document-model";
+import {
+  garbageCollect,
+  Operation,
+  OperationScope,
+  sortOperations,
+} from "document-model";
 import { useMemo, useState } from "react";
 import { Header } from "./header";
 import { Timeline } from "./timeline";
-import { Operation, Scope } from "./types";
 
 type Props = {
   readonly documentTitle: string;
@@ -25,7 +29,7 @@ export function RevisionHistory(props: Props) {
     itemsPerPage = 100,
   } = props;
 
-  const [scope, setScope] = useState<Scope>("global");
+  const [scope, setScope] = useState<OperationScope>("global");
 
   const visibleOperations = useMemo(() => {
     const operations = scope === "global" ? globalOperations : localOperations;
@@ -49,7 +53,7 @@ export function RevisionHistory(props: Props) {
     itemsPerPage,
   });
 
-  function onChangeScope(scope: Scope) {
+  function onChangeScope(scope: OperationScope) {
     goToFirstPage();
     setScope(scope);
   }

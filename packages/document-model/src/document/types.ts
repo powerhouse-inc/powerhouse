@@ -396,7 +396,11 @@ export type EditorModule<
       Record<string, unknown>
   >;
   documentTypes: string[];
-  config?: TEditorConfig;
+  config?: TEditorConfig & {
+    disableExternalControls?: boolean;
+    documentToolbarEnabled?: boolean;
+    showSwitchboardLink?: boolean;
+  };
 };
 
 export type Manifest = {
