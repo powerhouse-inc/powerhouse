@@ -393,18 +393,11 @@ export function useUiNodes() {
     );
 
     const showAddDriveModal = useCallback(
-        (groupSharingType: SharingType) => {
-            if (groupSharingType === LOCAL) {
-                showModal('addLocalDrive', {
-                    onAddLocalDrive,
-                });
-            } else {
-                showModal('addRemoteDrive', {
-                    onAddRemoteDrive,
-                    groupSharingType,
-                });
-            }
-        },
+        () =>
+            showModal('addDriveModal', {
+                onAddLocalDrive,
+                onAddRemoteDrive,
+            }),
         [onAddLocalDrive, onAddRemoteDrive, showModal],
     );
 

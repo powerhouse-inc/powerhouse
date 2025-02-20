@@ -36,7 +36,7 @@ export default function Sidebar() {
     }, [navigate, setSelectedNode]);
 
     const onAddDriveClick = useCallback(() => {
-        showAddDriveModal('PUBLIC');
+        showAddDriveModal();
     }, [showAddDriveModal]);
 
     const headerContent = (
