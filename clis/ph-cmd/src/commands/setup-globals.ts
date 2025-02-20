@@ -1,13 +1,13 @@
-import { Command } from "commander";
 import { createProject, parseVersion } from "@powerhousedao/codegen";
+import { Command } from "commander";
 import fs from "node:fs";
 import { CommandActionType } from "../types.js";
 import {
-  HOME_DIR,
-  POWERHOUSE_GLOBAL_DIR,
-  PH_GLOBAL_PROJECT_NAME,
   getPackageManagerFromPath,
+  HOME_DIR,
   PH_BIN_PATH,
+  PH_GLOBAL_PROJECT_NAME,
+  POWERHOUSE_GLOBAL_DIR,
 } from "../utils.js";
 
 export const setupGlobals: CommandActionType<

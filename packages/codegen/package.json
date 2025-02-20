@@ -7,11 +7,11 @@
   "files": [
     "/dist"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+  "exports": "./dist/index.js",
+  "imports": {
+    "#utils/*": "./src/utils/*.js",
+    "#codegen/*": "./src/codegen/*.js",
+    "#create-lib/*": "./src/create-lib/*.js"
   },
   "scripts": {
     "check-types": "tsc --build",
