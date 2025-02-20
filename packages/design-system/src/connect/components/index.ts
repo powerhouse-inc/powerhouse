@@ -25,6 +25,7 @@ export * from "./search-bar";
 export * from "./select";
 export * from "./sidebar";
 export * from "./status-icon";
+export * from "./tabs";
 export * from "./toast";
 export * from "./toggle";
 export * from "./tooltip";
