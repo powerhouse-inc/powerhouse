@@ -7,6 +7,7 @@ export type ConnectStudioOptions = {
   localDocuments?: string;
   open?: boolean;
   packages?: { packageName: string }[];
+  phCliVersion?: string;
 };
 
 export type StartServerOptions = {

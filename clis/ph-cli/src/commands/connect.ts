@@ -3,9 +3,9 @@ import {
   ConnectStudioOptions,
   startConnectStudio,
 } from "@powerhousedao/builder-tools/connect-studio";
-import { getConfig } from "@powerhousedao/config/powerhouse";
 import { Command } from "commander";
-import { version } from "../../package.json";
+import packageJson from "../../package.json" assert { type: "json" };
+const version = packageJson.version;
 export type ConnectOptions = ConnectStudioOptions;
 
 export async function startConnect(connectOptions: ConnectOptions) {
