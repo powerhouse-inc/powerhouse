@@ -209,50 +209,6 @@ export const WithinLayoutAndContent: Story = {
       "4281ab93-ef4f-4974-988d-7dad149a693d",
     );
 
-    // useEffect(() => {
-    //   const sidebarElement = document.querySelector(".sidebar");
-    //   console.log("sidebarElement", sidebarElement);
-    //   if (sidebarElement) {
-    //     document.addEventListener("sidebar:resize", (event) => {
-    //       console.log("sidebar:resize", event);
-    //     });
-    //     document.addEventListener("sidebar:resize:start", (event) => {
-    //       console.log("sidebar:resize:start", event);
-    //     });
-    //     document.addEventListener("sidebar:resize:active", (event) => {
-    //       console.log("sidebar:resize:active", event);
-    //     });
-    //     document.addEventListener("sidebar:resize:toggle", (event) => {
-    //       console.log("sidebar:resize:toggle", event);
-    //     });
-    //   }
-    //   return () => {
-    //     if (sidebarElement) {
-    //       document.removeEventListener("sidebar:resize", (event) => {
-    //         console.log("sidebar:resize", event);
-    //       });
-    //       document.removeEventListener("sidebar:resize:start", (event) => {
-    //         console.log("sidebar:resize:start", event);
-    //       });
-    //       document.removeEventListener("sidebar:resize:active", (event) => {
-    //         console.log("sidebar:resize:active", event);
-    //       });
-    //       document.removeEventListener("sidebar:resize:toggle", (event) => {
-    //         console.log("sidebar:resize:toggle", event);
-    //       });
-    //     }
-    //   };
-    // }, []);
-    useEffect(() => {
-      const onResize = (event: Event) => {
-        console.log("sidebar:resize", event);
-      };
-      document.addEventListener("sidebar:resize", onResize);
-      return () => {
-        document.removeEventListener("sidebar:resize", onResize);
-      };
-    }, []);
-
     return (
       <main className="flex h-svh w-full">
         <Sidebar
