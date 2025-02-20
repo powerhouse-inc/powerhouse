@@ -76,10 +76,6 @@ export interface SidebarProps {
    */
   maxWidth?: number;
   /**
-   * A callback function that is called when the width of the sidebar changes.
-   */
-  onWidthChange?: (width: number) => void;
-  /**
    * Optional className for the sidebar container
    */
   className?: string;
@@ -100,7 +96,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   extraFooterContent,
   initialWidth = 300,
   maxWidth,
-  onWidthChange,
   className,
 }) => {
   const {
@@ -113,7 +108,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     defaultWidth: initialWidth,
     minWidth: 220,
     maxWidth,
-    onWidthChange,
   });
 
   const {

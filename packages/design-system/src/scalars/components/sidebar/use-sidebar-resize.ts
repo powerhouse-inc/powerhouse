@@ -1,19 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { triggerEvent } from "./utils";
 
 interface SidebarResizeProps {
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;
-  onWidthChange?: (width: number) => void;
 }
 
 export const useSidebarResize = ({
   defaultWidth = 300,
   minWidth = 100,
   maxWidth,
-  onWidthChange,
 }: SidebarResizeProps) => {
   const [isResizing, setIsResizing] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(
@@ -25,6 +24,12 @@ export const useSidebarResize = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const handleToggleSidebar = useCallback(() => {
     setIsSidebarOpen(!isSidebarOpen);
+    // trigger event
+    triggerEvent(
+      "sidebar:resize:toggle",
+      { isSidebarOpen: !isSidebarOpen },
+      sidebarRef.current,
+    );
   }, [isSidebarOpen]);
 
   useEffect(() => {
@@ -38,13 +43,29 @@ export const useSidebarResize = ({
   const startResizing = useCallback(() => {
     if (isSidebarOpen) {
       setIsResizing(true);
+      // trigger event
+      triggerEvent(
+        "sidebar:resize:start",
+        {
+          isSidebarOpen,
+        },
+        sidebarRef.current,
+      );
     }
-  }, [isSidebarOpen]);
+  }, [isSidebarOpen, sidebarWidth]);
 
   const stopResizing = useCallback(() => {
     setIsResizing(false);
-    onWidthChange?.(isSidebarOpen ? sidebarWidth : 8);
-  }, [isSidebarOpen, sidebarWidth, onWidthChange]);
+    // trigger event
+    triggerEvent(
+      "sidebar:resize",
+      {
+        isSidebarOpen,
+        sidebarWidth: isSidebarOpen ? sidebarWidth : 8,
+      },
+      sidebarRef.current,
+    );
+  }, [isSidebarOpen, sidebarWidth]);
 
   const resize = useCallback(
     (mouseMoveEvent: MouseEvent) => {
@@ -61,9 +82,18 @@ export const useSidebarResize = ({
         }
 
         setSidebarWidth(newWidth);
+        // trigger event
+        triggerEvent(
+          "sidebar:resize:active",
+          {
+            isSidebarOpen,
+            sidebarWidth: newWidth,
+          },
+          sidebarRef.current,
+        );
       }
     },
-    [isResizing, minWidth, maxWidth],
+    [isResizing, minWidth, maxWidth, isSidebarOpen],
   );
 
   useEffect(() => {
