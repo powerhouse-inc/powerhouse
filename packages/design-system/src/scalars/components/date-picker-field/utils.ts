@@ -83,3 +83,62 @@ export const formatDateToValue = (inputString: string): string => {
   const stringDate = `${inputString}T00:00-00:00`;
   return stringDate;
 };
+
+/**
+ * Convert a date string to an ISO date string (YYYY-MM-DD format)
+ * @param inputString - The date string to convert
+ * @param dateFormat - The date format to use
+ * @returns The ISO date string
+ * @example
+ * // MM/dd/yyyy format
+ * convertToISODateFormat('12/25/2023') // returns '2023-12-25'
+ *
+ * // dd/MM/yyyy format
+ * convertToISODateFormat('25/12/2023') // returns '2023-12-25'
+ *
+ * // dd-MMM-yyyy format
+ * convertToISODateFormat('25-Dec-2023') // returns '2023-12-25'
+ *
+ * // Invalid date
+ * convertToISODateFormat('invalid') // returns 'invalid'
+ */
+export const convertToISODateFormat = (
+  inputString: string,
+  dateFormat = ALLOWED_FORMATS[0],
+): string => {
+  if (!dateFormat || !inputString) return inputString;
+  // Si la fecha tiene formato MM/dd/yyyy
+  if (dateFormatRegexes["MM/dd/yyyy"].test(inputString)) {
+    const [month, day, year] = inputString.split("/");
+    // Construimos la fecha ISO en el orden correcto: año-mes-día
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  for (const [formatStr, regex] of Object.entries(dateFormatRegexes)) {
+    if (regex.test(inputString)) {
+      const parsedDate = parse(inputString, formatStr, new Date());
+      if (isValid(parsedDate)) {
+        // Formatear a ISO sin tiempo
+        const isoDate = format(parsedDate, "yyyy-MM-dd");
+        return isoDate;
+      }
+    }
+  }
+  return inputString;
+};
+
+/**
+ * Convert a date string to an ISO date string (YYYY-MM-DD format)
+ * @param inputString - The date string to convert
+ * @returns The ISO date string
+ */
+export const formatDateToValidCalendarDateFormat = (
+  inputString: string,
+): string => {
+  const [datePart, timePart = "00:00-00:00"] = inputString.split("T");
+  const parsedDate = convertToISODateFormat(datePart);
+
+  // Combinar con la parte del tiempo y convertir a ISO
+  const isoDate = new Date(`${parsedDate}T${timePart}`);
+  return isoDate.toISOString();
+};
