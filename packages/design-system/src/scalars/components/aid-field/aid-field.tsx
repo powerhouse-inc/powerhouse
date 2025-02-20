@@ -151,7 +151,20 @@ export const AIDField = withFieldValidation<AIDFieldProps>(AIDFieldRaw, {
           return true;
         }
 
-        // TODO: add validation
+        // Validate supportedNetworks if present
+        const chainIdMatch = /^did:ethr:(0x[0-9a-fA-F]+):.+$/.exec(value);
+        if (
+          chainIdMatch &&
+          Array.isArray(supportedNetworks) &&
+          supportedNetworks.length > 0
+        ) {
+          const chainId = chainIdMatch[1];
+          if (
+            !supportedNetworks.some((network) => network.chainId === chainId)
+          ) {
+            return `Invalid chainId. Allowed chainIds are: ${supportedNetworks.map((network) => network.chainId).join(", ")}`;
+          }
+        }
 
         return true;
       },
