@@ -1,4 +1,6 @@
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
+import React from "react";
+import { TabContentProps } from "./tab-content";
 
 export function Tabs({
   children,
@@ -12,29 +14,33 @@ export function Tabs({
       <div className="flex w-full justify-between">
         {/* <EditorUndoRedoButtons {...props} /> */}
         <List className="flex w-full gap-x-2 rounded-xl bg-slate-50 p-1 text-sm font-semibold text-gray-600 outline-none">
-          {children &&
-            Array.isArray(children) &&
-            children.map((child) => (
+          {React.Children.map(children, (child, i) => {
+            if (!React.isValidElement(child)) return;
+            const { label, disabled } = child.props as TabContentProps;
+            return (
               <Trigger
                 className="data-[state='active']:tab-shadow ata-disabled:cursor-not-allowed 
               data-disabled:text-gray-400 flex h-7 flex-1 items-center justify-center rounded-lg transition duration-300 data-[state='active']:bg-gray-50 data-[state='active']:text-gray-900"
-                key={child.props.label}
-                value={child.props.label}
-                disabled={child.props.disabled}
+                key={label as string}
+                value={label as string}
+                disabled={disabled ?? false}
               >
-                {child.props.label}
+                {label as string}
               </Trigger>
-            ))}
+            );
+          })}
         </List>
       </div>
       <div className="mt-3 rounded-md bg-white">
-        {children &&
-          Array.isArray(children) &&
-          children.map((child, i) => (
-            <Content value={child.props.label} key={i}>
+        {React.Children.map(children, (child, i) => {
+          if (!React.isValidElement(child)) return;
+          const { label } = child.props as TabContentProps;
+          return (
+            <Content value={label as string} key={i}>
               {child}
             </Content>
-          ))}
+          );
+        })}
       </div>
     </Root>
   );
