@@ -19,14 +19,20 @@ import FolderView from "./components/folder-view";
 import { DriveLayout } from "./components/layout";
 import { SearchBar } from "./components/search-bar";
 
+export type IGenericDriveExplorerEditorProps = {
+  className?: string;
+  children?: React.ReactNode;
+};
+
 export type IProps = EditorProps<
   DocumentDriveState,
   DocumentDriveAction,
   DocumentDriveLocalState
->;
+> &
+  React.HTMLProps<HTMLDivElement>;
 
 export default function Editor(props: IProps) {
-  const { document, dispatch } = props;
+  const { document, dispatch, className, children } = props;
 
   const {
     state: {
@@ -97,7 +103,8 @@ export default function Editor(props: IProps) {
   }
 
   return (
-    <DriveLayout>
+    <DriveLayout className={className}>
+      {children}
       <DriveLayout.Header>
         <Breadcrumbs
           breadcrumbs={breadcrumbs}

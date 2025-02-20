@@ -761,6 +761,9 @@ importers:
 
   packages/common:
     dependencies:
+      '@powerhousedao/design-system':
+        specifier: workspace:*
+        version: link:../design-system
       '@tanstack/react-virtual':
         specifier: ^3.8.1
         version: 3.11.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -786,9 +789,6 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
-      '@powerhousedao/design-system':
-        specifier: workspace:*
-        version: link:../design-system
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../reactor-api

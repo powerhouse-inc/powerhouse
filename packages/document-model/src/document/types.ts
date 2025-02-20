@@ -381,6 +381,9 @@ export type EditorProps<S, A extends Action, L> = {
 export type Editor<S = unknown, A extends Action = Action, L = unknown> = {
   Component: FC<EditorProps<S, A, L>>;
   documentTypes: string[];
+  config: {
+    id: string;
+  };
 };
 
 export type Manifest = {
@@ -399,6 +402,11 @@ export type Manifest = {
     id: string;
     name: string;
     documentTypes: string[];
+  }[];
+  apps?: {
+    id: string;
+    name: string;
+    driveEditor?: string;
   }[];
 };
 

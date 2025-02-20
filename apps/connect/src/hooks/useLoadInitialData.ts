@@ -131,7 +131,6 @@ export const useLoadInitialData = () => {
 
     const updateUiDriveNodes = useCallback(
         async (documentDrives: DocumentDriveDocument[]) => {
-            console.log('UPDATE');
             const uiDriveNodes = await makeUiDriveNodes(documentDrives);
             setDriveNodes(uiDriveNodes);
         },

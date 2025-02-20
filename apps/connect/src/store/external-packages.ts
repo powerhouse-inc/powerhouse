@@ -1,4 +1,9 @@
-import { DocumentModelLib } from 'document-model/document';
+import {
+    DocumentDriveAction,
+    DocumentDriveDocument,
+    DocumentDriveLocalState,
+} from '@powerhousedao/common';
+import { DocumentModelLib, Editor } from 'document-model/document';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
 import { getHMRModule, subscribeExternalPackages } from 'src/services/hmr';
@@ -41,3 +46,34 @@ externalPackagesAtom.onMount = setAtom => {
 };
 
 export const useExternalPackages = () => useAtomValue(externalPackagesAtom);
+
+export type App = {
+    id: string;
+    name: string;
+    driveEditor?: Editor<
+        DocumentDriveDocument,
+        DocumentDriveAction,
+        DocumentDriveLocalState
+    >;
+};
+
+const appsAtom = atom<Promise<App[]>>(async get => {
+    const externalPackages = await get(externalPackagesAtom);
+    return externalPackages
+        .map(
+            pkg =>
+                pkg.manifest.apps?.map(app => ({
+                    ...app,
+                    driveEditor: pkg.editors.find(
+                        editor => editor.config.id === app.driveEditor,
+                    ) as Editor<
+                        DocumentDriveDocument,
+                        DocumentDriveAction,
+                        DocumentDriveLocalState
+                    >,
+                })) ?? [],
+        )
+        .flat();
+});
+
+export const useApps = () => useAtomValue(appsAtom);
