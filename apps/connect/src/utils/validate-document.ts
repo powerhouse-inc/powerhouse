@@ -1,4 +1,5 @@
 import {
+    DocumentModelDocument,
     PHDocument,
     validateInitialState,
     validateModules,
@@ -12,7 +13,7 @@ export const validateDocument = (document: PHDocument) => {
         return errors;
     }
 
-    const doc = document;
+    const doc = document as DocumentModelDocument;
     const specs = doc.state.global.specifications[0];
 
     // validate initial state errors
@@ -45,9 +46,7 @@ export const validateDocument = (document: PHDocument) => {
             ...acc,
             ...validateStateSchemaName(
                 specs.state[scope].schema,
-                // @ts-expect-error - Document model should know that name can be defined in global state
-
-                document.name || document.state.global?.name || '',
+                doc.name || doc.state.global?.name || '',
                 !isGlobalScope ? scope : '',
                 !isGlobalScope,
             ).map(err => ({

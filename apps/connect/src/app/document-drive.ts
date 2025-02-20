@@ -8,14 +8,14 @@ import {
     InMemoryCache,
     RemoteDriveOptions,
 } from 'document-drive';
-import { Action, DocumentModelLib, Operation } from 'document-model';
+import { Action, DocumentModelModule, Operation } from 'document-model';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
 import { logger } from '../services/logger';
 import { getReactorDefaultDrivesConfig } from '../utils/reactor';
 
 export default (
-    documentModels: DocumentModelLib[],
+    documentModels: DocumentModelModule[],
     path: string,
     ipcMain: IpcMain,
 ) => {

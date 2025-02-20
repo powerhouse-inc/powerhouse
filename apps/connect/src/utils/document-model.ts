@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react';
 const ENABLE_SYNC_DEBUG = false;
 
 export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
-    (import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE as string) || '50',
+    import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE! || '50',
 );
 
 export type DocumentDispatchCallback<TGlobalState, TLocalState> = (

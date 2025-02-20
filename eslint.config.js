@@ -42,6 +42,7 @@ export default tseslint.config(
       "**/out/",
       "**/forge.config.js",
       "**/vite.config.ts.timestamp-*.mjs",
+      "apps/connect/src/vite-env.d.ts",
     ],
   },
   {
@@ -52,7 +53,13 @@ export default tseslint.config(
         ...globals.browser,
       },
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: [
+            "**/*.config.js",
+            "**/*.config.mjs",
+            "**/*.config.cjs",
+          ],
+        },
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
           jsx: true,
@@ -116,12 +123,12 @@ export default tseslint.config(
           allowNumber: true,
         },
       ],
-    }
+    },
   },
   {
     files: ["**/*.tsx"],
-    ...reactPlugin.configs.flat?.all,
-    ...reactPlugin.configs.flat?.["jsx-runtime"],
+    ...reactPlugin.configs.flat.all,
+    ...reactPlugin.configs.flat["jsx-runtime"],
     settings: {
       react: {
         version: "detect",

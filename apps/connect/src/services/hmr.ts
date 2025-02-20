@@ -1,10 +1,11 @@
 import { ExternalPackage } from '#store/external-packages';
+import { ViteHotContext } from 'vite/types/hot.js';
 export type PackagesUpdate = {
     url: string;
     timestamp: string;
 };
 
-export async function getHMRModule() {
+export async function getHMRModule(): Promise<ViteHotContext | undefined> {
     // if running connect in dev mode then use its hmr
     if (import.meta.hot) {
         return import.meta.hot;
@@ -18,10 +19,10 @@ export async function getHMRModule() {
 
     try {
         const module = await import(
-            '../../../../packages/builder-tools/connect-studio/hmr'
+            '@powerhousedao/builder-tools/connect-studio'
         );
-        const hmr = module.default;
-        return hmr;
+        const hmr = module.hmr;
+        return hmr as ViteHotContext;
     } catch {
         return undefined;
     }

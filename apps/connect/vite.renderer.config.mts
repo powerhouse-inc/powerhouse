@@ -10,10 +10,10 @@ import path from 'path';
 import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 import pkg from './package.json';
-
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
 
 const reactImportScript = `
@@ -31,6 +31,78 @@ const reactImportScript = `
 `;
 
 process.env.VITE_IMPORT_REACT_SCRIPT = isBuildStudio ? '' : reactImportScript;
+
+const externalAndExclude = [
+    'esbuild',
+    'exec',
+    'createRequire',
+    'vite-envs',
+    'fsevents',
+    'node:crypto',
+    'fs',
+    'path',
+    'events',
+    'stream',
+    'buffer',
+    'vite-plugin-node-polyfills/shims/buffer',
+    'vite-plugin-node-polyfills/shims/global',
+    'fs/promises',
+    'node:fs',
+    'http',
+    'node:http',
+    'node:fs/promises',
+    'node:path',
+    'node:util',
+    'node:events',
+    'node:stream',
+    'node:buffer',
+    'util/types',
+    'node:async_hooks',
+    'node:diagnostics_channel',
+    'node:perf_hooks',
+    'node:v8',
+    'node:worker_threads',
+    'worker_threads',
+    'node:module',
+    'module',
+    'node:zlib',
+    'zlib',
+    'node:child_process',
+    'child_process',
+    'node:process',
+    'process',
+    'node:dns',
+    'dns',
+    'dns/promises',
+    'node:dns/promises',
+    'node:async_hooks',
+    'node:diagnostics_channel',
+    'node:perf_hooks',
+    'node:v8',
+    'node:worker_threads',
+    'worker_threads',
+    'document-drive',
+    'fs',
+    'fs/promises',
+    'json-stringify-deterministic',
+    '@powerhousedao/config',
+    '@powerhousedao/builder-tools',
+    'path',
+    'node:events',
+    'node:stream',
+    'node:buffer',
+    'node:async_hooks',
+    'node:diagnostics_channel',
+    'node:perf_hooks',
+    'node:v8',
+    'node:worker_threads',
+    'worker_threads',
+    'document-drive/dist/src/storage/filesystem.js',
+    'fs',
+    'fs/promises',
+    'json-stringify-deterministic',
+    'path',
+];
 
 export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
@@ -59,6 +131,7 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const plugins: PluginOption[] = [
+        nodePolyfills(),
         viteConnectDevStudioPlugin(false, env),
         viteLoadExternalPackages(undefined),
         react({
@@ -115,20 +188,18 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
-                    // Adds the service worker as a separate file
                     'service-worker': path.resolve(
                         __dirname,
                         'src/service-worker.ts',
                     ),
                 },
                 output: {
-                    // Ensure the service worker file goes to the root of the dist folder
                     entryFileNames: chunk =>
                         ['service-worker'].includes(chunk.name)
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: ['node:crypto'],
+                external: externalAndExclude,
             },
         },
         resolve: {
@@ -139,9 +210,12 @@ export default defineConfig(({ mode }) => {
                     __dirname,
                     './src/connect.config.ts',
                 ),
-                path: 'rollup-plugin-node-polyfills/polyfills/path',
-                events: 'rollup-plugin-node-polyfills/polyfills/events',
+                stream: 'stream-browserify',
+                buffer: 'buffer',
             },
+        },
+        optimizeDeps: {
+            exclude: externalAndExclude,
         },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),

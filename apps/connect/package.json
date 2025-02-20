@@ -45,7 +45,7 @@
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
-        "build:studio": "node studio/esbuild.studio.config.mjs",
+        "build:studio": "node esbuild.studio.config.mjs",
         "build": "npm run build:studio",
         "prebuild:studio": "BUILD_STUDIO=true npm run build:web",
         "postbuild:studio": "tsc -p tsconfig.studio.json",
@@ -55,16 +55,17 @@
         "build:service-worker": "tsc --build ./tsconfig.sw.json"
     },
     "dependencies": {
-        "@vitejs/plugin-basic-ssl": "^1.2.0",
-        "commander": "^12.1.0",
-        "magic-string": "^0.30.17",
-        "vite": "^5.4.8",
-        "vite-envs": "^4.4.5"
+      "commander": "^12.1.0",
+      "magic-string": "^0.30.17"
     },
     "peerDependencies": {
         "@powerhousedao/design-system": "workspace:*"
     },
     "devDependencies": {
+      "vite": "^6.1.1",
+      "@vitejs/plugin-basic-ssl": "^1.2.0",
+        "vite-envs": "^4.4.11",
+        "vite-plugin-node-polyfills": "^0.23.0",
         "@electron-forge/cli": "^6.1.1",
         "@electron-forge/maker-deb": "^6.1.1",
         "@electron-forge/maker-rpm": "^6.1.1",
@@ -87,8 +88,6 @@
         "@types/react-dom": "^18.2.18",
         "@types/uuid": "^9.0.7",
         "@types/wicg-file-system-access": "^2020.9.6",
-        "@typescript-eslint/eslint-plugin": "^6.18.1",
-        "@typescript-eslint/parser": "^6.18.1",
         "@vitejs/plugin-react": "^4.2.1",
         "asar": "^3.2.0",
         "autoprefixer": "^10.4.14",
@@ -111,7 +110,6 @@
         "playwright": "^1.41.2",
         "playwright-core": "^1.41.2",
         "postcss": "^8.4.33",
-        "prettier-plugin-organize-imports": "^3.2.4",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-error-boundary": "^4.0.11",

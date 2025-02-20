@@ -207,6 +207,7 @@ const electronApi = {
                 options,
             );
         },
+        // @ts-expect-error
     } satisfies Omit<IDocumentDriveServer, 'getSyncStatus'> & {
         getSyncStatus: (drive: string) => Promise<SyncStatus>;
     },
