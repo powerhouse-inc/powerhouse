@@ -1,3 +1,4 @@
+import { logger } from "document-drive/logger";
 import {
   DocumentDriveDocument,
   FileNode,
@@ -12,7 +13,6 @@ import {
 import { ICache } from "../cache";
 import type { DocumentStorage, IDriveStorage } from "../storage/types";
 import { isBefore, isDocumentDrive } from "../utils";
-import { logger } from "../utils/logger";
 import { SynchronizationUnitNotFoundError } from "./error";
 import {
   GetStrandsOptions,

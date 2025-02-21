@@ -1,5 +1,5 @@
 import { captureException } from '@sentry/react';
-import { ConsoleLogger, ILogger, setLogger } from 'document-drive/logger';
+import { setErrorHandler } from 'document-drive/logger';
 
 function captureSentryException(...data: any[]) {
     let error: unknown;
@@ -26,5 +26,4 @@ function captureSentryException(...data: any[]) {
     captureException(error, info ? { data: info } : undefined);
 }
 
-export const logger: ILogger = new ConsoleLogger([], captureSentryException);
-setLogger(logger);
+setErrorHandler(captureSentryException);

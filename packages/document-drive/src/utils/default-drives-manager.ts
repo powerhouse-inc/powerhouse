@@ -1,3 +1,4 @@
+import { logger } from "document-drive/logger";
 import {
   DefaultRemoteDriveInfo,
   DocumentDriveServerOptions,
@@ -10,7 +11,6 @@ import {
 } from "../server";
 import { DriveNotFoundError } from "../server/error";
 import { requestPublicDrive } from "./graphql";
-import { logger } from "./logger";
 
 export interface IServerDelegateDrivesManager {
   emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) => void;

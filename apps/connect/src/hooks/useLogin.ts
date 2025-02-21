@@ -1,8 +1,8 @@
+import { logger } from 'document-drive/logger';
 import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useConnectCrypto } from 'src/hooks/useConnectCrypto';
 import { useRenown } from 'src/hooks/useRenown';
-import { logger } from 'src/services/logger';
 import {
     RENOWN_CHAIN_ID,
     RENOWN_NETWORK_ID,

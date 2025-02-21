@@ -1,6 +1,6 @@
+import { logger } from 'document-drive/logger';
 import type { Document, DocumentModel } from 'document-model/document';
 import { utils } from 'document-model/document';
-import { logger } from 'src/services/logger';
 
 const downloadFile = async (document: Document) => {
     const zip = await utils.createZip(document);

@@ -1,7 +1,7 @@
+import { logger } from "document-drive/logger";
 import { Document } from "document-model/document";
 import { RemoteDriveOptions } from "../server";
 import { DocumentDriveServerConstructor } from "../server/base-server";
-import { logger } from "../utils/logger";
 import { ReadDriveSlugNotFoundError } from "./errors";
 import { ReadModeService } from "./service";
 import {

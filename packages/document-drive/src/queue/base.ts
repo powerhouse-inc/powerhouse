@@ -1,3 +1,4 @@
+import { logger } from "document-drive/logger";
 import {
   AddFileInput,
   DeleteNodeInput,
@@ -5,7 +6,6 @@ import {
 import { Action } from "document-model/document";
 import { Unsubscribe, createNanoEvents } from "nanoevents";
 import { generateUUID, runAsap } from "../utils";
-import { logger } from "../utils/logger";
 import {
   IJob,
   IJobQueue,

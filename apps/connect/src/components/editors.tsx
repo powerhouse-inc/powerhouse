@@ -1,4 +1,5 @@
 import { DocumentToolbar, RevisionHistory } from '@powerhousedao/design-system';
+import { logger } from 'document-drive/logger';
 import {
     Action,
     ActionErrorCallback,
@@ -22,7 +23,6 @@ import { useNavigate } from 'react-router-dom';
 import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
 import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { logger } from 'src/services/logger';
 import { FileNodeDocument, isSameDocument } from 'src/store/document-drive';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { useGetEditor } from 'src/store/editor';

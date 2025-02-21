@@ -1,7 +1,7 @@
+import { logger } from 'document-drive/logger';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useMemo } from 'react';
 import type { DID, IConnectCrypto } from 'src/services/crypto';
-import { logger } from 'src/services/logger';
 
 // uses electron connect crypto if available,
 // otherwise dynamically loads browser crypto

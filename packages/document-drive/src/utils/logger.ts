@@ -5,8 +5,12 @@ export type ILogger = Pick<
   "log" | "info" | "warn" | "error" | "debug"
 > & {
   level: LogLevel | "env";
+  errorHandler: LoggerErrorHandler | undefined;
+
   verbose: (message?: any, ...optionalParams: any[]) => void;
 };
+
+export type LoggerErrorHandler = (...data: any[]) => void;
 
 const LEVELS = {
   verbose: 1,
@@ -20,9 +24,9 @@ const LEVELS = {
 export class ConsoleLogger implements ILogger {
   #tags: string[];
   #levelString: LogLevel | "env" = "env";
-  #errorHandler: ((...data: any[]) => void) | undefined;
+  #errorHandler: LoggerErrorHandler | undefined;
 
-  constructor(tags?: string[], errorHandler?: (...data: any[]) => void) {
+  constructor(tags?: string[], errorHandler?: LoggerErrorHandler) {
     this.#tags = (tags || []).map((tag) => `[${tag}]`);
     this.#errorHandler = errorHandler;
 
@@ -41,6 +45,14 @@ export class ConsoleLogger implements ILogger {
 
   set level(level: LogLevel | "env") {
     this.#levelString = level;
+  }
+
+  get errorHandler(): LoggerErrorHandler | undefined {
+    return this.#errorHandler;
+  }
+
+  set errorHandler(handler: LoggerErrorHandler | undefined) {
+    this.#errorHandler = handler;
   }
 
   get #levelValue(): number {
@@ -116,21 +128,26 @@ export class ConsoleLogger implements ILogger {
 
 let loggerInstance: ILogger = new ConsoleLogger();
 let logLevel: LogLevel | "env" = "env";
+let errorHandler: LoggerErrorHandler | undefined;
+
 loggerInstance.level = logLevel;
+loggerInstance.errorHandler = errorHandler;
 
 export const logger: ILogger = loggerInstance;
 
-export const setLogger = (logger: ILogger) => (loggerInstance = logger);
+export const setErrorHandler = (handler: LoggerErrorHandler) => {
+  errorHandler = handler;
+  loggerInstance.errorHandler = handler;
+};
+
 export const setLogLevel = (level: LogLevel | "env") => {
   logLevel = level;
   loggerInstance.level = level;
 };
 
-export const childLogger = (
-  tags: string[],
-  errorHandler?: (...data: any[]) => void,
-) => {
-  const logger = new ConsoleLogger(tags, errorHandler);
+export const childLogger = (tags: string[]) => {
+  const logger = new ConsoleLogger(tags);
   logger.level = logLevel;
+  logger.errorHandler = errorHandler;
   return logger;
 };
