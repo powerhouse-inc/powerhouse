@@ -51,12 +51,11 @@ export const useDatePickerField = ({
   const handleDateSelect = useCallback(
     (date?: Date) => {
       if (!date) return;
-      const stringDate = date.toISOString();
-      const stringDateFromValue = getDateFromValue(
-        stringDate as DateFieldValue,
-      );
 
-      const newInputValue = parseInputString(stringDateFromValue, dateFormat);
+      const stringDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+      const newInputValue = parseInputString(stringDate, dateFormat);
       setInputDisplay(newInputValue);
 
       const newValue = formatDateToValue(newInputValue);
