@@ -1,44 +1,37 @@
-import { Select } from "@/connect";
+import { Select, SelectItem } from "@/connect";
 import { Icon } from "@/powerhouse/components/icon";
 import { App } from "document-model/document";
-import { ComponentPropsWithRef, useMemo } from "react";
+import { ComponentPropsWithRef } from "react";
 import { Control, Controller, Path } from "react-hook-form";
 
-export type AppInputOption = {
-  value: string;
-  displayValue: string;
-  icon: React.ReactNode;
-  description: string;
-  disabled?: boolean;
-};
-
-export function appToInputOption(app: App, disabled = false): AppInputOption {
+export function appToInputOption(app: App): SelectItem<string> {
   return {
     value: app.id,
     displayValue: app.name,
     icon: <Icon name="PowerhouseLogoSmall" />,
     description: "Built by Powerhouse",
-    disabled,
   };
 }
-type AppFormInputProps<T extends { app: AppInputOption }> = Omit<
+type AppFormInputProps<T extends { app: App }> = Omit<
   ComponentPropsWithRef<typeof Select>,
-  "id" | "value" | "onChange"
+  "id" | "items" | "value" | "onChange"
 > & {
   readonly control: Control<T>;
-  readonly appOptions: AppInputOption[];
+  readonly appOptions: App[];
 };
-export function AppFormInput<T extends { app: AppInputOption }>(
+
+export function AppFormInput<T extends { app: App }>(
   props: AppFormInputProps<T>,
 ) {
   const { control, appOptions, ...delegatedProps } = props;
-  const items = useMemo(() => appOptions.map(app appToInputOption), [appOptions]);
+  const items = appOptions.map(appToInputOption);
+
   return (
     <Controller
       control={control}
-      name={"app" as Path<T>}
+      name={"appId" as Path<T>}
       render={({ field }) => (
-        <Select {...delegatedProps} {...field} id="app" items={appOptions} />
+        <Select {...delegatedProps} {...field} id="appId" items={items} />
       )}
     />
   );

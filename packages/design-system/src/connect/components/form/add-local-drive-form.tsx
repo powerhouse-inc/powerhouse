@@ -34,7 +34,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
     formState: { errors },
   } = useForm<AddLocalDriveInput>({
     defaultValues: {
-      name: "",
+      name: props.appOptions[0].id,
       sharingType: LOCAL,
       availableOffline: false,
       app: props.appOptions[0],
