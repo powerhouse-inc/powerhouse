@@ -3,11 +3,11 @@ import {
     DocumentDriveAction,
     DocumentDriveServer,
     DriveInput,
-    FilesystemStorage,
     IDocumentDriveServer,
     InMemoryCache,
     RemoteDriveOptions,
 } from 'document-drive';
+import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { Action, DocumentModelModule, Operation } from 'document-model';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
