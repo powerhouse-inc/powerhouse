@@ -11,6 +11,7 @@ import {
 } from "document-model-libs/document-drive";
 import {
   Action,
+  App,
   BaseAction,
   utils as baseUtils,
   Document,
@@ -567,7 +568,7 @@ export class BaseDocumentDriveServer
     return [...this.documentModels];
   }
 
-  async addDrive(input: DriveInput): Promise<DocumentDriveDocument> {
+  async addDrive(input: DriveInput, app?: App): Promise<DocumentDriveDocument> {
     const id = input.global.id || generateUUID();
     if (!id) {
       throw new Error("Invalid Drive Id");
@@ -581,6 +582,10 @@ export class BaseDocumentDriveServer
     const document = utils.createDocument({
       state: input,
     });
+
+    document.meta = {
+      preferredEditor: app?.driveEditor,
+    };
 
     await this.storage.createDrive(id, document);
 
@@ -865,7 +870,7 @@ export class BaseDocumentDriveServer
           : merge(trunk, invertedTrunk, reshuffleByTimestamp);
 
       const newOperations = newHistory.filter(
-        (op) => trunk.length < 1 || precedes(trunk[trunk.length - 1]!, op),
+        (op) => trunk.length < 1 || precedes(trunk[trunk.length - 1], op),
       );
 
       for (const nextOperation of newOperations) {
@@ -2012,7 +2017,7 @@ export class BaseDocumentDriveServer
       driveId,
       listenerId,
     );
-    return listener?.listener.transmitter;
+    return listener.listener.transmitter;
   }
 
   getListener(

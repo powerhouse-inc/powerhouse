@@ -4,6 +4,7 @@ import {
     AddDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
 import { requestPublicDrive } from 'document-drive/utils/graphql';
+import { useApps } from 'src/store/external-packages';
 type Props = {
     open: boolean;
     onAddLocalDrive: (data: AddLocalDriveInput) => Promise<void>;
@@ -14,7 +15,10 @@ type Props = {
 export function AddDriveModal(props: Props) {
     const { open, onAddLocalDrive, onAddRemoteDrive, onClose } = props;
 
+    const apps = useApps();
+
     async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
+        console.log('onAddLocalDriveSubmit', data);
         await onAddLocalDrive(data);
         onClose();
     }
@@ -33,6 +37,7 @@ export function AddDriveModal(props: Props) {
             onOpenChange={status => {
                 if (!status) return onClose();
             }}
+            appOptions={apps}
         />
     );
 }

@@ -51,7 +51,7 @@ export const useLoadInitialData = () => {
                 `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,
             );
         } else {
-            toast(ReloadConnectToast, {
+            toast(<ReloadConnectToast />, {
                 type: 'connect-warning',
                 toastId: 'outdated-app',
                 autoClose: false,

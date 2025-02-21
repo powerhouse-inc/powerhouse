@@ -103,6 +103,8 @@ export function DriveEditorContainer() {
         return null;
     }
 
+    console.log(document.meta);
+
     return (
         <DriveContextProvider value={driveContext}>
             <GenericDriveExplorer.Component

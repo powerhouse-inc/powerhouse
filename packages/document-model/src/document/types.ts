@@ -160,6 +160,10 @@ export type Operation<A extends Action = Action> = A & {
   id?: string;
 };
 
+export type Meta = {
+  preferredEditor?: string;
+};
+
 /**
  * The base attributes of a {@link Document}.
  */
@@ -174,6 +178,8 @@ export type DocumentHeader = {
   created: string;
   /** The timestamp of the last change in the document. */
   lastModified: string;
+  /** The meta data of the document. */
+  meta?: Meta;
 };
 
 /**
@@ -386,6 +392,12 @@ export type Editor<S = unknown, A extends Action = Action, L = unknown> = {
   };
 };
 
+export type App = {
+  id: string;
+  name: string;
+  driveEditor?: string;
+};
+
 export type Manifest = {
   name: string;
   description: string;
@@ -403,11 +415,7 @@ export type Manifest = {
     name: string;
     documentTypes: string[];
   }[];
-  apps?: {
-    id: string;
-    name: string;
-    driveEditor?: string;
-  }[];
+  apps?: App[];
 };
 
 export type DocumentModelLib = {

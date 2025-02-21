@@ -1,11 +1,7 @@
-import {
-    DocumentDriveAction,
-    DocumentDriveDocument,
-    DocumentDriveLocalState,
-} from '@powerhousedao/common';
-import { DocumentModelLib, Editor } from 'document-model/document';
+import { App, DocumentModelLib } from 'document-model/document';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
+import { useMemo } from 'react';
 import { getHMRModule, subscribeExternalPackages } from 'src/services/hmr';
 
 const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
@@ -47,16 +43,36 @@ externalPackagesAtom.onMount = setAtom => {
 
 export const useExternalPackages = () => useAtomValue(externalPackagesAtom);
 
-export type App = {
-    id: string;
-    name: string;
-    driveEditor?: Editor<
-        DocumentDriveDocument,
-        DocumentDriveAction,
-        DocumentDriveLocalState
-    >;
+const CommonPackage: App = {
+    id: 'powerhouse/common',
+    name: 'Generic Drive Explorer',
+    driveEditor: 'GenericDriveExplorer',
 };
 
+const appsAtom = atom<Promise<App[]>>(async get => {
+    const externalPackages = await get(externalPackagesAtom);
+    return [
+        CommonPackage,
+        ...externalPackages
+            .map(pkg => pkg.manifest.apps)
+            .filter(Boolean)
+            .flat(),
+    ];
+});
+
+export const useApps = () => useAtomValue(appsAtom);
+
+export const useAppEditor = (appId: string) => {
+    const externalPackages = useExternalPackages();
+    const apps = useApps();
+    return useMemo(() => {
+        const app = apps.find(app => app.id === appId);
+        if (!app) return undefined;
+        return app.driveEditor;
+    }, [externalPackages, apps, appId]);
+};
+
+/*
 const appsAtom = atom<Promise<App[]>>(async get => {
     const externalPackages = await get(externalPackagesAtom);
     return externalPackages
@@ -75,5 +91,4 @@ const appsAtom = atom<Promise<App[]>>(async get => {
         )
         .flat();
 });
-
-export const useApps = () => useAtomValue(appsAtom);
+*/

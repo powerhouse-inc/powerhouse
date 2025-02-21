@@ -320,20 +320,23 @@ export function useUiNodes() {
     const onAddLocalDrive = useCallback(
         async (data: AddLocalDriveInput) => {
             try {
-                const newDrive = await addDrive({
-                    global: {
-                        name: data.name,
-                        id: undefined,
-                        icon: null,
-                        slug: null,
+                const newDrive = await addDrive(
+                    {
+                        global: {
+                            name: data.name,
+                            id: undefined,
+                            icon: null,
+                            slug: null,
+                        },
+                        local: {
+                            availableOffline: data.availableOffline,
+                            sharingType: data.sharingType.toLowerCase(),
+                            listeners: [],
+                            triggers: [],
+                        },
                     },
-                    local: {
-                        availableOffline: data.availableOffline,
-                        sharingType: data.sharingType.toLowerCase(),
-                        listeners: [],
-                        triggers: [],
-                    },
-                });
+                    data.app,
+                );
 
                 toast(t('notifications.addDriveSuccess'), {
                     type: 'connect-success',

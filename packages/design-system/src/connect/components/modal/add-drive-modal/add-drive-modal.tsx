@@ -7,6 +7,7 @@ import {
   Tabs,
 } from "@/connect";
 import { DivProps, Modal } from "@/powerhouse";
+import { App } from "document-model/document";
 import { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
@@ -21,6 +22,7 @@ export type AddDriveModalProps = {
   readonly requestPublicDrive: (
     url: string,
   ) => Promise<{ id: string; name: string }>;
+  readonly appOptions: App[];
 };
 export function AddDriveModal(props: AddDriveModalProps) {
   function handleCancel() {
@@ -56,6 +58,7 @@ export function AddDriveModal(props: AddDriveModalProps) {
             <AddLocalDriveForm
               onCancel={handleCancel}
               onSubmit={onAddLocalDrive}
+              appOptions={props.appOptions}
             />
           </TabContent>
           <TabContent label="Add Drive" description="Add a drive">
