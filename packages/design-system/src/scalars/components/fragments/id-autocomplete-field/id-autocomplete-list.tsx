@@ -7,17 +7,17 @@ import {
 } from "@/scalars/components/fragments/command";
 import { useCommandState } from "cmdk";
 import { cn } from "@/scalars/lib/utils";
-import { AutocompleteListOption } from "./autocomplete-list-option";
-import type { AutocompleteProps, AutocompleteOption } from "./types";
+import { IdAutocompleteListOption } from "./id-autocomplete-list-option";
+import type { IdAutocompleteProps, IdAutocompleteOption } from "./types";
 
-interface AutocompleteListProps {
-  variant: AutocompleteProps["variant"];
+interface IdAutocompleteListProps {
+  variant: IdAutocompleteProps["variant"];
   commandListRef?: React.RefObject<HTMLDivElement>;
   selectedValue?: string;
-  options?: AutocompleteOption[];
+  options?: IdAutocompleteOption[];
   toggleOption?: (value: string) => void;
   renderOption?: (
-    option: AutocompleteOption,
+    option: IdAutocompleteOption,
     displayProps?: {
       asPlaceholder?: boolean;
       showValue?: boolean;
@@ -28,7 +28,7 @@ interface AutocompleteListProps {
   ) => React.ReactNode;
 }
 
-export const AutocompleteList: React.FC<AutocompleteListProps> = ({
+export const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
   variant,
   commandListRef,
   selectedValue,
@@ -37,7 +37,7 @@ export const AutocompleteList: React.FC<AutocompleteListProps> = ({
   renderOption,
 }) => {
   const cmdkSearch = useCommandState((state) => state.search) as string;
-  const defaultOption: AutocompleteOption = {
+  const defaultOption: IdAutocompleteOption = {
     value: "value not available",
     title: "Title not available",
     path: "Path not available",
@@ -58,7 +58,7 @@ export const AutocompleteList: React.FC<AutocompleteListProps> = ({
             className: cn("pb-0"),
           })
         ) : (
-          <AutocompleteListOption
+          <IdAutocompleteListOption
             variant={variant}
             value="value not available"
             asPlaceholder
@@ -88,7 +88,7 @@ export const AutocompleteList: React.FC<AutocompleteListProps> = ({
                   showValue: true,
                 })
               ) : (
-                <AutocompleteListOption variant={variant} {...opt} />
+                <IdAutocompleteListOption variant={variant} {...opt} />
               )}
             </CommandItem>
           );

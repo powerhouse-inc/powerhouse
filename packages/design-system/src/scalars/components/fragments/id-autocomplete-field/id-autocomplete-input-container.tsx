@@ -8,9 +8,9 @@ import {
   TooltipProvider,
 } from "@/scalars/components/fragments/tooltip";
 import { cn } from "@/scalars/lib/utils";
-import type { AutocompleteOption } from "./types";
+import type { IdAutocompleteOption } from "./types";
 
-interface AutocompleteInputContainerProps {
+interface IdAutocompleteInputContainerProps {
   id: string;
   name: string;
   value: string;
@@ -21,7 +21,7 @@ interface AutocompleteInputContainerProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onClick?: (e: React.MouseEvent<HTMLInputElement>) => void;
-  selectedOption?: AutocompleteOption;
+  selectedOption?: IdAutocompleteOption;
   handleOpenChange?: (open: boolean) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLInputElement>) => void;
   placeholder?: string;
@@ -34,9 +34,9 @@ interface AutocompleteInputContainerProps {
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
 }
 
-export const AutocompleteInputContainer = React.forwardRef<
+export const IdAutocompleteInputContainer = React.forwardRef<
   HTMLInputElement,
-  AutocompleteInputContainerProps
+  IdAutocompleteInputContainerProps
 >(
   (
     {
@@ -106,7 +106,7 @@ export const AutocompleteInputContainer = React.forwardRef<
             }}
             placeholder={placeholder}
             aria-invalid={hasError}
-            aria-label={!label ? "Autocomplete field" : undefined}
+            aria-label={!label ? "Id Autocomplete field" : undefined}
             aria-required={required}
             aria-expanded={isPopoverOpen}
             maxLength={maxLength}
