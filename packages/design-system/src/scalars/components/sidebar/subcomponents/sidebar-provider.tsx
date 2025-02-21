@@ -2,10 +2,13 @@
 
 import {
   createContext,
+  createRef,
+  RefObject,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { type SidebarNode, type FlattenedNode, NodeStatus } from "../types";
@@ -17,6 +20,7 @@ import {
   isOpenLevel,
   nodesSearch,
 } from "../utils";
+import { List } from "react-virtualized";
 
 type SidebarContextType = {
   nodes: SidebarNode[];
@@ -30,8 +34,9 @@ type SidebarContextType = {
   activeSearchIndex: number;
   activeNodeId?: string;
   isStatusFilterEnabled: boolean;
+  virtualListRef: RefObject<List>;
   toggleNode: (nodeId: string) => void;
-  openNode: (nodeId: string, openPath?: boolean) => void;
+  openNode: (nodeId: string, openPath?: boolean, scrollTo?: boolean) => void;
   closeNode: (nodeId: string) => void;
   togglePin: (nodeId: string) => void;
   openLevel: (level: number) => void;
@@ -57,6 +62,7 @@ const SidebarContext = createContext<SidebarContextType>({
   activeSearchIndex: 0,
   activeNodeId: undefined,
   isStatusFilterEnabled: false,
+  virtualListRef: createRef<List>(),
   toggleNode: () => undefined,
   openNode: () => undefined,
   closeNode: () => undefined,
@@ -84,6 +90,7 @@ const SidebarProvider = ({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [pinnedNodePath, setPinnedNodePath] = useState<SidebarNode[]>([]);
   const [activeNodeId, setActiveNodeId] = useState<string | undefined>();
+  const virtualListRef = useRef<List>(null);
   const [isStatusFilterEnabled, setIsStatusFilterEnabled] =
     useState<boolean>(false);
   const [onActiveNodeChange, setOnActiveNodeChange] = useState<
@@ -106,6 +113,39 @@ const SidebarProvider = ({
     }
     return roots;
   }, [nodes, pinnedNodePath, isStatusFilterEnabled]);
+
+  const flattenTree = useCallback(
+    (nodes: SidebarNode[]): FlattenedNode[] => {
+      const flattened: FlattenedNode[] = [];
+
+      const dfs = (node: SidebarNode, depth: number) => {
+        const flatNode: FlattenedNode = {
+          ...node,
+          depth,
+          isExpanded: expandedNodes.has(node.id),
+        };
+        flattened.push(flatNode);
+
+        if (Array.isArray(node.children) && expandedNodes.has(node.id)) {
+          for (const child of node.children) {
+            dfs(child, depth + 1);
+          }
+        }
+      };
+
+      for (const node of nodes) {
+        dfs(node, 0);
+      }
+
+      return flattened;
+    },
+    [expandedNodes],
+  );
+
+  const flattenedNodes = useMemo(
+    () => flattenTree(currentRoots),
+    [currentRoots, flattenTree],
+  );
 
   const setActiveNodeChangeCallback = useCallback(
     (callback: (node: SidebarNode) => void) => {
@@ -147,7 +187,7 @@ const SidebarProvider = ({
   }, []);
 
   const openNode = useCallback(
-    (nodeId: string, openPath?: boolean) => {
+    (nodeId: string, openPath?: boolean, scrollTo?: boolean) => {
       setExpandedNodes((prev) => {
         const next = new Set(prev);
         next.add(nodeId);
@@ -156,8 +196,16 @@ const SidebarProvider = ({
       if (openPath) {
         openPathToNode(nodeId);
       }
+      if (scrollTo) {
+        const nodeIndex = flattenedNodes.findIndex(
+          (node) => node.id === nodeId,
+        );
+        setTimeout(() => {
+          virtualListRef.current?.scrollToRow(nodeIndex);
+        }, 100);
+      }
     },
-    [openPathToNode],
+    [flattenedNodes, openPathToNode],
   );
 
   const closeNode = useCallback((nodeId: string) => {
@@ -167,39 +215,6 @@ const SidebarProvider = ({
       return next;
     });
   }, []);
-
-  const flattenTree = useCallback(
-    (nodes: SidebarNode[]): FlattenedNode[] => {
-      const flattened: FlattenedNode[] = [];
-
-      const dfs = (node: SidebarNode, depth: number) => {
-        const flatNode: FlattenedNode = {
-          ...node,
-          depth,
-          isExpanded: expandedNodes.has(node.id),
-        };
-        flattened.push(flatNode);
-
-        if (Array.isArray(node.children) && expandedNodes.has(node.id)) {
-          for (const child of node.children) {
-            dfs(child, depth + 1);
-          }
-        }
-      };
-
-      for (const node of nodes) {
-        dfs(node, 0);
-      }
-
-      return flattened;
-    },
-    [expandedNodes],
-  );
-
-  const flattenedNodes = useMemo(
-    () => flattenTree(currentRoots),
-    [currentRoots, flattenTree],
-  );
 
   const maxDepth = useMemo(() => {
     if (pinnedNodePath.length > 0) {
@@ -318,6 +333,7 @@ const SidebarProvider = ({
         isSearching,
         activeSearchIndex,
         isStatusFilterEnabled,
+        virtualListRef,
         toggleNode,
         openNode,
         closeNode,

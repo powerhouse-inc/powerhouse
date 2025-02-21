@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useSidebar } from "./sidebar-provider";
 import { AutoSizer, List } from "react-virtualized";
 import { SidebarItem } from "./sidebar-item";
@@ -23,9 +23,9 @@ export const SidebarContentArea = ({
     activeSearchIndex,
     pinnedNodePath,
     activeNodeId,
+    virtualListRef,
     onActiveNodeChange,
   } = useSidebar();
-  const listRef = useRef<List>(null);
   const hasPinnedItems = allowPinning && pinnedNodePath.length > 0;
 
   // scroll into view when navigating between search results
@@ -39,11 +39,11 @@ export const SidebarContentArea = ({
       // scroll into view
       for (let i = 0; i < flattenedNodes.length; i++) {
         if (flattenedNodes[i].id === id) {
-          listRef.current?.scrollToRow(i);
+          virtualListRef.current?.scrollToRow(i);
         }
       }
     }
-  }, [activeSearchIndex, flattenedNodes, searchResults]);
+  }, [activeSearchIndex, flattenedNodes, searchResults, virtualListRef]);
 
   const renderNode = ({
     index,
@@ -90,7 +90,7 @@ export const SidebarContentArea = ({
           <AutoSizer>
             {({ width, height }) => (
               <List
-                ref={listRef}
+                ref={virtualListRef}
                 className="p-2"
                 width={width}
                 height={height}
