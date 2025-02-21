@@ -1,4 +1,4 @@
-import React, { useId, useEffect, useMemo } from "react";
+import React, { useId, useEffect, useMemo, useRef } from "react";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { FormGroup } from "@/scalars/components/fragments/form-group";
@@ -15,6 +15,7 @@ import ValueTransformer, {
   type TransformerType,
 } from "@/scalars/components/fragments/value-transformer";
 import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
+import { useResizeObserver } from "usehooks-ts";
 
 type TextareaFieldBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -87,6 +88,36 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const prefix = useId();
     const id = propId ?? `${prefix}-textarea`;
 
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+    const mergedRef = (node: HTMLTextAreaElement | null) => {
+      textareaRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    };
+
+    const adjustHeight = () => {
+      if (textareaRef.current) {
+        // Reset height to allow shrinking
+        textareaRef.current.style.height = "auto";
+        // Set to scrollHeight to expand based on content
+        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      }
+    };
+
+    useResizeObserver({
+      ref: textareaRef,
+      onResize: () => {
+        if (value !== undefined && autoExpand) {
+          adjustHeight();
+        }
+      },
+      box: "border-box",
+    });
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Prevent Enter key if multiline is falsy
       if (!multiline && e.key === "Enter") {
@@ -97,19 +128,10 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     };
 
     useEffect(() => {
-      const adjustHeight = () => {
-        const textarea = document.getElementById(id);
-        if (textarea) {
-          // Reset height to allow shrinking
-          textarea.style.height = "auto";
-          // Set to scrollHeight to expand based on content
-          textarea.style.height = `${textarea.scrollHeight}px`;
-        }
-      };
       if (value !== undefined && autoExpand) {
         adjustHeight();
       }
-    }, [id, value, autoExpand]);
+    }, [value, autoExpand]);
 
     const transformers: TransformerType = useMemo(
       () => [
@@ -160,7 +182,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
                     ],
                 className,
               )}
-              ref={ref}
+              ref={mergedRef}
               id={id}
               name={name}
               value={value}

@@ -222,4 +222,18 @@ describe("SelectField Component", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(select).toHaveFocus();
   });
+
+  it("should no invoke onChange on mount when it have a defaultValue", () => {
+    const onChange = vi.fn();
+    renderWithForm(
+      <SelectField
+        name="name"
+        label="Name"
+        defaultValue={defaultOptions[0].value}
+        options={defaultOptions}
+        onChange={onChange}
+      />,
+    );
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

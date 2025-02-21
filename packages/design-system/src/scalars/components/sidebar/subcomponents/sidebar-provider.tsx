@@ -7,10 +7,10 @@ import {
   useEffect,
   useMemo,
   useState,
-  useTransition,
 } from "react";
-import type { SidebarNode, FlattenedNode } from "../types";
+import { type SidebarNode, type FlattenedNode, NodeStatus } from "../types";
 import {
+  filterStatuses,
   getMaxDepth,
   getNodePath,
   getOpenLevels,
@@ -21,6 +21,7 @@ import {
 type SidebarContextType = {
   nodes: SidebarNode[];
   flattenedNodes: FlattenedNode[];
+  expandedNodes: Set<string>;
   pinnedNodePath: SidebarNode[];
   maxDepth: number;
   searchTerm: string;
@@ -28,7 +29,10 @@ type SidebarContextType = {
   isSearching: boolean;
   activeSearchIndex: number;
   activeNodeId?: string;
+  isStatusFilterEnabled: boolean;
   toggleNode: (nodeId: string) => void;
+  openNode: (nodeId: string, openPath?: boolean) => void;
+  closeNode: (nodeId: string) => void;
   togglePin: (nodeId: string) => void;
   openLevel: (level: number) => void;
   changeSearchTerm: (newTerm: string) => void;
@@ -36,13 +40,15 @@ type SidebarContextType = {
   previousSearchResult: () => void;
   setNodes: (newNodes: SidebarNode[]) => void;
   syncActiveNodeId: (nodeId?: string) => void;
-  onActiveNodeChange: (nodeId: string) => void;
-  setActiveNodeChangeCallback: (callback: (nodeId: string) => void) => void;
+  onActiveNodeChange: (node: SidebarNode) => void;
+  setActiveNodeChangeCallback: (callback: (node: SidebarNode) => void) => void;
+  toggleStatusFilter: () => void;
 };
 
 const SidebarContext = createContext<SidebarContextType>({
   nodes: [],
   flattenedNodes: [],
+  expandedNodes: new Set<string>(),
   pinnedNodePath: [],
   maxDepth: 4,
   searchTerm: "",
@@ -50,7 +56,10 @@ const SidebarContext = createContext<SidebarContextType>({
   isSearching: false,
   activeSearchIndex: 0,
   activeNodeId: undefined,
+  isStatusFilterEnabled: false,
   toggleNode: () => undefined,
+  openNode: () => undefined,
+  closeNode: () => undefined,
   togglePin: () => undefined,
   openLevel: () => undefined,
   changeSearchTerm: () => undefined,
@@ -60,6 +69,7 @@ const SidebarContext = createContext<SidebarContextType>({
   syncActiveNodeId: () => undefined,
   onActiveNodeChange: () => undefined,
   setActiveNodeChangeCallback: () => undefined,
+  toggleStatusFilter: () => undefined,
 });
 
 interface SidebarProviderProps extends React.PropsWithChildren {
@@ -74,19 +84,31 @@ const SidebarProvider = ({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [pinnedNodePath, setPinnedNodePath] = useState<SidebarNode[]>([]);
   const [activeNodeId, setActiveNodeId] = useState<string | undefined>();
+  const [isStatusFilterEnabled, setIsStatusFilterEnabled] =
+    useState<boolean>(false);
   const [onActiveNodeChange, setOnActiveNodeChange] = useState<
-    (nodeId: string) => void
+    (nodeId: SidebarNode) => void
   >(() => () => undefined);
 
   const currentRoots = useMemo(() => {
+    let roots = nodes;
     if (pinnedNodePath.length > 0) {
-      return pinnedNodePath[pinnedNodePath.length - 1].children ?? [];
+      roots = pinnedNodePath[pinnedNodePath.length - 1].children ?? [];
     }
-    return nodes;
-  }, [nodes, pinnedNodePath]);
+    if (isStatusFilterEnabled) {
+      roots = filterStatuses(roots, [
+        NodeStatus.CREATED,
+        NodeStatus.MODIFIED,
+        NodeStatus.REMOVED,
+        NodeStatus.MOVED,
+        NodeStatus.DUPLICATED,
+      ]);
+    }
+    return roots;
+  }, [nodes, pinnedNodePath, isStatusFilterEnabled]);
 
   const setActiveNodeChangeCallback = useCallback(
-    (callback: (nodeId: string) => void) => {
+    (callback: (node: SidebarNode) => void) => {
       setOnActiveNodeChange(() => callback);
     },
     [],
@@ -96,6 +118,22 @@ const SidebarProvider = ({
     setActiveNodeId(nodeId);
   }, []);
 
+  const openPathToNode = useCallback(
+    (nodeId: string) => {
+      const nodePath = getNodePath(currentRoots, nodeId);
+      if (nodePath) {
+        for (const node of nodePath) {
+          setExpandedNodes((prev) => {
+            const next = new Set(prev);
+            next.add(node.id);
+            return next;
+          });
+        }
+      }
+    },
+    [currentRoots],
+  );
+
   const toggleNode = useCallback((nodeId: string) => {
     setExpandedNodes((prev) => {
       const next = new Set(prev);
@@ -104,6 +142,28 @@ const SidebarProvider = ({
       } else {
         next.add(nodeId);
       }
+      return next;
+    });
+  }, []);
+
+  const openNode = useCallback(
+    (nodeId: string, openPath?: boolean) => {
+      setExpandedNodes((prev) => {
+        const next = new Set(prev);
+        next.add(nodeId);
+        return next;
+      });
+      if (openPath) {
+        openPathToNode(nodeId);
+      }
+    },
+    [openPathToNode],
+  );
+
+  const closeNode = useCallback((nodeId: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      next.delete(nodeId);
       return next;
     });
   }, []);
@@ -150,22 +210,6 @@ const SidebarProvider = ({
     return getMaxDepth(nodes);
   }, [nodes, pinnedNodePath]);
 
-  const openPathToNode = useCallback(
-    (nodeId: string) => {
-      const nodePath = getNodePath(currentRoots, nodeId);
-      if (nodePath) {
-        for (const node of nodePath) {
-          setExpandedNodes((prev) => {
-            const next = new Set(prev);
-            next.add(node.id);
-            return next;
-          });
-        }
-      }
-    },
-    [currentRoots],
-  );
-
   const togglePin = useCallback(
     (nodeId: string) => {
       const isPinned =
@@ -197,14 +241,24 @@ const SidebarProvider = ({
     [currentRoots, expandedNodes],
   );
 
+  const toggleStatusFilter = useCallback(() => {
+    setIsStatusFilterEnabled((prev) => !prev);
+  }, []);
+
   // search logic
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<SidebarNode[]>([]);
   const [activeSearchIndex, setActiveSearchIndex] = useState<number>(0);
-  const [isSearching, startSearch] = useTransition();
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
+    const debounceTimeout = 300; // Adjust the debounce delay as needed
+    let timeoutId: NodeJS.Timeout;
+
     if (searchTerm) {
+      // Set isSearching to true when starting the search
+      setIsSearching(true);
+
       // callback to search the nodes
       const searchAction = () => {
         const results = nodesSearch(currentRoots, searchTerm, "dfs");
@@ -213,13 +267,19 @@ const SidebarProvider = ({
         if (results.length > 0) {
           openPathToNode(results[0].id);
         }
+        // Set isSearching to false after search completes
+        setIsSearching(false);
       };
 
-      // trigger the search
-      startSearch(searchAction);
+      // trigger the search with a debounce
+      timeoutId = setTimeout(searchAction, debounceTimeout);
     } else {
       setSearchResults([]);
+      setIsSearching(false); // Ensure isSearching is false if there's no search term
     }
+
+    // Cleanup the timeout on component unmount or when dependencies change
+    return () => clearTimeout(timeoutId);
   }, [currentRoots, searchTerm, openPathToNode]);
 
   useEffect(() => {
@@ -250,13 +310,17 @@ const SidebarProvider = ({
       value={{
         nodes,
         flattenedNodes,
+        expandedNodes,
         pinnedNodePath,
         maxDepth,
         searchTerm,
         searchResults,
         isSearching,
         activeSearchIndex,
+        isStatusFilterEnabled,
         toggleNode,
+        openNode,
+        closeNode,
         togglePin,
         openLevel,
         changeSearchTerm: setSearchTerm,
@@ -267,6 +331,7 @@ const SidebarProvider = ({
         syncActiveNodeId,
         onActiveNodeChange,
         setActiveNodeChangeCallback,
+        toggleStatusFilter,
       }}
     >
       {children}

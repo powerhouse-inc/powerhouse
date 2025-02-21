@@ -6,15 +6,19 @@ interface SidebarResizeProps {
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;
+  onWidthChange?: (width: number) => void;
 }
 
 export const useSidebarResize = ({
   defaultWidth = 300,
   minWidth = 100,
   maxWidth,
+  onWidthChange,
 }: SidebarResizeProps) => {
   const [isResizing, setIsResizing] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(defaultWidth);
+  const [sidebarWidth, setSidebarWidth] = useState(
+    Math.max(defaultWidth, minWidth),
+  );
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // collapse/expand sidebar
@@ -39,20 +43,24 @@ export const useSidebarResize = ({
 
   const stopResizing = useCallback(() => {
     setIsResizing(false);
-  }, []);
+    onWidthChange?.(isSidebarOpen ? sidebarWidth : 8);
+  }, [isSidebarOpen, sidebarWidth, onWidthChange]);
 
   const resize = useCallback(
     (mouseMoveEvent: MouseEvent) => {
       if (isResizing && sidebarRef.current) {
-        const newWidth =
+        let newWidth =
           mouseMoveEvent.clientX -
           sidebarRef.current.getBoundingClientRect().left;
-        if (
-          newWidth >= minWidth &&
-          (maxWidth !== undefined ? newWidth <= maxWidth : true)
-        ) {
-          setSidebarWidth(newWidth);
+
+        if (newWidth < minWidth) {
+          newWidth = minWidth;
         }
+        if (maxWidth !== undefined && newWidth > maxWidth) {
+          newWidth = maxWidth;
+        }
+
+        setSidebarWidth(newWidth);
       }
     },
     [isResizing, minWidth, maxWidth],
