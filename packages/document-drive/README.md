@@ -1,5 +1,9 @@
 # Document Drive
 
+### Links
+
+- How [logging](./docs/logging.md) works.
+
 ### Quickstart
 
 #### Prerequisites
