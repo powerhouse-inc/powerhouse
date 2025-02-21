@@ -4,7 +4,7 @@ import { Sidebar } from "./sidebar";
 import { Icon } from "@/powerhouse";
 import { SidebarProvider, useSidebar } from "./subcomponents/sidebar-provider";
 import mockedTree from "./mocked_tree.json";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SidebarNode } from "./types";
 
 /**
@@ -205,16 +205,32 @@ export const WithinLayoutAndContent: Story = {
     showStatusFilter: true,
   },
   render: (args) => {
+    console.log("trying to render");
     const [activeNode, setActiveNode] = useState<string>(
       "4281ab93-ef4f-4974-988d-7dad149a693d",
     );
+
+    const [value, setValue] = useState<string>("");
+    const { openNode } = useSidebar();
+
+    const click = useCallback(() => {
+      openNode(value, true, true);
+    }, [openNode, value]);
+
+    const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      setValue(e.target.value);
+    }, []);
+
+    const onActiveNodeChange = useCallback((node: SidebarNode) => {
+      setActiveNode(node.id);
+    }, []);
 
     return (
       <main className="flex h-svh w-full">
         <Sidebar
           className="sidebar"
           {...args}
-          onActiveNodeChange={(node) => setActiveNode(node.id)}
+          onActiveNodeChange={onActiveNodeChange}
           activeNodeId={activeNode}
           extraFooterContent={
             <div className="flex flex-col gap-1">
@@ -243,6 +259,11 @@ export const WithinLayoutAndContent: Story = {
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Active Node: {activeNode}
           </p>
+
+          <div>
+            <input type="text" value={value} onChange={onChange} />
+            <button onClick={click}>Open</button>
+          </div>
         </div>
       </main>
     );
