@@ -63,9 +63,15 @@ export const useTimePickerField = ({
     undefined,
   );
 
+  const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const [selectedTimeZone, setSelectedTimeZone] = useState<
     string | string[] | undefined
-  >(getTimezone(value ?? defaultValue ?? ""));
+  >(
+    timeZone ||
+      (!showTimezoneSelect
+        ? systemTimezone
+        : getTimezone(value ?? defaultValue ?? "")),
+  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
@@ -92,7 +98,6 @@ export const useTimePickerField = ({
       input,
       is12HourFormat,
       dateIntervals,
-      // selectedPeriod,
     );
     setInputValue(validDisplay);
 
@@ -135,16 +140,39 @@ export const useTimePickerField = ({
     setIsOpen(false);
     const offsetUTC = getOffset(selectedTimeZone as string);
 
-    // Value to save in the onSubmin
+    // Value to save in the onSubmit
     const datetime = formatInputsToValueFormat(
       selectedHour,
       selectedMinute,
       offsetUTC,
     );
+    // If there are no hours and minutes selected, do nothing
+    if (!selectedHour && !selectedMinute) {
+      return;
+    }
+    // Set default values
+    let hourToUse = selectedHour;
+    if (!selectedHour && selectedMinute) {
+      hourToUse = is12HourFormat ? "12" : "00";
+    }
+
+    let periodToUse = selectedPeriod;
+    if (is12HourFormat && !selectedPeriod) {
+      const hourNum = parseInt(selectedHour);
+      periodToUse = hourNum >= 8 && hourNum <= 11 ? "AM" : "PM";
+      setSelectedPeriod(periodToUse);
+    }
+
+    // Condition that if the format is 12 hours and there are no minutes selected and there are no minutes selected adds a 00
+    let minuteToUse = selectedMinute;
+    if (!selectedMinute) {
+      minuteToUse = "00";
+    }
+
     // Value to display in the input get values from the popover interface
     const valueToDisplay = is12HourFormat
-      ? `${selectedHour}:${selectedMinute} ${selectedPeriod}`
-      : `${selectedHour}:${selectedMinute}`;
+      ? `${hourToUse}:${minuteToUse} ${periodToUse}`
+      : `${hourToUse}:${minuteToUse}`;
 
     setInputValue(valueToDisplay);
     onChange?.(createChangeEvent(datetime));
@@ -160,14 +188,15 @@ export const useTimePickerField = ({
 
   // if timeZone, then the options of select will be that timeZone and the offset
   const isDisableSelect = timeZone || !showTimezoneSelect ? true : false;
-  const timeZonesOptions = timeZone
-    ? [
-        options.find((opt) => opt.value === timeZone) || {
-          label: `(${getOffsetToDisplay(timeZone)}) ${timeZone.replace(/_/g, " ")}`,
-          value: timeZone,
-        },
-      ]
-    : options;
+  const timeZonesOptions =
+    timeZone || !showTimezoneSelect
+      ? [
+          options.find((opt) => opt.value === (timeZone || systemTimezone)) || {
+            label: `(${getOffsetToDisplay(timeZone || systemTimezone)}) ${(timeZone || systemTimezone).replace(/_/g, " ")}`,
+            value: timeZone || systemTimezone,
+          },
+        ]
+      : options;
 
   return {
     selectedHour,
