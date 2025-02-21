@@ -138,6 +138,7 @@ describe("IdAutocompleteField Component", () => {
 
     const input = screen.getByRole("combobox");
     await user.click(input);
+    await user.clear(input);
     await user.type(input, "test");
 
     await waitFor(() => {
