@@ -1,32 +1,20 @@
 import stringify from "json-stringify-deterministic";
 import { gql, requestGraphql } from "../../../utils/graphql";
-import { logger } from "../../../utils/logger";
+import { childLogger } from "../../../utils/logger";
 import { ListenerRevision, StrandUpdate } from "../../types";
 import { ITransmitter, StrandUpdateSource } from "./types";
 
-const ENABLE_SYNC_DEBUG = false;
 const SYNC_OPS_BATCH_LIMIT = 10;
 
 export class SwitchboardPushTransmitter implements ITransmitter {
   private targetURL: string;
-  private debugID = `[SPT #${Math.floor(Math.random() * 999)}]`;
+  private logger = childLogger([
+    "SwitchboardPushTransmitter",
+    Math.floor(Math.random() * 999).toString(),
+  ]);
 
   constructor(targetURL: string) {
     this.targetURL = targetURL;
-  }
-
-  private debugLog(...data: any[]) {
-    if (!ENABLE_SYNC_DEBUG) {
-      return false;
-    }
-
-    if (data.length > 0 && typeof data[0] === "string") {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      console.log(this.debugID, ...data);
-    }
   }
 
   async transmit(
@@ -37,7 +25,8 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       source.type === "trigger" &&
       source.trigger.data?.url === this.targetURL
     ) {
-      this.debugLog(`Cutting trigger loop from ${this.targetURL}.`);
+      this.logger.verbose(`Cutting trigger loop from ${this.targetURL}.`);
+
       return strands.map((strand) => ({
         driveId: strand.driveId,
         documentId: strand.documentId,
@@ -73,11 +62,11 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       opsCounter += newOps;
     }
 
-    this.debugLog(
+    this.logger.verbose(
       ` Total update: [${strands.map((s) => s.operations.length).join(", ")}] operations`,
     );
 
-    this.debugLog(
+    this.logger.verbose(
       `Culled update: [${culledStrands.map((s) => s.operations.length).join(", ")}] operations`,
     );
 
@@ -117,7 +106,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
 
       return pushUpdates;
     } catch (e) {
-      logger.error(e);
+      this.logger.error(e);
       throw e;
     }
     return [];
