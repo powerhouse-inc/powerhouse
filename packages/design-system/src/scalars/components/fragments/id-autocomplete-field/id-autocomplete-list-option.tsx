@@ -1,17 +1,23 @@
 import React from "react";
 import { Icon, type IconName } from "@/powerhouse/components/icon";
 import { cn } from "@/scalars/lib/utils";
-import type { AutocompleteProps, AutocompleteOption } from "./types";
+import type { IdAutocompleteProps, IdAutocompleteOption } from "./types";
 
 const IconRenderer: React.FC<{
   customIcon?: IconName | React.ReactElement;
-}> = ({ customIcon }) => {
+  asPlaceholder?: boolean;
+}> = ({ customIcon, asPlaceholder }) => {
   if (typeof customIcon === "string") {
     return (
       <Icon
         name={customIcon}
         size={24}
-        className={cn("shrink-0 text-gray-900 dark:text-gray-300")}
+        className={cn(
+          "shrink-0",
+          asPlaceholder
+            ? "text-gray-400 dark:text-gray-700"
+            : "text-gray-900 dark:text-gray-300",
+        )}
       />
     );
   }
@@ -53,16 +59,19 @@ const ReloadButton: React.FC<{
   </div>
 );
 
-export type AutocompleteListOptionProps = {
-  variant: AutocompleteProps["variant"];
+export type IdAutocompleteListOptionProps = {
+  variant: IdAutocompleteProps["variant"];
   asPlaceholder?: boolean;
   showValue?: boolean;
   isLoadingSelectedOption?: boolean;
   handleFetchSelectedOption?: (value: string) => void;
   className?: string;
-} & AutocompleteOption;
+  placeholderIcon?: IconName | React.ReactElement;
+} & IdAutocompleteOption;
 
-export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
+export const IdAutocompleteListOption: React.FC<
+  IdAutocompleteListOptionProps
+> = ({
   variant = "withValue",
   icon,
   title = "Title not available",
@@ -74,6 +83,7 @@ export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
   isLoadingSelectedOption,
   handleFetchSelectedOption,
   className,
+  placeholderIcon = "PowerhouseLogoSmall",
 }) => {
   const renderWithValue = () => (
     <div className={cn("flex w-full items-center")}>
@@ -93,15 +103,10 @@ export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
   const renderWithValueAndTitle = () => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex items-center gap-2")}>
-        {asPlaceholder ? (
-          <Icon
-            name="PowerhouseLogoSmall"
-            size={24}
-            className={cn("shrink-0 text-gray-400 dark:text-gray-700")}
-          />
-        ) : (
-          <IconRenderer customIcon={icon} />
-        )}
+        <IconRenderer
+          customIcon={asPlaceholder ? placeholderIcon : icon}
+          asPlaceholder={asPlaceholder}
+        />
         <span
           className={cn(
             "grow truncate text-sm font-bold leading-5",
@@ -140,15 +145,10 @@ export const AutocompleteListOption: React.FC<AutocompleteListOptionProps> = ({
   const renderWithValueTitleAndDescription = () => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex gap-2")}>
-        {asPlaceholder ? (
-          <Icon
-            name="PowerhouseLogoSmall"
-            size={24}
-            className={cn("shrink-0 text-gray-400 dark:text-gray-700")}
-          />
-        ) : (
-          <IconRenderer customIcon={icon} />
-        )}
+        <IconRenderer
+          customIcon={asPlaceholder ? placeholderIcon : icon}
+          asPlaceholder={asPlaceholder}
+        />
         <div className={cn("flex min-w-0 grow flex-col gap-[-2px]")}>
           <span
             className={cn(

@@ -19,28 +19,28 @@ import type {
   FieldCommonProps,
   ErrorHandling,
 } from "@/scalars/components/types";
-import type { AutocompleteProps } from "./types";
-import { useAutocompleteField } from "./use-autocomplete-field";
-import { AutocompleteInputContainer } from "./autocomplete-input-container";
-import { AutocompleteList } from "./autocomplete-list";
-import { AutocompleteListOption } from "./autocomplete-list-option";
+import type { IdAutocompleteProps } from "./types";
+import { useIdAutocompleteField } from "./use-id-autocomplete-field";
+import { IdAutocompleteInputContainer } from "./id-autocomplete-input-container";
+import { IdAutocompleteList } from "./id-autocomplete-list";
+import { IdAutocompleteListOption } from "./id-autocomplete-list-option";
 
-type AutocompleteFieldBaseProps = Omit<
+type IdAutocompleteFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
   | keyof FieldCommonProps<string>
   | keyof ErrorHandling
-  | keyof AutocompleteProps
+  | keyof IdAutocompleteProps
   | "pattern"
 >;
 
-export type AutocompleteFieldProps = AutocompleteFieldBaseProps &
+export type IdAutocompleteFieldProps = IdAutocompleteFieldBaseProps &
   FieldCommonProps<string> &
   ErrorHandling &
-  AutocompleteProps;
+  IdAutocompleteProps;
 
-export const AutocompleteFieldRaw = React.forwardRef<
+export const IdAutocompleteFieldRaw = React.forwardRef<
   HTMLInputElement,
-  AutocompleteFieldProps
+  IdAutocompleteFieldProps
 >(
   (
     {
@@ -73,7 +73,7 @@ export const AutocompleteFieldRaw = React.forwardRef<
     ref,
   ) => {
     const prefix = useId();
-    const id = idProp ?? `${prefix}-autocomplete`;
+    const id = idProp ?? `${prefix}-id-autocomplete`;
 
     const hasWarning = Array.isArray(warnings) && warnings.length > 0;
     const hasError = Array.isArray(errors) && errors.length > 0;
@@ -95,7 +95,7 @@ export const AutocompleteFieldRaw = React.forwardRef<
       handleCommandValue,
       handleFetchSelectedOption,
       handlePaste,
-    } = useAutocompleteField({
+    } = useIdAutocompleteField({
       autoComplete,
       defaultValue,
       value,
@@ -136,7 +136,7 @@ export const AutocompleteFieldRaw = React.forwardRef<
               className={cn("dark:bg-charcoal-900 bg-gray-100")}
             >
               <PopoverAnchor asChild={true}>
-                <AutocompleteInputContainer
+                <IdAutocompleteInputContainer
                   id={id}
                   name={name}
                   value={selectedValue}
@@ -182,7 +182,7 @@ export const AutocompleteFieldRaw = React.forwardRef<
                     },
                   )
                 ) : (
-                  <AutocompleteListOption
+                  <IdAutocompleteListOption
                     variant={variant}
                     icon={selectedOption?.icon}
                     title={selectedOption?.title}
@@ -209,7 +209,7 @@ export const AutocompleteFieldRaw = React.forwardRef<
                   }
                 }}
               >
-                <AutocompleteList
+                <IdAutocompleteList
                   variant={variant}
                   commandListRef={commandListRef}
                   selectedValue={selectedValue}
@@ -233,7 +233,7 @@ export const AutocompleteFieldRaw = React.forwardRef<
             onMouseDown={onMouseDown}
             placeholder={placeholder}
             aria-invalid={hasError}
-            aria-label={!label ? "Autocomplete field" : undefined}
+            aria-label={!label ? "Id Autocomplete field" : undefined}
             aria-required={required}
             maxLength={maxLength}
             {...props}
@@ -248,7 +248,7 @@ export const AutocompleteFieldRaw = React.forwardRef<
   },
 );
 
-export const AutocompleteField =
-  withFieldValidation<AutocompleteFieldProps>(AutocompleteFieldRaw);
+export const IdAutocompleteField =
+  withFieldValidation<IdAutocompleteFieldProps>(IdAutocompleteFieldRaw);
 
-AutocompleteField.displayName = "AutocompleteField";
+IdAutocompleteField.displayName = "IdAutocompleteField";

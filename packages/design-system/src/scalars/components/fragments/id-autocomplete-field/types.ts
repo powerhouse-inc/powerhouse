@@ -1,12 +1,12 @@
 import type { IconName } from "@/powerhouse/components/icon";
 
-export interface AutocompleteBaseProps {
+export interface IdAutocompleteBaseProps {
   onChange?: (value: string) => void;
   placeholder?: string;
   maxLength?: number;
 }
 
-export type AutocompleteProps = AutocompleteBaseProps &
+export type IdAutocompleteProps = IdAutocompleteBaseProps &
   (
     | {
         autoComplete: false;
@@ -24,15 +24,15 @@ export type AutocompleteProps = AutocompleteBaseProps &
           | "withValueAndTitle"
           | "withValueTitleAndDescription";
         isOpenByDefault?: boolean;
-        initialOptions?: AutocompleteOption[];
+        initialOptions?: IdAutocompleteOption[];
         fetchOptionsCallback: (
           userInput: string,
-        ) => Promise<AutocompleteOption[]>;
+        ) => Promise<IdAutocompleteOption[]>;
         fetchSelectedOptionCallback?: (
           value: string,
-        ) => Promise<AutocompleteOption | undefined>;
+        ) => Promise<IdAutocompleteOption | undefined>;
         renderOption?: (
-          option: AutocompleteOption,
+          option: IdAutocompleteOption,
           displayProps?: {
             asPlaceholder?: boolean;
             showValue?: boolean;
@@ -44,7 +44,7 @@ export type AutocompleteProps = AutocompleteBaseProps &
       }
   );
 
-export interface AutocompleteOption {
+export interface IdAutocompleteOption {
   icon?: IconName | React.ReactElement;
   title?: string;
   path?: string;

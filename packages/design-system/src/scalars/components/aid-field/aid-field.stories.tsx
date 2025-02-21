@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
-import { AutocompleteField } from "./autocomplete-field";
-import { mockedOptions, fetchOptions, fetchSelectedOption } from "./utils";
+import { AIDField } from "./aid-field";
+import { fetchOptions, fetchSelectedOption } from "./utils";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -9,9 +9,9 @@ import {
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
 
-const meta: Meta<typeof AutocompleteField> = {
-  title: "Document Engineering/Fragments/Autocomplete Field",
-  component: AutocompleteField,
+const meta: Meta<typeof AIDField> = {
+  title: "Document Engineering/Simple Components/AID Field",
+  component: AIDField,
   decorators: [
     withForm,
     (Story) => (
@@ -28,6 +28,16 @@ const meta: Meta<typeof AutocompleteField> = {
     ...getDefaultArgTypes(),
     ...PrebuiltArgTypes.placeholder,
     ...PrebuiltArgTypes.maxLength,
+
+    supportedNetworks: {
+      control: "object",
+      description:
+        "List of supported networks for DID validation. Each network must have a chainId (string) and optional name (string).",
+      table: {
+        type: { summary: "Network[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
 
     autoComplete: {
       control: "boolean",
@@ -52,7 +62,7 @@ const meta: Meta<typeof AutocompleteField> = {
         "description?: string\n\n",
       table: {
         type: {
-          summary: "(userInput: string) => Promise<AutocompleteOption[]>",
+          summary: "(userInput: string) => Promise<IdAutocompleteOption[]>",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -73,7 +83,8 @@ const meta: Meta<typeof AutocompleteField> = {
         "or undefined if the option is not found",
       table: {
         type: {
-          summary: "(value: string) => Promise<AutocompleteOption | undefined>",
+          summary:
+            "(value: string) => Promise<IdAutocompleteOption | undefined>",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -101,49 +112,21 @@ const meta: Meta<typeof AutocompleteField> = {
       if: { arg: "autoComplete", neq: false },
     },
 
-    renderOption: {
-      control: "object",
-      description:
-        "Custom render function for autocomplete options. " +
-        "Receives the option object and an optional displayProps object with the following properties:\n\n" +
-        "asPlaceholder?: boolean\n\n" +
-        "showValue?: boolean\n\n" +
-        "isLoadingSelectedOption?: boolean\n\n" +
-        "handleFetchSelectedOption?: (value: string) => void\n\n" +
-        "className?: string\n\n" +
-        "Must return a ReactNode.",
-      table: {
-        type: {
-          summary:
-            "(option: AutocompleteOption, displayProps?: {\n" +
-            "  asPlaceholder?: boolean,\n" +
-            "  showValue?: boolean,\n" +
-            "  isLoadingSelectedOption?: boolean,\n" +
-            "  handleFetchSelectedOption?: (value: string) => void,\n" +
-            "  className?: string\n" +
-            "}) => React.ReactNode",
-        },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-        readonly: true,
-      },
-      if: { arg: "autoComplete", neq: false },
-    },
-
     ...getValidationArgTypes(),
   },
   args: {
-    name: "autocomplete-field",
+    name: "aid-field",
   },
-} satisfies Meta<typeof AutocompleteField>;
+} satisfies Meta<typeof AIDField>;
 
 export default meta;
 
-type Story = StoryObj<typeof AutocompleteField>;
+type Story = StoryObj<typeof AIDField>;
 
 export const Default: Story = {
   args: {
-    label: "Autocomplete field",
-    placeholder: "Search...",
+    label: "AID field",
+    placeholder: "did:ethr:",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -151,35 +134,10 @@ export const Default: Story = {
 
 export const Empty: Story = {
   args: {
-    label: "Autocomplete field",
-    placeholder: "Search...",
+    label: "AID field",
+    placeholder: "did:ethr:",
     isOpenByDefault: true,
-    defaultValue: "with no matching options",
-    variant: "withValueTitleAndDescription",
-    fetchOptionsCallback: fetchOptions,
-    fetchSelectedOptionCallback: fetchSelectedOption,
-  },
-};
-
-export const Open: Story = {
-  args: {
-    label: "Autocomplete field",
-    placeholder: "Search...",
-    isOpenByDefault: true,
-    defaultValue: "with matching options",
-    initialOptions: mockedOptions,
-    variant: "withValueTitleAndDescription",
-    fetchOptionsCallback: fetchOptions,
-    fetchSelectedOptionCallback: fetchSelectedOption,
-  },
-};
-
-export const Filled: Story = {
-  args: {
-    label: "Autocomplete field",
-    placeholder: "Search...",
-    defaultValue: mockedOptions[0].value,
-    initialOptions: mockedOptions,
+    defaultValue: "did:ethr:",
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,

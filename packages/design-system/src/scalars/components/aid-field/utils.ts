@@ -1,6 +1,6 @@
-import { AutocompleteOption } from "@/scalars/components/fragments/autocomplete-field/types";
+import { IdAutocompleteOption } from "@/scalars/components/fragments/id-autocomplete-field/types";
 
-export const mockedOptions: AutocompleteOption[] = [
+export const mockedOptions: IdAutocompleteOption[] = [
   {
     icon: "Person",
     title: "Agent A",
@@ -24,7 +24,7 @@ export const mockedOptions: AutocompleteOption[] = [
   },
 ];
 
-export const fetchOptions = async (): Promise<AutocompleteOption[]> => {
+export const fetchOptions = async (): Promise<IdAutocompleteOption[]> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -38,7 +38,7 @@ export const fetchOptions = async (): Promise<AutocompleteOption[]> => {
 
 export const fetchSelectedOption = async (
   value: string,
-): Promise<AutocompleteOption | undefined> => {
+): Promise<IdAutocompleteOption | undefined> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
   return mockedOptions.find((option) => option.value === value);

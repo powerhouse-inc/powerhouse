@@ -1,20 +1,20 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDebounceCallback } from "usehooks-ts";
-import type { AutocompleteProps, AutocompleteOption } from "./types";
+import type { IdAutocompleteProps, IdAutocompleteOption } from "./types";
 
-interface UseAutocompleteFieldParams {
-  autoComplete: AutocompleteProps["autoComplete"];
+interface UseIdAutocompleteFieldParams {
+  autoComplete: IdAutocompleteProps["autoComplete"];
   defaultValue?: string;
   value?: string;
-  isOpenByDefault: AutocompleteProps["isOpenByDefault"];
-  initialOptions: AutocompleteProps["initialOptions"];
-  onChange?: AutocompleteProps["onChange"];
+  isOpenByDefault: IdAutocompleteProps["isOpenByDefault"];
+  initialOptions: IdAutocompleteProps["initialOptions"];
+  onChange?: IdAutocompleteProps["onChange"];
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
-  fetchOptions: AutocompleteProps["fetchOptionsCallback"];
-  fetchSelectedOption: AutocompleteProps["fetchSelectedOptionCallback"];
+  fetchOptions: IdAutocompleteProps["fetchOptionsCallback"];
+  fetchSelectedOption: IdAutocompleteProps["fetchSelectedOptionCallback"];
 }
 
-export function useAutocompleteField({
+export function useIdAutocompleteField({
   autoComplete,
   defaultValue,
   value,
@@ -24,13 +24,13 @@ export function useAutocompleteField({
   onBlur,
   fetchOptions,
   fetchSelectedOption,
-}: UseAutocompleteFieldParams) {
+}: UseIdAutocompleteFieldParams) {
   const shouldFetchOptions = useRef(false);
   const isInternalChange = useRef(false);
   const commandListRef = useRef<HTMLDivElement>(null);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(isOpenByDefault ?? false);
-  const [options, setOptions] = useState<AutocompleteOption[]>(
+  const [options, setOptions] = useState<IdAutocompleteOption[]>(
     initialOptions ?? [],
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +40,7 @@ export function useAutocompleteField({
     value ?? defaultValue ?? "",
   );
   const [selectedOption, setSelectedOption] = useState<
-    AutocompleteOption | undefined
+    IdAutocompleteOption | undefined
   >(undefined);
   const [commandValue, setCommandValue] = useState("");
   const [haveBeenOpened, setHaveBeenOpened] = useState(false);

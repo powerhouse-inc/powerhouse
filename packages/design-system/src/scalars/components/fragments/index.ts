@@ -1,4 +1,3 @@
-export * from "./autocomplete-field";
 export * from "./character-counter";
 export * from "./checkbox-field";
 export * from "./form-description";

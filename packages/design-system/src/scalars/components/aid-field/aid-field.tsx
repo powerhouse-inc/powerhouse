@@ -1,14 +1,14 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId, useCallback } from "react";
-import { AutocompleteFieldRaw } from "@/scalars/components/fragments/autocomplete-field";
-import { AutocompleteListOption } from "@/scalars/components/fragments/autocomplete-field/autocomplete-list-option";
+import { IdAutocompleteFieldRaw } from "@/scalars/components/fragments/id-autocomplete-field";
+import { IdAutocompleteListOption } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-list-option";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import type {
   FieldCommonProps,
   ErrorHandling,
 } from "@/scalars/components/types";
 import type { AIDProps } from "./types";
-import type { AutocompleteOption } from "@/scalars/components/fragments/autocomplete-field/types";
+import type { IdAutocompleteOption } from "@/scalars/components/fragments/id-autocomplete-field/types";
 
 type AIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -60,7 +60,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
 
     const renderOption = useCallback(
       (
-        option: AutocompleteOption,
+        option: IdAutocompleteOption,
         displayProps?: {
           asPlaceholder?: boolean;
           showValue?: boolean;
@@ -69,17 +69,19 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
           className?: string;
         },
       ) => (
-        <AutocompleteListOption
+        <IdAutocompleteListOption
           variant={variant}
           icon={option.icon}
           title={option.title}
           path={option.path}
           value={
+            displayProps?.asPlaceholder &&
             option.value === "value not available"
-              ? "aid not available"
+              ? "did not available"
               : option.value
           }
           description={option.description}
+          placeholderIcon="Person"
           {...displayProps}
         />
       ),
@@ -87,7 +89,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
     );
 
     return autoComplete && fetchOptionsCallback ? (
-      <AutocompleteFieldRaw
+      <IdAutocompleteFieldRaw
         id={id}
         name={name}
         className={className}
@@ -116,7 +118,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
         ref={ref}
       />
     ) : (
-      <AutocompleteFieldRaw
+      <IdAutocompleteFieldRaw
         id={id}
         name={name}
         className={className}

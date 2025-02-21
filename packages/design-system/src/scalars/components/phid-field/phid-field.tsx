@@ -1,14 +1,14 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId, useCallback } from "react";
-import { AutocompleteFieldRaw } from "@/scalars/components/fragments/autocomplete-field";
-import { AutocompleteListOption } from "@/scalars/components/fragments/autocomplete-field/autocomplete-list-option";
+import { IdAutocompleteFieldRaw } from "@/scalars/components/fragments/id-autocomplete-field";
+import { IdAutocompleteListOption } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-list-option";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import type {
   FieldCommonProps,
   ErrorHandling,
 } from "@/scalars/components/types";
 import type { PHIDProps } from "./types";
-import type { AutocompleteOption } from "@/scalars/components/fragments/autocomplete-field/types";
+import type { IdAutocompleteOption } from "@/scalars/components/fragments/id-autocomplete-field/types";
 
 type PHIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -61,7 +61,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
 
     const renderOption = useCallback(
       (
-        option: AutocompleteOption,
+        option: IdAutocompleteOption,
         displayProps?: {
           asPlaceholder?: boolean;
           showValue?: boolean;
@@ -70,12 +70,13 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
           className?: string;
         },
       ) => (
-        <AutocompleteListOption
+        <IdAutocompleteListOption
           variant={variant}
           icon={option.icon}
           title={option.title}
           path={option.path}
           value={
+            displayProps?.asPlaceholder &&
             option.value === "value not available"
               ? "phd not available"
               : option.value
@@ -88,7 +89,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
     );
 
     return autoComplete && fetchOptionsCallback ? (
-      <AutocompleteFieldRaw
+      <IdAutocompleteFieldRaw
         id={id}
         name={name}
         className={className}
@@ -117,7 +118,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
         ref={ref}
       />
     ) : (
-      <AutocompleteFieldRaw
+      <IdAutocompleteFieldRaw
         id={id}
         name={name}
         className={className}
