@@ -2,9 +2,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Sidebar } from "./sidebar";
 import { Icon } from "@/powerhouse";
-import { SidebarProvider, useSidebar } from "./subcomponents/sidebar-provider";
+import { SidebarProvider } from "./subcomponents/sidebar-provider";
 import mockedTree from "./mocked_tree.json";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { SidebarNode } from "./types";
 
 /**
@@ -205,21 +205,9 @@ export const WithinLayoutAndContent: Story = {
     showStatusFilter: true,
   },
   render: (args) => {
-    console.log("trying to render");
     const [activeNode, setActiveNode] = useState<string>(
       "4281ab93-ef4f-4974-988d-7dad149a693d",
     );
-
-    const [value, setValue] = useState<string>("");
-    const { openNode } = useSidebar();
-
-    const click = useCallback(() => {
-      openNode(value, true, true);
-    }, [openNode, value]);
-
-    const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-      setValue(e.target.value);
-    }, []);
 
     const onActiveNodeChange = useCallback((node: SidebarNode) => {
       setActiveNode(node.id);
@@ -259,11 +247,6 @@ export const WithinLayoutAndContent: Story = {
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Active Node: {activeNode}
           </p>
-
-          <div>
-            <input type="text" value={value} onChange={onChange} />
-            <button onClick={click}>Open</button>
-          </div>
         </div>
       </main>
     );
