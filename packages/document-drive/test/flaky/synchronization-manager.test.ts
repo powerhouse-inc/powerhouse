@@ -1,6 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 import { DocumentModelModule, Operation } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  PullResponderTransmitter,
+  ReactorBuilder,
+  generateUUID,
+} from "../../src";
+import InMemoryCache from "../../src/cache/memory";
+import { MemoryStorage } from "../../src/storage/memory";
+import { PrismaStorage } from "../../src/storage/prisma";
 import InMemoryCache from "../../src/cache/memory.js";
 import { DocumentDriveServer } from "../../src/server/base.js";
 import { PullResponderTransmitter } from "../../src/server/listener/transmitter/pull-responder.js";
@@ -32,7 +40,10 @@ describe("Synchronization Units", () => {
     it("should return drive synchronizationUnit", async () => {
       const storage = new MemoryStorage();
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
 
       await server.addDrive({
@@ -67,7 +78,10 @@ describe("Synchronization Units", () => {
     it("should return all synchronizationUnits", async () => {
       const storage = new MemoryStorage();
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
 
       await server.addDrive({
@@ -214,7 +228,10 @@ describe("Synchronization Units", () => {
     it("should return transmitter strands", async () => {
       const storage = new MemoryStorage();
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
 
       await server.addDrive({
@@ -342,7 +359,10 @@ describe("Synchronization Units", () => {
     it("should db query for each document", async () => {
       const storage = new MemoryStorage();
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
 
       await server.addDrive({
@@ -456,7 +476,10 @@ describe("Synchronization Units", () => {
     beforeEach(async () => {
       const storage = new PrismaStorage(new PrismaClient());
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
       if ((await server.getDrives()).includes("1")) {
         await server.deleteDrive("1");
@@ -466,7 +489,10 @@ describe("Synchronization Units", () => {
     it("should return drive synchronizationUnit", async () => {
       const storage = new PrismaStorage(new PrismaClient());
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
 
       await server.addDrive({
@@ -501,7 +527,10 @@ describe("Synchronization Units", () => {
     it("should return all synchronizationUnits", async () => {
       const storage = new PrismaStorage(new PrismaClient());
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
 
       await server.addDrive({
@@ -648,7 +677,10 @@ describe("Synchronization Units", () => {
     it("should return transmitter strands", async () => {
       const storage = new PrismaStorage(new PrismaClient());
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
 
       await server.addDrive({
@@ -776,7 +808,10 @@ describe("Synchronization Units", () => {
     it("should make single db query for all documents", async () => {
       const storage = new PrismaStorage(new PrismaClient());
       const cache = new InMemoryCache();
-      const server = new DocumentDriveServer(documentModels, storage, cache);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storage)
+        .withCache(cache)
+        .build();
       await server.initialize();
 
       await server.addDrive({

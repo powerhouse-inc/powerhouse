@@ -1,8 +1,8 @@
 import {
     BaseQueueManager,
     DocumentDriveAction,
-    DocumentDriveServer,
     DriveInput,
+    ReactorBuilder,
     FilesystemStorage,
     IDocumentDriveServer,
     InMemoryCache,
@@ -19,13 +19,12 @@ export default (
     path: string,
     ipcMain: IpcMain,
 ) => {
-    const documentDrive = new DocumentDriveServer(
-        documentModels,
-        new FilesystemStorage(join(path, 'Document Drives')),
-        new InMemoryCache(),
-        new BaseQueueManager(1, 10),
-        { ...getReactorDefaultDrivesConfig() },
-    );
+    const documentDrive = new ReactorBuilder(documentModels)
+        .withStorage(new FilesystemStorage(join(path, 'Document Drives')))
+        .withCache(new InMemoryCache())
+        .withQueueManager(new BaseQueueManager(1, 10))
+        .withOptions({ ...getReactorDefaultDrivesConfig() })
+        .build();
 
     const promise = documentDrive
         .initialize()

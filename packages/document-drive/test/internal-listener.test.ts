@@ -1,5 +1,7 @@
 import { DocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
+import { InternalTransmitterUpdate, IReceiver, ReactorBuilder } from "../src";
+import { expectUTCTimestamp, expectUUID } from "./utils";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { DocumentDriveServer } from "../src/server/base.js";
 import {
@@ -15,7 +17,7 @@ describe("Internal Listener", () => {
   ] as DocumentModelModule[];
 
   async function buildServer(receiver: IReceiver) {
-    const server = new DocumentDriveServer(documentModels);
+    const server = new ReactorBuilder(documentModels).build();
     await server.initialize();
 
     await server.addDrive({

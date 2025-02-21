@@ -6,7 +6,7 @@ import {
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { DocumentDriveServer } from "../../src/server/base.js";
+import { ReactorBuilder } from "../../src/server/base.js";
 import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document operations", () => {
@@ -15,9 +15,9 @@ describe("Document operations", () => {
     ...Object.values(DocumentModelsLibs),
   ] as DocumentModelModule[];
 
-  let server = new DocumentDriveServer(documentModels);
+  let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
-    server = new DocumentDriveServer(documentModels);
+    server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
 

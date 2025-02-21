@@ -1,5 +1,7 @@
 import { BaseAction, Operation } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
+import { IOperationResult, ReactorBuilder } from "../../src";
+import { DriveBasicClient } from "../utils";
 import { DocumentDriveServer } from "../../src/server/base.js";
 import { IOperationResult } from "../../src/server/types.js";
 import { DriveBasicClient } from "../utils.js";
@@ -14,9 +16,9 @@ describe("Drive Operations", () => {
     ...Object.values(DocumentModelsLibs),
   ] as BaseDocumentModel[];
 
-  let server = new DocumentDriveServer(documentModels);
+  let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
-    server = new DocumentDriveServer(documentModels);
+    server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
 

@@ -4,6 +4,14 @@ import { DocumentDriveServer } from "../../src/server/base.js";
 import {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
+  generateUUID,
+  ReactorBuilder,
+  RunAsap,
+} from "../../src";
+import { BrowserStorage } from "../../src/storage/browser";
+import { setLogger } from "../../src/utils/logger";
+import GetDrive from "./getDrive.json";
+import Strands from "./strands.small.json";
 } from "../../src/server/types.js";
 import { BrowserStorage } from "../../src/storage/browser.js";
 import { setLogger } from "../../src/utils/logger.js";
@@ -127,16 +135,13 @@ describe("Process Operations", () => {
     callback: () => void,
     onError: (error: Error) => void,
   ) {
-    const server = new DocumentDriveServer(
-      documentModels,
-      new BrowserStorage(generateUUID()),
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(new BrowserStorage(generateUUID()))
+      .withOptions({
         defaultDrives: { remoteDrives: defaultRemoteDrives },
         taskQueueMethod: runOnMacroTask,
-      },
-    );
+      })
+      .build();
     let strands = 0;
     server.on("syncStatus", (driveId, status, error, object) => {
       if (status === "SUCCESS") {

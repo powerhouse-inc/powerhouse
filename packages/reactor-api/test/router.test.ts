@@ -12,13 +12,13 @@ describe("Reactor Router", () => {
   it("should be initialized", () => {
     // const app = express();
     // const knex = getDbClient();
-    // const reactor = new DocumentDriveServer(documentModels);
+    // const reactor = new ReactorBuilder(documentModels).build();
     // const reactorRouter = new SubgraphManager("/", app, reactor, knex);
     expect(true).toBe(true);
   });
 
   // it("should be able to add a new subgraph", async () => {
-  //   const driveServer = new DocumentDriveServer(documentModels);
+  //   const driveServer = new ReactorBuilder(documentModels).build();
   //   await driveServer.initialize();
   //   const newSubgraph = {
   //     name: "newSubgraph",

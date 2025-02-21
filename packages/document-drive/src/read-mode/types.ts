@@ -7,6 +7,12 @@ import {
 import {
   DocumentDriveDocument,
   ListenerFilter,
+} from "document-model-libs/document-drive";
+import { Action, Document, DocumentModel } from "document-model/document";
+import { DocumentDriveServerMixin } from "../server/base-server";
+import { DocumentModelNotFoundError } from "../server/error";
+import { RemoteDriveOptions } from "../server/types";
+import { DriveInfo } from "../utils/graphql";
 } from "../drive-document-model/gen/types.js";
 import { DocumentModelNotFoundError } from "../server/error.js";
 import {

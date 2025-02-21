@@ -1,6 +1,15 @@
 import { DocumentModelModule } from "document-model";
 import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
+import { generateUUID, IOperationResult } from "../src";
+import InMemoryCache from "../src/cache/memory";
+import { BaseQueueManager } from "../src/queue/base";
+import { RedisQueueManager } from "../src/queue/redis";
+import { IQueueManager } from "../src/queue/types";
+import { ReactorBuilder } from "../src/server/builder";
+import { IBaseDocumentDriveServer } from "../src/server/types";
+import { MemoryStorage } from "../src/storage/memory";
+import { buildOperation, buildOperations } from "./utils";
 import InMemoryCache from "../src/cache/memory.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
@@ -45,7 +54,7 @@ describe.each(queueLayers)(
       queueValid = false;
     }
 
-    const createDrive = async (server: DocumentDriveServer) => {
+    const createDrive = async (server: IBaseDocumentDriveServer) => {
       const driveState = await server.addDrive({
         global: {
           id: generateUUID(),
@@ -66,11 +75,11 @@ describe.each(queueLayers)(
     };
 
     const addOperationsToDrive = async (
-      server: DocumentDriveServer,
+      server: IBaseDocumentDriveServer,
       drive: DocumentDriveDocument,
       queue = true,
     ) => {
-      const promisses = [];
+      const promisses: Promise<IOperationResult<DocumentDriveDocument>>[] = [];
       for (let i = 0; i < ADD_OPERATIONS_TO_DRIVE; i++) {
         const id = generateUUID();
         drive = reducer(
@@ -103,10 +112,9 @@ describe.each(queueLayers)(
     it.skipIf(!queueValid)(
       "block document queue until ADD_FILE is processed",
       async ({ expect }) => {
-        const server = new DocumentDriveServer(
-          documentModels,
-          new MemoryStorage(),
-        );
+        const server = new ReactorBuilder(documentModels)
+          .withStorage(new MemoryStorage())
+          .build();
         await server.initialize();
         let drive = await createDrive(server);
         const driveId = drive.state.global.id;
@@ -179,12 +187,12 @@ describe.each(queueLayers)(
     );
 
     it.skipIf(!queueValid)("orders strands correctly", async ({ expect }) => {
-      const server = new DocumentDriveServer(
-        documentModels,
-        new MemoryStorage(),
-        new InMemoryCache(),
-        await buildQueue(),
-      );
+      const queue = await buildQueue();
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(new MemoryStorage())
+        .withCache(new InMemoryCache())
+        .withQueueManager(queue)
+        .build();
       await server.initialize();
       let drive = await createDrive(server);
       const driveId = drive.state.global.id;
@@ -279,12 +287,12 @@ describe.each(queueLayers)(
     it.skipIf(!queueValid)(
       "it blocks a document queue when the drive queue processes a delete node operation",
       async ({ expect }) => {
-        const server = new DocumentDriveServer(
-          documentModels,
-          new MemoryStorage(),
-          new InMemoryCache(),
-          await buildQueue(),
-        );
+        const queue = await buildQueue();
+        const server = new ReactorBuilder(documentModels)
+          .withStorage(new MemoryStorage())
+          .withCache(new InMemoryCache())
+          .withQueueManager(queue)
+          .build();
         await server.initialize();
         let drive = await createDrive(server);
         const driveId = drive.state.global.id;
@@ -357,12 +365,12 @@ describe.each(queueLayers)(
     it.skipIf(!queueValid)(
       "produces error on addDriveOperations with wrong index",
       async ({ expect }) => {
-        const server = new DocumentDriveServer(
-          documentModels,
-          new MemoryStorage(),
-          new InMemoryCache(),
-          await buildQueue(),
-        );
+        const queue = await buildQueue();
+        const server = new ReactorBuilder(documentModels)
+          .withStorage(new MemoryStorage())
+          .withCache(new InMemoryCache())
+          .withQueueManager(queue)
+          .build();
         await server.initialize();
         const drives = await Promise.all(
           new Array(CREATE_DRIVES).fill(0).map(async (_, i) => {
@@ -385,12 +393,12 @@ describe.each(queueLayers)(
     it.skipIf(!queueValid)(
       "produces no errors on queueDriveOperations",
       async ({ expect }) => {
-        const server = new DocumentDriveServer(
-          documentModels,
-          new MemoryStorage(),
-          new InMemoryCache(),
-          await buildQueue(),
-        );
+        const queue = await buildQueue();
+        const server = new ReactorBuilder(documentModels)
+          .withStorage(new MemoryStorage())
+          .withCache(new InMemoryCache())
+          .withQueueManager(queue)
+          .build();
         await server.initialize();
         const drives = await Promise.all(
           new Array(CREATE_DRIVES).fill(0).map(async (_, i) => {
@@ -413,12 +421,12 @@ describe.each(queueLayers)(
     it.skipIf(!queueValid)(
       "adds operations with queueDriveAction",
       async ({ expect }) => {
-        const server = new DocumentDriveServer(
-          documentModels,
-          new MemoryStorage(),
-          new InMemoryCache(),
-          await buildQueue(),
-        );
+        const queue = await buildQueue();
+        const server = new ReactorBuilder(documentModels)
+          .withStorage(new MemoryStorage())
+          .withCache(new InMemoryCache())
+          .withQueueManager(queue)
+          .build();
         await server.initialize();
         const drive = await createDrive(server);
         const driveId = drive.state.global.id;

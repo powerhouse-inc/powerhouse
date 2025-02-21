@@ -2,8 +2,8 @@ import {
     BaseQueueManager,
     BrowserStorage,
     DefaultRemoteDriveInput,
-    DocumentDriveServer,
     DocumentDriveServerOptions,
+    ReactorBuilder,
     InMemoryCache,
 } from 'document-drive';
 import { DocumentModelModule } from 'document-model';
@@ -67,11 +67,10 @@ export function createBrowserDocumentDriveServer(
     documentModels: DocumentModelModule[],
     routerBasename: string,
 ) {
-    return new DocumentDriveServer(
-        documentModels,
-        new BrowserStorage(routerBasename),
-        new InMemoryCache(),
-        new BaseQueueManager(1, 10),
-        { ...getReactorDefaultDrivesConfig() },
-    );
+    return new ReactorBuilder(documentModels)
+        .withStorage(new BrowserStorage(routerBasename))
+        .withCache(new InMemoryCache())
+        .withQueueManager(new BaseQueueManager(1, 10))
+        .withOptions({ ...getReactorDefaultDrivesConfig() })
+        .build();
 }

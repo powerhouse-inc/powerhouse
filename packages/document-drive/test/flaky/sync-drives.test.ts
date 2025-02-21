@@ -8,6 +8,18 @@
  *
  */
 
+import {
+  DocumentDriveAction,
+  Listener,
+  ListenerFilter,
+  actions,
+  reducer,
+} from "document-model-libs/document-drive";
+import * as DocumentModelsLibs from "document-model-libs/document-models";
+import { DocumentModel, Operation } from "document-model/document";
+import * as DocumentModelLib from "document-model/document-model";
+import stringify from "json-stringify-deterministic";
+import { GraphQLQuery, HttpResponse, graphql } from "msw";
 import { Listener } from "@prisma/client";
 import { DocumentModelModule, Operation } from "document-model";
 import { graphql } from "graphql";
@@ -22,6 +34,7 @@ import { DocumentDriveServer } from "../../src/server/base.js";
 import { PullResponderTransmitter } from "../../src/server/listener/transmitter/pull-responder.js";
 import {
   ListenerRevision,
+  ReactorBuilder,
   StrandUpdate,
   SyncStatus,
 } from "../../src/server/types.js";
@@ -212,7 +225,7 @@ describe("Document Drive Server interaction", () => {
   });
 
   async function createRemoteDrive() {
-    const remoteServer = new DocumentDriveServer(documentModels);
+    const remoteServer = new ReactorBuilder(documentModels).build();
     await remoteServer.initialize();
 
     const mswServer = setupHandlers(remoteServer);
@@ -232,7 +245,7 @@ describe("Document Drive Server interaction", () => {
   it("should create remote drive", async ({ expect }) => {
     const { mswServer } = await createRemoteDrive();
 
-    const connectServer = new DocumentDriveServer(documentModels);
+    const connectServer = new ReactorBuilder(documentModels).build();
     await connectServer.addRemoteDrive("http://test", {
       availableOffline: true,
       sharingType: "public",
@@ -272,7 +285,7 @@ describe("Document Drive Server interaction", () => {
   it("should synchronize drive operations", async ({ expect }) => {
     const { remoteServer, mswServer } = await createRemoteDrive();
 
-    const connectServer = new DocumentDriveServer(documentModels);
+    const connectServer = new ReactorBuilder(documentModels).build();
 
     await connectServer.addRemoteDrive("http://test", {
       availableOffline: true,
@@ -329,7 +342,7 @@ describe("Document Drive Server interaction", () => {
   it("should synchronize document operations", async ({ expect }) => {
     const { remoteServer, mswServer } = await createRemoteDrive();
 
-    const connectServer = new DocumentDriveServer(documentModels);
+    const connectServer = new ReactorBuilder(documentModels).build();
 
     await connectServer.addRemoteDrive("http://test", {
       availableOffline: true,
@@ -463,7 +476,7 @@ describe("Document Drive Server interaction", () => {
       buildOperation(reducer, remoteDrive, actions.deleteNode({ id: "1" })),
     );
 
-    const connectServer = new DocumentDriveServer(documentModels);
+    const connectServer = new ReactorBuilder(documentModels).build();
 
     await connectServer.addRemoteDrive("http://test", {
       availableOffline: true,
@@ -531,7 +544,7 @@ describe("Document Drive Server interaction", () => {
       ),
     );
 
-    const connectServer = new DocumentDriveServer(documentModels);
+    const connectServer = new ReactorBuilder(documentModels).build();
 
     await connectServer.addRemoteDrive("http://test", {
       availableOffline: true,
@@ -728,7 +741,7 @@ describe("Document Drive Server interaction", () => {
   it("should stop pulling if trigger is removed", async ({ expect }) => {
     await createRemoteDrive();
 
-    const connectServer = new DocumentDriveServer(documentModels);
+    const connectServer = new ReactorBuilder(documentModels).build();
 
     await connectServer.addRemoteDrive("http://test", {
       availableOffline: true,
