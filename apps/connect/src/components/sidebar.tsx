@@ -1,31 +1,30 @@
 import {
     ConnectSidebar,
     Icon,
-    useUiNodesContext,
+    SidebarAddDriveItem,
+    SidebarItem,
+    UiDriveNode,
 } from '@powerhousedao/design-system';
 import { useAtom } from 'jotai';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { useLogin } from 'src/hooks/useLogin';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 import { logger } from 'src/services/logger';
 import { sidebarCollapsedAtom } from 'src/store';
-import DriveContainer from './drive-container';
 import { useModal } from './modal';
 
 export default function Sidebar() {
     const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
     const { showModal } = useModal();
     const navigate = useNavigate();
-    const { setSelectedNode } = useUiNodesContext();
 
     const { user, openRenown } = useLogin();
+    const { driveNodes, setSelectedNode, selectedNode, showAddDriveModal } =
+        useUiNodes();
 
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
-
-    function toggleCollapse() {
-        setCollapsed(value => !value);
-    }
 
     const onClickSettings = () => {
         showModal('settingsModal', { onRefresh: () => navigate(0) });
@@ -35,6 +34,10 @@ export default function Sidebar() {
         setSelectedNode(null);
         navigate('/');
     }, [navigate, setSelectedNode]);
+
+    const onAddDriveClick = useCallback(() => {
+        showAddDriveModal();
+    }, [showAddDriveModal]);
 
     const headerContent = (
         <div className="flex h-full items-center">
@@ -55,11 +58,16 @@ export default function Sidebar() {
         </div>
     );
 
+    const handleDriveClick = useCallback(
+        (driveNode: UiDriveNode) => {
+            setSelectedNode(driveNode);
+        },
+        [setSelectedNode],
+    );
     return (
         <ConnectSidebar
             id="sidebar"
-            collapsed={collapsed}
-            onToggle={toggleCollapse}
+            onClick={() => onRootClick()}
             onClickSettings={onClickSettings}
             headerContent={headerContent}
             address={user?.address}
@@ -73,7 +81,25 @@ export default function Sidebar() {
                 }
                 onError={logger.error}
             >
-                <DriveContainer />
+                {driveNodes.map((node, index) => (
+                    <SidebarItem
+                        key={index}
+                        title={node.name}
+                        onClick={() => handleDriveClick(node)}
+                        active={selectedNode?.id === node.id}
+                        icon={
+                            node.icon ? (
+                                <img
+                                    src={node.icon}
+                                    alt={node.name}
+                                    width={32}
+                                    height={32}
+                                />
+                            ) : undefined
+                        }
+                    />
+                ))}
+                <SidebarAddDriveItem onClick={onAddDriveClick} />
             </ErrorBoundary>
         </ConnectSidebar>
     );

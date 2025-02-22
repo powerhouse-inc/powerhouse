@@ -1,3 +1,4 @@
+export * from "./add-drive-modal/index";
 export * from "./add-local-drive-modal";
 export * from "./add-remote-drive-modal";
 export * from "./confirmation-modal";

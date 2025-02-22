@@ -1,3 +1,4 @@
+import { AddDriveModal } from './AddDriveModal';
 import { AddLocalDriveModal } from './AddLocalDriveModal';
 import { AddRemoteDriveModal } from './AddRemoteDriveModal';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -15,6 +16,7 @@ export const modals = {
     deleteItem: DeleteItemModal,
     upgradeDrive: UpgradeDriveModal,
     createDocument: CreateDocumentModal,
+    addDriveModal: AddDriveModal,
     addLocalDrive: AddLocalDriveModal,
     addRemoteDrive: AddRemoteDriveModal,
     driveSettings: DriveSettingsModal,

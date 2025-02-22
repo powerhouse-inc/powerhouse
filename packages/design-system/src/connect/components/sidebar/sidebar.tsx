@@ -17,31 +17,26 @@ export interface ConnectSidebarProps
   headerContent?: React.ReactNode;
   loadingUser?: boolean;
   onLogin: () => void;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
-  onToggle,
+  onClick,
   address,
   headerContent,
   onClickSettings,
-  collapsed = false,
   maxWidth = "304px",
   minWidth = "58px",
   onLogin,
   ...props
 }) => {
   return (
-    <Sidebar
-      {...props}
-      collapsed={collapsed}
-      maxWidth={maxWidth}
-      minWidth={minWidth}
-    >
+    <Sidebar {...props} maxWidth={maxWidth} minWidth={minWidth}>
       <SidebarPanel>
-        <ConnectSidebarHeader onToggle={onToggle}>
+        <ConnectSidebarHeader onClick={onClick}>
           {headerContent}
         </ConnectSidebarHeader>
-        <div className="hidden expanded:block">{props.children}</div>
+        <div className="flex flex-col">{props.children}</div>
       </SidebarPanel>
       <ConnectSidebarFooter
         address={address}
