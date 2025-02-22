@@ -870,7 +870,8 @@ export class BaseDocumentDriveServer
           : merge(trunk, invertedTrunk, reshuffleByTimestamp);
 
       const newOperations = newHistory.filter(
-        (op) => trunk.length < 1 || precedes(trunk[trunk.length - 1], op),
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-non-null-assertion
+        (op) => trunk.length < 1 || precedes(trunk[trunk.length - 1]!, op),
       );
 
       for (const nextOperation of newOperations) {
