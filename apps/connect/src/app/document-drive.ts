@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import InMemoryCache from 'document-drive/cache/memory';
+import { logger } from 'document-drive/logger';
 import { BaseQueueManager } from 'document-drive/queue/base';
 import {
     DriveInput,
@@ -12,7 +13,6 @@ import { DocumentDriveAction } from 'document-model-libs/document-drive';
 import { BaseAction, DocumentModel, Operation } from 'document-model/document';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
-import { logger } from 'src/services/logger';
 import { getReactorDefaultDrivesConfig } from 'src/utils/reactor';
 
 export default (

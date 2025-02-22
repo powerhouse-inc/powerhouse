@@ -15,6 +15,7 @@ import {
   IReceiver,
   ReactorBuilder,
 } from "document-drive";
+import { logger } from "document-drive/logger";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import {
   module as DocumentDrive,
@@ -51,6 +52,7 @@ export type StartServerOptions = {
     keyPath: string;
     certPath: string;
   };
+  logLevel?: "info" | "warn" | "error" | "debug" | "verbose" | "silent";
 };
 
 export const DefaultStartServerOptions = {
@@ -94,10 +96,25 @@ const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   process.setMaxListeners(0);
-  const { port, storagePath, drive, dev, dbPath, packages, configFile } = {
+  const {
+    port,
+    storagePath,
+    drive,
+    dev,
+    dbPath,
+    packages,
+    configFile,
+    logLevel,
+  } = {
     ...DefaultStartServerOptions,
     ...options,
   };
+
+  process.env.LOG_LEVEL = logLevel ?? "debug";
+
+  // be aware: this may not log anything if the log level is above info
+  logger.info(`Setting log level to ${logLevel}.`);
+
   const serverPort = Number(process.env.PORT ?? port);
 
   // start document drive server with all available document models & filesystem storage

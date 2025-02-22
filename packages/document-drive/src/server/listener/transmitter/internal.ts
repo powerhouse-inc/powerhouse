@@ -1,5 +1,6 @@
+import { logger } from "document-drive/logger";
 import { Document, Operation, OperationScope } from "document-model/document";
-import { logger } from "../../../utils/logger";
+import { InferDocumentOperation } from "../../../read-mode/types";
 import {
   GetDocumentOptions,
   IBaseDocumentDriveServer,
@@ -8,7 +9,6 @@ import {
   StrandUpdate,
 } from "../../types";
 import { ITransmitter, StrandUpdateSource } from "./types";
-import { InferDocumentOperation } from "../../../read-mode/types";
 
 export interface IReceiver<
   T extends Document = Document,

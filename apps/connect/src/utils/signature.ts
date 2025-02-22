@@ -1,3 +1,4 @@
+import { logger } from 'document-drive/logger';
 import {
     Action,
     ActionSigner,
@@ -8,7 +9,6 @@ import {
     User,
     utils,
 } from 'document-model/document';
-import { logger } from 'src/services/logger';
 import type { User as RenownUser } from 'src/services/renown/types';
 
 export async function signOperation<

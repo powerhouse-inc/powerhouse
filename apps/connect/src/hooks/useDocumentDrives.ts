@@ -1,10 +1,10 @@
+import { logger } from 'document-drive/logger';
 import type { IDocumentDriveServer } from 'document-drive/server';
 import { DocumentDriveDocument } from 'document-model-libs/document-drive';
 import { Document, OperationScope } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
-import { logger } from 'src/services/logger';
 import { useUnwrappedReactor } from 'src/store/reactor';
 import { ClientErrorHandler } from './useClientErrorHandler';
 

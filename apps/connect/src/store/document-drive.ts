@@ -1,4 +1,5 @@
 import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
+import { logger } from 'document-drive/logger';
 import { Document, Operation } from 'document-model/document';
 import { hashDocument } from 'document-model/utils';
 import { atom, useAtom, useSetAtom } from 'jotai';
@@ -6,7 +7,6 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { IReadModeContext } from 'src/context/read-mode';
 import { documentToHash } from 'src/hooks/useDocumentDrives';
 import { TDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { logger } from 'src/services/logger';
 
 function debounceOperations(
     callback: (operations: Operation[]) => Promise<Document | undefined>,

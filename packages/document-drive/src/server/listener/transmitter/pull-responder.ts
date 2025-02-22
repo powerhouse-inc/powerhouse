@@ -3,7 +3,7 @@ import { Operation } from "document-model/document";
 import { PULL_DRIVE_INTERVAL } from "../..";
 import { generateUUID } from "../../../utils";
 import { gql, requestGraphql } from "../../../utils/graphql";
-import { logger as defaultLogger } from "../../../utils/logger";
+import { childLogger } from "../../../utils/logger";
 import { OperationError } from "../../error";
 import {
   GetStrandsOptions,
@@ -21,8 +21,6 @@ import {
   PullResponderTrigger,
   StrandUpdateSource,
 } from "./types";
-
-const ENABLE_SYNC_DEBUG = false;
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
@@ -46,49 +44,28 @@ export interface IPullResponderTransmitter extends ITransmitter {
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]>;
 }
 
-const STATIC_DEBUG_ID = `[PRT #static]`;
-
-function staticDebugLog(...data: any[]) {
-  if (!ENABLE_SYNC_DEBUG) {
-    return;
-  }
-
-  if (data.length > 0 && typeof data[0] === "string") {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    console.log(`${STATIC_DEBUG_ID} ${data[0]}`, ...data.slice(1));
-  } else {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    console.log(STATIC_DEBUG_ID, ...data);
-  }
-}
-
 export class PullResponderTransmitter implements IPullResponderTransmitter {
-  private debugID = `[PRT #${Math.floor(Math.random() * 999)}]`;
+  private static staticLogger = childLogger([
+    "PullResponderTransmitter",
+    "static",
+  ]);
+
+  private logger = childLogger([
+    "PullResponderTransmitter",
+    Math.floor(Math.random() * 999).toString(),
+  ]);
+
   private listener: Listener;
   private manager: IListenerManager;
 
   constructor(listener: Listener, manager: IListenerManager) {
     this.listener = listener;
     this.manager = manager;
-    this.debugLog(`constructor(listener: ${listener.listenerId})`);
-  }
-
-  private debugLog(...data: any[]) {
-    if (!ENABLE_SYNC_DEBUG) {
-      return;
-    }
-
-    if (data.length > 0 && typeof data[0] === "string") {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      console.log(this.debugID, ...data);
-    }
+    this.logger.verbose(`constructor(listener: ${listener.listenerId})`);
   }
 
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]> {
-    this.debugLog(
+    this.logger.verbose(
       `getStrands(drive: ${this.listener.driveId}, listener: ${this.listener.listenerId})`,
     );
 
@@ -109,7 +86,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     revisions: ListenerRevision[],
   ): Promise<boolean> {
-    this.debugLog(
+    this.logger.verbose(
       `processAcknowledge(drive: ${driveId}, listener: ${listenerId})`,
       revisions,
     );
@@ -128,7 +105,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           s.documentId == revision.documentId,
       );
       if (!syncUnit) {
-        defaultLogger.warn("Unknown sync unit was acknowledged", revision);
+        this.logger.warn("Unknown sync unit was acknowledged", revision);
         success = false;
         continue;
       }
@@ -149,7 +126,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     filter: ListenerFilter,
   ): Promise<Listener["listenerId"]> {
-    staticDebugLog(`registerPullResponder(url: ${url})`, filter);
+    PullResponderTransmitter.staticLogger.verbose(
+      `registerPullResponder(url: ${url})`,
+      filter,
+    );
+
     // graphql request to switchboard
     const result = await requestGraphql<{
       registerPullResponderListener: {
@@ -185,7 +166,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     options?: GetStrandsOptions, // TODO add support for since
   ): Promise<StrandUpdate[]> {
-    staticDebugLog(`pullStrands(url: ${url}, listener: ${listenerId})`);
+    this.staticLogger.verbose(
+      `pullStrands(url: ${url}, listener: ${listenerId})`,
+    );
+
     const result = await requestGraphql<PullStrandsGraphQL>(
       url,
       gql`
@@ -252,7 +236,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     revisions: ListenerRevision[],
   ): Promise<boolean> {
-    staticDebugLog(
+    this.staticLogger.verbose(
       `acknowledgeStrands(url: ${url}, listener: ${listenerId})`,
       revisions,
     );
@@ -291,7 +275,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
   ) {
-    staticDebugLog(`executePull(driveId: ${driveId}), trigger:`, trigger);
+    this.staticLogger.verbose(
+      `executePull(driveId: ${driveId}), trigger:`,
+      trigger,
+    );
 
     try {
       const { url, listenerId } = trigger.data;
@@ -358,7 +345,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         }),
       )
         .then((result) => onAcknowledge?.(result))
-        .catch((error) => defaultLogger.error("ACK error", error));
+        .catch((error) => this.staticLogger.error("ACK error", error));
     } catch (error) {
       onError(error as Error);
     }
@@ -375,7 +362,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
   ): CancelPullLoop {
-    staticDebugLog(`setupPull(drive: ${driveId}), trigger:`, trigger);
+    this.staticLogger.verbose(
+      `setupPull(drive: ${driveId}), trigger:`,
+      trigger,
+    );
 
     const { interval } = trigger.data;
     let loopInterval = PULL_DRIVE_INTERVAL;
@@ -395,7 +385,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
     const executeLoop = async () => {
       while (!isCancelled) {
-        staticDebugLog("Execute loop...");
+        this.staticLogger.verbose("Execute loop...");
         await this.executePull(
           driveId,
           trigger,
@@ -405,13 +395,15 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           onAcknowledge,
         );
         await new Promise((resolve) => {
-          staticDebugLog(`Scheduling next pull in ${loopInterval} ms`);
+          this.staticLogger.verbose(
+            `Scheduling next pull in ${loopInterval} ms`,
+          );
           timeout = setTimeout(resolve, loopInterval) as unknown as number;
         });
       }
     };
 
-    executeLoop().catch(defaultLogger.error);
+    executeLoop().catch(this.staticLogger.error);
 
     return () => {
       isCancelled = true;
@@ -426,7 +418,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     options: Pick<RemoteDriveOptions, "pullInterval" | "pullFilter">,
   ): Promise<PullResponderTrigger> {
-    staticDebugLog(
+    this.staticLogger.verbose(
       `createPullResponderTrigger(drive: ${driveId}, url: ${url})`,
     );
 

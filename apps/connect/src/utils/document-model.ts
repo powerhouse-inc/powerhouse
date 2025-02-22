@@ -1,4 +1,5 @@
 import { IDocumentDriveServer } from 'document-drive';
+import { childLogger } from 'document-drive/logger';
 import type {
     Action,
     ActionErrorCallback,
@@ -9,10 +10,12 @@ import type {
     Reducer,
 } from 'document-model/document';
 import { useEffect, useState } from 'react';
-import { logger } from 'src/services/logger';
 import { Unsubscribe } from 'src/services/renown/types';
 
-const ENABLE_SYNC_DEBUG = false;
+const logger = childLogger([
+    'utils/document-model',
+    Math.floor(Math.random() * 999).toString(),
+]);
 
 export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
     (import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE as string) || '50',
@@ -120,12 +123,12 @@ async function waitForUpdate(
     let unsubscribe: Unsubscribe | undefined;
     const promise = new Promise<void>(resolve => {
         unsubscribe = reactor.on('strandUpdate', update => {
-            debugLog(`reactor.on(strandUpdate)`, update);
+            logger.verbose(`reactor.on(strandUpdate)`, update);
             const sameScope =
                 update.documentId === documentId && update.scope == scope;
 
             if (!sameScope) {
-                debugLog(
+                logger.verbose(
                     `reactor.on(strandUpdate) Ignoring wrong scope: ${update.documentId}:${update.scope} <> ${documentId}:${scope}`,
                 );
                 return;
@@ -133,12 +136,12 @@ async function waitForUpdate(
 
             const lastUpdateIndex = update.operations.at(-1)?.index;
             if (lastUpdateIndex && lastUpdateIndex >= lastIndex) {
-                debugLog(
+                logger.verbose(
                     `reactor.on(strandUpdate) Resolving ${update.documentId}:${update.scope} rev ${lastUpdateIndex} >= ${lastIndex}`,
                 );
                 resolve();
             } else {
-                debugLog(
+                logger.verbose(
                     `reactor.on(strandUpdate) Not resolving ${update.documentId}:${update.scope} rev ${lastUpdateIndex} < ${lastIndex}`,
                 );
             }
@@ -165,21 +168,6 @@ async function waitForUpdate(
     return withTimeout;
 }
 
-const debugID = `[dm.ts #${Math.floor(Math.random() * 999)}]`;
-const debugLog = (...data: any[]) => {
-    if (!ENABLE_SYNC_DEBUG) {
-        return;
-    }
-
-    if (data.length > 0 && typeof data[0] === 'string') {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        console.log(`${debugID} ${data[0]}`, ...data.slice(1));
-    } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        console.log(debugID, ...data);
-    }
-};
-
 export async function uploadDocumentOperations(
     drive: string,
     documentId: string,
@@ -195,13 +183,13 @@ export async function uploadDocumentOperations(
     const operationsLimit =
         options?.operationsLimit || FILE_UPLOAD_OPERATIONS_CHUNK_SIZE;
 
-    debugLog(
+    logger.verbose(
         `uploadDocumentOperations(drive: ${drive}, documentId:${documentId}, ops: ${Object.keys(document.operations).join(',')}, limit:${operationsLimit})`,
     );
 
     for (const operations of Object.values(document.operations)) {
         for (let i = 0; i < operations.length; i += operationsLimit) {
-            debugLog(
+            logger.verbose(
                 `uploadDocumentOperations:for(i:${i}, ops:${operations.length}, limit:${operationsLimit}): START`,
             );
             const chunk = operations.slice(i, i + operationsLimit);
@@ -229,11 +217,13 @@ export async function uploadDocumentOperations(
 
             await pushOperations(drive, documentId, chunk);
 
-            debugLog(
+            logger.verbose(
                 `uploadDocumentOperations:for:waitForUpdate(${documentId}:${scope} rev ${operation.index}): NEXT`,
             );
         }
     }
 
-    debugLog(`uploadDocumentOperations:for:waitForUpdate(${documentId}): END`);
+    logger.verbose(
+        `uploadDocumentOperations:for:waitForUpdate(${documentId}): END`,
+    );
 }

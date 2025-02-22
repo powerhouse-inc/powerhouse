@@ -13,6 +13,7 @@ import {
     ReadDriveSlugNotFoundError,
     RemoteDriveOptions,
 } from 'document-drive';
+import { logger } from 'document-drive/logger';
 import { Document, DocumentModel } from 'document-model/document';
 import { DocumentModelNotFoundError } from 'node_modules/document-drive/src/server/error';
 import {
@@ -26,7 +27,6 @@ import {
 } from 'react';
 import { drivesToHash } from 'src/hooks/useDocumentDrives';
 import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { logger } from 'src/services/logger';
 import { useAsyncReactor } from '../store/reactor';
 
 export interface IReadModeContext extends IReadModeDriveServer {

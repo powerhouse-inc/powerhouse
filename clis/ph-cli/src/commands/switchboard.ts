@@ -38,7 +38,11 @@ async function startLocalSwitchboard(switchboardOptions: SwitchboardOptions) {
         }
       : undefined;
 
-  const reactor = await startServer({ ...options, https });
+  const reactor = await startServer({
+    ...options,
+    https,
+    logLevel: baseConfig.logLevel,
+  });
 
   if (options.generate) {
     await addGenerateTransmitter(reactor, baseConfig);

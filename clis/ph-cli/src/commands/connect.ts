@@ -35,7 +35,8 @@ export function connectCommand(program: Command) {
     )
     .action(async (...args: [ConnectOptions]) => {
       const connectOptions = args.at(0) || {};
-      const { documentModelsDir, editorsDir, packages, studio } = getConfig();
+      const { documentModelsDir, editorsDir, packages, studio, logLevel } =
+        getConfig();
       await startConnectStudio({
         port: studio?.port?.toString() || undefined,
         packages,
@@ -43,6 +44,7 @@ export function connectCommand(program: Command) {
         localDocuments: documentModelsDir || undefined,
         localEditors: editorsDir || undefined,
         open: studio?.openBrowser,
+        logLevel: logLevel,
         ...connectOptions,
       });
     });

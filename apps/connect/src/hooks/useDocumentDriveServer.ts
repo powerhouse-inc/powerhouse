@@ -6,6 +6,7 @@ import {
     UiNode,
 } from '@powerhousedao/design-system';
 import { SynchronizationUnitNotFoundError } from 'document-drive';
+import { childLogger } from 'document-drive/logger';
 import {
     DriveInput,
     RemoteDriveOptions,
@@ -27,7 +28,6 @@ import {
 } from 'document-model-libs/document-drive';
 import { App, Document, Operation, utils } from 'document-model/document';
 import { useCallback, useMemo } from 'react';
-import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { useUnwrappedReactor } from 'src/store/reactor';
 import { useUser } from 'src/store/user';
@@ -38,28 +38,16 @@ import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useDocumentDrives } from './useDocumentDrives';
 import { useUserPermissions } from './useUserPermissions';
 
-const ENABLE_SYNC_DEBUG = false;
-
 // TODO this should be added to the document model
 export interface SortOptions {
     afterNodePath?: string;
 }
 
 export function useDocumentDriveServer() {
-    const debugID = `[uDDS #${Math.floor(Math.random() * 999)}]`;
-    const debugLog = (...data: any[]) => {
-        if (!ENABLE_SYNC_DEBUG) {
-            return;
-        }
-
-        if (data.length > 0 && typeof data[0] === 'string') {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-            console.log(`${debugID} ${data[0]}`, ...data.slice(1));
-        } else {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-            console.log(debugID, ...data);
-        }
-    };
+    const logger = childLogger([
+        'useDocumentDriveServer',
+        Math.floor(Math.random() * 999).toString(),
+    ]);
 
     const { isAllowedToCreateDocuments, isAllowedToEditDocuments } =
         useUserPermissions() || {
@@ -254,7 +242,7 @@ export function useDocumentDriveServer() {
             name?: string,
             parentFolder?: string,
         ) => {
-            debugLog(
+            logger.verbose(
                 `addFile(drive: ${drive}, name: ${name}, folder: ${parentFolder})`,
             );
             if (!reactor) {

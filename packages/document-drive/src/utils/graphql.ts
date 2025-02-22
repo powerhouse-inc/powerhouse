@@ -1,4 +1,5 @@
 import { pascalCase } from "change-case";
+import { logger } from "document-drive/logger";
 import {
   DocumentDriveLocalState,
   FileNode,
@@ -24,7 +25,6 @@ import {
   InferDocumentOperation,
   InferDocumentState,
 } from "../read-mode/types";
-import { logger } from "./logger";
 
 export { gql } from "graphql-request";
 

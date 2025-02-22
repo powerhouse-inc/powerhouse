@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { logger } from "document-drive/logger";
 import {
   DocumentDriveAction,
   DocumentDriveLocalState,
@@ -21,7 +22,6 @@ import type {
 import { IBackOffOptions, backOff } from "exponential-backoff";
 import { ConflictOperationError, DriveNotFoundError } from "../server/error";
 import type { SynchronizationUnitQuery } from "../server/types";
-import { logger } from "../utils/logger";
 import {
   DocumentDriveStorage,
   DocumentStorage,

@@ -1,5 +1,5 @@
+import { logger } from 'document-drive/logger';
 import { EventEmitter } from 'events';
-import { logger } from '../logger';
 import type { IStorage } from '../storage';
 import { getEnsInfo } from '../viem';
 import { RENOWN_URL } from './constants';

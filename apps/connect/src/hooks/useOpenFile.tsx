@@ -1,5 +1,5 @@
+import { logger } from 'document-drive/logger';
 import { Document } from 'document-model/document';
-import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { loadFile } from 'src/utils/file';
 

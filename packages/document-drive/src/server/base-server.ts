@@ -1,3 +1,4 @@
+import { logger } from "document-drive/logger";
 import {
   actions,
   AddListenerInput,
@@ -54,7 +55,6 @@ import {
   sortOperations,
 } from "../utils/document-helpers";
 import { requestPublicDrive } from "../utils/graphql";
-import { logger } from "../utils/logger";
 import {
   ConflictOperationError,
   DriveAlreadyExistsError,
