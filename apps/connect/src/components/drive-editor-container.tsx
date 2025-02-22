@@ -103,7 +103,7 @@ export function DriveEditorContainer() {
         return null;
     }
 
-    console.log(document.meta);
+    //console.log(document.meta);
 
     return (
         <DriveContextProvider value={driveContext}>
