@@ -1,6 +1,6 @@
 import {
+  AppFormInput,
   AvailableOfflineToggle,
-  DriveApp,
   FormInput,
   Label,
   LOCAL,
@@ -8,17 +8,20 @@ import {
   SharingTypeFormInput,
 } from "@/connect";
 import { Button } from "@/powerhouse";
+import { App } from "document-model/document";
 import { SubmitHandler, useForm } from "react-hook-form";
 
 export type AddLocalDriveInput = {
   name: string;
   sharingType: SharingType;
   availableOffline: boolean;
+  app: App;
 };
 
 type AddLocalDriveFormProps = {
   readonly onSubmit: CreateDriveFormSubmitHandler;
   readonly onCancel: () => void;
+  readonly appOptions: App[];
 };
 
 type CreateDriveFormSubmitHandler = SubmitHandler<AddLocalDriveInput>;
@@ -31,9 +34,10 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
     formState: { errors },
   } = useForm<AddLocalDriveInput>({
     defaultValues: {
-      name: "",
+      name: props.appOptions[0].id,
       sharingType: LOCAL,
       availableOffline: false,
+      app: props.appOptions[0],
     },
   });
 
@@ -65,7 +69,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
           >
             Drive App
           </Label>
-          <DriveApp location="LOCAL" />
+          <AppFormInput control={control} appOptions={props.appOptions} />
         </div>
         <div>
           <Label

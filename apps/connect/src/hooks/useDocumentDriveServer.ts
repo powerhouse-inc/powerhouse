@@ -25,7 +25,7 @@ import {
     isFolderNode,
     reducer,
 } from 'document-model-libs/document-drive';
-import { Document, Operation, utils } from 'document-model/document';
+import { App, Document, Operation, utils } from 'document-model/document';
 import { useCallback, useMemo } from 'react';
 import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
@@ -210,7 +210,11 @@ export function useDocumentDriveServer() {
     );
 
     const addOperations = useCallback(
-        async (driveId: string, id: string, operations: Operation[]) => {
+        async (
+            driveId: string,
+            id: string | undefined,
+            operations: Operation[],
+        ) => {
             if (!isAllowedToEditDocuments) {
                 throw new Error('User is not allowed to edit documents');
             }
@@ -226,12 +230,19 @@ export function useDocumentDriveServer() {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
 
-            const newDocument = await reactor.queueOperations(
-                driveId,
-                id,
-                operations,
-            );
-            return newDocument.document;
+            const result =
+                id !== undefined
+                    ? await reactor.queueOperations(driveId, id, operations)
+                    : await reactor.queueDriveOperations(
+                          driveId,
+                          operations as Operation<DocumentDriveAction>[],
+                      );
+
+            if (result.operations.length) {
+                await refreshDocumentDrives();
+            }
+            refreshDocumentDrives().catch(logger.error);
+            return result.document;
         },
         [documentDrives, isAllowedToEditDocuments, reactor],
     );
@@ -492,7 +503,7 @@ export function useDocumentDriveServer() {
     );
 
     const addDrive = useCallback(
-        async (drive: DriveInput) => {
+        async (drive: DriveInput, app?: App) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -502,10 +513,13 @@ export function useDocumentDriveServer() {
             }
             const id = drive.global.id || utils.hashKey();
             drive = documentDriveUtils.createState(drive);
-            const newDrive = await reactor.addDrive({
-                global: { ...drive.global, id },
-                local: drive.local,
-            });
+            const newDrive = await reactor.addDrive(
+                {
+                    global: { ...drive.global, id },
+                    local: drive.local,
+                },
+                app,
+            );
             await refreshDocumentDrives();
             return newDrive;
         },

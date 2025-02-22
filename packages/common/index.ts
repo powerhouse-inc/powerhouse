@@ -8,8 +8,4 @@ export { DocumentDrive } from "./document-models";
 export * from "./document-models/document-drive/gen/types";
 
 export { GenericDriveExplorer } from "./editors";
-export {
-  useDriveActions,
-  useDriveActionsWithUiNodes,
-  useDriveContext,
-} from "./editors/hooks";
+export * from "./editors/hooks";

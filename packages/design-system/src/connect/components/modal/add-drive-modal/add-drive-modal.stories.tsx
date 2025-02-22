@@ -20,6 +20,23 @@ export const Default: Story = {
     requestPublicDrive() {
       return Promise.resolve({ id: "1", name: "Test Drive" });
     },
+    appOptions: [
+      {
+        id: "powerhouse/common",
+        name: "Generic Drive Explorer",
+        driveEditor: "GenericDriveExplorer",
+      },
+      {
+        id: "powerhouse/invoice/contributor",
+        name: "Contributor App",
+        driveEditor: "ContributorDrive",
+      },
+      {
+        id: "powerhouse/invoice/administrator",
+        name: "OH Administrator App",
+        driveEditor: "AdministratorDrive",
+      },
+    ],
   },
   render: function Wrapper(args) {
     const [, setArgs] = useArgs<typeof args>();

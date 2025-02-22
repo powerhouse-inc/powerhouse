@@ -16,6 +16,23 @@ const Template: Story = {
       console.log(data);
     },
     onCancel: () => {},
+    appOptions: [
+      {
+        id: "powerhouse/common",
+        name: "Generic Drive Explorer",
+        driveEditor: "GenericDriveExplorer",
+      },
+      {
+        id: "powerhouse/invoice/contributor",
+        name: "Contributor App",
+        driveEditor: "ContributorDrive",
+      },
+      {
+        id: "powerhouse/invoice/administrator",
+        name: "OH Administrator App",
+        driveEditor: "AdministratorDrive",
+      },
+    ],
   },
   decorators: [
     (Story) => (

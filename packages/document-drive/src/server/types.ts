@@ -10,6 +10,7 @@ import type {
 import type {
   Action,
   ActionContext,
+  App,
   BaseAction,
   CreateChildDocumentInput,
   Document,
@@ -327,7 +328,7 @@ export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
   setDocumentModels(models: DocumentModel[]): void;
   getDrives(): Promise<string[]>;
-  addDrive(input: DriveInput): Promise<DocumentDriveDocument>;
+  addDrive(input: DriveInput, app?: App): Promise<DocumentDriveDocument>;
   addRemoteDrive(
     url: string,
     options: RemoteDriveOptions,

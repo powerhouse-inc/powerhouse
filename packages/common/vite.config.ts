@@ -41,6 +41,9 @@ export default defineConfig(() => {
     "react-dom",
     /^document-model\//,
     "document-model-libs",
+    "@powerhousedao/design-system",
+    /^@powerhousedao\/design-system\//,
+    "react-i18next",
   ];
 
   const test: InlineConfig = {
