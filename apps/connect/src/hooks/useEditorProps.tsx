@@ -12,7 +12,6 @@ import { useAtomValue } from 'jotai';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from 'src/components/modal';
-import { logger } from 'src/services/logger';
 import { useGetDocumentModel } from 'src/store/document-model';
 import { themeAtom } from 'src/store/theme';
 import { useUser } from 'src/store/user';
@@ -26,6 +25,7 @@ import { validateDocument } from 'src/utils/validate-document';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useUiNodes } from './useUiNodes';
 import { useUserPermissions } from './useUserPermissions';
+import { logger } from 'document-drive/logger';
 
 export interface EditorProps {
     context: EditorContext;
