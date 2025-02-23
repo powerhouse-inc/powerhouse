@@ -19,6 +19,7 @@ interface SidebarItemProps {
   isActive?: boolean;
   style?: React.CSSProperties;
   onChange?: (node: SidebarNode) => void;
+  allowCollapsingInactiveNodes?: boolean;
 }
 
 export const SidebarItem = ({
@@ -34,6 +35,7 @@ export const SidebarItem = ({
   isActive = false,
   style,
   onChange,
+  allowCollapsingInactiveNodes = false,
 }: SidebarItemProps) => {
   const paddingLeft = node.depth * 24;
   const isSearchActive =
@@ -44,9 +46,11 @@ export const SidebarItem = ({
   const hasStatus = node.status && node.status !== NodeStatus.UNCHANGED;
 
   const handleClick = useCallback(() => {
-    toggleNode?.(node.id);
+    if (isActive || !node.isExpanded || allowCollapsingInactiveNodes) {
+      toggleNode?.(node.id);
+    }
     onChange?.(node);
-  }, [onChange, node, toggleNode]);
+  }, [isActive, onChange, node, toggleNode, allowCollapsingInactiveNodes]);
 
   const handleTogglePin = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {

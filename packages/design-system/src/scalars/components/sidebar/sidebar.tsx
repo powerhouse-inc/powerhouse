@@ -76,6 +76,11 @@ export interface SidebarProps {
    */
   maxWidth?: number;
   /**
+   * Whether to allow collapsing inactive nodes on click
+   * @default false
+   */
+  allowCollapsingInactiveNodes?: boolean;
+  /**
    * Optional className for the sidebar container
    */
   className?: string;
@@ -96,6 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   extraFooterContent,
   initialWidth = 300,
   maxWidth,
+  allowCollapsingInactiveNodes = false,
   className,
 }) => {
   const {
@@ -172,7 +178,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           {allowPinning && pinnedNodePath.length > 0 && <SidebarPinningArea />}
-          <SidebarContentArea allowPinning={allowPinning} />
+          <SidebarContentArea
+            allowPinning={allowPinning}
+            allowCollapsingInactiveNodes={allowCollapsingInactiveNodes}
+          />
           {showSearchBar && (
             <SidebarSearch showStatusFilter={showStatusFilter} />
           )}

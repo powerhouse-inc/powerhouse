@@ -9,10 +9,12 @@ import { Icon } from "@/powerhouse";
 
 interface SidebarContentAreaProps {
   allowPinning?: boolean;
+  allowCollapsingInactiveNodes?: boolean;
 }
 
 export const SidebarContentArea = ({
   allowPinning,
+  allowCollapsingInactiveNodes,
 }: SidebarContentAreaProps) => {
   const {
     flattenedNodes,
@@ -69,6 +71,7 @@ export const SidebarContentArea = ({
         isActive={activeNodeId === node.id}
         onChange={onActiveNodeChange}
         style={style}
+        allowCollapsingInactiveNodes={allowCollapsingInactiveNodes}
       />
     );
   };

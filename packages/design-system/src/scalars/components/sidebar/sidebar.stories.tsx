@@ -175,6 +175,13 @@ const meta: Meta<typeof Sidebar> = {
       control: "number",
       description: "The maximum width of the sidebar.",
     },
+    allowCollapsingInactiveNodes: {
+      control: "boolean",
+      description: "Whether to allow collapsing inactive nodes on click.",
+      table: {
+        defaultValue: { summary: "false" },
+      },
+    },
   },
   args: {
     sidebarTitle: "Title Sidebar",
