@@ -1,6 +1,6 @@
 /* eslint-disable react/jsx-max-depth */
 import { SidebarNode, FlattenedNode, NodeStatus } from "../types";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/scalars/lib";
 import { Tooltip, TooltipProvider } from "../../fragments";
 import { Icon } from "@/powerhouse";
@@ -68,13 +68,32 @@ export const SidebarItem = ({
     [node.id, togglePin],
   );
 
+  // Check if the title has ellipsis to determine if the tooltip should be delayed
+  const [hasEllipsis, setHasEllipsis] = useState(false);
+  const ellipsisRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = ellipsisRef.current;
+    if (!element) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      const hasEllipsisNow = element.offsetWidth < element.scrollWidth;
+      setHasEllipsis(hasEllipsisNow);
+    });
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [hasEllipsis]);
+
   return (
     <TooltipProvider>
       <Tooltip
         content={node.title}
         triggerAsChild
         side="bottom"
-        delayDuration={700}
+        // 2 day delay if do not have ellipsis (no tooltip)
+        delayDuration={hasEllipsis ? 700 : 172800000}
       >
         <div
           style={{ ...style, paddingLeft }}
@@ -157,7 +176,7 @@ export const SidebarItem = ({
                 </svg>
               ) : null}
 
-              <div className="truncate text-sm leading-5">
+              <div ref={ellipsisRef} className="truncate text-sm leading-5">
                 {node.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
                 !pinnedMode ? (
                   <span
