@@ -17,6 +17,7 @@ describe("DatePickerField", () => {
         label="Test Label"
         name="test-date"
         value="2025-01-01"
+        dateFormat="yyyy-MM-dd"
       />,
     );
     expect(container).toMatchSnapshot();

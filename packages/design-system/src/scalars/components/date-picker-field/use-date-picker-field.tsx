@@ -1,13 +1,14 @@
-import { startOfDay } from "date-fns";
+import { parse, startOfDay } from "date-fns";
 import React, { useCallback, useMemo } from "react";
-import { createChangeEvent } from "../time-picker-field/utils";
 import { DateFieldValue, WeekStartDayNumber } from "./types";
 import {
   formatDateToValue,
+  formatUTCDateToISOStringWithOutTime,
   getDateFromValue,
   isDateFormatAllowed,
   parseInputString,
 } from "./utils";
+import { createChangeEvent } from "../time-picker-field/utils";
 
 interface DatePickerFieldProps {
   value?: DateFieldValue;
@@ -40,8 +41,7 @@ export const useDatePickerField = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     setInputDisplay(inputValue);
-    const newValue = formatDateToValue(inputValue);
-    onChange?.(createChangeEvent(newValue));
+    onChange?.(createChangeEvent(inputValue));
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -52,14 +52,22 @@ export const useDatePickerField = ({
     (date?: Date) => {
       if (!date) return;
 
-      const stringDate = `${date.getFullYear()}-${(date.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
-      const newInputValue = parseInputString(stringDate, dateFormat);
+      // Get LOCAL date components
+      const localYear = date.getFullYear();
+      const localMonth = date.getMonth();
+      const localDay = date.getDate();
+      // Create UTC date representing the same local date
+      const utcDate = new Date(Date.UTC(localYear, localMonth, localDay));
+      // Take the date without time in ISO format
+      const inputValue = formatUTCDateToISOStringWithOutTime(utcDate);
+      // Parse the date to the correct format
+      const newInputValue = parseInputString(inputValue, dateFormat);
       setInputDisplay(newInputValue);
+      const newValue = formatDateToValue(utcDate);
 
-      const newValue = formatDateToValue(newInputValue);
-      onChange?.(createChangeEvent(newValue));
+      const newValueOnchage = `${newInputValue}T${newValue.split("T")[1]}`;
+
+      onChange?.(createChangeEvent(newValueOnchage));
     },
     [dateFormat, onChange],
   );
@@ -108,22 +116,19 @@ export const useDatePickerField = ({
 
   const date = useMemo(() => {
     if (!value) return undefined;
-
     const dateString = getDateFromValue(value);
     const isValidDate = isDateFormatAllowed(dateString);
     if (!isValidDate) return undefined;
 
-    const dateStringFormatted = parseInputString(dateString, "yyyy-MM-dd");
-    // Convert the local time to UTC
-    const fechaUTC = new Date(dateStringFormatted);
-    const fechaLocalSinZona = new Date(fechaUTC);
-    const offsetMinutos = fechaLocalSinZona.getTimezoneOffset();
-    fechaLocalSinZona.setTime(
-      fechaLocalSinZona.getTime() + offsetMinutos * 60 * 1000,
+    const dateStringFormatted = parseInputString(dateString, dateFormat);
+    const fechaUTC = parse(
+      dateStringFormatted,
+      dateFormat ?? "yyyy-MM-dd",
+      new Date(),
     );
 
-    return fechaLocalSinZona;
-  }, [value]);
+    return fechaUTC;
+  }, [value, dateFormat]);
 
   return {
     date,
