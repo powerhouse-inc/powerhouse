@@ -52,6 +52,14 @@ export const SidebarItem = ({
     onChange?.(node);
   }, [isActive, onChange, node, toggleNode, allowCollapsingInactiveNodes]);
 
+  const handleCaretClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      toggleNode?.(node.id);
+    },
+    [node.id, toggleNode],
+  );
+
   const handleTogglePin = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
@@ -93,29 +101,36 @@ export const SidebarItem = ({
           >
             <div className="flex max-w-full items-center gap-2">
               {!pinnedMode && (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentcolor"
-                  width="16"
-                  height="16"
-                  className={cn(
-                    "min-w-4",
-                    node.isExpanded && node.children && node.children.length > 0
-                      ? ""
-                      : "-rotate-90",
-                    node.children === undefined || node.children.length === 0
-                      ? "text-gray-300 dark:text-gray-700"
-                      : "text-gray-700 dark:text-gray-400",
-                  )}
+                <div
+                  className="-m-2 -mr-1 h-full rounded-md py-2 pl-2 pr-1 hover:bg-gray-200"
+                  onClick={handleCaretClick}
                 >
-                  <path
-                    d="M6 9L12 15L18 9"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentcolor"
+                    width="16"
+                    height="16"
+                    className={cn(
+                      "min-w-4",
+                      node.isExpanded &&
+                        node.children &&
+                        node.children.length > 0
+                        ? ""
+                        : "-rotate-90",
+                      node.children === undefined || node.children.length === 0
+                        ? "text-gray-300 dark:text-gray-700"
+                        : "text-gray-700 dark:text-gray-400",
+                    )}
+                  >
+                    <path
+                      d="M6 9L12 15L18 9"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
               )}
 
               {iconName ? (
