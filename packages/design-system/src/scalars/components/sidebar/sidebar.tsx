@@ -7,9 +7,10 @@ import { SidebarNode } from "./types";
 import { useSidebar } from "./subcomponents/sidebar-provider";
 import { useSidebarResize } from "./use-sidebar-resize";
 import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { cn } from "@/scalars/lib";
 import { Icon } from "@/powerhouse";
+import { triggerEvent } from "./utils";
 
 export interface SidebarProps {
   /**
@@ -142,15 +143,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultLevel]);
 
+  const handleActiveNodeChange = useCallback(
+    (node: SidebarNode) => {
+      onActiveNodeChange?.(node);
+      triggerEvent("sidebar:change", { node }, sidebarRef.current);
+    },
+    [onActiveNodeChange, sidebarRef],
+  );
   // sync activeNodeId and onActiveNodeChange with provider state
   useEffect(() => {
     syncActiveNodeId(activeNodeId);
   }, [activeNodeId, syncActiveNodeId]);
   useEffect(() => {
-    if (onActiveNodeChange) {
-      setActiveNodeChangeCallback(onActiveNodeChange);
-    }
-  }, [onActiveNodeChange, setActiveNodeChangeCallback]);
+    setActiveNodeChangeCallback(handleActiveNodeChange);
+  }, [handleActiveNodeChange, setActiveNodeChangeCallback]);
 
   // unpin nodes if allowPinning changes to false
   useEffect(() => {
