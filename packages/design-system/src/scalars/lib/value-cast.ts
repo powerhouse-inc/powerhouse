@@ -1,3 +1,4 @@
+import { parse } from "date-fns";
 import { AmountValue } from "../components/amount-field/types";
 import { parseInputString } from "../components/date-picker-field/utils";
 import { getDateFromValue } from "../components/date-picker-field/utils";
@@ -10,7 +11,10 @@ export type ValueCast =
   | "AmountBigInt"
   | "DateString";
 
-export const castFunctions: Record<ValueCast, (value: any) => any> = {
+export const castFunctions: Record<
+  ValueCast,
+  (value: any, castParams?: string) => any
+> = {
   BigInt: (value: string) => BigInt(value),
   Number: (value: string) => Number(value),
   URLTrim: (value?: string) => value?.trim(),
@@ -36,13 +40,15 @@ export const castFunctions: Record<ValueCast, (value: any) => any> = {
       };
     }
   },
-  DateString: (value: string) => {
+  DateString: (value: string, dateFormat = "yyyy-MM-dd") => {
     const date = getDateFromValue(value);
-    const newValue = parseInputString(date, "yyyy-MM-dd");
-    return new Date(newValue).toISOString();
+    const newValue = parseInputString(date, dateFormat);
+    const fechaUTC = parse(newValue, dateFormat, new Date());
+    return fechaUTC;
   },
 };
 
-export function castValue(value: any, cast: ValueCast): any {
-  return castFunctions[cast](value);
+export function castValue(value: any, cast: string): any {
+  const [castType, ...params] = cast.split(":");
+  return castFunctions[castType as ValueCast](value, ...params);
 }
