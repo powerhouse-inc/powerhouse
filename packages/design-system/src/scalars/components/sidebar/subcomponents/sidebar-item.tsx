@@ -1,10 +1,11 @@
 /* eslint-disable react/jsx-max-depth */
 import { SidebarNode, FlattenedNode, NodeStatus } from "../types";
-import { useCallback } from "react";
+import { forwardRef, useCallback, useMemo, useRef } from "react";
 import { cn } from "@/scalars/lib";
 import { Tooltip, TooltipProvider } from "../../fragments";
 import { Icon } from "@/powerhouse";
 import { StatusIcon } from "./status-icon";
+import { useEllipsis } from "@/scalars/hooks/useEllipsis";
 
 interface SidebarItemProps {
   node: FlattenedNode;
@@ -19,7 +20,11 @@ interface SidebarItemProps {
   isActive?: boolean;
   style?: React.CSSProperties;
   onChange?: (node: SidebarNode) => void;
+  allowCollapsingInactiveNodes?: boolean;
 }
+
+const TOOLTIP_DELAY = 700;
+const TOOLTIP_DELAY_LONG = 172800000; // 2 days to simulate no tooltip
 
 export const SidebarItem = ({
   node,
@@ -34,6 +39,7 @@ export const SidebarItem = ({
   isActive = false,
   style,
   onChange,
+  allowCollapsingInactiveNodes = false,
 }: SidebarItemProps) => {
   const paddingLeft = node.depth * 24;
   const isSearchActive =
@@ -43,10 +49,25 @@ export const SidebarItem = ({
     : node.icon;
   const hasStatus = node.status && node.status !== NodeStatus.UNCHANGED;
 
+  const computedStyle = useMemo(
+    () => ({ ...style, paddingLeft }),
+    [style, paddingLeft],
+  );
+
   const handleClick = useCallback(() => {
-    toggleNode?.(node.id);
+    if (isActive || !node.isExpanded || allowCollapsingInactiveNodes) {
+      toggleNode?.(node.id);
+    }
     onChange?.(node);
-  }, [onChange, node, toggleNode]);
+  }, [isActive, onChange, node, toggleNode, allowCollapsingInactiveNodes]);
+
+  const handleCaretClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      toggleNode?.(node.id);
+    },
+    [node.id, toggleNode],
+  );
 
   const handleTogglePin = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -56,16 +77,20 @@ export const SidebarItem = ({
     [node.id, togglePin],
   );
 
+  // Check if the title has ellipsis to determine if the tooltip should be delayed
+  const ellipsisRef = useRef<HTMLDivElement>(null);
+  const hasEllipsis = useEllipsis(ellipsisRef);
+
   return (
     <TooltipProvider>
       <Tooltip
         content={node.title}
         triggerAsChild
         side="bottom"
-        delayDuration={700}
+        delayDuration={hasEllipsis ? TOOLTIP_DELAY : TOOLTIP_DELAY_LONG}
       >
         <div
-          style={{ ...style, paddingLeft }}
+          style={computedStyle}
           className={cn(
             "group/sidebar-item-wrapper flex w-full items-center",
             !pinnedMode && "pb-2",
@@ -89,71 +114,27 @@ export const SidebarItem = ({
           >
             <div className="flex max-w-full items-center gap-2">
               {!pinnedMode && (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentcolor"
-                  width="16"
-                  height="16"
-                  className={cn(
-                    "min-w-4",
-                    node.isExpanded && node.children && node.children.length > 0
-                      ? ""
-                      : "-rotate-90",
-                    node.children === undefined || node.children.length === 0
-                      ? "text-gray-300 dark:text-gray-700"
-                      : "text-gray-700 dark:text-gray-400",
-                  )}
+                <div
+                  className="-m-2 -mr-1 h-full rounded-md py-2 pl-2 pr-1 hover:bg-gray-200"
+                  onClick={handleCaretClick}
                 >
-                  <path
-                    d="M6 9L12 15L18 9"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                  <CaretIcon node={node} />
+                </div>
               )}
 
               {iconName ? (
                 <Icon name={iconName} size={16} className="min-w-4" />
               ) : pinnedMode ? (
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="min-w-4"
-                >
-                  <rect width="16" height="16" rx="6.4" fill="transparent" />
-                  <path
-                    d="M12 8C12 10.2091 10.2091 12 8 12C5.79086 12 4 10.2091 4 8C4 5.79086 5.79086 4 8 4C10.2091 4 12 5.79086 12 8Z"
-                    fill="currentColor"
-                    className={
-                      isPinned
-                        ? "text-gray-500 dark:text-gray-500"
-                        : "text-gray-300 dark:text-gray-300"
-                    }
-                  />
-                </svg>
+                <PinnedModeCircleIcon isPinned={isPinned} />
               ) : null}
 
-              <div className="truncate text-sm leading-5">
-                {node.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                !pinnedMode ? (
-                  <span
-                    dangerouslySetInnerHTML={{
-                      __html: node.title.replace(
-                        new RegExp(searchTerm, "gi"),
-                        (match) =>
-                          `<span class="${isSearchActive ? "bg-yellow-300 dark:bg-[#604B00]" : "bg-gray-300 dark:bg-charcoal-800"}">${match}</span>`,
-                      ),
-                    }}
-                  />
-                ) : (
-                  node.title
-                )}
-              </div>
+              <RenderTitle
+                ref={ellipsisRef}
+                title={node.title}
+                searchTerm={searchTerm}
+                isSearchActive={isSearchActive}
+                pinnedMode={pinnedMode}
+              />
 
               {allowPinning && (
                 <div
@@ -187,3 +168,79 @@ export const SidebarItem = ({
     </TooltipProvider>
   );
 };
+
+const RenderTitle = forwardRef<
+  HTMLDivElement,
+  {
+    title: string;
+    searchTerm: string;
+    isSearchActive: boolean;
+    pinnedMode: boolean;
+  }
+>(({ title, searchTerm, isSearchActive, pinnedMode }, ref) => {
+  return (
+    <div ref={ref} className="truncate text-sm leading-5">
+      {title.toLowerCase().includes(searchTerm.toLowerCase()) && !pinnedMode ? (
+        <span
+          dangerouslySetInnerHTML={{
+            __html: title.replace(
+              new RegExp(searchTerm, "gi"),
+              (match) =>
+                `<span class="${isSearchActive ? "bg-yellow-300 dark:bg-[#604B00]" : "bg-gray-300 dark:bg-charcoal-800"}">${match}</span>`,
+            ),
+          }}
+        />
+      ) : (
+        title
+      )}
+    </div>
+  );
+});
+
+const PinnedModeCircleIcon = ({ isPinned }: { isPinned: boolean }) => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="min-w-4"
+  >
+    <rect width="16" height="16" rx="6.4" fill="transparent" />
+    <path
+      d="M12 8C12 10.2091 10.2091 12 8 12C5.79086 12 4 10.2091 4 8C4 5.79086 5.79086 4 8 4C10.2091 4 12 5.79086 12 8Z"
+      fill="currentColor"
+      className={
+        isPinned
+          ? "text-gray-500 dark:text-gray-500"
+          : "text-gray-300 dark:text-gray-300"
+      }
+    />
+  </svg>
+);
+
+const CaretIcon = ({ node }: { node: FlattenedNode }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentcolor"
+    width="16"
+    height="16"
+    className={cn(
+      "min-w-4",
+      node.isExpanded && node.children && node.children.length > 0
+        ? ""
+        : "-rotate-90",
+      node.children === undefined || node.children.length === 0
+        ? "text-gray-300 dark:text-gray-700"
+        : "text-gray-700 dark:text-gray-400",
+    )}
+  >
+    <path
+      d="M6 9L12 15L18 9"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);

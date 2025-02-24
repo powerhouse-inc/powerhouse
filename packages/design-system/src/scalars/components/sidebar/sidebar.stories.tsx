@@ -49,6 +49,8 @@ import { SidebarNode } from "./types";
  *
  * The `Sidebar` component emits the following custom events:
  *
+ * - `sidebar:change`: it is triggered when the sidebar item is clicked.
+ *  - Data: `{ node: SidebarNode }`
  * - `sidebar:resize:start`: it is triggered when the sidebar resize starts at the moment the user clicks down in the resizing handle.
  *  - Data: `{ isSidebarOpen: boolean }`
  * - `sidebar:resize:active`: it is triggered when the sidebar is being resized while the user is dragging the resizing handle.
@@ -174,6 +176,13 @@ const meta: Meta<typeof Sidebar> = {
     maxWidth: {
       control: "number",
       description: "The maximum width of the sidebar.",
+    },
+    allowCollapsingInactiveNodes: {
+      control: "boolean",
+      description: "Whether to allow collapsing inactive nodes on click.",
+      table: {
+        defaultValue: { summary: "false" },
+      },
     },
   },
   args: {
