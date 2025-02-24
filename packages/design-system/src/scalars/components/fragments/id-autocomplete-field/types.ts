@@ -27,10 +27,13 @@ export type IdAutocompleteProps = IdAutocompleteBaseProps &
         initialOptions?: IdAutocompleteOption[];
         fetchOptionsCallback: (
           userInput: string,
-        ) => Promise<IdAutocompleteOption[]>;
+        ) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[];
         fetchSelectedOptionCallback?: (
           value: string,
-        ) => Promise<IdAutocompleteOption | undefined>;
+        ) =>
+          | Promise<IdAutocompleteOption | undefined>
+          | IdAutocompleteOption
+          | undefined;
         renderOption?: (
           option: IdAutocompleteOption,
           displayProps?: {

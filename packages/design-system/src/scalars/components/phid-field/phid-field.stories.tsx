@@ -71,7 +71,8 @@ const meta: Meta<typeof PHIDField> = {
         "description?: string\n\n",
       table: {
         type: {
-          summary: "(userInput: string) => Promise<IdAutocompleteOption[]>",
+          summary:
+            "(userInput: string) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -93,7 +94,7 @@ const meta: Meta<typeof PHIDField> = {
       table: {
         type: {
           summary:
-            "(value: string) => Promise<IdAutocompleteOption | undefined>",
+            "(value: string) => Promise<IdAutocompleteOption | undefined> | IdAutocompleteOption | undefined",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,

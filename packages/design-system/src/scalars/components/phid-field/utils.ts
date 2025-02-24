@@ -24,6 +24,7 @@ export const mockedOptions: IdAutocompleteOption[] = [
   },
 ];
 
+// Async versions
 export const fetchOptions = async (): Promise<IdAutocompleteOption[]> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -41,5 +42,16 @@ export const fetchSelectedOption = async (
 ): Promise<IdAutocompleteOption | undefined> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
+  return mockedOptions.find((option) => option.value === value);
+};
+
+// Sync versions
+export const fetchOptionsSync = (): IdAutocompleteOption[] => {
+  return mockedOptions;
+};
+
+export const fetchSelectedOptionSync = (
+  value: string,
+): IdAutocompleteOption | undefined => {
   return mockedOptions.find((option) => option.value === value);
 };
