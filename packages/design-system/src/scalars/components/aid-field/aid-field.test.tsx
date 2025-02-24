@@ -199,7 +199,7 @@ describe("AIDField Component", () => {
     );
 
     expect(screen.getByText("Title not available")).toBeInTheDocument();
-    expect(screen.queryByText("Path not available")).not.toBeInTheDocument();
+    expect(screen.getByText("Path not available")).toBeInTheDocument();
     expect(
       screen.queryByText("Description not available"),
     ).not.toBeInTheDocument();

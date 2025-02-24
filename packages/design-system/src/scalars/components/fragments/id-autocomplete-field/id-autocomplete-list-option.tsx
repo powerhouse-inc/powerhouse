@@ -100,49 +100,7 @@ export const IdAutocompleteListOption: React.FC<
     </div>
   );
 
-  const renderWithValueAndTitle = () => (
-    <div className={cn("flex w-full flex-col gap-1")}>
-      <div className={cn("flex items-center gap-2")}>
-        <IconRenderer
-          customIcon={asPlaceholder ? placeholderIcon : icon}
-          asPlaceholder={asPlaceholder}
-        />
-        <span
-          className={cn(
-            "grow truncate text-sm font-bold leading-5",
-            asPlaceholder
-              ? "text-gray-400 dark:text-gray-700"
-              : "text-gray-900 dark:text-gray-300",
-          )}
-        >
-          {title}
-        </span>
-        {asPlaceholder === false && handleFetchSelectedOption && (
-          <ReloadButton
-            isLoadingSelectedOption={isLoadingSelectedOption}
-            handleFetchSelectedOption={handleFetchSelectedOption}
-            value={value}
-          />
-        )}
-      </div>
-      {showValue && (
-        <div className={cn("flex max-w-full items-center")}>
-          <span
-            className={cn(
-              "truncate text-xs leading-5",
-              asPlaceholder
-                ? "text-gray-400 dark:text-gray-700"
-                : "text-gray-500 dark:text-gray-600",
-            )}
-          >
-            {value}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderWithValueTitleAndDescription = () => (
+  const renderWithValueTitleAndDescription = (showDescription = true) => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex gap-2")}>
         <IconRenderer
@@ -193,18 +151,20 @@ export const IdAutocompleteListOption: React.FC<
           </span>
         </div>
       )}
-      <div className={cn("flex flex-col")}>
-        <p
-          className={cn(
-            "line-clamp-2 text-xs leading-5",
-            asPlaceholder
-              ? "text-gray-400 dark:text-gray-700"
-              : "text-gray-900 dark:text-gray-300",
-          )}
-        >
-          {description}
-        </p>
-      </div>
+      {showDescription && (
+        <div className={cn("flex flex-col")}>
+          <p
+            className={cn(
+              "line-clamp-2 text-xs leading-5",
+              asPlaceholder
+                ? "text-gray-400 dark:text-gray-700"
+                : "text-gray-900 dark:text-gray-300",
+            )}
+          >
+            {description}
+          </p>
+        </div>
+      )}
     </div>
   );
 
@@ -217,7 +177,8 @@ export const IdAutocompleteListOption: React.FC<
       )}
     >
       {variant === "withValue" && renderWithValue()}
-      {variant === "withValueAndTitle" && renderWithValueAndTitle()}
+      {variant === "withValueAndTitle" &&
+        renderWithValueTitleAndDescription(false)}
       {variant === "withValueTitleAndDescription" &&
         renderWithValueTitleAndDescription()}
     </div>
