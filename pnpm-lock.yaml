@@ -821,6 +821,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      ethers:
+        specifier: ^6.13.3
+        version: 6.13.5(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       mathjs:
         specifier: ^13.1.1
         version: 13.2.3

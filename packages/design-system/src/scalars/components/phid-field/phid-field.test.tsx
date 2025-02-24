@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
-import { PHIDField } from "./phid-field";
 import { Form } from "@/scalars/components/form";
+import { PHIDField } from "./phid-field";
 
 describe("PHIDField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -241,6 +241,7 @@ describe("PHIDField Component", () => {
         <PHIDField
           name="phid"
           label="Test Label"
+          allowedScopes={["public"]}
           fetchOptionsCallback={defaultGetOptions}
           fetchSelectedOptionCallback={defaultGetSelectedOption}
         />
