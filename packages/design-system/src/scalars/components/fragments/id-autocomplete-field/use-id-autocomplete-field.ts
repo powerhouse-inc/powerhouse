@@ -67,25 +67,31 @@ export function useIdAutocompleteField({
         setHaveFetchError(false);
         setIsLoading(true);
 
-        fetchOptions(newValue)
-          .then((newOptions) => {
-            setOptions(newOptions);
-            const matchingOption = newOptions.find(
-              (opt) => opt.value === newValue,
-            );
-            if (matchingOption) {
-              setSelectedOption(matchingOption);
-              setIsPopoverOpen(false);
-            } else {
-              setSelectedOption(undefined);
-              setIsPopoverOpen(true);
-            }
-            setIsLoading(false);
-          })
-          .catch(() => {
-            setHaveFetchError(true);
-            setIsLoading(false);
-          });
+        try {
+          const result = fetchOptions(newValue);
+          Promise.resolve(result)
+            .then((newOptions) => {
+              setOptions(newOptions);
+              const matchingOption = newOptions.find(
+                (opt) => opt.value === newValue,
+              );
+              if (matchingOption) {
+                setSelectedOption(matchingOption);
+                setIsPopoverOpen(false);
+              } else {
+                setSelectedOption(undefined);
+                setIsPopoverOpen(true);
+              }
+              setIsLoading(false);
+            })
+            .catch(() => {
+              setHaveFetchError(true);
+              setIsLoading(false);
+            });
+        } catch {
+          setHaveFetchError(true);
+          setIsLoading(false);
+        }
       },
       [clear, autoComplete, fetchOptions],
     ),
@@ -97,32 +103,37 @@ export function useIdAutocompleteField({
 
       setIsLoadingSelectedOption(true);
 
-      fetchSelectedOption(value)
-        .then((option) => {
-          if (option) {
-            setSelectedOption(option);
-            setOptions((prevOptions) => {
-              const optionIndex = prevOptions.findIndex(
-                (opt) => opt.value === value,
-              );
-              if (optionIndex !== -1) {
-                const newOptions = [...prevOptions];
-                newOptions[optionIndex] = option;
-                return newOptions;
-              }
-              return prevOptions;
-            });
-          } else {
-            clear();
-            setOptions([]);
-            setSelectedValue("");
-            setSelectedOption(undefined);
-          }
-          setIsLoadingSelectedOption(false);
-        })
-        .catch(() => {
-          setIsLoadingSelectedOption(false);
-        });
+      try {
+        const result = fetchSelectedOption(value);
+        Promise.resolve(result)
+          .then((option) => {
+            if (option) {
+              setSelectedOption(option);
+              setOptions((prevOptions) => {
+                const optionIndex = prevOptions.findIndex(
+                  (opt) => opt.value === value,
+                );
+                if (optionIndex !== -1) {
+                  const newOptions = [...prevOptions];
+                  newOptions[optionIndex] = option;
+                  return newOptions;
+                }
+                return prevOptions;
+              });
+            } else {
+              clear();
+              setOptions([]);
+              setSelectedValue("");
+              setSelectedOption(undefined);
+            }
+            setIsLoadingSelectedOption(false);
+          })
+          .catch(() => {
+            setIsLoadingSelectedOption(false);
+          });
+      } catch {
+        setIsLoadingSelectedOption(false);
+      }
     },
     [clear, autoComplete, fetchSelectedOption],
   );
