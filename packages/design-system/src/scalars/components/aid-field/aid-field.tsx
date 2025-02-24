@@ -1,5 +1,6 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId, useCallback } from "react";
+import { isAddress } from "ethers";
 import { IdAutocompleteFieldRaw } from "@/scalars/components/fragments/id-autocomplete-field";
 import { IdAutocompleteListOption } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-list-option";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
@@ -153,19 +154,47 @@ export const AIDField = withFieldValidation<AIDFieldProps>(AIDFieldRaw, {
           return true;
         }
 
-        // Validate supportedNetworks if present
-        const chainIdMatch = /^did:ethr:(0x[0-9a-fA-F]+):.+$/.exec(value);
-        if (
-          chainIdMatch &&
-          Array.isArray(supportedNetworks) &&
-          supportedNetworks.length > 0
-        ) {
-          const chainId = chainIdMatch[1];
-          if (
-            !supportedNetworks.some((network) => network.chainId === chainId)
-          ) {
-            return `Invalid chainId. Allowed chainIds are: ${supportedNetworks.map((network) => network.chainId).join(", ")}`;
+        // Basic DID format validation
+        if (!value.startsWith("did:ethr:")) {
+          return "Invalid DID format. Must start with did:ethr:";
+        }
+
+        // Validate DID parts
+        const didParts = value.split(":");
+        if (didParts.length < 3 || didParts.length > 4) {
+          return "Invalid DID format. Must be in the format did:ethr:chainId:address (chainId is optional)";
+        }
+
+        // Validate chainId
+        if (didParts.length === 4) {
+          const chainId = didParts[2];
+
+          if (!/^0x[0-9a-fA-F]+$/.test(chainId)) {
+            return "Invalid chainId format. Must be a hexadecimal number with 0x prefix";
           }
+
+          if (Array.isArray(supportedNetworks)) {
+            if (
+              !supportedNetworks.some((network) => network.chainId === chainId)
+            ) {
+              return `Invalid chainId. Allowed chainIds are: ${supportedNetworks
+                .map((network) => network.chainId)
+                .join(", ")}`;
+            }
+          }
+        }
+
+        // Extract Ethereum address
+        const address = didParts[didParts.length - 1];
+
+        // Validate basic Ethereum address format
+        if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+          return "Invalid Ethereum address format. Must be a 40 character hexadecimal number with 0x prefix.";
+        }
+
+        // Validate checksum
+        if (!isAddress(address)) {
+          return "Invalid Ethereum address checksum.";
         }
 
         return true;

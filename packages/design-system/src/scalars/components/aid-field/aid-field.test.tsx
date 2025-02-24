@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithForm } from "@/scalars/lib/testing";
+import { Form } from "@/scalars/components/form";
 import { AIDField } from "./aid-field";
 
 describe("AIDField Component", () => {
@@ -227,6 +228,51 @@ describe("AIDField Component", () => {
 
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("should validate AID format on submit", async () => {
+    const mockOnSubmit = vi.fn();
+    const user = userEvent.setup();
+    const validAid = mockedOptions[1].value;
+    const invalidAid = "invalid-aid";
+
+    render(
+      <Form onSubmit={mockOnSubmit}>
+        <AIDField
+          name="aid"
+          label="Test Label"
+          supportedNetworks={[
+            {
+              chainId: "0x5",
+              name: "Goerli",
+            },
+          ]}
+          fetchOptionsCallback={defaultGetOptions}
+          fetchSelectedOptionCallback={defaultGetSelectedOption}
+        />
+        <button type="submit">Submit</button>
+      </Form>,
+    );
+
+    const input = screen.getByRole("combobox");
+    await user.click(input);
+    await user.type(input, invalidAid);
+
+    await user.click(screen.getByText("Submit"));
+    await waitFor(() => {
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+      expect(screen.getByText(/Invalid DID format/)).toBeInTheDocument();
+    });
+
+    await user.clear(input);
+    await user.type(input, validAid);
+
+    await user.click(screen.getByText("Submit"));
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        aid: validAid,
+      });
+    });
   });
 
   it("should handle value changes and auto selection", async () => {

@@ -191,16 +191,11 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
           return "Invalid format. Please use either: URL format: phd://<domain>/<documentID> or URI format: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
         }
 
-        // Validate scope if present
-        const scopeMatch =
-          /.*:.*::([^:]+)$/.exec(value) || /.*:.*:.*:([^:]+)$/.exec(value);
-        if (
-          scopeMatch &&
-          Array.isArray(allowedScopes) &&
-          allowedScopes.length > 0
-        ) {
-          const scope = scopeMatch[1];
-          if (!allowedScopes.includes(scope)) {
+        // Validate scope
+        if (Array.isArray(allowedScopes)) {
+          const scopeMatch =
+            /.*:.*::([^:]+)$/.exec(value) || /.*:.*:.*:([^:]+)$/.exec(value);
+          if (scopeMatch && !allowedScopes.includes(scopeMatch[1])) {
             return `Invalid scope. Allowed scopes are: ${allowedScopes.join(", ")}`;
           }
         }
