@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useSidebar } from "./sidebar-provider";
-import { Input } from "../../fragments";
+import { useSidebar } from "../sidebar-provider";
+import { Input } from "../../../fragments";
 import { cn } from "@/scalars/lib";
 import Tabler from "@/assets/icon-components/Tabler";
 import CrossCircle from "@/assets/icon-components/CrossCircle";
 import Search from "@/assets/icon-components/Search";
+import { SearchResultCounter } from "./search-result-counter";
+import { SearchNavigationArrow } from "./search-navigation-arrow";
 
 interface SidebarSearchProps {
   showStatusFilter: boolean;
@@ -26,8 +28,9 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
     previousSearchResult,
     toggleStatusFilter,
   } = useSidebar();
-  const ref = useRef<HTMLDivElement>(null);
+  const searchControlsRef = useRef<HTMLDivElement>(null);
 
+  // Event handlers
   const handleReset = useCallback(() => {
     changeSearchTerm("");
   }, [changeSearchTerm]);
@@ -62,86 +65,42 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
           placeholder="Search"
           className="w-full appearance-none !pl-8 [&::-webkit-search-cancel-button]:hidden"
           style={{
-            paddingRight: (ref.current?.clientWidth ?? 0) + 16,
+            paddingRight: (searchControlsRef.current?.clientWidth ?? 0) + 16,
           }}
         />
+
         <Search
           height={16}
           width={16}
           className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-700 dark:text-gray-50"
         />
+
+        {/* Search controls - only shown when there's a search term */}
         {searchTerm && (
           <div
-            ref={ref}
+            ref={searchControlsRef}
             className="absolute right-2 top-1/2 flex -translate-y-1/2 select-none items-center gap-2"
           >
-            {isSearching ? (
-              <div className="h-4 w-6 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-800" />
-            ) : (
-              <div className="text-xs">
-                {searchResults.length > 0 ? (
-                  <>
-                    <span className="text-gray-700 dark:text-gray-50">
-                      {activeSearchIndex + 1}
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-700">
-                      /{searchResults.length}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-gray-500 dark:text-gray-700">0/0</span>
-                )}
-              </div>
-            )}
+            <SearchResultCounter
+              isSearching={isSearching}
+              activeIndex={activeSearchIndex}
+              totalResults={searchResults.length}
+            />
 
             <div className="flex flex-col text-gray-500 dark:text-gray-700">
-              <div
-                className={cn(
-                  "cursor-pointer px-1 py-0.5 hover:text-gray-700 dark:hover:text-gray-300",
-                  activeSearchIndex === 0 &&
-                    "cursor-not-allowed text-gray-200 dark:text-gray-900",
-                )}
+              <SearchNavigationArrow
+                direction="up"
+                isDisabled={activeSearchIndex === 0}
                 onClick={previousSearchResult}
-              >
-                <svg
-                  width="8"
-                  height="6"
-                  viewBox="0 0 8 6"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  {/* eslint-disable-next-line react/jsx-max-depth */}
-                  <path
-                    d="M0.266663 5.6001H7.73333L4 0.800097L0.266663 5.6001Z"
-                    fill="currentcolor"
-                  />
-                </svg>
-              </div>
-
-              <div
-                className={cn(
-                  "cursor-pointer px-1 py-0.5 hover:text-gray-700 dark:hover:text-gray-300",
-                  activeSearchIndex === searchResults.length - 1 &&
-                    "cursor-not-allowed text-gray-200 dark:text-gray-900",
-                )}
+              />
+              <SearchNavigationArrow
+                direction="down"
+                isDisabled={activeSearchIndex === searchResults.length - 1}
                 onClick={nextSearchResult}
-              >
-                <svg
-                  width="8"
-                  height="6"
-                  viewBox="0 0 8 6"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  {/* eslint-disable-next-line react/jsx-max-depth */}
-                  <path
-                    d="M0.266663 0.399902H7.73333L4 5.1999L0.266663 0.399902Z"
-                    fill="currentcolor"
-                  />
-                </svg>
-              </div>
+              />
             </div>
 
+            {/* Clear search button */}
             <CrossCircle
               onClick={handleReset}
               name="CrossCircle"
@@ -152,6 +111,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
           </div>
         )}
       </div>
+
       {showStatusFilter && (
         <button
           type="button"
