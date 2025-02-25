@@ -1,12 +1,9 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { baseCreateDocument } from "../../index.js";
 import { prune, redo, undo } from "../../src/document/actions/creators.js";
-import { baseCreateDocument } from "../../src/document/utils/base.js";
 import {
-  CountAction,
   CountDocument,
-  CountLocalState,
   countReducer,
-  CountState,
   setLocalName,
   wrappedEmptyReducer,
 } from "../helpers.js";
@@ -92,7 +89,6 @@ describe("Local reducer", () => {
 
     expect(newDocument.operations.global).toStrictEqual([]);
   });
-
   it("should update local name", async () => {
     const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",

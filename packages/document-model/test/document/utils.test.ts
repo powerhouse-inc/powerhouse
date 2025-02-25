@@ -16,11 +16,8 @@ import {
 } from "../../src/document/utils/node.js";
 import { validateOperations } from "../../src/document/utils/validation.js";
 import {
-  CountAction,
   CountDocument,
-  CountLocalState,
   countReducer,
-  CountState,
   increment,
   mutableCountReducer,
   setLocalName,

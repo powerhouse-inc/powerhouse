@@ -14,9 +14,7 @@ import {
 } from "../../src/document/utils/base.js";
 import {
   CountDocument,
-  CountLocalState,
   countReducer,
-  CountState,
   error,
   increment,
   wrappedEmptyReducer,

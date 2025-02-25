@@ -4,7 +4,6 @@ import {
   UiNode,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
-import { EditorDispatch } from "document-model";
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
@@ -12,6 +11,7 @@ import {
   FolderNode,
   Node,
 } from "document-drive";
+import { EditorDispatch } from "document-model";
 import { useMemo } from "react";
 import { IDriveActions, useDriveActions } from "./useDriveActions";
 import { IDriveContext, useDriveContext } from "./useDriveContext";
@@ -91,7 +91,7 @@ export function useDriveActionsWithUiNodes(
     () => ({
       ..._driveContext,
       selectedNode: selectedNode,
-      onSelectNode: (node: Node) => {
+      onSelectNode: (node: UiNode) => {
         _driveContext.selectNode(node);
         setSelectedNode(getNodeById(node.id));
       },

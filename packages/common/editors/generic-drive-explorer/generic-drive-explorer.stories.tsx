@@ -1,12 +1,14 @@
 import { createDriveStoryWithUINodes } from "#editors/utils/storybook";
-import { Meta } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react";
 import Editor from "./editor";
 
-const { meta, CreateDocumentStory: Empty } =
+const { meta: _meta, CreateDocumentStory } =
   createDriveStoryWithUINodes(Editor);
 
-export { Empty };
+const meta: Meta<typeof Editor> = {
+  ..._meta,
+  title: "Generic Drive Explorer",
+};
+export const Empty: StoryObj<typeof Editor> = CreateDocumentStory;
 
-export default { ...meta, title: "Generic Drive Explorer" } as Meta<
-  typeof Editor
->;
+export default meta;

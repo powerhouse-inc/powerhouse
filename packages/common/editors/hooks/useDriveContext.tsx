@@ -1,5 +1,6 @@
-import { DocumentModelModule } from "document-model";
+import { UiNode } from "@powerhousedao/design-system";
 import { Node } from "document-drive";
+import { DocumentModelModule } from "document-model";
 import { createContext, PropsWithChildren, useContext } from "react";
 
 /**
@@ -23,7 +24,7 @@ export interface IDriveContext {
    * Callback to update the selected node in the drive
    * @param node - The node to be selected
    */
-  selectNode: (node: Node) => void;
+  selectNode: (node: UiNode | null) => void;
 
   /**
    * Adds a new file to the drive
@@ -38,7 +39,7 @@ export interface IDriveContext {
     drive: string,
     name?: string,
     parentFolder?: string,
-  ) => Promise<Node>;
+  ) => Promise<void>;
 
   /**
    * Shows a modal for creating a new document

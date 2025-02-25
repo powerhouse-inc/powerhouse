@@ -9,33 +9,7 @@
   "files": [
     "/dist"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/es/index.js",
-      "require": "./dist/cjs/index.js"
-    },
-    "./editors": {
-      "types": "./dist/editors.d.ts",
-      "import": "./dist/es/editors.js",
-      "require": "./dist/cjs/editors.js"
-    },
-    "./document-models": {
-      "types": "./dist/documentModels.d.ts",
-      "import": "./dist/es/documentModels.js",
-      "require": "./dist/cjs/documentModels.js"
-    },
-    "./document-drive": {
-      "types": "./dist/document-models/document-drive/index.d.ts",
-      "import": "./dist/es/document-drive.js",
-      "require": "./dist/cjs/document-drive.js"
-    },
-    "./storybook": {
-      "types": "./dist/storybook.d.ts",
-      "import": "./dist/es/storybook.js",
-      "require": "./dist/cjs/storybook.js"
-    }
-  },
+  "exports": "./dist/index.js",
   "imports": {
     "#document-models/*": "./dist/document-models/*.js",
     "#editors/*": "./dist/editors/*.js"
@@ -87,7 +61,7 @@
     "@storybook/react": "^8.4.4",
     "@storybook/react-vite": "^8.4.4",
     "@storybook/test": "^8.0.2",
-    "@storybook/types": "^8.4.4",
+    "@storybook/types": "^8.5.2",
     "@types/eslint__js": "^8.42.3",
     "@types/node": "^22.10.9",
     "@types/react": "^18.3.18",
@@ -128,10 +102,10 @@
   },
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "dependencies": {
-    "document-drive": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "@tanstack/react-virtual": "^3.8.1",
+    "document-drive": "workspace:*",
     "react-i18next": "^13.5.0"
   }
 }

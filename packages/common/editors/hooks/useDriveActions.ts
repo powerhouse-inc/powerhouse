@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/require-await */ // TODO dispatch should return a promise
+import { UiNode } from "@powerhousedao/design-system";
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
-  Node,
   addFolder,
   copyNode,
   deleteNode,
@@ -41,7 +41,7 @@ export interface IDriveActions {
   context: IDriveContext;
 
   /** Selects a node in the drive */
-  selectNode: (node: Node) => void;
+  selectNode: (node: UiNode | null) => void;
 
   /**
    * Creates a new folder in the drive

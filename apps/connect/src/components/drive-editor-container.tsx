@@ -6,11 +6,11 @@ import { useDocumentModels } from '#store/document-model';
 import { useDocumentDispatch } from '#utils/document-model';
 import {
     DriveContextProvider,
-    GenericDriveExplorer,
-    IDriveContext,
+    genericDriveExplorerEditorModule,
+    type IDriveContext,
 } from '@powerhousedao/common';
-import { useUiNodesContext } from '@powerhousedao/design-system';
-import { driveDocumentModelModule } from 'document-drive';
+import { UiNode, useUiNodesContext } from '@powerhousedao/design-system';
+import { driveDocumentModelModule, Node } from 'document-drive';
 import { DocumentModelModule, Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useModal } from './modal';
@@ -107,7 +107,7 @@ export function DriveEditorContainer() {
 
     return (
         <DriveContextProvider value={driveContext}>
-            <GenericDriveExplorer.Component
+            <genericDriveExplorerEditorModule.Component
                 {...editorProps}
                 onSwitchboardLinkClick={undefined}
                 document={document}
