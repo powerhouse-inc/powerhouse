@@ -1,10 +1,10 @@
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
-} from "#drive-document-model/gen/types.js";
-import { DriveNotFoundError } from "#server/error.js";
-import { SynchronizationUnitQuery } from "#server/types.js";
-import { mergeOperations } from "#utils/misc.js";
+} from "#drive-document-model/gen/types";
+import { DriveNotFoundError } from "#server/error";
+import { SynchronizationUnitQuery } from "#server/types";
+import { mergeOperations } from "#utils/misc";
 import {
   Action,
   DocumentHeader,
@@ -32,7 +32,7 @@ export class MemoryStorage implements IDriveStorage {
     return Object.keys(this.documents[drive] ?? {});
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
     driveId: string,
     id: string,
   ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
@@ -58,7 +58,11 @@ export class MemoryStorage implements IDriveStorage {
     this.drives = {};
   }
 
-  async createDocument<TGlobalState, TLocalState, TAction = Action>(
+  async createDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action = Action,
+  >(
     drive: string,
     id: string,
     document: PHDocument<TGlobalState, TLocalState, TAction>,
@@ -146,7 +150,7 @@ export class MemoryStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction>[],
+    operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);

@@ -20,7 +20,7 @@ import {
   initialLocalState,
 } from "./constants.js";
 import { reducer } from "./reducer.js";
-import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
+import { DocumentDriveAction, DocumentDriveLocalState, DocumentDriveState } from "./types.js";
 
 export const createState: CreateState<
   DocumentDriveState,
@@ -44,7 +44,8 @@ export const createExtendedState: CreateExtendedState<
 
 export const createDocument: CreateDocument<
   DocumentDriveState,
-  DocumentDriveLocalState
+  DocumentDriveLocalState,
+  DocumentDriveAction
 > = (state) => {
   return baseCreateDocument(createExtendedState(state), createState);
 };

@@ -104,34 +104,28 @@ export type ReducerOptions = {
  * A pure function that takes an action and the previous state
  * of the document and returns the new state.
  */
-export type Reducer<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
-> = <TAction extends TCustomAction>(
-  document: BaseDocument<
-    TGlobalState,
-    TLocalState,
-    TAction | Action | Operation<TAction>
-  >,
-  action: TAction | Action | Operation<TAction>,
+export type Reducer<TDocument extends PHDocument> = <
+  TAction extends ActionFromDocument<TDocument>,
+>(
+  document: TDocument,
+  action: TAction | Operation<TAction> | DefaultAction,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
-) => BaseDocument<
-  TGlobalState,
-  TLocalState,
-  TAction | Action | Operation<TAction>
->;
+) => TDocument;
 
-export type StateReducer<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
-> = <TAction extends TCustomAction>(
-  state: Draft<BaseState<TGlobalState, TLocalState>>,
-  action: TAction,
+export type PHReducer<TDocument extends PHDocument = PHDocument> =
+  Reducer<TDocument>;
+
+export type StateReducer<TDocument extends PHDocument> = <
+  TAction extends ActionFromDocument<TDocument>,
+>(
+  state: Draft<BaseStateFromDocument<TDocument>>,
+  action: TAction | DefaultAction | Operation<TAction>,
   dispatch?: SignalDispatch,
-) => BaseState<TGlobalState, TLocalState> | undefined;
+) => BaseStateFromDocument<TDocument> | undefined;
+
+export type PHStateReducer<TDocument extends PHDocument = PHDocument> =
+  StateReducer<TDocument>;
 
 /**
  * Scope of an operation.
@@ -149,23 +143,22 @@ export type OperationScope = "global" | "local";
  *
  * @typeParam A - The type of the action.
  */
-export type Operation<TAction = CustomAction | DefaultAction> =
-  (TAction extends CustomAction | DefaultAction ? TAction : never) & {
-    /** Position of the operation in the history */
-    index: number;
-    /** Timestamp of when the operation was added */
-    timestamp: string;
-    /** Hash of the resulting document data after the operation */
-    hash: string;
-    /** The number of operations skipped with this Operation */
-    skip: number;
-    /** Error message for a failed action */
-    error?: string;
-    /** The resulting state after the operation */
-    resultingState?: string;
-    /** Unique operation id */
-    id?: string;
-  };
+export type Operation<TAction extends Action = Action> = TAction & {
+  /** Position of the operation in the history */
+  index: number;
+  /** Timestamp of when the operation was added */
+  timestamp: string;
+  /** Hash of the resulting document data after the operation */
+  hash: string;
+  /** The number of operations skipped with this Operation */
+  skip: number;
+  /** Error message for a failed action */
+  error?: string;
+  /** The resulting state after the operation */
+  resultingState?: string;
+  /** Unique operation id */
+  id?: string;
+};
 
 /**
  * The base attributes of a {@link BaseDocument}.
@@ -220,48 +213,39 @@ export type PartialState<TGlobalOrLocalState> =
   | TGlobalOrLocalState
   | Partial<TGlobalOrLocalState>;
 
-export type CreateState<TGlobalState, TLocalState> = (
-  state?: Partial<
-    BaseState<PartialState<TGlobalState>, PartialState<TLocalState>>
-  >,
-) => BaseState<TGlobalState, TLocalState>;
+export type CreateState<TDocument extends BaseDocument<any, any, any>> = (
+  state?: Partial<BaseStateFromDocument<TDocument>>,
+) => BaseStateFromDocument<TDocument>;
 
-export type CreateExtendedState<TGlobalState, TLocalState> = (
-  extendedState?: Partial<
-    ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
-  >,
-  createState?: CreateState<TGlobalState, TLocalState>,
-) => ExtendedState<TGlobalState, TLocalState>;
+export type CreateExtendedState<TDocument extends BaseDocument<any, any, any>> =
+  (
+    extendedState?: Partial<ExtendedStateFromDocument<TDocument>>,
+    createState?: CreateState<TDocument>,
+  ) => ExtendedStateFromDocument<TDocument>;
 
 export type SaveToFileHandle = (
-  document: BaseDocument<unknown, unknown>,
+  document: PHDocument,
   input: FileSystemFileHandle,
 ) => void | Promise<void>;
 
 export type SaveToFile = (
-  document: BaseDocument<unknown, unknown>,
+  document: PHDocument,
   path: string,
   name?: string,
 ) => string | Promise<string>;
 
-export type LoadFromInput<TGlobalState, TLocalState, TAction = Action> = (
+export type LoadFromInput<TDocument extends BaseDocument<any, any, any>> = (
   input: FileInput,
-) =>
-  | BaseDocument<TGlobalState, TLocalState, TAction>
-  | Promise<BaseDocument<TGlobalState, TLocalState, TAction>>;
+) => TDocument | Promise<TDocument>;
 
-export type LoadFromFile<TGlobalState, TLocalState, TAction = Action> = (
+export type LoadFromFile<TDocument extends BaseDocument<any, any, any>> = (
   path: string,
-) =>
-  | BaseDocument<TGlobalState, TLocalState, TAction>
-  | Promise<BaseDocument<TGlobalState, TLocalState, TAction>>;
+) => TDocument | Promise<TDocument>;
 
-export type CreateDocument<TGlobalState, TLocalState, TAction = Action> = (
-  document?: Partial<
-    ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
-  >,
-  createState?: CreateState<TGlobalState, TLocalState>,
-) => BaseDocument<TGlobalState, TLocalState, TAction>;
+export type CreateDocument<TDocument extends BaseDocument<any, any, any>> = (
+  initialState?: Partial<ExtendedStateFromDocument<TDocument>>,
+  createState?: CreateState<TDocument>,
+) => TDocument;
 
 export type ExtendedState<TGlobalState, TLocalState> = DocumentHeader & {
   /** The document model specific state. */
@@ -270,22 +254,20 @@ export type ExtendedState<TGlobalState, TLocalState> = DocumentHeader & {
   attachments?: FileRegistry;
 };
 
-export type DocumentOperations<TAction = Action> = Record<
+export type DocumentOperations<TAction extends Action = Action> = Record<
   OperationScope,
   Operation<TAction>[]
 >;
 
-export type MappedOperation<TAction = Action> = {
+export type MappedOperation<TAction extends Action = Action> = {
   ignore: boolean;
   operation: Operation<TAction>;
 };
 
-export type DocumentOperationsIgnoreMap<TAction = Action> = Record<
-  OperationScope,
-  MappedOperation<TAction>[]
->;
+export type DocumentOperationsIgnoreMap<TAction extends Action = Action> =
+  Record<OperationScope, MappedOperation<TAction>[]>;
 
-export type OperationSignatureContext<TAction = Action> = {
+export type OperationSignatureContext<TAction extends Action = Action> = {
   documentId: string;
   signer: Omit<ActionSigner, "signatures"> & { signatures?: Signature[] };
   operation: Operation<TAction>;
@@ -311,7 +293,7 @@ export type OperationVerificationHandler = (
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type BaseDocument<TGlobalState, TLocalState, TAction = Action> =
+export type BaseDocument<TGlobalState, TLocalState, TAction extends Action> =
   /** The document model specific state. */
   ExtendedState<TGlobalState, TLocalState> & {
     /** The operations history of the document. */
@@ -325,7 +307,7 @@ export type BaseDocument<TGlobalState, TLocalState, TAction = Action> =
 export type PHDocument<
   TGlobalState = unknown,
   TLocalState = unknown,
-  TAction = Action,
+  TAction extends Action = Action,
 > = BaseDocument<TGlobalState, TLocalState, TAction>;
 
 /**
@@ -336,12 +318,12 @@ export type PHDocument<
  */
 export type AttachmentRef = string; // TODO `attachment://${string}`;
 
-export type DocumentModelUtils<TGlobalState, TLocalState, TAction = Action> = {
-  createState: CreateState<TGlobalState, TLocalState>;
-  createExtendedState: CreateExtendedState<TGlobalState, TLocalState>;
-  createDocument: CreateDocument<TGlobalState, TLocalState, TAction>;
-  loadFromFile: LoadFromFile<TGlobalState, TLocalState, TAction>;
-  loadFromInput: LoadFromInput<TGlobalState, TLocalState, TAction>;
+export type DocumentModelUtils<TDocument extends PHDocument> = {
+  createState: CreateState<TDocument>;
+  createExtendedState: CreateExtendedState<TDocument>;
+  createDocument: CreateDocument<TDocument>;
+  loadFromFile: LoadFromFile<TDocument>;
+  loadFromInput: LoadFromInput<TDocument>;
   saveToFile: SaveToFile;
   saveToFileHandle: SaveToFileHandle;
 };
@@ -371,29 +353,21 @@ export type EditorDispatch<TAction extends Action | CustomAction = Action> = (
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-export type EditorProps<
-  TGlobalState,
-  TLocalState,
-  TAction extends CustomAction | Action = Action,
-> = {
-  document: BaseDocument<TGlobalState, TLocalState, TAction>;
-  dispatch: EditorDispatch<TAction>;
+export type EditorProps<TDocument extends PHDocument> = {
+  document: TDocument;
+  dispatch: EditorDispatch<ActionFromDocument<TDocument>>;
   context: EditorContext;
   error?: unknown;
   documentNodeName?: string;
 };
 
 export type EditorModule<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-  TAction extends CustomAction | Action = Action,
+  TDocument extends PHDocument = PHDocument,
   TCustomProps = unknown,
   TEditorConfig extends Record<string, unknown> = Record<string, unknown>,
 > = {
   Component: FC<
-    EditorProps<TGlobalState, TLocalState, TAction> &
-      TCustomProps &
-      Record<string, unknown>
+    EditorProps<TDocument> & TCustomProps & Record<string, unknown>
   >;
   documentTypes: string[];
   config?: TEditorConfig & {
@@ -422,38 +396,64 @@ export type Manifest = {
   }[];
 };
 
-export type DocumentModelLib<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-  TCustomAction extends CustomAction | Action = Action,
-> = {
+export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
   manifest: Manifest;
-  documentModels: DocumentModelModule<
-    TGlobalState,
-    TLocalState,
-    TCustomAction
-  >[];
-  editors: EditorModule<TGlobalState, TLocalState, TCustomAction>[];
+  documentModels: DocumentModelModule<TDocument>[];
+  editors: EditorModule<TDocument>[];
 };
 
 export type ValidationError = { message: string; details: object };
 
-export type DocumentModelModule<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-  TCustomAction extends CustomAction = Action,
-> = {
+export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   documentModelName: string;
   documentType: string;
   fileExtension: string;
-  reducer: Reducer<TGlobalState, TLocalState, TCustomAction>;
+  reducer: Reducer<TDocument>;
   actions: Record<
     string,
-    (input: any) => TCustomAction | CustomAction | DefaultAction
+    (input: any) => ActionFromDocument<TDocument> | CustomAction | DefaultAction
   >;
-  utils: DocumentModelUtils<TGlobalState, TLocalState>;
+  utils: DocumentModelUtils<TDocument>;
   documentModelState: DocumentModelState;
 };
+
+type ExtractPHDocumentGenerics<T> =
+  T extends BaseDocument<infer State, infer LocalState, infer Action>
+    ? { state: State; localState: LocalState; action: Action }
+    : never;
+
+export type GlobalStateFromDocument<
+  TDocument extends BaseDocument<any, any, any>,
+> = ExtractPHDocumentGenerics<TDocument>["state"];
+
+export type LocalStateFromDocument<
+  TDocument extends BaseDocument<any, any, any>,
+> = ExtractPHDocumentGenerics<TDocument>["localState"];
+
+export type BaseStateFromDocument<
+  TDocument extends BaseDocument<any, any, any>,
+> = BaseState<
+  GlobalStateFromDocument<TDocument>,
+  LocalStateFromDocument<TDocument>
+>;
+
+export type ExtendedStateFromDocument<
+  TDocument extends BaseDocument<any, any, any>,
+> = ExtendedState<
+  GlobalStateFromDocument<TDocument>,
+  LocalStateFromDocument<TDocument>
+>;
+
+export type ActionFromDocument<TDocument extends BaseDocument<any, any, any>> =
+  ExtractPHDocumentGenerics<TDocument>["action"];
+
+export type OperationFromDocument<
+  TDocument extends BaseDocument<any, any, any>,
+> = Operation<ActionFromDocument<TDocument>>;
+
+export type OperationsFromDocument<
+  TDocument extends BaseDocument<any, any, any>,
+> = DocumentOperations<ActionFromDocument<TDocument>>;
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;

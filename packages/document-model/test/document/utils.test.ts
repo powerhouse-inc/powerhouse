@@ -16,6 +16,8 @@ import {
 } from "../../src/document/utils/node.js";
 import { validateOperations } from "../../src/document/utils/validation.js";
 import {
+  CountAction,
+  CountDocument,
   CountLocalState,
   countReducer,
   CountState,
@@ -159,7 +161,7 @@ describe("Base utils", () => {
   });
 
   it("should replay document and keep lastModified timestamp", async () => {
-    const document = baseCreateDocument<CountState, CountLocalState>({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -181,8 +183,8 @@ describe("Base utils", () => {
   });
 
   it("should work with mutable reducer", () => {
-    const reducer = createReducer(mutableCountReducer);
-    const document = baseCreateDocument<CountState, CountLocalState>({
+    const reducer = createReducer<CountDocument>(mutableCountReducer);
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

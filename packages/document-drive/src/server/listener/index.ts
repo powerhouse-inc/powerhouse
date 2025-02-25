@@ -1,2 +1,1 @@
-export * from "./listener-manager";
-export * from "./transmitter";
+export * from "./listener-manager.js";

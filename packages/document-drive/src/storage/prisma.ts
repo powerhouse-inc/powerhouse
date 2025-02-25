@@ -141,7 +141,11 @@ export class PrismaStorage implements IDriveStorage {
     );
   }
 
-  async createDocument<TGlobalState, TLocalState, TAction = Action>(
+  async createDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action = Action,
+  >(
     drive: string,
     id: string,
     document: PHDocument<TGlobalState, TLocalState, TAction>,
@@ -266,28 +270,34 @@ export class PrismaStorage implements IDriveStorage {
     }
   }
 
-  async addDocumentOperationsWithTransaction<TGlobalState, TLocalState>(
+  async addDocumentOperationsWithTransaction<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action = Action,
+  >(
     drive: string,
     id: string,
-    callback: (document: PHDocument<TGlobalState, TLocalState>) => Promise<{
-      operations: Operation[];
+    callback: (
+      document: PHDocument<TGlobalState, TLocalState, TAction>,
+    ) => Promise<{
+      operations: Operation<TAction>[];
       header: DocumentHeader;
       newState?: BaseState<TGlobalState, TLocalState> | undefined;
     }>,
   ) {
     let result: {
-      operations: Operation[];
+      operations: Operation<TAction>[];
       header: DocumentHeader;
       newState?: BaseState<TGlobalState, TLocalState> | undefined;
     } | null = null;
 
     await this.db.$transaction(
       async (tx) => {
-        const document = await this.getDocument<TGlobalState, TLocalState>(
-          drive,
-          id,
-          tx,
-        );
+        const document = await this.getDocument<
+          TGlobalState,
+          TLocalState,
+          TAction
+        >(drive, id, tx);
         if (!document) {
           throw new Error(`Document with id ${id} not found`);
         }
@@ -344,7 +354,7 @@ export class PrismaStorage implements IDriveStorage {
     return count > 0;
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
     driveId: string,
     id: string,
     tx?: Transaction,

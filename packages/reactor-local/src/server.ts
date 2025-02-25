@@ -15,8 +15,8 @@ import {
   IDocumentDriveServer,
   InternalTransmitter,
   IReceiver,
-  ReactorBuilder,
   ListenerFilter,
+  ReactorBuilder,
 } from "document-drive";
 import {
   documentModelDocumentModelModule,
@@ -140,7 +140,7 @@ export const startServer = async (
     (error) => console.error(error),
   );
   packagesManager.onDocumentModelsChange((documentModels) => {
-    driveServer.setDocumentModels(
+    driveServer.setDocumentModelModules(
       joinDocumentModels(baseDocumentModels, documentModels),
     );
   });
@@ -222,8 +222,11 @@ async function loadDocumentModels(
       DocumentModelModule
     >;
     const localDocumentModels = Object.values(localDMs);
-    driveServer.setDocumentModels(
-      joinDocumentModels(driveServer.getDocumentModels(), localDocumentModels),
+    driveServer.setDocumentModelModules(
+      joinDocumentModels(
+        driveServer.getDocumentModelModules(),
+        localDocumentModels,
+      ),
     );
   } catch (e) {
     if ((e as FSError).code === "ENOENT") {

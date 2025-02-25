@@ -1,4 +1,11 @@
 import {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "#drive-document-model/gen/types";
+import { SynchronizationUnitQuery } from "#server/types";
+import {
   Action,
   AttachmentInput,
   DocumentHeader,
@@ -8,13 +15,6 @@ import {
   PHDocument,
 } from "document-model";
 import { DataTypes, Options, Sequelize } from "sequelize";
-import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "../drive-document-model/gen/types.js";
-import { SynchronizationUnitQuery } from "../server/types.js";
 import { IDriveStorage } from "./types.js";
 
 export class SequelizeStorage implements IDriveStorage {
@@ -139,7 +139,11 @@ export class SequelizeStorage implements IDriveStorage {
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);
   }
-  async createDocument<TGlobalState, TLocalState, TAction = Action>(
+  async createDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action = Action,
+  >(
     drive: string,
     id: string,
     document: PHDocument<TGlobalState, TLocalState, TAction>,
@@ -300,7 +304,7 @@ export class SequelizeStorage implements IDriveStorage {
     return count > 0;
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
     driveId: string,
     id: string,
   ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {

@@ -13,6 +13,7 @@ import {
   hashKey,
 } from "../../src/document/utils/base.js";
 import {
+  CountDocument,
   CountLocalState,
   countReducer,
   CountState,
@@ -119,7 +120,7 @@ describe("Base reducer", () => {
     const document = baseCreateDocument();
 
     const id = hashKey();
-    const reducer = createReducer<any, any, any>((_state, action, dispatch) => {
+    const reducer = createReducer((_state, action, dispatch) => {
       if (action.type === "CREATE_DOCUMENT") {
         // @ts-expect-error TODO add synchronization units to fix type error
         dispatch?.({
@@ -255,12 +256,12 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer", () => {
-    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountDocument>({
       documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: {} },
+      state: { global: { count: 0 }, local: { name: "" } },
     });
 
-    let document = baseCreateDocument(initialState);
+    let document = baseCreateDocument<CountDocument>(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());
@@ -271,12 +272,12 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
-    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountDocument>({
       documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: {} },
+      state: { global: { count: 0 }, local: { name: "" } },
     });
 
-    let document = baseCreateDocument(initialState);
+    let document = baseCreateDocument<CountDocument>(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment(), undefined, { skip: 1 });
@@ -287,12 +288,12 @@ describe("Base reducer", () => {
   });
 
   it("should include error message into error operation prop", () => {
-    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountDocument>({
       documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: {} },
+      state: { global: { count: 0 }, local: { name: "" } },
     });
 
-    let document = baseCreateDocument(initialState);
+    let document = baseCreateDocument<CountDocument>(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment(), undefined, { skip: 1 });
@@ -324,12 +325,12 @@ describe("Base reducer", () => {
   });
 
   it("should not include error message in successful operations", () => {
-    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountDocument>({
       documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: {} },
+      state: { global: { count: 0 }, local: { name: "" } },
     });
 
-    let document = baseCreateDocument(initialState);
+    let document = baseCreateDocument<CountDocument>(initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());

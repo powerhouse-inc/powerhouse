@@ -1,18 +1,17 @@
 import { Db } from "#types.js";
 import { createSchema } from "#utils/create-schema.js";
+import { ApolloServer } from "@apollo/server";
+import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
+import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
-import { IRouter, Router } from "express";
+import express, { IRouter, Router } from "express";
 import { AnalyticsSubgraph } from "./analytics/index.js";
 import { AuthSubgraph } from "./auth/index.js";
 import { DriveSubgraph } from "./drive/index.js";
 import { Subgraph, SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
-import express from "express";
-import cors from "cors";
-import { ApolloServer } from "@apollo/server";
-import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { Context } from "./types.js";
 
 export class SubgraphManager {
@@ -36,7 +35,7 @@ export class SubgraphManager {
 
   async init() {
     console.log(`Initializing Subgraph Manager...`);
-    const models = this.reactor.getDocumentModels();
+    const models = this.reactor.getDocumentModelModules();
     const driveModel = models.find(
       (it) => it.documentModelState.name === "DocumentDrive",
     );

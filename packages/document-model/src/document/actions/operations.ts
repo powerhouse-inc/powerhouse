@@ -1,11 +1,10 @@
 import { castDraft, create, Draft } from "mutative";
 import { PruneActionInput } from "../schema/types.js";
 import {
-  BaseDocument,
+  ActionFromDocument,
   BaseState,
-  CustomAction,
-  DefaultAction,
-  Operation,
+  OperationFromDocument,
+  PHDocument,
   StateReducer,
 } from "../types.js";
 import { hashDocumentStateForScope, replayOperations } from "../utils/base.js";
@@ -13,21 +12,23 @@ import { nextSkipNumber, sortOperations } from "../utils/document-helpers.js";
 import { loadState, noop } from "./creators.js";
 
 // updates the name of the document
-export function setNameOperation<TDoc extends BaseDocument<unknown, unknown>>(
-  document: TDoc,
+export function setNameOperation<TDocument extends PHDocument>(
+  document: TDocument,
   name: string,
 ) {
   return { ...document, name };
 }
 
-export function undoOperation<
-  TDoc extends BaseDocument<unknown, unknown>,
-  TCustomAction extends CustomAction = never,
->(
-  document: TDoc,
-  action: TCustomAction | DefaultAction | Operation,
+export function undoOperation<TDocument extends PHDocument>(
+  document: TDocument,
+  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>,
   skip: number,
-) {
+): {
+  document: TDocument;
+  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>;
+  skip: number;
+  reuseLastOperationIndex: boolean;
+} {
   // const scope = action.scope;
   const { scope } = action;
 
@@ -43,7 +44,7 @@ export function undoOperation<
     const sortedOperations = sortOperations(operations);
 
     draft.action = noop(scope) as Draft<
-      TCustomAction | DefaultAction | Operation
+      ActionFromDocument<TDocument> | OperationFromDocument<TDocument>
     >;
 
     const lastOperation = sortedOperations.at(-1);
@@ -77,14 +78,16 @@ export function undoOperation<
   });
 }
 
-export function redoOperation<
-  TDoc extends BaseDocument<unknown, unknown>,
-  TCustomAction extends CustomAction = never,
->(
-  document: TDoc,
-  action: TCustomAction | DefaultAction | Operation,
+export function redoOperation<TDocument extends PHDocument>(
+  document: TDocument,
+  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>,
   skip: number,
-) {
+): {
+  document: TDocument;
+  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>;
+  skip: number;
+  reuseLastOperationIndex: boolean;
+} {
   const { scope, input } = action;
 
   const defaultResult = {
@@ -128,19 +131,15 @@ export function redoOperation<
       type: operation.type,
       scope: operation.scope,
       input: operation.input,
-    } as TCustomAction | DefaultAction | Operation);
+    } as ActionFromDocument<TDocument> | OperationFromDocument<TDocument>);
   });
 }
 
-export function pruneOperation<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  document: BaseDocument<TGlobalState, TLocalState>,
+export function pruneOperation<TDocument extends PHDocument>(
+  document: TDocument,
   input: PruneActionInput,
-  wrappedReducer: StateReducer<TGlobalState, TLocalState, TCustomAction>,
-) {
+  wrappedReducer: StateReducer<TDocument>,
+): TDocument {
   const operations = document.operations.global;
 
   let { start, end } = input;
@@ -201,10 +200,10 @@ export function pruneOperation<
   );
 }
 
-export function loadStateOperation<TDoc extends BaseDocument<unknown, unknown>>(
-  oldDocument: TDoc,
+export function loadStateOperation<TDocument extends PHDocument>(
+  oldDocument: TDocument,
   newDocument: { name: string; state?: BaseState<unknown, unknown> },
-): TDoc {
+): TDocument {
   return {
     ...oldDocument,
     name: newDocument.name,

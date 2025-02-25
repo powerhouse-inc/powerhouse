@@ -1,4 +1,3 @@
-import { DocumentModelLocalState, DocumentModelState } from "./types.js";
 import {
   CreateDocument,
   CreateExtendedState,
@@ -25,31 +24,27 @@ import {
   initialLocalState,
 } from "./constants.js";
 import { reducer } from "./reducer.js";
+import { DocumentModelDocument } from "./types.js";
 
-export const createState: CreateState<
-  DocumentModelState,
-  DocumentModelLocalState
-> = (state) => {
+export const createState: CreateState<DocumentModelDocument> = (state) => {
   return {
     global: { ...documentModelState, ...state?.global },
     local: { ...initialLocalState, ...state?.local },
   };
 };
 
-export const createExtendedState: CreateExtendedState<
-  DocumentModelState,
-  DocumentModelLocalState
-> = (extendedState) => {
+export const createExtendedState: CreateExtendedState<DocumentModelDocument> = (
+  extendedState,
+) => {
   return baseCreateExtendedState(
     { ...extendedState, documentType },
     createState,
   );
 };
 
-export const createDocument: CreateDocument<
-  DocumentModelState,
-  DocumentModelLocalState
-> = (state) => {
+export const createDocument: CreateDocument<DocumentModelDocument> = (
+  state,
+) => {
   return baseCreateDocument(createExtendedState(state), createState);
 };
 
@@ -61,16 +56,10 @@ export const saveToFileHandle: SaveToFileHandle = (document, input) => {
   return baseSaveToFileHandle(document, input);
 };
 
-export const loadFromFile: LoadFromFile<
-  DocumentModelState,
-  DocumentModelLocalState
-> = (path) => {
+export const loadFromFile: LoadFromFile<DocumentModelDocument> = (path) => {
   return baseLoadFromFile(path, reducer);
 };
 
-export const loadFromInput: LoadFromInput<
-  DocumentModelState,
-  DocumentModelLocalState
-> = (input) => {
+export const loadFromInput: LoadFromInput<DocumentModelDocument> = (input) => {
   return baseLoadFromInput(input, reducer);
 };

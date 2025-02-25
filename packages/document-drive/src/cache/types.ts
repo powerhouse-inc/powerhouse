@@ -6,7 +6,7 @@ export interface ICache {
     id: string,
     document: PHDocument,
   ): Promise<boolean>;
-  getDocument<TGlobalState, TLocalState, TAction = Action>(
+  getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
     drive: string,
     id: string,
   ): Promise<PHDocument<TGlobalState, TLocalState, TAction> | undefined>;

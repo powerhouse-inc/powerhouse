@@ -1,27 +1,26 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { BaseDocument, ExtendedState } from "../../src/document/types.js";
+import { ExtendedStateFromDocument } from "#document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
   replayOperations,
-} from "../../src/document/utils/base.js";
-import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
+} from "#document/utils/base.js";
+import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
 import {
   baseCountReducer,
-  CountLocalState,
+  CountDocument,
   countReducer,
-  CountState,
   increment,
 } from "../helpers.js";
 
 describe("Document Operation ID", () => {
-  let document: BaseDocument<CountState, CountLocalState>;
-  let initialState: ExtendedState<CountState, CountLocalState>;
+  let document: CountDocument;
+  let initialState: ExtendedStateFromDocument<CountDocument>;
 
   beforeEach(() => {
-    initialState = baseCreateExtendedState<CountState, CountLocalState>({
+    initialState = baseCreateExtendedState<CountDocument>({
       documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: {} },
+      state: { global: { count: 0 }, local: { name: "" } },
     });
 
     document = baseCreateDocument(initialState);
@@ -119,7 +118,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations(
+    const replayedDoc = replayOperations<CountDocument>(
       initialState,
       clearedOperations,
       baseCountReducer,
@@ -157,7 +156,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations(
+    const replayedDoc = replayOperations<CountDocument>(
       initialState,
       clearedOperations,
       baseCountReducer,
@@ -201,7 +200,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations(
+    const replayedDoc = replayOperations<CountDocument>(
       initialState,
       clearedOperations,
       baseCountReducer,

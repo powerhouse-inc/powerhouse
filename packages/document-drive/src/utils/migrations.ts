@@ -1,8 +1,10 @@
-import { DocumentOperations, Operation, OperationScope } from "document-model";
 import {
+  DocumentOperations,
+  Operation,
+  OperationScope,
   PHDocument,
   Signature,
-} from "../../../document-model/src/document/types.js";
+} from "document-model";
 
 export function migrateDocumentOperationSignatures<TGlobalState, TLocalState>(
   document: PHDocument<TGlobalState, TLocalState>,

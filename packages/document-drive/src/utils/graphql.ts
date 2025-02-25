@@ -1,11 +1,17 @@
+import {
+  DocumentDriveLocalState,
+  FileNode,
+  FolderNode,
+} from "#drive-document-model/gen/types";
 import { pascalCase } from "change-case";
 import {
-  BaseDocument,
   Action,
+  BaseDocument,
+  CustomAction,
   DocumentModelModule,
   DocumentModelState,
   Operation,
-  CustomAction,
+  PHDocument,
 } from "document-model";
 import {
   BuildSchemaOptions,
@@ -20,13 +26,7 @@ import {
   buildSchema,
 } from "graphql";
 import request, { GraphQLClient, gql } from "graphql-request";
-import {
-  DocumentDriveLocalState,
-  FileNode,
-  FolderNode,
-} from "../drive-document-model/gen/types.js";
 import { logger } from "./logger.js";
-import { string } from "zod";
 
 export { gql } from "graphql-request";
 
@@ -195,10 +195,8 @@ export async function fetchDocument<
   }>
 > {
   const { documentModelState, utils } = documentModelLib;
-  const stateFields = generateDocumentStateQueryFields(
-    documentModelState as DocumentModelState,
-  );
-  const name = pascalCase((documentModelState as DocumentModelState).name);
+  const stateFields = generateDocumentStateQueryFields(documentModelState);
+  const name = pascalCase(documentModelState.name);
   const result = await requestGraphql<{
     document: DocumentGraphQLResult<TGlobalState, TLocalState>;
   }>(
@@ -262,10 +260,7 @@ export async function fetchDocument<
             ...o,
             error: o.error ?? undefined,
             scope: "global",
-            input: JSON.parse(inputText) as BaseDocument<
-              TGlobalState,
-              TLocalState
-            >,
+            input: JSON.parse(inputText) as PHDocument,
           })),
           local: [],
         },

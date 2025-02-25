@@ -10,12 +10,13 @@ import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from "./actions/types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
 import { SignalDispatch } from "./signal.js";
 import {
-  BaseDocument,
-  BaseState,
-  CustomAction,
+  Action,
+  ActionFromDocument,
   DefaultAction,
   Operation,
+  OperationFromDocument,
   OperationScope,
+  PHDocument,
   ReducerOptions,
   StateReducer,
 } from "./types.js";
@@ -45,7 +46,7 @@ import {
  * @returns The next revision number.
  */
 function getNextRevision(
-  document: BaseDocument<unknown, unknown>,
+  document: PHDocument,
   operation: { index?: number; scope: OperationScope },
 ) {
   let latestOperationIndex: number | undefined;
@@ -68,10 +69,10 @@ function getNextRevision(
  * @param operation The action being applied to the document.
  * @returns The updated document state.
  */
-export function updateHeader<TDoc extends BaseDocument<unknown, unknown>>(
-  document: TDoc,
-  action: CustomAction | DefaultAction | Operation,
-): TDoc {
+export function updateHeader<TDocument extends PHDocument>(
+  document: TDocument,
+  action: Action | DefaultAction | Operation,
+): TDocument {
   return {
     ...document,
     revision: {
@@ -91,12 +92,12 @@ export function updateHeader<TDoc extends BaseDocument<unknown, unknown>>(
  * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
  * @returns The updated document state.
  */
-function updateOperations<TDoc extends BaseDocument<unknown, unknown>>(
-  document: TDoc,
-  actionOrOperation: CustomAction | DefaultAction | Operation,
+function updateOperations<TDocument extends PHDocument>(
+  document: TDocument,
+  actionOrOperation: Action | DefaultAction | Operation,
   skip = 0,
   reuseLastOperationIndex = false,
-): TDoc {
+): TDocument {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
   if (
@@ -165,12 +166,12 @@ function updateOperations<TDoc extends BaseDocument<unknown, unknown>>(
  * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
  * @returns The updated document state.
  */
-export function updateDocument<TDoc extends BaseDocument<unknown, unknown>>(
-  document: TDoc,
-  action: CustomAction | DefaultAction | Operation,
+export function updateDocument<TDocument extends PHDocument>(
+  document: TDocument,
+  action: Action | Operation,
   skip = 0,
   reuseLastOperationIndex = false,
-): TDoc {
+): TDocument {
   let newDocument = updateOperations(
     document,
     action,
@@ -189,19 +190,14 @@ export function updateDocument<TDoc extends BaseDocument<unknown, unknown>>(
  * @param wrappedReducer The custom reducer function being wrapped by the base reducer.
  * @returns The updated document state.
  */
-function _baseReducer<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: TCustomAction | DefaultAction | Operation,
-  wrappedReducer: StateReducer<
-    TGlobalState,
-    TLocalState,
-    TCustomAction | DefaultAction | Operation
-  >,
-): BaseDocument<TGlobalState, TLocalState> {
+function _baseReducer<TDocument extends PHDocument>(
+  document: TDocument,
+  action:
+    | ActionFromDocument<TDocument>
+    | OperationFromDocument<TDocument>
+    | DefaultAction,
+  wrappedReducer: StateReducer<TDocument>,
+): TDocument {
   // throws if action is not valid base action
   const parsedAction = DocumentActionSchema().parse(action);
 
@@ -225,15 +221,19 @@ function _baseReducer<
  * @param skip The number of operations to skip before applying the action.
  * @returns The updated document, calculated skip value and transformed action (if applied).
  */
-export function processUndoRedo<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: TCustomAction | DefaultAction | Operation,
+export function processUndoRedo<TDocument extends PHDocument>(
+  document: TDocument,
+  action:
+    | ActionFromDocument<TDocument>
+    | OperationFromDocument<TDocument>
+    | DefaultAction,
   skip: number,
-) {
+): {
+  document: TDocument;
+  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>;
+  skip: number;
+  reuseLastOperationIndex: boolean;
+} {
   switch (action.type) {
     case UNDO:
       return undoOperation(document, action, skip);
@@ -244,22 +244,14 @@ export function processUndoRedo<
   }
 }
 
-function processSkipOperation<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: TCustomAction | DefaultAction | Operation,
-  customReducer: StateReducer<
-    TGlobalState,
-    TLocalState,
-    TCustomAction | DefaultAction | Operation
-  >,
+function processSkipOperation<TDocument extends PHDocument>(
+  document: TDocument,
+  action: Action | Operation,
+  customReducer: StateReducer<TDocument>,
   skipValue: number,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
-) {
+): TDocument {
   const scope = action.scope;
 
   const latestOperation = document.operations[scope].at(-1);
@@ -309,21 +301,13 @@ function processSkipOperation<
   };
 }
 
-function processUndoOperation<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  document: BaseDocument<TGlobalState, TLocalState>,
+function processUndoOperation<TDocument extends PHDocument>(
+  document: TDocument,
   scope: OperationScope,
-  customReducer: StateReducer<
-    TGlobalState,
-    TLocalState,
-    TCustomAction | DefaultAction | Operation
-  >,
+  customReducer: StateReducer<TDocument>,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
-): BaseDocument<TGlobalState, TLocalState> {
+): TDocument {
   const operations = [...document.operations[scope]];
   const sortedOperations = sortOperations(operations);
 
@@ -358,7 +342,7 @@ function processUndoOperation<
     [...document.clipboard, ...diff].filter((op) => op.type !== "NOOP"),
   ).reverse();
 
-  return { ...doc, clipboard };
+  return { ...doc, clipboard } as TDocument;
 }
 
 /**
@@ -373,21 +357,13 @@ function processUndoOperation<
  * specific to the document's state.
  * @returns The new state of the document.
  */
-export function baseReducer<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  document: BaseDocument<TGlobalState, TLocalState>,
-  action: TCustomAction | DefaultAction | Operation,
-  customReducer: StateReducer<
-    TGlobalState,
-    TLocalState,
-    TCustomAction | DefaultAction | Operation
-  >,
+export function baseReducer<TDocument extends PHDocument>(
+  document: TDocument,
+  action: Action | Operation,
+  customReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
   options: ReducerOptions = {},
-): BaseDocument<TGlobalState, TLocalState> {
+): TDocument {
   const {
     skip,
     ignoreSkipOperations = false,
@@ -505,7 +481,7 @@ export function baseReducer<
       draft.operations[_action.scope][lastOperationIndex].skip = 0;
 
       if (shouldProcessSkipOperation) {
-        draft.state = castDraft<BaseState<TGlobalState, TLocalState>>({
+        draft.state = castDraft({
           ...document.state,
         });
         draft.operations = castDraft({
@@ -531,7 +507,7 @@ export function baseReducer<
   const scope = _action.scope || "global";
   const hash =
     reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
-      ? (_action as unknown as Operation).hash
+      ? (_action as Operation).hash
       : hashDocumentStateForScope(newDocument, scope);
 
   // updates the last operation with the hash of the resulting state

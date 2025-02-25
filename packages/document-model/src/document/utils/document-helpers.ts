@@ -1,5 +1,10 @@
 import stringify from "safe-stable-stringify";
-import { DocumentOperations, Operation, OperationScope } from "../types.js";
+import {
+  Action,
+  DocumentOperations,
+  Operation,
+  OperationScope,
+} from "../types.js";
 
 export type OperationIndex = {
   index: number;
@@ -539,9 +544,9 @@ export function skipHeaderOperations<TOpIndex extends OperationIndex>(
   return (clearedOperations.at(0) ?? []) as TOpIndex[];
 }
 
-export function garbageCollectDocumentOperations(
-  documentOperations: DocumentOperations,
-) {
+export function garbageCollectDocumentOperations<
+  TAction extends Action = Action,
+>(documentOperations: DocumentOperations<TAction>) {
   const clearedOperations = Object.entries(documentOperations).reduce(
     (acc, entry) => {
       const [scope, ops] = entry;
@@ -554,7 +559,7 @@ export function garbageCollectDocumentOperations(
     {},
   );
 
-  return clearedOperations as DocumentOperations;
+  return clearedOperations as DocumentOperations<TAction>;
 }
 
 /**

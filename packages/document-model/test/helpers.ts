@@ -1,32 +1,27 @@
 import { SignalDispatch } from "../src/document/signal.js";
 import {
+  Action,
   BaseAction,
-  BaseDocument,
-  CustomAction,
-  DefaultAction,
   Operation,
   OperationScope,
+  PHDocument,
   ReducerOptions,
   StateReducer,
 } from "../src/document/types.js";
 import { createAction, createReducer } from "../src/document/utils/base.js";
 
 // Empty reducer that supports base actions
-export const emptyReducer = <TGlobalState, TLocalState>(
-  state: BaseDocument<TGlobalState, TLocalState>,
-) => state;
+export const emptyReducer = <TDocument extends PHDocument = PHDocument>(
+  document: PHDocument,
+) => document as TDocument;
 
-export const wrappedEmptyReducer = <
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  state: BaseDocument<TGlobalState, TLocalState>,
-  action: TCustomAction | DefaultAction | Operation,
+export const wrappedEmptyReducer = <TDocument extends PHDocument = PHDocument>(
+  document: TDocument,
+  action: Action | Operation,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
-): BaseDocument<TGlobalState, TLocalState> => {
-  return emptyReducer(state);
+): TDocument => {
+  return emptyReducer(document);
 };
 
 // Counter reducer that supports increment/decrement actions
@@ -40,6 +35,11 @@ export type CountAction =
   | SetLocalNameAction
   | ErrorAction;
 
+export type CountDocument = PHDocument<
+  CountState,
+  CountLocalState,
+  CountAction
+>;
 export type CountState = { count: number };
 
 export type CountLocalState = { name: string };
@@ -59,11 +59,10 @@ export const setLocalName = (name: string) =>
     "local",
   );
 
-export const baseCountReducer: StateReducer<
-  CountState,
-  CountLocalState,
-  CountAction
-> = (state, action) => {
+export const baseCountReducer: StateReducer<CountDocument> = (
+  state,
+  action,
+) => {
   switch (action.type) {
     case "INCREMENT":
       state.global.count += 1;
@@ -81,11 +80,10 @@ export const baseCountReducer: StateReducer<
   }
 };
 
-export const mutableCountReducer: StateReducer<
-  CountState,
-  CountLocalState,
-  CountAction
-> = (state, action) => {
+export const mutableCountReducer: StateReducer<CountDocument> = (
+  state,
+  action,
+) => {
   switch (action.type) {
     case "INCREMENT":
       return {
@@ -109,11 +107,7 @@ export const mutableCountReducer: StateReducer<
   }
 };
 
-export const countReducer = createReducer<
-  CountState,
-  CountLocalState,
-  CountAction
->(baseCountReducer);
+export const countReducer = createReducer<CountDocument>(baseCountReducer);
 
 export const mapOperations = (operations: Operation[]) => {
   return operations.map(({ input, type, index, scope, skip }) => ({

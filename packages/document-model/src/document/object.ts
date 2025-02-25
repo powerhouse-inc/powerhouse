@@ -1,10 +1,10 @@
 import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
 import { SignalDispatch } from "./signal.js";
 import {
+  Action,
   AttachmentRef,
   BaseDocument,
   BaseState,
-  CustomAction,
   DefaultAction,
   Operation,
   OperationScope,
@@ -23,13 +23,11 @@ import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";
 export abstract class BaseDocumentClass<
   TGlobalState,
   TLocalState,
-  TCustomAction extends CustomAction = never,
+  TCustomAction extends Action,
 > {
-  protected _document: BaseDocument<TGlobalState, TLocalState>;
+  protected _document: BaseDocument<TGlobalState, TLocalState, TCustomAction>;
   private _reducer: Reducer<
-    TGlobalState,
-    TLocalState,
-    TCustomAction | DefaultAction | Operation
+    BaseDocument<TGlobalState, TLocalState, TCustomAction>
   >;
   private _signalDispatch?: SignalDispatch;
 
@@ -39,12 +37,8 @@ export abstract class BaseDocumentClass<
    * @param document - The initial state of the document.
    */
   constructor(
-    reducer: Reducer<
-      TGlobalState,
-      TLocalState,
-      TCustomAction | DefaultAction | Operation
-    >,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    reducer: Reducer<BaseDocument<TGlobalState, TLocalState, TCustomAction>>,
+    document: BaseDocument<TGlobalState, TLocalState, TCustomAction>,
     signalDispatch?: SignalDispatch,
   ) {
     this._reducer = reducer;
@@ -97,8 +91,11 @@ export abstract class BaseDocumentClass<
   protected static async stateFromFile<
     TGlobalState,
     TLocalState,
-    TCustomAction extends CustomAction = never,
-  >(path: string, reducer: Reducer<TGlobalState, TLocalState, TCustomAction>) {
+    TCustomAction extends Action,
+  >(
+    path: string,
+    reducer: Reducer<BaseDocument<TGlobalState, TLocalState, TCustomAction>>,
+  ) {
     const state = await baseLoadFromFile(path, reducer);
     return state;
   }

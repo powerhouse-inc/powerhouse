@@ -25,7 +25,7 @@ class InMemoryCache implements ICache {
     return this.cache.get(drive)?.delete(id) ?? false;
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
     drive: string,
     id: string,
   ): Promise<PHDocument<TGlobalState, TLocalState, TAction> | undefined> {

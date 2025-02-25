@@ -1,16 +1,17 @@
 import { Operation, OperationScope } from "document-model";
+
 import {
   DocumentDriveLocalState,
   DocumentDriveState,
-} from "../../../drive-document-model/gen/types.js";
-import { logger } from "../../../utils/logger.js";
+} from "#drive-document-model/gen/types";
 import {
   GetDocumentOptions,
   IBaseDocumentDriveServer,
   Listener,
   ListenerRevision,
   StrandUpdate,
-} from "../../types.js";
+} from "#server/types";
+import { logger } from "#utils/logger";
 import { ITransmitter, StrandUpdateSource } from "./types.js";
 
 export interface IReceiver {

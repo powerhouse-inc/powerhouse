@@ -1,7 +1,7 @@
 import stringify from "json-stringify-deterministic";
-import { gql, requestGraphql } from "../../../utils/graphql.js";
-import { logger } from "../../../utils/logger.js";
-import { ListenerRevision, StrandUpdate } from "../../types.js";
+import { gql, requestGraphql } from "#utils/graphql";
+import { logger } from "#utils/logger";
+import { ListenerRevision, StrandUpdate } from "#server/types";
 import { ITransmitter, StrandUpdateSource } from "./types.js";
 
 const ENABLE_SYNC_DEBUG = false;

@@ -21,7 +21,7 @@ export function DocumentEditorContainer() {
         openSwitchboardLink,
         addOperationToSelectedDocument,
         renameNode,
-        getDocumentModel,
+        getDocumentModelModule,
     } = useUiNodes();
 
     const handleAddOperationToSelectedDocument = useCallback(
@@ -92,14 +92,14 @@ export function DocumentEditorContainer() {
                     },
                     onContinue(closeModal) {
                         closeModal();
-                        return exportFile(document, getDocumentModel);
+                        return exportFile(document, getDocumentModelModule);
                     },
                 });
             } else {
-                return exportFile(document, getDocumentModel);
+                return exportFile(document, getDocumentModelModule);
             }
         },
-        [getDocumentModel, showModal, t],
+        [getDocumentModelModule, showModal, t],
     );
 
     const onExport = useCallback(() => {

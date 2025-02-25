@@ -3,7 +3,7 @@ import { useReadModeContext } from '#context/read-mode';
 import { useFileNodeDocument } from '#store/document-drive';
 import {
     useFilteredDocumentModels,
-    useGetDocumentModel,
+    useGetDocumentModelModule,
 } from '#store/document-model';
 import { getNodeOptions } from '#utils/drive-sections';
 import { makeNodeSlugFromNodeName } from '#utils/slug';
@@ -69,7 +69,7 @@ export function useUiNodes() {
     const userPermissions = useUserPermissions();
     const nodeOptions = getNodeOptions();
     const documentModels = useFilteredDocumentModels();
-    const getDocumentModel = useGetDocumentModel();
+    const getDocumentModelModule = useGetDocumentModelModule();
     const fileNodeDocument = useFileNodeDocument({
         ...uiNodesContext,
         ...documentDriveServer,
@@ -551,7 +551,7 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
-            getDocumentModel,
+            getDocumentModelModule,
         }),
         [
             documentDriveServer,
@@ -578,7 +578,7 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
-            getDocumentModel,
+            getDocumentModelModule,
         ],
     );
 }

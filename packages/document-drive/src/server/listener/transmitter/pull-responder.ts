@@ -1,13 +1,6 @@
-import { gql } from "graphql-request";
-import {
-  ListenerFilter,
-  Trigger,
-} from "../../../drive-document-model/gen/types.js";
-import { requestGraphql } from "../../../utils/graphql.js";
-import { logger as defaultLogger } from "../../../utils/logger.js";
-import { generateUUID } from "../../../utils/misc.js";
-import { PULL_DRIVE_INTERVAL } from "../../base.js";
-import { OperationError } from "../../error.js";
+import { ListenerFilter, Trigger } from "#drive-document-model/gen/types";
+import { PULL_DRIVE_INTERVAL } from "#server/base";
+import { OperationError } from "#server/error";
 import {
   GetStrandsOptions,
   IListenerManager,
@@ -18,12 +11,16 @@ import {
   OperationUpdate,
   RemoteDriveOptions,
   StrandUpdate,
-} from "../../types.js";
+} from "#server/types";
+import { requestGraphql } from "#utils/graphql";
+import { generateUUID } from "#utils/misc";
+import { gql } from "graphql-request";
 import {
   ITransmitter,
   PullResponderTrigger,
   StrandUpdateSource,
 } from "./types.js";
+import { logger as defaultLogger } from "#utils/logger";
 
 const ENABLE_SYNC_DEBUG = false;
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {

@@ -1,3 +1,4 @@
+import { DocumentModelDocument } from "../../index.js";
 import {
   setAuthorName,
   setAuthorWebsite,
@@ -454,7 +455,7 @@ describe("Document Operations", () => {
       );
       document = reducer(document, setModelId({ id: "<id>" }));
 
-      const replayedDoc = replayOperations(
+      const replayedDoc = replayOperations<DocumentModelDocument>(
         initialState,
         garbageCollectDocumentOperations(document.operations),
         stateReducer,

@@ -1,14 +1,13 @@
-import { ListenerFilter } from "document-model-libs/document-drive";
-import { OperationScope } from "document-model/document";
-import { logger } from "../../utils/logger";
-import { OperationError } from "../error";
-import { ISynchronizationManager } from "../index";
+import { ListenerFilter } from "#drive-document-model/gen/types";
+import { OperationError } from "#server/error";
+import { StrandUpdateSource } from "#server/listener/transmitter/types";
 import {
   DefaultListenerManagerOptions,
   DriveUpdateErrorHandler,
   ErrorStatus,
   GetStrandsOptions,
   IListenerManager,
+  ISynchronizationManager,
   Listener,
   ListenerManagerOptions,
   ListenerState,
@@ -17,9 +16,10 @@ import {
   StrandUpdate,
   SynchronizationUnit,
   SynchronizationUnitQuery,
-} from "../types";
-import { StrandUpdateSource } from "./transmitter/types";
-import { debounce } from "./util";
+} from "#server/types";
+import { logger } from "#utils/logger";
+import { OperationScope } from "document-model";
+import { debounce } from "./util.js";
 
 const ENABLE_SYNC_DEBUG = false;
 

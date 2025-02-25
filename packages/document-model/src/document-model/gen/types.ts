@@ -11,6 +11,7 @@ export type ExtendedDocumentModelState = ExtendedState<
 >;
 export type DocumentModelDocument = BaseDocument<
   DocumentModelState,
-  DocumentModelLocalState
+  DocumentModelLocalState,
+  DocumentModelAction
 >;
 export { DocumentModelState, DocumentModelAction, DocumentModelLocalState };

@@ -48,7 +48,6 @@ export type {
   BaseAction,
   BaseActionWithAttachment,
   BaseDocument,
-  Signature,
   BaseState,
   CreateChildDocumentInput,
   CreateDocument,
@@ -82,6 +81,7 @@ export type {
   SaveToFileHandle,
   Signal,
   SignalDispatch,
+  Signature,
   StateReducer,
   SynchronizationUnitInput,
   User,
@@ -118,7 +118,7 @@ export {
   validateModules,
   validateStateSchemaName,
 } from "#document-model/custom/utils.js";
-export type { OperationError } from "#document-model/gen/schema/types.js";
+export type { OperationError as DocumentModelOperationError } from "#document-model/gen/schema/types.js";
 export { documentModelDocumentModelModule } from "#document-model/module.js";
 export { redo, undo } from "#document/actions/creators.js";
 export type { EditorContext } from "#document/types.js";

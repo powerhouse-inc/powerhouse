@@ -1,11 +1,11 @@
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
-} from "#drive-document-model/gen/types.js";
-import { DriveNotFoundError } from "#server/error.js";
-import { SynchronizationUnitQuery } from "#server/types.js";
-import { migrateDocumentOperationSignatures } from "#utils/migrations.js";
-import { mergeOperations } from "#utils/misc.js";
+} from "#drive-document-model/gen/types";
+import { DriveNotFoundError } from "#server/error";
+import { SynchronizationUnitQuery } from "#server/types";
+import { migrateDocumentOperationSignatures } from "#utils/migrations";
+import { mergeOperations } from "#utils/misc";
 import type {
   Action,
   DocumentHeader,
@@ -53,7 +53,7 @@ export class BrowserStorage implements IDriveStorage {
       .map((key) => key.slice(driveKey.length));
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
     driveId: string,
     id: string,
   ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
@@ -68,7 +68,11 @@ export class BrowserStorage implements IDriveStorage {
     return document;
   }
 
-  async createDocument<TGlobalState, TLocalState, TAction = Action>(
+  async createDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action = Action,
+  >(
     drive: string,
     id: string,
     document: PHDocument<TGlobalState, TLocalState, TAction>,

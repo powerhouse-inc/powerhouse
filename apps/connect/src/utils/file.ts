@@ -25,9 +25,11 @@ const downloadFile = async (document: PHDocument) => {
 
 export async function exportFile(
     document: PHDocument,
-    getDocumentModel: (documentType: string) => DocumentModelModule | undefined,
+    getDocumentModelModule: (
+        documentType: string,
+    ) => DocumentModelModule | undefined,
 ) {
-    const documentModel = getDocumentModel(document.documentType);
+    const documentModel = getDocumentModelModule(document.documentType);
     if (!documentModel) {
         throw new Error(
             `Document model not supported: ${document.documentType}`,
@@ -65,14 +67,16 @@ export async function exportFile(
 
 export async function loadFile(
     path: string | File,
-    getDocumentModel: (documentType: string) => DocumentModelModule | undefined,
+    getDocumentModelModule: (
+        documentType: string,
+    ) => DocumentModelModule | undefined,
 ) {
     const baseDocument = await baseLoadFromInput(
         path,
         (document: PHDocument) => document,
         { checkHashes: true },
     );
-    const documentModel = getDocumentModel(baseDocument.documentType);
+    const documentModel = getDocumentModelModule(baseDocument.documentType);
     if (!documentModel) {
         throw new Error(
             `Document "${baseDocument.documentType}" is not supported`,

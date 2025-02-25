@@ -7,18 +7,10 @@ import {
 } from "#document-model/custom/utils.js";
 import { setStateSchema } from "#document-model/gen/creators.js";
 import { reducer } from "#document-model/gen/reducer.js";
-import {
-  DocumentModelLocalState,
-  DocumentModelState,
-  Module,
-  Operation,
-} from "#document-model/gen/schema/types.js";
+import { Module, Operation } from "#document-model/gen/schema/types.js";
+import { DocumentModelDocument } from "#document-model/gen/types.js";
 import { createDocument } from "#document-model/gen/utils.js";
-import {
-  ExtendedState,
-  PartialState,
-  ValidationError,
-} from "#document/types.js";
+import { ExtendedStateFromDocument, ValidationError } from "#document/types.js";
 
 describe("DocumentModel Validation Error", () => {
   const documentName = "testDocument";
@@ -32,12 +24,7 @@ describe("DocumentModel Validation Error", () => {
       extension: "phdm",
       authorName: "test author",
       authorWebsite: "www.test.com",
-    } as Partial<
-      ExtendedState<
-        PartialState<DocumentModelState>,
-        PartialState<DocumentModelLocalState>
-      >
-    >);
+    } as Partial<ExtendedStateFromDocument<DocumentModelDocument>>);
   });
 
   describe("initial state", () => {

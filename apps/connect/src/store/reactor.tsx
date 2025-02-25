@@ -91,7 +91,7 @@ reactorAtom.onMount = setAtom => {
         if (!documentModelsSubscripion) {
             documentModelsSubscripion = subscribeDocumentModels(
                 documentModels => {
-                    reactor.setDocumentModels(documentModels);
+                    reactor.setDocumentModelModules(documentModels);
                 },
             );
         }

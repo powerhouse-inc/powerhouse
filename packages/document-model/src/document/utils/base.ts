@@ -13,22 +13,20 @@ import { baseReducer, updateHeader } from "../reducer.js";
 import { UndoAction, UndoRedoAction } from "../schema/types.js";
 import { SignalDispatch } from "../signal.js";
 import {
-  Action,
+  ActionFromDocument,
   BaseAction,
-  BaseDocument,
-  BaseState,
+  BaseStateFromDocument,
   CreateState,
-  CustomAction,
-  DefaultAction,
   DocumentAction,
   DocumentHeader,
   DocumentOperations,
   DocumentOperationsIgnoreMap,
-  ExtendedState,
+  ExtendedStateFromDocument,
   MappedOperation,
   Operation,
   OperationScope,
-  PartialState,
+  OperationsFromDocument,
+  PHDocument,
   Reducer,
   ReducerOptions,
   StateReducer,
@@ -148,33 +146,26 @@ export function createAction<TAction extends BaseAction<string, unknown>>(
  *
  * @returns The new reducer.
  */
-export function createReducer<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  reducer: StateReducer<
-    TGlobalState,
-    TLocalState,
-    TCustomAction | DefaultAction | Operation
-  >,
+export function createReducer<TDocument extends PHDocument>(
+  stateReducer: StateReducer<TDocument>,
   documentReducer = baseReducer,
-): Reducer<
-  TGlobalState,
-  TLocalState,
-  TCustomAction | DefaultAction | Operation
-> {
-  return (document, action, dispatch, options) => {
-    return documentReducer(document, action, reducer, dispatch, options);
+): Reducer<TDocument> {
+  type TAction = ActionFromDocument<TDocument>;
+  const reducer: Reducer<TDocument> = (
+    document: TDocument,
+    action: TAction | Operation<TAction>,
+    dispatch?: SignalDispatch,
+    options?: ReducerOptions,
+  ) => {
+    return documentReducer(document, action, stateReducer, dispatch, options);
   };
+  return reducer;
 }
 
-export function baseCreateExtendedState<TGlobalState, TLocalState>(
-  initialState?: Partial<
-    ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
-  >,
-  createState?: CreateState<TGlobalState, TLocalState>,
-): ExtendedState<TGlobalState, TLocalState> {
+export function baseCreateExtendedState<TDocument extends PHDocument>(
+  initialState?: Partial<ExtendedStateFromDocument<TDocument>>,
+  createState?: CreateState<TDocument>,
+): ExtendedStateFromDocument<TDocument> {
   return {
     name: "",
     documentType: "",
@@ -188,31 +179,27 @@ export function baseCreateExtendedState<TGlobalState, TLocalState>(
     ...initialState,
     state:
       createState?.(initialState?.state) ??
-      ((initialState?.state ?? { global: {}, local: {} }) as BaseState<
-        TGlobalState,
-        TLocalState
-      >),
+      ((initialState?.state ?? {
+        global: {},
+        local: {},
+      }) as BaseStateFromDocument<TDocument>),
   };
 }
 
-export function baseCreateDocument<
-  TGlobalState,
-  TLocalState,
-  TAction extends Action | CustomAction = Action,
->(
-  initialState?: Partial<
-    ExtendedState<PartialState<TGlobalState>, PartialState<TLocalState>>
-  >,
-  createState?: CreateState<TGlobalState, TLocalState>,
-): BaseDocument<TGlobalState, TLocalState, TAction> {
-  const state: ExtendedState<TGlobalState, TLocalState> =
-    baseCreateExtendedState(initialState, createState);
+export function baseCreateDocument<TDocument extends PHDocument>(
+  initialState?: Partial<ExtendedStateFromDocument<TDocument>>,
+  createState?: CreateState<TDocument>,
+): TDocument {
+  const state: ExtendedStateFromDocument<TDocument> = baseCreateExtendedState(
+    initialState,
+    createState,
+  );
   return {
     ...state,
     initialState: state,
     operations: { global: [], local: [] },
     clipboard: [],
-  };
+  } as unknown as TDocument;
 }
 
 export function hashDocumentStateForScope(
@@ -298,11 +285,9 @@ export function sortMappedOperations(operations: DocumentOperationsIgnoreMap) {
     );
 }
 
-// gets the last modified timestamp of a document from
+// gets the last modified timestamp of a document from§
 // it's operations, falling back to the initial state
-export function getDocumentLastModified(
-  document: BaseDocument<unknown, unknown>,
-) {
+export function getDocumentLastModified(document: PHDocument) {
   const sortedOperations = sortOperations(
     Object.values(document.operations).flat(),
   );
@@ -314,25 +299,21 @@ export function getDocumentLastModified(
 // Runs the operations on the initial data using the
 // provided reducer, wrapped with the document reducer.
 // This rebuilds the document according to the provided actions.
-export function replayOperations<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  initialState: ExtendedState<TGlobalState, TLocalState>,
-  clearedOperations: DocumentOperations,
-  reducer: StateReducer<TGlobalState, TLocalState, TCustomAction>,
+export function replayOperations<TDocument extends PHDocument>(
+  initialState: ExtendedStateFromDocument<TDocument>,
+  clearedOperations: OperationsFromDocument<TDocument>,
+  stateReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
   header?: DocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReducerOptions,
-) {
+): TDocument {
   // wraps the provided custom reducer with the
   // base document reducer
-  const wrappedReducer = createReducer(reducer, documentReducer);
+  const wrappedReducer = createReducer(stateReducer, documentReducer);
 
-  return replayDocument(
+  return replayDocument<TDocument>(
     initialState,
     clearedOperations,
     wrappedReducer,
@@ -359,19 +340,15 @@ export type ReplayDocumentOptions = {
 // Runs the operations on the initial data using the
 // provided document reducer.
 // This rebuilds the document according to the provided actions.
-export function replayDocument<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  initialState: ExtendedState<TGlobalState, TLocalState>,
+export function replayDocument<TDocument extends PHDocument>(
+  initialState: ExtendedStateFromDocument<TDocument>,
   operations: DocumentOperations,
-  reducer: Reducer<TGlobalState, TLocalState, TCustomAction>,
+  reducer: Reducer<TDocument>,
   dispatch?: SignalDispatch,
   header?: DocumentHeader,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
-) {
+): TDocument {
   const {
     checkHashes = true,
     reuseOperationResultingState,
@@ -399,9 +376,9 @@ export function replayDocument<
       const opWithState = scopeOperations[index];
       if (!opWithState.resultingState) continue;
       try {
-        const scopeState = operationResultingStateParser<
-          TGlobalState | TLocalState
-        >(opWithState.resultingState);
+        const scopeState = operationResultingStateParser(
+          opWithState.resultingState,
+        );
         documentState = {
           ...documentState,
           state: {
@@ -424,7 +401,7 @@ export function replayDocument<
   }
 
   // builds a new document from the initial data
-  const document = baseCreateDocument<TGlobalState, TLocalState>(documentState);
+  const document = baseCreateDocument(documentState);
   document.initialState = initialState;
   document.operations = initialOperations;
 
@@ -503,7 +480,11 @@ export function replayDocument<
     return acc;
   }, initialState.lastModified);
 
-  return { ...result, operations: resultOperations, lastModified };
+  return {
+    ...result,
+    operations: resultOperations,
+    lastModified,
+  } as TDocument;
 }
 
 export function parseResultingState<TState>(

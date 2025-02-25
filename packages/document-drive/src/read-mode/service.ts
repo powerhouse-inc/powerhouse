@@ -1,18 +1,18 @@
-import type { Action, CustomAction, DocumentModelModule } from "document-model";
-import { GraphQLError } from "graphql";
-import { driveDocumentType } from "../drive-document-model/constants.js";
 import {
   DocumentDriveAction,
   DocumentDriveLocalState,
   DocumentDriveState,
-} from "../drive-document-model/gen/types.js";
-import { driveDocumentModelModule } from "../drive-document-model/module.js";
-import { DocumentModelNotFoundError } from "../server/error.js";
+} from "#drive-document-model/gen/types";
+import { driveDocumentModelModule } from "#drive-document-model/module";
+import { DocumentModelNotFoundError } from "#server/error";
 import {
   DocumentGraphQLResult,
   fetchDocument,
   requestPublicDrive,
-} from "../utils/graphql.js";
+} from "#utils/graphql";
+import type { Action, CustomAction, DocumentModelModule } from "document-model";
+import { GraphQLError } from "graphql";
+import { driveDocumentType } from "../drive-document-model/constants.js";
 import {
   ReadDocumentNotFoundError,
   ReadDriveError,
@@ -20,7 +20,7 @@ import {
   ReadDriveSlugNotFoundError,
 } from "./errors.js";
 import {
-  GetDocumentModel,
+  GetDocumentModelModule,
   IReadModeDriveService,
   ReadDrive,
   ReadDriveContext,
@@ -28,14 +28,14 @@ import {
 } from "./types.js";
 
 export class ReadModeService implements IReadModeDriveService {
-  #getDocumentModel: GetDocumentModel;
+  #getDocumentModelModule: GetDocumentModelModule;
   #drives = new Map<
     string,
     { drive: Omit<ReadDrive, "readContext">; context: ReadDriveContext }
   >();
 
-  constructor(getDocumentModel: GetDocumentModel) {
-    this.#getDocumentModel = getDocumentModel;
+  constructor(getDocumentModelModule: GetDocumentModelModule) {
+    this.#getDocumentModelModule = getDocumentModelModule;
   }
 
   #parseGraphQLErrors(
@@ -110,7 +110,7 @@ export class ReadModeService implements IReadModeDriveService {
       | DocumentModelModule<TGlobalState, TLocalState, TAction>
       | undefined = undefined;
     try {
-      documentModelModule = this.#getDocumentModel(documentType);
+      documentModelModule = this.#getDocumentModelModule(documentType);
     } catch (error) {
       return new DocumentModelNotFoundError(documentType, error);
     }

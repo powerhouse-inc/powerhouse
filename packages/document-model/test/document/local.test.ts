@@ -2,6 +2,8 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { prune, redo, undo } from "../../src/document/actions/creators.js";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
 import {
+  CountAction,
+  CountDocument,
   CountLocalState,
   countReducer,
   CountState,
@@ -92,7 +94,7 @@ describe("Local reducer", () => {
   });
 
   it("should update local name", async () => {
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -124,7 +126,7 @@ describe("Local reducer", () => {
   });
 
   it("should undo local operation", async () => {
-    const document = baseCreateDocument<CountState, CountLocalState>({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -166,7 +168,7 @@ describe("Local reducer", () => {
   });
 
   it("should redo local operation", async () => {
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -201,7 +203,7 @@ describe("Local reducer", () => {
   });
 
   it.skip("should prune local operations", async () => {
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

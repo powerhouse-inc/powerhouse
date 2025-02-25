@@ -1,15 +1,7 @@
-import { Document } from "document-model/document";
-import { RemoteDriveOptions } from "../server";
-import { DocumentDriveServerConstructor } from "../server/base-server";
-import { logger } from "../utils/logger";
-import { ReadDriveSlugNotFoundError } from "./errors";
-import { ReadModeService } from "./service";
 import { Action, CustomAction } from "document-model";
-import {
-  DocumentDriveServerConstructor,
-  RemoteDriveOptions,
-} from "../server/types.js";
-import { logger } from "../utils/logger.js";
+import { DocumentDriveServerConstructor } from "#server/base-server";
+import { RemoteDriveOptions } from "#server/types";
+import { logger } from "#utils/logger";
 import { ReadDriveSlugNotFoundError } from "./errors.js";
 import { ReadModeService } from "./service.js";
 import {
@@ -33,7 +25,7 @@ export function ReadModeServer(
       super();
 
       this.#readModeStorage = new ReadModeService(
-        this.getDocumentModel.bind(this),
+        this.getDocumentModelModule.bind(this),
       );
 
       this.#buildDrives()

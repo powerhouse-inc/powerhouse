@@ -5,7 +5,7 @@ export const getDocumentModelTypeDefs = (
   documentDriveServer: BaseDocumentDriveServer,
   typeDefs: string,
 ) => {
-  const documentModels = documentDriveServer.getDocumentModels();
+  const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
   documentModels.forEach(({ documentModelState }) => {
     dmSchema += `

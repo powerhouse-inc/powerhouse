@@ -1,5 +1,6 @@
 import { DocumentModelAction } from "../../document-model/gen/actions.js";
 import {
+  DocumentModelDocument,
   DocumentModelLocalState,
   DocumentModelState,
 } from "../../document-model/gen/types.js";
@@ -57,11 +58,10 @@ import {
   UpdateStateExampleInputSchema,
 } from "./schema/zod.js";
 
-export const stateReducer: TStateReducer<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> = (state, action) => {
+export const stateReducer: TStateReducer<DocumentModelDocument> = (
+  state,
+  action,
+) => {
   if (isDocumentAction(action)) {
     return state;
   }
@@ -315,8 +315,4 @@ export const stateReducer: TStateReducer<
   }
 };
 
-export const reducer = createReducer<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
->(stateReducer);
+export const reducer = createReducer<DocumentModelDocument>(stateReducer);

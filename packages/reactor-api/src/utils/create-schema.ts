@@ -23,7 +23,7 @@ export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
   typeDefs: DocumentNode,
 ) => {
-  const documentModels = documentDriveServer.getDocumentModels();
+  const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
   documentModels.forEach(({ documentModelState }) => {
     const dmSchemaName = pascalCase(

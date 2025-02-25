@@ -1,3 +1,4 @@
+import { PHReducer } from "#document/types.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   baseCreateDocument,
@@ -11,13 +12,7 @@ import {
   hex2ab,
   verifyOperationSignature,
 } from "../../src/document/utils/crypto.js";
-import {
-  CountAction,
-  CountLocalState,
-  countReducer,
-  CountState,
-  increment,
-} from "../helpers.js";
+import { CountDocument, countReducer, increment } from "../helpers.js";
 
 describe("Crypto utils", () => {
   beforeAll(() => {
@@ -29,7 +24,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with empty previousState", () => {
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -67,7 +62,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with previousState", () => {
-    let document = baseCreateDocument({
+    let document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -124,14 +119,14 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountState, CountLocalState>({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
     const operation = await buildSignedOperation(
-      { ...increment(), id: "123" } as CountAction,
-      countReducer,
+      { ...increment(), id: "123" },
+      countReducer as PHReducer,
       document,
       {
         documentId: "1",
@@ -188,14 +183,14 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountState, CountLocalState>({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
     const operation = await buildSignedOperation(
-      { ...increment(), id: "123" } as CountAction,
-      countReducer,
+      { ...increment(), id: "123" },
+      countReducer as PHReducer,
       document,
       {
         documentId: "1",
@@ -249,14 +244,14 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
     const operation = await buildSignedOperation(
-      { ...increment(), id: "123" } as CountAction,
-      countReducer,
+      { ...increment(), id: "123" },
+      countReducer as PHReducer,
       document,
       {
         documentId: "1",

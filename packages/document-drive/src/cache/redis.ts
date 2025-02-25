@@ -40,7 +40,7 @@ class RedisCache implements ICache {
     return false;
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
     drive: string,
     id: string,
   ): Promise<PHDocument<TGlobalState, TLocalState, TAction> | undefined> {

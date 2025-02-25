@@ -32,10 +32,10 @@ export function buildDocumentRevisionsFilter<TGlobalState, TLocalState>(
   );
 }
 
-export function filterOperationsByRevision(
-  operations: DocumentOperations,
+export function filterOperationsByRevision<TAction extends Action = Action>(
+  operations: DocumentOperations<TAction>,
   revisions?: RevisionsFilter,
-): DocumentOperations {
+): DocumentOperations<TAction> {
   if (!revisions) {
     return operations;
   }
@@ -49,14 +49,14 @@ export function filterOperationsByRevision(
       }
       return acc;
     },
-    { global: [], local: [] } as DocumentOperations,
+    { global: [], local: [] } as DocumentOperations<TAction>,
   );
 }
 
 export function isAtRevision<
   TGlobalState = unknown,
   TLocalState = unknown,
-  TAction = Action,
+  TAction extends Action = Action,
 >(
   document: PHDocument<TGlobalState, TLocalState, TAction>,
   revisions?: RevisionsFilter,

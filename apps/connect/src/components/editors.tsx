@@ -3,7 +3,7 @@ import { useUndoRedoShortcuts } from '#hooks/useUndoRedoShortcuts';
 import { useUserPermissions } from '#hooks/useUserPermissions';
 import { logger } from '#services/logger';
 import { FileNodeDocument, isSameDocument } from '#store/document-drive';
-import { useGetDocumentModel } from '#store/document-model';
+import { useGetDocumentModelModule } from '#store/document-model';
 import { useGetEditor } from '#store/editor';
 import { themeAtom } from '#store/theme';
 import { useUser } from '#store/user';
@@ -82,13 +82,13 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
-    const getDocumentModel = useGetDocumentModel();
+    const getDocumentModelModule = useGetDocumentModelModule();
     const getEditor = useGetEditor();
 
     const documentType = fileNodeDocument?.documentType;
     const documentModel = useMemo(
-        () => (documentType ? getDocumentModel(documentType) : undefined),
-        [documentType, getDocumentModel],
+        () => (documentType ? getDocumentModelModule(documentType) : undefined),
+        [documentType, getDocumentModelModule],
     );
 
     const editor = useMemo(

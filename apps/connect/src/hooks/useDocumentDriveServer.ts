@@ -1,5 +1,5 @@
 import { logger } from '#services/logger';
-import { useGetDocumentModel } from '#store/document-model';
+import { useGetDocumentModelModule } from '#store/document-model';
 import { useUnwrappedReactor } from '#store/reactor';
 import { useUser } from '#store/user';
 import { loadFile } from '#utils/file';
@@ -80,7 +80,7 @@ export function useDocumentDriveServer() {
     const { sign } = useConnectCrypto();
     const reactor = useUnwrappedReactor();
 
-    const getDocumentModel = useGetDocumentModel();
+    const getDocumentModelModule = useGetDocumentModelModule();
 
     const [documentDrives, refreshDocumentDrives, , documentDrivesStatus] =
         useDocumentDrives();
@@ -265,7 +265,7 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create files');
             }
-            const document = await loadFile(file, getDocumentModel);
+            const document = await loadFile(file, getDocumentModelModule);
 
             // first create the file with the initial state of document
             const initialDocument: PHDocument = {
@@ -306,7 +306,7 @@ export function useDocumentDriveServer() {
         [
             addDocument,
             addOperations,
-            getDocumentModel,
+            getDocumentModelModule,
             isAllowedToCreateDocuments,
             reactor,
         ],

@@ -16,7 +16,7 @@ const documentModels = Object.values(
   documentModelsMap,
 ) as DocumentModelModule[];
 
-function getDocumentModel(id: string) {
+function getDocumentModelModule(id: string) {
   const documentModel = documentModels.find(
     (d) => d.documentModelState.id === id,
   );
@@ -75,7 +75,7 @@ describe("Read mode methods", () => {
   it("should return read drive when drive ID is found in read drives", async ({
     expect,
   }) => {
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const readDriveId = "read-drive";
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
@@ -192,7 +192,7 @@ describe("Read mode methods", () => {
   });
 
   it("should return existing read drive for given slug", async ({ expect }) => {
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const readDriveId = "read-drive";
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
@@ -222,7 +222,7 @@ describe("Read mode methods", () => {
   });
 
   it("should delete read drive", async ({ expect }) => {
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const readDriveId = "read-drive";
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
@@ -289,7 +289,7 @@ describe("Read mode methods", () => {
       }),
     );
 
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
       filter: {
@@ -333,7 +333,7 @@ describe("Read mode methods", () => {
   it("should return ReadDriveNotFoundError if read drive ID is not found", async ({
     expect,
   }) => {
-    const readMode = new ReadModeService(getDocumentModel);
+    const readMode = new ReadModeService(getDocumentModelModule);
     const getResult = await readMode.getReadDrive("non-existent-drive-id");
     expect(getResult).toStrictEqual(
       new ReadDriveNotFoundError("non-existent-drive-id"),
@@ -364,7 +364,7 @@ describe("Read mode methods", () => {
   it("should return ReadDriveSlugNotFoundError if read drive slug is not found", async ({
     expect,
   }) => {
-    const readMode = new ReadModeService(getDocumentModel);
+    const readMode = new ReadModeService(getDocumentModelModule);
     const result = await readMode.getReadDriveBySlug("non-existent-drive-slug");
     expect(result).toStrictEqual(
       new ReadDriveSlugNotFoundError("non-existent-drive-slug"),
@@ -374,7 +374,7 @@ describe("Read mode methods", () => {
   it("should return ReadDocumentNotFoundError when document is not found in read drive", async ({
     expect,
   }) => {
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const readDriveId = "read-drive";
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
@@ -461,7 +461,7 @@ describe("Read mode methods", () => {
   it("should throw Error when trying to add non existent drive", async ({
     expect,
   }) => {
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const readDriveId = "non-existent-drive-id";
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
@@ -499,7 +499,7 @@ describe("Read mode methods", () => {
   });
 
   it("should throw if specific Graphql error is found", async ({ expect }) => {
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const readDriveId = "read-drive";
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
@@ -584,7 +584,7 @@ describe("Read mode methods", () => {
   it("should throw ReadDriveNotFoundError if no document is returned", async ({
     expect,
   }) => {
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const readDriveId = "read-drive";
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
@@ -629,7 +629,7 @@ describe("Read mode methods", () => {
   it("should return ReadDocumentNotFoundError if no document is returned", async ({
     expect,
   }) => {
-    const readModeService = new ReadModeService(getDocumentModel);
+    const readModeService = new ReadModeService(getDocumentModelModule);
     const readDriveId = "read-drive";
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,

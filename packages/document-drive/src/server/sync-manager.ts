@@ -1,29 +1,30 @@
+import { ICache } from "#cache/types";
 import {
   DocumentDriveDocument,
   FileNode,
-  isFileNode,
-} from "document-model-libs/document-drive";
+} from "#drive-document-model/gen/types";
+import { isFileNode } from "#drive-document-model/src/utils";
+import { IDriveStorage } from "#storage/types";
+import { logger } from "#utils/logger";
+import { isBefore, isDocumentDrive } from "#utils/misc";
 import {
-  utils as baseUtils,
-  Document,
-  DocumentModel,
+  DocumentModelModule,
   OperationScope,
-} from "document-model/document";
-import { ICache } from "../cache";
-import type { DocumentStorage, IDriveStorage } from "../storage/types";
-import { isBefore, isDocumentDrive } from "../utils";
-import { logger } from "../utils/logger";
-import { SynchronizationUnitNotFoundError } from "./error";
+  PHDocument,
+  garbageCollectDocumentOperations,
+  replayDocument,
+} from "document-model";
+import { SynchronizationUnitNotFoundError } from "./error.js";
 import {
   GetStrandsOptions,
   IEventEmitter,
   ISynchronizationManager,
-  SynchronizationUnitQuery,
+  OperationUpdate,
   SyncStatus,
   SyncUnitStatusObject,
-  type OperationUpdate,
-  type SynchronizationUnit,
-} from "./types";
+  SynchronizationUnit,
+  SynchronizationUnitQuery,
+} from "./types.js";
 
 export default class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new Map<string, SyncUnitStatusObject>();
@@ -31,7 +32,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
   constructor(
     private readonly storage: IDriveStorage,
     private readonly cache: ICache,
-    private readonly documentModels: DocumentModel[],
+    private readonly documentModelModules: DocumentModelModule[],
     private readonly eventEmitter?: IEventEmitter,
   ) {}
 
@@ -289,7 +290,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
   private async getDocument(
     driveId: string,
     documentId: string,
-  ): Promise<Document> {
+  ): Promise<PHDocument> {
     try {
       const cachedDocument = await this.cache.getDocument(driveId, documentId);
       if (cachedDocument) {
@@ -302,20 +303,19 @@ export default class SynchronizationManager implements ISynchronizationManager {
     return this._buildDocument(documentStorage);
   }
 
-  private _buildDocument<T extends Document>(
-    documentStorage: DocumentStorage<T>,
-  ): T {
-    const documentModel = this.getDocumentModel(documentStorage.documentType);
+  private _buildDocument(documentStorage: PHDocument): PHDocument {
+    const documentModelModule = this.getDocumentModelModule(
+      documentStorage.documentType,
+    );
 
-    const operations =
-      baseUtils.documentHelpers.garbageCollectDocumentOperations(
-        documentStorage.operations,
-      );
+    const operations = garbageCollectDocumentOperations(
+      documentStorage.operations,
+    );
 
-    return baseUtils.replayDocument(
+    return replayDocument(
       documentStorage.initialState,
       operations,
-      documentModel.reducer,
+      documentModelModule.reducer,
       undefined,
       documentStorage,
       undefined,
@@ -323,17 +323,17 @@ export default class SynchronizationManager implements ISynchronizationManager {
         checkHashes: true,
         reuseOperationResultingState: true,
       },
-    ) as T;
+    );
   }
 
-  private getDocumentModel(documentType: string) {
-    const documentModel = this.documentModels.find(
-      (model) => model.documentModel.id === documentType,
+  private getDocumentModelModule(documentType: string) {
+    const documentModelModule = this.documentModelModules.find(
+      (m) => m.documentType === documentType,
     );
-    if (!documentModel) {
+    if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);
     }
-    return documentModel;
+    return documentModelModule;
   }
 
   getCombinedSyncUnitStatus(syncUnitStatus: SyncUnitStatusObject): SyncStatus {
@@ -353,8 +353,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       (a, b) => order.indexOf(a) - order.indexOf(b),
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return sortedStatus[0]!;
+    return sortedStatus[0];
   }
 
   getSyncStatus(

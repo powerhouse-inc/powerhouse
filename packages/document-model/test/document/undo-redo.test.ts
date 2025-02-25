@@ -1,26 +1,24 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { noop, redo, undo } from "../../src/document/actions/creators.js";
 import { processUndoRedo } from "../../src/document/reducer.js";
-import { BaseDocument } from "../../src/document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
 } from "../../src/document/utils/base.js";
 import {
   CountAction,
-  CountLocalState,
+  CountDocument,
   countReducer,
-  CountState,
   increment,
 } from "../helpers.js";
 
 describe("UNDO/REDO", () => {
-  let document: BaseDocument<CountState, CountLocalState>;
+  let document: CountDocument;
 
   beforeEach(() => {
-    const initialState = baseCreateExtendedState<CountState, CountLocalState>({
+    const initialState = baseCreateExtendedState<CountDocument>({
       documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: {} },
+      state: { global: { count: 0 }, local: { name: "" } },
     });
 
     document = baseCreateDocument(initialState);
@@ -90,12 +88,10 @@ describe("UNDO/REDO", () => {
     });
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
-      const initialState = baseCreateExtendedState<CountState, CountLocalState>(
-        {
-          documentType: "powerhouse/counter",
-          state: { global: { count: 0 }, local: {} },
-        },
-      );
+      const initialState = baseCreateExtendedState<CountDocument>({
+        documentType: "powerhouse/counter",
+        state: { global: { count: 0 }, local: { name: "" } },
+      });
 
       document = baseCreateDocument(initialState);
 
@@ -111,12 +107,10 @@ describe("UNDO/REDO", () => {
 
   describe("processUndoRedo -> REDO", () => {
     it("should throw an error when there's no operation to redo in the clipboard", () => {
-      const initialState = baseCreateExtendedState<CountState, CountLocalState>(
-        {
-          documentType: "powerhouse/counter",
-          state: { global: { count: 0 }, local: {} },
-        },
-      );
+      const initialState = baseCreateExtendedState<CountDocument>({
+        documentType: "powerhouse/counter",
+        state: { global: { count: 0 }, local: { name: "" } },
+      });
 
       document = baseCreateDocument(initialState);
 

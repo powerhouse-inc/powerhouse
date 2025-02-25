@@ -1,4 +1,11 @@
 import {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+} from "#drive-document-model/gen/types";
+import { DriveNotFoundError } from "#server/error";
+import { SynchronizationUnitQuery } from "#server/types";
+import { mergeOperations } from "#utils/misc";
+import {
   Action,
   DocumentHeader,
   Operation,
@@ -17,13 +24,6 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import sanitize from "sanitize-filename";
-import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-} from "../drive-document-model/gen/types.js";
-import { DriveNotFoundError } from "../server/error.js";
-import { SynchronizationUnitQuery } from "../server/types.js";
-import { mergeOperations } from "../utils/misc.js";
 import { IDriveStorage } from "./types.js";
 
 type FSError = {
@@ -90,7 +90,7 @@ export class FilesystemStorage implements IDriveStorage {
     return Promise.resolve(documentExists);
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction = Action>(
+  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
     drive: string,
     id: string,
   ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
@@ -108,7 +108,11 @@ export class FilesystemStorage implements IDriveStorage {
     }
   }
 
-  async createDocument<TGlobalState, TLocalState, TAction = Action>(
+  async createDocument<
+    TGlobalState,
+    TLocalState,
+    TAction extends Action = Action,
+  >(
     drive: string,
     id: string,
     document: PHDocument<TGlobalState, TLocalState, TAction>,

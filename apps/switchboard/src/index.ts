@@ -26,7 +26,6 @@ const httpServer = http.createServer(app);
 const main = async () => {
   try {
     const redis = await initRedis();
-    // @ts-ignore: @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const prismaClient: PrismaClient = new PrismaClient();
     const connectionString = process.env.DATABASE_URL;
     const dbUrl =
@@ -38,9 +37,8 @@ const main = async () => {
     const redisCache = new RedisCache(redis);
     const storage = new PrismaStorage(prismaClient);
     const driveServer = new ReactorBuilder([
-      DocumentModelLib,
-      ...Object.values(DocumentModelsLibs),
-    ] as DocumentModel[])
+      documentModelDocumentModelModule,
+    ] as DocumentModelModule[])
       .withStorage(storage)
       .withCache(redisCache)
       .build();

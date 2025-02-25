@@ -241,7 +241,7 @@ export class DriveSubgraph extends Subgraph {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const document = await this.reactor.getDocument(ctx.driveId, id);
 
-        const dms = this.reactor.getDocumentModels();
+        const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
           ({ documentModelState }) =>
             documentModelState.id === document.documentType,

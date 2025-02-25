@@ -77,7 +77,7 @@ export const useDocumentModels = () => useAtomValue(documentModelsAtom);
 const unrappedDocumentModelsAtom = unwrap(documentModelsAtom);
 
 // will return undefined until document models are initialized. Does not block rendering.
-export const useUnwrappedDocumentModels = () =>
+export const useUnwrappedDocumentModelModules = () =>
     useAtomValue(unrappedDocumentModelsAtom);
 
 export const subscribeDocumentModels = function (
@@ -95,7 +95,7 @@ export const subscribeDocumentModels = function (
     return () => unobserve();
 };
 
-function getDocumentModel<TGlobalState, TLocalState>(
+function getDocumentModelModule<TGlobalState, TLocalState>(
     documentType: string,
     documentModels:
         | DocumentModelModule<TGlobalState, TLocalState>[]
@@ -104,22 +104,28 @@ function getDocumentModel<TGlobalState, TLocalState>(
     return documentModels?.find(d => d.documentModelName === documentType);
 }
 
-export function useDocumentModel<TGlobalState, TLocalState>(
+export function useDocumentModelModule<TGlobalState, TLocalState>(
     documentType: string,
 ) {
-    const documentModels = useUnwrappedDocumentModels();
-    return getDocumentModel<TGlobalState, TLocalState>(
+    const documentModelModules = useUnwrappedDocumentModelModules();
+    return getDocumentModelModule<TGlobalState, TLocalState>(
         documentType,
-        documentModels as DocumentModelModule<TGlobalState, TLocalState>[],
+        documentModelModules as DocumentModelModule<
+            TGlobalState,
+            TLocalState
+        >[],
     );
 }
 
-export const useGetDocumentModel = <TGlobalState, TLocalState>() => {
-    const documentModels = useUnwrappedDocumentModels();
+export const useGetDocumentModelModule = <TGlobalState, TLocalState>() => {
+    const documentModelModules = useUnwrappedDocumentModelModules();
     return (documentType: string) =>
-        getDocumentModel(
+        getDocumentModelModule(
             documentType,
-            documentModels as DocumentModelModule<TGlobalState, TLocalState>[],
+            documentModelModules as DocumentModelModule<
+                TGlobalState,
+                TLocalState
+            >[],
         );
 };
 
@@ -132,7 +138,7 @@ export const useGetDocumentModel = <TGlobalState, TLocalState>() => {
  * @returns {Array<DocumentModel>} The filtered document models.
  */
 export const useFilteredDocumentModels = () => {
-    const documentModels = useUnwrappedDocumentModels();
+    const documentModels = useUnwrappedDocumentModelModules();
     const { config } = useFeatureFlag();
     const { enabledEditors, disabledEditors } = config.editors;
 

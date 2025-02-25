@@ -1,13 +1,15 @@
 import {
+  Action,
   DocumentOperations,
   Operation,
   OperationScope,
   PHDocument,
   generateId,
 } from "document-model";
-import { driveDocumentType } from "../drive-document-model/constants.js";
-import { DocumentDriveDocument } from "../drive-document-model/gen/types.js";
-import { OperationError } from "../server/error.js";
+
+import { driveDocumentType } from "#drive-document-model/constants";
+import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { OperationError } from "#server/error";
 import { RunAsap } from "./run-asap.js";
 
 export const runAsap = RunAsap.runAsap;
@@ -19,10 +21,10 @@ export function isDocumentDrive(
   return document.documentType === driveDocumentType;
 }
 
-export function mergeOperations<TGlobalState, TLocalState>(
-  currentOperations: DocumentOperations,
+export function mergeOperations<TAction extends Action = Action>(
+  currentOperations: DocumentOperations<TAction>,
   newOperations: Operation[],
-): DocumentOperations {
+): DocumentOperations<TAction> {
   const minIndexByScope = Object.keys(currentOperations).reduce<
     Partial<Record<OperationScope, number>>
   >((acc, curr) => {
@@ -44,7 +46,7 @@ export function mergeOperations<TGlobalState, TLocalState>(
 
   return newOperations
     .sort((a, b) => a.index - b.index)
-    .reduce<DocumentOperations>((acc, curr) => {
+    .reduce<DocumentOperations<TAction>>((acc, curr) => {
       const existingOperations = acc[curr.scope] || [];
       return { ...acc, [curr.scope]: [...existingOperations, curr] };
     }, currentOperations);
