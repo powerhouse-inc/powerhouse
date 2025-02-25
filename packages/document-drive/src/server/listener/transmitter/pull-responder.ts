@@ -269,7 +269,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     return result.acknowledge;
   }
 
-  private static async executePull<TGlobalState, TLocalState>(
+  private static async executePull(
     driveId: string,
     trigger: PullResponderTrigger,
     onStrandUpdate: (
@@ -356,7 +356,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }
   }
 
-  static setupPull<TGlobalState, TLocalState>(
+  static setupPull(
     driveId: string,
     trigger: PullResponderTrigger,
     onStrandUpdate: (

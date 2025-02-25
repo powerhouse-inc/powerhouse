@@ -6,9 +6,9 @@ import {
   Signature,
 } from "document-model";
 
-export function migrateDocumentOperationSignatures<TGlobalState, TLocalState>(
-  document: PHDocument<TGlobalState, TLocalState>,
-): PHDocument<TGlobalState, TLocalState> | undefined {
+export function migrateDocumentOperationSignatures(
+  document: PHDocument,
+): PHDocument | undefined {
   let legacy = false;
   const operations = Object.entries(
     document.operations,

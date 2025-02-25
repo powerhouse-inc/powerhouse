@@ -55,7 +55,7 @@ export class RedisQueue<T> implements IQueue<T> {
     return entries.map((e) => JSON.parse(e) as IJob<T>);
   }
 
-  async addDependencies<TGlobalState, TLocalState>(job: IJob<Job>) {
+  async addDependencies(job: IJob<Job>) {
     if (await this.hasDependency(job)) {
       return;
     }
@@ -63,12 +63,12 @@ export class RedisQueue<T> implements IQueue<T> {
     await this.setBlocked(true);
   }
 
-  async hasDependency<TGlobalState, TLocalState>(job: IJob<Job>) {
+  async hasDependency(job: IJob<Job>) {
     const deps = await this.client.lRange(this.id + "-deps", 0, -1);
     return deps.some((d) => d === JSON.stringify(job));
   }
 
-  async removeDependencies<TGlobalState, TLocalState>(job: IJob<Job>) {
+  async removeDependencies(job: IJob<Job>) {
     await this.client.lRem(this.id + "-deps", 1, JSON.stringify(job));
     const allDeps = await this.client.lLen(this.id + "-deps");
     if (allDeps > 0) {

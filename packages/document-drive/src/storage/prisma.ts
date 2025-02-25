@@ -142,14 +142,10 @@ export class PrismaStorage implements IDriveStorage {
     );
   }
 
-  async createDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
+  async createDocument(
     drive: string,
     id: string,
-    document: PHDocument<TGlobalState, TLocalState, TAction>,
+    document: PHDocument,
   ): Promise<void> {
     await this.db.document.upsert({
       where: {
@@ -171,7 +167,7 @@ export class PrismaStorage implements IDriveStorage {
     });
   }
 
-  private async _addDocumentOperations<TGlobalState, TLocalState>(
+  private async _addDocumentOperations(
     tx: Transaction,
     drive: string,
     id: string,

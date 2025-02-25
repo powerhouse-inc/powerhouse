@@ -8,13 +8,12 @@ import {
   ListenerFilter,
   ReactorBuilder,
 } from "document-drive";
+import { DocumentModelModule, PHDocument } from "document-model";
 
 import { beforeAll, bench, describe } from "vitest";
 
-class TestReceiver<TGlobalState, TLocalState> implements IReceiver {
-  async onStrands<TGlobalState, TLocalState>(
-    strands: InternalTransmitterUpdate<TGlobalState, TLocalState>[],
-  ) {
+class TestReceiver implements IReceiver {
+  async onStrands(strands: InternalTransmitterUpdate<PHDocument>[]) {
     return Promise.resolve();
   }
 

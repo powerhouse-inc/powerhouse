@@ -3,7 +3,6 @@ import { DriveNotFoundError } from "#server/error";
 import { SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
-  Action,
   DocumentHeader,
   Operation,
   OperationFromDocument,
@@ -56,15 +55,7 @@ export class MemoryStorage implements IDriveStorage {
     this.drives = {};
   }
 
-  async createDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
-    drive: string,
-    id: string,
-    document: PHDocument<TGlobalState, TLocalState, TAction>,
-  ) {
+  async createDocument(drive: string, id: string, document: PHDocument) {
     this.documents[drive] = this.documents[drive] ?? {};
     const {
       operations,

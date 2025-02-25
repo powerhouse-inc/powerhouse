@@ -20,8 +20,8 @@ export function buildRevisionsFilter(
   }, {});
 }
 
-export function buildDocumentRevisionsFilter<TGlobalState, TLocalState>(
-  document: PHDocument<TGlobalState, TLocalState>,
+export function buildDocumentRevisionsFilter(
+  document: PHDocument,
 ): RevisionsFilter {
   return Object.entries(document.operations).reduce<RevisionsFilter>(
     (acc, [scope, operations]) => {
@@ -53,12 +53,8 @@ export function filterOperationsByRevision<TAction extends Action = Action>(
   );
 }
 
-export function isAtRevision<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-  TAction extends Action = Action,
->(
-  document: PHDocument<TGlobalState, TLocalState, TAction>,
+export function isAtRevision(
+  document: PHDocument,
   revisions?: RevisionsFilter,
 ): boolean {
   return (
@@ -73,8 +69,8 @@ export function isAtRevision<
   );
 }
 
-export function isAfterRevision<TGlobalState, TLocalState>(
-  document: PHDocument<TGlobalState, TLocalState>,
+export function isAfterRevision(
+  document: PHDocument,
   revisions?: RevisionsFilter,
 ): boolean {
   return (

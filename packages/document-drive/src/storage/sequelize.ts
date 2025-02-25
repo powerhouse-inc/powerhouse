@@ -139,14 +139,10 @@ export class SequelizeStorage implements IDriveStorage {
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);
   }
-  async createDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
+  async createDocument(
     drive: string,
     id: string,
-    document: PHDocument<TGlobalState, TLocalState, TAction>,
+    document: PHDocument,
   ): Promise<void> {
     const Document = this.db.models.document;
 
@@ -164,7 +160,7 @@ export class SequelizeStorage implements IDriveStorage {
       revision: document.revision,
     });
   }
-  async addDocumentOperations<TGlobalState, TLocalState>(
+  async addDocumentOperations(
     drive: string,
     id: string,
     operations: Operation[],
@@ -242,7 +238,7 @@ export class SequelizeStorage implements IDriveStorage {
     );
   }
 
-  async _addDocumentOperationAttachments<TGlobalState, TLocalState>(
+  async _addDocumentOperationAttachments(
     driveId: string,
     documentId: string,
     operation: Operation,

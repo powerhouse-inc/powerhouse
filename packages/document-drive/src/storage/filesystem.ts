@@ -6,7 +6,6 @@ import { DriveNotFoundError } from "#server/error";
 import { SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
-  Action,
   DocumentHeader,
   Operation,
   OperationScope,
@@ -104,15 +103,7 @@ export class FilesystemStorage implements IDriveStorage {
     }
   }
 
-  async createDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
-    drive: string,
-    id: string,
-    document: PHDocument<TGlobalState, TLocalState, TAction>,
-  ) {
+  async createDocument(drive: string, id: string, document: PHDocument) {
     const documentPath = this._buildDocumentPath(drive, id);
     ensureDir(path.dirname(documentPath));
     writeFileSync(documentPath, stringify(document), {
@@ -160,7 +151,7 @@ export class FilesystemStorage implements IDriveStorage {
     return fs.rm(this._buildDocumentPath(drive, id));
   }
 
-  async addDocumentOperations<TGlobalState, TLocalState>(
+  async addDocumentOperations(
     drive: string,
     id: string,
     operations: Operation[],

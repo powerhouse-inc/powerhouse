@@ -7,7 +7,6 @@ import { SynchronizationUnitQuery } from "#server/types";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations } from "#utils/misc";
 import type {
-  Action,
   DocumentHeader,
   Operation,
   OperationScope,
@@ -66,15 +65,7 @@ export class BrowserStorage implements IDriveStorage {
     return document;
   }
 
-  async createDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
-    drive: string,
-    id: string,
-    document: PHDocument<TGlobalState, TLocalState, TAction>,
-  ) {
+  async createDocument(drive: string, id: string, document: PHDocument) {
     await (await this.db).setItem(this.buildKey(drive, id), document);
   }
 
