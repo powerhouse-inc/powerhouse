@@ -3,6 +3,7 @@ import { Command } from "commander";
 import path from "node:path";
 import { CommandActionType } from "../types.js";
 import { getProjectInfo } from "../utils.js";
+
 export const inspect: CommandActionType<
   [
     string,

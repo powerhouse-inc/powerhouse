@@ -1,7 +1,7 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { defineConfig } from "vite";
+import { defineConfig, Plugin } from "vite";
 import dts from "vite-plugin-dts";
 import generateFile from "vite-plugin-generate-file";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -53,6 +53,7 @@ export default defineConfig(() => {
   return {
     test,
     build: {
+      minify: false,
       outDir: `dist`,
       emptyOutDir: true,
       lib: {
@@ -113,7 +114,7 @@ export default defineConfig(() => {
             type: "commonjs",
           },
         },
-      ]),
+      ]) as Plugin,
     ],
   };
 });

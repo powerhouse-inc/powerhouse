@@ -10,6 +10,7 @@ import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 import pkg from './package.json';
 import { viteLoadExternalPackages } from './studio/vite-plugins/external-packages';
+import { viteImportMap } from './studio/vite-plugins/import-map';
 import { viteConnectDevStudioPlugin } from './studio/vite-plugins/studio';
 
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
@@ -89,6 +90,7 @@ export default defineConfig(({ mode }) => {
                 };
             },
         }),
+        viteImportMap(['react', 'react-dom']),
     ] as const;
 
     if (uploadSentrySourcemaps) {

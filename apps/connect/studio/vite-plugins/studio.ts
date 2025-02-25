@@ -97,6 +97,7 @@ export function viteConnectDevStudioPlugin(
                 'react-dom',
                 '@powerhousedao/scalars',
                 '@powerhousedao/design-system',
+                '@powerhousedao/common',
             ]),
         localDocumentModelsPath
             ? viteReplaceImports({
@@ -131,6 +132,7 @@ export function viteConnectDevStudioPlugin(
                           ...STUDIO_IMPORTS,
                           '@powerhousedao/studio',
                           '@powerhousedao/design-system',
+                          '@powerhousedao/common',
                           'document-model-libs',
                       ]
                     : [externalIds, ...STUDIO_IMPORTS];
