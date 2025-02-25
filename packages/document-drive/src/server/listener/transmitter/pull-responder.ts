@@ -16,7 +16,7 @@ import {
   Trigger,
 } from "document-drive";
 
-import { PULL_DRIVE_INTERVAL } from "#server/base";
+import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
 import { gql } from "graphql-request";

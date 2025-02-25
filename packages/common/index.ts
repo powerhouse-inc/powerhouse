@@ -1,1 +1,1 @@
-export * from "./editors";
+export * from "./editors/generic-drive-explorer";

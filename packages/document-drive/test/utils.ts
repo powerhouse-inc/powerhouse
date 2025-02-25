@@ -6,10 +6,9 @@ import {
   OperationFromDocument,
   PHDocument,
   PHReducer,
-  Reducer,
 } from "document-model";
 import { ExpectStatic } from "vitest";
-import { BaseDocumentDriveServer } from "../src/server/base.js";
+import { BaseDocumentDriveServer } from "#server/base-server";
 
 export function expectUUID(expect: ExpectStatic): unknown {
   return expect.stringMatching(

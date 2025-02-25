@@ -5,9 +5,10 @@ import { IQueueManager } from "#queue/types";
 import { MemoryStorage } from "#storage/memory";
 import { IDriveStorage } from "#storage/types";
 import { DocumentModelModule } from "document-model";
-import { DocumentDriveServer, TransmitterFactory } from "./base.js";
+import { DocumentDriveServer } from "./base-server.js";
 import { DefaultEventEmitter } from "./event-emitter.js";
 import { ListenerManager } from "./listener/listener-manager.js";
+import TransmitterFactory from "./listener/transmitter/factory.js";
 import SynchronizationManager from "./sync-manager.js";
 import {
   DefaultListenerManagerOptions,

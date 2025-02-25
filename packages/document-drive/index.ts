@@ -55,7 +55,10 @@ export type {
   ReadDrivesListener,
   ReadDrivesListenerUnsubscribe,
 } from "#read-mode/types";
-export { BaseDocumentDriveServer, DocumentDriveServer } from "#server/base";
+export {
+  BaseDocumentDriveServer,
+  DocumentDriveServer,
+} from "#server/base-server";
 export { ReactorBuilder } from "#server/builder";
 export {
   DocumentModelNotFoundError,

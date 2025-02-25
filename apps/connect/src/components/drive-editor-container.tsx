@@ -5,12 +5,13 @@ import { useUiNodes } from '#hooks/useUiNodes';
 import { useDocumentModels } from '#store/document-model';
 import { useDocumentDispatch } from '#utils/document-model';
 import {
-    DocumentDrive,
     DriveContextProvider,
     GenericDriveExplorer,
     IDriveContext,
 } from '@powerhousedao/common';
-import { Operation, useUiNodesContext } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/design-system';
+import { driveDocumentModelModule } from 'document-drive';
+import { DocumentModelModule, Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useModal } from './modal';
 
@@ -41,7 +42,7 @@ export function DriveEditorContainer() {
     const { addOperationToSelectedDrive } = useUiNodes();
     const documentDrive = useSelectedDocumentDrive();
     const [document, _dispatch, error] = useDocumentDispatch(
-        DocumentDrive.reducer,
+        driveDocumentModelModule.reducer,
         documentDrive,
     );
 
@@ -61,7 +62,7 @@ export function DriveEditorContainer() {
 
     const { showModal } = useModal();
     const showCreateDocumentModal = useCallback(
-        (documentModel: DocumentModel) => {
+        (documentModel: DocumentModelModule) => {
             if (!selectedDriveNode) {
                 throw new Error('No drive node selected');
             }
