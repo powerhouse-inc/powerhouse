@@ -3,15 +3,18 @@ import {
     DriveContextProvider,
     GenericDriveExplorer,
     IDriveContext,
+    useDriveContext,
 } from '@powerhousedao/common';
 import { useUiNodesContext } from '@powerhousedao/design-system';
 import { DocumentModel, Operation } from 'document-model/document';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 import { useEditorProps } from 'src/hooks/useEditorProps';
 import { useUiNodes } from 'src/hooks/useUiNodes';
 import { useDocumentModels } from 'src/store/document-model';
+import { useDriveEditor } from 'src/store/external-packages';
 import { useDocumentDispatch } from 'src/utils/document-model';
 import { useModal } from './modal';
 
@@ -29,6 +32,27 @@ function useSelectedDocumentDrive() {
     }
 
     return documentDrive.drive;
+}
+
+function DriveEditorError({ error }: FallbackProps) {
+    return (
+        <div className="mx-auto flex max-w-[80%]  flex-1 flex-col items-center justify-center">
+            <h1 className="mb-2 text-xl font-semibold">Error</h1>
+            <i>{error instanceof Error ? error.message : error}</i>
+            <pre>{JSON.stringify(error, null, 2)}</pre>
+        </div>
+    );
+}
+
+function DriveContextDebug() {
+    const context = useDriveContext();
+    const uiNodesContext = useUiNodesContext();
+    console.log('uiNodesContext', uiNodesContext);
+    return (
+        <div>
+            <pre>Context: {!!context}</pre>
+        </div>
+    );
 }
 
 export function DriveEditorContainer() {
@@ -99,20 +123,31 @@ export function DriveEditorContainer() {
         ],
     );
 
+    const driveEditor = useDriveEditor(document?.meta?.preferredEditor);
+    useEffect(() => {
+        console.log(
+            `App Drive Editor for ${selectedDriveNode?.name}:`,
+            driveEditor,
+        );
+    }, [driveEditor?.config.id, selectedDriveNode]);
+
     if (!document) {
         return null;
     }
 
-    console.log(document.meta);
+    const DriveEditorComponent =
+        driveEditor?.Component ?? GenericDriveExplorer.Component;
 
     return (
         <DriveContextProvider value={driveContext}>
-            <GenericDriveExplorer.Component
-                {...editorProps}
-                onSwitchboardLinkClick={undefined}
-                document={document}
-                error={error}
-            />
+            <ErrorBoundary fallbackRender={DriveEditorError}>
+                <DriveEditorComponent
+                    {...editorProps}
+                    onSwitchboardLinkClick={undefined}
+                    document={document}
+                    error={error}
+                />
+            </ErrorBoundary>
         </DriveContextProvider>
     );
 }

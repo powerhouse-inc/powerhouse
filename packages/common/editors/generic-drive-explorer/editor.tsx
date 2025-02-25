@@ -39,12 +39,14 @@ export default function Editor(props: IProps) {
       global: { id },
     },
   } = document;
+  const driveContext = useDriveContext();
+
   const {
     showSearchBar,
     isAllowedToCreateDocuments,
     documentModels,
     showCreateDocumentModal,
-  } = useDriveContext();
+  } = driveContext ?? { isAllowedToCreateDocuments: true };
   const {
     driveNodes,
     selectedNode,
@@ -71,7 +73,13 @@ export default function Editor(props: IProps) {
 
   const onCreateDocument = useCallback(
     async (documentModel: DocumentModel) => {
-      const { name } = await showCreateDocumentModal(documentModel);
+      let name = "New Document";
+
+      if (showCreateDocumentModal) {
+        const result = await showCreateDocumentModal(documentModel);
+        name = result.name || name;
+      }
+
       const document = documentModel.utils.createDocument();
       await addDocument(
         name,

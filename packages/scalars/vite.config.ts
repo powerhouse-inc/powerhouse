@@ -1,6 +1,6 @@
 import { writeFileSync } from "fs";
 import { glob } from "glob";
-import { defineConfig } from "vite";
+import { defineConfig, Plugin } from "vite";
 import dts from "vite-plugin-dts";
 import generateFile from "vite-plugin-generate-file";
 import pkg from "./package.json";
@@ -74,7 +74,7 @@ export default defineConfig({
           type: "commonjs",
         },
       },
-    ]),
+    ]) as Plugin,
     {
       name: "update-package-json",
       closeBundle() {

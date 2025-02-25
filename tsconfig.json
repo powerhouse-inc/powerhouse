@@ -6,6 +6,9 @@
       "path": "./packages/config"
     },
     {
+      "path": "./packages/common"
+    },
+    {
       "path": "./packages/design-system"
     },
     {

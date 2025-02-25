@@ -1,7 +1,7 @@
 import { App, DocumentModelLib } from 'document-model/document';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { getHMRModule, subscribeExternalPackages } from 'src/services/hmr';
 
 const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
@@ -43,7 +43,7 @@ externalPackagesAtom.onMount = setAtom => {
 
 export const useExternalPackages = () => useAtomValue(externalPackagesAtom);
 
-const CommonPackage: App = {
+export const CommonPackage: App = {
     id: 'powerhouse/common',
     name: 'Generic Drive Explorer',
     driveEditor: 'GenericDriveExplorer',
@@ -70,6 +70,29 @@ export const useAppEditor = (appId: string) => {
         if (!app) return undefined;
         return app.driveEditor;
     }, [externalPackages, apps, appId]);
+};
+
+export const useGetAppNameForEditorId = () => {
+    const apps = useApps();
+    return useCallback(
+        (editorId?: string) => {
+            if (!editorId) return undefined;
+            const app = apps.find(app => app.driveEditor === editorId);
+            return app?.name;
+        },
+        [apps],
+    );
+};
+
+export const useDriveEditor = (editorId?: string) => {
+    const externalPackages = useExternalPackages();
+    return useMemo(() => {
+        if (!editorId) return undefined;
+        const pkg = externalPackages.find(pkg =>
+            pkg.manifest.apps?.find(app => app.driveEditor === editorId),
+        );
+        return pkg?.editors.find(editor => editor.config.id === editorId);
+    }, [externalPackages, editorId]);
 };
 
 /*

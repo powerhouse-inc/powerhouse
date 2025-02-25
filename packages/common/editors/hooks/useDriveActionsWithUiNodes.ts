@@ -91,7 +91,7 @@ export function useDriveActionsWithUiNodes(
     () => ({
       ..._driveContext,
       selectedNode: selectedNode,
-      onSelectNode: (node: Node) => {
+      selectNode: (node: Node) => {
         _driveContext.selectNode(node);
         setSelectedNode(getNodeById(node.id));
       },
