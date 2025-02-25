@@ -3,8 +3,10 @@
 import { useCallback, useRef } from "react";
 import { useSidebar } from "./sidebar-provider";
 import { Input } from "../../fragments";
-import { Icon } from "@/powerhouse";
 import { cn } from "@/scalars/lib";
+import Tabler from "@/assets/icon-components/Tabler";
+import CrossCircle from "@/assets/icon-components/CrossCircle";
+import Search from "@/assets/icon-components/Search";
 
 interface SidebarSearchProps {
   showStatusFilter: boolean;
@@ -63,9 +65,9 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
             paddingRight: (ref.current?.clientWidth ?? 0) + 16,
           }}
         />
-        <Icon
-          name="Search"
-          size={16}
+        <Search
+          height={16}
+          width={16}
           className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-700 dark:text-gray-50"
         />
         {searchTerm && (
@@ -140,10 +142,11 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
               </div>
             </div>
 
-            <Icon
+            <CrossCircle
               onClick={handleReset}
               name="CrossCircle"
-              size={16}
+              height={16}
+              width={16}
               className="cursor-pointer text-gray-500 hover:text-gray-700 active:text-gray-900 dark:text-gray-700 dark:hover:text-gray-600 dark:active:text-gray-300"
             />
           </div>
@@ -161,7 +164,7 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
               : "hover:bg-gray-100 hover:text-gray-700",
           )}
         >
-          <Icon name="Tabler" size={16} />
+          <Tabler height={16} width={16} />
         </button>
       )}
     </div>
