@@ -59,6 +59,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
       onChange,
       onBlur,
       onClick,
+      onKeyDown,
       onMouseDown,
       autoComplete = true,
       variant = "withValue",
@@ -149,6 +150,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
                   onClick={onClick}
                   selectedOption={selectedOption}
                   handleOpenChange={handleOpenChange}
+                  onKeyDown={onKeyDown}
                   onMouseDown={onMouseDown}
                   placeholder={placeholder}
                   hasError={hasError}

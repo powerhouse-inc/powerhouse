@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-no-bind */
 import React, { useState } from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { useMediaQuery } from "usehooks-ts";
@@ -23,6 +24,7 @@ interface IdAutocompleteInputContainerProps {
   onClick?: (e: React.MouseEvent<HTMLInputElement>) => void;
   selectedOption?: IdAutocompleteOption;
   handleOpenChange?: (open: boolean) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLInputElement>) => void;
   placeholder?: string;
   hasError: boolean;
@@ -52,6 +54,7 @@ export const IdAutocompleteInputContainer = React.forwardRef<
       onClick,
       selectedOption,
       handleOpenChange,
+      onKeyDown,
       onMouseDown,
       placeholder,
       hasError,
@@ -89,6 +92,12 @@ export const IdAutocompleteInputContainer = React.forwardRef<
                 handleOpenChange?.(true);
               }
               onClick?.(e);
+            }}
+            onKeyDown={(e) => {
+              onKeyDown?.(e);
+              if (!isPopoverOpen) {
+                e.stopPropagation();
+              }
             }}
             onMouseDown={(e) => {
               const input = e.target as HTMLInputElement;
