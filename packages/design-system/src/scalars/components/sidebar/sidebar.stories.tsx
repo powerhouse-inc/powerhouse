@@ -28,8 +28,8 @@ import { SidebarNode } from "./types";
  *   id: string;
  *   title: string;
  *   children: SidebarNode[];
- *   icon?: IconName;
- *   expandedIcon?: IconName;
+ *   icon?: IconName | ReactElement;
+ *   expandedIcon?: IconName | ReactElement;
  *   status?: NodeStatus;
  * };
  * enum NodeStatus {
