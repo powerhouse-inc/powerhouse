@@ -1,11 +1,11 @@
 import {
     BaseQueueManager,
-    BrowserStorage,
     DefaultRemoteDriveInput,
     DocumentDriveServerOptions,
     ReactorBuilder,
     InMemoryCache,
 } from 'document-drive';
+import { BrowserStorage } from 'document-drive/storage/browser';
 import { DocumentModelModule } from 'document-model';
 
 const DEFAULT_DRIVES_URL =

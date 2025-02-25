@@ -8,7 +8,8 @@
   "exports": {
     "./connect-studio": "./dist/connect-studio/index.js",
     "./document-model-editor": "./dist/document-model-editor/index.js",
-    "./editor-utils": "./dist/editor-utils/index.js"
+    "./editor-utils": "./dist/editor-utils/index.js",
+    "./*": "./dist/*.js"
   },
   "imports": {
     "#editor-utils/*": "./dist/editor-utils/*.js",
