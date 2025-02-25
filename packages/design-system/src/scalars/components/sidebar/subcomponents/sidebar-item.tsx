@@ -1,12 +1,11 @@
 /* eslint-disable react/jsx-max-depth */
 import { SidebarNode, FlattenedNode, NodeStatus } from "../types";
-import { forwardRef, useCallback, useMemo, useRef } from "react";
+import { cloneElement, forwardRef, useCallback, useMemo, useRef } from "react";
 import { cn } from "@/scalars/lib";
 import { Tooltip, TooltipProvider } from "../../fragments";
 import { Icon } from "@/powerhouse";
 import { StatusIcon } from "./status-icon";
 import { useEllipsis } from "@/scalars/hooks/useEllipsis";
-import CaretRight from "@/assets/icon-components/CaretRight";
 import CaretDown from "@/assets/icon-components/CaretDown";
 import PinFilled from "@/assets/icon-components/PinFilled";
 import Pin from "@/assets/icon-components/Pin";
@@ -48,7 +47,7 @@ export const SidebarItem = ({
   const paddingLeft = node.depth * 24;
   const isSearchActive =
     searchResults.length > 0 && searchResults[activeSearchIndex].id === node.id;
-  const iconName = node.isExpanded
+  const IconComponent = node.isExpanded
     ? (node.expandedIcon ?? node.icon)
     : node.icon;
   const isDescendenceModified = useMemo(() => {
@@ -153,8 +152,12 @@ export const SidebarItem = ({
                 </div>
               )}
 
-              {iconName ? (
-                <Icon name={iconName} size={16} className="min-w-4" />
+              {IconComponent ? (
+                typeof IconComponent === "string" ? (
+                  <Icon name={IconComponent} size={16} className="min-w-4" />
+                ) : (
+                  cloneElement(IconComponent, { className: "min-w-4 w-4" })
+                )
               ) : pinnedMode ? (
                 <PinnedModeCircleIcon isPinned={isPinned} />
               ) : null}
