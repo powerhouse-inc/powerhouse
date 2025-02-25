@@ -5,10 +5,9 @@ import {
   deleteModule,
   deleteOperation,
   deleteOperationError,
-  DocumentModelAction,
-  DocumentModelLocalState,
-  DocumentModelState,
-  EditorProps, hashKey,
+  DocumentModelDocument,
+  EditorProps,
+  hashKey,
   setAuthorName,
   setAuthorWebsite,
   setInitialState,
@@ -36,13 +35,7 @@ import {
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
 
-export function DocumentModelEditor(
-  props: EditorProps<
-    DocumentModelState,
-    DocumentModelLocalState,
-    DocumentModelAction
-  >,
-) {
+export function DocumentModelEditor(props: EditorProps<DocumentModelDocument>) {
   const { document, documentNodeName, dispatch } = props;
   const {
     name: modelName,

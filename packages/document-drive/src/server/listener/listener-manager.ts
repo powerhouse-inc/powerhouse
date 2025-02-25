@@ -1,10 +1,3 @@
-import { ListenerFilter } from "document-model-libs/document-drive";
-import { OperationScope } from "document-model/document";
-import { childLogger } from "../../utils/logger";
-import { OperationError } from "../error";
-import { ISynchronizationManager } from "../index";
-import { ListenerFilter } from "#drive-document-model/gen/types";
-import { OperationError } from "#server/error";
 import { StrandUpdateSource } from "#server/listener/transmitter/types";
 import {
   DefaultListenerManagerOptions,
@@ -22,8 +15,9 @@ import {
   SynchronizationUnit,
   SynchronizationUnitQuery,
 } from "#server/types";
-import { logger } from "#utils/logger";
+import { childLogger, ListenerFilter } from "document-drive";
 import { OperationScope } from "document-model";
+import { OperationError } from "#server/error";
 import { debounce } from "./util.js";
 
 const ENABLE_SYNC_DEBUG = false;

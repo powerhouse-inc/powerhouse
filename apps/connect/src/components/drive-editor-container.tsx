@@ -1,18 +1,17 @@
+import { useDocumentDriveById } from '#hooks/useDocumentDriveById';
+import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
+import { useEditorProps } from '#hooks/useEditorProps';
+import { useUiNodes } from '#hooks/useUiNodes';
+import { useDocumentModels } from '#store/document-model';
+import { useDocumentDispatch } from '#utils/document-model';
 import {
     DocumentDrive,
     DriveContextProvider,
     GenericDriveExplorer,
     IDriveContext,
 } from '@powerhousedao/common';
-import { useUiNodesContext } from '@powerhousedao/design-system';
-import { DocumentModel, Operation } from 'document-model/document';
+import { Operation, useUiNodesContext } from '@powerhousedao/design-system';
 import { useCallback, useMemo } from 'react';
-import { useDocumentDriveById } from 'src/hooks/useDocumentDriveById';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { useEditorProps } from 'src/hooks/useEditorProps';
-import { useUiNodes } from 'src/hooks/useUiNodes';
-import { useDocumentModels } from 'src/store/document-model';
-import { useDocumentDispatch } from 'src/utils/document-model';
 import { useModal } from './modal';
 
 function useSelectedDocumentDrive() {

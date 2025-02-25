@@ -220,7 +220,12 @@ export type PartialState<TGlobalOrLocalState> =
   | Partial<TGlobalOrLocalState>;
 
 export type CreateState<TDocument extends BaseDocument<any, any, any>> = (
-  state?: Partial<BaseStateFromDocument<TDocument>>,
+  state?: Partial<
+    BaseState<
+      PartialState<GlobalStateFromDocument<TDocument>>,
+      PartialState<LocalStateFromDocument<TDocument>>
+    >
+  >,
 ) => BaseStateFromDocument<TDocument>;
 
 export type CreateExtendedState<TDocument extends BaseDocument<any, any, any>> =
@@ -386,13 +391,11 @@ export type EditorModule<
     EditorProps<TDocument> & TCustomProps & Record<string, unknown>
   >;
   documentTypes: string[];
-  config?: TEditorConfig & {
+  config: TEditorConfig & {
+    id: string;
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;
-  };
-  config: {
-    id: string;
   };
 };
 

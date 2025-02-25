@@ -1,4 +1,4 @@
-import { DocumentModel } from "document-model/document";
+import { DocumentModel } from "document-model";
 import { Node } from "document-models/document-drive";
 import { createContext, PropsWithChildren, useContext } from "react";
 

@@ -15,7 +15,6 @@ import { AddListenerInputSchema } from "#drive-document-model/gen/schema/zod";
 import {
   AddListenerInput,
   DocumentDriveDocument,
-  DocumentDriveLocalState,
   DocumentDriveState,
   FileNode,
   ListenerFilter,
@@ -101,6 +100,7 @@ import {
   IBaseDocumentDriveServer,
   IListenerManager,
   IOperationResult,
+  ISynchronizationManager,
   Listener,
   ListenerState,
   OperationUpdate,
@@ -151,7 +151,9 @@ export class TransmitterFactory implements ITransmitterFactory {
   }
 }
 
-export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
+export class BaseDocumentDriveServer
+  implements IBaseDocumentDriveServer, ISynchronizationManager
+{
   private emitter = createNanoEvents<DriveEvents>();
   private cache: ICache;
   private documentModelModules: DocumentModelModule[];
@@ -230,6 +232,10 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     this.initializePromise = this._initialize();
   }
 
+  updateSyncStatus(syncUnitId: string, status: SyncUnitStatusObject) {
+    this.syncStatus.set(syncUnitId, status);
+  }
+
   setDocumentModelModules(modules: DocumentModelModule[]): void {
     this.documentModelModules = [...modules];
     this.emit("documentModelModules", [...modules]);
@@ -255,9 +261,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     return source.type === "local" ? "push" : "pull";
   }
 
-  private getCombinedSyncUnitStatus(
-    syncUnitStatus: SyncUnitStatusObject,
-  ): SyncStatus {
+  getCombinedSyncUnitStatus(syncUnitStatus: SyncUnitStatusObject): SyncStatus {
     if (!syncUnitStatus.pull && !syncUnitStatus.push) return "INITIAL_SYNC";
     if (syncUnitStatus.pull === "INITIAL_SYNC") return "INITIAL_SYNC";
     if (syncUnitStatus.push === "INITIAL_SYNC")
@@ -300,7 +304,7 @@ export class BaseDocumentDriveServer implements IBaseDocumentDriveServer {
     );
   }
 
-  private async initializeDriveSyncStatus(
+  async initializeDriveSyncStatus(
     driveId: string,
     drive: DocumentDriveDocument,
   ) {

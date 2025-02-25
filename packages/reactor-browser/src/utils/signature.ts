@@ -6,17 +6,18 @@ import {
   Operation,
   OperationSignatureContext,
   PHDocument,
+  PHReducer,
   Reducer,
   User,
 } from "document-model";
 import type { User as RenownUser } from "../renown/types";
 
-export async function signOperation(
+export async function signOperation<TDocument extends PHDocument>(
   operation: Operation,
   sign: (data: Uint8Array) => Promise<Uint8Array>,
   documentId: string,
-  document: PHDocument,
-  reducer?: Reducer<any, any, Action>,
+  document: TDocument,
+  reducer?: Reducer<TDocument>,
   user?: User,
 ): Promise<Operation> {
   if (!user) return operation;

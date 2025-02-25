@@ -1,10 +1,10 @@
+import { useApps } from '#store/external-packages';
 import {
     AddLocalDriveInput,
     AddRemoteDriveInput,
     AddDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
-import { requestPublicDrive } from 'document-drive/utils/graphql';
-import { useApps } from 'src/store/external-packages';
+import { requestPublicDrive } from 'document-drive';
 type Props = {
     open: boolean;
     onAddLocalDrive: (data: AddLocalDriveInput) => Promise<void>;

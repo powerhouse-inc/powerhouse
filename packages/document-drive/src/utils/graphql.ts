@@ -1,4 +1,3 @@
-import { logger } from "document-drive/logger";
 import {
   DocumentDriveLocalState,
   FileNode,

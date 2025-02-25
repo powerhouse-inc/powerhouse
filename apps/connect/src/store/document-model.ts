@@ -4,6 +4,7 @@ import {
     documentModelDocumentModelModule,
     DocumentModelLib,
     DocumentModelModule,
+    PHDocument,
 } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
@@ -95,38 +96,29 @@ export const subscribeDocumentModels = function (
     return () => unobserve();
 };
 
-function getDocumentModelModule<TGlobalState, TLocalState>(
+function getDocumentModelModule<TDocument extends PHDocument>(
     documentType: string,
-    documentModels:
-        | DocumentModelModule<TGlobalState, TLocalState>[]
-        | undefined,
+    documentModels: DocumentModelModule[] | undefined,
 ) {
-    return documentModels?.find(d => d.documentModelName === documentType);
+    return documentModels?.find(d => d.documentType === documentType) as
+        | DocumentModelModule<TDocument>
+        | undefined;
 }
 
-export function useDocumentModelModule<TGlobalState, TLocalState>(
+export function useDocumentModelModule<TDocument extends PHDocument>(
     documentType: string,
 ) {
     const documentModelModules = useUnwrappedDocumentModelModules();
-    return getDocumentModelModule<TGlobalState, TLocalState>(
+    return getDocumentModelModule<TDocument>(
         documentType,
-        documentModelModules as DocumentModelModule<
-            TGlobalState,
-            TLocalState
-        >[],
+        documentModelModules,
     );
 }
 
-export const useGetDocumentModelModule = <TGlobalState, TLocalState>() => {
+export const useGetDocumentModelModule = <TDocument extends PHDocument>() => {
     const documentModelModules = useUnwrappedDocumentModelModules();
     return (documentType: string) =>
-        getDocumentModelModule(
-            documentType,
-            documentModelModules as DocumentModelModule<
-                TGlobalState,
-                TLocalState
-            >[],
-        );
+        getDocumentModelModule<TDocument>(documentType, documentModelModules);
 };
 
 /**

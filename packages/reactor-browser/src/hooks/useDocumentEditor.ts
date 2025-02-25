@@ -1,10 +1,9 @@
 import { IDocumentDriveServer } from "document-drive";
 import {
-  Action,
   ActionErrorCallback,
-  CustomAction,
+  ActionFromDocument,
   DocumentModelModule,
-  Operation,
+  OperationFromDocument,
   PHDocument,
 } from "document-model";
 import { User } from "../renown/types";
@@ -13,41 +12,33 @@ import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
 import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
 import { useDocumentDispatch } from "./useDocumentDispatch";
 
-export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
-  operation: Operation,
+export type DocumentDispatchCallback<TDocument extends PHDocument> = (
+  operation: OperationFromDocument<TDocument>,
   state: {
-    prevState: PHDocument<TGlobalState, TLocalState>;
-    newState: PHDocument<TGlobalState, TLocalState>;
+    prevState: TDocument;
+    newState: TDocument;
   },
 ) => void;
 
-export type UseDocumentEditorProps<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
-> = {
+export type UseDocumentEditorProps<TDocument extends PHDocument> = {
   driveId: string;
   nodeId: string;
-  document: PHDocument<TGlobalState, TLocalState> | undefined;
-  documentModel: DocumentModelModule<TGlobalState, TLocalState, TCustomAction>;
+  document: TDocument | undefined;
+  documentModelModule: DocumentModelModule<TDocument>;
   user?: User;
   onExport?: () => void;
   onOpenSwitchboardLink?: () => Promise<void>;
-  onChange?: (document: PHDocument<TGlobalState, TLocalState>) => void;
+  onChange?: (document: TDocument) => void;
 };
 
-export function useDocumentEditor<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
+export function useDocumentEditor<TDocument extends PHDocument>(
   reactor: IDocumentDriveServer | undefined,
-  props: UseDocumentEditorProps<TGlobalState, TLocalState, TCustomAction>,
+  props: UseDocumentEditorProps<TDocument>,
 ) {
   const {
     nodeId,
     driveId,
-    documentModel,
+    documentModelModule,
     document: initialDocument,
     user,
   } = props;
@@ -61,26 +52,26 @@ export function useDocumentEditor<
   });
 
   const [document, _dispatch, error] = useDocumentDispatch(
-    documentModel.reducer,
+    documentModelModule.reducer,
     initialDocument,
   );
 
   function dispatch(
-    action: TCustomAction | Action,
+    action: ActionFromDocument<TDocument>,
     onErrorCallback?: ActionErrorCallback,
   ) {
-    const callback: DocumentDispatchCallback<TGlobalState, TLocalState> = (
+    const callback: DocumentDispatchCallback<TDocument> = (
       operation,
       state,
     ) => {
       const { prevState } = state;
 
-      signOperation(
+      signOperation<TDocument>(
         operation,
         sign,
         nodeId,
         prevState,
-        documentModel.reducer,
+        documentModelModule.reducer,
         user,
       )
         .then((op) => {

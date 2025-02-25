@@ -1,6 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { logger } from "document-drive/logger";
 import type {
   Action,
   AttachmentInput,

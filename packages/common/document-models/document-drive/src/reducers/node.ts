@@ -7,7 +7,7 @@
 import {
   CreateChildDocumentInput,
   SynchronizationUnit,
-} from "document-model/document";
+} from "document-model";
 import {
   FileNode,
   getDescendants,

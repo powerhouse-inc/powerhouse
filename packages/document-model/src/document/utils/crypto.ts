@@ -1,14 +1,14 @@
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
-  Action,
+  ActionFromDocument,
   ActionSigner,
   Operation,
+  OperationFromDocument,
   OperationSignatureContext,
   OperationSigningHandler,
   OperationVerificationHandler,
   PHDocument,
-  PHReducer,
   Reducer,
   Signature,
 } from "../types.js";
@@ -79,10 +79,10 @@ export async function buildOperationSignature(
   return [...params, `0x${ab2hex(signature)}`];
 }
 
-export async function buildSignedOperation(
-  action: Action | Operation<Action>,
-  reducer: PHReducer,
-  document: PHDocument,
+export async function buildSignedOperation<TDocument extends PHDocument>(
+  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>,
+  reducer: Reducer<TDocument>,
+  document: TDocument,
   context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,
   signHandler: OperationSigningHandler,
 ) {

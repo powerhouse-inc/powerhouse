@@ -2,12 +2,13 @@ import { useDocumentReducer } from "#editor-utils/reducer";
 import { useArgs, useChannel } from "@storybook/preview-api";
 import { Decorator, Meta, StoryObj } from "@storybook/react";
 import {
-  Action,
   ActionContext,
-  BaseDocument,
-  CustomAction,
+  ActionFromDocument,
   EditorProps,
   ExtendedState,
+  GlobalStateFromDocument,
+  LocalStateFromDocument,
+  PHDocument,
   PartialState,
   Reducer,
   baseCreateDocument,
@@ -15,11 +16,7 @@ import {
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
 
-type EditorStoryArgs<
-  TGlobalState,
-  TLocalState,
-  TAction extends Action | CustomAction = Action,
-> = Partial<{
+type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
   isAllowedToCreateDocuments: boolean;
   isAllowedToEditDocuments: boolean;
   canUndo: boolean;
@@ -31,50 +28,36 @@ type EditorStoryArgs<
   simulateBackgroundUpdates?: {
     backgroundUpdateRate: number;
     backgroundUpdateActions: ((
-      document: BaseDocument<TGlobalState, TLocalState, TAction>,
-    ) => TAction)[];
+      document: TDocument,
+    ) => ActionFromDocument<TDocument>)[];
   };
 }>;
 
-type EditorStoryProps<
-  TGlobalState,
-  TLocalState,
-  TAction extends Action | CustomAction = Action,
-> = EditorProps<TGlobalState, TLocalState, TAction> &
-  EditorStoryArgs<TGlobalState, TLocalState, TAction>;
+type EditorStoryProps<TDocument extends PHDocument> = EditorProps<TDocument> &
+  EditorStoryArgs<TDocument>;
 
-export type EditorStoryComponent<
-  TGlobalState,
-  TLocalState,
-  TAction extends Action | CustomAction = Action,
-> = (
-  props: EditorStoryProps<TGlobalState, TLocalState, TAction>,
+export type EditorStoryComponent<TDocument extends PHDocument> = (
+  props: EditorStoryProps<TDocument>,
 ) => React.JSX.Element;
 
-export type DocumentStory<
-  TGlobalState,
-  TLocalState,
-  TAction extends Action | CustomAction = Action,
-> = StoryObj<EditorStoryComponent<TGlobalState, TLocalState, TAction>>;
+export type DocumentStory<TDocument extends PHDocument> = StoryObj<
+  EditorStoryComponent<TDocument>
+>;
 
-export function createDocumentStory<
-  TGlobalState,
-  TLocalState,
-  TAction extends Action | CustomAction = Action,
->(
-  Editor: EditorStoryComponent<TGlobalState, TLocalState, TAction>,
-  reducer: Reducer<TGlobalState, TLocalState, TAction>,
-  initialState: ExtendedState<
-    PartialState<TGlobalState>,
-    PartialState<TLocalState>
+export function createDocumentStory<TDocument extends PHDocument>(
+  Editor: EditorStoryComponent<TDocument>,
+  reducer: Reducer<TDocument>,
+  initialState: Partial<
+    ExtendedState<
+      PartialState<GlobalStateFromDocument<TDocument>>,
+      PartialState<LocalStateFromDocument<TDocument>>
+    >
   >,
-  additionalStoryArgs?: EditorStoryArgs<TGlobalState, TLocalState, TAction>,
-  decorators?: Decorator<
-    EditorStoryProps<TGlobalState, TLocalState, TAction>
-  >[],
+  additionalStoryArgs?: EditorStoryArgs<TDocument>,
+  decorators?: Decorator<EditorStoryProps<TDocument>>[],
 ): {
   meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory<TGlobalState, TLocalState, TAction>;
+  CreateDocumentStory: DocumentStory<TDocument>;
 } {
   const meta = {
     component: Editor,
@@ -97,9 +80,7 @@ export function createDocumentStory<
       (Story, { args }) => {
         const [, setArgs] = useArgs<typeof args>();
         const emit = useChannel({
-          DOCUMENT: (
-            document: BaseDocument<TGlobalState, TLocalState, TAction>,
-          ) => {
+          DOCUMENT: (document: TDocument) => {
             setArgs({ document });
           },
         });
@@ -120,7 +101,7 @@ export function createDocumentStory<
           setError(error);
         },
       );
-      function dispatch(action: TAction) {
+      function dispatch(action: ActionFromDocument<TDocument>) {
         const context: ActionContext = {};
         if (args.context.user) {
           context.signer = {
@@ -191,27 +172,26 @@ export function createDocumentStory<
     },
   } satisfies Meta<typeof Editor>;
 
-  const CreateDocumentStory: DocumentStory<TGlobalState, TLocalState, TAction> =
-    {
-      name: "New document",
-      args: {
-        document: baseCreateDocument(initialState),
-        context: {
-          theme: "light",
-          user: {
-            address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
-            networkId: "eip155",
-            chainId: 1,
-            ens: {
-              name: "vitalik.eth",
-              avatarUrl:
-                "https://ipfs.io/ipfs/QmSP4nq9fnN9dAiCj42ug9Wa79rqmQerZXZch82VqpiH7U/image.gif",
-            },
+  const CreateDocumentStory: DocumentStory<TDocument> = {
+    name: "New document",
+    args: {
+      document: baseCreateDocument(initialState),
+      context: {
+        theme: "light",
+        user: {
+          address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+          networkId: "eip155",
+          chainId: 1,
+          ens: {
+            name: "vitalik.eth",
+            avatarUrl:
+              "https://ipfs.io/ipfs/QmSP4nq9fnN9dAiCj42ug9Wa79rqmQerZXZch82VqpiH7U/image.gif",
           },
         },
-        ...additionalStoryArgs,
       },
-    };
+      ...additionalStoryArgs,
+    },
+  };
 
   return { meta, CreateDocumentStory } as const;
 }

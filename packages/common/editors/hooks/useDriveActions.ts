@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/require-await */ // TODO dispatch should return a promise
-import { Document, EditorDispatch } from "document-model/document";
+import { Document, EditorDispatch } from "document-model";
 import { generateId as _generateId } from "document-model/utils";
 import {
   DocumentDriveAction,

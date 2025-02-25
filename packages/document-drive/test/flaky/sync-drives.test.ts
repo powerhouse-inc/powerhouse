@@ -14,23 +14,14 @@ import {
   ListenerFilter,
   actions,
   reducer,
-} from "document-model-libs/document-drive";
+} from "document-drive";
+import * as DocumentModelLib from "document-model";
+import { DocumentModelModule, Operation } from "document-model";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel, Operation } from "document-model/document";
-import * as DocumentModelLib from "document-model/document-model";
 import stringify from "json-stringify-deterministic";
 import { GraphQLQuery, HttpResponse, graphql } from "msw";
-import { Listener } from "@prisma/client";
-import { DocumentModelModule, Operation } from "document-model";
-import { graphql } from "graphql";
-import { GraphQLQuery, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { stringify } from "querystring";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
-import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { ListenerFilter } from "../../src/drive-document-model/gen/types.js";
-import { DocumentDriveServer } from "../../src/server/base.js";
 import { PullResponderTransmitter } from "../../src/server/listener/transmitter/pull-responder.js";
 import {
   ListenerRevision,

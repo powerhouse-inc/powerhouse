@@ -4,7 +4,7 @@ import {
   UiNode,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
-import { EditorDispatch } from "document-model/document";
+import { EditorDispatch } from "document-model";
 import {
   DocumentDriveAction,
   DocumentDriveDocument,

@@ -1,15 +1,18 @@
-import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
-import { logger } from 'document-drive/logger';
-import { Document, Operation } from 'document-model/document';
-import { hashDocument } from 'document-model/utils';
+import { IReadModeContext } from '#context/read-mode';
+import { documentToHash } from '#hooks/useDocumentDrives';
+import { TDocumentDriveServer } from '#hooks/useDocumentDriveServer';
+import { TUiNodesContext } from '@powerhousedao/design-system';
+import { logger } from 'document-drive';
+import {
+    hashDocumentStateForScope,
+    Operation,
+    PHDocument,
+} from 'document-model';
 import { atom, useAtom, useSetAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
-import { IReadModeContext } from 'src/context/read-mode';
-import { documentToHash } from 'src/hooks/useDocumentDrives';
-import { TDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 
 function debounceOperations(
-    callback: (operations: Operation[]) => Promise<Document | undefined>,
+    callback: (operations: Operation[]) => Promise<PHDocument | undefined>,
     timeout = 50,
 ) {
     let timer: number;
@@ -40,7 +43,7 @@ function debounceOperations(
         } else {
             operations.push(operation);
         }
-        return new Promise<Document | undefined>((resolve, reject) => {
+        return new Promise<PHDocument | undefined>((resolve, reject) => {
             timer = setTimeout(() => {
                 callback(operations).then(resolve).catch(reject);
             }, timeout) as unknown as number;
@@ -54,7 +57,7 @@ export type FileNodeDocument =
           documentId: string;
           documentType: string;
           name: string;
-          document: Document | undefined;
+          document: PHDocument | undefined;
           status: 'LOADING' | 'ERROR';
       }
     | {
@@ -62,18 +65,18 @@ export type FileNodeDocument =
           documentId: string;
           documentType: string;
           name: string;
-          document: Document;
+          document: PHDocument;
           status: 'LOADED';
       }
     | undefined;
 
-const documentCacheAtom = atom(new Map<string, Document>());
+const documentCacheAtom = atom(new Map<string, PHDocument>());
 
 const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
 
 export function isSameDocument(
-    prev: Document | undefined,
-    next: Document | undefined,
+    prev: PHDocument | undefined,
+    next: PHDocument | undefined,
 ) {
     if (prev === next) {
         return true;
@@ -81,7 +84,7 @@ export function isSameDocument(
     if (!prev || !next) {
         return false;
     }
-    if (hashDocument(prev) === hashDocument(next)) {
+    if (hashDocumentStateForScope(prev) === hashDocumentStateForScope(next)) {
         return true;
     } else {
         return false;
@@ -132,7 +135,7 @@ const fileNodeDocumentAtom = atom(
 
 const selectedDocumentAtom = atom(
     null,
-    (get, set, document: Document | undefined) => {
+    (get, set, document: PHDocument | undefined) => {
         const fileNodeDocument = get(fileNodeDocumentAtom);
         if (!fileNodeDocument) {
             throw new Error('fileNodeDocument is undefined');
@@ -291,7 +294,7 @@ export function useFileNodeDocument(
     ]);
 
     const addOperationToSelectedDocument = useMemo(() => {
-        if (driveId && documentId && kind === FILE) {
+        if (driveId && documentId && kind === 'FILE') {
             return debounceOperations(operations =>
                 addOperations(driveId, documentId, operations),
             );
@@ -311,7 +314,7 @@ export function useFileNodeDocument(
     );
 
     const isSelectedDocument =
-        kind === FILE &&
+        kind === 'FILE' &&
         fileNodeDocument?.driveId === driveId &&
         fileNodeDocument?.documentId === documentId;
     const selectedDocument = isSelectedDocument

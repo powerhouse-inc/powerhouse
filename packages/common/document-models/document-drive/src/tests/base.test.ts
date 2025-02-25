@@ -1,4 +1,4 @@
-import { Signal } from "document-model/document";
+import { Signal } from "document-model";
 import { DocumentDrive, actions, reducer, utils } from "../..";
 
 describe("DocumentDrive Class", () => {

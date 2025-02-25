@@ -15,7 +15,7 @@ import {
   ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
 } from "document-drive";
-import { Action, CustomAction, PHDocument } from "document-model";
+import { PHDocument } from "document-model";
 import {
   createContext,
   FC,
@@ -142,16 +142,12 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
   }
 
   @checkServer
-  fetchDocument<
-    TGlobalState,
-    TLocalState,
-    TCustomAction extends Action | CustomAction = Action,
-  >(
+  fetchDocument<TDocument extends PHDocument>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | PHDocument<TGlobalState, TLocalState, TCustomAction>
+    | TDocument
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError

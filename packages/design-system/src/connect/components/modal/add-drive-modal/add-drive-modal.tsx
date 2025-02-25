@@ -7,7 +7,7 @@ import {
   Tabs,
 } from "@/connect";
 import { DivProps, Modal } from "@/powerhouse";
-import { App } from "document-model/document";
+import { App } from "document-model";
 import { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 

@@ -1,32 +1,21 @@
 import type {
-  Action,
   ActionErrorCallback,
-  BaseDocument,
-  CustomAction,
+  ActionFromDocument,
+  OperationFromDocument,
+  PHDocument,
   Reducer,
 } from "document-model";
 import { useState } from "react";
 
-export function useDocumentReducer<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends CustomAction = never,
->(
-  reducer: Reducer<
-    TGlobalState,
-    TLocalState,
-    TCustomAction | CustomAction | Action
-  >,
-  initialState: BaseDocument<TGlobalState, TLocalState, TCustomAction>,
+export function useDocumentReducer<TDocument extends PHDocument>(
+  reducer: Reducer<TDocument>,
+  initialState: TDocument,
   onError?: (error: unknown) => void,
-): readonly [
-  BaseDocument<TGlobalState, TLocalState, TCustomAction>,
-  (action: TCustomAction | CustomAction | Action) => void,
-] {
+): readonly [TDocument, (action: ActionFromDocument<TDocument>) => void] {
   const [state, setState] = useState(initialState);
 
   const dispatch = (
-    action: TCustomAction | CustomAction | Action,
+    action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>,
     onErrorCallback?: ActionErrorCallback,
   ) => {
     setState((_state) => {
@@ -41,11 +30,7 @@ export function useDocumentReducer<
           onErrorCallback?.(error);
         }
 
-        return newState as BaseDocument<
-          TGlobalState,
-          TLocalState,
-          TCustomAction
-        >;
+        return newState;
       } catch (error) {
         onError?.(error);
         onErrorCallback?.(error);

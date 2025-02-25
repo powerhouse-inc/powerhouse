@@ -7,7 +7,7 @@ import {
   Node,
 } from "..";
 
-import { OperationScope, SynchronizationUnit } from "document-model/document";
+import { OperationScope, SynchronizationUnit } from "document-model";
 import { generateId } from "document-model/utils";
 import { AddFileAction, CopyNodeAction } from "../gen/node/actions";
 import { addFile, copyNode } from "../gen/node/creators";

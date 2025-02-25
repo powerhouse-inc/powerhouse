@@ -1,16 +1,8 @@
-import type {
-  DocumentModelAction,
-  DocumentModelLocalState,
-  DocumentModelState,
-} from "document-model";
+import type { DocumentModelDocument } from "document-model";
 import { EditorModule } from "document-model";
 import { DocumentModelEditor } from "./editor.js";
 
-export const documentModelEditorModule: EditorModule<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> = {
+export const documentModelEditorModule: EditorModule<DocumentModelDocument> = {
   Component: DocumentModelEditor,
   documentTypes: ["powerhouse/document-model"],
   config: {

@@ -1,24 +1,18 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import InMemoryCache from 'document-drive/cache/memory';
-import { logger } from 'document-drive/logger';
-import { BaseQueueManager } from 'document-drive/queue/base';
+import { getReactorDefaultDrivesConfig } from '#utils/reactor';
 import {
     BaseQueueManager,
     DocumentDriveAction,
     DriveInput,
-    ReactorBuilder,
     FilesystemStorage,
     IDocumentDriveServer,
     InMemoryCache,
+    logger,
+    ReactorBuilder,
     RemoteDriveOptions,
 } from 'document-drive';
-import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { Action, DocumentModelModule, Operation } from 'document-model';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
-import { logger } from 'src/services/logger';
-import { getReactorDefaultDrivesConfig } from 'src/utils/reactor';
 
 export default (
     documentModels: DocumentModelModule[],

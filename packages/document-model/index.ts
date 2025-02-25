@@ -94,6 +94,7 @@ export type {
   SynchronizationUnitInput,
   User,
   ValidationError,
+  App,
 } from "#document/types.js";
 export {
   baseCreateDocument,

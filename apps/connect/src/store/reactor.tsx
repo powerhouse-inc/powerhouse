@@ -1,15 +1,11 @@
-import connectConfig from 'connect-config';
-import { type IDocumentDriveServer } from 'document-drive';
-import { logger } from 'document-drive/logger';
-import { utils } from 'document-model/document';
+import connectConfig from '#connect.config';
+import { createBrowserDocumentDriveServer } from '#utils/reactor';
+import { IDocumentDriveServer, logger } from 'document-drive';
+import { hashKey } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, unwrap } from 'jotai/utils';
-import {
-    documentModelsAtom,
-    subscribeDocumentModels,
-} from 'src/store/document-model';
-import { createBrowserDocumentDriveServer } from 'src/utils/reactor';
 import { atomStore } from '.';
+import { documentModelsAtom, subscribeDocumentModels } from './document-model';
 
 async function initReactor(reactor: IDocumentDriveServer) {
     const errors = await reactor.initialize();
@@ -23,7 +19,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
         reactor
             .addDrive({
                 global: {
-                    id: utils.hashKey(),
+                    id: hashKey(),
                     name: 'My Local Drive',
                     icon: null,
                     slug: 'my-local-drive',
@@ -58,13 +54,16 @@ const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(createReactor);
 const unwrappedReactor = unwrap(reactorAtom);
 
 // blocks rendering until reactor is initialized.
-export const useReactor = () => useAtomValue(reactorAtom);
+export const useReactor = (): IDocumentDriveServer | undefined =>
+    useAtomValue(reactorAtom);
 
 // will return undefined until reactor is initialized. Does not block rendering.
-export const useUnwrappedReactor = () => useAtomValue(unwrappedReactor);
+export const useUnwrappedReactor = (): IDocumentDriveServer | undefined =>
+    useAtomValue(unwrappedReactor);
 
 // will return undefined until reactor is initialized. Does not block rendering or trigger the reactor to be initialized.
-export const useAsyncReactor = () => useAtomValue(reactorAsyncAtom);
+export const useAsyncReactor = (): IDocumentDriveServer | undefined =>
+    useAtomValue(reactorAsyncAtom);
 
 const reactorAsyncAtom = atom<IDocumentDriveServer | undefined>(undefined);
 reactorAsyncAtom.onMount = setAtom => {
@@ -90,7 +89,7 @@ reactorAtom.onMount = setAtom => {
         if (!documentModelsSubscripion) {
             documentModelsSubscripion = subscribeDocumentModels(
                 documentModels => {
-                    reactor.setDocumentModels(documentModels);
+                    reactor.setDocumentModelModules(documentModels);
                 },
             );
         }

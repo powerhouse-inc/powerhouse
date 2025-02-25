@@ -2,10 +2,11 @@ import {
   IDocumentDriveServer,
   InternalTransmitterUpdate,
 } from "document-drive";
+import { PHDocument } from "document-model";
 import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "../types.js";
 
-export type ProcessorUpdate<TGlobalState, TLocalState> =
-  InternalTransmitterUpdate<TGlobalState, TLocalState>;
+export type ProcessorUpdate<TDocument extends PHDocument> =
+  InternalTransmitterUpdate<TDocument>;
 
 export abstract class Processor implements IProcessor {
   protected reactor: IDocumentDriveServer;
@@ -33,8 +34,8 @@ export abstract class Processor implements IProcessor {
     this.reactor = args.reactor;
   }
 
-  abstract onStrands<TGlobalState, TLocalState>(
-    strands: ProcessorUpdate<TGlobalState, TLocalState>[],
+  abstract onStrands<TDocument extends PHDocument>(
+    strands: ProcessorUpdate<TDocument>[],
   ): Promise<void>;
 
   abstract onDisconnect(): Promise<void>;
@@ -45,8 +46,8 @@ export abstract class Processor implements IProcessor {
 }
 
 export class BaseProcessor extends Processor {
-  async onStrands<TGlobalState, TLocalState>(
-    strands: ProcessorUpdate<TGlobalState, TLocalState>[],
+  async onStrands<TDocument extends PHDocument>(
+    strands: ProcessorUpdate<TDocument>[],
   ): Promise<void> {}
   async onDisconnect(): Promise<void> {}
 }

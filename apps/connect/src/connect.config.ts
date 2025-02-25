@@ -1,5 +1,5 @@
 import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
-import { logger, setLogLevel } from 'document-drive/logger';
+import { logger, setLogLevel } from 'document-drive';
 import { version } from '../package.json';
 
 const APP_VERSION = import.meta.env.APP_VERSION || version;

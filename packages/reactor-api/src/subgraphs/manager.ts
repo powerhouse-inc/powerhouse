@@ -43,7 +43,7 @@ export class SubgraphManager {
       throw new Error("DocumentDrive model required");
     }
 
-    this.reactor.on("documentModels", () => {
+    this.reactor.on("documentModelModules", () => {
       this.updateRouter().catch((error: unknown) => console.error(error));
     });
 

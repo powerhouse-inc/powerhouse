@@ -5,7 +5,7 @@ import {
   useDrop,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
-import { DocumentModel, EditorProps } from "document-model/document";
+import { DocumentModel, EditorProps } from "document-model";
 import {
   DocumentDriveAction,
   DocumentDriveLocalState,

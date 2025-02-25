@@ -1,4 +1,4 @@
-import { logger } from 'document-drive/logger';
+import { logger } from 'document-drive';
 import { EventEmitter } from 'events';
 import type { IStorage } from '../storage';
 import { getEnsInfo } from '../viem';

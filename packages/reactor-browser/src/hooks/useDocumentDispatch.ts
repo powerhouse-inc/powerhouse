@@ -1,48 +1,33 @@
 import type {
-  Action,
   ActionErrorCallback,
-  CustomAction,
-  Operation,
+  ActionFromDocument,
+  OperationFromDocument,
   PHDocument,
   Reducer,
 } from "document-model";
 import { useEffect, useState } from "react";
 
-export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
-  operation: Operation,
+export type DocumentDispatchCallback<TDocument extends PHDocument> = (
+  operation: OperationFromDocument<TDocument>,
   state: {
-    prevState: PHDocument<TGlobalState, TLocalState>;
-    newState: PHDocument<TGlobalState, TLocalState>;
+    prevState: TDocument;
+    newState: TDocument;
   },
 ) => void;
 
-export type DocumentDispatch<
-  TGlobalState,
-  TLocalState,
-  TAction extends CustomAction = never,
-> = (
-  action: TAction | Action | CustomAction,
-  callback?: DocumentDispatchCallback<TGlobalState, TLocalState>,
+export type DocumentDispatch<TDocument extends PHDocument> = (
+  action: ActionFromDocument<TDocument>,
+  callback?: DocumentDispatchCallback<TDocument>,
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
 type OnErrorHandler = (error: unknown) => void;
 
-export function useDocumentDispatch<
-  TGlobalState,
-  TLocalState,
-  TAction extends CustomAction = never,
->(
-  documentReducer:
-    | Reducer<TGlobalState, TLocalState, TAction | Action | CustomAction>
-    | undefined,
-  initialState: PHDocument<TGlobalState, TLocalState> | undefined,
+export function useDocumentDispatch<TDocument extends PHDocument>(
+  documentReducer: Reducer<TDocument> | undefined,
+  initialState: TDocument | undefined,
   onError: OnErrorHandler = console.error,
-): readonly [
-  PHDocument<TGlobalState, TLocalState> | undefined,
-  DocumentDispatch<TGlobalState, TLocalState, TAction>,
-  unknown,
-] {
+): readonly [TDocument | undefined, DocumentDispatch<TDocument>, unknown] {
   const [state, setState] = useState(initialState);
   const [error, setError] = useState<unknown>();
 
@@ -55,7 +40,7 @@ export function useDocumentDispatch<
     setState(initialState);
   }, [initialState]);
 
-  const dispatch: DocumentDispatch<TGlobalState, TLocalState, TAction> = (
+  const dispatch: DocumentDispatch<TDocument> = (
     action,
     callback,
     onErrorCallback?: ActionErrorCallback,

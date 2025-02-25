@@ -1,4 +1,3 @@
-import { logger } from "document-drive/logger";
 import { IReadModeDriveServer } from "#read-mode/types";
 import { DriveNotFoundError } from "#server/error";
 import {

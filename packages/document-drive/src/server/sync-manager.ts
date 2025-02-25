@@ -1,5 +1,4 @@
 import { ICache } from "#cache/types";
-import { logger } from "document-drive/logger";
 import {
   DocumentDriveDocument,
   FileNode,

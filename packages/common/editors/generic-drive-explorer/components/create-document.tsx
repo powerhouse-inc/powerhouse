@@ -1,5 +1,5 @@
 import { Button } from "@powerhousedao/design-system";
-import { DocumentModel } from "document-model/document";
+import { DocumentModel } from "document-model";
 
 interface CreateDocumentProps {
   documentModels?: DocumentModel[];

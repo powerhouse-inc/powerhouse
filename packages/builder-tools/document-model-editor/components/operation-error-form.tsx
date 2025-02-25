@@ -1,11 +1,11 @@
 import { pascalCase } from "change-case";
-import type { Module, OperationError } from "document-model";
+import type { DocumentModelOperationError, Module } from "document-model";
 import { useCallback, useRef } from "react";
 import { TextField } from "./text-field.js";
 
 type Props = {
   operation: Module["operations"][number];
-  error?: OperationError;
+  error?: DocumentModelOperationError;
   focusOnMount?: boolean;
   onSubmit?: () => void;
   onAddOperationError: (

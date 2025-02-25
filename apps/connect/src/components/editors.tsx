@@ -1,7 +1,6 @@
 import { useConnectCrypto, useConnectDid } from '#hooks/useConnectCrypto';
 import { useUndoRedoShortcuts } from '#hooks/useUndoRedoShortcuts';
 import { useUserPermissions } from '#hooks/useUserPermissions';
-import { logger } from '#services/logger';
 import { FileNodeDocument, isSameDocument } from '#store/document-drive';
 import { useGetDocumentModelModule } from '#store/document-model';
 import { useGetEditor } from '#store/editor';
@@ -12,8 +11,12 @@ import {
     useDocumentDispatch,
 } from '#utils/document-model';
 import { addActionContext, signOperation } from '#utils/signature';
-import { DocumentToolbar, RevisionHistory } from '@powerhousedao/design-system';
-import { logger } from 'document-drive/logger';
+import {
+    Button,
+    DocumentToolbar,
+    RevisionHistory,
+} from '@powerhousedao/design-system';
+import { logger } from 'document-drive';
 import {
     Action,
     ActionErrorCallback,
@@ -24,7 +27,7 @@ import {
     undo,
 } from 'document-model';
 import { useAtomValue } from 'jotai';
-import React, {
+import {
     Suspense,
     useCallback,
     useEffect,
@@ -34,34 +37,17 @@ import React, {
 } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
-import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
-import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { FileNodeDocument, isSameDocument } from 'src/store/document-drive';
-import { useGetDocumentModel } from 'src/store/document-model';
-import { useGetEditor } from 'src/store/editor';
-import { themeAtom } from 'src/store/theme';
-import { useUser } from 'src/store/user';
-import {
-    DocumentDispatchCallback,
-    useDocumentDispatch,
-} from 'src/utils/document-model';
-import { addActionContext, signOperation } from 'src/utils/signature';
-import Button from './button';
 import { EditorLoader } from './editor-loader';
 import { useModal } from './modal';
 
-export type EditorProps<TGlobalState = unknown, TLocalState = unknown> = {
+export type EditorProps<TDocument extends PHDocument = PHDocument> = {
     fileNodeDocument: FileNodeDocument;
-    document: PHDocument<TGlobalState, TLocalState> | undefined;
+    document: TDocument | undefined;
     onClose: () => void;
     onExport: () => void;
     onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
-    onChange?: (
-        documentId: string,
-        document: PHDocument<TGlobalState, TLocalState>,
-    ) => void;
+    onChange?: (documentId: string, document: TDocument) => void;
 };
 
 function EditorError({ message }: { message: React.ReactNode }) {
@@ -144,7 +130,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
 
     const dispatch = useCallback(
         (action: Action, onErrorCallback?: ActionErrorCallback) => {
-            const callback: DocumentDispatchCallback<unknown, unknown> = (
+            const callback: DocumentDispatchCallback<PHDocument> = (
                 operation,
                 state,
             ) => {

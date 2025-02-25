@@ -19,6 +19,7 @@ export {
 } from "#drive-document-model/gen/creators";
 export { reducer as documentDriveReducer } from "#drive-document-model/gen/reducer";
 export type {
+  AddListenerInput,
   FileNode,
   Listener,
   ListenerFilter,
@@ -83,7 +84,12 @@ export { FilesystemStorage } from "#storage/filesystem";
 export { MemoryStorage } from "#storage/memory";
 export { PrismaStorage } from "#storage/prisma";
 export { requestPublicDrive } from "#utils/graphql";
-export { setLogger } from "#utils/logger";
+export {
+  childLogger,
+  logger,
+  setErrorHandler,
+  setLogLevel,
+} from "#utils/logger";
 export type { ILogger } from "#utils/logger";
 export { generateUUID, isDocumentDrive } from "#utils/misc";
 export { InMemoryCache, RedisCache };

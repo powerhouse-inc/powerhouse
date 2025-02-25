@@ -1,6 +1,6 @@
 import { Select, SelectItem } from "@/connect";
 import { Icon } from "@/powerhouse/components/icon";
-import { App } from "document-model/document";
+import { App } from "document-model";
 import { ComponentPropsWithRef } from "react";
 import { Control, Controller, Path } from "react-hook-form";
 

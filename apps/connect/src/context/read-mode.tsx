@@ -1,10 +1,10 @@
 import { drivesToHash } from '#hooks/useDocumentDrives';
 import { useUserPermissions } from '#hooks/useUserPermissions';
-import { logger } from '#services/logger';
 import {
     DocumentModelNotFoundError,
     IDocumentDriveServer,
     IReadModeDriveServer,
+    logger,
     ReadDocumentNotFoundError,
     ReadDrive,
     ReadDriveContext,
@@ -14,8 +14,7 @@ import {
     ReadDriveSlugNotFoundError,
     RemoteDriveOptions,
 } from 'document-drive';
-import { logger } from 'document-drive/logger';
-import { Action, CustomAction, PHDocument } from 'document-model';
+import { PHDocument } from 'document-model';
 import {
     createContext,
     FC,
@@ -127,16 +126,12 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     }
 
     @checkServer
-    fetchDocument<
-        TGlobalState,
-        TLocalState,
-        TAction extends Action | CustomAction = Action,
-    >(
+    fetchDocument<TDocument extends PHDocument>(
         driveId: string,
         documentId: string,
         documentType: string,
     ): Promise<
-        | PHDocument<TGlobalState, TLocalState, TAction>
+        | TDocument
         | DocumentModelNotFoundError
         | ReadDriveNotFoundError
         | ReadDocumentNotFoundError

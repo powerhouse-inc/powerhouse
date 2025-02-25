@@ -7,7 +7,7 @@ This project contains a logging interface that is used throughout related projec
 The interface works exactly like the `console` API:
 
 ```
-import { logger } from "document-drive/logger";
+import { logger } from "document-drive";
 
 logger.info("hey!");
 ```
@@ -17,7 +17,7 @@ logger.info("hey!");
 Sometimes it is nice to create "scoped" loggers, that will wrap logs with tags.
 
 ```
-import { childLogger } from "document-drive/logger";
+import { childLogger } from "document-drive";
 
 const logger = childLogger("MySystem");
 
@@ -77,7 +77,7 @@ Yet switch them on by updating `powerhouse.config.json`:
 A global error handler may be also be set, which can forward error logs along to other sources.
 
 ```
-import { setErrorHandler } from 'document-drive/logger';
+import { setErrorHandler } from 'document-drive';
 
 setErrorHandler(forwardErrorToSentry);
 ```

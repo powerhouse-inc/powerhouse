@@ -33,6 +33,9 @@
     },
     {
       "path": "./tools/scalar-generator"
+    },
+    {
+      "path": "./packages/builder-tools"
     }
   ],
   "files": []
