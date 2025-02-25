@@ -41,6 +41,13 @@ export {
 export { applyMixins, BaseDocumentClass } from "#document/object.js";
 export type {
   Action,
+  ActionFromDocument,
+  GlobalStateFromDocument,
+  LocalStateFromDocument,
+  OperationFromDocument,
+  OperationsFromDocument,
+  BaseStateFromDocument,
+  ExtendedStateFromDocument,
   ActionContext,
   ActionErrorCallback,
   ActionSigner,
@@ -76,6 +83,7 @@ export type {
   PartialState,
   PHDocument,
   Reducer,
+  PHReducer,
   ReducerOptions,
   SaveToFile,
   SaveToFileHandle,

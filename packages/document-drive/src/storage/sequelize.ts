@@ -304,10 +304,10 @@ export class SequelizeStorage implements IDriveStorage {
     return count > 0;
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  async getDocument<TDocument extends PHDocument>(
     driveId: string,
     id: string,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
+  ): Promise<TDocument> {
     const documentFromDb = this.db.models.document;
     if (!documentFromDb) {
       throw new Error("Document model not found");
@@ -381,7 +381,7 @@ export class SequelizeStorage implements IDriveStorage {
       revision: document.revision,
     };
 
-    return doc as PHDocument<TGlobalState, TLocalState, TAction>;
+    return doc as TDocument;
   }
 
   async deleteDocument(drive: string, id: string) {

@@ -1,4 +1,8 @@
-import type { BaseDocument, DocumentModelModule, ExtendedState } from "document-model";
+import type {
+  DocumentModelModule,
+  ExtendedState,
+  PHDocument,
+} from "document-model";
 import type { DocumentDriveAction } from "./actions.js";
 import type {
   DocumentDriveLocalState,
@@ -10,14 +14,11 @@ export type ExtendedDocumentDriveState = ExtendedState<
   DocumentDriveState,
   DocumentDriveLocalState
 >;
-export type DocumentDriveDocument = BaseDocument<
+export type DocumentDriveDocument = PHDocument<
   DocumentDriveState,
   DocumentDriveLocalState,
   DocumentDriveAction
 >;
 
-export type DriveDocumentModelModule = DocumentModelModule<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
->;
+export type DriveDocumentModelModule =
+  DocumentModelModule<DocumentDriveDocument>;

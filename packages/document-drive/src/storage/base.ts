@@ -4,9 +4,9 @@ import {
 } from "#drive-document-model/gen/types";
 import { SynchronizationUnitQuery } from "#server/types";
 import type {
-  Action,
   DocumentHeader,
   Operation,
+  OperationFromDocument,
   PHDocument,
 } from "document-model";
 import { IDriveStorage, IStorage, IStorageDelegate } from "./types.js";
@@ -16,23 +16,15 @@ abstract class BaseStorage implements IStorage {
 
   abstract getDocuments(drive: string): Promise<string[]>;
 
-  abstract getDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
+  abstract getDocument<TDocument extends PHDocument>(
     drive: string,
     id: string,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>>;
+  ): Promise<TDocument>;
 
-  abstract createDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
+  abstract createDocument(
     drive: string,
     id: string,
-    document: PHDocument<TGlobalState, TLocalState, TAction>,
+    document: PHDocument,
   ): Promise<void>;
 
   abstract addDocumentOperations(
@@ -42,17 +34,11 @@ abstract class BaseStorage implements IStorage {
     header: DocumentHeader,
   ): Promise<void>;
 
-  abstract addDocumentOperationsWithTransaction<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
+  abstract addDocumentOperationsWithTransaction<TDocument extends PHDocument>(
     drive: string,
     id: string,
-    callback: (
-      document: PHDocument<TGlobalState, TLocalState, TAction>,
-    ) => Promise<{
-      operations: Operation[];
+    callback: (document: TDocument) => Promise<{
+      operations: OperationFromDocument<TDocument>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;

@@ -1,8 +1,4 @@
-import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "#drive-document-model/gen/types";
+import { DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { driveDocumentModelModule } from "#drive-document-model/module";
 import { DocumentModelNotFoundError } from "#server/error";
 import {
@@ -10,7 +6,7 @@ import {
   fetchDocument,
   requestPublicDrive,
 } from "#utils/graphql";
-import type { Action, CustomAction, DocumentModelModule } from "document-model";
+import type { DocumentModelModule, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
 import { driveDocumentType } from "../drive-document-model/constants.js";
 import {
@@ -74,11 +70,11 @@ export class ReadModeService implements IReadModeDriveService {
     if (!drive) {
       return new ReadDriveNotFoundError(id);
     }
-    const document = await this.fetchDocument<
-      DocumentDriveState,
-      DocumentDriveLocalState,
-      DocumentDriveAction
-    >(id, id, driveDocumentType);
+    const document = await this.fetchDocument<DocumentDriveDocument>(
+      id,
+      id,
+      driveDocumentType,
+    );
     if (document instanceof Error) {
       return document;
     }
@@ -87,16 +83,12 @@ export class ReadModeService implements IReadModeDriveService {
     return result;
   }
 
-  async fetchDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action | CustomAction = Action,
-  >(
+  async fetchDocument<TDocument extends PHDocument>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | DocumentGraphQLResult<TGlobalState, TLocalState, TAction>
+    | DocumentGraphQLResult<TDocument>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError
@@ -106,9 +98,8 @@ export class ReadModeService implements IReadModeDriveService {
       return new ReadDriveNotFoundError(driveId);
     }
 
-    let documentModelModule:
-      | DocumentModelModule<TGlobalState, TLocalState, TAction>
-      | undefined = undefined;
+    let documentModelModule: DocumentModelModule<TDocument> | undefined =
+      undefined;
     try {
       documentModelModule = this.#getDocumentModelModule(documentType);
     } catch (error) {
@@ -116,11 +107,11 @@ export class ReadModeService implements IReadModeDriveService {
     }
 
     const { url } = drive.context;
-    const { errors, document } = await fetchDocument<
-      TGlobalState,
-      TLocalState,
-      TAction
-    >(url, documentId, documentModelModule);
+    const { errors, document } = await fetchDocument<TDocument>(
+      url,
+      documentId,
+      documentModelModule,
+    );
 
     if (errors) {
       const error = this.#parseGraphQLErrors(errors, driveId, documentId);

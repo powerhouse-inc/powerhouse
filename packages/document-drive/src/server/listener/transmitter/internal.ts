@@ -1,4 +1,10 @@
-import { Operation, OperationScope } from "document-model";
+import {
+  GlobalStateFromDocument,
+  LocalStateFromDocument,
+  OperationFromDocument,
+  OperationScope,
+  PHDocument,
+} from "document-model";
 
 import {
   DocumentDriveLocalState,
@@ -15,27 +21,29 @@ import { logger } from "#utils/logger";
 import { ITransmitter, StrandUpdateSource } from "./types.js";
 
 export interface IReceiver {
-  onStrands: <TGlobalState, TLocalState>(
-    strands: InternalTransmitterUpdate<TGlobalState, TLocalState>[],
+  onStrands: <TDocument extends PHDocument>(
+    strands: InternalTransmitterUpdate<TDocument>[],
   ) => Promise<void>;
   onDisconnect: () => Promise<void>;
 }
 
-export type InternalOperationUpdate<TGlobalState, TLocalState> = Omit<
-  Operation,
+export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
+  OperationFromDocument<TDocument>,
   "scope"
 > & {
-  state: TGlobalState | TLocalState;
-  previousState: TGlobalState | TLocalState;
+  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
+  previousState:
+    | GlobalStateFromDocument<TDocument>
+    | LocalStateFromDocument<TDocument>;
 };
 
-export type InternalTransmitterUpdate<TGlobalState, TLocalState> = {
+export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
   driveId: string;
   documentId: string;
   scope: OperationScope;
   branch: string;
-  operations: InternalOperationUpdate<TGlobalState, TLocalState>[];
-  state: TGlobalState | TLocalState;
+  operations: InternalOperationUpdate<TDocument>[];
+  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
 };
 
 export interface IInternalTransmitter extends ITransmitter {
@@ -52,13 +60,13 @@ export class InternalTransmitter implements ITransmitter {
     this.drive = drive;
   }
 
-  async #buildInternalOperationUpdate<TGlobalState, TLocalState>(
+  async #buildInternalOperationUpdate<TDocument extends PHDocument>(
     strand: StrandUpdate,
   ) {
     const operations = [];
     const stateByIndex = new Map<
       number,
-      TGlobalState | TLocalState | DocumentDriveState | DocumentDriveLocalState
+      GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>
     >();
     const getStateByIndex = async (index: number) => {
       const state = stateByIndex.get(index);
@@ -73,7 +81,7 @@ export class InternalTransmitter implements ITransmitter {
         checkHashes: false,
       };
       const document = await (strand.documentId
-        ? this.drive.getDocument<TGlobalState, TLocalState>(
+        ? this.drive.getDocument<TDocument>(
             strand.driveId,
             strand.documentId,
             getDocumentOptions,

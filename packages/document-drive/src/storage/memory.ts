@@ -1,7 +1,4 @@
-import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-} from "#drive-document-model/gen/types";
+import { DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { DriveNotFoundError } from "#server/error";
 import { SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
@@ -9,6 +6,7 @@ import {
   Action,
   DocumentHeader,
   Operation,
+  OperationFromDocument,
   OperationScope,
   PHDocument,
 } from "document-model";
@@ -32,10 +30,10 @@ export class MemoryStorage implements IDriveStorage {
     return Object.keys(this.documents[drive] ?? {});
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  async getDocument<TDocument extends PHDocument>(
     driveId: string,
     id: string,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
+  ): Promise<TDocument> {
     const drive = this.documents[driveId];
     if (!drive) {
       throw new DriveNotFoundError(driveId);
@@ -45,7 +43,7 @@ export class MemoryStorage implements IDriveStorage {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    return document as PHDocument<TGlobalState, TLocalState, TAction>;
+    return document as TDocument;
   }
 
   async saveDocument(drive: string, id: string, document: PHDocument) {
@@ -150,11 +148,14 @@ export class MemoryStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation[],
+    operations: OperationFromDocument<DocumentDriveDocument>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);
-    const mergedOperations = mergeOperations(drive.operations, operations);
+    const mergedOperations = mergeOperations<DocumentDriveDocument>(
+      drive.operations,
+      operations,
+    );
 
     this.drives[id] = {
       ...drive,

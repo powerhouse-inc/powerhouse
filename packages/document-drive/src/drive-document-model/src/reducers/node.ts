@@ -4,13 +4,9 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { BaseDocument, SynchronizationUnitInput } from "document-model";
+import { PHDocument, SynchronizationUnitInput } from "document-model";
 import { DocumentDriveNodeOperations } from "../../gen/node/operations.js";
-import {
-  DocumentDriveLocalState,
-  DocumentDriveState,
-  FileNode,
-} from "../../gen/types.js";
+import { FileNode } from "../../gen/types.js";
 import {
   getDescendants,
   handleTargetNameCollisions,
@@ -65,10 +61,7 @@ export const reducer: DocumentDriveNodeOperations = {
         id: action.input.id,
         documentType: action.input.documentType,
         synchronizationUnits,
-        document: action.input.document as BaseDocument<
-          DocumentDriveState,
-          DocumentDriveLocalState
-        >,
+        document: action.input.document as PHDocument,
       },
     });
   },

@@ -67,16 +67,12 @@ export interface IReadModeDriveService {
 
   fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
 
-  fetchDocument<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action | CustomAction = Action,
-  >(
+  fetchDocument<TDocument extends PHDocument>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | PHDocument<TGlobalState, TLocalState, TAction>
+    | TDocument
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError
@@ -85,10 +81,6 @@ export interface IReadModeDriveService {
   deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined>;
 }
 
-export type GetDocumentModelModule = <
-  TGlobalState,
-  TLocalState,
-  TAction extends Action,
->(
+export type GetDocumentModelModule = <TDocument extends PHDocument>(
   documentType: string,
-) => DocumentModelModule<TGlobalState, TLocalState, TAction>;
+) => DocumentModelModule<TDocument>;

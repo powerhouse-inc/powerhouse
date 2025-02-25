@@ -219,7 +219,12 @@ export type CreateState<TDocument extends BaseDocument<any, any, any>> = (
 
 export type CreateExtendedState<TDocument extends BaseDocument<any, any, any>> =
   (
-    extendedState?: Partial<ExtendedStateFromDocument<TDocument>>,
+    extendedState?: Partial<
+      ExtendedState<
+        PartialState<GlobalStateFromDocument<TDocument>>,
+        PartialState<LocalStateFromDocument<TDocument>>
+      >
+    >,
     createState?: CreateState<TDocument>,
   ) => ExtendedStateFromDocument<TDocument>;
 
@@ -243,7 +248,12 @@ export type LoadFromFile<TDocument extends BaseDocument<any, any, any>> = (
 ) => TDocument | Promise<TDocument>;
 
 export type CreateDocument<TDocument extends BaseDocument<any, any, any>> = (
-  initialState?: Partial<ExtendedStateFromDocument<TDocument>>,
+  initialState?: Partial<
+    ExtendedState<
+      PartialState<GlobalStateFromDocument<TDocument>>,
+      PartialState<LocalStateFromDocument<TDocument>>
+    >
+  >,
   createState?: CreateState<TDocument>,
 ) => TDocument;
 
@@ -411,7 +421,7 @@ export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   reducer: Reducer<TDocument>;
   actions: Record<
     string,
-    (input: any) => ActionFromDocument<TDocument> | CustomAction | DefaultAction
+    (input: any) => ActionFromDocument<TDocument> | DefaultAction
   >;
   utils: DocumentModelUtils<TDocument>;
   documentModelState: DocumentModelState;

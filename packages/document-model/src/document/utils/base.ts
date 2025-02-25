@@ -21,11 +21,15 @@ import {
   DocumentHeader,
   DocumentOperations,
   DocumentOperationsIgnoreMap,
+  ExtendedState,
   ExtendedStateFromDocument,
+  GlobalStateFromDocument,
+  LocalStateFromDocument,
   MappedOperation,
   Operation,
   OperationScope,
   OperationsFromDocument,
+  PartialState,
   PHDocument,
   Reducer,
   ReducerOptions,
@@ -163,7 +167,12 @@ export function createReducer<TDocument extends PHDocument>(
 }
 
 export function baseCreateExtendedState<TDocument extends PHDocument>(
-  initialState?: Partial<ExtendedStateFromDocument<TDocument>>,
+  initialState?: Partial<
+    ExtendedState<
+      PartialState<GlobalStateFromDocument<TDocument>>,
+      PartialState<LocalStateFromDocument<TDocument>>
+    >
+  >,
   createState?: CreateState<TDocument>,
 ): ExtendedStateFromDocument<TDocument> {
   return {

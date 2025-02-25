@@ -18,6 +18,7 @@ import {
   CreateChildDocumentInput,
   DocumentModelModule,
   Operation,
+  OperationFromDocument,
   OperationScope,
   PHDocument,
   ReducerOptions,
@@ -62,39 +63,23 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
   accessLevel?: RemoteDriveAccessLevel;
 };
 
-export type CreateDocumentInput<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-  TAction extends Action = Action,
-> = CreateChildDocumentInput<TGlobalState, TLocalState, TAction>;
+export type CreateDocumentInput<TDocument extends PHDocument> =
+  CreateChildDocumentInput<TDocument>;
 
 export type SignalResult = {
   signal: Signal;
   result: unknown; // infer from return types on document-model
 };
 
-export type IOperationResult<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-  TAction extends Action = Action,
-  TDocument extends PHDocument<TGlobalState, TLocalState, TAction> = PHDocument<
-    TGlobalState,
-    TLocalState,
-    TAction
-  >,
-> = {
+export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
   status: UpdateStatus;
   error?: OperationError;
-  operations: Operation<TAction>[];
+  operations: OperationFromDocument<TDocument>[];
   document: TDocument | undefined;
   signals: SignalResult[];
 };
 
-export type DriveOperationResult = IOperationResult<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
->;
+export type DriveOperationResult = IOperationResult<DocumentDriveDocument>;
 
 export type SynchronizationUnit = {
   syncId: string;
@@ -365,11 +350,11 @@ export interface IBaseDocumentDriveServer {
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
 
   getDocuments(driveId: string): Promise<string[]>;
-  getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  getDocument<TDocument extends PHDocument>(
     driveId: string,
     documentId: string,
     options?: GetDocumentOptions,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>>;
+  ): Promise<TDocument>;
 
   addOperation(
     driveId: string,

@@ -2,19 +2,29 @@ import {
   applyMixins,
   BaseDocumentClass,
   ExtendedState,
-  PartialState,
   SignalDispatch,
 } from "document-model";
+import { ExtendedStateFromDocument } from "../../../../document-model/src/document/types.js";
 import { DocumentDriveAction } from "./actions.js";
 import { fileExtension } from "./constants.js";
 import DocumentDrive_Drive from "./drive/object.js";
 import DocumentDrive_Node from "./node/object.js";
 import { reducer } from "./reducer.js";
-import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
+import {
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "./types.js";
 import { createDocument } from "./utils.js";
 
 export * from "./drive/object.js";
 export * from "./node/object.js";
+
+type DeepPartial<T> = T extends object
+  ? {
+      [P in keyof T]?: DeepPartial<T[P]>;
+    }
+  : T;
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface DocumentDriveClass extends DocumentDrive_Node, DocumentDrive_Drive {}
@@ -28,15 +38,20 @@ class DocumentDriveClass extends BaseDocumentClass<
   static fileExtension = fileExtension;
 
   constructor(
-    initialState?: Partial<
-      ExtendedState<
-        PartialState<DocumentDriveState>,
-        PartialState<DocumentDriveLocalState>
-      >
+    initialState?: DeepPartial<
+      ExtendedState<DocumentDriveState, DocumentDriveLocalState>
     >,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, createDocument(initialState), dispatch);
+    super(
+      reducer,
+      createDocument(
+        initialState as Partial<
+          ExtendedStateFromDocument<DocumentDriveDocument>
+        >,
+      ),
+      dispatch,
+    );
   }
 
   public saveToFile(path: string, name?: string) {

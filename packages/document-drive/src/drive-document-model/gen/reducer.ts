@@ -4,8 +4,7 @@ import {
   Reducer,
   StateReducer,
 } from "document-model";
-import { DocumentDriveAction } from "./actions.js";
-import { DocumentDriveLocalState, DocumentDriveState } from "./types.js";
+import { DocumentDriveDocument } from "./types.js";
 
 import { reducer as DriveReducer } from "../src/reducers/drive.js";
 import { reducer as NodeReducer } from "../src/reducers/node.js";
@@ -27,11 +26,11 @@ import {
   UpdateNodeInputSchema,
 } from "./schema/zod.js";
 
-const stateReducer: StateReducer<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> = (state, action, dispatch) => {
+const stateReducer: StateReducer<DocumentDriveDocument> = (
+  state,
+  action,
+  dispatch,
+) => {
   if (isDocumentAction(action)) {
     return state;
   }
@@ -133,8 +132,5 @@ const stateReducer: StateReducer<
   }
 };
 
-export const reducer: Reducer<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> = createReducer(stateReducer);
+export const reducer: Reducer<DocumentDriveDocument> =
+  createReducer(stateReducer);

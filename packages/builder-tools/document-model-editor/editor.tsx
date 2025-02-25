@@ -1,29 +1,29 @@
-import { useEffect, useRef, useMemo, useCallback } from "react";
 import {
+  addModule,
+  addOperation,
+  addOperationError,
+  deleteModule,
+  deleteOperation,
+  deleteOperationError,
   DocumentModelAction,
-  DocumentModelState,
   DocumentModelLocalState,
+  DocumentModelState,
+  EditorProps, hashKey,
   setAuthorName,
   setAuthorWebsite,
+  setInitialState,
   setModelDescription,
   setModelExtension,
   setModelId,
   setModelName,
-  setStateSchema,
-  setInitialState,
-  addModule,
   setModuleName,
-  deleteModule,
-  addOperation,
+  setOperationDescription,
+  setOperationErrorName,
   setOperationName,
   setOperationSchema,
-  setOperationDescription,
-  deleteOperation,
-  addOperationError,
-  deleteOperationError,
-  setOperationErrorName,
+  setStateSchema,
 } from "document-model";
-import { EditorProps, hashKey } from "document-model";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Divider } from "./components/divider.js";
 import { ModelMetadata } from "./components/model-metadata-form.js";
 import { Modules } from "./components/modules.js";
@@ -31,8 +31,8 @@ import { StateSchemas } from "./components/state-schemas.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
 import { Scope } from "./types/documents.js";
 import {
-  initializeModelSchema,
   compareStringsWithoutWhitespace,
+  initializeModelSchema,
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
 

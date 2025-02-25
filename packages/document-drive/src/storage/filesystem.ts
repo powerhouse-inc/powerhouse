@@ -90,19 +90,15 @@ export class FilesystemStorage implements IDriveStorage {
     return Promise.resolve(documentExists);
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  async getDocument<TDocument extends PHDocument>(
     drive: string,
     id: string,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
+  ): Promise<TDocument> {
     try {
       const content = readFileSync(this._buildDocumentPath(drive, id), {
         encoding: "utf-8",
       });
-      return JSON.parse(content) as PHDocument<
-        TGlobalState,
-        TLocalState,
-        TAction
-      >;
+      return JSON.parse(content) as TDocument;
     } catch (error) {
       throw new Error(`Document with id ${id} not found`);
     }
@@ -203,12 +199,9 @@ export class FilesystemStorage implements IDriveStorage {
     return drives;
   }
 
-  async getDrive(id: string) {
+  async getDrive(id: string): Promise<DocumentDriveDocument> {
     try {
-      return (await this.getDocument(
-        FilesystemStorage.DRIVES_DIR,
-        id,
-      )) as DocumentDriveDocument;
+      return await this.getDocument(FilesystemStorage.DRIVES_DIR, id);
     } catch {
       throw new DriveNotFoundError(id);
     }
@@ -250,7 +243,10 @@ export class FilesystemStorage implements IDriveStorage {
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);
-    const mergedOperations = mergeOperations(drive.operations, operations);
+    const mergedOperations = mergeOperations<DocumentDriveDocument>(
+      drive.operations,
+      operations,
+    );
 
     await this.createDrive(id, {
       ...drive,

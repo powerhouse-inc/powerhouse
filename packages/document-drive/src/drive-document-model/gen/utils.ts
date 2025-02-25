@@ -20,33 +20,30 @@ import {
   initialLocalState,
 } from "./constants.js";
 import { reducer } from "./reducer.js";
-import { DocumentDriveAction, DocumentDriveLocalState, DocumentDriveState } from "./types.js";
-
-export const createState: CreateState<
+import {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
   DocumentDriveState,
-  DocumentDriveLocalState
-> = (state) => {
+} from "./types.js";
+
+export const createState: CreateState<DocumentDriveDocument> = (state) => {
   return {
     global: { ...initialGlobalState, ...state?.global },
     local: { ...initialLocalState, ...state?.local },
   };
 };
 
-export const createExtendedState: CreateExtendedState<
-  DocumentDriveState,
-  DocumentDriveLocalState
-> = (extendedState) => {
+export const createExtendedState: CreateExtendedState<DocumentDriveDocument> = (
+  extendedState,
+) => {
   return baseCreateExtendedState(
     { ...extendedState, documentType },
     createState,
   );
 };
 
-export const createDocument: CreateDocument<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> = (state) => {
+export const createDocument: CreateDocument<DocumentDriveDocument> = (state) => {
   return baseCreateDocument(createExtendedState(state), createState);
 };
 
@@ -58,16 +55,10 @@ export const saveToFileHandle: SaveToFileHandle = (document, input) => {
   return baseSaveToFileHandle(document, input);
 };
 
-export const loadFromFile: LoadFromFile<
-  DocumentDriveState,
-  DocumentDriveLocalState
-> = (path) => {
+export const loadFromFile: LoadFromFile<DocumentDriveDocument> = (path) => {
   return baseLoadFromFile(path, reducer);
 };
 
-export const loadFromInput: LoadFromInput<
-  DocumentDriveState,
-  DocumentDriveLocalState
-> = (input) => {
+export const loadFromInput: LoadFromInput<DocumentDriveDocument> = (input) => {
   return baseLoadFromInput(input, reducer);
 };

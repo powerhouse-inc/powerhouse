@@ -53,15 +53,13 @@ export class BrowserStorage implements IDriveStorage {
       .map((key) => key.slice(driveKey.length));
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  async getDocument<TDocument extends PHDocument>(
     driveId: string,
     id: string,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
+  ): Promise<TDocument> {
     const document = await (
       await this.db
-    ).getItem<PHDocument<TGlobalState, TLocalState, TAction>>(
-      this.buildKey(driveId, id),
-    );
+    ).getItem<TDocument>(this.buildKey(driveId, id));
     if (!document) {
       throw new Error(`Document with id ${id} not found`);
     }

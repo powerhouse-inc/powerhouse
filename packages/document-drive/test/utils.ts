@@ -1,9 +1,11 @@
 import {
   Action,
-  CustomAction,
+  ActionFromDocument,
   DocumentModelDocument,
   Operation,
+  OperationFromDocument,
   PHDocument,
+  PHReducer,
   Reducer,
 } from "document-model";
 import { ExpectStatic } from "vitest";
@@ -20,8 +22,7 @@ export function expectUTCTimestamp(expect: ExpectStatic): unknown {
 }
 
 export function buildOperation(
-  reducer: Reducer<any, any, any>,
-
+  reducer: PHReducer,
   document: PHDocument,
   action: Action,
   index?: number,
@@ -36,10 +37,8 @@ export function buildOperation(
 }
 
 export function buildOperations(
-  reducer: Reducer<any, any, any>,
-
+  reducer: PHReducer,
   document: PHDocument,
-
   actions: Array<Action>,
 ): Operation[] {
   const operations: Operation[] = [];
@@ -54,31 +53,25 @@ export function buildOperations(
   return operations;
 }
 
-export function buildOperationAndDocument<
-  TGlobalState,
-  TLocalState,
-  TAction extends CustomAction = Action,
->(
-  reducer: Reducer<TGlobalState, TLocalState, TAction>,
-  document: PHDocument<TGlobalState, TLocalState, TAction>,
-  action: TAction,
+export function buildOperationAndDocument<TDocument extends PHDocument>(
+  reducer: PHReducer<TDocument>,
+  document: TDocument,
+  action: ActionFromDocument<TDocument>,
   index?: number,
 ): {
-  document: PHDocument<TGlobalState, TLocalState, TAction>;
-  operation: Operation<TAction>;
+  document: TDocument;
+  operation: OperationFromDocument<TDocument>;
 } {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const operation = newDocument.operations[action.scope]
-    .slice()
-    .pop()! as Operation<TAction>;
+  const operation = newDocument.operations[action.scope].slice().pop()!;
 
   return {
-    document: newDocument as PHDocument<TGlobalState, TLocalState, TAction>,
+    document: newDocument,
     operation: {
       ...operation,
       index: index ?? operation.index,
-    } as Operation<TAction>,
+    } as OperationFromDocument<TDocument>,
   };
 }
 
@@ -92,7 +85,7 @@ export class BasicClient {
 
     private document: PHDocument,
 
-    private reducer: Reducer<any, any, any>,
+    private reducer: PHReducer,
   ) {}
 
   getDocument() {
@@ -166,7 +159,7 @@ export class DriveBasicClient {
 
     private document: PHDocument,
 
-    private reducer: Reducer<any, any, any>,
+    private reducer: PHReducer,
   ) {}
 
   getDocument() {

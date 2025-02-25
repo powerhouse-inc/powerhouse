@@ -1,49 +1,43 @@
 import { DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { SynchronizationUnitQuery } from "#server/types";
 import type {
-  Action,
   DocumentHeader,
-  DocumentOperations,
   Operation,
+  OperationFromDocument,
+  OperationsFromDocument,
   PHDocument,
 } from "document-model";
 
 export interface IStorageDelegate {
-  getCachedOperations<TAction extends Action = Action>(
+  getCachedOperations<TDocument extends PHDocument = PHDocument>(
     drive: string,
     id: string,
-  ): Promise<DocumentOperations<TAction> | undefined>;
+  ): Promise<OperationsFromDocument<TDocument> | undefined>;
 }
 
 export interface IStorage {
   checkDocumentExists(drive: string, id: string): Promise<boolean>;
   getDocuments: (drive: string) => Promise<string[]>;
-  getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  getDocument<TDocument extends PHDocument>(
     drive: string,
     id: string,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>>;
-  createDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  ): Promise<TDocument>;
+  createDocument(
     drive: string,
     id: string,
-    document: PHDocument<TGlobalState, TLocalState, TAction>,
+    document: PHDocument,
   ): Promise<void>;
-  addDocumentOperations<TAction extends Action = Action>(
+  addDocumentOperations<TDocument extends PHDocument>(
     drive: string,
     id: string,
-    operations: Operation<TAction>[],
+    operations: OperationFromDocument<TDocument>[],
     header: DocumentHeader,
   ): Promise<void>;
-  addDocumentOperationsWithTransaction?<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
+  addDocumentOperationsWithTransaction?<TDocument extends PHDocument>(
     drive: string,
     id: string,
-    callback: (
-      document: PHDocument<TGlobalState, TLocalState, TAction>,
-    ) => Promise<{
-      operations: Operation<TAction>[];
+    callback: (document: TDocument) => Promise<{
+      operations: OperationFromDocument<TDocument>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;

@@ -5,12 +5,9 @@ import {
 } from "#drive-document-model/gen/types";
 import { pascalCase } from "change-case";
 import {
-  Action,
-  BaseDocument,
-  CustomAction,
   DocumentModelModule,
   DocumentModelState,
-  Operation,
+  OperationFromDocument,
   PHDocument,
 } from "document-model";
 import {
@@ -171,34 +168,26 @@ export type DriveState = DriveInfo &
     nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
   };
 
-export type DocumentGraphQLResult<
-  TGlobalState,
-  TLocalState,
-  TAction extends Action | CustomAction = Action,
-> = BaseDocument<TGlobalState, TLocalState, TAction> & {
-  operations: (Operation & {
+export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
+  operations: (OperationFromDocument<TDocument> & {
     inputText: string;
   })[];
 };
 
-export async function fetchDocument<
-  TGlobalState,
-  TLocalState,
-  TAction extends Action | CustomAction = Action,
->(
+export async function fetchDocument<TDocument extends PHDocument>(
   url: string,
   documentId: string,
-  documentModelLib: DocumentModelModule<TGlobalState, TLocalState, TAction>,
+  documentModelModule: DocumentModelModule<TDocument>,
 ): Promise<
   GraphQLResult<{
-    document: DocumentGraphQLResult<TGlobalState, TLocalState, TAction>;
+    document: DocumentGraphQLResult<TDocument>;
   }>
 > {
-  const { documentModelState, utils } = documentModelLib;
+  const { documentModelState, utils } = documentModelModule;
   const stateFields = generateDocumentStateQueryFields(documentModelState);
   const name = pascalCase(documentModelState.name);
   const result = await requestGraphql<{
-    document: DocumentGraphQLResult<TGlobalState, TLocalState>;
+    document: DocumentGraphQLResult<TDocument>;
   }>(
     url,
     gql`
@@ -281,6 +270,6 @@ export async function fetchDocument<
     ...result,
     document,
   } as GraphQLResult<{
-    document: DocumentGraphQLResult<TGlobalState, TLocalState, TAction>;
+    document: DocumentGraphQLResult<TDocument>;
   }>;
 }

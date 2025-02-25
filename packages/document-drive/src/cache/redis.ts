@@ -40,16 +40,14 @@ class RedisCache implements ICache {
     return false;
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  async getDocument<TDocument extends PHDocument>(
     drive: string,
     id: string,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction> | undefined> {
+  ): Promise<TDocument | undefined> {
     const redisId = RedisCache._getId(drive, id);
     const doc = await this.redis.get(redisId);
 
-    return doc
-      ? (JSON.parse(doc) as PHDocument<TGlobalState, TLocalState, TAction>)
-      : undefined;
+    return doc ? (JSON.parse(doc) as TDocument) : undefined;
   }
 
   async deleteDocument(drive: string, id: string) {

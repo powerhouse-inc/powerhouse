@@ -1,4 +1,4 @@
-import { Action, BaseDocument, OperationScope } from "./types.js";
+import { OperationScope, PHDocument } from "./types.js";
 
 export interface ISignal<TType extends string, TInput> {
   type: TType;
@@ -12,13 +12,11 @@ export type SynchronizationUnitInput = {
 };
 
 export type CreateChildDocumentInput<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-  TAction extends Action = Action,
+  TDocument extends PHDocument = PHDocument,
 > = {
   id: string;
   documentType: string;
-  document?: BaseDocument<TGlobalState, TLocalState, TAction>;
+  document?: TDocument;
   synchronizationUnits: SynchronizationUnitInput[];
 };
 

@@ -3,13 +3,14 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   Action,
   AttachmentInput,
-  BaseState,
+  BaseStateFromDocument,
   DocumentHeader,
-  DocumentOperations,
-  ExtendedState,
+  ExtendedStateFromDocument,
   FileRegistry,
   Operation,
+  OperationFromDocument,
   OperationScope,
+  OperationsFromDocument,
   PHDocument,
 } from "document-model";
 import { IBackOffOptions, backOff } from "exponential-backoff";
@@ -270,34 +271,24 @@ export class PrismaStorage implements IDriveStorage {
     }
   }
 
-  async addDocumentOperationsWithTransaction<
-    TGlobalState,
-    TLocalState,
-    TAction extends Action = Action,
-  >(
+  async addDocumentOperationsWithTransaction<TDocument extends PHDocument>(
     drive: string,
     id: string,
-    callback: (
-      document: PHDocument<TGlobalState, TLocalState, TAction>,
-    ) => Promise<{
-      operations: Operation<TAction>[];
+    callback: (document: TDocument) => Promise<{
+      operations: OperationFromDocument<TDocument>[];
       header: DocumentHeader;
-      newState?: BaseState<TGlobalState, TLocalState> | undefined;
+      newState?: BaseStateFromDocument<TDocument> | undefined;
     }>,
   ) {
     let result: {
-      operations: Operation<TAction>[];
+      operations: OperationFromDocument<TDocument>[];
       header: DocumentHeader;
-      newState?: BaseState<TGlobalState, TLocalState> | undefined;
+      newState?: BaseStateFromDocument<TDocument> | undefined;
     } | null = null;
 
     await this.db.$transaction(
       async (tx) => {
-        const document = await this.getDocument<
-          TGlobalState,
-          TLocalState,
-          TAction
-        >(drive, id, tx);
+        const document = await this.getDocument<TDocument>(drive, id, tx);
         if (!document) {
           throw new Error(`Document with id ${id} not found`);
         }
@@ -354,11 +345,11 @@ export class PrismaStorage implements IDriveStorage {
     return count > 0;
   }
 
-  async getDocument<TGlobalState, TLocalState, TAction extends Action = Action>(
+  async getDocument<TDocument extends PHDocument>(
     driveId: string,
     id: string,
     tx?: Transaction,
-  ): Promise<PHDocument<TGlobalState, TLocalState, TAction>> {
+  ): Promise<TDocument> {
     const prisma = tx ?? this.db;
     const result = await prisma.document.findUnique({
       where: {
@@ -463,18 +454,16 @@ export class PrismaStorage implements IDriveStorage {
       });
       acc[scope].push(result);
       return acc;
-    }, cachedOperations) as DocumentOperations<TAction>;
+    }, cachedOperations) as OperationsFromDocument<TDocument>;
 
     const dbDoc = result;
-    const doc: PHDocument<TGlobalState, TLocalState, TAction> = {
+    const doc = {
       created: dbDoc.created.toISOString(),
       name: dbDoc.name ? dbDoc.name : "",
       documentType: dbDoc.documentType,
-      initialState: JSON.parse(dbDoc.initialState) as ExtendedState<
-        TGlobalState,
-        TLocalState
-      >,
-      // @ts-expect-error TODO: fix as this should not be undefined
+      initialState: JSON.parse(
+        dbDoc.initialState,
+      ) as ExtendedStateFromDocument<TDocument>,
       state: undefined,
       lastModified: new Date(dbDoc.lastModified).toISOString(),
       operations: operationsByScope,
@@ -482,7 +471,7 @@ export class PrismaStorage implements IDriveStorage {
       revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
       attachments: {},
     };
-    return doc;
+    return doc as unknown as TDocument;
   }
 
   async deleteDocument(drive: string, id: string) {

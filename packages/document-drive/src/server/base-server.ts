@@ -39,6 +39,7 @@ import {
   DocumentModelModule,
   Operation,
   OperationScope,
+  OperationsFromDocument,
   PHDocument,
   attachBranch,
   garbageCollect,
@@ -173,16 +174,12 @@ export class BaseDocumentDriveServer
     );
 
     this.storage.setStorageDelegate?.({
-      getCachedOperations: async <TAction extends Action = Action>(
+      getCachedOperations: async <TDocument extends PHDocument>(
         drive: string,
         id: string,
-      ) => {
+      ): Promise<OperationsFromDocument<TDocument> | undefined> => {
         try {
-          const document = await this.cache.getDocument<
-            unknown,
-            unknown,
-            TAction
-          >(drive, id);
+          const document = await this.cache.getDocument<TDocument>(drive, id);
           return document?.operations;
         } catch (error) {
           logger.error(error);
@@ -557,22 +554,16 @@ export class BaseDocumentDriveServer
     );
   }
 
-  protected getDocumentModelModule<
-    TGlobalState = unknown,
-    TLocalState = unknown,
-    TAction extends Action = Action,
-  >(documentType: string) {
+  protected getDocumentModelModule<TDocument extends PHDocument>(
+    documentType: string,
+  ) {
     const documentModelModule = this.documentModelModules.find(
       (module) => module.documentType === documentType,
     );
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);
     }
-    return documentModelModule as DocumentModelModule<
-      TGlobalState,
-      TLocalState,
-      TAction
-    >;
+    return documentModelModule as unknown as DocumentModelModule<TDocument>;
   }
 
   getDocumentModelModules() {
@@ -724,16 +715,17 @@ export class BaseDocumentDriveServer
     }
   }
 
-  async getDocument<
-    TGlobalState = unknown,
-    TLocalState = unknown,
-    TAction extends Action = Action,
-  >(driveId: string, documentId: string, options?: GetDocumentOptions) {
-    let cachedDocument:
-      | PHDocument<TGlobalState, TLocalState, TAction>
-      | undefined;
+  async getDocument<TDocument extends PHDocument>(
+    driveId: string,
+    documentId: string,
+    options?: GetDocumentOptions,
+  ): Promise<TDocument> {
+    let cachedDocument: TDocument | undefined;
     try {
-      cachedDocument = await this.cache.getDocument(driveId, documentId); // TODO support GetDocumentOptions
+      cachedDocument = await this.cache.getDocument<TDocument>(
+        driveId,
+        documentId,
+      ); // TODO support GetDocumentOptions
       if (cachedDocument && isAtRevision(cachedDocument, options?.revisions)) {
         return cachedDocument;
       }
@@ -741,8 +733,9 @@ export class BaseDocumentDriveServer
       logger.error("Error getting document from cache", e);
     }
     const documentStorage =
-      cachedDocument ?? (await this.storage.getDocument(driveId, documentId));
-    const document = this._buildDocument(documentStorage, options);
+      cachedDocument ??
+      (await this.storage.getDocument<TDocument>(driveId, documentId));
+    const document = this._buildDocument<TDocument>(documentStorage, options);
 
     if (!options?.revisions) {
       this.cache.setDocument(driveId, documentId, document).catch(logger.error);
@@ -754,7 +747,10 @@ export class BaseDocumentDriveServer
     return this.storage.getDocuments(driveId);
   }
 
-  protected async createDocument(driveId: string, input: CreateDocumentInput) {
+  protected async createDocument<TDocument extends PHDocument>(
+    driveId: string,
+    input: CreateDocumentInput<TDocument>,
+  ): Promise<TDocument> {
     // if a document was provided then checks if it's valid
     let state = undefined;
     if (input.document) {
@@ -799,11 +795,7 @@ export class BaseDocumentDriveServer
     const operations = Object.values(document.operations).flat();
     if (operations.length) {
       if (isDocumentDrive(document)) {
-        await this.storage.addDriveOperations(
-          driveId,
-          operations as Operation<DocumentDriveAction>[],
-          document,
-        );
+        await this.storage.addDriveOperations(driveId, operations, document);
       } else {
         await this.storage.addDocumentOperations(
           driveId,
@@ -814,7 +806,7 @@ export class BaseDocumentDriveServer
       }
     }
 
-    return document;
+    return document as TDocument;
   }
 
   async deleteDocument(driveId: string, documentId: string) {
@@ -984,10 +976,10 @@ export class BaseDocumentDriveServer
     };
   }
 
-  private _buildDocument<TGlobalState, TLocalState, TAction extends Action>(
-    documentStorage: PHDocument<TGlobalState, TLocalState, TAction>,
+  private _buildDocument<TDocument extends PHDocument>(
+    documentStorage: TDocument,
     options?: GetDocumentOptions,
-  ): PHDocument<TGlobalState, TLocalState, TAction> {
+  ): TDocument {
     if (
       documentStorage.state &&
       (!options || options.checkHashes === false) &&
@@ -996,11 +988,9 @@ export class BaseDocumentDriveServer
       return documentStorage;
     }
 
-    const documentModelModule = this.getDocumentModelModule<
-      TGlobalState,
-      TLocalState,
-      TAction
-    >(documentStorage.documentType);
+    const documentModelModule = this.getDocumentModelModule<TDocument>(
+      documentStorage.documentType,
+    );
 
     const revisionOperations =
       options?.revisions !== undefined
@@ -1011,7 +1001,7 @@ export class BaseDocumentDriveServer
         : documentStorage.operations;
     const operations = garbageCollectDocumentOperations(revisionOperations);
 
-    return replayDocument<TGlobalState, TLocalState, TAction>(
+    return replayDocument(
       documentStorage.initialState,
       operations,
       documentModelModule.reducer,
