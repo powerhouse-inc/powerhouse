@@ -15,6 +15,13 @@ export type PowerhouseConfig = {
   watch?: boolean;
   switchboard?: {
     port?: number;
+    https?:
+      | undefined
+      | boolean
+      | {
+          keyPath?: string;
+          certPath?: string;
+        };
   };
   studio?: {
     port?: number;
