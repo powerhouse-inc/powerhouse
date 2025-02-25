@@ -1,28 +1,28 @@
-import { Action } from "../../../document";
+import { BaseAction } from "../../../document/types.js";
 import {
   AddChangeLogItemInput,
-  UpdateChangeLogItemInput,
   DeleteChangeLogItemInput,
   ReorderChangeLogItemsInput,
-} from "../types";
+  UpdateChangeLogItemInput,
+} from "../schema/types.js";
 
-export type AddChangeLogItemAction = Action<
+export type AddChangeLogItemAction = BaseAction<
   "ADD_CHANGE_LOG_ITEM",
   AddChangeLogItemInput
 >;
-export type UpdateChangeLogItemAction = Action<
+export type UpdateChangeLogItemAction = BaseAction<
   "UPDATE_CHANGE_LOG_ITEM",
   UpdateChangeLogItemInput
 >;
-export type DeleteChangeLogItemAction = Action<
+export type DeleteChangeLogItemAction = BaseAction<
   "DELETE_CHANGE_LOG_ITEM",
   DeleteChangeLogItemInput
 >;
-export type ReorderChangeLogItemsAction = Action<
+export type ReorderChangeLogItemsAction = BaseAction<
   "REORDER_CHANGE_LOG_ITEMS",
   ReorderChangeLogItemsInput
 >;
-export type ReleaseNewVersionAction = Action<"RELEASE_NEW_VERSION", never>;
+export type ReleaseNewVersionAction = BaseAction<"RELEASE_NEW_VERSION", never>;
 
 export type DocumentModelVersioningAction =
   | AddChangeLogItemAction

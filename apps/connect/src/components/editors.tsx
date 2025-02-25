@@ -1,16 +1,33 @@
-import { DocumentToolbar, RevisionHistory } from '@powerhousedao/design-system';
-import { logger } from 'document-drive/logger';
+import { useConnectCrypto, useConnectDid } from '#hooks/useConnectCrypto';
+import { useUndoRedoShortcuts } from '#hooks/useUndoRedoShortcuts';
+import { useUserPermissions } from '#hooks/useUserPermissions';
+import { FileNodeDocument, isSameDocument } from '#store/document-drive';
+import { useGetDocumentModelModule } from '#store/document-model';
+import { useGetEditor } from '#store/editor';
+import { themeAtom } from '#store/theme';
+import { useUser } from '#store/user';
+import {
+    DocumentDispatchCallback,
+    useDocumentDispatch,
+} from '#utils/document-model';
+import { addActionContext, signOperation } from '#utils/signature';
+import {
+    Button,
+    DocumentToolbar,
+    RevisionHistory,
+} from '@powerhousedao/design-system';
+import { logger } from 'document-drive';
 import {
     Action,
     ActionErrorCallback,
-    BaseAction,
-    Document,
     EditorContext,
     Operation,
-    actions,
-} from 'document-model/document';
+    PHDocument,
+    redo,
+    undo,
+} from 'document-model';
 import { useAtomValue } from 'jotai';
-import React, {
+import {
     Suspense,
     useCallback,
     useEffect,
@@ -20,38 +37,17 @@ import React, {
 } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
-import { useConnectCrypto, useConnectDid } from 'src/hooks/useConnectCrypto';
-import { useUndoRedoShortcuts } from 'src/hooks/useUndoRedoShortcuts';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { FileNodeDocument, isSameDocument } from 'src/store/document-drive';
-import { useGetDocumentModel } from 'src/store/document-model';
-import { useGetEditor } from 'src/store/editor';
-import { themeAtom } from 'src/store/theme';
-import { useUser } from 'src/store/user';
-import {
-    DocumentDispatchCallback,
-    useDocumentDispatch,
-} from 'src/utils/document-model';
-import { addActionContext, signOperation } from 'src/utils/signature';
-import Button from './button';
 import { EditorLoader } from './editor-loader';
 import { useModal } from './modal';
 
-export type EditorProps<
-    T = unknown,
-    A extends Action = Action,
-    LocalState = unknown,
-> = {
+export type EditorProps<TDocument extends PHDocument = PHDocument> = {
     fileNodeDocument: FileNodeDocument;
-    document: Document<T, A, LocalState> | undefined;
+    document: TDocument | undefined;
     onClose: () => void;
     onExport: () => void;
     onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
-    onChange?: (
-        documentId: string,
-        document: Document<T, A, LocalState>,
-    ) => void;
+    onChange?: (documentId: string, document: TDocument) => void;
 };
 
 function EditorError({ message }: { message: React.ReactNode }) {
@@ -86,13 +82,13 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
-    const getDocumentModel = useGetDocumentModel();
+    const getDocumentModelModule = useGetDocumentModelModule();
     const getEditor = useGetEditor();
 
     const documentType = fileNodeDocument?.documentType;
     const documentModel = useMemo(
-        () => (documentType ? getDocumentModel(documentType) : undefined),
-        [documentType, getDocumentModel],
+        () => (documentType ? getDocumentModelModule(documentType) : undefined),
+        [documentType, getDocumentModelModule],
     );
 
     const editor = useMemo(
@@ -133,15 +129,11 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     }, [document, documentId, fileNodeDocument, onChange]);
 
     const dispatch = useCallback(
-        (
-            action: BaseAction | Action,
-            onErrorCallback?: ActionErrorCallback,
-        ) => {
-            const callback: DocumentDispatchCallback<
-                unknown,
-                Action,
-                unknown
-            > = (operation, state) => {
+        (action: Action, onErrorCallback?: ActionErrorCallback) => {
+            const callback: DocumentDispatchCallback<PHDocument> = (
+                operation,
+                state,
+            ) => {
                 if (!fileNodeDocument?.documentId) return;
 
                 const { prevState } = state;
@@ -189,12 +181,12 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         () => setRevisionHistoryVisible(false),
         [],
     );
-    const undo = useCallback(() => {
-        dispatch(actions.undo());
+    const handleUndo = useCallback(() => {
+        dispatch(undo());
     }, [dispatch]);
 
-    const redo = useCallback(() => {
-        dispatch(actions.undo());
+    const handleRedo = useCallback(() => {
+        dispatch(redo());
     }, [dispatch]);
 
     const isLoadingDocument =
@@ -210,7 +202,12 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         !!document &&
         (document.revision.global > 0 || document.revision.local > 0);
     const canRedo = !!document?.clipboard.length;
-    useUndoRedoShortcuts({ undo, redo, canUndo, canRedo });
+    useUndoRedoShortcuts({
+        undo: handleUndo,
+        redo: handleRedo,
+        canUndo,
+        canRedo,
+    });
 
     useEffect(() => {
         return () => {
@@ -352,10 +349,10 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                 <div className="mb-4 flex justify-end gap-10">
                     <Button onClick={onExport}>Export</Button>
                     <div className="flex gap-4">
-                        <Button onClick={undo} disabled={!canUndo}>
+                        <Button onClick={handleUndo} disabled={!canUndo}>
                             Undo
                         </Button>
-                        <Button onClick={redo} disabled={!canRedo}>
+                        <Button onClick={handleRedo} disabled={!canRedo}>
                             Redo
                         </Button>
                     </div>
@@ -392,8 +389,8 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                                 onExport={onExport}
                                 canUndo={canUndo}
                                 canRedo={canRedo}
-                                undo={undo}
-                                redo={redo}
+                                undo={handleUndo}
+                                redo={handleRedo}
                                 onSwitchboardLinkClick={
                                     handleSwitchboardLinkClick
                                 }

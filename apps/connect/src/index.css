@@ -1,4 +1,3 @@
-@import url('../node_modules/document-model-libs/dist/document-model-libs.css');
 @import url('../node_modules/@powerhousedao/design-system/dist/style.css');
 
 @tailwind components;

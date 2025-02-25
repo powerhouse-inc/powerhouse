@@ -1,5 +1,5 @@
+import { useConnectConfig } from '#hooks/useConnectConfig';
 import { About as BaseAbout } from '@powerhousedao/design-system';
-import { useConnectConfig } from 'src/hooks/useConnectConfig';
 import packageJson from '../../../../../package.json';
 
 export const About: React.FC = () => {

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as Sentry from '@sentry/browser';
+import { PHDocument } from 'document-model';
 import {
     BrowserWindow,
     Menu,
@@ -29,7 +30,7 @@ const isMac = process.platform === 'darwin';
 async function initApp() {
     // if on mac sets app icon
     if (isMac) {
-        const appIcon = nativeImage.createFromPath('src/assets/icon.png');
+        const appIcon = nativeImage.createFromPath('#assets/icon.png');
         app.dock.setIcon(appIcon);
     }
 
@@ -54,13 +55,11 @@ async function initApp() {
         });
 
         ipcMain.handle('renown:login', (_e, did: string) => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             Sentry.setUser({ id: did });
             return renown.login(did);
         });
 
         ipcMain.handle('renown:logout', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             Sentry.setUser(null);
             return renown.logout();
         });
@@ -172,7 +171,7 @@ function handleFileSave(path?: string) {
     }
 }
 
-ipcMain.handle('fileSaved', (e, document: Document, path?: string) =>
+ipcMain.handle('fileSaved', (e, document: PHDocument, path?: string) =>
     handleFileSave(path),
 );
 

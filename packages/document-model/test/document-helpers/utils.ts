@@ -1,4 +1,4 @@
-import { Operation } from "../../src/document";
+import { Operation } from "../../src/document/types.js";
 
 export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;
@@ -17,7 +17,7 @@ export const buildOperation = (
       input: {},
       hash: `hash-${input.index}`,
       ...input,
-    };
+    } as Operation;
   }
 
   return {
@@ -27,7 +27,7 @@ export const buildOperation = (
     scope: "global",
     type: "TEST",
     ...input,
-  };
+  } as Operation;
 };
 
 export const buildOperations = (

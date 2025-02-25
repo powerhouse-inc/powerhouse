@@ -1,3 +1,7 @@
+import {
+    viteConnectDevStudioPlugin,
+    viteLoadExternalPackages,
+} from '@powerhousedao/builder-tools/connect-studio';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
@@ -6,12 +10,10 @@ import path from 'path';
 import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 import pkg from './package.json';
-import { viteLoadExternalPackages } from './studio/vite-plugins/external-packages';
-import { viteConnectDevStudioPlugin } from './studio/vite-plugins/studio';
-
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
 
 const reactImportScript = `
@@ -29,6 +31,8 @@ const reactImportScript = `
 `;
 
 process.env.VITE_IMPORT_REACT_SCRIPT = isBuildStudio ? '' : reactImportScript;
+
+const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
     const isProd = mode === 'production';
@@ -57,6 +61,14 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const plugins: PluginOption[] = [
+        nodePolyfills({
+            include: ['events'],
+            globals: {
+                Buffer: false,
+                global: false,
+                process: false,
+            },
+        }),
         viteConnectDevStudioPlugin(false, env),
         viteLoadExternalPackages(undefined),
         react({
@@ -113,20 +125,18 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
-                    // Adds the service worker as a separate file
                     'service-worker': path.resolve(
                         __dirname,
                         'src/service-worker.ts',
                     ),
                 },
                 output: {
-                    // Ensure the service worker file goes to the root of the dist folder
                     entryFileNames: chunk =>
                         ['service-worker'].includes(chunk.name)
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: ['node:crypto'],
+                external: externalAndExclude,
             },
         },
         resolve: {
@@ -137,9 +147,11 @@ export default defineConfig(({ mode }) => {
                     __dirname,
                     './src/connect.config.ts',
                 ),
-                path: 'rollup-plugin-node-polyfills/polyfills/path',
-                events: 'rollup-plugin-node-polyfills/polyfills/events',
             },
+        },
+        optimizeDeps: {
+            include: ['did-key-creator'],
+            exclude: externalAndExclude,
         },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),

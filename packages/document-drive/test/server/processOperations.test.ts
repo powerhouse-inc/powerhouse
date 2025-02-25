@@ -1,22 +1,27 @@
-import * as DocumentDrive from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
 import {
   Action,
-  DocumentModel as BaseDocumentModel,
-  Operation,
-} from "document-model/document";
-import {
   DocumentModelDocument,
-  module as DocumentModelLib,
-  actions,
-  reducer,
-} from "document-model/document-model";
+  DocumentModelLib,
+  garbageCollect,
+  Operation,
+  setModelExtension,
+  setModelId,
+  setModelName,
+} from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { IOperationResult, ReactorBuilder } from "../../src";
 import { OperationError } from "../../src/server/error";
 import { garbageCollect } from "../../src/utils/document-helpers";
 import { BasicClient, buildOperation, buildOperations } from "../utils";
 
+import { undo } from "../../../document-model/src/document/actions/creators.js";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { generateAddNodeAction } from "../../src/drive-document-model/src/utils.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { OperationError } from "../../src/server/error.js";
+import { IOperationResult } from "../../src/server/types.js";
+import { BasicClient, buildOperation, buildOperations } from "../utils.js";
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
     const { timestamp, ...operation } = op;
@@ -27,7 +32,7 @@ describe("processOperations", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as BaseDocumentModel[];
+  ] as DocumentModelLib<any, any>[];
 
   let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
@@ -52,9 +57,9 @@ describe("processOperations", () => {
     await server.addDriveOperation(
       driveId,
       buildOperation(
-        DocumentDrive.reducer,
+        reducer,
         drive,
-        DocumentDrive.utils.generateAddNodeAction(
+        generateAddNodeAction(
           drive.state.global,
           {
             id: "1",
@@ -63,7 +68,7 @@ describe("processOperations", () => {
           },
           ["global", "local"],
         ),
-      ),
+      ) as Operation<DocumentDriveAction>,
     );
 
     let document = (await server.getDocument(
@@ -89,8 +94,8 @@ describe("processOperations", () => {
 
   it("should add initial operations to a document", async () => {
     const operations = [
-      actions.setModelName({ name: "test" }),
-      actions.setModelId({ id: "test" }),
+      setModelName({ name: "test" }),
+      setModelId({ id: "test" }),
     ];
 
     const document = await buildFile(operations);
@@ -106,7 +111,7 @@ describe("processOperations", () => {
     const document = await buildFile();
 
     const operations = buildOperations(reducer, document, [
-      actions.setModelName({ name: "test" }),
+      setModelName({ name: "test" }),
     ]);
 
     const result = await server._processOperations(
@@ -126,14 +131,14 @@ describe("processOperations", () => {
 
   it("should apply multiple new operations", async () => {
     const document = await buildFile([
-      actions.setModelName({ name: "test" }),
-      actions.setModelId({ id: "test" }),
+      setModelName({ name: "test" }),
+      setModelId({ id: "test" }),
     ]);
 
     const operations = buildOperations(reducer, document, [
-      actions.setModelName({ name: "test2" }),
-      actions.setModelId({ id: "test2" }),
-      actions.setModelExtension({
+      setModelName({ name: "test2" }),
+      setModelId({ id: "test2" }),
+      setModelExtension({
         extension: "test2",
       }),
     ]);
@@ -159,11 +164,11 @@ describe("processOperations", () => {
 
   it.skip("should apply undo operation", async () => {
     const document = await buildFile([
-      actions.setModelName({ name: "test" }),
-      actions.setModelId({ id: "test" }),
+      setModelName({ name: "test" }),
+      setModelId({ id: "test" }),
     ]);
 
-    const operations = buildOperations(reducer, document, [actions.undo()]);
+    const operations = buildOperations(reducer, document, [undo()]);
 
     const result = await server._processOperations(
       driveId,
@@ -195,13 +200,13 @@ describe("processOperations", () => {
 
   it.skip("should update an undo operation", async () => {
     const document = await buildFile([
-      actions.setModelName({ name: "test" }),
-      actions.setModelId({ id: "test" }),
-      actions.setModelExtension({ extension: "test" }),
-      actions.undo(),
+      setModelName({ name: "test" }),
+      setModelId({ id: "test" }),
+      setModelExtension({ extension: "test" }),
+      undo(),
     ]);
 
-    const operations = buildOperations(reducer, document, [actions.undo()]);
+    const operations = buildOperations(reducer, document, [undo()]);
 
     const result = await server._processOperations(
       driveId,
@@ -229,18 +234,13 @@ describe("processOperations", () => {
 
   it("should throw an error if there is a missing index operation", async () => {
     const document = await buildFile([
-      actions.setModelName({ name: "test" }),
-      actions.setModelId({ id: "test" }),
-      actions.setModelExtension({ extension: "test" }),
+      setModelName({ name: "test" }),
+      setModelId({ id: "test" }),
+      setModelExtension({ extension: "test" }),
     ]);
 
     const operations = [
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test2" }),
-        4,
-      ),
+      buildOperation(reducer, document, setModelName({ name: "test2" }), 4),
     ];
 
     const result = await server._processOperations(
@@ -265,36 +265,16 @@ describe("processOperations", () => {
 
   it("should throw an error if there is a missing index operation between valid operations", async () => {
     const document = await buildFile([
-      actions.setModelName({ name: "test" }),
-      actions.setModelId({ id: "test" }),
-      actions.setModelExtension({ extension: "test" }),
+      setModelName({ name: "test" }),
+      setModelId({ id: "test" }),
+      setModelExtension({ extension: "test" }),
     ]);
 
     const operations = [
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test3" }),
-        3,
-      ),
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test4" }),
-        4,
-      ),
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test6" }),
-        6,
-      ),
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test7" }),
-        7,
-      ),
+      buildOperation(reducer, document, setModelName({ name: "test3" }), 3),
+      buildOperation(reducer, document, setModelName({ name: "test4" }), 4),
+      buildOperation(reducer, document, setModelName({ name: "test6" }), 6),
+      buildOperation(reducer, document, setModelName({ name: "test7" }), 7),
     ];
 
     const result = await server._processOperations(
@@ -319,18 +299,13 @@ describe("processOperations", () => {
 
   it("should throw an error if there is a duplicated index operation", async () => {
     const document = await buildFile([
-      actions.setModelName({ name: "test" }),
-      actions.setModelId({ id: "test" }),
-      actions.setModelExtension({ extension: "test" }),
+      setModelName({ name: "test" }),
+      setModelId({ id: "test" }),
+      setModelExtension({ extension: "test" }),
     ]);
 
     const operations = [
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test2" }),
-        2,
-      ),
+      buildOperation(reducer, document, setModelName({ name: "test2" }), 2),
     ];
 
     const result = await server._processOperations(
@@ -352,30 +327,15 @@ describe("processOperations", () => {
 
   it("should throw an error if there is a duplicated index operation between valid operations", async () => {
     const document = await buildFile([
-      actions.setModelName({ name: "test" }),
-      actions.setModelId({ id: "test" }),
-      actions.setModelExtension({ extension: "test" }),
+      setModelName({ name: "test" }),
+      setModelId({ id: "test" }),
+      setModelExtension({ extension: "test" }),
     ]);
 
     const operations = [
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test3" }),
-        3,
-      ),
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test4" }),
-        3,
-      ),
-      buildOperation(
-        reducer,
-        document,
-        actions.setModelName({ name: "test5" }),
-        4,
-      ),
+      buildOperation(reducer, document, setModelName({ name: "test3" }), 3),
+      buildOperation(reducer, document, setModelName({ name: "test4" }), 3),
+      buildOperation(reducer, document, setModelName({ name: "test5" }), 4),
     ];
 
     const result = await server._processOperations(
@@ -401,7 +361,7 @@ describe("processOperations", () => {
     const operation = buildOperation(
       reducer,
       document,
-      actions.setModelName({ name: "test" }),
+      setModelName({ name: "test" }),
     );
 
     const resultOp1 = await server.addOperation(driveId, documentId, operation);
@@ -453,7 +413,7 @@ describe("processOperations", () => {
     const operation0 = buildOperation(
       reducer,
       document,
-      actions.setModelName({ name: "1" }),
+      setModelName({ name: "1" }),
       0,
     );
 
@@ -473,7 +433,7 @@ describe("processOperations", () => {
     const operation1 = buildOperation(
       reducer,
       document,
-      actions.setModelName({ name: "2" }),
+      setModelName({ name: "2" }),
       0,
     );
 
@@ -493,7 +453,7 @@ describe("processOperations", () => {
     const operation2 = buildOperation(
       reducer,
       document,
-      actions.setModelId({ id: "3" }),
+      setModelId({ id: "3" }),
       0,
     );
 
@@ -513,7 +473,7 @@ describe("processOperations", () => {
     const operation3 = buildOperation(
       reducer,
       document,
-      actions.setModelId({ id: "4" }),
+      setModelId({ id: "4" }),
       0,
     );
 
@@ -584,19 +544,19 @@ describe("processOperations", () => {
       reducer,
     );
 
-    client1.dispatchDocumentAction(actions.setModelName({ name: "1" }));
+    client1.dispatchDocumentAction(setModelName({ name: "1" }));
     pushOperationResult = await client1.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 
-    client2.dispatchDocumentAction(actions.setModelName({ name: "2" }));
+    client2.dispatchDocumentAction(setModelName({ name: "2" }));
     pushOperationResult = await client2.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 
-    client2.dispatchDocumentAction(actions.setModelId({ id: "3" }));
+    client2.dispatchDocumentAction(setModelId({ id: "3" }));
     pushOperationResult = await client2.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 
-    client1.dispatchDocumentAction(actions.setModelId({ id: "4" }));
+    client1.dispatchDocumentAction(setModelId({ id: "4" }));
     pushOperationResult = await client1.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 
@@ -660,11 +620,11 @@ describe("processOperations", () => {
       reducer,
     );
 
-    client1.dispatchDocumentAction(actions.setModelName({ name: "1" }));
+    client1.dispatchDocumentAction(setModelName({ name: "1" }));
     pushOperationResult = await client1.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 
-    client2.dispatchDocumentAction(actions.setModelName({ name: "2" }));
+    client2.dispatchDocumentAction(setModelName({ name: "2" }));
     pushOperationResult = await client2.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 

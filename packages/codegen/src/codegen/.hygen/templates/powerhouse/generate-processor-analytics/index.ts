@@ -1,4 +1,4 @@
-import { DocumentTypesMap } from "../../../..";
+import { DocumentTypesMap } from "../../../../index.js";
 
 export type Args = {
   name: string;

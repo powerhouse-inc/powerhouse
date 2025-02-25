@@ -1,32 +1,29 @@
-import { describe, it, expect } from "vitest";
-import { utils } from "../../src/document";
-import { setName } from "../../src/document/actions/creators";
+import { setName } from "../../src/document/actions/creators.js";
 import {
-  createDocument,
-  createExtendedState,
+  baseCreateDocument,
+  baseCreateExtendedState,
   mapSkippedOperations,
-  documentHelpers,
-} from "../../src/document/utils";
+  replayOperations,
+} from "../../src/document/utils/base.js";
+import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
 import {
-  emptyReducer,
-  mapOperations,
-  createFakeOperation,
-  CountState,
-  CountAction,
-  CountLocalState,
-  countReducer,
-  increment,
-  error,
   baseCountReducer,
-} from "../helpers";
+  CountDocument,
+  countReducer,
+  createFakeOperation,
+  error,
+  increment,
+  mapOperations,
+  wrappedEmptyReducer,
+} from "../helpers.js";
 
 describe("skip operations", () => {
   describe("skip operation param", () => {
     it("should include skip param in base operations with default value to 0 if not provided", () => {
-      let document = createDocument();
-      document = emptyReducer(document, setName("TEST_1"));
-      document = emptyReducer(document, setName("TEST_2"));
-      document = emptyReducer(document, setName("TEST_3"));
+      let document = baseCreateDocument();
+      document = wrappedEmptyReducer(document, setName("TEST_1"));
+      document = wrappedEmptyReducer(document, setName("TEST_2"));
+      document = wrappedEmptyReducer(document, setName("TEST_3"));
 
       expect(document.revision.global).toBe(3);
 
@@ -40,16 +37,16 @@ describe("skip operations", () => {
     });
 
     it("should include skip param in base operations with provided value", () => {
-      let document = createDocument();
-      document = emptyReducer(document, setName("TEST_1"), undefined, {
+      let document = baseCreateDocument<CountDocument>();
+      document = wrappedEmptyReducer(document, setName("TEST_1"), undefined, {
         skip: 1,
         ignoreSkipOperations: true,
       });
-      document = emptyReducer(document, setName("TEST_2"), undefined, {
+      document = wrappedEmptyReducer(document, setName("TEST_2"), undefined, {
         skip: 2,
         ignoreSkipOperations: true,
       });
-      document = emptyReducer(document, setName("TEST_3"), undefined, {
+      document = wrappedEmptyReducer(document, setName("TEST_3"), undefined, {
         skip: 3,
         ignoreSkipOperations: true,
       });
@@ -307,14 +304,12 @@ describe("skip operations", () => {
 
   describe("replayOperations", () => {
     it("should ignore operation 2, when operation 3 -> (skip=1)", () => {
-      const initialState = createExtendedState<CountState, CountLocalState>({
+      const initialState = baseCreateExtendedState<CountDocument>({
         documentType: "powerhouse/counter",
-        state: { global: { count: 0 }, local: {} },
+        state: { global: { count: 0 }, local: { name: "" } },
       });
 
-      let document = createDocument<CountState, CountAction, CountLocalState>(
-        initialState,
-      );
+      let document = baseCreateDocument<CountDocument>(initialState);
 
       document = countReducer(document, increment()); // valid operation, skip 0
       document = countReducer(document, increment()); // skipped
@@ -327,10 +322,11 @@ describe("skip operations", () => {
         { skip: 1, ignoreSkipOperations: false },
       );
 
-      const clearedOperations =
-        documentHelpers.garbageCollectDocumentOperations(document.operations);
+      const clearedOperations = garbageCollectDocumentOperations(
+        document.operations,
+      );
 
-      const replayedDoc = utils.replayOperations(
+      const replayedDoc = replayOperations<CountDocument>(
         initialState,
         clearedOperations,
         baseCountReducer,
@@ -355,14 +351,12 @@ describe("skip operations", () => {
     });
 
     it("should ignore operation 2, 3 and 4, when operation 5 -> (skip=3)", () => {
-      const initialState = createExtendedState<CountState, CountLocalState>({
+      const initialState = baseCreateExtendedState<CountDocument>({
         documentType: "powerhouse/counter",
-        state: { global: { count: 0 }, local: {} },
+        state: { global: { count: 0 }, local: { name: "" } },
       });
 
-      let document = createDocument<CountState, CountAction, CountLocalState>(
-        initialState,
-      );
+      let document = baseCreateDocument<CountDocument>(initialState);
 
       document = countReducer(document, increment()); // valid operation, skip 0
       document = countReducer(document, increment()); // skipped
@@ -376,10 +370,11 @@ describe("skip operations", () => {
         { skip: 3, ignoreSkipOperations: true },
       );
 
-      const clearedOperations =
-        documentHelpers.garbageCollectDocumentOperations(document.operations);
+      const clearedOperations = garbageCollectDocumentOperations(
+        document.operations,
+      );
 
-      const replayedDoc = utils.replayOperations(
+      const replayedDoc = replayOperations<CountDocument>(
         initialState,
         clearedOperations,
         baseCountReducer,
@@ -404,14 +399,12 @@ describe("skip operations", () => {
     });
 
     it("should ignore operation 2 and 5, when operation 3 -> (skip=1) and operation 6 -> (skip=1)", () => {
-      const initialState = createExtendedState<CountState, CountLocalState>({
+      const initialState = baseCreateExtendedState<CountDocument>({
         documentType: "powerhouse/counter",
-        state: { global: { count: 0 }, local: {} },
+        state: { global: { count: 0 }, local: { name: "" } },
       });
 
-      let document = createDocument<CountState, CountAction, CountLocalState>(
-        initialState,
-      );
+      let document = baseCreateDocument<CountDocument>(initialState);
 
       document = countReducer(document, increment()); // valid operation, skip 0
       document = countReducer(document, increment()); // skipped
@@ -432,10 +425,11 @@ describe("skip operations", () => {
         { skip: 1, ignoreSkipOperations: true },
       );
 
-      const clearedOperations =
-        documentHelpers.garbageCollectDocumentOperations(document.operations);
+      const clearedOperations = garbageCollectDocumentOperations(
+        document.operations,
+      );
 
-      const replayedDoc = utils.replayOperations(
+      const replayedDoc = replayOperations<CountDocument>(
         initialState,
         clearedOperations,
         baseCountReducer,
@@ -471,14 +465,12 @@ describe("skip operations", () => {
     });
 
     it("should ignore all the previous operations, when operation 5 -> (skip=4)", () => {
-      const initialState = createExtendedState<CountState, CountLocalState>({
+      const initialState = baseCreateExtendedState<CountDocument>({
         documentType: "powerhouse/counter",
-        state: { global: { count: 0 }, local: {} },
+        state: { global: { count: 0 }, local: { name: "" } },
       });
 
-      let document = createDocument<CountState, CountAction, CountLocalState>(
-        initialState,
-      );
+      let document = baseCreateDocument<CountDocument>(initialState);
 
       document = countReducer(document, increment()); // skipped
       document = countReducer(document, increment()); // skipped
@@ -492,10 +484,11 @@ describe("skip operations", () => {
         { skip: 4, ignoreSkipOperations: true },
       );
 
-      const clearedOperations =
-        documentHelpers.garbageCollectDocumentOperations(document.operations);
+      const clearedOperations = garbageCollectDocumentOperations(
+        document.operations,
+      );
 
-      const replayedDoc = utils.replayOperations(
+      const replayedDoc = replayOperations<CountDocument>(
         initialState,
         clearedOperations,
         baseCountReducer,
@@ -516,14 +509,12 @@ describe("skip operations", () => {
     });
 
     it("should skip operations when dispatch a new action with an skip value", () => {
-      const initialState = createExtendedState<CountState, CountLocalState>({
+      const initialState = baseCreateExtendedState<CountDocument>({
         documentType: "powerhouse/counter",
-        state: { global: { count: 0 }, local: {} },
+        state: { global: { count: 0 }, local: { name: "" } },
       });
 
-      let document = createDocument<CountState, CountAction, CountLocalState>(
-        initialState,
-      );
+      let document = baseCreateDocument<CountDocument>(initialState);
 
       document = countReducer(document, increment());
       document = countReducer(document, increment());
@@ -558,14 +549,12 @@ describe("skip operations", () => {
     });
 
     it("should not process and skip operation that throws an error", () => {
-      const initialState = createExtendedState<CountState, CountLocalState>({
+      const initialState = baseCreateExtendedState<CountDocument>({
         documentType: "powerhouse/counter",
-        state: { global: { count: 0 }, local: {} },
+        state: { global: { count: 0 }, local: { name: "" } },
       });
 
-      let document = createDocument<CountState, CountAction, CountLocalState>(
-        initialState,
-      );
+      let document = baseCreateDocument<CountDocument>(initialState);
 
       document = countReducer(document, increment());
       document = countReducer(document, increment());

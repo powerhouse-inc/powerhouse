@@ -1,6 +1,5 @@
-import { documentModel } from "document-model-libs/document-drive";
 import { describe, it } from "vitest";
-import { generateDocumentStateQueryFields } from "../src/utils/graphql";
+import { generateDocumentStateQueryFields } from "../src/utils/graphql.js";
 
 describe("Graphql methods", () => {
   it("should generate document drive query", ({ expect }) => {

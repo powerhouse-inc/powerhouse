@@ -1,19 +1,18 @@
+import { Db } from "#types.js";
+import { createSchema } from "#utils/create-schema.js";
 import { ApolloServer } from "@apollo/server";
-import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { IDocumentDriveServer } from "document-drive";
 import express, { IRouter, Router } from "express";
-import { Db } from "src/types";
-import { authSubgraph, Context, SubgraphArgs, SubgraphClass } from ".";
-import { createSchema } from "../utils/create-schema";
-import { AnalyticsSubgraph } from "./analytics";
-import { Subgraph } from "./base";
-import { DriveSubgraph } from "./drive";
-import { SystemSubgraph } from "./system";
-import { AuthSubgraph } from "./auth";
+import { AnalyticsSubgraph } from "./analytics/index.js";
+import { AuthSubgraph } from "./auth/index.js";
+import { DriveSubgraph } from "./drive/index.js";
+import { Subgraph, SubgraphClass } from "./index.js";
+import { SystemSubgraph } from "./system/index.js";
+import { Context } from "./types.js";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -36,15 +35,15 @@ export class SubgraphManager {
 
   async init() {
     console.log(`Initializing Subgraph Manager...`);
-    const models = this.reactor.getDocumentModels();
+    const models = this.reactor.getDocumentModelModules();
     const driveModel = models.find(
-      (it) => it.documentModel.name === "DocumentDrive",
+      (it) => it.documentModelState.name === "DocumentDrive",
     );
     if (!driveModel) {
       throw new Error("DocumentDrive model required");
     }
 
-    this.reactor.on("documentModels", () => {
+    this.reactor.on("documentModelModules", () => {
       this.updateRouter().catch((error: unknown) => console.error(error));
     });
 
@@ -83,8 +82,10 @@ export class SubgraphManager {
       const path = `/${subgraphConfig.name}`;
       newRouter.use(
         path,
+        /* eslint-disable */
         // @ts-ignore
         expressMiddleware(server, {
+          // @ts-ignore
           context: ({ req }): Context => ({
             headers: req.headers,
             driveId: req.params.drive ?? undefined,
@@ -93,6 +94,7 @@ export class SubgraphManager {
             ...this.getAdditionalContextFields(),
           }),
         }),
+        /* eslint-enable */
       );
     }
 

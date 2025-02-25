@@ -11,8 +11,8 @@ import { twMerge } from "tailwind-merge";
 import { FilterItem, FilterItemType } from "./filter-item";
 
 export interface ConnectSearchBarProps {
-  value: string;
-  onChange: (value: string) => void;
+  value?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
   filterLabel?: string;
   filterItems?: Array<FilterItemType>;
@@ -57,7 +57,7 @@ export const ConnectSearchBar: React.FC<ConnectSearchBarProps> = (props) => {
   );
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    onChange(event.target.value);
+    onChange?.(event.target.value);
   }
 
   return (

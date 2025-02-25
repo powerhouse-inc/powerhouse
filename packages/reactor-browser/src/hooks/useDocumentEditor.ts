@@ -1,49 +1,44 @@
-import {
-  Action,
-  Document,
-  Operation,
-  BaseAction,
-  DocumentModel,
-  ActionErrorCallback,
-} from "document-model/document";
-import { useDocumentDispatch } from "./useDocumentDispatch";
-import { signOperation, addActionContext } from "../utils/signature";
-import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
-import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
 import { IDocumentDriveServer } from "document-drive";
+import {
+  ActionErrorCallback,
+  ActionFromDocument,
+  DocumentModelModule,
+  OperationFromDocument,
+  PHDocument,
+} from "document-model";
 import { User } from "../renown/types";
+import { addActionContext, signOperation } from "../utils/signature";
+import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
+import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
+import { useDocumentDispatch } from "./useDocumentDispatch";
 
-export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
-  operation: Operation,
+export type DocumentDispatchCallback<TDocument extends PHDocument> = (
+  operation: OperationFromDocument<TDocument>,
   state: {
-    prevState: Document<State, A, LocalState>;
-    newState: Document<State, A, LocalState>;
+    prevState: TDocument;
+    newState: TDocument;
   },
 ) => void;
 
-export type UseDocumentEditorProps<
-  T = unknown,
-  A extends Action = Action,
-  LocalState = unknown,
-> = {
+export type UseDocumentEditorProps<TDocument extends PHDocument> = {
   driveId: string;
   nodeId: string;
-  document: Document<T, A, LocalState> | undefined;
-  documentModel: DocumentModel<unknown, Action>;
+  document: TDocument | undefined;
+  documentModelModule: DocumentModelModule<TDocument>;
   user?: User;
   onExport?: () => void;
   onOpenSwitchboardLink?: () => Promise<void>;
-  onChange?: (document: Document<T, A, LocalState>) => void;
+  onChange?: (document: TDocument) => void;
 };
 
-export function useDocumentEditor(
+export function useDocumentEditor<TDocument extends PHDocument>(
   reactor: IDocumentDriveServer | undefined,
-  props: UseDocumentEditorProps,
+  props: UseDocumentEditorProps<TDocument>,
 ) {
   const {
     nodeId,
     driveId,
-    documentModel,
+    documentModelModule,
     document: initialDocument,
     user,
   } = props;
@@ -57,26 +52,26 @@ export function useDocumentEditor(
   });
 
   const [document, _dispatch, error] = useDocumentDispatch(
-    documentModel.reducer,
+    documentModelModule.reducer,
     initialDocument,
   );
 
   function dispatch(
-    action: BaseAction | Action,
+    action: ActionFromDocument<TDocument>,
     onErrorCallback?: ActionErrorCallback,
   ) {
-    const callback: DocumentDispatchCallback<unknown, Action, unknown> = (
+    const callback: DocumentDispatchCallback<TDocument> = (
       operation,
       state,
     ) => {
       const { prevState } = state;
 
-      signOperation(
+      signOperation<TDocument>(
         operation,
         sign,
         nodeId,
         prevState,
-        documentModel.reducer,
+        documentModelModule.reducer,
         user,
       )
         .then((op) => {

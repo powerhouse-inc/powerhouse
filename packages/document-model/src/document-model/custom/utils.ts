@@ -1,6 +1,6 @@
 import { pascalCase } from "change-case";
-import { ValidationError } from "../../document";
-import { Module, Operation } from "../gen/schema";
+import { ValidationError } from "../../document/types.js";
+import { Module, Operation } from "../gen/schema/types.js";
 
 export function validateInitialState(
   initialState: string,
@@ -68,7 +68,7 @@ export function validateStateSchemaName(
   return errors;
 }
 
-export function validateModules(modules: Array<Module>): ValidationError[] {
+export function validateModules(modules: Module[]): ValidationError[] {
   const errors: ValidationError[] = [];
   if (!modules.length) {
     errors.push({

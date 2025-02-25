@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 type LogLevel = "verbose" | "debug" | "info" | "warn" | "error" | "silent";
 
 export type ILogger = Pick<
@@ -89,7 +91,6 @@ export class ConsoleLogger implements ILogger {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return console.debug(...[...this.#tags, ...data]);
   }
 
@@ -98,7 +99,6 @@ export class ConsoleLogger implements ILogger {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return console.info(...[...this.#tags, ...data]);
   }
 
@@ -107,7 +107,6 @@ export class ConsoleLogger implements ILogger {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return console.warn(...[...this.#tags, ...data]);
   }
 
@@ -117,16 +116,14 @@ export class ConsoleLogger implements ILogger {
     }
 
     if (this.#errorHandler) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       this.#errorHandler(...data);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return console.error(...[...this.#tags, ...data]);
   }
 }
 
-let loggerInstance: ILogger = new ConsoleLogger();
+const loggerInstance: ILogger = new ConsoleLogger();
 let logLevel: LogLevel | "env" = "env";
 let errorHandler: LoggerErrorHandler | undefined;
 

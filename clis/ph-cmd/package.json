@@ -28,5 +28,8 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.6"
   }
 }

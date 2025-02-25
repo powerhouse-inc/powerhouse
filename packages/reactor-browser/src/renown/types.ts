@@ -1,4 +1,4 @@
-import type { User as EditorUser } from "document-model/document";
+import type { User as EditorUser } from "document-model";
 import type { IStorage } from "../storage";
 import { CREDENTIAL_TYPES } from "./constants";
 

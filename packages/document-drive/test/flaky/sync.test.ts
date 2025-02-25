@@ -1,20 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  DocumentDriveAction,
-  Trigger,
-  actions,
-  reducer,
-} from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel, Operation } from "document-model/document";
-import {
-  actions as DocumentModelActions,
   DocumentModelDocument,
-  module as DocumentModelLib,
-} from "document-model/document-model";
-import stringify from "json-stringify-deterministic";
-import { HttpResponse, graphql, http } from "msw";
+  DocumentModelModule,
+  Operation,
+} from "document-model";
+import { graphql } from "graphql";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { stringify } from "querystring";
 import {
   afterAll,
   afterEach,
@@ -24,22 +17,26 @@ import {
   it,
   vi,
 } from "vitest";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { Trigger } from "../../src/drive-document-model/gen/types.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { ConflictOperationError } from "../../src/server/error.js";
+import { StrandUpdateGraphQL } from "../../src/server/listener/transmitter/pull-responder.js";
 import {
   ListenerRevision,
   ReactorBuilder,
-  StrandUpdateGraphQL,
   SyncStatus,
   UpdateStatus,
-} from "../../src/server";
-import { ConflictOperationError } from "../../src/server/error";
-import { MemoryStorage } from "../../src/storage/memory";
-import { PrismaStorage } from "../../src/storage/prisma";
+} from "../../../../src/server/types.js";
+import { MemoryStorage } from "../../../src/storage/memory.js";
+import { PrismaStorage } from "../../../src/storage/prisma.js";
 
 describe("Document Drive Server with %s", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   const prismaClient = new PrismaClient();
   const storageLayer = new MemoryStorage();

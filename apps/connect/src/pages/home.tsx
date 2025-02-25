@@ -1,3 +1,4 @@
+import { useUiNodes } from '#hooks/useUiNodes';
 import {
     HomeScreen,
     HomeScreenAddDriveItem,
@@ -6,7 +7,6 @@ import {
     UiDriveNode,
 } from '@powerhousedao/design-system';
 import { useCallback } from 'react';
-import { useUiNodes } from 'src/hooks/useUiNodes';
 
 function getDriveIcon(driveNode: UiDriveNode) {
     if (driveNode.icon) {

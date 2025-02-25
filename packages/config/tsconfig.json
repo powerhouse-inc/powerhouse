@@ -1,11 +1,6 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "composite": true,
     "outDir": "./dist",
-    "lib": ["ESNext"],
-    "baseUrl": ".",
-    "tsBuildInfoFile": ".tsbuildinfo"
   },
-  "include": ["src/**/*.ts"]
 }

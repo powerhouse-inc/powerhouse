@@ -1,32 +1,32 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "types": ["node", "vitest/globals", "@types/wicg-file-system-access"],
-    "declaration": false,
+    "types": ["node", "vitest/globals", "@types/wicg-file-system-access", "@storybook/types"],
     "outDir": "./dist",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "skipLibCheck": true,
     "jsx": "react-jsx",
     "lib": ["ESNext", "dom", "dom.iterable"],
-    "baseUrl": "./",
-    "allowJs": true,
-    "paths": {
-      "@editors/utils": ["editors/utils/"]
-    }
+    "resolveJsonModule": true
   },
   "include": [
-    "./index.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "*.config.js",
-    "*.config.ts",
-    ".storybook/**/*"
+    "**/*",
+    "./package.json"
   ],
-  "exclude": ["dist/", "node_modules"]
+  "exclude": ["dist", "node_modules", "storybook-static"],
+  "references": [
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/builder-tools"
+    },
+    {
+      "path": "../../packages/document-drive"
+    }
+  ]
 }

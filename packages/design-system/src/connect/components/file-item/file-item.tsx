@@ -57,7 +57,11 @@ export function FileItem(props: FileItemProps) {
       ...option,
       id: id as NodeOption,
     }))
-    .filter((option) => defaultFileOptions.includes(option.id));
+    .filter((option) =>
+      defaultFileOptions.includes(
+        option.id as (typeof defaultFileOptions)[number],
+      ),
+    );
 
   function onSubmit(name: string) {
     onRenameNode(name, uiNode);

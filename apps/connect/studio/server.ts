@@ -1,3 +1,10 @@
+import {
+    backupIndexHtml,
+    getStudioConfig,
+    removeBase64EnvValues,
+    viteConnectDevStudioPlugin,
+    viteLoadExternalPackages,
+} from '@powerhousedao/builder-tools/connect-studio';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { exec } from 'node:child_process';
 import fs from 'node:fs';
@@ -5,10 +12,6 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createLogger, createServer, InlineConfig, Plugin } from 'vite';
 import { viteEnvs } from 'vite-envs';
-import { backupIndexHtml, removeBase64EnvValues } from './helpers';
-import { getStudioConfig } from './vite-plugins/base';
-import { viteLoadExternalPackages } from './vite-plugins/external-packages';
-import { viteConnectDevStudioPlugin } from './vite-plugins/studio';
 
 export type StartServerOptions = {
     configFile?: string;

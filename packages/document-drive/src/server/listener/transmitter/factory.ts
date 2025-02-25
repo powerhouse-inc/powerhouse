@@ -1,15 +1,13 @@
 import {
-  InternalTransmitter,
-  ITransmitter,
-  PullResponderTransmitter,
-  SwitchboardPushTransmitter,
-} from ".";
-import {
   IBaseDocumentDriveServer,
   IListenerManager,
   ITransmitterFactory,
   Listener,
-} from "../../types";
+} from "#server/types";
+import { InternalTransmitter } from "./internal.js";
+import { PullResponderTransmitter } from "./pull-responder.js";
+import { SwitchboardPushTransmitter } from "./switchboard-push.js";
+import { ITransmitter } from "./types.js";
 
 export default class TransmitterFactory implements ITransmitterFactory {
   private readonly listenerManager: IListenerManager;
@@ -29,7 +27,7 @@ export default class TransmitterFactory implements ITransmitterFactory {
           throw new Error("No call info data: " + JSON.stringify(listener));
         }
 
-        return new SwitchboardPushTransmitter(listener.callInfo!.data!);
+        return new SwitchboardPushTransmitter(listener.callInfo!.data);
       }
       case "Internal": {
         return new InternalTransmitter(listener, driveServer);

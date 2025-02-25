@@ -1,11 +1,11 @@
 import {
+  DocumentDriveAction,
   IDocumentDriveServer,
   ListenerRevision,
   PullResponderTransmitter,
   StrandUpdate,
 } from "document-drive";
-import { DocumentDriveAction } from "document-model-libs/document-drive";
-import { BaseAction, Operation, OperationScope } from "document-model/document";
+import { Operation, OperationScope } from "document-model";
 
 // define types
 export type InternalStrandUpdate = {
@@ -19,17 +19,17 @@ export type InternalStrandUpdate = {
 // processes a strand update and returns a listener revision
 export const processPushUpdate = async (
   reactor: IDocumentDriveServer,
-  strand: InternalStrandUpdate
+  strand: InternalStrandUpdate,
 ): Promise<ListenerRevision> => {
   const result = await (strand.documentId !== undefined
     ? reactor.queueOperations(
         strand.driveId,
         strand.documentId,
-        strand.operations
+        strand.operations,
       )
     : reactor.queueDriveOperations(
         strand.driveId,
-        strand.operations as Operation<DocumentDriveAction | BaseAction>[]
+        strand.operations as Operation<DocumentDriveAction>[],
       ));
 
   const scopeOperations = result.document?.operations[strand.scope] ?? [];
@@ -61,11 +61,11 @@ export const processAcknowledge = async (
   reactor: IDocumentDriveServer,
   driveId: string,
   listenerId: string,
-  revisions: ListenerRevision[]
+  revisions: ListenerRevision[],
 ): Promise<boolean> => {
   const transmitter = (await reactor.getTransmitter(
     driveId,
-    listenerId
+    listenerId,
   )) as PullResponderTransmitter;
   return transmitter.processAcknowledge(driveId, listenerId, revisions);
 };
@@ -75,11 +75,11 @@ export const processGetStrands = async (
   reactor: IDocumentDriveServer,
   driveId: string,
   listenerId: string,
-  since: string | undefined
+  since: string | undefined,
 ): Promise<StrandUpdate[]> => {
   const transmitter = (await reactor.getTransmitter(
     driveId,
-    listenerId
+    listenerId,
   )) as PullResponderTransmitter;
   return transmitter.getStrands({ since });
 };

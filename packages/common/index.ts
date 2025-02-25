@@ -1,11 +1,13 @@
-import * as documentModelsExports from "./document-models";
-import * as editorsExports from "./editors";
+// import * as documentModelsExports from "./document-models";
+// import * as editorsExports from "./editors/index";
 
-export const documentModels = Object.values(documentModelsExports);
-export const editors = Object.values(editorsExports);
+// export const documentModels = Object.values(documentModelsExports);
+// export const editors = Object.values(editorsExports);
 
-export { DocumentDrive } from "./document-models";
-export * from "./document-models/document-drive/gen/types";
+// export { DocumentDrive } from "./document-models";
+// export * from "./document-models/document-drive/gen/types";
 
-export { GenericDriveExplorer } from "./editors";
-export * from "./editors/hooks";
+// export * from "./editors/hooks";
+export { DriveContextProvider } from "./editors/hooks/useDriveContext";
+export type { IDriveContext } from "./editors/hooks/useDriveContext";
+export { genericDriveExplorerEditorModule } from "./editors/index";

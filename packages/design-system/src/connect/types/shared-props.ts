@@ -8,8 +8,8 @@ import {
 
 export type NodeProps = {
   nodeOptions: TNodeOptions;
-  isAllowedToCreateDocuments: boolean;
-  isRemoteDrive: boolean;
+  isAllowedToCreateDocuments?: boolean;
+  isRemoteDrive?: boolean;
   onAddFolder: (name: string, uiNode: UiNode) => void;
   onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
   onAddAndSelectNewFolder: (name: string) => Promise<void>;

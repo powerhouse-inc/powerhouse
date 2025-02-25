@@ -1,9 +1,9 @@
+import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
 import { type CodegenConfig, generate } from "@graphql-codegen/cli";
 import { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
-import { plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
-import { readdirSync } from "node:fs";
 import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
-import { formatWithPrettierBeforeWrite } from "./utils";
+import { readdirSync } from "node:fs";
+import { formatWithPrettierBeforeWrite } from "./utils.js";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })
@@ -32,7 +32,7 @@ export const tsConfig: TypeScriptPluginConfig = {
 export type ValidationSchemaConfigType = Parameters<typeof plugin>[2];
 
 export const validationConfig: ValidationSchemaConfigType = {
-  importFrom: `./types`,
+  importFrom: `./types.js`,
   schema: "zod",
   ...tsConfig,
   scalarSchemas: {

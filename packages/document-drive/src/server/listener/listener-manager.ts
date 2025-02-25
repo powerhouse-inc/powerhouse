@@ -1,14 +1,11 @@
-import { ListenerFilter } from "document-model-libs/document-drive";
-import { OperationScope } from "document-model/document";
-import { childLogger } from "../../utils/logger";
-import { OperationError } from "../error";
-import { ISynchronizationManager } from "../index";
+import { StrandUpdateSource } from "#server/listener/transmitter/types";
 import {
   DefaultListenerManagerOptions,
   DriveUpdateErrorHandler,
   ErrorStatus,
   GetStrandsOptions,
   IListenerManager,
+  ISynchronizationManager,
   Listener,
   ListenerManagerOptions,
   ListenerState,
@@ -17,9 +14,13 @@ import {
   StrandUpdate,
   SynchronizationUnit,
   SynchronizationUnitQuery,
-} from "../types";
-import { StrandUpdateSource } from "./transmitter/types";
-import { debounce } from "./util";
+} from "#server/types";
+import { childLogger, ListenerFilter } from "document-drive";
+import { OperationScope } from "document-model";
+import { OperationError } from "#server/error";
+import { debounce } from "./util.js";
+
+const ENABLE_SYNC_DEBUG = false;
 
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;

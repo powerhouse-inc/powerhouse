@@ -9,25 +9,25 @@ import {
 } from "@powerhousedao/reactor-api";
 import {
   DriveAlreadyExistsError,
+  driveDocumentModelModule,
   DriveInput,
+  FilesystemStorage,
   IDocumentDriveServer,
   InternalTransmitter,
   IReceiver,
+  ListenerFilter,
+  logger,
   ReactorBuilder,
 } from "document-drive";
-import { logger } from "document-drive/logger";
-import { FilesystemStorage } from "document-drive/storage/filesystem";
 import {
-  module as DocumentDrive,
-  ListenerFilter,
-} from "document-model-libs/document-drive";
-import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
 import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, ViteDevServer } from "vite";
-import { PackagesManager } from "./packages";
+import { PackagesManager } from "./packages.js";
 
 type FSError = {
   errno: number;
@@ -90,7 +90,10 @@ export type LocalReactor = {
   ) => Promise<InternalTransmitter>;
 };
 
-const baseDocumentModels = [DocumentModelLib, DocumentDrive] as DocumentModel[];
+const baseDocumentModelModules = [
+  documentModelDocumentModelModule,
+  driveDocumentModelModule,
+] as DocumentModelModule[];
 
 const startServer = async (
   options?: StartServerOptions,
@@ -118,7 +121,7 @@ const startServer = async (
   const serverPort = Number(process.env.PORT ?? port);
 
   // start document drive server with all available document models & filesystem storage
-  const driveServer = new ReactorBuilder(baseDocumentModels)
+  const driveServer = new ReactorBuilder(baseDocumentModelModules)
     .withStorage(new FilesystemStorage(storagePath))
     .build();
 
@@ -153,9 +156,9 @@ const startServer = async (
         : { packages: [] },
     (error) => console.error(error),
   );
-  packagesManager.onDocumentModelsChange((documentModels) => {
-    driveServer.setDocumentModels(
-      joinDocumentModels(baseDocumentModels, documentModels),
+  packagesManager.onDocumentModelsChange((documentModelModules) => {
+    driveServer.setDocumentModelModules(
+      joinDocumentModelModules(baseDocumentModelModules, documentModelModules),
     );
   });
 
@@ -233,11 +236,14 @@ async function loadDocumentModels(
     await access(path);
     const localDMs = (await vite.ssrLoadModule(path)) as Record<
       string,
-      DocumentModel
+      DocumentModelModule
     >;
-    const localDocumentModels = Object.values(localDMs);
-    driveServer.setDocumentModels(
-      joinDocumentModels(driveServer.getDocumentModels(), localDocumentModels),
+    const localDocumentModelModules = Object.values(localDMs);
+    driveServer.setDocumentModelModules(
+      joinDocumentModelModules(
+        driveServer.getDocumentModelModules(),
+        localDocumentModelModules,
+      ),
     );
   } catch (e) {
     if ((e as FSError).code === "ENOENT") {
@@ -298,13 +304,13 @@ async function loadSubgraphs(
   }
 }
 
-function joinDocumentModels(...documentModels: DocumentModel[][]) {
-  return documentModels
+function joinDocumentModelModules(...modules: DocumentModelModule[][]) {
+  return modules
     .flat()
     .toReversed()
-    .reduce<DocumentModel[]>(
+    .reduce<DocumentModelModule[]>(
       (acc, curr) =>
-        acc.find((dm) => dm.documentModel.id === curr.documentModel.id)
+        acc.find((dm) => dm.documentType === curr.documentType)
           ? acc
           : [...acc, curr],
       [],

@@ -1,8 +1,8 @@
+import DotsLoader from '#components/dots-loader';
+import { useLogin } from '#hooks/useLogin';
+import { useUser } from '#store/user';
 import IconRenown from '@/assets/icons/renown.svg?react';
 import { Button } from '@powerhousedao/design-system';
-import DotsLoader from 'src/components/dots-loader';
-import { useLogin } from 'src/hooks/useLogin';
-import { useUser } from 'src/store/user';
 
 export const Login: React.FC = () => {
     const user = useUser();

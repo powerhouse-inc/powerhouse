@@ -1,8 +1,8 @@
-import { App, DocumentModelLib } from 'document-model/document';
+import { getHMRModule, subscribeExternalPackages } from '#services/hmr';
+import { App, DocumentModelLib } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
 import { useMemo } from 'react';
-import { getHMRModule, subscribeExternalPackages } from 'src/services/hmr';
 
 const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
 const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES === 'true';
@@ -55,7 +55,7 @@ const appsAtom = atom<Promise<App[]>>(async get => {
         CommonPackage,
         ...externalPackages
             .map(pkg => pkg.manifest.apps)
-            .filter(Boolean)
+            .filter(pkg => pkg !== undefined)
             .flat(),
     ];
 });

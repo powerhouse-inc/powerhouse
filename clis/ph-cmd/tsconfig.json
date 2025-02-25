@@ -2,8 +2,11 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext"
   },
-  "include": ["src/**/*", "*.config.ts"]
+  "include": ["**/*"],
+  "references": [
+    { "path": "../../packages/builder-tools" },
+    { "path": "../../packages/codegen" },
+    { "path": "../../packages/scalars" },
+  ]
 }

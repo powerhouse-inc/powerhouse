@@ -1,5 +1,6 @@
 import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
-import { logger, setLogLevel } from 'document-drive/logger';
+import { logger, setLogLevel } from 'document-drive';
+import { LogLevel } from 'vite';
 import { version } from '../package.json';
 
 const APP_VERSION = import.meta.env.APP_VERSION || version;
@@ -45,7 +46,7 @@ const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
 const PH_CONNECT_CLI_VERSION =
     import.meta.env.PH_CONNECT_CLI_VERSION || undefined;
 
-setLogLevel(import.meta.env.LOG_LEVEL);
+setLogLevel(import.meta.env.LOG_LEVEL as LogLevel);
 logger.info(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
 
 export default {

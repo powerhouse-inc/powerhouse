@@ -1,3 +1,4 @@
+import { Home } from '#pages/home';
 import connectConfig from 'connect-config';
 import React, { Suspense } from 'react';
 import {
@@ -6,10 +7,9 @@ import {
     createBrowserRouter,
     createMemoryRouter,
 } from 'react-router-dom';
-import { Home } from 'src/pages/home';
 
 const Root = React.lazy(() => import('./root'));
-const Content = React.lazy(() => import('src/pages/content'));
+const Content = React.lazy(() => import('#pages/content'));
 
 async function createRouter(routes: RouteObject[]) {
     const isPackaged = await window.electronAPI?.isPackaged();

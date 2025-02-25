@@ -1,25 +1,30 @@
-import { DocumentDriveAction } from "document-model-libs/document-drive";
-import { BaseAction, DocumentHeader, Operation } from "document-model/document";
-import { SynchronizationUnitQuery } from "../server";
 import {
-  DocumentDriveStorage,
-  DocumentStorage,
-  IDriveStorage,
-  IStorage,
-  IStorageDelegate,
-} from "./types";
+  DocumentDriveAction,
+  DocumentDriveDocument,
+} from "#drive-document-model/gen/types";
+import { SynchronizationUnitQuery } from "#server/types";
+import type {
+  DocumentHeader,
+  Operation,
+  OperationFromDocument,
+  PHDocument,
+} from "document-model";
+import { IDriveStorage, IStorage, IStorageDelegate } from "./types.js";
 
 abstract class BaseStorage implements IStorage {
   abstract checkDocumentExists(drive: string, id: string): Promise<boolean>;
 
   abstract getDocuments(drive: string): Promise<string[]>;
 
-  abstract getDocument(drive: string, id: string): Promise<DocumentStorage>;
+  abstract getDocument<TDocument extends PHDocument>(
+    drive: string,
+    id: string,
+  ): Promise<TDocument>;
 
   abstract createDocument(
     drive: string,
     id: string,
-    document: DocumentStorage,
+    document: PHDocument,
   ): Promise<void>;
 
   abstract addDocumentOperations(
@@ -29,24 +34,24 @@ abstract class BaseStorage implements IStorage {
     header: DocumentHeader,
   ): Promise<void>;
 
-  abstract addDocumentOperationsWithTransaction?(
+  abstract addDocumentOperationsWithTransaction<TDocument extends PHDocument>(
     drive: string,
     id: string,
-    callback: (document: DocumentStorage) => Promise<{
-      operations: Operation[];
+    callback: (document: TDocument) => Promise<{
+      operations: OperationFromDocument<TDocument>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;
 
   abstract deleteDocument(drive: string, id: string): Promise<void>;
 
-  abstract getOperationResultingState?(
+  abstract getOperationResultingState<TGlobalState, TLocalState>(
     drive: string,
     id: string,
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown>;
+  ): Promise<TGlobalState | TLocalState | undefined>;
 
   abstract setStorageDelegate?(delegate: IStorageDelegate): void;
 
@@ -69,13 +74,13 @@ export abstract class BaseDriveStorage
   implements IDriveStorage
 {
   abstract getDrives(): Promise<string[]>;
-  abstract getDrive(id: string): Promise<DocumentDriveStorage>;
-  abstract getDriveBySlug(slug: string): Promise<DocumentDriveStorage>;
-  abstract createDrive(id: string, drive: DocumentDriveStorage): Promise<void>;
+  abstract getDrive(id: string): Promise<DocumentDriveDocument>;
+  abstract getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
+  abstract createDrive(id: string, drive: DocumentDriveDocument): Promise<void>;
   abstract deleteDrive(id: string): Promise<void>;
   abstract addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void>;
 }

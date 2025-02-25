@@ -36,7 +36,9 @@ export function GroupTransactionsTable() {
         if (filterAssetId && filterTypes.length) {
           return (
             transaction.fixedIncomeTransaction?.assetId === filterAssetId &&
-            filterTypes.includes(transaction.type)
+            filterTypes.includes(
+              transaction.type as keyof typeof allGroupTransactionTypes,
+            )
           );
         }
 
@@ -45,7 +47,9 @@ export function GroupTransactionsTable() {
         }
 
         if (filterTypes.length) {
-          return filterTypes.includes(transaction.type);
+          return filterTypes.includes(
+            transaction.type as keyof typeof allGroupTransactionTypes,
+          );
         }
       }),
     );

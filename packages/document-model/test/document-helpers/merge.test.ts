@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   checkCleanedOperationsIntegrity,
   merge,
-  reshuffleByTimestampAndIndex,
   reshuffleByTimestamp,
-} from "../../src/document/utils/document-helpers";
-import { buildOperations } from "./utils";
+  reshuffleByTimestampAndIndex,
+} from "../../src/document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("merge", () => {
   const scenarios = [

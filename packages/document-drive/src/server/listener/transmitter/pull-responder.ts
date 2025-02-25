@@ -1,10 +1,3 @@
-import { ListenerFilter, Trigger } from "document-model-libs/document-drive";
-import { Operation } from "document-model/document";
-import { PULL_DRIVE_INTERVAL } from "../..";
-import { generateUUID } from "../../../utils";
-import { gql, requestGraphql } from "../../../utils/graphql";
-import { childLogger } from "../../../utils/logger";
-import { OperationError } from "../../error";
 import {
   GetStrandsOptions,
   IListenerManager,
@@ -15,13 +8,25 @@ import {
   OperationUpdate,
   RemoteDriveOptions,
   StrandUpdate,
-} from "../../types";
+} from "#server/types";
+import {
+  childLogger,
+  generateUUID,
+  ListenerFilter,
+  Trigger,
+} from "document-drive";
+
+import { PULL_DRIVE_INTERVAL } from "#server/constants";
+import { OperationError } from "#server/error";
+import { requestGraphql } from "#utils/graphql";
+import { gql } from "graphql-request";
 import {
   ITransmitter,
   PullResponderTrigger,
   StrandUpdateSource,
-} from "./types";
+} from "./types.js";
 
+const ENABLE_SYNC_DEBUG = false;
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
 };
@@ -298,7 +303,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       const listenerRevisions: ListenerRevisionWithError[] = [];
 
       for (const strand of strands) {
-        const operations: Operation[] = strand.operations.map((op) => ({
+        const operations = strand.operations.map((op) => ({
           ...op,
           scope: strand.scope,
           branch: strand.branch,

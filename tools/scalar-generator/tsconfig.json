@@ -1,8 +1,9 @@
 {
+    "extends": "../../tsconfig.options.json",
     "compilerOptions": {
+        "outDir": "./dist",
         "rootDir": ".",
         "sourceMap": true,
-        "declaration": false,
         "moduleResolution": "node",
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,

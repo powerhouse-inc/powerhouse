@@ -1,15 +1,15 @@
 import { GraphQLError } from "graphql";
 import ms from "ms";
 import { SiweMessage } from "siwe";
-import { JWT_EXPIRATION_PERIOD } from "../env";
-import { Session } from "../types";
+import { Context } from "#subgraphs/types.js";
+import { Db } from "#types.js";
+import { JWT_EXPIRATION_PERIOD } from "../env/index.js";
 import {
   generateTokenAndSession,
   validateOriginAgainstAllowed,
   verifyToken,
-} from "./helpers";
-import { Db } from "../../../types";
-import { Context } from "src/subgraphs/types";
+} from "./helpers.js";
+import { Session } from "../types.js";
 
 export const createAuthenticationSession = async (
   db: Db,

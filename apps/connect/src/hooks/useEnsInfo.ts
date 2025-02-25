@@ -1,5 +1,5 @@
+import { getEnsInfo, type ENSInfo } from '#services/viem';
 import { useEffect, useMemo, useState } from 'react';
-import { getEnsInfo, type ENSInfo } from 'src/services/viem';
 
 export function useENSInfo(
     address?: `0x${string}`,

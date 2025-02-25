@@ -1,7 +1,7 @@
 import { Icon } from "@/powerhouse";
+import { OperationScope } from "document-model";
 import { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
-import { Scope as TScope } from "../types";
 import { Branch } from "./branch";
 import { DocId } from "./doc-id";
 import { Scope } from "./scope";
@@ -9,8 +9,8 @@ import { Scope } from "./scope";
 interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   readonly title: ReactNode;
   readonly docId: string;
-  readonly scope: TScope;
-  readonly onChangeScope: (scope: TScope) => void;
+  readonly scope: OperationScope;
+  readonly onChangeScope: (scope: OperationScope) => void;
   readonly onClose: () => void;
 }
 
@@ -34,7 +34,7 @@ export function Header(props: Props) {
     >
       <div className="flex items-center gap-3">
         <button
-          className="rounded-lg bg-gray-50 p-1 text-slate-100 shadow-button"
+          className="shadow-button rounded-lg bg-gray-50 p-1 text-slate-100"
           onClick={onClose}
         >
           <Icon name="VariantArrowLeft" />

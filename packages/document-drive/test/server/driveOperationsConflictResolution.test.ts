@@ -1,14 +1,10 @@
-import * as DocumentDrive from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import {
-  BaseAction,
-  DocumentModel as BaseDocumentModel,
-  Operation,
-} from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import { BaseAction, Operation } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { IOperationResult, ReactorBuilder } from "../../src";
 import { DriveBasicClient } from "../utils";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { IOperationResult } from "../../src/server/types.js";
+import { DriveBasicClient } from "../utils.js";
 
 function sortNodes(nodes: DocumentDrive.Node[]) {
   return nodes.sort((a, b) => (a.id < b.id ? -1 : 1));

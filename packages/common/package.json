@@ -9,39 +9,17 @@
   "files": [
     "/dist"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/es/index.js",
-      "require": "./dist/cjs/index.js"
-    },
-    "./editors": {
-      "types": "./dist/editors.d.ts",
-      "import": "./dist/es/editors.js",
-      "require": "./dist/cjs/editors.js"
-    },
-    "./document-models": {
-      "types": "./dist/documentModels.d.ts",
-      "import": "./dist/es/documentModels.js",
-      "require": "./dist/cjs/documentModels.js"
-    },
-    "./document-drive": {
-      "types": "./dist/document-models/document-drive/index.d.ts",
-      "import": "./dist/es/document-drive.js",
-      "require": "./dist/cjs/document-drive.js"
-    },
-    "./storybook": {
-      "types": "./dist/storybook.d.ts",
-      "import": "./dist/es/storybook.js",
-      "require": "./dist/cjs/storybook.js"
-    }
+  "exports": "./dist/index.js",
+  "imports": {
+    "#document-models/*": "./dist/document-models/*.js",
+    "#editors/*": "./dist/editors/*.js"
   },
   "scripts": {
     "generate": "powerhouse generate",
     "dev": "ph-cli dev --config-file ./powerhouse.config.json",
     "format-generated": "npx prettier \"**/{gen,processors,editors}/**/*\" --write --ignore-path --no-error-on-unmatched-pattern >> /dev/null",
     "postgenerate": "npm run format-generated",
-    "check-types": "tsc",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
     "lint": "eslint",
     "build": "npm run generate && vite build",
@@ -59,9 +37,6 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "peerDependencies": {
-    "@powerhousedao/design-system": "workspace:*",
-    "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -86,7 +61,7 @@
     "@storybook/react": "^8.4.4",
     "@storybook/react-vite": "^8.4.4",
     "@storybook/test": "^8.0.2",
-    "@storybook/types": "^8.4.4",
+    "@storybook/types": "^8.5.2",
     "@types/eslint__js": "^8.42.3",
     "@types/node": "^22.10.9",
     "@types/react": "^18.3.18",
@@ -96,7 +71,6 @@
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
     "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.3",
@@ -128,7 +102,10 @@
   },
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "dependencies": {
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "@tanstack/react-virtual": "^3.8.1",
+    "document-drive": "workspace:*",
     "react-i18next": "^13.5.0"
   }
 }

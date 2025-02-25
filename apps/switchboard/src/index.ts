@@ -5,28 +5,27 @@ import {
 import { SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
 import { PrismaClient } from "@prisma/client";
 import { ReactorBuilder } from "document-drive";
-import RedisCache from "document-drive/cache/redis";
-import { PrismaStorage } from "document-drive/storage/prisma";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import { DocumentDriveServer, PrismaStorage, RedisCache } from "document-drive";
+import {
+  DocumentModelModule,
+  documentModelDocumentModelModule,
+} from "document-model";
 import dotenv from "dotenv";
 import express from "express";
 import http from "http";
 import path from "path";
-import { initRedis } from "./clients/redis";
+import { initRedis } from "./clients/redis.js";
 dotenv.config();
 
 // start document drive server with all available document models
 
 // Create a monolith express app for all subgraphs
-const app = express({});
+const app = express();
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 const main = async () => {
   try {
     const redis = await initRedis();
-    // @ts-ignore: @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const prismaClient: PrismaClient = new PrismaClient();
     const connectionString = process.env.DATABASE_URL;
     const dbUrl =
@@ -38,9 +37,8 @@ const main = async () => {
     const redisCache = new RedisCache(redis);
     const storage = new PrismaStorage(prismaClient);
     const driveServer = new ReactorBuilder([
-      DocumentModelLib,
-      ...Object.values(DocumentModelsLibs),
-    ] as DocumentModel[])
+      documentModelDocumentModelModule,
+    ] as DocumentModelModule[])
       .withStorage(storage)
       .withCache(redisCache)
       .build();
@@ -56,6 +54,7 @@ const main = async () => {
       app,
       driveServer,
       knex,
+      // @ts-expect-error todo update analytics store to use IAnalyticsStore
       analyticsStore,
     );
     // init router

@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/Date";
+import { scalar } from "../src/scalars/Date.js";
 
 describe("Date Scalar", () => {
   it("should serialize a valid Date", () => {

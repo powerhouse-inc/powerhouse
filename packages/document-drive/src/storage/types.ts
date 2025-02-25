@@ -1,51 +1,43 @@
+import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { SynchronizationUnitQuery } from "#server/types";
 import type {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-} from "document-model-libs/document-drive";
-import type {
-  Action,
-  BaseAction,
-  Document,
   DocumentHeader,
-  DocumentOperations,
   Operation,
-} from "document-model/document";
-import type { SynchronizationUnitQuery } from "../server/types";
-
-export type DocumentStorage<D extends Document = Document> = Omit<
-  D,
-  "attachments"
->;
-
-export type DocumentDriveStorage = DocumentStorage<DocumentDriveDocument>;
+  OperationFromDocument,
+  OperationsFromDocument,
+  PHDocument,
+} from "document-model";
 
 export interface IStorageDelegate {
-  getCachedOperations(
+  getCachedOperations<TDocument extends PHDocument = PHDocument>(
     drive: string,
     id: string,
-  ): Promise<DocumentOperations<Action> | undefined>;
+  ): Promise<OperationsFromDocument<TDocument> | undefined>;
 }
 
 export interface IStorage {
   checkDocumentExists(drive: string, id: string): Promise<boolean>;
   getDocuments: (drive: string) => Promise<string[]>;
-  getDocument(drive: string, id: string): Promise<DocumentStorage>;
+  getDocument<TDocument extends PHDocument>(
+    drive: string,
+    id: string,
+  ): Promise<TDocument>;
   createDocument(
     drive: string,
     id: string,
-    document: DocumentStorage,
+    document: PHDocument,
   ): Promise<void>;
-  addDocumentOperations(
+  addDocumentOperations<TDocument extends PHDocument>(
     drive: string,
     id: string,
-    operations: Operation[],
+    operations: OperationFromDocument<TDocument>[],
     header: DocumentHeader,
   ): Promise<void>;
-  addDocumentOperationsWithTransaction?(
+  addDocumentOperationsWithTransaction?<TDocument extends PHDocument>(
     drive: string,
     id: string,
-    callback: (document: DocumentStorage) => Promise<{
-      operations: Operation[];
+    callback: (document: TDocument) => Promise<{
+      operations: OperationFromDocument<TDocument>[];
       header: DocumentHeader;
     }>,
   ): Promise<void>;
@@ -56,7 +48,7 @@ export interface IStorage {
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown>;
+  ): Promise<string | undefined>;
   setStorageDelegate?(delegate: IStorageDelegate): void;
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
@@ -71,19 +63,19 @@ export interface IStorage {
 }
 export interface IDriveStorage extends IStorage {
   getDrives(): Promise<string[]>;
-  getDrive(id: string): Promise<DocumentDriveStorage>;
-  getDriveBySlug(slug: string): Promise<DocumentDriveStorage>;
-  createDrive(id: string, drive: DocumentDriveStorage): Promise<void>;
+  getDrive(id: string): Promise<DocumentDriveDocument>;
+  getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
+  createDrive(id: string, drive: DocumentDriveDocument): Promise<void>;
   deleteDrive(id: string): Promise<void>;
   clearStorage?(): Promise<void>;
   addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: Operation[],
     header: DocumentHeader,
   ): Promise<void>;
   addDriveOperationsWithTransaction?(
     drive: string,
-    callback: (document: DocumentDriveStorage) => Promise<{
+    callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
       header: DocumentHeader;
     }>,
@@ -93,5 +85,5 @@ export interface IDriveStorage extends IStorage {
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown>;
+  ): Promise<string | undefined>;
 }

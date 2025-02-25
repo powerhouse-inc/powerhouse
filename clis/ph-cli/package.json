@@ -8,13 +8,14 @@
     "access": "public"
   },
   "bin": {
-    "ph-cli": "dist/cli.js"
+    "ph-cli": "dist/src/cli.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsc --build",
+    "check-types": "tsc --build",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
@@ -39,13 +40,11 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
+    "@powerhousedao/builder-tools": "workspace:*",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
     "graphql": "^16.9.0",
-    "pm2": "^5.4.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "pm2": "^5.4.3"
   }
 }

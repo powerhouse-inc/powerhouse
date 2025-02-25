@@ -5,27 +5,33 @@ export const getDocumentModelTypeDefs = (
   documentDriveServer: BaseDocumentDriveServer,
   typeDefs: string,
 ) => {
-  const documentModels = documentDriveServer.getDocumentModels();
+  const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
-  documentModels.forEach(({ documentModel }) => {
+  documentModels.forEach(({ documentModelState }) => {
     dmSchema += `
-        ${documentModel.specifications
+        ${documentModelState.specifications
           .map((specification) =>
             specification.state.global.schema
-              .replaceAll(" Account ", ` ${documentModel.name}Account `)
-              .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-              .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+              .replaceAll(" Account ", ` ${documentModelState.name}Account `)
+              .replaceAll(`: Account`, `: ${documentModelState.name}Account`)
+              .replaceAll(
+                `[Account!]!`,
+                `[${documentModelState.name}Account!]!`,
+              )
               .replaceAll("scalar DateTime", "")
               .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
           )
           .join("\n")};
 
-        ${documentModel.specifications
+        ${documentModelState.specifications
           .map((specification) =>
             specification.state.local.schema
-              .replaceAll(" Account ", ` ${documentModel.name}Account `)
-              .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-              .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+              .replaceAll(" Account ", ` ${documentModelState.name}Account `)
+              .replaceAll(`: Account`, `: ${documentModelState.name}Account`)
+              .replaceAll(
+                `[Account!]!`,
+                `[${documentModelState.name}Account!]!`,
+              )
               .replaceAll("scalar DateTime", "")
               .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
               .replaceAll("type AccountSnapshotLocalState", "")
@@ -34,14 +40,14 @@ export const getDocumentModelTypeDefs = (
           )
           .join("\n")};
 
-        type ${documentModel.name} implements IDocument {
+        type ${documentModelState.name} implements IDocument {
             id: ID!
             name: String!
             documentType: String!
             revision: Int!
             created: DateTime!
             lastModified: DateTime!
-            ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ""}
+            ${documentModelState.name !== "DocumentModel" ? `state: ${documentModelState.name}State!` : ""}
         }\n`;
   });
 

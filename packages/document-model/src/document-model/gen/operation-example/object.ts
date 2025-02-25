@@ -1,26 +1,24 @@
-import { BaseDocument } from "../../../document/object";
-
+import { BaseDocumentClass } from "../../../document/object.js";
+import { ReducerOptions } from "../../../document/types.js";
+import { DocumentModelAction } from "../actions.js";
 import {
   AddOperationExampleInput,
-  UpdateOperationExampleInput,
   DeleteOperationExampleInput,
   ReorderOperationExamplesInput,
-  DocumentModelState,
-  DocumentModelLocalState,
-} from "../types";
+  UpdateOperationExampleInput,
+} from "../schema/types.js";
+import { DocumentModelLocalState, DocumentModelState } from "../types.js";
 import {
   addOperationExample,
-  updateOperationExample,
   deleteOperationExample,
   reorderOperationExamples,
-} from "./creators";
-import { DocumentModelAction } from "../actions";
-import { ReducerOptions } from "../../../document";
+  updateOperationExample,
+} from "./creators.js";
 
-export default class DocumentModel_OperationExample extends BaseDocument<
+export default class DocumentModel_OperationExample extends BaseDocumentClass<
   DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
+  DocumentModelLocalState,
+  DocumentModelAction
 > {
   public addOperationExample(
     input: AddOperationExampleInput,

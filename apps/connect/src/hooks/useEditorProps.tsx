@@ -1,31 +1,31 @@
-import { UiDriveNode, UiFileNode } from '@powerhousedao/design-system';
-import {
-    Action,
-    ActionErrorCallback,
-    actions,
-    BaseAction,
-    Document,
-    EditorContext,
-    Operation,
-} from 'document-model/document';
-import { useAtomValue } from 'jotai';
-import { useCallback, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useModal } from 'src/components/modal';
-import { useGetDocumentModel } from 'src/store/document-model';
-import { themeAtom } from 'src/store/theme';
-import { useUser } from 'src/store/user';
+import { useModal } from '#components/modal/index';
+import { useGetDocumentModelModule } from '#store/document-model';
+import { themeAtom } from '#store/theme';
+import { useUser } from '#store/user';
 import {
     DocumentDispatch,
     DocumentDispatchCallback,
-    exportFile,
-} from 'src/utils';
-import { addActionContext, signOperation } from 'src/utils/signature';
-import { validateDocument } from 'src/utils/validate-document';
+} from '#utils/document-model';
+import { exportFile } from '#utils/file';
+import { addActionContext, signOperation } from '#utils/signature';
+import { validateDocument } from '#utils/validate-document';
+import { UiDriveNode, UiFileNode } from '@powerhousedao/design-system';
+import { logger } from 'document-drive';
+import {
+    Action,
+    ActionErrorCallback,
+    EditorContext,
+    Operation,
+    PHDocument,
+    redo,
+    undo,
+} from 'document-model';
+import { useAtomValue } from 'jotai';
+import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useUiNodes } from './useUiNodes';
 import { useUserPermissions } from './useUserPermissions';
-import { logger } from 'document-drive/logger';
 
 export interface EditorProps {
     context: EditorContext;
@@ -42,7 +42,7 @@ export interface EditorProps {
 
 export function useEditorDispatch(
     node: UiDriveNode | UiFileNode | null,
-    documentDispatch: DocumentDispatch<any, any, any>,
+    documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
     const user = useUser() || undefined;
@@ -53,23 +53,19 @@ export function useEditorDispatch(
         node?.kind === 'DRIVE'
             ? 'powerhouse/document-drive'
             : node?.documentType;
-    const getDocumentModel = useGetDocumentModel();
-    const documentModel = useMemo(
-        () => (documentType ? getDocumentModel(documentType) : undefined),
-        [documentType, getDocumentModel],
+    const getDocumentModelModule = useGetDocumentModelModule();
+    const documentModelModule = useMemo(
+        () => (documentType ? getDocumentModelModule(documentType) : undefined),
+        [documentType, getDocumentModelModule],
     );
 
     const dispatch = useCallback(
-        (
-            action: BaseAction | Action,
-            onErrorCallback?: ActionErrorCallback,
-        ) => {
+        (action: Action, onErrorCallback?: ActionErrorCallback) => {
             console.log('OLAAAA');
-            const callback: DocumentDispatchCallback<
-                unknown,
-                Action,
-                unknown
-            > = (operation, state) => {
+            const callback: DocumentDispatchCallback<PHDocument> = (
+                operation,
+                state,
+            ) => {
                 if (!node?.id) return;
 
                 const { prevState } = state;
@@ -79,7 +75,7 @@ export function useEditorDispatch(
                     sign,
                     node.id,
                     prevState,
-                    documentModel?.reducer,
+                    documentModelModule?.reducer,
                     user,
                 )
                     .then(op => {
@@ -100,7 +96,7 @@ export function useEditorDispatch(
         [
             documentDispatch,
             connectDid,
-            documentModel?.reducer,
+            documentModelModule?.reducer,
             onAddOperation,
             node,
             sign,
@@ -112,9 +108,9 @@ export function useEditorDispatch(
 }
 
 export function useEditorProps(
-    document: Document<any, any> | undefined,
+    document: PHDocument | undefined,
     node: UiDriveNode | UiFileNode | null,
-    documentDispatch: DocumentDispatch<any, any, any>,
+    documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
     const { t } = useTranslation();
@@ -129,7 +125,7 @@ export function useEditorProps(
         selectedParentNode,
         selectedDocument,
         setSelectedNode,
-        getDocumentModel,
+        getDocumentModelModule,
     } = useUiNodes();
 
     const canUndo =
@@ -139,12 +135,12 @@ export function useEditorProps(
 
     const dispatch = useEditorDispatch(node, documentDispatch, onAddOperation);
 
-    const undo = useCallback(() => {
-        dispatch(actions.undo());
+    const handleUndo = useCallback(() => {
+        dispatch(undo());
     }, [dispatch]);
 
-    const redo = useCallback(() => {
-        dispatch(actions.undo());
+    const handleRedo = useCallback(() => {
+        dispatch(redo());
     }, [dispatch]);
 
     const onClose = useCallback(() => {
@@ -152,7 +148,7 @@ export function useEditorProps(
     }, [selectedParentNode, setSelectedNode]);
 
     const exportDocument = useCallback(
-        (document: Document) => {
+        (document: PHDocument) => {
             const validationErrors = validateDocument(document);
 
             if (validationErrors.length) {
@@ -175,14 +171,14 @@ export function useEditorProps(
                     },
                     onContinue(closeModal) {
                         closeModal();
-                        return exportFile(document, getDocumentModel);
+                        return exportFile(document, getDocumentModelModule);
                     },
                 });
             } else {
-                return exportFile(document, getDocumentModel);
+                return exportFile(document, getDocumentModelModule);
             }
         },
-        [getDocumentModel, showModal, t],
+        [getDocumentModelModule, showModal, t],
     );
 
     const onExport = useCallback(() => {
@@ -203,8 +199,8 @@ export function useEditorProps(
         context,
         canUndo,
         canRedo,
-        undo,
-        redo,
+        undo: handleUndo,
+        redo: handleRedo,
         onClose,
         onExport,
         onShowRevisionHistory: showRevisionHistory,

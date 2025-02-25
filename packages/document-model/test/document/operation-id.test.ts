@@ -1,29 +1,29 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { Document, utils, ExtendedState } from "../../src/document";
-import { createDocument, createExtendedState } from "../../src/document/utils";
-import { documentHelpers } from "../../src/document/utils";
+import { beforeEach, describe, expect, it } from "vitest";
+import { ExtendedStateFromDocument } from "#document/types.js";
 import {
-  CountState,
-  CountAction,
-  CountLocalState,
+  baseCreateDocument,
+  baseCreateExtendedState,
+  replayOperations,
+} from "#document/utils/base.js";
+import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
+import {
+  baseCountReducer,
+  CountDocument,
   countReducer,
   increment,
-  baseCountReducer,
-} from "../helpers";
+} from "../helpers.js";
 
 describe("Document Operation ID", () => {
-  let document: Document<CountState, CountAction, CountLocalState>;
-  let initialState: ExtendedState<CountState, CountLocalState>;
+  let document: CountDocument;
+  let initialState: ExtendedStateFromDocument<CountDocument>;
 
   beforeEach(() => {
-    initialState = createExtendedState<CountState, CountLocalState>({
+    initialState = baseCreateExtendedState<CountDocument>({
       documentType: "powerhouse/counter",
-      state: { global: { count: 0 }, local: {} },
+      state: { global: { count: 0 }, local: { name: "" } },
     });
 
-    document = createDocument<CountState, CountAction, CountLocalState>(
-      initialState,
-    );
+    document = baseCreateDocument(initialState);
   });
 
   it("should add an id to new operations", () => {
@@ -114,11 +114,11 @@ describe("Document Operation ID", () => {
     document = countReducer(document, increment());
     document = countReducer(document, increment());
 
-    const clearedOperations = documentHelpers.garbageCollectDocumentOperations(
+    const clearedOperations = garbageCollectDocumentOperations(
       document.operations,
     );
 
-    const replayedDoc = utils.replayOperations(
+    const replayedDoc = replayOperations<CountDocument>(
       initialState,
       clearedOperations,
       baseCountReducer,
@@ -152,11 +152,11 @@ describe("Document Operation ID", () => {
 
     document = countReducer(document, increment());
 
-    const clearedOperations = documentHelpers.garbageCollectDocumentOperations(
+    const clearedOperations = garbageCollectDocumentOperations(
       document.operations,
     );
 
-    const replayedDoc = utils.replayOperations(
+    const replayedDoc = replayOperations<CountDocument>(
       initialState,
       clearedOperations,
       baseCountReducer,
@@ -196,11 +196,11 @@ describe("Document Operation ID", () => {
 
     document = countReducer(document, increment());
 
-    const clearedOperations = documentHelpers.garbageCollectDocumentOperations(
+    const clearedOperations = garbageCollectDocumentOperations(
       document.operations,
     );
 
-    const replayedDoc = utils.replayOperations(
+    const replayedDoc = replayOperations<CountDocument>(
       initialState,
       clearedOperations,
       baseCountReducer,

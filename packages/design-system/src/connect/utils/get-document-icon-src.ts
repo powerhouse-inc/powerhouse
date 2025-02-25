@@ -8,7 +8,7 @@ export function getDocumentIconSrc(
     return customDocumentIconSrc;
   }
 
-  if (documentTypes.includes(documentType)) {
+  if (documentTypes.includes(documentType as (typeof documentTypes)[number])) {
     return iconMap[documentType];
   }
 

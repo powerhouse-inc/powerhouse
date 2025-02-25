@@ -1,3 +1,4 @@
+// @ts-check
 import { default as eslint } from "@eslint/js";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactPlugin from "eslint-plugin-react";
@@ -5,82 +6,6 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
 import tailwind from "eslint-plugin-tailwindcss";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-
-const reactRuleOverrides = {
-  disabled: {
-    "react/require-default-props": "off",
-    "react/jsx-no-literals": "off",
-    "react/forbid-component-props": "off",
-    "react/no-multi-comp": "off",
-    "react/destructuring-assignment": "off",
-    "react/function-component-definition": "off",
-    "react/prop-types": "off",
-    "react/button-has-type": "off",
-  },
-  warn: {
-    "react/no-unused-prop-types": "warn",
-    "react/jsx-max-depth": ["warn", { max: 4 }],
-    "react/no-array-index-key": "warn",
-    "react/jsx-no-bind": [
-      "warn",
-      {
-        ignoreDOMComponents: true,
-      },
-    ],
-    "react/button-has-type": "warn",
-    "react/hook-use-state": "warn",
-    "react/jsx-no-useless-fragment": "warn",
-    "react/jsx-props-no-spreading": [
-      "warn",
-      {
-        html: "ignore",
-      },
-    ],
-  },
-};
-
-const typescriptRuleOverrides = {
-  disabled: {
-    "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/consistent-indexed-object-style": "off",
-    "@typescript-eslint/no-duplicate-type-constituents": "off",
-    "@typescript-eslint/explicit-function-return-type": "off",
-    "@typescript-eslint/consistent-type-imports": "off",
-    "@typescript-eslint/array-type": "off",
-    "@typescript-eslint/prefer-function-type": "off",
-    "@typescript-eslint/strict-boolean-expressions": "off",
-    "@typescript-eslint/prefer-nullish-coalescing": "off",
-    "@typescript-eslint/no-confusing-void-expression": "off",
-    "@typescript-eslint/consistent-type-definitions": "off",
-    "@typescript-eslint/no-empty-function": "off",
-    "@typescript-eslint/no-misused-promises": "off",
-    "@typescript-eslint/prefer-reduce-type-parameter": "off",
-  },
-  warn: {
-    "@typescript-eslint/prefer-for-of": "warn",
-    "@typescript-eslint/require-await": "warn",
-    "@typescript-eslint/ban-ts-comment": "warn",
-    "@typescript-eslint/unbound-method": "warn",
-    "@typescript-eslint/no-empty-object-type": "warn",
-    "@typescript-eslint/no-non-null-assertion": "warn",
-    "@typescript-eslint/prefer-find": "warn",
-    "@typescript-eslint/no-floating-promises": "warn",
-    "@typescript-eslint/use-unknown-in-catch-callback-variable": "warn",
-    "@typescript-eslint/restrict-plus-operands": "warn",
-    "@typescript-eslint/return-await": "warn",
-    "@typescript-eslint/no-dynamic-delete": "warn",
-    "@typescript-eslint/no-unnecessary-type-assertion": "warn",
-    "@typescript-eslint/no-unused-vars": "warn",
-    "@typescript-eslint/no-unnecessary-condition": "warn",
-    "@typescript-eslint/no-unnecessary-type-parameters": "warn",
-    "@typescript-eslint/restrict-template-expressions": [
-      "warn",
-      {
-        allowNumber: true,
-      },
-    ],
-  },
-};
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -112,20 +37,26 @@ export default tseslint.config(
       "**/postcss.config.mjs",
       "**/create-require.js",
       ".nx/",
-      "packages/document-drive/test/*",
+      "packages/document-drive/**/*.test.ts",
+      "packages/document-drive/**/*.bench.ts",
       "**/.vite/",
       "**/out/",
       "**/forge.config.js",
       "**/vite.config.ts.timestamp-*.mjs",
+      "apps/connect/src/vite-env.d.ts",
     ],
   },
   {
     languageOptions: {
+      sourceType: "module",
+      ecmaVersion: "latest",
       globals: {
         ...globals.browser,
       },
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["*.config.js", "*.config.mjs", "*.config.cjs"],
+        },
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
           jsx: true,
@@ -153,14 +84,48 @@ export default tseslint.config(
       },
     },
     rules: {
-      ...typescriptRuleOverrides.disabled,
-      ...typescriptRuleOverrides.warn,
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/consistent-indexed-object-style": "off",
+      "@typescript-eslint/no-duplicate-type-constituents": "off",
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/consistent-type-imports": "off",
+      "@typescript-eslint/array-type": "off",
+      "@typescript-eslint/prefer-function-type": "off",
+      "@typescript-eslint/strict-boolean-expressions": "off",
+      "@typescript-eslint/prefer-nullish-coalescing": "off",
+      "@typescript-eslint/no-confusing-void-expression": "off",
+      "@typescript-eslint/consistent-type-definitions": "off",
+      "@typescript-eslint/no-empty-function": "off",
+      "@typescript-eslint/no-misused-promises": "off",
+      "@typescript-eslint/prefer-reduce-type-parameter": "off",
+      "@typescript-eslint/prefer-for-of": "warn",
+      "@typescript-eslint/require-await": "warn",
+      "@typescript-eslint/ban-ts-comment": "warn",
+      "@typescript-eslint/unbound-method": "warn",
+      "@typescript-eslint/no-empty-object-type": "warn",
+      "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/prefer-find": "warn",
+      "@typescript-eslint/no-floating-promises": "warn",
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "warn",
+      "@typescript-eslint/restrict-plus-operands": "warn",
+      "@typescript-eslint/return-await": "warn",
+      "@typescript-eslint/no-dynamic-delete": "warn",
+      "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unnecessary-condition": "warn",
+      "@typescript-eslint/no-unnecessary-type-parameters": "warn",
+      "@typescript-eslint/restrict-template-expressions": [
+        "warn",
+        {
+          allowNumber: true,
+        },
+      ],
     },
   },
   {
     files: ["**/*.tsx"],
-    ...reactPlugin.configs.flat?.all,
-    ...reactPlugin.configs.flat?.["jsx-runtime"],
+    ...reactPlugin.configs.flat.all,
+    ...reactPlugin.configs.flat["jsx-runtime"],
     settings: {
       react: {
         version: "detect",
@@ -171,9 +136,26 @@ export default tseslint.config(
       "react-hooks": reactHooksPlugin,
     },
     rules: {
-      ...reactHooksPlugin.configs.recommended.rules,
-      ...reactRuleOverrides.disabled,
-      ...reactRuleOverrides.warn,
+      "react/require-default-props": "off",
+      "react/jsx-no-literals": "off",
+      "react/forbid-component-props": "off",
+      "react/no-multi-comp": "off",
+      "react/destructuring-assignment": "off",
+      "react/function-component-definition": "off",
+      "react/prop-types": "off",
+      "react/no-unused-prop-types": "warn",
+      "react/jsx-max-depth": "warn",
+      "react/no-array-index-key": "warn",
+      "react/jsx-no-bind": "warn",
+      "react/button-has-type": "warn",
+      "react/hook-use-state": "warn",
+      "react/jsx-no-useless-fragment": "warn",
+      "react/jsx-props-no-spreading": [
+        "warn",
+        {
+          html: "ignore",
+        },
+      ],
     },
   },
 );

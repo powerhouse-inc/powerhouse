@@ -1,2 +1,2 @@
-export * from "./types";
-export { initRenown } from "./init.browser";
+export { initRenown } from "./init.browser.js";
+export * from "./types.js";

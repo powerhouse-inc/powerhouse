@@ -1,11 +1,11 @@
+import { Context } from "#subgraphs/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentNode } from "graphql";
-import gql from "graphql-tag";
-import { Context } from "src/subgraphs";
+import { gql } from "graphql-tag";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
@@ -23,12 +23,14 @@ export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
   typeDefs: DocumentNode,
 ) => {
-  const documentModels = documentDriveServer.getDocumentModels();
+  const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
-  documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = pascalCase(documentModel.name.replaceAll("/", " "));
+  documentModels.forEach(({ documentModelState }) => {
+    const dmSchemaName = pascalCase(
+      documentModelState.name.replaceAll("/", " "),
+    );
     let tmpDmSchema = `
-          ${documentModel.specifications
+          ${documentModelState.specifications
             .map((specification) =>
               specification.state.global.schema
                 .replaceAll("scalar DateTime", "")
@@ -36,7 +38,7 @@ export const getDocumentModelTypeDefs = (
             )
             .join("\n")};
   
-          ${documentModel.specifications
+          ${documentModelState.specifications
             .map((specification) =>
               specification.state.local.schema
                 .replaceAll("scalar DateTime", "")

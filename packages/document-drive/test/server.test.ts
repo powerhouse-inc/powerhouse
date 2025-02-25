@@ -1,39 +1,27 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  utils as DocumentDriveUtils,
-  actions,
-  generateAddNodeAction,
-  reducer,
-} from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import {
   ActionContext,
-  Document,
-  DocumentModel,
-} from "document-model/document";
-import {
-  actions as DocumentModelActions,
   DocumentModelDocument,
-  module as DocumentModelLib,
-  utils as DocumentModelUtils,
-} from "document-model/document-model";
-import fs from "fs/promises";
+  DocumentModelModule,
+} from "document-model";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { ReactorBuilder } from "../src/server";
-import { BrowserStorage } from "../src/storage/browser";
-import { FilesystemStorage } from "../src/storage/filesystem";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaStorage } from "../src/storage/prisma";
-import { SequelizeStorage } from "../src/storage/sequelize";
-import { IDriveStorage } from "../src/storage/types";
-import { generateUUID } from "../src/utils";
-import { expectUUID } from "./utils";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+import { ReactorBuilder } from "../src/server/base.js";
+import { BrowserStorage } from "../src/storage/browser.js";
+import { FilesystemStorage } from "../src/storage/filesystem.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { PrismaStorage } from "../src/storage/prisma.js";
+import { SequelizeStorage } from "../src/storage/sequelize.js";
+import { IDriveStorage } from "../src/storage/types.js";
+import { generateUUID } from "../src/utils/misc.js";
+import { expectUUID } from "./utils.js";
 
 const documentModels = [
   DocumentModelLib,
   ...Object.values(DocumentModelsLibs),
-] as DocumentModel[];
+] as DocumentModelModule[];
 
 const FileStorageDir = path.join(__dirname, "./file-storage");
 const prismaClient = new PrismaClient();
@@ -57,7 +45,7 @@ const storageLayers = [
   ],
 ] as unknown as [string, () => Promise<IDriveStorage>][];
 
-let file: Document | undefined = undefined;
+let file: PHDocument | undefined = undefined;
 try {
   file = await DocumentModelsLibs.RealWorldAssets.utils.loadFromFile(
     "./test/rwa-document.zip",

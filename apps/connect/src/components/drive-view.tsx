@@ -1,8 +1,8 @@
+import { useConnectConfig } from '#hooks/useConnectConfig';
+import { useUiNodes } from '#hooks/useUiNodes';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
-import { DocumentModel } from 'document-model/document';
+import { DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
-import { useConnectConfig } from 'src/hooks/useConnectConfig';
-import { useUiNodes } from 'src/hooks/useUiNodes';
 import Button from './button';
 import FolderView from './folder-view';
 import { useModal } from './modal';
@@ -49,7 +49,7 @@ export function DriveView() {
     });
 
     const createDocument = useCallback(
-        (documentModel: DocumentModel) => {
+        (documentModel: DocumentModelModule) => {
             if (!selectedDriveNode) return;
 
             showModal('createDocument', {
@@ -82,14 +82,16 @@ export function DriveView() {
                         <div className="flex w-full flex-wrap gap-4">
                             {documentModels?.map(doc => (
                                 <Button
-                                    key={doc.documentModel.id}
-                                    aria-details={doc.documentModel.description}
+                                    key={doc.documentModelState.id}
+                                    aria-details={
+                                        doc.documentModelState.description
+                                    }
                                     className="bg-gray-200 text-slate-800"
                                     onClick={() => createDocument(doc)}
                                 >
                                     <span className="text-sm">
                                         {getDocumentModelName(
-                                            doc.documentModel.name,
+                                            doc.documentModelState.name,
                                         )}
                                     </span>
                                 </Button>

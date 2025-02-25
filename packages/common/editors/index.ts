@@ -1,1 +1,1 @@
-export { module as GenericDriveExplorer } from "./generic-drive-explorer";
+export { genericDriveExplorerEditorModule } from "./generic-drive-explorer";

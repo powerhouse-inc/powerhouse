@@ -1,4 +1,4 @@
-import store from 'src/app/store';
+import store from '#app/store';
 import { BaseStorage, IStorage } from '.';
 
 export class ElectronStorage<

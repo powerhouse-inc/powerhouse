@@ -1,8 +1,5 @@
-import { Operation, PrismaClient } from "@prisma/client";
-import * as DocumentDrive from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import { PrismaClient } from "@prisma/client";
+import { DocumentModelModule, Operation } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   PullResponderTransmitter,
@@ -12,18 +9,24 @@ import {
 import InMemoryCache from "../../src/cache/memory";
 import { MemoryStorage } from "../../src/storage/memory";
 import { PrismaStorage } from "../../src/storage/prisma";
+import InMemoryCache from "../../src/cache/memory.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { PullResponderTransmitter } from "../../src/server/listener/transmitter/pull-responder.js";
+import { MemoryStorage } from "../../src/storage/memory.js";
+import { PrismaStorage } from "../../src/storage/prisma.js";
+import { generateUUID } from "../../src/utils/misc.js";
 import {
   buildOperation,
   buildOperations,
   expectUTCTimestamp,
   expectUUID,
-} from "../utils";
+} from "../utils.js";
 
 describe("Synchronization Units", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   beforeEach(() => {
     vi.useFakeTimers().setSystemTime(new Date("2024-01-01"));

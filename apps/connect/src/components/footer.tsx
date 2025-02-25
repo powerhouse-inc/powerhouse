@@ -1,11 +1,11 @@
+import { useCookieBanner } from '#hooks/useCookieBanner/index';
+import { openUrl } from '#utils/openUrl';
 import {
     Footer as DesignSystemFooter,
     FooterLink,
     Icon,
 } from '@powerhousedao/design-system';
 import { Trans } from 'react-i18next';
-import { useCookieBanner } from 'src/hooks/useCookieBanner';
-import { openUrl } from 'src/utils/openUrl';
 import { useModal } from './modal';
 
 export const Footer = () => {

@@ -7,7 +7,9 @@
     "outDir": "./dist",
     "types": ["vitest/globals"],
     "resolveJsonModule": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler"
   },
   "include": [
     "src/**/*.ts",
@@ -15,5 +17,13 @@
     "test/**/*.ts",
     "*.ts",
     "package.json"
+  ],
+  "references": [
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../document-model"
+    }
   ]
 }

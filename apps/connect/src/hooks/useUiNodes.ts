@@ -1,3 +1,12 @@
+import { useModal } from '#components/modal/index';
+import { useReadModeContext } from '#context/read-mode';
+import { useFileNodeDocument } from '#store/document-drive';
+import {
+    useFilteredDocumentModels,
+    useGetDocumentModelModule,
+} from '#store/document-model';
+import { getNodeOptions } from '#utils/drive-sections';
+import { makeNodeSlugFromNodeName } from '#utils/slug';
 import {
     AddLocalDriveInput,
     AddRemoteDriveInput,
@@ -16,19 +25,9 @@ import {
     UiNode,
     useUiNodesContext,
 } from '@powerhousedao/design-system';
-import { ReadDrive } from 'document-drive';
-import { DocumentDriveDocument } from 'document-model-libs/document-drive';
+import { DocumentDriveDocument, ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useModal } from 'src/components/modal';
-import { useReadModeContext } from 'src/context/read-mode';
-import { useFileNodeDocument } from 'src/store/document-drive';
-import {
-    useFilteredDocumentModels,
-    useGetDocumentModel,
-} from 'src/store/document-model';
-import { getNodeOptions } from 'src/utils/drive-sections';
-import { makeNodeSlugFromNodeName } from 'src/utils/slug';
 import { useDocumentDriveById } from './useDocumentDriveById';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 import { useOpenSwitchboardLink } from './useOpenSwitchboardLink';
@@ -70,7 +69,7 @@ export function useUiNodes() {
     const userPermissions = useUserPermissions();
     const nodeOptions = getNodeOptions();
     const documentModels = useFilteredDocumentModels();
-    const getDocumentModel = useGetDocumentModel();
+    const getDocumentModelModule = useGetDocumentModelModule();
     const fileNodeDocument = useFileNodeDocument({
         ...uiNodesContext,
         ...documentDriveServer,
@@ -548,7 +547,7 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
-            getDocumentModel,
+            getDocumentModelModule,
         }),
         [
             documentDriveServer,
@@ -575,7 +574,7 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
-            getDocumentModel,
+            getDocumentModelModule,
         ],
     );
 }

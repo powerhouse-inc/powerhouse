@@ -1,22 +1,16 @@
 {
+  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "target": "esnext",
-    "types": ["@types/node", "./types.d.ts"],
-    "declaration": true,
+    "types": ["@types/node"],
     "outDir": "./dist",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "skipLibCheck": true,
-    "emitDeclarationOnly": true,
-    "baseUrl": ".",
-    "rootDir": "..",
-    "paths": {
-      "document-drive": ["../document-drive/src/index.ts"]
-    }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "*.config.ts"]
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../document-drive"
+    }
+  ],
+  "exclude": ["**/*.test.*", "**/*.bench.*", "dist", "node_modules"]
 }

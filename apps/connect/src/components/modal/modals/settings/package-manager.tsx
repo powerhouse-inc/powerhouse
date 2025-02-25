@@ -1,13 +1,12 @@
-import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
-import CommonManifest from 'document-model-libs/manifest';
-import { Manifest } from 'document-model/document';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useDocumentDrives } from 'src/hooks/useDocumentDrives';
-import { addExternalPackage, removeExternalPackage } from 'src/services/hmr';
+import { useDocumentDrives } from '#hooks/useDocumentDrives';
+import { addExternalPackage, removeExternalPackage } from '#services/hmr';
 import {
     useExternalPackages,
     useMutableExternalPackages,
-} from 'src/store/external-packages';
+} from '#store/external-packages';
+import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
+import { Manifest } from 'document-model';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';
@@ -84,11 +83,11 @@ export const PackageManager: React.FC = () => {
     }, [reactor, options]);
 
     const packagesInfo = useMemo(() => {
-        return [manifestToDetails(CommonManifest, 'common', false)].concat(
+        return [
             ...packages.map(pkg =>
                 manifestToDetails(pkg.manifest, pkg.id, true),
             ),
-        );
+        ];
     }, [packages]);
 
     const handleReactorChange = useCallback(

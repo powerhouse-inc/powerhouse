@@ -1,5 +1,5 @@
 import { Command } from "commander";
-// import { Manifest } from "document-model/document";
+// import { Manifest } from "document-model";
 import path from "node:path";
 import { CommandActionType } from "../types.js";
 import { getProjectInfo } from "../utils.js";

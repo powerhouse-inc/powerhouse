@@ -1,19 +1,20 @@
-import {
-  DocumentDriveDocument,
-  utils,
-} from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import * as DocumentModelLib from "document-model/document-model";
+import { DocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import { InternalTransmitterUpdate, IReceiver, ReactorBuilder } from "../src";
 import { expectUTCTimestamp, expectUUID } from "./utils";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { DocumentDriveServer } from "../src/server/base.js";
+import {
+  IReceiver,
+  InternalTransmitterUpdate,
+} from "../src/server/listener/transmitter/internal.js";
+import { expectUTCTimestamp, expectUUID } from "./utils.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   async function buildServer(receiver: IReceiver) {
     const server = new ReactorBuilder(documentModels).build();

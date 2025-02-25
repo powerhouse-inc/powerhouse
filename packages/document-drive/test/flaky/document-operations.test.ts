@@ -1,22 +1,19 @@
-import * as DocumentDrive from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { BaseAction, DocumentModel } from "document-model/document";
 import {
+  BaseAction,
   DocumentModelAction,
   DocumentModelDocument,
-  module as DocumentModelLib,
-  actions,
-  reducer,
-} from "document-model/document-model";
+  DocumentModelModule,
+} from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { ReactorBuilder } from "../../src";
-import { buildOperation, buildOperations } from "../utils";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { ReactorBuilder } from "../../src/server/base.js";
+import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document operations", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {

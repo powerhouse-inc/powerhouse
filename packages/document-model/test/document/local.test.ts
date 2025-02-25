@@ -1,14 +1,12 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
-import { prune, redo, undo } from "../../src/document/actions";
-import { createDocument } from "../../src/document/utils";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { baseCreateDocument } from "../../index.js";
+import { prune, redo, undo } from "../../src/document/actions/creators.js";
 import {
-  CountAction,
-  CountLocalState,
-  CountState,
+  CountDocument,
   countReducer,
-  emptyReducer,
   setLocalName,
-} from "../helpers";
+  wrappedEmptyReducer,
+} from "../helpers.js";
 
 describe("Local reducer", () => {
   beforeAll(() => {
@@ -16,8 +14,8 @@ describe("Local reducer", () => {
   });
 
   it("should update local revision", async () => {
-    const document = createDocument();
-    const newDocument = emptyReducer(document, {
+    const document = baseCreateDocument();
+    const newDocument = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "local",
@@ -27,12 +25,12 @@ describe("Local reducer", () => {
 
   it("should update lastModified", async () => {
     vi.useFakeTimers();
-    const document = createDocument();
+    const document = baseCreateDocument();
     await new Promise((r) => {
       setTimeout(r, 100);
       vi.runOnlyPendingTimers();
     });
-    const newDocument = emptyReducer(document, {
+    const newDocument = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "local",
@@ -45,8 +43,8 @@ describe("Local reducer", () => {
 
   it("should not update global operations list", async () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
-    const document = createDocument();
-    const newDocument = emptyReducer(document, {
+    const document = baseCreateDocument();
+    const newDocument = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "local",
@@ -69,8 +67,8 @@ describe("Local reducer", () => {
 
   it("should update local operations list", async () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
-    const document = createDocument();
-    const newDocument = emptyReducer(document, {
+    const document = baseCreateDocument();
+    const newDocument = wrappedEmptyReducer(document, {
       type: "TEST",
       input: {},
       scope: "local",
@@ -91,9 +89,8 @@ describe("Local reducer", () => {
 
     expect(newDocument.operations.global).toStrictEqual([]);
   });
-
   it("should update local name", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -125,7 +122,7 @@ describe("Local reducer", () => {
   });
 
   it("should undo local operation", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -167,7 +164,7 @@ describe("Local reducer", () => {
   });
 
   it("should redo local operation", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
@@ -202,7 +199,7 @@ describe("Local reducer", () => {
   });
 
   it.skip("should prune local operations", async () => {
-    const document = createDocument<CountState, CountAction, CountLocalState>({
+    const document = baseCreateDocument<CountDocument>({
       documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });

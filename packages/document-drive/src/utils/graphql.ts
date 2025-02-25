@@ -1,12 +1,15 @@
-import { pascalCase } from "change-case";
-import { logger } from "document-drive/logger";
 import {
   DocumentDriveLocalState,
   FileNode,
   FolderNode,
-} from "document-model-libs/document-drive";
-import { Document, DocumentModel, Operation } from "document-model/document";
-import { DocumentModelState } from "document-model/document-model";
+} from "#drive-document-model/gen/types";
+import { pascalCase } from "change-case";
+import {
+  DocumentModelModule,
+  DocumentModelState,
+  OperationFromDocument,
+  PHDocument,
+} from "document-model";
 import {
   BuildSchemaOptions,
   GraphQLError,
@@ -20,11 +23,7 @@ import {
   buildSchema,
 } from "graphql";
 import request, { GraphQLClient, gql } from "graphql-request";
-import {
-  InferDocumentLocalState,
-  InferDocumentOperation,
-  InferDocumentState,
-} from "../read-mode/types";
+import { logger } from "./logger.js";
 
 export { gql } from "graphql-request";
 
@@ -111,11 +110,11 @@ function getFields(type: GraphQLOutputType): string {
 }
 
 export function generateDocumentStateQueryFields(
-  documentModel: DocumentModelState,
+  documentModelState: DocumentModelState,
   options?: BuildSchemaOptions & ParseOptions,
 ): string {
-  const name = pascalCase(documentModel.name);
-  const spec = documentModel.specifications.at(-1);
+  const name = pascalCase(documentModelState.name);
+  const spec = documentModelState.specifications.at(-1);
   if (!spec) {
     throw new Error("No document model specification found");
   }
@@ -169,49 +168,26 @@ export type DriveState = DriveInfo &
     nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
   };
 
-export type DocumentGraphQLResult<D extends Document> = Pick<
-  D,
-  "name" | "created" | "documentType" | "lastModified"
-> & {
-  id: string;
-  revision: number;
-  state: InferDocumentState<D>;
-  initialState: InferDocumentState<D>;
-  operations: (Pick<
-    Operation,
-    | "id"
-    | "hash"
-    | "index"
-    | "skip"
-    | "timestamp"
-    | "type"
-    | "error"
-    | "context"
-  > & { inputText: string })[];
+export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
+  operations: (OperationFromDocument<TDocument> & {
+    inputText: string;
+  })[];
 };
 
-export async function fetchDocument<D extends Document>(
+export async function fetchDocument<TDocument extends PHDocument>(
   url: string,
   documentId: string,
-  documentModelLib: DocumentModel<
-    InferDocumentState<D>,
-    InferDocumentOperation<D>,
-    InferDocumentLocalState<D>
-  >,
+  documentModelModule: DocumentModelModule<TDocument>,
 ): Promise<
   GraphQLResult<{
-    document: Document<
-      InferDocumentState<D>,
-      InferDocumentOperation<D>,
-      InferDocumentLocalState<D>
-    >;
+    document: DocumentGraphQLResult<TDocument>;
   }>
 > {
-  const { documentModel, utils } = documentModelLib;
-  const stateFields = generateDocumentStateQueryFields(documentModel);
-  const name = pascalCase(documentModel.name);
+  const { documentModelState, utils } = documentModelModule;
+  const stateFields = generateDocumentStateQueryFields(documentModelState);
+  const name = pascalCase(documentModelState.name);
   const result = await requestGraphql<{
-    document: DocumentGraphQLResult<D>;
+    document: DocumentGraphQLResult<TDocument>;
   }>(
     url,
     gql`
@@ -260,24 +236,20 @@ export async function fetchDocument<D extends Document>(
         `,
     { id: documentId },
   );
-  const document: Document<
-    InferDocumentState<D>,
-    InferDocumentOperation<D>,
-    InferDocumentLocalState<D>
-  > | null = result.document
+  const document = result.document
     ? {
         ...result.document,
         revision: {
-          global: result.document.revision,
+          global: result.document.revision.global,
           local: 0,
         },
-        state: utils.createState({ global: result.document.state }),
+        state: result.document.state,
         operations: {
           global: result.document.operations.map(({ inputText, ...o }) => ({
             ...o,
             error: o.error ?? undefined,
             scope: "global",
-            input: JSON.parse(inputText) as D,
+            input: JSON.parse(inputText) as PHDocument,
           })),
           local: [],
         },
@@ -287,7 +259,7 @@ export async function fetchDocument<D extends Document>(
           created: result.document.created,
           lastModified: result.document.created,
           state: utils.createState({
-            global: result.document.initialState,
+            global: result.document.initialState.state.global,
           }),
         }),
         clipboard: [],
@@ -297,5 +269,7 @@ export async function fetchDocument<D extends Document>(
   return {
     ...result,
     document,
-  };
+  } as GraphQLResult<{
+    document: DocumentGraphQLResult<TDocument>;
+  }>;
 }

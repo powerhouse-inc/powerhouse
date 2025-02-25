@@ -1,5 +1,5 @@
+import { designSystemPreset } from "@powerhousedao/config/tailwind";
 import type { Config } from "tailwindcss";
-import { designSystemPreset } from "@powerhousedao/config";
 
 const config = {
   darkMode: ["class", '[data-mode="dark"]'],

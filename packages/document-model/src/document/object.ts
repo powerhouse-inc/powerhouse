@@ -1,16 +1,18 @@
-import { loadState, prune, redo, setName, undo } from "./actions";
-import type { BaseAction } from "./actions/types";
-import type { SignalDispatch } from "./signal";
-import type {
+import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
+import { SignalDispatch } from "./signal.js";
+import {
   Action,
   AttachmentRef,
-  Document,
-  ExtendedState,
+  BaseDocument,
+  BaseState,
+  DefaultAction,
+  Operation,
   OperationScope,
   Reducer,
   ReducerOptions,
-} from "./types";
-import { loadFromFile, readOnly, saveToFile } from "./utils";
+} from "./types.js";
+import { readOnly } from "./utils/base.js";
+import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";
 
 /**
  * This is an abstract class representing a document and provides methods
@@ -18,9 +20,15 @@ import { loadFromFile, readOnly, saveToFile } from "./utils";
  * @typeparam T - The type of data stored in the document.
  * @typeparam A - The type of action the document can take.
  */
-export abstract class BaseDocument<T, A extends Action, L = unknown> {
-  protected _document: Document<T, A, L>;
-  private _reducer: Reducer<T, A, L>;
+export abstract class BaseDocumentClass<
+  TGlobalState,
+  TLocalState,
+  TCustomAction extends Action,
+> {
+  protected _document: BaseDocument<TGlobalState, TLocalState, TCustomAction>;
+  private _reducer: Reducer<
+    BaseDocument<TGlobalState, TLocalState, TCustomAction>
+  >;
   private _signalDispatch?: SignalDispatch;
 
   /**
@@ -29,8 +37,8 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param document - The initial state of the document.
    */
   constructor(
-    reducer: Reducer<T, A, L>,
-    document: Document<T, A, L>,
+    reducer: Reducer<BaseDocument<TGlobalState, TLocalState, TCustomAction>>,
+    document: BaseDocument<TGlobalState, TLocalState, TCustomAction>,
     signalDispatch?: SignalDispatch,
   ) {
     this._reducer = reducer;
@@ -43,7 +51,10 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param action - The action to dispatch.
    * @returns The Document instance.
    */
-  protected dispatch(action: A | BaseAction, options?: ReducerOptions) {
+  protected dispatch(
+    action: TCustomAction | DefaultAction | Operation,
+    options?: ReducerOptions,
+  ) {
     this._document = this._reducer(
       this._document,
       action,
@@ -60,7 +71,7 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @returns The file path where the state was saved.
    */
   protected saveToFile(path: string, extension: string, name?: string) {
-    return saveToFile(this._document, path, extension, name);
+    return baseSaveToFile(this._document, path, extension, name);
   }
 
   /**
@@ -68,7 +79,7 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param path - The file path where the state is stored.
    */
   async loadFromFile(path: string) {
-    this._document = await loadFromFile<T, A, L>(path, this._reducer);
+    this._document = await baseLoadFromFile(path, this._reducer);
   }
 
   /**
@@ -77,11 +88,15 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param reducer - The reducer function that updates the state.
    * @returns The state of the document.
    */
-  protected static async stateFromFile<T, A extends Action, L>(
+  protected static async stateFromFile<
+    TGlobalState,
+    TLocalState,
+    TCustomAction extends Action,
+  >(
     path: string,
-    reducer: Reducer<T, A, L>,
+    reducer: Reducer<BaseDocument<TGlobalState, TLocalState, TCustomAction>>,
   ) {
-    const state = await loadFromFile<T, A, L>(path, reducer);
+    const state = await baseLoadFromFile(path, reducer);
     return state;
   }
 
@@ -157,7 +172,7 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param attachment - The key of the attachment to retrieve.
    */
   public getAttachment(attachment: AttachmentRef) {
-    return this._document.attachments[attachment];
+    return this._document.attachments?.[attachment];
   }
 
   /**
@@ -202,7 +217,10 @@ export abstract class BaseDocument<T, A extends Action, L = unknown> {
    * @param operations - The operations to apply to the document.
    */
   public loadState(
-    state: Pick<ExtendedState<T, L>, "state" | "name">,
+    state: {
+      name: string;
+      state: BaseState<TGlobalState, TLocalState>;
+    },
     operations: number,
   ) {
     this.dispatch(loadState(state, operations));

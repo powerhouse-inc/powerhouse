@@ -47,14 +47,17 @@ type ImportMetaEnv = {
   LOCAL_DOCUMENT_MODELS: string
   LOCAL_DOCUMENT_EDITORS: string
   LOAD_EXTERNAL_PACKAGES: string
+  FILE_UPLOAD_OPERATIONS_CHUNK_SIZE: string
+  PH_CONNECT_VERSION_CHECK_INTERVAL: string
+  PH_CONNECT_CLI_VERSION: string
   // @user-defined-start
-  /*
-   *  You can use this section to explicitly extend the type definition of `import.meta.env`
-   *  This is useful if you're using Vite plugins that define specific `import.meta.env` properties.
-   *  If you're not using such plugins, this section should remain as is.
-   */
-  SSR: boolean;
-  // @user-defined-end
+    /*
+     *  You can use this section to explicitly extend the type definition of `import.meta.env`
+     *  This is useful if you're using Vite plugins that define specific `import.meta.env` properties.
+     *  If you're not using such plugins, this section should remain as is.
+     */
+    SSR: boolean;
+    // @user-defined-end
 }
 
 interface ImportMeta {
@@ -69,6 +72,5 @@ interface ImportMeta {
   glob: import('vite-envs/types/importGlob').ImportGlobFunction
 }
 
-
-declare const __APP_VERSION__: string
-declare const __REQUIRES_HARD_REFRESH__: boolean
+declare const __APP_VERSION__: string;
+declare const __REQUIRES_HARD_REFRESH__: boolean;

@@ -1,12 +1,12 @@
+import { useDefaultDocumentModelEditor } from '#hooks/useDefaultDocumentModelEditor/index';
 import { DefaultEditor as BaseDefaultEditor } from '@powerhousedao/design-system';
-import { DocumentModel } from 'document-model/document';
+import { DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
-import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
 
-const mapDocumentModelsToOptions = (documentModels: DocumentModel[]) =>
+const mapDocumentModelsToOptions = (documentModels: DocumentModelModule[]) =>
     documentModels.map(document => ({
-        label: document.documentModel.name,
-        value: document.documentModel.id,
+        label: document.documentModelState.name,
+        value: document.documentModelState.id,
     }));
 
 const documentModelEditorOptions = [

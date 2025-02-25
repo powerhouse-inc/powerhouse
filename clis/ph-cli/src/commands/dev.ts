@@ -1,10 +1,10 @@
+import { ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
 import { blue, green, red } from "colorette";
 import { Command } from "commander";
 import { ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CommandActionType } from "../types.js";
-import { type ConnectOptions } from "./connect.js";
 import {
   DefaultSwitchboardOptions,
   SwitchboardOptions,
@@ -53,7 +53,7 @@ function spawnLocalSwitchboard(options?: SwitchboardOptions) {
 }
 
 async function spawnConnect(
-  options?: ConnectOptions,
+  options?: ConnectStudioOptions,
   localReactorUrl?: string,
 ) {
   const child = fork(

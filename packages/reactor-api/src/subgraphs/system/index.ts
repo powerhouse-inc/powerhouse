@@ -1,9 +1,9 @@
+import { Subgraph } from "#subgraphs/index.js";
 import { DriveInput } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import { Subgraph } from "../base";
-import { ADMIN_USERS } from "./env";
-import { SystemContext } from "./types";
+import { ADMIN_USERS } from "./env/index.js";
+import { SystemContext } from "./types.js";
 
 export class SystemSubgraph extends Subgraph {
   name = "system";

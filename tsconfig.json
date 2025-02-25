@@ -1,5 +1,4 @@
 {
-  "include": ["vitest.workspace.ts"],
   "extends": "./tsconfig.options.json",
   "references": [
     {
@@ -15,13 +14,32 @@
       "path": "./packages/document-model"
     },
     {
-      "path": "./packages/document-model-libs"
-    },
-    {
       "path": "./packages/scalars"
     },
     {
       "path": "./packages/reactor-browser"
+    },
+    {
+      "path": "./packages/reactor-api"
+    },
+    {
+      "path": "./packages/reactor-local"
+    },
+    {
+      "path": "./apps/connect"
+    },
+    {
+      "path": "./apps/switchboard"
+    },
+    {
+      "path": "./tools/scalar-generator"
+    },
+    {
+      "path": "./packages/builder-tools"
+    },
+    {
+      "path": "./packages/common"
     }
-  ]
+  ],
+  "files": []
 }

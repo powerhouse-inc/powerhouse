@@ -15,11 +15,12 @@ const config: ForgeConfig = {
         osxSign: {},
         icon: 'assets/icon',
         overwrite: true,
-        protocols: [{
-            name: 'connect',
-            schemes: ['phd'],
-        
-        }],
+        protocols: [
+            {
+                name: 'connect',
+                schemes: ['phd'],
+            },
+        ],
     },
     rebuildConfig: {},
     makers: [
@@ -29,14 +30,14 @@ const config: ForgeConfig = {
             options: {
                 bin: pkg.productName,
                 name: pkg.productName,
-                mimeType: ['x-scheme-handler/phd',]
+                mimeType: ['x-scheme-handler/phd'],
             },
         }),
         new MakerDeb({
             options: {
                 bin: pkg.productName,
                 name: pkg.productName,
-                mimeType: ['x-scheme-handler/phd',]
+                mimeType: ['x-scheme-handler/phd'],
             },
         }),
     ],
@@ -79,11 +80,11 @@ const config: ForgeConfig = {
             try {
                 const sourcePath = path.resolve(
                     __dirname,
-                    'node_modules/@powerhousedao/design-system/dist/icons.svg'
+                    'node_modules/@powerhousedao/design-system/dist/icons.svg',
                 );
                 const destinationPath = path.resolve(
                     __dirname,
-                    'public/icons.svg'
+                    'public/icons.svg',
                 );
 
                 await fs.copyFile(sourcePath, destinationPath);

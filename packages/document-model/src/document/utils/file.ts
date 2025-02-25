@@ -1,26 +1,24 @@
+import { ExtendedStateFromDocument, Reducer } from "#document/types.js";
+import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
 import JSZip from "jszip";
 import mime from "mime/lite";
-import type {
-  Action,
+import {
   Attachment,
   AttachmentInput,
-  Document,
   DocumentHeader,
   DocumentOperations,
-  ExtendedState,
-  Reducer,
-} from "../types";
-import { fetchFile, getFile, hash, readFile, writeFile } from "./node";
-import { replayDocument, ReplayDocumentOptions } from "./base";
-import { validateOperations } from "./validation";
+  PHDocument,
+} from "../types.js";
+import { replayDocument, ReplayDocumentOptions } from "./base.js";
 import {
   filterDocumentOperationsResultingState,
   garbageCollectDocumentOperations,
-} from "./document-helpers";
+} from "./document-helpers.js";
+import { validateOperations } from "./validation.js";
 
 export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
-export const createZip = async (document: Document) => {
+export function createZip(document: PHDocument) {
   // create zip file
   const zip = new JSZip();
 
@@ -47,17 +45,19 @@ export const createZip = async (document: Document) => {
   if (document.attachments) {
     const attachments = Object.keys(document.attachments);
     attachments.forEach((key) => {
-      const { data, ...attributes } = document.attachments[key];
-      zip.file(key, data, {
-        base64: true,
-        createFolders: true,
-        comment: JSON.stringify(attributes),
-      });
+      const { data, ...attributes } = document.attachments?.[key] ?? {};
+      if (data) {
+        zip.file(key, data, {
+          base64: true,
+          createFolders: true,
+          comment: JSON.stringify(attributes),
+        });
+      }
     });
   }
 
   return zip;
-};
+}
 
 /**
  * Saves a document to a ZIP file.
@@ -71,14 +71,14 @@ export const createZip = async (document: Document) => {
  * @param extension - The extension to use for the file.
  * @returns A promise that resolves to the path of the saved file.
  */
-export const saveToFile = async (
-  document: Document,
+export async function baseSaveToFile(
+  document: PHDocument,
   path: string,
   extension: string,
   name?: string,
-): Promise<string> => {
+) {
   // create zip file
-  const zip = await createZip(document);
+  const zip = createZip(document);
   const file = await zip.generateAsync({
     type: "uint8array",
     streamFiles: true,
@@ -91,18 +91,18 @@ export const saveToFile = async (
     fileName.endsWith(fileExtension) ? fileName : `${fileName}${fileExtension}`,
     file,
   );
-};
+}
 
-export const saveToFileHandle = async (
-  document: Document,
+export async function baseSaveToFileHandle(
+  document: PHDocument,
   input: FileSystemFileHandle,
-) => {
-  const zip = await createZip(document);
+) {
+  const zip = createZip(document);
   const blob = await zip.generateAsync({ type: "blob" });
   const writable = await input.createWritable();
   await writable.write(blob);
   await writable.close();
-};
+}
 
 /**
  * Loads a document from a ZIP file.
@@ -119,36 +119,38 @@ export const saveToFileHandle = async (
  * @returns A promise that resolves to the document state after applying all the operations.
  * @throws An error if the initial state or the operations history is not found in the ZIP file.
  */
-export const loadFromFile = async <S, A extends Action, L>(
+export async function baseLoadFromFile<TDocument extends PHDocument>(
   path: string,
-  reducer: Reducer<S, A, L>,
+  reducer: Reducer<TDocument>,
   options?: ReplayDocumentOptions,
-) => {
+): Promise<TDocument> {
   const file = readFile(path);
-  return loadFromInput(file, reducer, options);
-};
+  return baseLoadFromInput(file, reducer, options);
+}
 
-export const loadFromInput = async <S, A extends Action, L>(
+export async function baseLoadFromInput<TDocument extends PHDocument>(
   input: FileInput,
-  reducer: Reducer<S, A, L>,
+  reducer: Reducer<TDocument>,
   options?: ReplayDocumentOptions,
-) => {
+): Promise<TDocument> {
   const zip = new JSZip();
   await zip.loadAsync(input);
   return loadFromZip(zip, reducer, options);
-};
+}
 
-async function loadFromZip<S, A extends Action, L>(
+async function loadFromZip<TDocument extends PHDocument>(
   zip: JSZip,
-  reducer: Reducer<S, A, L>,
+  reducer: Reducer<TDocument>,
   options?: ReplayDocumentOptions,
-) {
+): Promise<TDocument> {
   const initialStateZip = zip.file("state.json");
   if (!initialStateZip) {
     throw new Error("Initial state not found");
   }
   const initialStateStr = await initialStateZip.async("string");
-  const initialState = JSON.parse(initialStateStr) as ExtendedState<S, L>;
+  const initialState = JSON.parse(
+    initialStateStr,
+  ) as ExtendedStateFromDocument<TDocument>;
 
   const headerZip = zip.file("header.json");
   let header: DocumentHeader | undefined = undefined;
@@ -160,10 +162,9 @@ async function loadFromZip<S, A extends Action, L>(
   if (!operationsZip) {
     throw new Error("Operations history not found");
   }
-
   const operations = JSON.parse(
     await operationsZip.async("string"),
-  ) as DocumentOperations<A>;
+  ) as DocumentOperations;
 
   const clearedOperations = garbageCollectDocumentOperations(operations);
 

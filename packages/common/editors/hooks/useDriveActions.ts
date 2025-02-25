@@ -1,16 +1,23 @@
 /* eslint-disable @typescript-eslint/require-await */ // TODO dispatch should return a promise
-import { Document, EditorDispatch } from "document-model/document";
-import { generateId as _generateId } from "document-model/utils";
+import { UiNode } from "@powerhousedao/design-system";
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
-  Node,
-  actions,
+  addFolder,
+  copyNode,
+  deleteNode,
   generateAddNodeAction,
   generateNodesCopy,
   isFileNode,
   isFolderNode,
-} from "document-models/document-drive";
+  moveNode,
+  updateNode,
+} from "document-drive";
+import {
+  EditorDispatch,
+  PHDocument,
+  generateId as _generateId,
+} from "document-model";
 import { useMemo } from "react";
 import { IDriveContext } from "./useDriveContext";
 
@@ -34,7 +41,7 @@ export interface IDriveActions {
   context: IDriveContext;
 
   /** Selects a node in the drive */
-  selectNode: (node: Node) => void;
+  selectNode: (node: UiNode | null) => void;
 
   /**
    * Creates a new folder in the drive
@@ -67,7 +74,7 @@ export interface IDriveActions {
   addDocument: (
     name: string,
     documentType: string,
-    document?: Document,
+    document?: PHDocument,
     parentFolder?: string,
     id?: string,
   ) => Promise<void>;
@@ -125,13 +132,13 @@ function createDriveActions(
 
   const { selectedNode } = context;
 
-  const addFolder = async (
+  const handleAddFolder = async (
     name: string,
     parentFolder?: string | null,
     id = generateId(),
   ) => {
     dispatch(
-      actions.addFolder({
+      addFolder({
         id,
         name,
         parentFolder: parentFolder ?? null,
@@ -142,7 +149,7 @@ function createDriveActions(
   const addDocument = async (
     name: string,
     documentType: string,
-    document?: Document,
+    document?: PHDocument,
     parentFolder?: string,
     id = generateId(),
   ) => {
@@ -182,24 +189,24 @@ function createDriveActions(
     await context.addFile(file, driveId, name, parentFolder);
   };
 
-  const deleteNode = async (id: string) => {
-    dispatch(actions.deleteNode({ id }));
+  const handleDeleteNode = async (id: string) => {
+    dispatch(deleteNode({ id }));
   };
 
   const renameNode = async (id: string, name: string) => {
-    dispatch(actions.updateNode({ id, name }));
+    dispatch(updateNode({ id, name }));
   };
 
-  const moveNode = async (sourceId: string, targetId: string) => {
+  const handleMoveNode = async (sourceId: string, targetId: string) => {
     dispatch(
-      actions.moveNode({
+      moveNode({
         srcFolder: sourceId,
         targetParentFolder: targetId,
       }),
     );
   };
 
-  const copyNode = async (
+  const handleCopyNode = async (
     sourceId: string,
     targetFolderId: string | undefined,
   ) => {
@@ -229,7 +236,7 @@ function createDriveActions(
     );
 
     const copyActions = copyNodesInput.map((copyNodeInput) =>
-      actions.copyNode(copyNodeInput),
+      copyNode(copyNodeInput),
     );
 
     for (const copyAction of copyActions) {
@@ -243,19 +250,19 @@ function createDriveActions(
       throw new Error(`Node with id "${sourceId}" not found`);
     }
 
-    await copyNode(node.id, node.parentFolder || undefined);
+    await handleCopyNode(node.id, node.parentFolder || undefined);
   };
 
   return {
     context,
     selectNode: context.selectNode,
-    addFolder,
+    addFolder: handleAddFolder,
     addFile,
     addDocument,
-    deleteNode,
+    deleteNode: handleDeleteNode,
     renameNode,
-    moveNode,
-    copyNode,
+    moveNode: handleMoveNode,
+    copyNode: handleCopyNode,
     duplicateNode,
   };
 }

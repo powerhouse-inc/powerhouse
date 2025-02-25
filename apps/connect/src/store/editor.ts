@@ -1,22 +1,20 @@
-import type { ExtendedEditor } from 'document-model-libs';
+import { useDefaultDocumentModelEditor } from '#hooks/useDefaultDocumentModelEditor/index';
+import { DocumentModelLib, EditorModule } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
-import { useDefaultDocumentModelEditor } from 'src/hooks/useDefaultDocumentModelEditor';
-import { DocumentModelsModule } from 'src/utils/types';
 import { externalPackagesAtom } from './external-packages';
 
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 
 async function loadBaseEditors() {
-    const JsonEditor = (await import('document-model-libs/editors/json'))
-        .default as unknown as ExtendedEditor;
-    const DocumentModelEditor = (await import('document-model-libs/editors'))
-        .DocumentModel2 as unknown as ExtendedEditor;
-    return [JsonEditor, DocumentModelEditor];
+    const documentModelEditorModule = (
+        await import('@powerhousedao/builder-tools/document-model-editor')
+    ).documentModelEditorModule;
+    return [documentModelEditorModule] as EditorModule[];
 }
 
-function getEditorsFromModules(modules: DocumentModelsModule[]) {
+function getEditorsFromModules(modules: DocumentModelLib[]) {
     return modules
         .map(module => module.editors)
         .reduce((acc, val) => acc.concat(val), []);
@@ -29,7 +27,7 @@ async function loadDynamicEditors() {
     try {
         const localEditors = (await import(
             'LOCAL_DOCUMENT_EDITORS'
-        )) as unknown as Record<string, ExtendedEditor>;
+        )) as unknown as Record<string, EditorModule>;
         console.log('Loaded local document editors:', localEditors);
         return Object.values(localEditors);
     } catch (e) {
@@ -71,10 +69,10 @@ export const useLoadableEditors = () => {
 export const useEditorsAsync = () => {
     const editorsPromise = useRef(
         (() => {
-            let resolveFn!: (value: ExtendedEditor[]) => void;
+            let resolveFn!: (value: EditorModule[]) => void;
             let rejectFn!: (reason?: any) => void;
 
-            const promise = new Promise<ExtendedEditor[]>((resolve, reject) => {
+            const promise = new Promise<EditorModule[]>((resolve, reject) => {
                 resolveFn = resolve;
                 rejectFn = reject;
             });
@@ -97,7 +95,7 @@ export const useEditorsAsync = () => {
 
 const getEditor = (
     documentType: string,
-    editors: ExtendedEditor[],
+    editors: EditorModule[],
     preferredEditorId?: string,
 ) => {
     const preferredEditor = editors.find(

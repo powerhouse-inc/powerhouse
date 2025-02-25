@@ -1,19 +1,19 @@
-import { DocumentDriveAction } from "document-model-libs/document-drive";
+import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { DriveNotFoundError } from "#server/error";
+import { SynchronizationUnitQuery } from "#server/types";
+import { mergeOperations } from "#utils/misc";
 import {
-  BaseAction,
-  Document,
   DocumentHeader,
   Operation,
+  OperationFromDocument,
   OperationScope,
-} from "document-model/document";
-import { DriveNotFoundError } from "../server/error";
-import type { SynchronizationUnitQuery } from "../server/types";
-import { mergeOperations } from "../utils";
-import { DocumentDriveStorage, DocumentStorage, IDriveStorage } from "./types";
+  PHDocument,
+} from "document-model";
+import { IDriveStorage } from "./types.js";
 
 export class MemoryStorage implements IDriveStorage {
-  private documents: Record<string, Record<string, DocumentStorage>>;
-  private drives: Record<string, DocumentDriveStorage>;
+  private documents: Record<string, Record<string, PHDocument>>;
+  private drives: Record<string, DocumentDriveDocument>;
   private slugToDriveId: Record<string, string> = {};
 
   constructor() {
@@ -22,14 +22,17 @@ export class MemoryStorage implements IDriveStorage {
   }
 
   checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    return Promise.resolve(this.documents[drive]?.[id] !== undefined);
+    return Promise.resolve(this.documents[drive][id] !== undefined);
   }
 
   async getDocuments(drive: string) {
     return Object.keys(this.documents[drive] ?? {});
   }
 
-  async getDocument(driveId: string, id: string) {
+  async getDocument<TDocument extends PHDocument>(
+    driveId: string,
+    id: string,
+  ): Promise<TDocument> {
     const drive = this.documents[driveId];
     if (!drive) {
       throw new DriveNotFoundError(driveId);
@@ -39,10 +42,10 @@ export class MemoryStorage implements IDriveStorage {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    return document;
+    return document as TDocument;
   }
 
-  async saveDocument(drive: string, id: string, document: Document) {
+  async saveDocument(drive: string, id: string, document: PHDocument) {
     this.documents[drive] = this.documents[drive] ?? {};
     this.documents[drive][id] = document;
   }
@@ -52,7 +55,7 @@ export class MemoryStorage implements IDriveStorage {
     this.drives = {};
   }
 
-  async createDocument(drive: string, id: string, document: DocumentStorage) {
+  async createDocument(drive: string, id: string, document: PHDocument) {
     this.documents[drive] = this.documents[drive] ?? {};
     const {
       operations,
@@ -75,7 +78,7 @@ export class MemoryStorage implements IDriveStorage {
       lastModified,
       clipboard,
       state,
-    };
+    } as PHDocument;
   }
 
   async addDocumentOperations(
@@ -91,7 +94,7 @@ export class MemoryStorage implements IDriveStorage {
 
     const mergedOperations = mergeOperations(document.operations, operations);
 
-    this.documents[drive]![id] = {
+    this.documents[drive][id] = {
       ...document,
       ...header,
       operations: mergedOperations,
@@ -125,7 +128,7 @@ export class MemoryStorage implements IDriveStorage {
     return this.getDrive(driveId);
   }
 
-  async createDrive(id: string, drive: DocumentDriveStorage) {
+  async createDrive(id: string, drive: DocumentDriveDocument) {
     this.drives[id] = drive;
     this.documents[id] = {};
     const { slug } = drive.initialState.state.global;
@@ -136,11 +139,14 @@ export class MemoryStorage implements IDriveStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction | BaseAction>[],
+    operations: OperationFromDocument<DocumentDriveDocument>[],
     header: DocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);
-    const mergedOperations = mergeOperations(drive.operations, operations);
+    const mergedOperations = mergeOperations<DocumentDriveDocument>(
+      drive.operations,
+      operations,
+    );
 
     this.drives[id] = {
       ...drive,

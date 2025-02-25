@@ -1,7 +1,7 @@
-import { logger } from 'document-drive/logger';
+import { DID, IConnectCrypto } from '#services/crypto/index';
+import { logger } from 'document-drive';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useMemo } from 'react';
-import type { DID, IConnectCrypto } from 'src/services/crypto';
 
 // uses electron connect crypto if available,
 // otherwise dynamically loads browser crypto
@@ -10,8 +10,8 @@ const connectCrypto = (async () => {
         return window.connectCrypto;
     }
 
-    const { ConnectCrypto } = await import('src/services/crypto');
-    const { BrowserKeyStorage } = await import('src/services/crypto/browser');
+    const { ConnectCrypto } = await import('#services/crypto/index');
+    const { BrowserKeyStorage } = await import('#services/crypto/browser');
     const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
     await connectCrypto.did();
     return connectCrypto;

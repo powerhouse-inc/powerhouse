@@ -1,25 +1,17 @@
-import { ExtendedEditor, EditorContextProps } from "document-model-libs";
+import { DocumentDriveDocument } from "document-drive";
+import { EditorModule } from "document-model";
 import Editor from "./editor";
-import {
-  DocumentDriveState,
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-} from "../../document-models/document-drive";
 
-export const module: ExtendedEditor<
-  DocumentDriveState,
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  EditorContextProps
-> = {
-  Component: Editor,
-  documentTypes: ["powerhouse/document-drive"],
-  config: {
-    id: "editor-id",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
-  },
-};
+export const genericDriveExplorerEditorModule: EditorModule<DocumentDriveDocument> =
+  {
+    Component: Editor,
+    documentTypes: ["powerhouse/document-drive"],
+    config: {
+      id: "editor-id",
+      disableExternalControls: true,
+      documentToolbarEnabled: true,
+      showSwitchboardLink: true,
+    },
+  };
 
-export default module;
+export default genericDriveExplorerEditorModule;
