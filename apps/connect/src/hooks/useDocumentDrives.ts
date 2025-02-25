@@ -1,11 +1,11 @@
-import { logger } from '#services/logger';
-import { useUnwrappedReactor } from '#store/reactor';
-import type { IDocumentDriveServer } from 'document-drive';
-import { DocumentDriveDocument } from 'document-drive';
-import { OperationScope, PHDocument } from 'document-model';
+import { logger } from 'document-drive/logger';
+import type { IDocumentDriveServer } from 'document-drive/server';
+import { DocumentDriveDocument } from 'document-model-libs/document-drive';
+import { Document, OperationScope } from 'document-model/document';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
+import { useUnwrappedReactor } from 'src/store/reactor';
 import { ClientErrorHandler } from './useClientErrorHandler';
 
 // map of DocumentDriveServer objects and their Document Drives
@@ -13,7 +13,7 @@ const documentDrivesAtom = atom(
     new Map<IDocumentDriveServer, DocumentDriveDocument[]>(),
 );
 
-export function documentToHash(drive: PHDocument): string {
+export function documentToHash(drive: Document): string {
     return Object.keys(drive.operations)
         .map(
             key =>

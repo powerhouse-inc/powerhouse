@@ -9,24 +9,25 @@ import {
 } from "@powerhousedao/reactor-api";
 import {
   DriveAlreadyExistsError,
-  driveDocumentModelModule,
   DriveInput,
-  FilesystemStorage,
   IDocumentDriveServer,
   InternalTransmitter,
   IReceiver,
-  ListenerFilter,
   ReactorBuilder,
 } from "document-drive";
+import { logger } from "document-drive/logger";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import {
-  documentModelDocumentModelModule,
-  DocumentModelModule,
-} from "document-model";
+  module as DocumentDrive,
+  ListenerFilter,
+} from "document-model-libs/document-drive";
+import { DocumentModel } from "document-model/document";
+import { module as DocumentModelLib } from "document-model/document-model";
 import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, ViteDevServer } from "vite";
-import { PackagesManager } from "./packages.js";
+import { PackagesManager } from "./packages";
 
 type FSError = {
   errno: number;
@@ -51,6 +52,7 @@ export type StartServerOptions = {
     keyPath: string;
     certPath: string;
   };
+  logLevel?: "info" | "warn" | "error" | "debug" | "verbose" | "silent";
 };
 
 export const DefaultStartServerOptions = {
@@ -88,19 +90,31 @@ export type LocalReactor = {
   ) => Promise<InternalTransmitter>;
 };
 
-const baseDocumentModels = [
-  documentModelDocumentModelModule,
-  driveDocumentModelModule,
-] as DocumentModelModule[];
+const baseDocumentModels = [DocumentModelLib, DocumentDrive] as DocumentModel[];
 
-export const startServer = async (
+const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   process.setMaxListeners(0);
-  const { port, storagePath, drive, dev, dbPath, packages, configFile } = {
+  const {
+    port,
+    storagePath,
+    drive,
+    dev,
+    dbPath,
+    packages,
+    configFile,
+    logLevel,
+  } = {
     ...DefaultStartServerOptions,
     ...options,
   };
+
+  process.env.LOG_LEVEL = logLevel ?? "debug";
+
+  // be aware: this may not log anything if the log level is above info
+  logger.info(`Setting log level to ${logLevel}.`);
+
   const serverPort = Number(process.env.PORT ?? port);
 
   // start document drive server with all available document models & filesystem storage
@@ -140,7 +154,7 @@ export const startServer = async (
     (error) => console.error(error),
   );
   packagesManager.onDocumentModelsChange((documentModels) => {
-    driveServer.setDocumentModelModules(
+    driveServer.setDocumentModels(
       joinDocumentModels(baseDocumentModels, documentModels),
     );
   });
@@ -219,14 +233,11 @@ async function loadDocumentModels(
     await access(path);
     const localDMs = (await vite.ssrLoadModule(path)) as Record<
       string,
-      DocumentModelModule
+      DocumentModel
     >;
     const localDocumentModels = Object.values(localDMs);
-    driveServer.setDocumentModelModules(
-      joinDocumentModels(
-        driveServer.getDocumentModelModules(),
-        localDocumentModels,
-      ),
+    driveServer.setDocumentModels(
+      joinDocumentModels(driveServer.getDocumentModels(), localDocumentModels),
     );
   } catch (e) {
     if ((e as FSError).code === "ENOENT") {
@@ -287,15 +298,17 @@ async function loadSubgraphs(
   }
 }
 
-function joinDocumentModels(...documentModels: DocumentModelModule[][]) {
+function joinDocumentModels(...documentModels: DocumentModel[][]) {
   return documentModels
     .flat()
     .toReversed()
-    .reduce<DocumentModelModule[]>(
+    .reduce<DocumentModel[]>(
       (acc, curr) =>
-        acc.find((dm) => dm.documentType === curr.documentType)
+        acc.find((dm) => dm.documentModel.id === curr.documentModel.id)
           ? acc
           : [...acc, curr],
       [],
     );
 }
+
+export { startServer };

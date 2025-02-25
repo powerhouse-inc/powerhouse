@@ -14,6 +14,7 @@ import {
     ReadDriveSlugNotFoundError,
     RemoteDriveOptions,
 } from 'document-drive';
+import { logger } from 'document-drive/logger';
 import { Action, CustomAction, PHDocument } from 'document-model';
 import {
     createContext,

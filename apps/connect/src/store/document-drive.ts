@@ -1,18 +1,15 @@
-import { IReadModeContext } from '#context/read-mode';
-import { documentToHash } from '#hooks/useDocumentDrives';
-import { TDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { logger } from '#services/logger';
 import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
-import {
-    hashDocumentStateForScope,
-    Operation,
-    PHDocument,
-} from 'document-model';
+import { logger } from 'document-drive/logger';
+import { Document, Operation } from 'document-model/document';
+import { hashDocument } from 'document-model/utils';
 import { atom, useAtom, useSetAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
+import { IReadModeContext } from 'src/context/read-mode';
+import { documentToHash } from 'src/hooks/useDocumentDrives';
+import { TDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
 
 function debounceOperations(
-    callback: (operations: Operation[]) => Promise<PHDocument | undefined>,
+    callback: (operations: Operation[]) => Promise<Document | undefined>,
     timeout = 50,
 ) {
     let timer: number;
@@ -43,7 +40,7 @@ function debounceOperations(
         } else {
             operations.push(operation);
         }
-        return new Promise<PHDocument | undefined>((resolve, reject) => {
+        return new Promise<Document | undefined>((resolve, reject) => {
             timer = setTimeout(() => {
                 callback(operations).then(resolve).catch(reject);
             }, timeout) as unknown as number;
@@ -57,7 +54,7 @@ export type FileNodeDocument =
           documentId: string;
           documentType: string;
           name: string;
-          document: PHDocument | undefined;
+          document: Document | undefined;
           status: 'LOADING' | 'ERROR';
       }
     | {
@@ -65,18 +62,18 @@ export type FileNodeDocument =
           documentId: string;
           documentType: string;
           name: string;
-          document: PHDocument;
+          document: Document;
           status: 'LOADED';
       }
     | undefined;
 
-const documentCacheAtom = atom(new Map<string, PHDocument>());
+const documentCacheAtom = atom(new Map<string, Document>());
 
 const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
 
 export function isSameDocument(
-    prev: PHDocument | undefined,
-    next: PHDocument | undefined,
+    prev: Document | undefined,
+    next: Document | undefined,
 ) {
     if (prev === next) {
         return true;
@@ -84,7 +81,7 @@ export function isSameDocument(
     if (!prev || !next) {
         return false;
     }
-    if (hashDocumentStateForScope(prev) === hashDocumentStateForScope(next)) {
+    if (hashDocument(prev) === hashDocument(next)) {
         return true;
     } else {
         return false;
@@ -135,7 +132,7 @@ const fileNodeDocumentAtom = atom(
 
 const selectedDocumentAtom = atom(
     null,
-    (get, set, document: PHDocument | undefined) => {
+    (get, set, document: Document | undefined) => {
         const fileNodeDocument = get(fileNodeDocumentAtom);
         if (!fileNodeDocument) {
             throw new Error('fileNodeDocument is undefined');
@@ -301,6 +298,18 @@ export function useFileNodeDocument(
         }
     }, [addOperations, driveId, documentId, kind]);
 
+    const addOperationToSelectedDrive = useCallback(
+        (operation: Operation) => {
+            if (!selectedDriveNode?.id) {
+                throw new Error('No drive node selected');
+            }
+            return debounceOperations(operations =>
+                addOperations(selectedDriveNode.id, undefined, operations),
+            )(operation);
+        },
+        [addOperations, selectedDriveNode?.id],
+    );
+
     const isSelectedDocument =
         kind === FILE &&
         fileNodeDocument?.driveId === driveId &&
@@ -315,6 +324,7 @@ export function useFileNodeDocument(
             selectedDocument,
             setSelectedDocument,
             addOperationToSelectedDocument,
+            addOperationToSelectedDrive,
         }),
         [
             fileNodeDocument,
@@ -322,6 +332,7 @@ export function useFileNodeDocument(
             selectedDocument,
             setSelectedDocument,
             addOperationToSelectedDocument,
+            addOperationToSelectedDrive,
         ],
     );
 }

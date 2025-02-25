@@ -1,14 +1,14 @@
-import { logger } from '#services/logger';
+import connectConfig from 'connect-config';
+import { type IDocumentDriveServer } from 'document-drive';
+import { logger } from 'document-drive/logger';
+import { utils } from 'document-model/document';
+import { atom, useAtomValue } from 'jotai';
+import { atomWithLazy, unwrap } from 'jotai/utils';
 import {
     documentModelsAtom,
     subscribeDocumentModels,
-} from '#store/document-model';
-import { createBrowserDocumentDriveServer } from '#utils/reactor';
-import connectConfig from 'connect-config';
-import { type IDocumentDriveServer } from 'document-drive';
-import { hashKey } from 'document-model';
-import { atom, useAtomValue } from 'jotai';
-import { atomWithLazy, unwrap } from 'jotai/utils';
+} from 'src/store/document-model';
+import { createBrowserDocumentDriveServer } from 'src/utils/reactor';
 import { atomStore } from '.';
 
 async function initReactor(reactor: IDocumentDriveServer) {
@@ -23,7 +23,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
         reactor
             .addDrive({
                 global: {
-                    id: hashKey(),
+                    id: utils.hashKey(),
                     name: 'My Local Drive',
                     icon: null,
                     slug: 'my-local-drive',
@@ -48,7 +48,7 @@ async function createReactor() {
             | undefined) ??
         createBrowserDocumentDriveServer(
             documentModels,
-            connectConfig.routerBasename as string,
+            connectConfig.routerBasename,
         );
     await initReactor(server);
     return server;
@@ -58,11 +58,10 @@ const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(createReactor);
 const unwrappedReactor = unwrap(reactorAtom);
 
 // blocks rendering until reactor is initialized.
-export const useReactor = (): IDocumentDriveServer => useAtomValue(reactorAtom);
+export const useReactor = () => useAtomValue(reactorAtom);
 
 // will return undefined until reactor is initialized. Does not block rendering.
-export const useUnwrappedReactor = (): IDocumentDriveServer | undefined =>
-    useAtomValue(unwrappedReactor);
+export const useUnwrappedReactor = () => useAtomValue(unwrappedReactor);
 
 // will return undefined until reactor is initialized. Does not block rendering or trigger the reactor to be initialized.
 export const useAsyncReactor = () => useAtomValue(reactorAsyncAtom);
@@ -91,7 +90,7 @@ reactorAtom.onMount = setAtom => {
         if (!documentModelsSubscripion) {
             documentModelsSubscripion = subscribeDocumentModels(
                 documentModels => {
-                    reactor.setDocumentModelModules(documentModels);
+                    reactor.setDocumentModels(documentModels);
                 },
             );
         }

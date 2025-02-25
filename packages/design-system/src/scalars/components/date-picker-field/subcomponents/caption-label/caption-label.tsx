@@ -32,7 +32,7 @@ const CaptionLabel: React.FC<CaptionLabelProps> = ({
       )}
     >
       <Button
-        className="truncate text-sm font-medium"
+        className="truncate text-sm font-semibold"
         variant="ghost"
         onClick={() => setNavView("months")}
       >
@@ -40,7 +40,7 @@ const CaptionLabel: React.FC<CaptionLabelProps> = ({
       </Button>
       <Button
         className={cn(
-          "truncate text-sm font-medium",
+          "truncate text-sm font-semibold",
           isSelectedYear ? "text-gray-900" : "text-gray-600",
         )}
         variant="ghost"

@@ -1,13 +1,9 @@
-import { logger } from '#services/logger';
-import {
-    baseLoadFromInput,
-    createZip,
-    DocumentModelModule,
-    PHDocument,
-} from 'document-model';
+import { logger } from 'document-drive/logger';
+import type { Document, DocumentModel } from 'document-model/document';
+import { utils } from 'document-model/document';
 
-const downloadFile = async (document: PHDocument) => {
-    const zip = createZip(document);
+const downloadFile = async (document: Document) => {
+    const zip = await utils.createZip(document);
     zip.generateAsync({ type: 'blob' })
         .then(blob => {
             const link = window.document.createElement('a');
@@ -24,19 +20,17 @@ const downloadFile = async (document: PHDocument) => {
 };
 
 export async function exportFile(
-    document: PHDocument,
-    getDocumentModelModule: (
-        documentType: string,
-    ) => DocumentModelModule | undefined,
+    document: Document,
+    getDocumentModel: (documentType: string) => DocumentModel | undefined,
 ) {
-    const documentModel = getDocumentModelModule(document.documentType);
+    const documentModel = getDocumentModel(document.documentType);
     if (!documentModel) {
         throw new Error(
             `Document model not supported: ${document.documentType}`,
         );
     }
 
-    const extension = documentModel.fileExtension;
+    const extension = documentModel.utils.fileExtension;
 
     // Fallback for browsers that don't support showSaveFilePicker
     if (!window.showSaveFilePicker) {
@@ -67,16 +61,14 @@ export async function exportFile(
 
 export async function loadFile(
     path: string | File,
-    getDocumentModelModule: (
-        documentType: string,
-    ) => DocumentModelModule | undefined,
+    getDocumentModel: (documentType: string) => DocumentModel | undefined,
 ) {
-    const baseDocument = await baseLoadFromInput(
+    const baseDocument = await utils.loadFromInput(
         path,
-        (document: PHDocument) => document,
+        (state: Document) => state,
         { checkHashes: true },
     );
-    const documentModel = getDocumentModelModule(baseDocument.documentType);
+    const documentModel = getDocumentModel(baseDocument.documentType);
     if (!documentModel) {
         throw new Error(
             `Document "${baseDocument.documentType}" is not supported`,

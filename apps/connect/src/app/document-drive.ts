@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import InMemoryCache from 'document-drive/cache/memory';
+import { logger } from 'document-drive/logger';
+import { BaseQueueManager } from 'document-drive/queue/base';
 import {
     BaseQueueManager,
     DocumentDriveAction,
@@ -12,8 +17,8 @@ import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { Action, DocumentModelModule, Operation } from 'document-model';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';
-import { logger } from '../services/logger';
-import { getReactorDefaultDrivesConfig } from '../utils/reactor';
+import { logger } from 'src/services/logger';
+import { getReactorDefaultDrivesConfig } from 'src/utils/reactor';
 
 export default (
     documentModels: DocumentModelModule[],

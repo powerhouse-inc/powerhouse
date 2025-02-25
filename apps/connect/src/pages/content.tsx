@@ -1,9 +1,9 @@
-import { DocumentEditorContainer } from '#components/document-editor-container';
-import { DriveView } from '#components/drive-view';
-import { Footer } from '#components/footer';
-import { useUiNodes } from '#hooks/useUiNodes';
 import { FILE } from '@powerhousedao/design-system';
 import { useEffect } from 'react';
+import { DocumentEditorContainer } from 'src/components/document-editor-container';
+import { DriveEditorContainer } from 'src/components/drive-editor-container';
+import { Footer } from 'src/components/footer';
+import { useUiNodes } from 'src/hooks/useUiNodes';
 
 export default function Content() {
     const uiNodes = useUiNodes();
@@ -29,9 +29,9 @@ export default function Content() {
         <div className="flex h-full flex-col overflow-auto" id="content-view">
             {fileNodeDocument ? (
                 <DocumentEditorContainer key={fileNodeDocument.documentId} />
-            ) : (
-                <DriveView />
-            )}
+            ) : selectedDriveNode ? (
+                <DriveEditorContainer />
+            ) : null}
             <div className="flex w-full flex-row justify-end pr-3 pt-3">
                 <Footer />
             </div>

@@ -1,12 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
-import { Command } from "@/scalars/components/fragments/command";
-import { cn } from "@/scalars/lib/utils";
 import { PHIDField } from "./phid-field";
-import { PHIDInputContainer } from "./phid-input-container";
-import { PHIDList } from "./phid-list";
-import { PHIDListItem } from "./phid-list-item";
-import { mockedOptions } from "./utils";
+import { mockedOptions, fetchOptions, fetchSelectedOption } from "./utils";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -34,38 +29,9 @@ const meta: Meta<typeof PHIDField> = {
     ...PrebuiltArgTypes.placeholder,
     ...PrebuiltArgTypes.maxLength,
 
-    defaultBranch: {
-      control: "text",
-      description: "Specifies the default branch to use when none is provided.",
-      table: {
-        type: { summary: "string" },
-        defaultValue: { summary: "main" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
-    defaultScope: {
-      control: "text",
-      description: "Specifies the default scope to use when none is provided.",
-      table: {
-        type: { summary: "string" },
-        defaultValue: { summary: "public" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
     allowedScopes: {
       control: "object",
       description: "List of allowed scopes.",
-      table: {
-        type: { summary: "string[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
-    allowedDocumentTypes: {
-      control: "object",
-      description: "Defines which document types can be referenced.",
       table: {
         type: { summary: "string[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
@@ -90,6 +56,43 @@ const meta: Meta<typeof PHIDField> = {
         defaultValue: { summary: "true" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
+    },
+
+    fetchOptionsCallback: {
+      control: "object",
+      description:
+        "Function to fetch options based on user input. " +
+        "Can return an array of PHIDItem with:\n\n" +
+        "icon?: IconName | React.ReactElement\n\n" +
+        "title?: string\n\n" +
+        "path?: string\n\n" +
+        "phid: string\n\n" +
+        "description?: string",
+      table: {
+        type: { summary: "(phidFragment: string) => Promise<PHIDItem[]>" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        readonly: true,
+      },
+      if: { arg: "autoComplete", neq: false },
+    },
+
+    fetchSelectedOptionCallback: {
+      control: "object",
+      description:
+        "Function to fetch details for a selected PHID. " +
+        "Can return a PHIDItem with:\n\n" +
+        "icon?: IconName | React.ReactElement\n\n" +
+        "title?: string\n\n" +
+        "path?: string\n\n" +
+        "phid: string\n\n" +
+        "description?: string\n\n" +
+        "or undefined if the PHID is not found",
+      table: {
+        type: { summary: "(phid: string) => Promise<PHIDItem | undefined>" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        readonly: true,
+      },
+      if: { arg: "autoComplete", neq: false },
     },
 
     allowDataObjectReference: {
@@ -132,91 +135,44 @@ export const Default: Story = {
   args: {
     label: "PHID field",
     placeholder: "phd:",
+    fetchOptionsCallback: fetchOptions,
+    fetchSelectedOptionCallback: fetchSelectedOption,
   },
 };
 
-export const PopoverOpenWithResults: Story = {
+export const Empty: Story = {
   args: {
+    label: "PHID field",
+    placeholder: "phd:",
     variant: "withIdTitleAndDescription",
-  },
-  render: function Wrapper(args) {
-    return (
-      <Command shouldFilter={false}>
-        <div
-          className={cn(
-            "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
-            "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
-          )}
-        >
-          <input type="text" className="sr-only" aria-hidden="true" autoFocus />
-          <PHIDList variant={args.variant} options={mockedOptions} />
-        </div>
-      </Command>
-    );
+    isOpenByDefault: true,
+    defaultValue: "phd:",
+    fetchOptionsCallback: fetchOptions,
+    fetchSelectedOptionCallback: fetchSelectedOption,
   },
 };
 
-export const PopoverOpenWithNoResults: Story = {
+export const Open: Story = {
   args: {
+    label: "PHID field",
+    placeholder: "phd:",
     variant: "withIdTitleAndDescription",
-  },
-  render: function Wrapper(args) {
-    return (
-      <Command shouldFilter={false}>
-        <div
-          className={cn(
-            "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
-            "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
-          )}
-        >
-          <PHIDList variant={args.variant} options={[]} />
-        </div>
-      </Command>
-    );
+    isOpenByDefault: true,
+    defaultValue: "phd:",
+    initialOptions: mockedOptions,
+    fetchOptionsCallback: fetchOptions,
+    fetchSelectedOptionCallback: fetchSelectedOption,
   },
 };
 
 export const Filled: Story = {
   args: {
+    label: "PHID field",
+    placeholder: "phd:",
     variant: "withIdTitleAndDescription",
-  },
-  render: function Wrapper(args) {
-    const asCard =
-      args.variant === "withIdAndTitle" ||
-      args.variant === "withIdTitleAndDescription";
-    return (
-      <Command
-        shouldFilter={false}
-        className={cn("dark:bg-charcoal-900 rounded-md bg-white")}
-      >
-        <PHIDInputContainer
-          id="phid-field"
-          name="phid-field"
-          value={mockedOptions[0].phid}
-          isLoading={false}
-          haveFetchError={false}
-          options={[]}
-          selectedOption={mockedOptions[0]}
-          handleOpenChange={() => {}}
-          placeholder="phd:"
-          hasError={false}
-          label="PHID field"
-          isPopoverOpen={false}
-          autoComplete={true}
-        />
-        {asCard && (
-          <PHIDListItem
-            variant={args.variant}
-            title={mockedOptions[0].title}
-            path={mockedOptions[0].path}
-            phid={mockedOptions[0].phid}
-            description={mockedOptions[0].description}
-            asPlaceholder={false}
-            showPHID={false}
-            className={cn("dark:bg-charcoal-900 rounded-t-none bg-white pt-2")}
-          />
-        )}
-      </Command>
-    );
+    defaultValue: mockedOptions[0].phid,
+    initialOptions: mockedOptions,
+    fetchOptionsCallback: fetchOptions,
+    fetchSelectedOptionCallback: fetchSelectedOption,
   },
 };

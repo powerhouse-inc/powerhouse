@@ -37,7 +37,7 @@ export function Home() {
     );
 
     const onAddDriveClick = useCallback(() => {
-        showAddDriveModal('PUBLIC');
+        showAddDriveModal();
     }, [showAddDriveModal]);
 
     return (

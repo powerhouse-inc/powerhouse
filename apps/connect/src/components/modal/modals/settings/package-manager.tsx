@@ -16,12 +16,13 @@ function manifestToDetails(manifest: Manifest, id: string, removable: boolean) {
         dm => `Document Model: ${dm.name}`,
     );
     const editors = manifest.editors.map(editor => `Editor: ${editor.name}`);
+    const apps = manifest.apps?.map(app => `App: ${app.name}`);
     return {
         id,
         ...manifest,
         publisher: manifest.publisher.name,
         publisherUrl: manifest.publisher.url,
-        modules: documentModels.concat(editors),
+        modules: documentModels.concat(editors).concat(apps ?? []),
         removable,
     };
 }

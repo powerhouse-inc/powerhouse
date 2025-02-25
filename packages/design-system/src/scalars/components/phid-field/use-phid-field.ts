@@ -1,48 +1,49 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDebounceCallback } from "usehooks-ts";
-import type { PHIDProps, PHIDListItemProps } from "./types";
-import { fetchPHIDOptions, fetchSelectedOption } from "./utils";
+import type { PHIDProps, PHIDItem } from "./types";
 
-interface UsePHIDFieldProps {
+interface UsePHIDFieldParams {
   autoComplete: PHIDProps["autoComplete"];
   defaultValue?: string;
   value?: string;
-  allowedScopes: PHIDProps["allowedScopes"];
-  allowedDocumentTypes: PHIDProps["allowedDocumentTypes"];
+  isOpenByDefault: PHIDProps["isOpenByDefault"];
+  initialOptions: PHIDProps["initialOptions"];
   onChange?: PHIDProps["onChange"];
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  fetchOptions: PHIDProps["fetchOptionsCallback"];
+  fetchSelectedOption: PHIDProps["fetchSelectedOptionCallback"];
 }
 
 export function usePHIDField({
   autoComplete,
   defaultValue,
   value,
-  allowedScopes,
-  allowedDocumentTypes,
+  isOpenByDefault,
+  initialOptions,
   onChange,
   onBlur,
-}: UsePHIDFieldProps) {
+  fetchOptions,
+  fetchSelectedOption,
+}: UsePHIDFieldParams) {
+  const shouldFetchOptions = useRef(false);
   const isInternalChange = useRef(false);
-  const optionsAbortControllerRef = useRef<AbortController | null>(null);
-  const selectedOptionAbortControllerRef = useRef<AbortController | null>(null);
   const commandListRef = useRef<HTMLDivElement>(null);
 
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [options, setOptions] = useState<PHIDListItemProps[]>([]);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(isOpenByDefault ?? false);
+  const [options, setOptions] = useState<PHIDItem[]>(initialOptions ?? []);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSelectedOption, setIsLoadingSelectedOption] = useState(false);
   const [haveFetchError, setHaveFetchError] = useState(false);
   const [selectedValue, setSelectedValue] = useState(
     value ?? defaultValue ?? "",
   );
+  const [selectedOption, setSelectedOption] = useState<PHIDItem | undefined>(
+    undefined,
+  );
   const [commandValue, setCommandValue] = useState("");
   const [haveBeenOpened, setHaveBeenOpened] = useState(false);
 
   const clear = useCallback(() => {
-    optionsAbortControllerRef.current?.abort();
-    selectedOptionAbortControllerRef.current?.abort();
-    optionsAbortControllerRef.current = null;
-    selectedOptionAbortControllerRef.current = null;
     setHaveFetchError(false);
     setIsLoading(false);
     setIsLoadingSelectedOption(false);
@@ -51,80 +52,60 @@ export function usePHIDField({
 
   const debouncedFetchOptions = useDebounceCallback(
     useCallback(
-      async (newValue: string) => {
+      (newValue: string) => {
+        if (!autoComplete || !fetchOptions) return;
         if (newValue === "") {
           clear();
           setOptions([]);
           setSelectedValue("");
+          setSelectedOption(undefined);
           return;
         }
-
-        optionsAbortControllerRef.current?.abort();
-        const controller = new AbortController();
-        optionsAbortControllerRef.current = controller;
 
         setHaveFetchError(false);
         setIsLoading(true);
 
-        try {
-          const newOptions = await fetchPHIDOptions({
-            phidFragment: newValue,
-            allowedScopes,
-            allowedDocumentTypes,
-            signal: controller.signal,
-          });
-
-          // Simulate 30% chance of error
-          if (Math.random() < 0.3) {
-            throw new Error("Simulated error");
-          }
-
-          if (!controller.signal.aborted) {
+        fetchOptions(newValue)
+          .then((newOptions) => {
             setOptions(newOptions);
-            const hasMatch = newOptions.some((opt) => opt.phid === newValue);
-            setIsPopoverOpen(!hasMatch);
-          }
-        } catch (error) {
-          if (error instanceof Error && error.name === "AbortError") {
-            return;
-          }
-
-          if (!controller.signal.aborted) {
-            setHaveFetchError(true);
-          }
-        } finally {
-          if (!controller.signal.aborted) {
+            const matchingOption = newOptions.find(
+              (opt) => opt.phid === newValue,
+            );
+            if (matchingOption) {
+              setSelectedOption(matchingOption);
+              setIsPopoverOpen(false);
+            } else {
+              setSelectedOption(undefined);
+              setIsPopoverOpen(true);
+            }
             setIsLoading(false);
-          }
-        }
+          })
+          .catch(() => {
+            setHaveFetchError(true);
+            setIsLoading(false);
+          });
       },
-      [clear, allowedScopes, allowedDocumentTypes],
+      [clear, autoComplete, fetchOptions],
     ),
   );
 
   const handleFetchSelectedOption = useCallback(
-    async (phid: string) => {
-      selectedOptionAbortControllerRef.current?.abort();
-      const controller = new AbortController();
-      selectedOptionAbortControllerRef.current = controller;
+    (phid: string) => {
+      if (!autoComplete || !fetchSelectedOption) return;
 
       setIsLoadingSelectedOption(true);
 
-      try {
-        const selectedOption = await fetchSelectedOption({
-          phid,
-          signal: controller.signal,
-        });
-
-        if (!controller.signal.aborted) {
-          if (selectedOption) {
+      fetchSelectedOption(phid)
+        .then((option) => {
+          if (option) {
+            setSelectedOption(option);
             setOptions((prevOptions) => {
               const optionIndex = prevOptions.findIndex(
                 (opt) => opt.phid === phid,
               );
               if (optionIndex !== -1) {
                 const newOptions = [...prevOptions];
-                newOptions[optionIndex] = selectedOption;
+                newOptions[optionIndex] = option;
                 return newOptions;
               }
               return prevOptions;
@@ -133,17 +114,15 @@ export function usePHIDField({
             clear();
             setOptions([]);
             setSelectedValue("");
+            setSelectedOption(undefined);
           }
-        }
-      } catch (error) {
-        console.error("Failed to fetch selected option: ", error);
-      } finally {
-        if (!controller.signal.aborted) {
           setIsLoadingSelectedOption(false);
-        }
-      }
+        })
+        .catch(() => {
+          setIsLoadingSelectedOption(false);
+        });
     },
-    [clear],
+    [clear, autoComplete, fetchSelectedOption],
   );
 
   const handleOpenChange = useCallback(
@@ -158,18 +137,22 @@ export function usePHIDField({
 
   const toggleOption = useCallback(
     (optionValue: string) => {
+      shouldFetchOptions.current = false;
       isInternalChange.current = true;
       setSelectedValue(optionValue);
+      setSelectedOption(options.find((opt) => opt.phid === optionValue));
       clear();
       onChange?.(optionValue);
     },
-    [onChange, clear],
+    [onChange, clear, options],
   );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
+      shouldFetchOptions.current = true;
       setSelectedValue(newValue);
+      setSelectedOption(undefined);
       onChange?.(newValue);
     },
     [onChange],
@@ -188,29 +171,37 @@ export function usePHIDField({
     [onBlur, isPopoverOpen],
   );
 
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const pastedValue = e.clipboardData.getData("text");
+      if (pastedValue === selectedValue) {
+        debouncedFetchOptions(selectedValue);
+      }
+    },
+    [selectedValue, debouncedFetchOptions],
+  );
+
   useEffect(() => {
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
-      return;
-    }
     if (autoComplete) {
-      debouncedFetchOptions(selectedValue)?.catch((error) => {
-        console.error("Failed to fetch options: ", error);
-      });
+      if (shouldFetchOptions.current) {
+        debouncedFetchOptions(selectedValue);
+      }
     } else {
       clear();
       setOptions([]);
       setSelectedValue("");
+      setSelectedOption(undefined);
     }
   }, [autoComplete, selectedValue, debouncedFetchOptions, clear]);
 
   useEffect(() => {
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
-      return;
+    if (!isInternalChange.current) {
+      shouldFetchOptions.current = false;
+      setSelectedValue(value ?? "");
+      setSelectedOption(undefined);
     }
-    setSelectedValue(value ?? defaultValue ?? "");
-  }, [value, defaultValue]);
+    isInternalChange.current = false;
+  }, [value]);
 
   useEffect(() => {
     if (!isPopoverOpen && haveBeenOpened) {
@@ -222,15 +213,21 @@ export function usePHIDField({
     }
   }, [isPopoverOpen, haveBeenOpened, onBlur]);
 
+  // added to support the Filled variant in stories
   useEffect(() => {
-    return () => {
-      optionsAbortControllerRef.current?.abort();
-      selectedOptionAbortControllerRef.current?.abort();
-    };
+    if (initialOptions?.length && selectedValue) {
+      const matchingOption = initialOptions.find(
+        (opt) => opt.phid === selectedValue,
+      );
+      if (matchingOption) {
+        setSelectedOption(matchingOption);
+      }
+    }
   }, []);
 
   return {
     selectedValue,
+    selectedOption,
     isPopoverOpen,
     commandListRef,
     options,
@@ -244,5 +241,6 @@ export function usePHIDField({
     handleChange,
     handleCommandValue,
     handleFetchSelectedOption,
+    handlePaste,
   };
 }

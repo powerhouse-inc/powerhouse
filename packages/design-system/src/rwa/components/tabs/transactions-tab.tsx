@@ -1,12 +1,12 @@
-import { GroupTransactionsTable, TabContent } from "@/rwa";
+import { GroupTransactionsTable, RwaTabContent } from "@/rwa";
 
 export function TransactionsTab() {
   return (
-    <TabContent
+    <RwaTabContent
       description="Details on the distribution of assets among different financial institutions or investment vehicles."
       label="Transactions"
     >
       <GroupTransactionsTable />
-    </TabContent>
+    </RwaTabContent>
   );
 }

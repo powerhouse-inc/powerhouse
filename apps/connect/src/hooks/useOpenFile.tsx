@@ -1,18 +1,18 @@
-import { logger } from '#services/logger';
-import { useGetDocumentModelModule } from '#store/document-model';
-import { loadFile } from '#utils/file';
-import { PHDocument } from 'document-model';
+import { logger } from 'document-drive/logger';
+import { Document } from 'document-model/document';
+import { useGetDocumentModel } from 'src/store/document-model';
+import { loadFile } from 'src/utils/file';
 
 export function useOpenFile(
-    onDocument: (document: PHDocument, file: File) => void,
+    onDocument: (document: Document, file: File) => void,
     onError?: (error: Error) => void,
 ) {
-    const getDocumentModelModule = useGetDocumentModelModule();
+    const getDocumentModel = useGetDocumentModel();
     return async () => {
         try {
             const [fileHandle] = await window.showOpenFilePicker();
             const file = await fileHandle.getFile();
-            const document = await loadFile(file, getDocumentModelModule);
+            const document = await loadFile(file, getDocumentModel);
             if (document) {
                 onDocument(document, file);
             } else {

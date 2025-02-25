@@ -161,14 +161,7 @@ export const SelectFieldRaw = React.forwardRef<
               />
             </Button>
           </PopoverTrigger>
-          <PopoverContent
-            align="start"
-            className={cn(
-              "w-[--radix-popover-trigger-width] p-0",
-              "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-700",
-              "rounded shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
-            )}
-          >
+          <PopoverContent align="start">
             <Command
               defaultValue={
                 !multiple && selectedValues[0]

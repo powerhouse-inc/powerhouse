@@ -12,6 +12,7 @@ import { FormGroup } from "@/scalars/components/fragments/form-group";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormDescription } from "@/scalars/components/fragments/form-description";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
+import { Input } from "@/scalars/components/fragments/input";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import { cn } from "@/scalars/lib/utils";
 import type {
@@ -56,15 +57,16 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onBlur,
       onClick,
       onMouseDown,
-      defaultBranch = "main",
-      defaultScope = "public",
-      allowedScopes,
-      allowedDocumentTypes,
-      allowUris,
+      allowedScopes, // used in field validation
+      allowUris, // used in field validation
       autoComplete = true,
-      allowDataObjectReference = false,
+      allowDataObjectReference = false, // allways false for now
       variant = "withId",
       maxLength,
+      fetchOptionsCallback,
+      fetchSelectedOptionCallback,
+      isOpenByDefault, // to be used only in stories
+      initialOptions, // to be used only in stories
       ...props
     },
     ref,
@@ -77,6 +79,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
 
     const {
       selectedValue,
+      selectedOption,
       isPopoverOpen,
       commandListRef,
       options,
@@ -90,17 +93,19 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       handleChange,
       handleCommandValue,
       handleFetchSelectedOption,
+      handlePaste,
     } = usePHIDField({
       autoComplete,
       defaultValue,
       value,
-      allowedScopes,
-      allowedDocumentTypes,
+      isOpenByDefault,
+      initialOptions,
       onChange,
       onBlur,
+      fetchOptions: fetchOptionsCallback,
+      fetchSelectedOption: fetchSelectedOptionCallback,
     });
 
-    const selectedOption = options.find((opt) => opt.phid === selectedValue);
     const asCard =
       variant === "withIdAndTitle" || variant === "withIdTitleAndDescription";
 
@@ -120,80 +125,98 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             {label}
           </FormLabel>
         )}
-        <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
-          <Command
-            shouldFilter={false}
-            value={commandValue}
-            onValueChange={handleCommandValue}
-            className={cn("dark:bg-charcoal-900 rounded-md bg-white")}
-          >
-            <PopoverAnchor asChild={true}>
-              <PHIDInputContainer
-                id={id}
-                name={name}
-                value={selectedValue}
-                className={className}
-                isLoading={isLoading}
-                haveFetchError={haveFetchError}
-                disabled={disabled}
-                onChange={handleChange}
-                onBlur={onTriggerBlur}
-                onClick={onClick}
-                options={options}
-                selectedOption={selectedOption}
-                handleOpenChange={handleOpenChange}
-                onMouseDown={onMouseDown}
-                placeholder={placeholder}
-                hasError={hasError}
-                label={label}
-                required={required}
-                isPopoverOpen={isPopoverOpen}
-                maxLength={maxLength}
-                autoComplete={autoComplete}
-                {...props}
-                ref={ref}
-              />
-            </PopoverAnchor>
-            {asCard && (
-              <PHIDListItem
-                variant={variant}
-                title={selectedOption?.title}
-                path={selectedOption?.path}
-                phid={selectedOption?.phid ?? ""}
-                description={selectedOption?.description}
-                asPlaceholder={selectedOption === undefined}
-                showPHID={false}
-                isLoadingSelectedOption={isLoadingSelectedOption}
-                handleFetchSelectedOption={handleFetchSelectedOption}
-                className={cn(
-                  "dark:bg-charcoal-900 rounded-t-none bg-white pt-2",
-                )}
-              />
-            )}
-            <PopoverContent
-              align="start"
-              className={cn(
-                "w-[--radix-popover-trigger-width] p-0",
-                "border-gray-300 bg-white dark:border-slate-500 dark:bg-slate-600",
-                "rounded-md shadow-[1px_4px_15px_0px_rgba(74,88,115,0.25)] dark:shadow-[1px_4px_15.3px_0px_#141921]",
-              )}
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onInteractOutside={(e) => {
-                if (e.target instanceof Element && e.target.id === id) {
-                  e.preventDefault();
-                }
-              }}
+        {autoComplete && fetchOptionsCallback ? (
+          <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
+            <Command
+              shouldFilter={false}
+              value={commandValue}
+              onValueChange={handleCommandValue}
+              className={cn("dark:bg-charcoal-900 bg-gray-100")}
             >
-              <PHIDList
-                variant={variant}
-                commandListRef={commandListRef}
-                selectedValue={selectedValue}
-                options={options}
-                toggleOption={toggleOption}
-              />
-            </PopoverContent>
-          </Command>
-        </Popover>
+              <PopoverAnchor asChild={true}>
+                <PHIDInputContainer
+                  id={id}
+                  name={name}
+                  value={selectedValue}
+                  className={className}
+                  isLoading={isLoading}
+                  haveFetchError={haveFetchError}
+                  disabled={disabled}
+                  onChange={handleChange}
+                  onBlur={onTriggerBlur}
+                  onClick={onClick}
+                  selectedOption={selectedOption}
+                  handleOpenChange={handleOpenChange}
+                  onMouseDown={onMouseDown}
+                  placeholder={placeholder}
+                  hasError={hasError}
+                  label={label}
+                  required={required}
+                  isPopoverOpen={isPopoverOpen}
+                  maxLength={maxLength}
+                  handlePaste={handlePaste}
+                  {...props}
+                  ref={ref}
+                />
+              </PopoverAnchor>
+              {asCard && (
+                <PHIDListItem
+                  variant={variant}
+                  icon={selectedOption?.icon}
+                  title={selectedOption?.title}
+                  path={selectedOption?.path}
+                  phid={selectedOption?.phid ?? ""}
+                  description={selectedOption?.description}
+                  asPlaceholder={selectedOption === undefined}
+                  showPHID={false}
+                  isLoadingSelectedOption={isLoadingSelectedOption}
+                  handleFetchSelectedOption={
+                    fetchSelectedOptionCallback
+                      ? handleFetchSelectedOption
+                      : undefined
+                  }
+                  className={cn("rounded-t-none pt-2")}
+                />
+              )}
+              <PopoverContent
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                onInteractOutside={(e) => {
+                  if (e.target instanceof Element && e.target.id === id) {
+                    e.preventDefault();
+                  }
+                }}
+              >
+                <PHIDList
+                  variant={variant}
+                  commandListRef={commandListRef}
+                  selectedValue={selectedValue}
+                  options={options}
+                  toggleOption={toggleOption}
+                />
+              </PopoverContent>
+            </Command>
+          </Popover>
+        ) : (
+          <Input
+            id={id}
+            name={name}
+            value={selectedValue}
+            className={className}
+            disabled={disabled}
+            onChange={handleChange}
+            onBlur={onBlur}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            placeholder={placeholder}
+            aria-invalid={hasError}
+            aria-label={!label ? "PHID field" : undefined}
+            aria-required={required}
+            maxLength={maxLength}
+            {...props}
+            ref={ref}
+          />
+        )}
         {!!description && <FormDescription>{description}</FormDescription>}
         {hasWarning && <FormMessageList messages={warnings} type="warning" />}
         {hasError && <FormMessageList messages={errors} type="error" />}
@@ -214,7 +237,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         // URL pattern
         // Domain segments can start/end with alphanumeric and contain hyphens
         // Multiple segments separated by dots are allowed (e.g., sub.domain.com)
-        const domainSegment = "[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?";
+        const domainSegment = "[a-zA-Z0-9](?:[a-zA-Z0-9\\-]*[a-zA-Z0-9])?";
         const domain = `${domainSegment}(?:\\.${domainSegment})*`;
         const uuidPattern =
           "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}";
@@ -232,15 +255,14 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         }
 
         // URI patterns
-        const branchPattern = "[a-zA-Z0-9][a-zA-Z0-9-/]*[a-zA-Z0-9]"; // Until PH defines the pattern to be used
-        const scopePattern = "[a-zA-Z0-9][a-zA-Z0-9-/]*[a-zA-Z0-9]"; // Until PH defines the pattern to be used
+        const branchScopePattern = "[a-zA-Z][a-zA-Z0-9\\-/_]*[a-zA-Z0-9]";
 
         // Valid URI formats
         const URIFormats = [
           `^phd:${uuidPattern}$`,
-          `^phd:${uuidPattern}:${branchPattern}$`,
-          `^phd:${uuidPattern}::${scopePattern}$`,
-          `^phd:${uuidPattern}:${branchPattern}:${scopePattern}$`,
+          `^phd:${uuidPattern}:${branchScopePattern}$`,
+          `^phd:${uuidPattern}::${branchScopePattern}$`,
+          `^phd:${uuidPattern}:${branchScopePattern}:${branchScopePattern}$`,
         ];
 
         const isValidURIFormat = URIFormats.some((format) =>

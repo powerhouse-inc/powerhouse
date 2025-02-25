@@ -1,55 +1,44 @@
-import { logger } from '#services/logger';
-import { Unsubscribe } from '#services/renown/types';
 import { IDocumentDriveServer } from 'document-drive';
+import { childLogger } from 'document-drive/logger';
 import type {
     Action,
     ActionErrorCallback,
-    CustomAction,
+    BaseAction,
+    Document,
     Operation,
     OperationScope,
-    PHDocument,
     Reducer,
-} from 'document-model';
+} from 'document-model/document';
 import { useEffect, useState } from 'react';
+import { Unsubscribe } from 'src/services/renown/types';
 
-const ENABLE_SYNC_DEBUG = false;
+const logger = childLogger([
+    'utils/document-model',
+    Math.floor(Math.random() * 999).toString(),
+]);
 
 export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
-    import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE! || '50',
+    (import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE as string) || '50',
 );
 
-export type DocumentDispatchCallback<TGlobalState, TLocalState> = (
+export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
     operation: Operation,
     state: {
-        prevState: PHDocument<TGlobalState, TLocalState>;
-        newState: PHDocument<TGlobalState, TLocalState>;
+        prevState: Document<State, A, LocalState>;
+        newState: Document<State, A, LocalState>;
     },
 ) => void;
 
-export type DocumentDispatch<
-    TGlobalState,
-    TLocalState,
-    TCustomAction extends CustomAction = never,
-> = (
-    action: TCustomAction | CustomAction | Action,
-    callback?: DocumentDispatchCallback<TGlobalState, TLocalState>,
+export type DocumentDispatch<State, A extends Action, LocalState> = (
+    action: A | BaseAction,
+    callback?: DocumentDispatchCallback<State, A, LocalState>,
     onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-export function wrapReducer<
-    TGlobalState,
-    TLocalState,
-    TCustomAction extends CustomAction = never,
->(
-    reducer:
-        | Reducer<
-              TGlobalState,
-              TLocalState,
-              TCustomAction | CustomAction | Action
-          >
-        | undefined,
+export function wrapReducer<State, A extends Action, LocalState>(
+    reducer: Reducer<State, A, LocalState> | undefined,
     onError?: (error: unknown) => void,
-): Reducer<TGlobalState, TLocalState, TCustomAction | CustomAction | Action> {
+): Reducer<State, A, LocalState> {
     return (state, action) => {
         if (!reducer) return state;
         try {
@@ -63,23 +52,13 @@ export function wrapReducer<
 
 type OnErrorHandler = (error: unknown) => void;
 
-export function useDocumentDispatch<
-    TGlobalState,
-    TLocalState,
-    TCustomAction extends CustomAction = never,
->(
-    documentReducer:
-        | Reducer<
-              TGlobalState,
-              TLocalState,
-              TCustomAction | CustomAction | Action
-          >
-        | undefined,
-    initialState: PHDocument<TGlobalState, TLocalState> | undefined,
+export function useDocumentDispatch<State, A extends Action, LocalState>(
+    documentReducer: Reducer<State, A, LocalState> | undefined,
+    initialState: Document<State, A, LocalState> | undefined,
     onError: OnErrorHandler = logger.error,
 ): readonly [
-    PHDocument<TGlobalState, TLocalState> | undefined,
-    DocumentDispatch<TGlobalState, TLocalState, TCustomAction>,
+    Document<State, A, LocalState> | undefined,
+    DocumentDispatch<State, A, LocalState>,
     unknown,
 ] {
     const [state, setState] = useState(initialState);
@@ -95,11 +74,11 @@ export function useDocumentDispatch<
         setError(undefined);
     }, [initialState]);
 
-    const dispatch: DocumentDispatch<
-        TGlobalState,
-        TLocalState,
-        TCustomAction
-    > = (action, callback, onErrorCallback?: ActionErrorCallback) => {
+    const dispatch: DocumentDispatch<State, A, LocalState> = (
+        action,
+        callback,
+        onErrorCallback?: ActionErrorCallback,
+    ) => {
         setError(undefined);
         setState(_state => {
             if (!documentReducer || !_state) return _state;
@@ -144,12 +123,12 @@ async function waitForUpdate(
     let unsubscribe: Unsubscribe | undefined;
     const promise = new Promise<void>(resolve => {
         unsubscribe = reactor.on('strandUpdate', update => {
-            debugLog(`reactor.on(strandUpdate)`, update);
+            logger.verbose(`reactor.on(strandUpdate)`, update);
             const sameScope =
                 update.documentId === documentId && update.scope == scope;
 
             if (!sameScope) {
-                debugLog(
+                logger.verbose(
                     `reactor.on(strandUpdate) Ignoring wrong scope: ${update.documentId}:${update.scope} <> ${documentId}:${scope}`,
                 );
                 return;
@@ -157,12 +136,12 @@ async function waitForUpdate(
 
             const lastUpdateIndex = update.operations.at(-1)?.index;
             if (lastUpdateIndex && lastUpdateIndex >= lastIndex) {
-                debugLog(
+                logger.verbose(
                     `reactor.on(strandUpdate) Resolving ${update.documentId}:${update.scope} rev ${lastUpdateIndex} >= ${lastIndex}`,
                 );
                 resolve();
             } else {
-                debugLog(
+                logger.verbose(
                     `reactor.on(strandUpdate) Not resolving ${update.documentId}:${update.scope} rev ${lastUpdateIndex} < ${lastIndex}`,
                 );
             }
@@ -189,43 +168,28 @@ async function waitForUpdate(
     return withTimeout;
 }
 
-const debugID = `[dm.ts #${Math.floor(Math.random() * 999)}]`;
-const debugLog = (...data: any[]) => {
-    if (!ENABLE_SYNC_DEBUG) {
-        return;
-    }
-
-    if (data.length > 0 && typeof data[0] === 'string') {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        console.log(`${debugID} ${data[0]}`, ...data.slice(1));
-    } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        console.log(debugID, ...data);
-    }
-};
-
 export async function uploadDocumentOperations(
     drive: string,
     documentId: string,
-    document: PHDocument,
+    document: Document,
     reactor: IDocumentDriveServer,
     pushOperations: (
         driveId: string,
         id: string,
         operations: Operation[],
-    ) => Promise<PHDocument | undefined>,
+    ) => Promise<Document | undefined>,
     options?: { waitForSync?: boolean; operationsLimit?: number },
 ) {
     const operationsLimit =
         options?.operationsLimit || FILE_UPLOAD_OPERATIONS_CHUNK_SIZE;
 
-    debugLog(
+    logger.verbose(
         `uploadDocumentOperations(drive: ${drive}, documentId:${documentId}, ops: ${Object.keys(document.operations).join(',')}, limit:${operationsLimit})`,
     );
 
     for (const operations of Object.values(document.operations)) {
         for (let i = 0; i < operations.length; i += operationsLimit) {
-            debugLog(
+            logger.verbose(
                 `uploadDocumentOperations:for(i:${i}, ops:${operations.length}, limit:${operationsLimit}): START`,
             );
             const chunk = operations.slice(i, i + operationsLimit);
@@ -253,11 +217,13 @@ export async function uploadDocumentOperations(
 
             await pushOperations(drive, documentId, chunk);
 
-            debugLog(
+            logger.verbose(
                 `uploadDocumentOperations:for:waitForUpdate(${documentId}:${scope} rev ${operation.index}): NEXT`,
             );
         }
     }
 
-    debugLog(`uploadDocumentOperations:for:waitForUpdate(${documentId}): END`);
+    logger.verbose(
+        `uploadDocumentOperations:for:waitForUpdate(${documentId}): END`,
+    );
 }

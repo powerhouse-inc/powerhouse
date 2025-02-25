@@ -1,3 +1,8 @@
+import { ListenerFilter } from "document-model-libs/document-drive";
+import { OperationScope } from "document-model/document";
+import { childLogger } from "../../utils/logger";
+import { OperationError } from "../error";
+import { ISynchronizationManager } from "../index";
 import { ListenerFilter } from "#drive-document-model/gen/types";
 import { OperationError } from "#server/error";
 import { StrandUpdateSource } from "#server/listener/transmitter/types";
@@ -26,7 +31,10 @@ const ENABLE_SYNC_DEBUG = false;
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
 
-  private debugID = `[LM  #${Math.floor(Math.random() * 999)}]`;
+  protected logger = childLogger([
+    "ListenerManager",
+    Math.floor(Math.random() * 999).toString(),
+  ]);
 
   protected syncManager: ISynchronizationManager;
   protected options: ListenerManagerOptions;
@@ -44,31 +52,18 @@ export class ListenerManager implements IListenerManager {
     this.syncManager = syncManager;
     this.options = { ...DefaultListenerManagerOptions, ...options };
 
-    this.debugLog(`constructor(...)`);
-  }
-
-  private debugLog(...data: any[]) {
-    if (!ENABLE_SYNC_DEBUG) {
-      return;
-    }
-
-    if (data.length > 0 && typeof data[0] === "string") {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      console.log(`${this.debugID} ${data[0]}`, ...data.slice(1));
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      console.log(this.debugID, ...data);
-    }
+    this.logger.verbose(`constructor(...)`);
   }
 
   async initialize(handler: DriveUpdateErrorHandler) {
-    this.debugLog("initialize(...)");
+    this.logger.verbose("initialize(...)");
+
     // if network connect comes back online
     // then triggers the listeners update
     if (typeof window !== "undefined") {
       window.addEventListener("online", () => {
         this.triggerUpdate(false, { type: "local" }, handler).catch((error) => {
-          logger.error("Non handled error updating listeners", error);
+          this.logger.error("Non handled error updating listeners", error);
         });
       });
     }
@@ -79,7 +74,7 @@ export class ListenerManager implements IListenerManager {
   }
 
   async setListener(driveId: string, listener: Listener) {
-    this.debugLog(
+    this.logger.verbose(
       `setListener(drive: ${driveId}, listener: ${listener.listenerId})`,
     );
 
@@ -110,7 +105,7 @@ export class ListenerManager implements IListenerManager {
   }
 
   async removeListener(driveId: string, listenerId: string) {
-    this.debugLog("setListener()");
+    this.logger.verbose("setListener()");
 
     const driveMap = this.listenerStateByDriveId.get(driveId);
     if (!driveMap) {
@@ -223,7 +218,7 @@ export class ListenerManager implements IListenerManager {
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     maxContinues = 500,
   ) {
-    this.debugLog(
+    this.logger.verbose(
       `_triggerUpdate(source: ${source.type}, maxContinues: ${maxContinues})`,
       this.listenerStateByDriveId,
     );
@@ -239,26 +234,26 @@ export class ListenerManager implements IListenerManager {
         const transmitter = listenerState.listener.transmitter;
 
         if (!transmitter?.transmit) {
-          this.debugLog(`Transmitter not set on listener: ${listenerId}`);
+          this.logger.verbose(`Transmitter not set on listener: ${listenerId}`);
           continue;
         }
 
         const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
         const strandUpdates: StrandUpdate[] = [];
 
-        this.debugLog("syncUnits", syncUnits);
+        this.logger.verbose("syncUnits", syncUnits);
 
         // TODO change to push one after the other, reusing operation data
         const tasks = syncUnits.map((syncUnit) => async () => {
           const unitState = listenerState.syncUnits.get(syncUnit.syncId);
 
           if (unitState && unitState.listenerRev >= syncUnit.revision) {
-            this.debugLog(
+            this.logger.verbose(
               `Abandoning push for sync unit ${syncUnit.syncId}: already up-to-date (${unitState.listenerRev} >= ${syncUnit.revision})`,
             );
             return;
           } else {
-            this.debugLog(
+            this.logger.verbose(
               `Listener out-of-date for sync unit ${syncUnit.syncId}: ${unitState?.listenerRev} < ${syncUnit.revision}`,
             );
           }
@@ -275,11 +270,11 @@ export class ListenerManager implements IListenerManager {
             );
             opData.push(...data);
           } catch (e) {
-            logger.error(e);
+            this.logger.error(e);
           }
 
           if (!opData.length) {
-            this.debugLog(
+            this.logger.verbose(
               `Abandoning push for ${syncUnit.syncId}: no operations found`,
             );
             return;
@@ -295,21 +290,23 @@ export class ListenerManager implements IListenerManager {
         });
 
         if (this.options.sequentialUpdates) {
-          this.debugLog(
+          this.logger.verbose(
             `Collecting ${tasks.length} syncUnit strandUpdates in sequence`,
           );
           for (const task of tasks) {
             await task();
           }
         } else {
-          this.debugLog(
+          this.logger.verbose(
             `Collecting ${tasks.length} syncUnit strandUpdates in parallel`,
           );
           await Promise.all(tasks.map((task) => task()));
         }
 
         if (strandUpdates.length == 0) {
-          this.debugLog(`No strandUpdates needed for listener ${listenerId}`);
+          this.logger.verbose(
+            `No strandUpdates needed for listener ${listenerId}`,
+          );
           continue;
         }
 
@@ -321,7 +318,7 @@ export class ListenerManager implements IListenerManager {
 
         // TODO update listeners in parallel, blocking for listeners with block=true
         try {
-          this.debugLog(
+          this.logger.verbose(
             `_triggerUpdate(source: ${source.type}) > transmitter.transmit`,
           );
 
@@ -330,7 +327,7 @@ export class ListenerManager implements IListenerManager {
             source,
           );
 
-          this.debugLog(
+          this.logger.verbose(
             `_triggerUpdate(source: ${source.type}) > transmission succeeded`,
             listenerRevisions,
           );
@@ -369,23 +366,23 @@ export class ListenerManager implements IListenerManager {
                   su.operations.length - 1,
                 )?.index;
                 if (suIndex !== revision.revision) {
-                  this.debugLog(
+                  this.logger.verbose(
                     `Revision still out-of-date for ${su.documentId}:${su.scope}:${su.branch} ${suIndex} <> ${revision.revision}`,
                   );
                   continuationNeeded = true;
                 } else {
-                  this.debugLog(
+                  this.logger.verbose(
                     `Revision match for ${su.documentId}:${su.scope}:${su.branch} ${suIndex}`,
                   );
                 }
               } else {
-                this.debugLog(
+                this.logger.verbose(
                   `Cannot find strand update for (${revision.documentId}:${revision.scope}:${revision.branch} in drive ${revision.driveId})`,
                 );
               }
               // Check for revision status ^^
             } else {
-              logger.warn(
+              this.logger.warn(
                 `Received revision for untracked unit for listener ${listenerState.listener.listenerId}`,
                 revision,
               );
@@ -430,7 +427,7 @@ export class ListenerManager implements IListenerManager {
       }
     }
 
-    this.debugLog(
+    this.logger.verbose(
       `Returning listener updates (maxContinues: ${maxContinues})`,
       listenerUpdates,
     );
@@ -507,7 +504,7 @@ export class ListenerManager implements IListenerManager {
       try {
         await listenerState.listener.transmitter?.disconnect?.();
       } catch (error) {
-        logger.error(error);
+        this.logger.error(error);
       }
     }
   }
@@ -568,7 +565,7 @@ export class ListenerManager implements IListenerManager {
           operations,
         });
       } catch (error) {
-        logger.error(error);
+        this.logger.error(error);
         return;
       }
     });

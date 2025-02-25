@@ -99,7 +99,14 @@ export function useSelectField({
     }
   }, [isPopoverOpen, haveBeenOpened, onBlur]);
 
+  // handles changes to the "multiple" prop avoiding calling onChange on mount
+  const prevMultiple = useRef(multiple);
   useEffect(() => {
+    if (prevMultiple.current === multiple) {
+      return;
+    }
+    prevMultiple.current = multiple;
+
     if (!multiple && selectedValues.length > 1) {
       isInternalChange.current = true;
       setSelectedValues([selectedValues[0]]);

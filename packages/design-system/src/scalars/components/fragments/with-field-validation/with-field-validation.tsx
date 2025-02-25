@@ -79,27 +79,12 @@ export const withFieldValidation = <T extends PossibleProps>(
     useEffect(() => {
       if (initialized) {
         setValue(name, value);
-      } else {
-        // set default value
-        if (value === undefined) {
-          setValue(name, props.defaultValue ?? defaultValues?.[name]);
-        }
       }
       setInitialized(true);
       // initialized can not be in the dependencies because it would cause
       // a change of the value on initial render
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [name, value]);
-
-    // Sync form state with external value prop
-    useEffect(() => {
-      const formValue = getValues(name) as unknown;
-      if (formValue !== value && formValue !== undefined && onChangeProp) {
-        onChangeProp({
-          target: { value: formValue },
-        } as unknown as React.ChangeEvent<unknown>);
-      }
-    }, [getValues(name)]);
 
     if (value !== undefined && !onChangeProp) {
       console.warn(
@@ -144,9 +129,6 @@ export const withFieldValidation = <T extends PossibleProps>(
             (event: React.ChangeEvent<HTMLInputElement>) => {
               // update value state
               if (onChangeProp) {
-                // the fields is controlled by the parent
-                onChangeProp(event);
-
                 if (Object.hasOwn(event, "target")) {
                   // it is probably an actual event
                   setValue(name, event.target.value);
@@ -154,6 +136,9 @@ export const withFieldValidation = <T extends PossibleProps>(
                   // it is a custom onChange and it pass the value directly
                   setValue(name, event);
                 }
+
+                // the fields is controlled by the parent
+                onChangeProp(event);
               } else {
                 // sometimes the onChange is overridden by the parent and use the new value as parameter instead of event
                 let value: unknown = event;

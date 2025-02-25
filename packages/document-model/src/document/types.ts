@@ -160,6 +160,10 @@ export type Operation<TAction extends Action = Action> = TAction & {
   id?: string;
 };
 
+export type Meta = {
+  preferredEditor?: string;
+};
+
 /**
  * The base attributes of a {@link BaseDocument}.
  */
@@ -174,6 +178,8 @@ export type DocumentHeader = {
   created: string;
   /** The timestamp of the last change in the document. */
   lastModified: string;
+  /** The meta data of the document. */
+  meta?: Meta;
 };
 
 /**
@@ -385,6 +391,15 @@ export type EditorModule<
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;
   };
+  config: {
+    id: string;
+  };
+};
+
+export type App = {
+  id: string;
+  name: string;
+  driveEditor?: string;
 };
 
 export type Manifest = {
@@ -404,6 +419,7 @@ export type Manifest = {
     name: string;
     documentTypes: string[];
   }[];
+  apps?: App[];
 };
 
 export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {

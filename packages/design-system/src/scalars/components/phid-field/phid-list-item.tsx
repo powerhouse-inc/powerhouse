@@ -1,11 +1,29 @@
 import React from "react";
-import { Icon } from "@/powerhouse/components/icon";
+import { Icon, type IconName } from "@/powerhouse/components/icon";
 import { cn } from "@/scalars/lib/utils";
-import type { PHIDProps, PHIDListItemProps } from "./types";
+import type { PHIDProps, PHIDItem } from "./types";
+
+const IconRenderer: React.FC<{
+  customIcon?: IconName | React.ReactElement;
+}> = ({ customIcon }) => {
+  if (typeof customIcon === "string") {
+    return (
+      <Icon
+        name={customIcon}
+        size={24}
+        className={cn("shrink-0 text-gray-900 dark:text-gray-300")}
+      />
+    );
+  }
+  if (React.isValidElement(customIcon)) {
+    return <div className="size-6 shrink-0 overflow-hidden">{customIcon}</div>;
+  }
+  return null;
+};
 
 const ReloadButton: React.FC<{
   isLoadingSelectedOption?: boolean;
-  handleFetchSelectedOption?: (phid: string) => Promise<void>;
+  handleFetchSelectedOption: (phid: string) => void;
   phid: string;
 }> = ({ isLoadingSelectedOption, handleFetchSelectedOption, phid }) => (
   <div>
@@ -14,7 +32,7 @@ const ReloadButton: React.FC<{
       disabled={isLoadingSelectedOption}
       onClick={() => {
         if (!isLoadingSelectedOption) {
-          void handleFetchSelectedOption?.(phid);
+          handleFetchSelectedOption(phid);
         }
       }}
       className={cn(
@@ -35,21 +53,22 @@ const ReloadButton: React.FC<{
   </div>
 );
 
-export const PHIDListItem: React.FC<
-  {
-    variant: PHIDProps["variant"];
-    asPlaceholder?: boolean;
-    showPHID?: boolean;
-    isLoadingSelectedOption?: boolean;
-    handleFetchSelectedOption?: (phid: string) => Promise<void>;
-    className?: string;
-  } & PHIDListItemProps
-> = ({
+export type PHIDListItemProps = {
+  variant: PHIDProps["variant"];
+  asPlaceholder?: boolean;
+  showPHID?: boolean;
+  isLoadingSelectedOption?: boolean;
+  handleFetchSelectedOption?: (phid: string) => void;
+  className?: string;
+} & PHIDItem;
+
+export const PHIDListItem: React.FC<PHIDListItemProps> = ({
   variant = "withId",
-  title = "Title Unavailable",
-  path = "aha/hah-lorem",
+  icon,
+  title = "Title not available",
+  path = "Path not available",
   phid,
-  description = "Lorem ipsum dolor sit amet consectetur. Sed elementum tempor.",
+  description = "Description not available",
   asPlaceholder,
   showPHID = true,
   isLoadingSelectedOption,
@@ -71,16 +90,15 @@ export const PHIDListItem: React.FC<
   const renderWithIdAndTitle = () => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex items-center gap-2")}>
-        <Icon
-          name="PowerhouseLogoSmall"
-          size={24}
-          className={cn(
-            "shrink-0",
-            asPlaceholder
-              ? "text-gray-400 dark:text-gray-700"
-              : "text-gray-900 dark:text-gray-300",
-          )}
-        />
+        {asPlaceholder ? (
+          <Icon
+            name="PowerhouseLogoSmall"
+            size={24}
+            className={cn("shrink-0 text-gray-400 dark:text-gray-700")}
+          />
+        ) : (
+          <IconRenderer customIcon={icon} />
+        )}
         <span
           className={cn(
             "grow truncate text-sm font-bold leading-5",
@@ -91,7 +109,7 @@ export const PHIDListItem: React.FC<
         >
           {title}
         </span>
-        {asPlaceholder === false && (
+        {asPlaceholder === false && handleFetchSelectedOption && (
           <ReloadButton
             isLoadingSelectedOption={isLoadingSelectedOption}
             handleFetchSelectedOption={handleFetchSelectedOption}
@@ -116,16 +134,15 @@ export const PHIDListItem: React.FC<
   const renderWithIdTitleAndDescription = () => (
     <div className={cn("flex w-full flex-col gap-1")}>
       <div className={cn("flex gap-2")}>
-        <Icon
-          name="PowerhouseLogoSmall"
-          size={24}
-          className={cn(
-            "shrink-0",
-            asPlaceholder
-              ? "text-gray-400 dark:text-gray-700"
-              : "text-gray-900 dark:text-gray-300",
-          )}
-        />
+        {asPlaceholder ? (
+          <Icon
+            name="PowerhouseLogoSmall"
+            size={24}
+            className={cn("shrink-0 text-gray-400 dark:text-gray-700")}
+          />
+        ) : (
+          <IconRenderer customIcon={icon} />
+        )}
         <div className={cn("flex min-w-0 grow flex-col gap-[-2px]")}>
           <span
             className={cn(
@@ -148,7 +165,7 @@ export const PHIDListItem: React.FC<
             {path}
           </span>
         </div>
-        {asPlaceholder === false && (
+        {asPlaceholder === false && handleFetchSelectedOption && (
           <ReloadButton
             isLoadingSelectedOption={isLoadingSelectedOption}
             handleFetchSelectedOption={handleFetchSelectedOption}

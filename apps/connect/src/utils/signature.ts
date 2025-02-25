@@ -1,26 +1,26 @@
-import { logger } from '#services/logger';
-import type { User as RenownUser } from '#services/renown/types';
+import { logger } from 'document-drive/logger';
 import {
     Action,
     ActionSigner,
-    buildSignedOperation,
+    Document,
     Operation,
     OperationSignatureContext,
-    PHDocument,
     Reducer,
     User,
-} from 'document-model';
+    utils,
+} from 'document-model/document';
+import type { User as RenownUser } from 'src/services/renown/types';
 
 export async function signOperation<
-    TGlobalState = unknown,
-    TLocalState = unknown,
-    TAction extends Action = Action,
+    State = unknown,
+    A extends Action = Action,
+    LocalState = unknown,
 >(
-    operation: Operation<TAction>,
+    operation: Operation<A>,
     sign: (data: Uint8Array) => Promise<Uint8Array>,
     documentId: string,
-    document: PHDocument<TGlobalState, TLocalState>,
-    reducer?: Reducer<TGlobalState, TLocalState, TAction>,
+    document: Document<State, A, LocalState>,
+    reducer?: Reducer<State, A, LocalState>,
     user?: User,
 ) {
     if (!user) return operation;
@@ -41,13 +41,11 @@ export async function signOperation<
         signer: operation.context.signer,
     };
 
-    const signedOperation = await buildSignedOperation(
-        operation,
-        reducer,
-        document,
-        context,
-        sign,
-    );
+    const signedOperation = await utils.buildSignedOperation<
+        State,
+        A,
+        LocalState
+    >(operation, reducer, document, context, sign);
 
     return signedOperation;
 }

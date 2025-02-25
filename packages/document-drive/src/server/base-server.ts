@@ -13,6 +13,23 @@ import {
   DocumentDriveState,
   ListenerFilter,
   Trigger,
+  utils,
+} from "document-model-libs/document-drive";
+import {
+  Action,
+  App,
+  BaseAction,
+  utils as baseUtils,
+  Document,
+  DocumentHeader,
+  DocumentModel,
+  utils as DocumentUtils,
+  Operation,
+  OperationScope,
+} from "document-model/document";
+import { ClientError } from "graphql-request";
+import { Unsubscribe } from "nanoevents";
+import { ICache } from "../cache";
 } from "#drive-document-model/gen/types";
 import { createDocument } from "#drive-document-model/gen/utils";
 import {
@@ -570,7 +587,7 @@ export class BaseDocumentDriveServer
     return [...this.documentModelModules];
   }
 
-  async addDrive(input: DriveInput): Promise<DocumentDriveDocument> {
+  async addDrive(input: DriveInput, app?: App): Promise<DocumentDriveDocument> {
     const id = input.global.id || generateUUID();
     if (!id) {
       throw new Error("Invalid Drive Id");
@@ -584,6 +601,10 @@ export class BaseDocumentDriveServer
     const document = createDocument({
       state: input,
     });
+
+    document.meta = {
+      preferredEditor: app?.driveEditor,
+    };
 
     await this.storage.createDrive(id, document);
 

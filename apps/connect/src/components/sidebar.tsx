@@ -8,13 +8,13 @@ import {
     SidebarItem,
     UiDriveNode,
 } from '@powerhousedao/design-system';
+import { logger } from 'document-drive/logger';
 import { useAtom } from 'jotai';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { useLogin } from 'src/hooks/useLogin';
 import { useUiNodes } from 'src/hooks/useUiNodes';
-import { logger } from 'src/services/logger';
 import { sidebarCollapsedAtom } from 'src/store';
 import { useModal } from './modal';
 
@@ -39,7 +39,7 @@ export default function Sidebar() {
     }, [navigate, setSelectedNode]);
 
     const onAddDriveClick = useCallback(() => {
-        showAddDriveModal('PUBLIC');
+        showAddDriveModal();
     }, [showAddDriveModal]);
 
     const headerContent = (

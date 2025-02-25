@@ -1,5 +1,6 @@
 import { logger } from '#services/logger';
 import { LOCAL } from '@powerhousedao/design-system';
+import { PullResponderTrigger } from 'document-drive';
 import {
     PullResponderTrigger,
     PullResponderTriggerData,

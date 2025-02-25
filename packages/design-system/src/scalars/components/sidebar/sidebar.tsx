@@ -17,9 +17,9 @@ export interface SidebarProps {
    */
   activeNodeId?: string;
   /**
-   * Callback function to update the active node ID
+   * Callback function to update the active node
    */
-  onActiveNodeChange?: (newActiveNodeId: string) => void;
+  onActiveNodeChange?: (newNode: SidebarNode) => void;
   /**
    * The nodes to be displayed in the sidebar
    */
@@ -50,6 +50,11 @@ export interface SidebarProps {
    */
   showSearchBar?: boolean;
   /**
+   * Whether to display the status filter button in the sidebar. This option is ignored if `showSearchBar` is `false`.
+   * @default false
+   */
+  showStatusFilter?: boolean;
+  /**
    * The title that appears at the top of the sidebar, providing context or a heading for the hierarchy displayed within it.
    */
   sidebarTitle?: string;
@@ -61,6 +66,23 @@ export interface SidebarProps {
    * An optional footer content that can be displayed at the bottom of the sidebar.
    */
   extraFooterContent?: React.ReactNode;
+  /**
+   * The initial width of the sidebar.
+   * @default 300
+   */
+  initialWidth?: number;
+  /**
+   * The maximum width of the sidebar.
+   */
+  maxWidth?: number;
+  /**
+   * A callback function that is called when the width of the sidebar changes.
+   */
+  onWidthChange?: (width: number) => void;
+  /**
+   * Optional className for the sidebar container
+   */
+  className?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -74,7 +96,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   allowPinning = true,
   resizable = true,
   showSearchBar = true,
+  showStatusFilter = false,
   extraFooterContent,
+  initialWidth = 300,
+  maxWidth,
+  onWidthChange,
+  className,
 }) => {
   const {
     sidebarRef,
@@ -83,14 +110,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     isSidebarOpen,
     handleToggleSidebar,
   } = useSidebarResize({
-    defaultWidth: 300,
+    defaultWidth: initialWidth,
     minWidth: 220,
+    maxWidth,
+    onWidthChange,
   });
 
   const {
     pinnedNodePath,
     setNodes,
     openLevel,
+    togglePin,
     syncActiveNodeId,
     setActiveNodeChangeCallback,
   } = useSidebar();
@@ -107,7 +137,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (defaultLevel > 1) {
       openLevel(defaultLevel);
     }
-  }, [defaultLevel, openLevel]);
+    // openLevel can not be added as dependency because
+    // it will cause an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultLevel]);
 
   // sync activeNodeId and onActiveNodeChange with provider state
   useEffect(() => {
@@ -119,6 +152,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [onActiveNodeChange, setActiveNodeChangeCallback]);
 
+  // unpin nodes if allowPinning changes to false
+  useEffect(() => {
+    if (!allowPinning && pinnedNodePath.length > 0) {
+      togglePin(pinnedNodePath[pinnedNodePath.length - 1].id);
+    }
+  }, [allowPinning, pinnedNodePath, togglePin]);
+
   return (
     <aside
       ref={sidebarRef}
@@ -126,6 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       className={cn(
         "group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600",
         isResizing && "transition-none",
+        className,
       )}
     >
       {isSidebarOpen && (
@@ -138,7 +179,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {allowPinning && pinnedNodePath.length > 0 && <SidebarPinningArea />}
           <SidebarContentArea allowPinning={allowPinning} />
-          {showSearchBar && <SidebarSearch />}
+          {showSearchBar && (
+            <SidebarSearch showStatusFilter={showStatusFilter} />
+          )}
           {extraFooterContent && (
             <div className="w-full border-t border-gray-300 p-2 dark:border-gray-800">
               {extraFooterContent}

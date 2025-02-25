@@ -19,6 +19,7 @@ export type StartServerOptions = {
     https?: boolean;
     open?: boolean;
     phCliVersion?: string;
+    logLevel: 'verbose' | 'debug' | 'info' | 'warn' | 'error' | 'silent';
 };
 
 const studioDirname = fileURLToPath(new URL('.', import.meta.url));
@@ -78,7 +79,14 @@ function runShellScriptPlugin(scriptPath: string): Plugin {
     };
 }
 
-export async function startServer(options: StartServerOptions = {}) {
+export async function startServer(
+    options: StartServerOptions = {
+        logLevel: 'debug',
+    },
+) {
+    // set from options, as they are dynamically loaded
+    process.env.LOG_LEVEL = options.logLevel;
+
     // exits if node version is not compatible
     ensureNodeVersion();
 
@@ -101,6 +109,8 @@ export async function startServer(options: StartServerOptions = {}) {
 
     process.env.PH_CONNECT_STUDIO_MODE = 'true';
     process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
+
+    const computedEnv = { ...studioConfig, LOG_LEVEL: options.logLevel };
 
     const config: InlineConfig = {
         customLogger: logger,
@@ -149,7 +159,7 @@ export async function startServer(options: StartServerOptions = {}) {
             viteLoadExternalPackages(options.packages, true),
             viteEnvs({
                 declarationFile: join(studioDirname, '../.env'),
-                computedEnv: studioConfig,
+                computedEnv,
             }),
             runShellScriptPlugin(viteEnvsScript),
             options.https &&

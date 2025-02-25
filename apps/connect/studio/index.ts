@@ -30,10 +30,13 @@ export type ConnectStudioOptions = {
     open?: boolean;
     packages?: { packageName: string }[];
     phCliVersion?: string;
+    logLevel?: 'verbose' | 'debug' | 'info' | 'warn' | 'error' | 'silent';
 };
 
 export function startConnectStudio(options: ConnectStudioOptions) {
-    const serverOptions: StartServerOptions = {};
+    const serverOptions: StartServerOptions = {
+        logLevel: options.logLevel ?? 'debug',
+    };
 
     if (options.port) {
         process.env.PORT = options.port;

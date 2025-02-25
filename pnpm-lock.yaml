@@ -251,6 +251,9 @@ importers:
       '@powerhousedao/builder-tools':
         specifier: workspace:*
         version: link:../../packages/builder-tools
+      '@powerhousedao/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -901,6 +904,9 @@ importers:
 
   packages/common:
     dependencies:
+      '@powerhousedao/design-system':
+        specifier: workspace:*
+        version: link:../design-system
       '@tanstack/react-virtual':
         specifier: ^3.8.1
         version: 3.11.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -926,12 +932,6 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
-      '@powerhousedao/design-system':
-        specifier: workspace:*
-        version: link:../design-system
-      '@powerhousedao/ph-cli':
-        specifier: workspace:*
-        version: link:../../clis/ph-cli
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../reactor-api
@@ -11492,7 +11492,6 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
-    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:

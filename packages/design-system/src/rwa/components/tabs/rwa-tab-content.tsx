@@ -5,7 +5,7 @@ type Props = {
   readonly description: ReactNode;
   readonly children: ReactNode;
 };
-export function TabContent(props: Props) {
+export function RwaTabContent(props: Props) {
   const { label, description, children } = props;
 
   return (

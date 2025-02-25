@@ -11,7 +11,7 @@ export type PowerhouseConfig = {
   subgraphsDir: string;
   importScriptsDir: string;
   interactive?: boolean;
-  skipFormat?: boolean;
+  skipFormat: boolean;
   watch?: boolean;
   switchboard?: {
     port?: number;
@@ -23,6 +23,7 @@ export type PowerhouseConfig = {
     openBrowser?: boolean;
   };
   packages?: PowerhousePackage[];
+  logLevel: "verbose" | "debug" | "info" | "warn" | "error" | "silent";
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
@@ -30,6 +31,8 @@ const DEFAULT_EDITORS_DIR = "./editors";
 const DEFAULT_PROCESSORS_DIR = "./processors";
 const DEFAULT_SUBGRAPHS_DIR = "./subgraphs";
 const DEFAULT_IMPORT_SCRIPTS_DIR = "./scripts";
+const DEFAULT_SKIP_FORMAT = false;
+const DEFAULT_LOG_LEVEL = "debug";
 
 export const DEFAULT_CONFIG: PowerhouseConfig = {
   documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,
@@ -37,7 +40,8 @@ export const DEFAULT_CONFIG: PowerhouseConfig = {
   processorsDir: DEFAULT_PROCESSORS_DIR,
   subgraphsDir: DEFAULT_SUBGRAPHS_DIR,
   importScriptsDir: DEFAULT_IMPORT_SCRIPTS_DIR,
-  skipFormat: false,
+  skipFormat: DEFAULT_SKIP_FORMAT,
+  logLevel: DEFAULT_LOG_LEVEL,
 };
 
 export function getConfig(path = "./powerhouse.config.json") {
@@ -49,6 +53,7 @@ export function getConfig(path = "./powerhouse.config.json") {
   } catch {
     console.warn("No powerhouse.config.json found, using defaults");
   }
+
   return config;
 }
 
