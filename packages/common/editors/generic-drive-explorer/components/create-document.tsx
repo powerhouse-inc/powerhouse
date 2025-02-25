@@ -1,9 +1,9 @@
 import { Button } from "@powerhousedao/design-system";
-import { DocumentModel } from "document-model";
+import { DocumentModelModule } from "document-model";
 
 interface CreateDocumentProps {
-  documentModels?: DocumentModel[];
-  createDocument: (doc: DocumentModel) => void;
+  documentModels?: DocumentModelModule[];
+  createDocument: (doc: DocumentModelModule) => void;
 }
 
 export const CreateDocument: React.FC<CreateDocumentProps> = ({
@@ -18,12 +18,12 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
       <div className="flex w-full flex-wrap gap-4">
         {documentModels?.map((doc) => (
           <Button
-            key={doc.documentModel.id}
-            aria-details={doc.documentModel.description}
+            key={doc.documentType}
+            aria-details={doc.documentModelState.description}
             className="bg-gray-200 text-slate-800"
             onClick={() => createDocument(doc)}
           >
-            <span className="text-sm">{doc.documentModel.name}</span>
+            <span className="text-sm">{doc.documentModelName}</span>
           </Button>
         ))}
       </div>

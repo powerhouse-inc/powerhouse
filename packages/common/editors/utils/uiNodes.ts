@@ -2,17 +2,12 @@ import {
   DRIVE,
   FILE,
   LOCAL,
-  SharingType,
   UiDriveNode,
   UiFileNode,
   UiFolderNode,
   type UiNode,
 } from "@powerhousedao/design-system";
-import {
-  DocumentDriveDocument,
-  isFolderNode,
-  Node,
-} from "document-models/document-drive";
+import { DocumentDriveDocument, isFolderNode, Node } from "document-drive";
 
 export function sortUiNodesByName(a: UiNode, b: UiNode) {
   return a.name.localeCompare(b.name);
@@ -30,9 +25,7 @@ export function makeUiNode(
   const { id, name, icon, slug, nodes } = drive.state.global;
   const { sharingType: _sharingType, availableOffline } = drive.state.local;
   const __sharingType = _sharingType?.toUpperCase();
-  const sharingType = (
-    __sharingType === "PRIVATE" ? LOCAL : __sharingType
-  ) as SharingType;
+  const sharingType = __sharingType === "PRIVATE" ? LOCAL : __sharingType;
 
   // TODO: handle sync status
   // const normalizedDriveSyncStatus =

@@ -16,7 +16,7 @@ import {
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
 
-type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
+export type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
   isAllowedToCreateDocuments: boolean;
   isAllowedToEditDocuments: boolean;
   canUndo: boolean;
@@ -33,8 +33,8 @@ type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
   };
 }>;
 
-type EditorStoryProps<TDocument extends PHDocument> = EditorProps<TDocument> &
-  EditorStoryArgs<TDocument>;
+export type EditorStoryProps<TDocument extends PHDocument> =
+  EditorProps<TDocument> & EditorStoryArgs<TDocument>;
 
 export type EditorStoryComponent<TDocument extends PHDocument> = (
   props: EditorStoryProps<TDocument>,

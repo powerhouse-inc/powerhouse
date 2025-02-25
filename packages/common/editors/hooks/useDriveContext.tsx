@@ -1,5 +1,5 @@
-import { DocumentModel } from "document-model";
-import { Node } from "document-models/document-drive";
+import { DocumentModelModule } from "document-model";
+import { Node } from "document-drive";
 import { createContext, PropsWithChildren, useContext } from "react";
 
 /**
@@ -14,7 +14,7 @@ export interface IDriveContext {
   isAllowedToCreateDocuments: boolean;
 
   /** Array of available document models that can be created */
-  documentModels: DocumentModel[];
+  documentModels: DocumentModelModule[];
 
   /** Currently selected node (file/folder) in the drive */
   selectedNode: Node | null;
@@ -46,7 +46,7 @@ export interface IDriveContext {
    * @returns Promise resolving to an object containing the document name
    */
   showCreateDocumentModal: (
-    documentModel: DocumentModel,
+    documentModel: DocumentModelModule,
   ) => Promise<{ name: string }>;
 }
 

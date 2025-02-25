@@ -1,3 +1,5 @@
+import { useDriveActionsWithUiNodes } from "#editors/hooks/useDriveActionsWithUiNodes";
+import { useDriveContext } from "#editors/hooks/useDriveContext";
 import {
   Breadcrumbs,
   FILE,
@@ -5,15 +7,9 @@ import {
   useDrop,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
-import { DocumentModel, EditorProps } from "document-model";
-import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "document-models/document-drive";
-import { useDriveActionsWithUiNodes } from "editors/hooks/useDriveActionsWithUiNodes";
-import { useDriveContext } from "editors/hooks/useDriveContext";
-import { useCallback, useMemo } from "react";
+import { DocumentDriveDocument } from "document-drive";
+import { DocumentModelModule, EditorProps } from "document-model";
+import React, { useCallback, useMemo } from "react";
 import { CreateDocument } from "./components/create-document";
 import FolderView from "./components/folder-view";
 import { DriveLayout } from "./components/layout";
@@ -24,11 +20,7 @@ export type IGenericDriveExplorerEditorProps = {
   children?: React.ReactNode;
 };
 
-export type IProps = EditorProps<
-  DocumentDriveState,
-  DocumentDriveAction,
-  DocumentDriveLocalState
-> &
+export type IProps = EditorProps<DocumentDriveDocument> &
   React.HTMLProps<HTMLDivElement>;
 
 export default function Editor(props: IProps) {
@@ -70,12 +62,12 @@ export default function Editor(props: IProps) {
   } = useDriveActionsWithUiNodes(document, dispatch);
 
   const onCreateDocument = useCallback(
-    async (documentModel: DocumentModel) => {
+    async (documentModel: DocumentModelModule) => {
       const { name } = await showCreateDocumentModal(documentModel);
       const document = documentModel.utils.createDocument();
       await addDocument(
         name,
-        documentModel.documentModel.name,
+        documentModel.documentModelName,
         document,
         selectedNode?.id,
       );

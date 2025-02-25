@@ -69,6 +69,7 @@ export type {
   DocumentOperations,
   EditorModule,
   EditorProps,
+  EditorDispatch,
   ExtendedState,
   FileRegistry,
   InputMaybe,

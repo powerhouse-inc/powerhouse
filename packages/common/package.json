@@ -36,12 +36,16 @@
       "require": "./dist/cjs/storybook.js"
     }
   },
+  "imports": {
+    "#document-models/*": "./dist/document-models/*.js",
+    "#editors/*": "./dist/editors/*.js"
+  },
   "scripts": {
     "generate": "powerhouse generate",
     "dev": "ph-cli dev --config-file ./powerhouse.config.json",
     "format-generated": "npx prettier \"**/{gen,processors,editors}/**/*\" --write --ignore-path --no-error-on-unmatched-pattern >> /dev/null",
     "postgenerate": "npm run format-generated",
-    "check-types": "tsc",
+    "check-types": "tsc --build",
     "postlint": "npm run check-types",
     "lint": "eslint",
     "build": "npm run generate && vite build",
@@ -59,8 +63,6 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "peerDependencies": {
-    "@powerhousedao/design-system": "workspace:*",
-    "document-model": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -126,6 +128,9 @@
   },
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "dependencies": {
+    "document-drive": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/builder-tools": "workspace:*",
     "@tanstack/react-virtual": "^3.8.1",
     "react-i18next": "^13.5.0"
   }

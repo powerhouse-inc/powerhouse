@@ -1,4 +1,5 @@
-import { BaseProps } from "@editors/utils";
+import { BaseProps } from "#editors/utils/index";
+import { sortUiNodesByName } from "#editors/utils/uiNodes";
 import {
   FILE,
   FOLDER,
@@ -8,7 +9,6 @@ import {
   UiFolderNode,
   UiNode,
 } from "@powerhousedao/design-system";
-import { sortUiNodesByName } from "editors/utils/uiNodes";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
 import FileContentView from "./file-content-view";

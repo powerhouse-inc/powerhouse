@@ -49,6 +49,7 @@ type ImportMetaEnv = {
   LOAD_EXTERNAL_PACKAGES: string
   FILE_UPLOAD_OPERATIONS_CHUNK_SIZE: string
   PH_CONNECT_VERSION_CHECK_INTERVAL: string
+  PH_CONNECT_CLI_VERSION: string
   // @user-defined-start
     /*
      *  You can use this section to explicitly extend the type definition of `import.meta.env`

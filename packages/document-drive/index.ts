@@ -21,6 +21,7 @@ export { reducer as documentDriveReducer } from "#drive-document-model/gen/reduc
 export type {
   AddListenerInput,
   FileNode,
+  FolderNode,
   Listener,
   ListenerFilter,
   PullResponderTriggerData,

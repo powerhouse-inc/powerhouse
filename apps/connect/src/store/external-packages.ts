@@ -55,7 +55,7 @@ const appsAtom = atom<Promise<App[]>>(async get => {
         CommonPackage,
         ...externalPackages
             .map(pkg => pkg.manifest.apps)
-            .filter(Boolean)
+            .filter(pkg => pkg !== undefined)
             .flat(),
     ];
 });

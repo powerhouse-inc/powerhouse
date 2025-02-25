@@ -11,7 +11,7 @@ import {
   FileNode,
   FolderNode,
   Node,
-} from "document-models/document-drive";
+} from "document-drive";
 import { useMemo } from "react";
 import { IDriveActions, useDriveActions } from "./useDriveActions";
 import { IDriveContext, useDriveContext } from "./useDriveContext";
