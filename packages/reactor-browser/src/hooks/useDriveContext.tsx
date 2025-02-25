@@ -1,5 +1,5 @@
 import { UiNode } from "@powerhousedao/design-system";
-import { Node } from "document-drive";
+import { Node, SyncStatus } from "document-drive";
 import { DocumentModelModule } from "document-model";
 import { createContext, PropsWithChildren, useContext } from "react";
 
@@ -49,6 +49,17 @@ export interface IDriveContext {
   showCreateDocumentModal: (
     documentModel: DocumentModelModule,
   ) => Promise<{ name: string }>;
+
+  /**
+   * Retrieves the sync status of a document or drive
+   * @param driveId - ID of the drive to check sync status for
+   * @param documentId - ID of the document to check sync status for
+   * @returns SyncStatus object containing sync information
+   */
+  useSyncStatus: (
+    driveId: string,
+    documentId?: string,
+  ) => SyncStatus | undefined;
 }
 
 const DriveContext = createContext<IDriveContext | undefined>(undefined);

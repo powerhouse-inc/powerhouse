@@ -1,6 +1,7 @@
 import { useDocumentDriveById } from '#hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
 import { useEditorProps } from '#hooks/useEditorProps';
+import { useSyncStatus } from '#hooks/useSyncStatus';
 import { useUiNodes } from '#hooks/useUiNodes';
 import { useFilteredDocumentModels } from '#store/document-model';
 import { useDocumentDispatch } from '#utils/document-model';
@@ -88,6 +89,7 @@ export function DriveEditorContainer() {
             selectNode: setSelectedNode,
             addFile,
             showCreateDocumentModal,
+            useSyncStatus: useSyncStatus,
         }),
         [
             editorProps.isAllowedToCreateDocuments,
