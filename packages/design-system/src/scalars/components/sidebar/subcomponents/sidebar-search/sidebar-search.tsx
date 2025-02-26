@@ -103,7 +103,6 @@ export const SidebarSearch: React.FC<SidebarSearchProps> = ({
             {/* Clear search button */}
             <CrossCircle
               onClick={handleReset}
-              name="CrossCircle"
               height={16}
               width={16}
               className="cursor-pointer text-gray-500 hover:text-gray-700 active:text-gray-900 dark:text-gray-700 dark:hover:text-gray-600 dark:active:text-gray-300"
