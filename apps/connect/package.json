@@ -3,17 +3,13 @@
     "productName": "Powerhouse-Connect",
     "version": "1.0.0-dev.202",
     "description": "Powerhouse Connect",
-    "main": "./dist/studio/index.js",
-    "types": "./dist/studio/index.d.ts",
+    "main": "./dist/index.html",
     "imports": {
         "#*": "./src/*.js"
     },
     "type": "module",
-    "bin": {
-        "connect": "./dist/studio/cli.js"
-    },
     "engines": {
-        "node": ">=18.0.0"
+        "node": ">=20.0.0"
     },
     "files": [
         "dist"

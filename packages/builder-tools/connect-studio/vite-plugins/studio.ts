@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PluginOption, ViteDevServer } from "vite";
 import {
   externalIds,
@@ -81,6 +83,7 @@ export function watchLocalFiles(
 
 export function viteConnectDevStudioPlugin(
   enabled = false,
+  connectPath: string,
   env?: Record<string, string>,
 ): PluginOption[] {
   const studioConfig = getStudioConfig(env);
@@ -88,13 +91,7 @@ export function viteConnectDevStudioPlugin(
   const localDocumentEditorsPath = studioConfig[LOCAL_DOCUMENT_EDITORS_IMPORT];
 
   return [
-    enabled &&
-      viteIgnoreStaticImport([
-        "react",
-        "react-dom",
-        "@powerhousedao/scalars",
-        "@powerhousedao/design-system",
-      ]),
+    enabled && viteIgnoreStaticImport(["react", "react-dom"]),
     localDocumentModelsPath
       ? viteReplaceImports({
           [LOCAL_DOCUMENT_MODELS_IMPORT]: localDocumentModelsPath,
@@ -105,7 +102,9 @@ export function viteConnectDevStudioPlugin(
           [LOCAL_DOCUMENT_EDITORS_IMPORT]: localDocumentEditorsPath,
         })
       : viteIgnoreStaticImport([LOCAL_DOCUMENT_EDITORS_IMPORT]),
-    enabled ? viteLoadHMRModule() : viteIgnoreStaticImport([HMR_MODULE_IMPORT]),
+    enabled
+      ? viteLoadHMRModule(connectPath)
+      : viteIgnoreStaticImport([HMR_MODULE_IMPORT]),
     {
       name: "vite-plugin-connect-dev-studio",
       enforce: "pre",
@@ -121,20 +120,24 @@ export function viteConnectDevStudioPlugin(
         }
 
         const buildStudioExternals = enabled
-          ? [
-              externalIds,
-              ...STUDIO_IMPORTS,
-              "@powerhousedao/studio",
-              "@powerhousedao/design-system",
-            ]
+          ? [externalIds, ...STUDIO_IMPORTS]
           : STUDIO_IMPORTS;
 
         config.build.rollupOptions.external.push(...buildStudioExternals);
       },
       closeBundle() {
-        // if (enabled) {
-        //   // build();
-        // }
+        if (!enabled) {
+          fs.copyFileSync(
+            fileURLToPath(import.meta.resolve("../hmr.js")),
+            join(connectPath, "hmr.js"),
+          );
+
+          // Copy the .env file to the dist folder
+          fs.copyFileSync(
+            join(connectPath, "../.env"),
+            join(connectPath, ".env"),
+          );
+        }
       },
       configureServer(server) {
         watchLocalFiles(
