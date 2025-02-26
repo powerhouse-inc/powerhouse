@@ -13,14 +13,14 @@ export type PowerhouseConfig = {
   interactive?: boolean;
   skipFormat: boolean;
   watch?: boolean;
-  switchboard?: {
+  reactor?: {
     port?: number;
     https?:
       | undefined
       | boolean
       | {
-          keyPath?: string;
-          certPath?: string;
+          keyPath: string;
+          certPath: string;
         };
   };
   studio?: {

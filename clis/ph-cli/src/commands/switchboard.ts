@@ -28,7 +28,7 @@ async function startLocalSwitchboard(switchboardOptions: SwitchboardOptions) {
     ...switchboardOptions,
   };
 
-  const { https } = baseConfig.switchboard ?? {};
+  const { https } = baseConfig.reactor ?? { https: false };
 
   const reactor = await startServer({
     ...options,

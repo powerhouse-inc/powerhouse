@@ -107,7 +107,7 @@ export const dev: CommandActionType<
 }) => {
   try {
     const baseConfig = getConfig(configFile);
-    const https = baseConfig.switchboard?.https;
+    const https = baseConfig.reactor?.https;
     const { driveUrl } = await spawnLocalSwitchboard({
       generate,
       port: switchboardPort,
