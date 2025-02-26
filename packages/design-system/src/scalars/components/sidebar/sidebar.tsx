@@ -1,15 +1,15 @@
 "use client";
 
-import { SidebarHeader } from "./subcomponents/sidebar-header";
-import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
-import { SidebarSearch } from "./subcomponents/sidebar-search";
-import { SidebarNode } from "./types";
-import { useSidebar } from "./subcomponents/sidebar-provider";
-import { useSidebarResize } from "./use-sidebar-resize";
-import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
-import { useCallback, useEffect } from "react";
 import { cn } from "@/scalars/lib";
 import { Icon } from "@/powerhouse";
+import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
+import { SidebarHeader } from "./subcomponents/sidebar-header";
+import { SidebarNode } from "./types";
+import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
+import { SidebarSearch } from "./subcomponents/sidebar-search";
+import { useSidebar } from "./subcomponents/sidebar-provider";
+import { useSidebarResize } from "./use-sidebar-resize";
+import { useCallback, useEffect } from "react";
 import { triggerEvent } from "./utils";
 
 export interface SidebarProps {
@@ -34,7 +34,7 @@ export interface SidebarProps {
    * Enables the vertical resizing of the sidebar
    * @default true
    */
-  resizable?: boolean; // default to true
+  resizable?: boolean;
   /**
    * Whether pinning functionality is enabled for nodes
    * @default true
@@ -87,6 +87,10 @@ export interface SidebarProps {
   className?: string;
 }
 
+/**
+ * Sidebar component that provides a collapsible and resizable navigation panel
+ * with support for hierarchical data, search, pinning, and custom styling.
+ */
 export const Sidebar: React.FC<SidebarProps> = ({
   activeNodeId,
   onActiveNodeChange,
@@ -126,20 +130,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setActiveNodeChangeCallback,
   } = useSidebar();
 
-  // sync param nodes with provider state if provided
+  // Sync external nodes with internal state when provided
   useEffect(() => {
     if (nodes) {
       setNodes(nodes);
     }
   }, [nodes, setNodes]);
 
-  // open levels on mount
+  // Initialize default expanded level on mount
   useEffect(() => {
     if (defaultLevel > 1) {
       openLevel(defaultLevel);
     }
-    // openLevel can not be added as dependency because
-    // it will cause an infinite loop
+    // openLevel is intentionally omitted from dependencies
+    // to prevent infinite loop as it may change on each render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultLevel]);
 
@@ -154,14 +158,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     syncActiveNodeId(activeNodeId);
   }, [activeNodeId, syncActiveNodeId]);
+
+  // Sync active node change callback with provider state
   useEffect(() => {
     setActiveNodeChangeCallback(handleActiveNodeChange);
   }, [handleActiveNodeChange, setActiveNodeChangeCallback]);
 
-  // unpin nodes if allowPinning changes to false
+  // Unpin nodes if pinning is disabled
   useEffect(() => {
-    if (!allowPinning && pinnedNodePath.length > 0) {
-      togglePin(pinnedNodePath[pinnedNodePath.length - 1].id);
+    const hasPinnedNodes = pinnedNodePath.length > 0;
+    if (!allowPinning && hasPinnedNodes) {
+      const lastPinnedNodeId = pinnedNodePath[pinnedNodePath.length - 1].id;
+      togglePin(lastPinnedNodeId);
     }
   }, [allowPinning, pinnedNodePath, togglePin]);
 
