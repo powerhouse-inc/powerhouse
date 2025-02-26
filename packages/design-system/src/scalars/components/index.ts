@@ -16,3 +16,4 @@ export * from "./string-field";
 export * from "./time-picker-field";
 export * from "./types";
 export * from "./url-field";
+export * from "./dropdown";
