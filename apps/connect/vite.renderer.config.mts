@@ -125,7 +125,7 @@ export default defineConfig(({ mode }) => {
         plugins,
         build: {
             minify: isProd,
-            sourcemap: isProd,
+            sourcemap: true,
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
