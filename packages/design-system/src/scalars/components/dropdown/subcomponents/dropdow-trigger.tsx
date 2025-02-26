@@ -1,5 +1,6 @@
 import { cn } from "@/scalars/lib/utils";
 import { DropdownTrigger } from "..";
+import ChevronDown from "@/assets/icon-components/ChevronDown";
 
 export const CustomTrigger: React.FC<
   React.ComponentProps<typeof DropdownTrigger>
@@ -7,7 +8,7 @@ export const CustomTrigger: React.FC<
   <DropdownTrigger
     {...props}
     className={cn(
-      "flex h-9 w-full items-center px-3 py-2 cursor-pointer text-gray-900 text-[14px] font-normal",
+      "flex h-9 w-full cursor-pointer items-center px-3 py-2 text-[14px] font-normal text-gray-900",
       "dark:border-charcoal-700 dark:bg-charcoal-900 rounded-md border border-gray-300 bg-white",
       "hover:border-gray-300 hover:bg-gray-100",
       "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-800",
@@ -18,6 +19,9 @@ export const CustomTrigger: React.FC<
     )}
     asChild
   >
-    <div className="flex gap-2">{children}</div>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">{children}</div>
+      <ChevronDown className="size-4" />
+    </div>
   </DropdownTrigger>
 );
