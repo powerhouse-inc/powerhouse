@@ -2,7 +2,6 @@ import basicSsl from "@vitejs/plugin-basic-ssl";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { createLogger, createServer, InlineConfig, Plugin } from "vite";
 import { viteEnvs } from "vite-envs";
 import { backupIndexHtml, removeBase64EnvValues } from "./helpers.js";
@@ -11,8 +10,9 @@ import { getStudioConfig } from "./vite-plugins/base.js";
 import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
 import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
 
-const studioDirname = fileURLToPath(new URL(".", import.meta.url));
-const appPath = join(studioDirname, "..");
+console.log("RESOLVE from", process.cwd());
+console.log(import.meta.resolve("@powerhousedao/connect", process.cwd()));
+const appPath = process.cwd();
 const viteEnvsScript = join(appPath, "vite-envs.sh");
 
 const projectRoot = process.cwd();
@@ -54,7 +54,7 @@ function runShellScriptPlugin(scriptPath: string): Plugin {
         exec(`sh ${scriptPath}`, (error, stdout, stderr) => {
           if (error) {
             console.error(`Error executing the script: ${error.message}`);
-            removeBase64EnvValues();
+            removeBase64EnvValues(appPath);
             return;
           }
           if (stderr) {
@@ -78,7 +78,7 @@ export async function startServer(
   ensureNodeVersion();
 
   // backups index html if running on windows
-  backupIndexHtml(true);
+  backupIndexHtml(appPath, true);
 
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
   const HOST = process.env.HOST ? process.env.HOST : "0.0.0.0";
@@ -131,11 +131,6 @@ export async function startServer(
           "node_modules",
           "@powerhousedao",
           "scalars",
-        ),
-        "document-model-libs": join(
-          projectRoot,
-          "node_modules",
-          "document-model-libs",
         ),
         react: join(projectRoot, "node_modules", "react"),
         "react-dom": join(projectRoot, "node_modules", "react-dom"),

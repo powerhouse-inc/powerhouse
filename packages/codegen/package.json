@@ -9,9 +9,9 @@
   ],
   "exports": "./dist/index.js",
   "imports": {
-    "#utils/*": "./src/utils/*.js",
-    "#codegen/*": "./src/codegen/*.js",
-    "#create-lib/*": "./src/create-lib/*.js"
+    "#utils/*": "./dist/src/utils/*.js",
+    "#codegen/*": "./dist/src/codegen/*.js",
+    "#create-lib/*": "./dist/src/create-lib/*.js"
   },
   "scripts": {
     "check-types": "tsc --build",

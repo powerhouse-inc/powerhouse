@@ -126,11 +126,15 @@ export function viteConnectDevStudioPlugin(
               ...STUDIO_IMPORTS,
               "@powerhousedao/studio",
               "@powerhousedao/design-system",
-              "document-model-libs",
             ]
           : STUDIO_IMPORTS;
 
         config.build.rollupOptions.external.push(...buildStudioExternals);
+      },
+      closeBundle() {
+        // if (enabled) {
+        //   // build();
+        // }
       },
       configureServer(server) {
         watchLocalFiles(
