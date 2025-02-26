@@ -44,6 +44,8 @@ export function useIdAutocompleteField({
   >(undefined);
   const [commandValue, setCommandValue] = useState("");
   const [haveBeenOpened, setHaveBeenOpened] = useState(false);
+  const [isFetchSelectedOptionSync, setIsFetchSelectedOptionSync] =
+    useState(false);
 
   const clear = useCallback(() => {
     setHaveFetchError(false);
@@ -105,6 +107,8 @@ export function useIdAutocompleteField({
 
       try {
         const result = fetchSelectedOption(value);
+        const isPromise = result instanceof Promise;
+
         Promise.resolve(result)
           .then((option) => {
             if (option) {
@@ -127,6 +131,12 @@ export function useIdAutocompleteField({
               setSelectedOption(undefined);
             }
             setIsLoadingSelectedOption(false);
+            if (!isPromise) {
+              setIsFetchSelectedOptionSync(true);
+              setTimeout(() => {
+                setIsFetchSelectedOptionSync(false);
+              }, 1500);
+            }
           })
           .catch(() => {
             setIsLoadingSelectedOption(false);
@@ -248,6 +258,7 @@ export function useIdAutocompleteField({
     isLoadingSelectedOption,
     haveFetchError,
     commandValue,
+    isFetchSelectedOptionSync,
     toggleOption,
     handleOpenChange,
     onTriggerBlur,

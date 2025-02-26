@@ -67,6 +67,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
           showValue?: boolean;
           isLoadingSelectedOption?: boolean;
           handleFetchSelectedOption?: (value: string) => void;
+          isFetchSelectedOptionSync?: boolean;
           className?: string;
         },
       ) => (
