@@ -11,11 +11,12 @@ export const DropdownItem = React.forwardRef<
 >(({ className, inset, ...props }, ref) => (
   <Dropdowntem
     ref={ref}
-    className={cn(
-      "focus:bg-accent focus:text-accent-foreground relative flex select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 cursor-pointer gap-2",
+    className={cn([
+      "focus:bg-accent focus:text-accent-foreground relative flex select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
+      "cursor-pointer gap-2 font-normal text-gray-700 pl-3",
       inset && "pl-8",
       className,
-    )}
+    ])}
     {...props}
   />
 ));
