@@ -26,7 +26,14 @@ function getUniqueDocumentModels(
     const uniqueModels = new Map<string, DocumentModelModule>();
 
     for (const model of documentModels) {
-        uniqueModels.set(model.documentType, model);
+        if ('documentModelState' in model) {
+            uniqueModels.set(model.documentType, model);
+        } else {
+            console.error(
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                `Document model ${(model as any).documentModel.id} needs to be migrated!`,
+            );
+        }
     }
 
     return Array.from(uniqueModels.values());

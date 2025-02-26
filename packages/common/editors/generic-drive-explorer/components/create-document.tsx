@@ -6,6 +6,17 @@ interface CreateDocumentProps {
   createDocument: (doc: DocumentModelModule) => void;
 }
 
+function getDocumentSpec(doc: DocumentModelModule) {
+  if ("documentModelState" in doc) {
+    return doc.documentModelState;
+  }
+
+  return (
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    (doc as any).documentModel as DocumentModelModule["documentModelState"]
+  );
+}
+
 export const CreateDocument: React.FC<CreateDocumentProps> = ({
   documentModels,
   createDocument,
@@ -16,16 +27,19 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
         New document
       </h3>
       <div className="flex w-full flex-wrap gap-4">
-        {documentModels?.map((doc) => (
-          <Button
-            key={doc.documentType}
-            aria-details={doc.documentModelState.description}
-            className="bg-gray-200 text-slate-800"
-            onClick={() => createDocument(doc)}
-          >
-            <span className="text-sm">{doc.documentModelName}</span>
-          </Button>
-        ))}
+        {documentModels?.map((doc) => {
+          const spec = getDocumentSpec(doc);
+          return (
+            <Button
+              key={doc.documentType}
+              aria-details={spec.description}
+              className="bg-gray-200 text-slate-800"
+              onClick={() => createDocument(doc)}
+            >
+              <span className="text-sm">{spec.name}</span>
+            </Button>
+          );
+        })}
       </div>
     </>
   );

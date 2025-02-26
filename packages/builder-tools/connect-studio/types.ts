@@ -1,4 +1,5 @@
 export type ConnectStudioOptions = {
+  connectPath?: string;
   port?: string;
   host?: boolean;
   https?: boolean;
@@ -12,6 +13,7 @@ export type ConnectStudioOptions = {
 };
 
 export type StartServerOptions = {
+  connectPath?: string;
   configFile?: string;
   packages?: string[];
   https?: boolean;

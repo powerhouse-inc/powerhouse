@@ -6,7 +6,6 @@ const REQUIRED_DEPENDENCIES = [
   "@powerhousedao/design-system",
   "document-drive",
   "document-model",
-  "document-model-libs",
 ] as const;
 
 type RequiredDependencies = Record<

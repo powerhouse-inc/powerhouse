@@ -21,6 +21,7 @@ function loadExternalPackages() {
 
 const hmrAvailableAtom = atom(async () => {
     const module = await getHMRModule();
+    console.log('HMR module', module);
     return typeof module !== 'undefined';
 });
 
