@@ -67,6 +67,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
           showValue?: boolean;
           isLoadingSelectedOption?: boolean;
           handleFetchSelectedOption?: (value: string) => void;
+          isFetchSelectedOptionSync?: boolean;
           className?: string;
         },
       ) => (

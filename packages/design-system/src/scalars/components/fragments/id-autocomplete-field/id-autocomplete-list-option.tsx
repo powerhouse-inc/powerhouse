@@ -30,14 +30,20 @@ const IconRenderer: React.FC<{
 const ReloadButton: React.FC<{
   isLoadingSelectedOption?: boolean;
   handleFetchSelectedOption: (value: string) => void;
+  isFetchSelectedOptionSync?: boolean;
   value: string;
-}> = ({ isLoadingSelectedOption, handleFetchSelectedOption, value }) => (
+}> = ({
+  isLoadingSelectedOption,
+  handleFetchSelectedOption,
+  isFetchSelectedOptionSync,
+  value,
+}) => (
   <div>
     <button
       type="button"
-      disabled={isLoadingSelectedOption}
+      disabled={isLoadingSelectedOption || isFetchSelectedOptionSync}
       onClick={() => {
-        if (!isLoadingSelectedOption) {
+        if (!isLoadingSelectedOption && !isFetchSelectedOptionSync) {
           handleFetchSelectedOption(value);
         }
       }}
@@ -45,14 +51,21 @@ const ReloadButton: React.FC<{
         "mt-0.5 focus-visible:outline-none",
         "disabled:pointer-events-none [&_svg]:pointer-events-none",
       )}
-      aria-label={isLoadingSelectedOption ? "Loading" : "Reload"}
+      aria-label={
+        isLoadingSelectedOption
+          ? "Loading"
+          : isFetchSelectedOptionSync
+            ? "Success"
+            : "Reload"
+      }
     >
       <Icon
-        name="Reload"
+        name={isFetchSelectedOptionSync ? "Checkmark" : "Reload"}
         size={16}
         className={cn(
           "text-gray-500 dark:text-gray-600",
           isLoadingSelectedOption && "animate-spin",
+          isFetchSelectedOptionSync && "animate-in fade-in duration-500",
         )}
       />
     </button>
@@ -65,6 +78,7 @@ export type IdAutocompleteListOptionProps = {
   showValue?: boolean;
   isLoadingSelectedOption?: boolean;
   handleFetchSelectedOption?: (value: string) => void;
+  isFetchSelectedOptionSync?: boolean;
   className?: string;
   placeholderIcon?: IconName | React.ReactElement;
 } & IdAutocompleteOption;
@@ -82,6 +96,7 @@ export const IdAutocompleteListOption: React.FC<
   showValue = true,
   isLoadingSelectedOption,
   handleFetchSelectedOption,
+  isFetchSelectedOptionSync,
   className,
   placeholderIcon = "PowerhouseLogoSmall",
 }) => {
@@ -133,6 +148,7 @@ export const IdAutocompleteListOption: React.FC<
           <ReloadButton
             isLoadingSelectedOption={isLoadingSelectedOption}
             handleFetchSelectedOption={handleFetchSelectedOption}
+            isFetchSelectedOptionSync={isFetchSelectedOptionSync}
             value={value}
           />
         )}

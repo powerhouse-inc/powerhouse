@@ -88,6 +88,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
       isLoadingSelectedOption,
       haveFetchError,
       commandValue,
+      isFetchSelectedOptionSync,
       toggleOption,
       handleOpenChange,
       onTriggerBlur,
@@ -178,6 +179,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
                       handleFetchSelectedOption: fetchSelectedOptionCallback
                         ? handleFetchSelectedOption
                         : undefined,
+                      isFetchSelectedOptionSync,
                       className: cn("rounded-t-none pt-2"),
                     },
                   )
@@ -197,6 +199,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
                         ? handleFetchSelectedOption
                         : undefined
                     }
+                    isFetchSelectedOptionSync={isFetchSelectedOptionSync}
                     className={cn("rounded-t-none pt-2")}
                   />
                 ))}
