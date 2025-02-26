@@ -1,10 +1,9 @@
 import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import fs from "node:fs";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const studioDirname = fileURLToPath(new URL(".", import.meta.url));
-const appPath = join(studioDirname, "..");
+const projectRoot = process.cwd();
+const appPath = join(projectRoot, "node_modules/@powerhousedao/connect/dist");
 
 export function backupIndexHtml(restore = false) {
   const filePath = join(appPath, "index.html");

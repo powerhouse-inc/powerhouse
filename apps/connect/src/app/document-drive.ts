@@ -3,13 +3,13 @@ import {
     BaseQueueManager,
     DocumentDriveAction,
     DriveInput,
-    FilesystemStorage,
     IDocumentDriveServer,
     InMemoryCache,
     logger,
     ReactorBuilder,
     RemoteDriveOptions,
 } from 'document-drive';
+import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import { Action, DocumentModelModule, Operation } from 'document-model';
 import { IpcMain, webContents } from 'electron';
 import { join } from 'path';

@@ -4,13 +4,13 @@ import { useEditorProps } from '#hooks/useEditorProps';
 import { useUiNodes } from '#hooks/useUiNodes';
 import { useDocumentModels } from '#store/document-model';
 import { useDocumentDispatch } from '#utils/document-model';
+import { GenericDriveExplorer } from '@powerhousedao/common';
+import { useUiNodesContext } from '@powerhousedao/design-system';
 import {
     DriveContextProvider,
-    genericDriveExplorerEditorModule,
     type IDriveContext,
-} from '@powerhousedao/common';
-import { UiNode, useUiNodesContext } from '@powerhousedao/design-system';
-import { driveDocumentModelModule, Node } from 'document-drive';
+} from '@powerhousedao/reactor-browser/hooks/useDriveContext';
+import { driveDocumentModelModule } from 'document-drive';
 import { DocumentModelModule, Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useModal } from './modal';
@@ -103,11 +103,9 @@ export function DriveEditorContainer() {
         return null;
     }
 
-    console.log(document.meta);
-
     return (
         <DriveContextProvider value={driveContext}>
-            <genericDriveExplorerEditorModule.Component
+            <GenericDriveExplorer.Component
                 {...editorProps}
                 onSwitchboardLinkClick={undefined}
                 document={document}

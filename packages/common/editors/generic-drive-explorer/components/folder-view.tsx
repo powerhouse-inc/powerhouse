@@ -1,5 +1,4 @@
-import { BaseProps } from "#editors/utils/index";
-import { sortUiNodesByName } from "#editors/utils/uiNodes";
+import type { BaseProps } from "#editors/utils/index";
 import {
   FILE,
   FOLDER,
@@ -11,8 +10,9 @@ import {
 } from "@powerhousedao/design-system";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
-import FileContentView from "./file-content-view";
-import { DriveLayout } from "./layout";
+import { sortUiNodesByName } from "../../utils/uiNodes.js";
+import FileContentView from "./file-content-view.js";
+import { DriveLayout } from "./layout.js";
 
 interface IFolderViewProps extends BaseProps {
   node: UiDriveNode | UiFolderNode;

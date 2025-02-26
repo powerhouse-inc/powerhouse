@@ -1,7 +1,7 @@
-import { Action, CustomAction, PHDocument } from "document-model";
 import { DocumentDriveServerConstructor } from "#server/base-server";
 import { RemoteDriveOptions } from "#server/types";
 import { logger } from "#utils/logger";
+import { PHDocument } from "document-model";
 import { ReadDriveSlugNotFoundError } from "./errors.js";
 import { ReadModeService } from "./service.js";
 import {
@@ -21,8 +21,9 @@ export function ReadModeServer(
     #readModeStorage: IReadModeDriveService;
     #listeners = new Set<ReadDrivesListener>();
 
-    constructor() {
-      super();
+    constructor(...args: any[]) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      super(...args);
 
       this.#readModeStorage = new ReadModeService(
         this.getDocumentModelModule.bind(this),

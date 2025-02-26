@@ -69,6 +69,15 @@ export function startConnectStudio(options: ConnectStudioOptions) {
     serverOptions.https = options.https;
   }
 
+  if (options.phCliVersion) {
+    serverOptions.phCliVersion = options.phCliVersion;
+  }
+
+  if (options.logLevel) {
+    process.env.LOG_LEVEL = options.logLevel;
+    serverOptions.logLevel = options.logLevel;
+  }
+
   return startServer(serverOptions).catch((error) => {
     throw error;
   });

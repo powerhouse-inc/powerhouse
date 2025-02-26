@@ -1,5 +1,3 @@
-import { useDriveActionsWithUiNodes } from "#editors/hooks/useDriveActionsWithUiNodes";
-import { useDriveContext } from "#editors/hooks/useDriveContext";
 import {
   Breadcrumbs,
   FILE,
@@ -7,13 +5,15 @@ import {
   useDrop,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
+import { useDriveActionsWithUiNodes } from "@powerhousedao/reactor-browser/hooks/useDriveActionsWithUiNodes";
+import { useDriveContext } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import { DocumentDriveDocument } from "document-drive";
 import { DocumentModelModule, EditorProps } from "document-model";
 import React, { useCallback, useMemo } from "react";
-import { CreateDocument } from "./components/create-document";
-import FolderView from "./components/folder-view";
-import { DriveLayout } from "./components/layout";
-import { SearchBar } from "./components/search-bar";
+import { CreateDocument } from "./components/create-document.js";
+import FolderView from "./components/folder-view.js";
+import { DriveLayout } from "./components/layout.js";
+import { SearchBar } from "./components/search-bar.js";
 
 export type IGenericDriveExplorerEditorProps = {
   className?: string;

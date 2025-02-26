@@ -11,7 +11,6 @@ import {
   DriveAlreadyExistsError,
   driveDocumentModelModule,
   DriveInput,
-  FilesystemStorage,
   IDocumentDriveServer,
   InternalTransmitter,
   IReceiver,
@@ -19,6 +18,7 @@ import {
   logger,
   ReactorBuilder,
 } from "document-drive";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import {
   documentModelDocumentModelModule,
   DocumentModelModule,

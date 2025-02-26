@@ -8,6 +8,7 @@ export type ConnectStudioOptions = {
   open?: boolean;
   packages?: { packageName: string }[];
   phCliVersion?: string;
+  logLevel?: "verbose" | "debug" | "info" | "warn" | "error" | "silent";
 };
 
 export type StartServerOptions = {
@@ -15,4 +16,6 @@ export type StartServerOptions = {
   packages?: string[];
   https?: boolean;
   open?: boolean;
+  phCliVersion?: string;
+  logLevel?: "verbose" | "debug" | "info" | "warn" | "error" | "silent";
 };

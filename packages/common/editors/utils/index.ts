@@ -13,4 +13,4 @@ export type BaseProps<T extends HTMLElement = HTMLDivElement> = {
   containerProps?: Omit<React.HTMLAttributes<T>, "className" | "style" | "id">;
 };
 
-export * from "./uiNodes";
+export * from "./uiNodes.js";

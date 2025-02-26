@@ -1,5 +1,5 @@
 import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
-import { logger, setLogLevel } from 'document-drive';
+import { logger, setLogLevel } from 'document-drive/utils/logger';
 import { LogLevel } from 'vite';
 import { version } from '../package.json';
 
