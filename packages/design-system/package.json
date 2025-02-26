@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.22.5-canary.55",
+  "version": "1.22.5-canary.58",
   "description": "",
   "files": [
     "/dist"
@@ -94,7 +94,7 @@
     "@powerhousedao/scalars": "workspace:*",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",
-    "@radix-ui/react-dropdown-menu": "^2.1.2",
+    "@radix-ui/react-dropdown-menu": "^2.1.5",
     "@radix-ui/react-popover": "^1.1.2",
     "@radix-ui/react-radio-group": "^1.2.1",
     "@radix-ui/react-separator": "^1.1.0",
