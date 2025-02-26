@@ -9,6 +9,28 @@ import { StorybookControlCategory } from "@/scalars/lib/storybook-arg-types";
  * - `DropdownContent` wraps the menu items
  * - `DropdownItem` represents individual menu options
  *
+ * ## How to setup the component
+ *
+ * First import the necessary components:
+ * ```
+ * import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from "@powerhousedao/design-system/scalars";
+ * ```
+ *
+ * Basic implementation:
+ * ```
+ * function MyComponent() {
+ *   return (
+ *     <Dropdown>
+ *       <DropdownTrigger>Open Menu</DropdownTrigger>
+ *       <DropdownContent>
+ *         <DropdownItem>Item 1</DropdownItem>
+ *         <DropdownItem>Item 2</DropdownItem>
+ *       </DropdownContent>
+ *     </Dropdown>
+ *   );
+ * }
+ * ```
+ *
  * Basic usage with icons:
  * ```
  * <Dropdown>
