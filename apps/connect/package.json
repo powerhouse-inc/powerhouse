@@ -59,7 +59,6 @@
         "@powerhousedao/design-system": "workspace:*"
     },
     "devDependencies": {
-        "vite": "^6.1.1",
         "@vitejs/plugin-basic-ssl": "^1.2.0",
         "vite-envs": "^4.4.11",
         "vite-plugin-node-polyfills": "^0.23.0",

@@ -36,12 +36,9 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({ address }) => {
   );
 
   return (
-    <div
-      className="flex gap-2 rounded-sm py-2.5 collapsed:justify-center
-            collapsed:px-1 expanding:justify-center expanding:px-1"
-    >
+    <div className="flex gap-2 rounded-sm py-2.5">
       <ENSAvatar address={address} size="40px" />
-      <div className="grid w-full items-center font-semibold collapsed:hidden expanding:hidden">
+      <div className="grid w-full items-center font-semibold">
         {loadingUser ? usernameAndAddressLoader : null}
         {!loadingUser && !!ensName && ensNameAndAddress}
         {!loadingUser && !ensName && addressOnly}

@@ -30,10 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div
       {...props}
-      className={twMerge(
-        ` collapsed group flex h-full flex-col bg-slate-50`,
-        className,
-      )}
+      className={twMerge(`group flex h-full flex-col bg-slate-50`, className)}
       ref={ref}
       style={{
         width: minWidth,
