@@ -1,6 +1,6 @@
 import { SharingType } from '@powerhousedao/design-system';
 import { useSyncExternalStore } from 'react';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
+import { useDocumentDriveServer } from './useDocumentDriveServer';
 
 export function useSyncStatus(driveId: string, documentId?: string) {
     const { getSyncStatusSync, onSyncStatus, documentDrives } =
