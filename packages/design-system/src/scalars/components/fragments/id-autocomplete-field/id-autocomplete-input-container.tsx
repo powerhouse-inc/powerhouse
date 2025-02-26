@@ -23,6 +23,7 @@ interface IdAutocompleteInputContainerProps {
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onClick?: (e: React.MouseEvent<HTMLInputElement>) => void;
   selectedOption?: IdAutocompleteOption;
+  optionsLength: number;
   handleOpenChange?: (open: boolean) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLInputElement>) => void;
@@ -53,6 +54,7 @@ export const IdAutocompleteInputContainer = React.forwardRef<
       onBlur,
       onClick,
       selectedOption,
+      optionsLength,
       handleOpenChange,
       onKeyDown,
       onMouseDown,
@@ -95,7 +97,14 @@ export const IdAutocompleteInputContainer = React.forwardRef<
             }}
             onKeyDown={(e) => {
               onKeyDown?.(e);
-              if (!isPopoverOpen) {
+              const isOptionsRelatedKey = [
+                "ArrowUp",
+                "ArrowDown",
+                "Enter",
+              ].includes(e.key);
+              if (
+                !(isOptionsRelatedKey && isPopoverOpen && optionsLength > 0)
+              ) {
                 e.stopPropagation();
               }
             }}

@@ -149,6 +149,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
                   onBlur={onTriggerBlur}
                   onClick={onClick}
                   selectedOption={selectedOption}
+                  optionsLength={options.length}
                   handleOpenChange={handleOpenChange}
                   onKeyDown={onKeyDown}
                   onMouseDown={onMouseDown}
