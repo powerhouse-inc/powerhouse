@@ -1,11 +1,14 @@
 /* eslint-disable react/jsx-max-depth */
 import { SidebarNode, FlattenedNode, NodeStatus } from "../types";
-import { forwardRef, useCallback, useMemo, useRef } from "react";
+import { cloneElement, forwardRef, useCallback, useMemo, useRef } from "react";
 import { cn } from "@/scalars/lib";
 import { Tooltip, TooltipProvider } from "../../fragments";
 import { Icon } from "@/powerhouse";
 import { StatusIcon } from "./status-icon";
 import { useEllipsis } from "@/scalars/hooks/useEllipsis";
+import CaretDown from "@/assets/icon-components/CaretDown";
+import PinFilled from "@/assets/icon-components/PinFilled";
+import Pin from "@/assets/icon-components/Pin";
 
 interface SidebarItemProps {
   node: FlattenedNode;
@@ -44,10 +47,23 @@ export const SidebarItem = ({
   const paddingLeft = node.depth * 24;
   const isSearchActive =
     searchResults.length > 0 && searchResults[activeSearchIndex].id === node.id;
-  const iconName = node.isExpanded
+  const IconComponent = node.isExpanded
     ? (node.expandedIcon ?? node.icon)
     : node.icon;
-  const hasStatus = node.status && node.status !== NodeStatus.UNCHANGED;
+  const isDescendenceModified = useMemo(() => {
+    const check = (n: SidebarNode): boolean => {
+      if (!n.children || n.children.length === 0) {
+        return n.status === NodeStatus.MODIFIED;
+      }
+
+      return n.children.some((child) => check(child));
+    };
+
+    return check(node);
+  }, [node]);
+  const hasStatus =
+    (node.status && node.status !== NodeStatus.UNCHANGED) ||
+    isDescendenceModified;
 
   const computedStyle = useMemo(
     () => ({ ...style, paddingLeft }),
@@ -118,12 +134,30 @@ export const SidebarItem = ({
                   className="-m-2 -mr-1 h-full rounded-md py-2 pl-2 pr-1 hover:bg-gray-200"
                   onClick={handleCaretClick}
                 >
-                  <CaretIcon node={node} />
+                  <CaretDown
+                    width="16"
+                    height="16"
+                    className={cn(
+                      "min-w-4",
+                      node.isExpanded &&
+                        node.children &&
+                        node.children.length > 0
+                        ? ""
+                        : "-rotate-90",
+                      node.children === undefined || node.children.length === 0
+                        ? "text-gray-300 dark:text-gray-700"
+                        : "text-gray-700 dark:text-gray-400",
+                    )}
+                  />
                 </div>
               )}
 
-              {iconName ? (
-                <Icon name={iconName} size={16} className="min-w-4" />
+              {IconComponent ? (
+                typeof IconComponent === "string" ? (
+                  <Icon name={IconComponent} size={16} className="min-w-4" />
+                ) : (
+                  cloneElement(IconComponent, { className: "min-w-4 w-4" })
+                )
               ) : pinnedMode ? (
                 <PinnedModeCircleIcon isPinned={isPinned} />
               ) : null}
@@ -147,10 +181,14 @@ export const SidebarItem = ({
                   )}
                   onClick={handleTogglePin}
                 >
-                  <Icon name={isPinned ? "PinFilled" : "Pin"} size={16} />
+                  {isPinned ? (
+                    <PinFilled width="16" height="16" />
+                  ) : (
+                    <Pin width="16" height="16" />
+                  )}
                 </div>
               )}
-              {node.status && hasStatus && (
+              {hasStatus && (
                 <div
                   className={cn(
                     "absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center",
@@ -158,7 +196,10 @@ export const SidebarItem = ({
                   )}
                   onClick={handleTogglePin}
                 >
-                  <StatusIcon status={node.status} />
+                  <StatusIcon
+                    status={node.status ?? NodeStatus.UNCHANGED}
+                    isDescendenceModified={isDescendenceModified}
+                  />
                 </div>
               )}
             </div>

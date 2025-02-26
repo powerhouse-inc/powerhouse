@@ -1,0 +1,13 @@
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+export const Dropdown = DropdownMenuPrimitive.Root;
+export const DropdownTrigger = DropdownMenuPrimitive.Trigger;
+export const DropdownMenuGroup = DropdownMenuPrimitive.Group;
+export const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
+export const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
+export const DropdownMenuContent = DropdownMenuPrimitive.Content;
+export const Dropdowntem = DropdownMenuPrimitive.Item;
+export * from "./subcomponents/dropdown-content";
+export * from "./subcomponents/dropdown-item";
+export * from "./subcomponents/dropdown-label";
+export * from "./subcomponents/dropdown-shortcut";
