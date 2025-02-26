@@ -17,7 +17,8 @@
     "#connect-studio/*": "./dist/connect-studio/*.js"
   },
   "scripts": {
-    "build": "npx @tailwindcss/cli -i ./styles.css -o ./dist/styles.css && tsc --build",
+    "build:css": "npx @tailwindcss/cli -i ./styles.css -o ./dist/styles.css",
+    "build": "npm run build:css && tsc --build",
     "storybook": "storybook dev -p 6006",
     "test": "vitest run",
     "check-types": "tsc --build",
@@ -29,6 +30,7 @@
     "clean:node_modules": "rimraf node_modules"
   },
   "devDependencies": {
+    "@storybook/types": "^8.5.2",
     "@types/react": "^18.3.18",
     "esbuild": "^0.24.0",
     "react": "^18.3.1",
