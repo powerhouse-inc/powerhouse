@@ -5,6 +5,7 @@ import { ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CommandActionType } from "../types.js";
+import { getConfig } from "../utils.js";
 import {
   DefaultSwitchboardOptions,
   SwitchboardOptions,
@@ -103,17 +104,10 @@ export const dev: CommandActionType<
   watch,
   switchboardPort = DefaultSwitchboardOptions.port,
   configFile,
-  httpsKeyFile,
-  httpsCertFile,
 }) => {
   try {
-    const https =
-      httpsKeyFile && httpsCertFile
-        ? {
-            keyPath: httpsKeyFile,
-            certPath: httpsCertFile,
-          }
-        : undefined;
+    const baseConfig = getConfig(configFile);
+    const https = baseConfig.switchboard?.https;
     const { driveUrl } = await spawnLocalSwitchboard({
       generate,
       port: switchboardPort,
