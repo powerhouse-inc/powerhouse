@@ -35,6 +35,9 @@
         },
         {
             "path": "../../packages/builder-tools"
+        },
+        {
+            "path": "../../packages/reactor-browser"
         }
     ],
     "include": ["src", "src/**/*.json", "package.json"],

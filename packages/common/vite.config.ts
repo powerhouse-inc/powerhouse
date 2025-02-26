@@ -7,32 +7,10 @@ import generateFile from "vite-plugin-generate-file";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { InlineConfig } from "vitest/node";
 
-const { documentModelsDir, editorsDir } = getConfig();
-
 const entry: Record<string, string> = {
   index: "index.ts",
-  documentModels: path.resolve(documentModelsDir, "index.ts"),
-  editors: path.resolve(editorsDir, "index.ts"),
   storybook: "storybook.ts",
 };
-
-// add subpackage for each editor
-readdirSync(documentModelsDir, { withFileTypes: true })
-  .filter((dirent) => dirent.isDirectory())
-  .map((dirent) => dirent.name)
-  .forEach((name) => {
-    entry[name] = path.resolve(documentModelsDir, name, "index.ts");
-  });
-
-readdirSync(editorsDir, { withFileTypes: true })
-  .filter((dirent) => dirent.isDirectory())
-  .map((dirent) => dirent.name)
-  .forEach((name) => {
-    const editorPath = path.resolve(editorsDir, name, "index.ts");
-    if (existsSync(editorPath)) {
-      entry[`editors/${name}`] = editorPath;
-    }
-  });
 
 export default defineConfig(() => {
   const external = [

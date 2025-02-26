@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
-    "emitDeclarationOnly": true,
     "jsx": "react-jsx",
     "outDir": "./dist",
     "types": ["vitest/globals"],
@@ -24,6 +23,12 @@
     },
     {
       "path": "../document-model"
+    },
+    {
+      "path": "../config"
+    },
+    {
+      "path": "../design-system"
     }
   ]
 }

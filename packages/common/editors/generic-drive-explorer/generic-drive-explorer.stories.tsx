@@ -1,6 +1,6 @@
 import { createDriveStoryWithUINodes } from "#editors/utils/storybook";
 import { Meta, StoryObj } from "@storybook/react";
-import Editor from "./editor";
+import Editor from "./editor.js";
 
 const { meta: _meta, CreateDocumentStory } =
   createDriveStoryWithUINodes(Editor);

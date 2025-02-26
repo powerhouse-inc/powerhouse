@@ -14,31 +14,30 @@
     "#document-models/*": "./dist/document-models/*.js",
     "#editors/*": "./dist/editors/*.js"
   },
+  "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "scripts": {
-    "generate": "powerhouse generate",
-    "dev": "ph-cli dev --config-file ./powerhouse.config.json",
-    "format-generated": "npx prettier \"**/{gen,processors,editors}/**/*\" --write --ignore-path --no-error-on-unmatched-pattern >> /dev/null",
-    "postgenerate": "npm run format-generated",
     "check-types": "tsc --build",
-    "postlint": "npm run check-types",
     "lint": "eslint",
-    "build": "npm run generate && vite build",
+    "build": "tsc --build",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "npm run generate && storybook build",
+    "build-storybook": "storybook build",
     "test": "vitest run",
     "test:nogen": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build",
-    "connect": "ph-cli connect",
-    "reactor": "ph-cli reactor",
-    "install:storybook": "tsx scripts/index.ts",
-    "service": "ph-cli service",
-    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
-    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@powerhousedao/reactor-browser": "workspace:*"
+  },
+  "dependencies": {
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@tanstack/react-virtual": "^3.8.1",
+    "document-model": "workspace:*",
+    "document-drive": "workspace:*",
+    "react-i18next": "^13.5.0"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.5",
@@ -70,7 +69,6 @@
     "@typescript-eslint/parser": "^8.21.0",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
-    "document-model": "workspace:*",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.3",
@@ -99,13 +97,5 @@
     "vite-tsconfig-paths": "^4.2.0",
     "vitest": "^2.1.8",
     "zod": "^3.24.1"
-  },
-  "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
-  "dependencies": {
-    "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
-    "@tanstack/react-virtual": "^3.8.1",
-    "document-drive": "workspace:*",
-    "react-i18next": "^13.5.0"
   }
 }

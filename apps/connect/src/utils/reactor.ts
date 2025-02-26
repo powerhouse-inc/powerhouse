@@ -1,13 +1,13 @@
 import {
     BaseDocumentDriveServer,
     BaseQueueManager,
-    BrowserStorage,
     DefaultRemoteDriveInput,
     DocumentDriveServerOptions,
     InMemoryCache,
     IReadModeDriveServer,
     ReactorBuilder,
 } from 'document-drive';
+import { BrowserStorage } from 'document-drive/storage/browser';
 import { DocumentModelModule } from 'document-model';
 
 const DEFAULT_DRIVES_URL =
@@ -74,5 +74,5 @@ export function createBrowserDocumentDriveServer(
         .withCache(new InMemoryCache())
         .withQueueManager(new BaseQueueManager(1, 10))
         .withOptions({ ...getReactorDefaultDrivesConfig() })
-        .build() as unknown as BaseDocumentDriveServer & IReadModeDriveServer;
+        .build();
 }
