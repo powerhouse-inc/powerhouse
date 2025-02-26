@@ -11,3 +11,5 @@ export * from "./subcomponents/dropdown-content";
 export * from "./subcomponents/dropdown-item";
 export * from "./subcomponents/dropdown-label";
 export * from "./subcomponents/dropdown-shortcut";
+export * from "./subcomponents/dropdow-trigger";
+export * from "./dropdown";
