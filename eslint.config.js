@@ -3,7 +3,7 @@ import { default as eslint } from "@eslint/js";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
-import tailwind from "eslint-plugin-tailwindcss";
+// import tailwind from "eslint-plugin-tailwindcss";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -11,7 +11,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.stylisticTypeChecked,
   ...tseslint.configs.strictTypeChecked,
-  ...tailwind.configs["flat/recommended"],
+  // ...tailwind.configs["flat/recommended"],
   eslintPluginPrettierRecommended,
   {
     ignores: [
@@ -24,6 +24,7 @@ export default tseslint.config(
       "docs/",
       "**/node_modules/",
       "**/dist/",
+      "**/ts-dist/",
       "**/build/",
       "**/storybook-static/",
       "**/.storybook/",
@@ -39,11 +40,14 @@ export default tseslint.config(
       ".nx/",
       "packages/document-drive/**/*.test.ts",
       "packages/document-drive/**/*.bench.ts",
+      "packages/reactor-api/**/*.test.ts",
+      "packages/reactor-api/**/*.bench.ts",
       "**/.vite/",
       "**/out/",
       "**/forge.config.js",
       "**/vite.config.ts.timestamp-*.mjs",
       "apps/connect/src/vite-env.d.ts",
+      "**/*.config.*",
     ],
   },
   {
@@ -54,9 +58,7 @@ export default tseslint.config(
         ...globals.browser,
       },
       parserOptions: {
-        projectService: {
-          allowDefaultProject: ["*.config.js", "*.config.mjs", "*.config.cjs"],
-        },
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
           jsx: true,

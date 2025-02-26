@@ -6,11 +6,11 @@ import {
   OperationFromDocument,
   PHDocument,
 } from "document-model";
-import { User } from "../renown/types";
-import { addActionContext, signOperation } from "../utils/signature";
-import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
-import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
-import { useDocumentDispatch } from "./useDocumentDispatch";
+import { User } from "../renown/types.js";
+import { addActionContext, signOperation } from "../utils/signature.js";
+import { useAddDebouncedOperations } from "./useAddDebouncedOperations.js";
+import { useConnectCrypto, useConnectDid } from "./useConnectCrypto.js";
+import { useDocumentDispatch } from "./useDocumentDispatch.js";
 
 export type DocumentDispatchCallback<TDocument extends PHDocument> = (
   operation: OperationFromDocument<TDocument>,

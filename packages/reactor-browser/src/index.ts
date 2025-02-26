@@ -1,7 +1,7 @@
 import { IDocumentDriveServer } from "document-drive";
 
-export * from "./document-model";
-export * from "./context";
-export * from "./reactor";
-export * from "./hooks";
+export * from "./context/index.js";
+export * from "./document-model.js";
+export * from "./hooks/index.js";
+export * from "./reactor.js";
 export type DocumentDriveServerInterface = IDocumentDriveServer;

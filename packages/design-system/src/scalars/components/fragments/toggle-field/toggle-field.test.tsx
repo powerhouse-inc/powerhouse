@@ -64,7 +64,6 @@ describe("ToggleField Component", () => {
 
   it("should render with custom className", () => {
     // this is a custom class name for testing purposes
-    // eslint-disable-next-line tailwindcss/no-custom-classname
     renderWithForm(<ToggleField name="test" className="custom-class" />);
     const toggle = screen.getByTestId("custom-class");
     expect(toggle).toHaveClass("custom-class");

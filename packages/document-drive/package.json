@@ -16,9 +16,8 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "check-types": "tsc --build",
-    "check-types:watch": "tsc --build --watch",
-    "postlint": "npm run check-types",
+    "build:tsc": "tsc --build",
+    "build:tsc:watch": "tsc --build --watch",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
@@ -63,8 +62,5 @@
     "vitest-fetch-mock": "^0.3.0",
     "webdriverio": "^9.0.9",
     "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "vite": "^6.1.0"
   }
 }

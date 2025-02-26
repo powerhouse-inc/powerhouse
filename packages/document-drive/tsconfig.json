@@ -11,5 +11,6 @@
       "path": "../codegen"
     }
   ],
+  "include": ["**/*"],
   "exclude": ["**/*.test.ts", "**/*.bench.ts", "dist", "node_modules"]
 }

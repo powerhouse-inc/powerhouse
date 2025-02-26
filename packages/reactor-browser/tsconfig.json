@@ -7,14 +7,9 @@
     "types": ["vitest/globals"],
     "resolveJsonModule": true,
     "experimentalDecorators": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler"
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "test/**/*.ts",
-    "*.ts",
+    "**/*",
     "package.json"
   ],
   "references": [

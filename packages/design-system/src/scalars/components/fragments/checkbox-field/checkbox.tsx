@@ -1,8 +1,8 @@
 "use client";
 
+import { cn } from "@/scalars/lib/utils";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
-import { cn } from "@/scalars/lib/utils";
 
 export type CheckboxValue = boolean | "indeterminate";
 
@@ -18,7 +18,6 @@ const Checkbox = React.forwardRef<
 >(({ className, checked, invalid, ...props }, ref) => (
   <CheckboxPrimitive.Root
     ref={ref}
-    // eslint-disable-next-line tailwindcss/no-custom-classname
     className={cn(
       // Base styles
       "peer size-4 shrink-0 rounded",

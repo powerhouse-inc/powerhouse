@@ -2,8 +2,8 @@
 import { atom, useAtom } from "jotai";
 import { useEffect, useMemo } from "react";
 
-import { DID, IConnectCrypto, ConnectCrypto } from "../crypto";
-import { BrowserKeyStorage } from "../crypto/browser";
+import { DID, IConnectCrypto, ConnectCrypto } from "../crypto/index.js";
+import { BrowserKeyStorage } from "../crypto/browser.js";
 
 const connectCrypto = (async () => {
   const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());

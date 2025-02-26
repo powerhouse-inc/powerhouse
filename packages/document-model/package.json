@@ -17,8 +17,7 @@
     }
   },
   "scripts": {
-    "check-types": "tsc --build",
-    "postlint": "npm run check-types",
+    "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "npm run build:browser && npm run build:node",

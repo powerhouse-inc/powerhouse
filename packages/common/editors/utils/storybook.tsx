@@ -11,7 +11,7 @@ import {
   UiNodesContextProvider,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
-import { DriveContextProvider } from "@powerhousedao/reactor-browser";
+import { DriveContextProvider } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import { Decorator, Meta } from "@storybook/react";
 import {
   DocumentDriveDocument,

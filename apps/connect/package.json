@@ -29,7 +29,7 @@
     },
     "homepage": "https://github.com/powerhouse-inc/document-model-electron#readme",
     "scripts": {
-        "check-types": "tsc --build",
+        "build:tsc": "tsc --build",
         "start": "electron-forge start",
         "package": "electron-forge package",
         "make": "PH_CONNECT_BASE_HREF=./ electron-forge make",
@@ -39,7 +39,6 @@
         "publish:electron": "electron-forge publish",
         "prepublishOnly": "npm run build:studio",
         "lint": "eslint .",
-        "postlint": "tsc --build",
         "lint:fix": "eslint --fix .",
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
         "dev:web": "vite -c vite.renderer.config.mts",

@@ -1,4 +1,3 @@
-/* eslint-disable react/jsx-max-depth */
 import { SidebarNode, FlattenedNode, NodeStatus } from "../types";
 import { useCallback } from "react";
 import { cn } from "@/scalars/lib";
@@ -73,7 +72,6 @@ export const SidebarItem = ({
         >
           <div
             id={`sidebar-item-${node.id}`}
-            // eslint-disable-next-line tailwindcss/no-custom-classname
             className={cn(
               "group/sidebar-item dark:hover:bg-charcoal-900 relative flex w-full cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-400",
               hasStatus && "pr-6",

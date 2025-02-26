@@ -1,4 +1,3 @@
-/* eslint-disable tailwindcss/no-unnecessary-arbitrary-value */
 import { useAcceptedCookies } from '#hooks/useAcceptedCookies/index';
 import { useCookieBanner } from '#hooks/useCookieBanner/index';
 import {

@@ -62,7 +62,6 @@ describe("Radio Component", () => {
     render(
       <RadioGroup name="radio-group">
         {/* Custom className for testing purposes */}
-        {/* eslint-disable-next-line tailwindcss/no-custom-classname */}
         <Radio label="Test Label" value="test" className="custom-class" />
       </RadioGroup>,
     );
