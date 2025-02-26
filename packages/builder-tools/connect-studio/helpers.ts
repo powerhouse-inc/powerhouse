@@ -2,10 +2,7 @@ import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import fs from "node:fs";
 import { join, resolve } from "node:path";
 
-const projectRoot = process.cwd();
-const appPath = join(projectRoot, "node_modules/@powerhousedao/connect/dist");
-
-export function backupIndexHtml(restore = false) {
+export function backupIndexHtml(appPath: string, restore = false) {
   const filePath = join(appPath, "index.html");
   const backupPath = join(appPath, "index.html.bak");
 
@@ -16,8 +13,8 @@ export function backupIndexHtml(restore = false) {
   }
 }
 
-export function removeBase64EnvValues() {
-  backupIndexHtml();
+export function removeBase64EnvValues(appPath: string) {
+  backupIndexHtml(appPath);
 
   const filePath = join(appPath, "index.html");
 
