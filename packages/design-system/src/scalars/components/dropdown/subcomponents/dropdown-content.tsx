@@ -1,14 +1,13 @@
 import React from "react";
 import { cn } from "@/scalars/lib/utils";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { DropdownMenuContent, DropdownMenuPortal } from "..";
 
 export const DropdownContent = React.forwardRef<
-  React.ElementRef<typeof DropdownMenuContent>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuContent>
+  React.ElementRef<typeof DropdownMenuPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
 >(({ className, sideOffset = 4, ...props }, ref) => (
-  <DropdownMenuPortal>
-    <DropdownMenuContent
+  <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
@@ -27,6 +26,6 @@ export const DropdownContent = React.forwardRef<
       )}
       {...props}
     />
-  </DropdownMenuPortal>
+  </DropdownMenuPrimitive.Portal>
 ));
-DropdownContent.displayName = DropdownMenuPrimitive.Content.displayName;
+DropdownContent.displayName = "DropdownContent";
