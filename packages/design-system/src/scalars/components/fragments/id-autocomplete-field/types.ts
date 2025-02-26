@@ -41,6 +41,7 @@ export type IdAutocompleteProps = IdAutocompleteBaseProps &
             showValue?: boolean;
             isLoadingSelectedOption?: boolean;
             handleFetchSelectedOption?: (value: string) => void;
+            isFetchSelectedOptionSync?: boolean;
             className?: string;
           },
         ) => React.ReactNode;
