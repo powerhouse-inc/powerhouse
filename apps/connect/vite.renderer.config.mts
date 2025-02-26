@@ -150,7 +150,7 @@ export default defineConfig(({ mode }) => {
             },
         },
         optimizeDeps: {
-            include: ['did-key-creator'],
+            include: ['did-key-creator', '@powerhousedao/reactor-browser'],
             exclude: externalAndExclude,
         },
         define: {

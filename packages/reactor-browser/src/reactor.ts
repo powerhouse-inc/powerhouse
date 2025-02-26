@@ -1,13 +1,13 @@
 import {
   BaseDocumentDriveServer,
   BaseQueueManager,
-  BrowserStorage,
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
   InMemoryCache,
   IReadModeDriveServer,
   ReactorBuilder,
 } from "document-drive";
+import { BrowserStorage } from "document-drive/storage/browser";
 import { DocumentModelModule } from "document-model";
 
 export type ReactorDefaultDrivesConfig = {

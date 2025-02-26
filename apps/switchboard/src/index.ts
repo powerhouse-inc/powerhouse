@@ -5,7 +5,8 @@ import {
 import { SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
 import { PrismaClient } from "@prisma/client";
 import { ReactorBuilder } from "document-drive";
-import { DocumentDriveServer, PrismaStorage, RedisCache } from "document-drive";
+import RedisCache from "document-drive/cache/redis";
+import { PrismaStorage } from "document-drive/storage/prisma";
 import {
   DocumentModelModule,
   documentModelDocumentModelModule,

@@ -1,4 +1,3 @@
-import { DriveContextProvider } from "#editors/hooks/useDriveContext";
 import {
   createDocumentStory,
   DocumentStory,
@@ -12,6 +11,7 @@ import {
   UiNodesContextProvider,
   useUiNodesContext,
 } from "@powerhousedao/design-system";
+import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import { Decorator, Meta } from "@storybook/react";
 import {
   DocumentDriveDocument,
@@ -27,7 +27,7 @@ import {
   PartialState,
 } from "document-model";
 import { PropsWithChildren, useEffect, useState } from "react";
-import { makeUiDriveNode } from "./uiNodes";
+import { makeUiDriveNode } from "./uiNodes.js";
 
 // Sets the ui drive nodes for the story
 function UINodesSetter(

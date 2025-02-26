@@ -1,4 +1,4 @@
-import { BaseProps } from "#editors/utils/index";
+import type { BaseProps } from "#editors/utils/index";
 import { cn } from "@powerhousedao/design-system/scalars";
 
 export function DriveLayout({ children, className, ...props }: BaseProps) {
