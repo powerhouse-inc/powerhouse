@@ -2,7 +2,7 @@ import { cn } from "@/scalars/lib/utils";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import React from "react";
 
-const DropdownLabel = React.forwardRef<
+export const DropdownLabel = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label> & {
     inset?: boolean;
@@ -19,6 +19,4 @@ const DropdownLabel = React.forwardRef<
   />
 ));
 
-DropdownLabel.displayName = DropdownMenuPrimitive.Label.displayName;
-
-export default DropdownLabel;
+DropdownLabel.displayName = "DropdownLabel";

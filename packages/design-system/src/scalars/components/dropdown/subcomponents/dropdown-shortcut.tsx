@@ -1,6 +1,6 @@
 import { cn } from "@/scalars/lib/utils";
 
-const DropdownMenuShortcut = ({
+export const DropdownShortcut = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLSpanElement>) => {
@@ -12,6 +12,4 @@ const DropdownMenuShortcut = ({
   );
 };
 
-DropdownMenuShortcut.displayName = "DropdownMenuShortcut";
-
-export default DropdownMenuShortcut;
+DropdownShortcut.displayName = "DropdownShortcut";

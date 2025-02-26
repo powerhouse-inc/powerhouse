@@ -1,11 +1,11 @@
 import { cn } from "@/scalars/lib/utils";
-import { DropdownTrigger } from "..";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import ChevronDown from "@/assets/icon-components/ChevronDown";
 
-export const CustomTrigger: React.FC<
-  React.ComponentProps<typeof DropdownTrigger>
+export const DropdownTrigger: React.FC<
+  React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>
 > = ({ children, className, ...props }) => (
-  <DropdownTrigger
+  <DropdownMenuPrimitive.Trigger
     {...props}
     className={cn(
       "flex h-9 w-full cursor-pointer items-center px-3 py-2 text-[14px] font-normal text-gray-900",
@@ -23,5 +23,5 @@ export const CustomTrigger: React.FC<
       <div className="flex items-center gap-2">{children}</div>
       <ChevronDown className="size-4" />
     </div>
-  </DropdownTrigger>
+  </DropdownMenuPrimitive.Trigger>
 );
