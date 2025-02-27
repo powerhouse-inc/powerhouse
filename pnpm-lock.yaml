@@ -1124,6 +1124,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../reactor-browser
       '@prettier/sync':
         specifier: ^0.5.2
         version: 0.5.2(prettier@3.5.2)
@@ -1442,31 +1445,22 @@ importers:
       did-key-creator:
         specifier: ^1.2.0
         version: 1.2.0
-      jotai:
-        specifier: ^2.10.3
-        version: 2.11.1(@types/react@18.3.18)(react@18.3.1)
-    devDependencies:
-      '@powerhousedao/config':
-        specifier: workspace:*
-        version: link:../config
-      '@powerhousedao/design-system':
-        specifier: workspace:*
-        version: link:../design-system
-      '@powerhousedao/scalars':
-        specifier: workspace:*
-        version: link:../scalars
-      '@types/react':
-        specifier: ^18.3.1
-        version: 18.3.18
-      '@types/react-dom':
-        specifier: ^18.3.1
-        version: 18.3.5(@types/react@18.3.18)
       document-drive:
         specifier: workspace:*
         version: link:../document-drive
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      jotai:
+        specifier: ^2.10.3
+        version: 2.11.1(@types/react@18.3.18)(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.1
+        version: 18.3.18
+      '@types/react-dom':
+        specifier: ^18.3.1
+        version: 18.3.5(@types/react@18.3.18)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -33582,7 +33576,7 @@ snapshots:
   vite@4.5.9(@types/node@22.13.5)(lightningcss@1.29.1)(terser@5.37.0):
     dependencies:
       esbuild: 0.18.20
-      postcss: 8.5.2
+      postcss: 8.5.3
       rollup: 3.29.5
     optionalDependencies:
       '@types/node': 22.13.5

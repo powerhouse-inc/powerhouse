@@ -3,11 +3,8 @@ import { ModalManager } from '#components/modal/index';
 import { ReadModeContextProvider } from '#context/read-mode';
 import { RootProvider } from '#context/root-provider';
 import atoms, { atomStore } from '#store/index';
-import {
-    ToastContainer,
-    UiNodesContextProvider,
-    WagmiContext,
-} from '@powerhousedao/design-system';
+import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
+import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Provider, useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
 import Analytics from './analytics';
@@ -20,7 +17,6 @@ const Router = React.lazy(async () => {
 
 const Preloader = () => {
     for (const atom of Object.values(atoms)) {
-        // eslint-disable-next-line react-hooks/rules-of-hooks
         useAtomValue(atom);
     }
     return null;

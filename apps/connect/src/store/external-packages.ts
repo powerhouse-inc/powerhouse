@@ -2,7 +2,7 @@ import { getHMRModule, subscribeExternalPackages } from '#services/hmr';
 import { App, DocumentModelLib } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
 const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES === 'true';
@@ -44,7 +44,7 @@ externalPackagesAtom.onMount = setAtom => {
 
 export const useExternalPackages = () => useAtomValue(externalPackagesAtom);
 
-const CommonPackage: App = {
+export const CommonPackage: App = {
     id: 'powerhouse/common',
     name: 'Generic Drive Explorer',
     driveEditor: 'GenericDriveExplorer',
@@ -73,23 +73,25 @@ export const useAppEditor = (appId: string) => {
     }, [externalPackages, apps, appId]);
 };
 
-/*
-const appsAtom = atom<Promise<App[]>>(async get => {
-    const externalPackages = await get(externalPackagesAtom);
-    return externalPackages
-        .map(
-            pkg =>
-                pkg.manifest.apps?.map(app => ({
-                    ...app,
-                    driveEditor: pkg.editors.find(
-                        editor => editor.config.id === app.driveEditor,
-                    ) as Editor<
-                        DocumentDriveDocument,
-                        DocumentDriveAction,
-                        DocumentDriveLocalState
-                    >,
-                })) ?? [],
-        )
-        .flat();
-});
-*/
+export const useGetAppNameForEditorId = () => {
+    const apps = useApps();
+    return useCallback(
+        (editorId?: string) => {
+            if (!editorId) return undefined;
+            const app = apps.find(app => app.driveEditor === editorId);
+            return app?.name;
+        },
+        [apps],
+    );
+};
+
+export const useDriveEditor = (editorId?: string) => {
+    const externalPackages = useExternalPackages();
+    return useMemo(() => {
+        if (!editorId) return undefined;
+        const pkg = externalPackages.find(pkg =>
+            pkg.manifest.apps?.find(app => app.driveEditor === editorId),
+        );
+        return pkg?.editors.find(editor => editor.config.id === editorId);
+    }, [externalPackages, editorId]);
+};

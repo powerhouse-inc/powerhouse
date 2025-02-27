@@ -7,11 +7,11 @@ import {
 } from "@powerhousedao/builder-tools/editor-utils";
 import {
   DRIVE,
+  DriveContextProvider,
   UiDriveNode,
   UiNodesContextProvider,
   useUiNodesContext,
-} from "@powerhousedao/design-system";
-import { DriveContextProvider } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
+} from "@powerhousedao/reactor-browser";
 import { Decorator, Meta } from "@storybook/react";
 import {
   DocumentDriveDocument,

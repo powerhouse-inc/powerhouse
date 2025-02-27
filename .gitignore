@@ -5,6 +5,7 @@ node_modules/
 .next
 *.tsbuildinfo
 dev.db
-**/vite.config.ts.timestamp-*.mjs
+**/vite.config.*.timestamp-*.mjs
+**/vite.*.config.*.timestamp-*.mjs
 .DS_Store
 .cursor

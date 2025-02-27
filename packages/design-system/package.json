@@ -61,6 +61,7 @@
   "devDependencies": {
     "@hookform/devtools": "^4.3.1",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",

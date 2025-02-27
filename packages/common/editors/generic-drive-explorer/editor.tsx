@@ -1,12 +1,14 @@
 import {
   Breadcrumbs,
-  FILE,
   useBreadcrumbs,
   useDrop,
-  useUiNodesContext,
 } from "@powerhousedao/design-system";
 import { useDriveActionsWithUiNodes } from "@powerhousedao/reactor-browser/hooks/useDriveActionsWithUiNodes";
 import { useDriveContext } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
+import {
+  FILE,
+  useUiNodesContext,
+} from "@powerhousedao/reactor-browser/hooks/useUiNodesContext";
 import { DocumentDriveDocument } from "document-drive";
 import { DocumentModelModule, EditorProps } from "document-model";
 import React, { useCallback, useMemo } from "react";

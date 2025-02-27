@@ -1,7 +1,7 @@
-import { UiNode } from "@powerhousedao/design-system";
 import { Node, SyncStatus } from "document-drive";
 import { DocumentModelModule } from "document-model";
 import { createContext, PropsWithChildren, useContext } from "react";
+import type { UiNode } from "../uiNodes/types.js";
 
 /**
  * Interface representing the context values provided by the host application
@@ -86,7 +86,7 @@ export const DriveContextProvider: React.FC<
  */
 export function useDriveContext() {
   const context = useContext(DriveContext);
-
+  console.log("HELLO");
   if (!context) {
     throw new Error(
       "useDriveContext must be used within a DriveContextProvider",

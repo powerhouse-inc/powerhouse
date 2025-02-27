@@ -2,6 +2,7 @@ import {
     viteConnectDevStudioPlugin,
     viteLoadExternalPackages,
 } from '@powerhousedao/builder-tools/connect-studio';
+import { externalIds } from '@powerhousedao/builder-tools/connect-studio/vite-plugins/base';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
@@ -125,7 +126,7 @@ export default defineConfig(({ mode }) => {
         plugins,
         build: {
             minify: isProd,
-            sourcemap: true,
+            sourcemap: false,
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
@@ -140,7 +141,7 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: externalAndExclude,
+                external: [...externalAndExclude, ...externalIds],
             },
         },
         resolve: {
@@ -154,7 +155,7 @@ export default defineConfig(({ mode }) => {
             },
         },
         optimizeDeps: {
-            include: ['did-key-creator', '@powerhousedao/reactor-browser'],
+            include: ['did-key-creator'],
             exclude: externalAndExclude,
         },
         define: {

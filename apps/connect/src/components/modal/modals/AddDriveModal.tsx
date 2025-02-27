@@ -1,4 +1,4 @@
-import { useApps } from '#store/external-packages';
+import { CommonPackage, useApps } from '#store/external-packages';
 import {
     AddLocalDriveInput,
     AddRemoteDriveInput,
@@ -18,8 +18,13 @@ export function AddDriveModal(props: Props) {
     const apps = useApps();
 
     async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
-        console.log('onAddLocalDriveSubmit', data);
-        await onAddLocalDrive(data);
+        // TODO: Remove workaround after fixing app select component
+        const appId =
+            'appId' in data && typeof data.appId === 'string'
+                ? data.appId
+                : data.app.id;
+        const app = apps.find(app => app.id === appId) ?? CommonPackage;
+        await onAddLocalDrive({ ...data, app });
         onClose();
     }
 

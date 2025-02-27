@@ -2,11 +2,13 @@ import {
   DRIVE,
   FILE,
   LOCAL,
+} from "@powerhousedao/reactor-browser/uiNodes/constants";
+import {
   UiDriveNode,
   UiFileNode,
   UiFolderNode,
   type UiNode,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/reactor-browser/uiNodes/types";
 import { DocumentDriveDocument, isFolderNode, Node } from "document-drive";
 
 export function sortUiNodesByName(a: UiNode, b: UiNode) {
