@@ -139,6 +139,12 @@ export async function startServer(
         //   "@powerhousedao",
         //   "scalars",
         // ),
+        "@powerhousedao/reactor-browser": join(
+          projectRoot,
+          "node_modules",
+          "@powerhousedao",
+          "reactor-browser",
+        ),
         react: join(projectRoot, "node_modules", "react"),
         "react-dom": join(projectRoot, "node_modules", "react-dom"),
       },

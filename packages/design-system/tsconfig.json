@@ -6,13 +6,13 @@
     "outDir": "./dist",
     "jsx": "react-jsx",
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "references": [
     {
@@ -23,8 +23,11 @@
     },
     {
       "path": "../config"
+    },
+    {
+      "path": "../reactor-browser"
     }
   ],
-  "include": ["**/*", "**/*.json"],
-  "exclude": ["node_modules", "dist", "storybook-static"]
+  "include": ["src/**/*", "**/*.json", "./*.ts"],
+  "exclude": ["node_modules", "./dist/**/*", "storybook-static"]
 }

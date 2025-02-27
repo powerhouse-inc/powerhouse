@@ -1,10 +1,4 @@
 import {
-  FILE,
-  UiFileNode,
-  UiNode,
-  useUiNodesContext,
-} from "@powerhousedao/design-system";
-import {
   DocumentDriveAction,
   DocumentDriveDocument,
   FileNode,
@@ -13,8 +7,11 @@ import {
 } from "document-drive";
 import { EditorDispatch } from "document-model";
 import { useMemo } from "react";
+import { FILE } from "../uiNodes/constants.js";
+import type { UiFileNode, UiNode } from "../uiNodes/types.js";
 import { IDriveActions, useDriveActions } from "./useDriveActions.js";
 import { IDriveContext, useDriveContext } from "./useDriveContext.js";
+import { useUiNodesContext } from "./useUiNodesContext.js";
 
 function toNode(uiNode: UiNode): Node {
   if (uiNode.kind === "DRIVE") {
@@ -26,7 +23,7 @@ function toNode(uiNode: UiNode): Node {
     return { id, name, parentFolder, kind: "folder" } satisfies FolderNode;
   } else {
     // Remove after ts reset is fixed
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+
     const fileNode = uiNode as UiFileNode;
     return {
       id,

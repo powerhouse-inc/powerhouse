@@ -21,9 +21,6 @@
     },
     {
       "path": "../config"
-    },
-    {
-      "path": "../design-system"
     }
   ]
 }

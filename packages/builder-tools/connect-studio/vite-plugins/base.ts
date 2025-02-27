@@ -2,10 +2,12 @@ import MagicString from "magic-string";
 import path from "node:path";
 import { Alias, AliasOptions, Plugin, PluginOption, normalizePath } from "vite";
 
-// matches react, react-dom, and all it's sub-imports like react-dom/client
-export const externalIds = /^react(-dom)?(\/.*)?$/;
-// used to find react imports in the code for text replacement
-export const externalImports = /react(-dom)?/;
+// matches @powerhousedao/connect, react, react-dom and all their sub-imports like react-dom/client
+export const externalIds = [
+  /^react(-dom)?(\/.*)?$/,
+  /^@powerhousedao\/reactor-browser(\/.*)?$/,
+  "@powerhousedao/reactor-browser/hooks/useDriveContext",
+];
 
 export const LOCAL_DOCUMENT_MODELS_IMPORT = "LOCAL_DOCUMENT_MODELS";
 export const LOCAL_DOCUMENT_EDITORS_IMPORT = "LOCAL_DOCUMENT_EDITORS";

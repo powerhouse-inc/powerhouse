@@ -19,7 +19,6 @@ import {
   REMOVE_TRIGGER,
   RENAME,
   SETTINGS,
-  TUiNodesContext,
   UiDriveNode,
   UiNode,
   WRITE,
@@ -29,6 +28,7 @@ import {
   useDrop,
 } from "@/connect";
 import { Icon } from "@/powerhouse";
+import { TUiNodesContext } from "@powerhousedao/reactor-browser";
 import { MouseEventHandler, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { DropIndicator } from "./drop-indicator";

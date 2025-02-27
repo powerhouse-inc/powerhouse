@@ -24,8 +24,8 @@ import {
     UiFileNode,
     UiFolderNode,
     UiNode,
-    useUiNodesContext,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { DocumentDriveDocument, ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

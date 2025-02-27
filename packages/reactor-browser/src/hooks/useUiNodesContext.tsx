@@ -1,4 +1,3 @@
-import { DRIVE, FILE, UiDriveNode, UiFolderNode, UiNode } from "@/connect";
 import {
   createContext,
   FC,
@@ -9,6 +8,11 @@ import {
   useMemo,
   useState,
 } from "react";
+import { DRIVE, FILE } from "../uiNodes/constants.js";
+import { UiDriveNode, UiFolderNode, UiNode } from "../uiNodes/types.js";
+
+export * from "../uiNodes/constants.js";
+export * from "../uiNodes/types.js";
 
 export type TUiNodesContext = {
   driveNodes: UiDriveNode[];
@@ -89,7 +93,10 @@ export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({
   );
 
   const getSelectedDriveNode = useCallback(
-    (selectedNode: UiNode | null, driveNodes: UiDriveNode[] | null) => {
+    (
+      selectedNode: UiNode | null,
+      driveNodes: UiDriveNode[] | null,
+    ): UiDriveNode | null => {
       if (!selectedNode || !driveNodes?.length) return null;
 
       if (selectedNode.kind === DRIVE) return selectedNode;
@@ -105,7 +112,9 @@ export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({
      */
   const _getParentNode = useCallback(
     (node: UiNode, driveNodes: UiDriveNode[] | null) => {
-      if (!driveNodes?.length || node.kind === DRIVE) return null;
+      if (!driveNodes?.length || node.kind === DRIVE) {
+        return null;
+      }
 
       const parentNode = _getNodeById(node.parentFolder, driveNodes);
 
