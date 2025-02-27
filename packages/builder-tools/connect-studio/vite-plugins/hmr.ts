@@ -1,16 +1,12 @@
 import { exec } from "node:child_process";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { normalizePath, PluginOption, ViteDevServer } from "vite";
 import { HMR_MODULE_IMPORT, viteReplaceImports } from "./base.js";
 
-const __dirname =
-  import.meta.dirname || dirname(fileURLToPath(import.meta.url));
-
-export const viteLoadHMRModule = (): PluginOption => {
+export const viteLoadHMRModule = (connectPath: string): PluginOption => {
   return [
     viteReplaceImports({
-      [HMR_MODULE_IMPORT]: normalizePath(join(__dirname, "hmr.js")),
+      [HMR_MODULE_IMPORT]: normalizePath(join(connectPath, "hmr.js")),
     }),
     {
       name: "vite-plugin-studio-hmr-module",

@@ -622,6 +622,25 @@ export function useDocumentDriveServer() {
         [reactor],
     );
 
+    const getSyncStatusSync = useCallback(
+        (syncId: string, sharingType: SharingType): SyncStatus | undefined => {
+            if (sharingType === LOCAL) return;
+            if (!reactor) {
+                throw new Error('Reactor is not loaded');
+            }
+            try {
+                const syncStatus = reactor.getSyncStatus(syncId);
+                if (syncStatus instanceof SynchronizationUnitNotFoundError)
+                    return 'INITIAL_SYNC';
+                return syncStatus;
+            } catch (error) {
+                console.error(error);
+                return ERROR;
+            }
+        },
+        [reactor],
+    );
+
     const onStrandUpdate = useCallback(
         (cb: (update: StrandUpdate) => void) => {
             if (!reactor) {
@@ -733,6 +752,7 @@ export function useDocumentDriveServer() {
             setDriveAvailableOffline,
             setDriveSharingType,
             getSyncStatus,
+            getSyncStatusSync,
             onStrandUpdate,
             onSyncStatus,
             clearStorage,
@@ -756,6 +776,7 @@ export function useDocumentDriveServer() {
             documentDrives,
             documentDrivesStatus,
             getSyncStatus,
+            getSyncStatusSync,
             handleMoveNode,
             onStrandUpdate,
             onSyncStatus,

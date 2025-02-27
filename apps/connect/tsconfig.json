@@ -8,10 +8,14 @@
         "moduleResolution": "Bundler",
         "jsx": "react-jsx",
         "resolveJsonModule": true,
+        "noEmit": true,
         "paths": {
             "@/assets": ["./assets"],
             "connect-config": ["./src/connect.config.ts"],
             "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
+            "PH:HMR_MODULE": [
+                "../../packages/builder-tools/connect-studio/hmr"
+            ],
             "LOCAL_DOCUMENT_MODELS": ["./custom.d.ts"],
             "LOCAL_DOCUMENT_EDITORS": ["./custom.d.ts"]
         },
@@ -38,6 +42,9 @@
         },
         {
             "path": "../../packages/reactor-browser"
+        },
+        {
+            "path": "../../packages/common"
         }
     ],
     "include": ["**/*", "**/*.json"],

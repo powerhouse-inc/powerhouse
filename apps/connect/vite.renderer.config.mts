@@ -69,7 +69,11 @@ export default defineConfig(({ mode }) => {
                 process: false,
             },
         }),
-        viteConnectDevStudioPlugin(false, env),
+        viteConnectDevStudioPlugin(
+            false,
+            path.resolve(__dirname, './dist'),
+            env,
+        ),
         viteLoadExternalPackages(undefined),
         react({
             include: 'src/**/*.tsx',
@@ -121,7 +125,7 @@ export default defineConfig(({ mode }) => {
         plugins,
         build: {
             minify: isProd,
-            sourcemap: isProd,
+            sourcemap: true,
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),

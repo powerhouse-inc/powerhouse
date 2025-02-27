@@ -1,8 +1,9 @@
 import { useDocumentDriveById } from '#hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
 import { useEditorProps } from '#hooks/useEditorProps';
+import { useSyncStatus } from '#hooks/useSyncStatus';
 import { useUiNodes } from '#hooks/useUiNodes';
-import { useDocumentModels } from '#store/document-model';
+import { useFilteredDocumentModels } from '#store/document-model';
 import { useDocumentDispatch } from '#utils/document-model';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { useUiNodesContext } from '@powerhousedao/design-system';
@@ -78,16 +79,17 @@ export function DriveEditorContainer() {
     );
 
     const { addFile } = useDocumentDriveServer();
-    const documentModels = useDocumentModels();
+    const documentModels = useFilteredDocumentModels();
     const driveContext: IDriveContext = useMemo(
         () => ({
             showSearchBar: false,
             isAllowedToCreateDocuments: editorProps.isAllowedToCreateDocuments,
-            documentModels: documentModels,
+            documentModels: documentModels ?? [],
             selectedNode: selectedNode,
             selectNode: setSelectedNode,
             addFile,
             showCreateDocumentModal,
+            useSyncStatus: useSyncStatus,
         }),
         [
             editorProps.isAllowedToCreateDocuments,

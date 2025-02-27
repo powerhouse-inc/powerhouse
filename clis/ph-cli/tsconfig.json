@@ -1,6 +1,8 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "./dist",
     "resolveJsonModule": true
   },
@@ -23,9 +25,6 @@
     },
     {
       "path": "../../packages/scalars"
-    },
-    {
-      "path": "../../apps/connect"
     },
     {
       "path": "../../packages/design-system"

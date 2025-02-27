@@ -3,17 +3,13 @@
     "productName": "Powerhouse-Connect",
     "version": "1.0.0-dev.202",
     "description": "Powerhouse Connect",
-    "main": "./dist/studio/index.js",
-    "types": "./dist/studio/index.d.ts",
+    "main": "./dist/index.html",
     "imports": {
         "#*": "./src/*.js"
     },
     "type": "module",
-    "bin": {
-        "connect": "./dist/studio/cli.js"
-    },
     "engines": {
-        "node": ">=18.0.0"
+        "node": ">=20.0.0"
     },
     "files": [
         "dist"
@@ -44,7 +40,7 @@
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
-        "build:studio": "BUILD_STUDIO=true npm run build:web",
+        "build:studio": "BUILD_STUDIO=true npm run build:web -- --mode development",
         "build": "npm run build:studio",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",

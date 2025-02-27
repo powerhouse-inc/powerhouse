@@ -61,7 +61,6 @@ export function useEditorDispatch(
 
     const dispatch = useCallback(
         (action: Action, onErrorCallback?: ActionErrorCallback) => {
-            console.log('OLAAAA');
             const callback: DocumentDispatchCallback<PHDocument> = (
                 operation,
                 state,

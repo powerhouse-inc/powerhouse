@@ -93,6 +93,7 @@ const DriveContextDecorator: Decorator<
         ],
         selectedNode,
         selectNode: setSelectedNode,
+        useSyncStatus: () => "SUCCESS",
         addFile() {
           throw new Error("addFile not implemented");
         },
