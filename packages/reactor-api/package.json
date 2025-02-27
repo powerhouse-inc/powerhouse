@@ -52,6 +52,7 @@
     "body-parser": "^1.20.3",
     "change-case": "^5.4.4",
     "cors": "^2.8.5",
+    "devcert": "^1.2.2",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1",
