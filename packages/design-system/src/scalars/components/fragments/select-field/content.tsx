@@ -73,6 +73,16 @@ export const Content: React.FC<ContentProps> = ({
       {searchable && (
         <CommandInput
           placeholder="Search..."
+          onKeyDown={(e) => {
+            const isOptionsRelatedKey = [
+              "ArrowUp",
+              "ArrowDown",
+              "Enter",
+            ].includes(e.key);
+            if (!(isOptionsRelatedKey && enabledOptions.length > 0)) {
+              e.stopPropagation();
+            }
+          }}
           wrapperClassName="rounded-t"
           className="text-gray-900 dark:text-gray-50"
         />

@@ -30,23 +30,6 @@ export const SidebarContentArea = ({
   } = useSidebar();
   const hasPinnedItems = allowPinning && pinnedNodePath.length > 0;
 
-  // scroll into view when navigating between search results
-  useEffect(() => {
-    if (
-      searchResults.length > 0 &&
-      activeSearchIndex >= 0 &&
-      activeSearchIndex < searchResults.length
-    ) {
-      const { id } = searchResults[activeSearchIndex];
-      // scroll into view
-      for (let i = 0; i < flattenedNodes.length; i++) {
-        if (flattenedNodes[i].id === id) {
-          virtualListRef.current?.scrollToRow(i);
-        }
-      }
-    }
-  }, [activeSearchIndex, flattenedNodes, searchResults, virtualListRef]);
-
   const renderNode = ({
     index,
     key,
