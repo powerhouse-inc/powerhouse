@@ -124,7 +124,6 @@ describe("RadioGroup Component", () => {
   it("should apply custom className", () => {
     render(
       // Custom className for testing purposes
-      // eslint-disable-next-line tailwindcss/no-custom-classname
       <RadioGroup name="radio-group" className="custom-class">
         <Radio label="Option 1" value="1" />
       </RadioGroup>,

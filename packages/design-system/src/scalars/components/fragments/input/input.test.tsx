@@ -48,7 +48,7 @@ describe("Input", () => {
 
   it("should apply custom className", () => {
     // for testing purposes, we disable the custom class name rule
-    // eslint-disable-next-line tailwindcss/no-custom-classname
+
     render(<Input className="custom-class" />);
     expect(screen.getByRole("textbox")).toHaveClass("custom-class");
   });

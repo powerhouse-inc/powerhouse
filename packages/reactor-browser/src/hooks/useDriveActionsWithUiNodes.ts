@@ -13,8 +13,8 @@ import {
 } from "document-drive";
 import { EditorDispatch } from "document-model";
 import { useMemo } from "react";
-import { IDriveActions, useDriveActions } from "./useDriveActions";
-import { IDriveContext, useDriveContext } from "./useDriveContext";
+import { IDriveActions, useDriveActions } from "./useDriveActions.js";
+import { IDriveContext, useDriveContext } from "./useDriveContext.js";
 
 function toNode(uiNode: UiNode): Node {
   if (uiNode.kind === "DRIVE") {

@@ -1,6 +1,6 @@
 import { formatFiles, generateFiles, Tree } from "@nx/devkit";
-import * as path from "path";
-import { NewScalarGeneratorSchema } from "./schema";
+import { NewScalarGeneratorSchema } from "./schema.js";
+import { join } from "path";
 
 const namespaceImport =
   "// namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT";
@@ -25,7 +25,7 @@ export async function newScalarGenerator(
 ) {
   const projectRoot = `packages/scalars`;
 
-  generateFiles(tree, path.join(__dirname, "files"), projectRoot, options);
+  generateFiles(tree, join(__dirname, "files"), projectRoot, options);
 
   const filePath = `packages/scalars/src/scalars/index.ts`;
   const contents = tree.read(filePath)?.toString() || "";

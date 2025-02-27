@@ -35,8 +35,8 @@ const fetchLatestVersion = async () => {
         return undefined;
     }
     const result = await fetch(link);
-    const data = await result.json();
-    const { version } = data as { version: string };
+    const data = (await result.json()) as { version: string };
+    const { version } = data;
     return version;
 };
 

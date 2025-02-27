@@ -1,6 +1,5 @@
 import { useLogin } from '#hooks/useLogin';
 import { useUiNodes } from '#hooks/useUiNodes';
-import { sidebarCollapsedAtom } from '#store/index';
 import {
     ConnectSidebar,
     Icon,
@@ -9,14 +8,12 @@ import {
     UiDriveNode,
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
-import { useAtom } from 'jotai';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { useModal } from './modal';
 
 export default function Sidebar() {
-    const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
     const { showModal } = useModal();
     const navigate = useNavigate();
 

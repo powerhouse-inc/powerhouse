@@ -1,16 +1,14 @@
 import {
   Action,
   ActionSigner,
-  BaseDocument,
   buildSignedOperation,
   Operation,
   OperationSignatureContext,
   PHDocument,
-  PHReducer,
   Reducer,
   User,
 } from "document-model";
-import type { User as RenownUser } from "../renown/types";
+import type { User as RenownUser } from "../renown/types.js";
 
 export async function signOperation<TDocument extends PHDocument>(
   operation: Operation,

@@ -3,7 +3,7 @@
 exports[`Connect Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="collapsed group flex h-full flex-col bg-slate-50"
+    class="group flex h-full flex-col bg-slate-50"
     data-testid="sidebar"
     style="width: 58px;"
   >
@@ -44,15 +44,14 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
         class=""
       >
         <div
-          class="flex gap-2 rounded-sm py-2.5 collapsed:justify-center
-            collapsed:px-1 expanding:justify-center expanding:px-1"
+          class="flex gap-2 rounded-sm py-2.5"
         >
           <div
             class="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
             style="width: 40px; height: 40px;"
           />
           <div
-            class="grid w-full items-center font-semibold collapsed:hidden expanding:hidden"
+            class="grid w-full items-center font-semibold"
           >
             <p
               class="mb-2 h-4 w-4/5 animate-pulse rounded bg-gray-400"

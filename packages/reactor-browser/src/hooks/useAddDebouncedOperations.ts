@@ -2,8 +2,8 @@ import { Operation, PHDocument } from "document-model";
 import { useCallback, useMemo } from "react";
 
 import { IDocumentDriveServer } from "document-drive";
-import { useDocumentDrives } from "./useDocumentDrives";
-import { useUserPermissions } from "./useUserPermissions";
+import { useDocumentDrives } from "./useDocumentDrives.js";
+import { useUserPermissions } from "./useUserPermissions.js";
 
 function debounceOperations(
   callback: (operations: Operation[]) => Promise<PHDocument | undefined>,

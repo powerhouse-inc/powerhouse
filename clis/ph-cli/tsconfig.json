@@ -4,7 +4,6 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "isolatedModules": true,
     "resolveJsonModule": true
   },
   "include": ["**/*", "package.json"],

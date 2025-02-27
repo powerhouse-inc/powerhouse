@@ -14,8 +14,7 @@
     "#create-lib/*": "./dist/src/create-lib/*.js"
   },
   "scripts": {
-    "check-types": "tsc --build",
-    "postlint": "npm run check-types",
+    "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "clean": "rimraf dist/",

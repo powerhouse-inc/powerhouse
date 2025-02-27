@@ -12,5 +12,6 @@
     {
       "path": "../reactor-api"
     }
-  ]
+  ],
+  "include": ["**/*"]
 }

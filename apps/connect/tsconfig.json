@@ -47,6 +47,6 @@
             "path": "../../packages/common"
         }
     ],
-    "include": ["src", "src/**/*.json", "package.json"],
+    "include": ["**/*", "**/*.json"],
     "exclude": ["ts-dist/**", "studio/**"]
 }

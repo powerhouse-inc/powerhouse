@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect } from "vitest";
-import { Tooltip, TooltipProvider } from "./tooltip";
 import React from "react";
+import { describe, expect, it } from "vitest";
+import { Tooltip, TooltipProvider } from "./tooltip";
 
 const TooltipTest = ({
   content = "Test tooltip" as React.ReactNode,
@@ -70,7 +70,7 @@ describe("Tooltip", () => {
 
   it("should apply custom className to tooltip content", () => {
     // custom class for testing purposes
-    // eslint-disable-next-line tailwindcss/no-custom-classname
+
     render(<TooltipTest className="custom-class" open={true} />);
     const tooltip = screen.getAllByText("Test tooltip");
     expect(tooltip[0]).toHaveClass("custom-class");

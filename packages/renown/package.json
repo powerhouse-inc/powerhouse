@@ -28,9 +28,9 @@
     }
   },
   "scripts": {
-    "check-types": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.browser.json --noEmit",
-    "check-types:node": "tsc -p tsconfig.node.json --noEmit",
-    "check-types:brower": "tsc -p tsconfig.browser.json --noEmit",
+    "build:tsc": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.browser.json --noEmit",
+    "build:tsc:node": "tsc -p tsconfig.node.json --noEmit",
+    "build:tsc:browser": "tsc -p tsconfig.browser.json --noEmit",
     "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.browser.json",
     "build:browser": "tsc -p tsconfig.browser.json",
     "build:node": "tsc -p tsconfig.node.json",

@@ -19,7 +19,7 @@ import {
   generateId as _generateId,
 } from "document-model";
 import { useMemo } from "react";
-import { IDriveContext } from "./useDriveContext";
+import { IDriveContext } from "./useDriveContext.js";
 
 const generateId = () => _generateId().toString();
 

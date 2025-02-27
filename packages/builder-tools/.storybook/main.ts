@@ -1,5 +1,4 @@
 import type { StorybookConfig } from "@storybook/react-vite";
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 const config: StorybookConfig = {
   stories: [`../**/*.stories.tsx`],
@@ -21,11 +20,9 @@ const config: StorybookConfig = {
   },
    viteFinal: async (config) => {
     const { mergeConfig } = await import('vite');
-
+    const { default: tailwindcss } = await import("@tailwindcss/vite");
     return mergeConfig(config, {
-      plugins: [nodePolyfills({
-        protocolImports: true
-      })],
+      plugins: [tailwindcss()],
     });
   },
 };

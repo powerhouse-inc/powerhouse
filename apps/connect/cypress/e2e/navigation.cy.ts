@@ -271,17 +271,6 @@ describe('Navigation', () => {
         );
     });
 
-    it('should collapse/expand sidebar', () => {
-        const sidebarCollapseSelector =
-            '#sidebar > div.no-scrollbar.flex-1.overflow-auto.text-gray-900.transition-shadow > div.flex-shrink-0.mb-4.flex.justify-between.gap-4.px-4.pt-11.collapsed\\:justify-center > button';
-
-        cy.get(sidebarCollapseSelector).click();
-        cy.get('#sidebar').invoke('outerWidth').should('eq', 58);
-
-        cy.get(sidebarCollapseSelector).click();
-        cy.get('#sidebar').invoke('outerWidth').should('eq', 304);
-    });
-
     it('should open settings', () => {
         cy.contains('Settings').click();
         cy.get('div[role="dialog"]').should('be.visible');
