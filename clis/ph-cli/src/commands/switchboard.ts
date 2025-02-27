@@ -14,8 +14,6 @@ export type SwitchboardOptions = StartServerOptions & {
   generate?: boolean;
   watch?: boolean;
   dbPath?: string;
-  httpsKeyFile?: string;
-  httpsCertFile?: string;
 };
 
 export const DefaultSwitchboardOptions = {
@@ -30,13 +28,7 @@ async function startLocalSwitchboard(switchboardOptions: SwitchboardOptions) {
     ...switchboardOptions,
   };
 
-  const https =
-    switchboardOptions.httpsKeyFile && switchboardOptions.httpsCertFile
-      ? {
-          keyPath: switchboardOptions.httpsKeyFile,
-          certPath: switchboardOptions.httpsCertFile,
-        }
-      : undefined;
+  const { https } = baseConfig.reactor ?? { https: false };
 
   const reactor = await startServer({
     ...options,
