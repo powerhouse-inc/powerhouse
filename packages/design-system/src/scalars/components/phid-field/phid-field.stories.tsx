@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
 import { PHIDField } from "./phid-field";
-import { mockedOptions, fetchOptions, fetchSelectedOption } from "./utils";
+import { mockedOptions, fetchOptions, fetchSelectedOption } from "./mocks";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,

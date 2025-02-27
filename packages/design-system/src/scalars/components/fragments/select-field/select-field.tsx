@@ -88,15 +88,14 @@ export const SelectFieldRaw = React.forwardRef<
       defaultValue,
       value,
       onChange,
-      onBlur,
     });
 
     const onTriggerBlur = useCallback(
-      (event: any) => {
+      (e: React.FocusEvent<HTMLButtonElement>) => {
         if (!isPopoverOpen) {
           // trigger the blur event when the trigger loses focus but the popover is not open,
           // because when the popover is open, the trigger loses focus but the select as a component still has the focus
-          onBlur?.(event as React.FocusEvent<HTMLButtonElement>);
+          onBlur?.(e);
         }
       },
       [onBlur, isPopoverOpen],
@@ -119,7 +118,16 @@ export const SelectFieldRaw = React.forwardRef<
             {label}
           </FormLabel>
         )}
-        <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
+        <Popover
+          open={isPopoverOpen}
+          onOpenChange={(open) => {
+            handleOpenChange(open);
+            // if the popover is closing and it was not by the trigger button
+            if (!open && document.activeElement?.id !== id) {
+              onBlur?.({ target: {} } as React.FocusEvent<HTMLButtonElement>);
+            }
+          }}
+        >
           <PopoverTrigger asChild={true}>
             {/* TODO: create a trigger component */}
             <Button
@@ -161,7 +169,13 @@ export const SelectFieldRaw = React.forwardRef<
               />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start">
+          <PopoverContent
+            align="start"
+            onEscapeKeyDown={(e) => {
+              e.preventDefault();
+              handleOpenChange(false);
+            }}
+          >
             <Command
               defaultValue={
                 !multiple && selectedValues[0]

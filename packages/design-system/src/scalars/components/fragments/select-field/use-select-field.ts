@@ -1,6 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from "react";
 import { SelectProps } from "@/scalars/components/enum-field/types";
-import { SelectFieldProps } from "./select-field";
 
 interface UseSelectFieldProps {
   options?: SelectProps["options"];
@@ -8,7 +7,6 @@ interface UseSelectFieldProps {
   defaultValue?: string | string[];
   value?: string | string[];
   onChange?: (value: string | string[]) => void;
-  onBlur?: SelectFieldProps["onBlur"];
 }
 
 export function useSelectField({
@@ -17,7 +15,6 @@ export function useSelectField({
   defaultValue,
   value,
   onChange,
-  onBlur,
 }: UseSelectFieldProps) {
   const isInternalChange = useRef(false);
   const commandListRef = useRef<HTMLDivElement>(null);
@@ -86,18 +83,6 @@ export function useSelectField({
     setSelectedValues(newValues);
     onChange?.(multiple ? newValues : newValues[0]);
   }, [options, selectedValues, multiple, onChange]);
-
-  // call onBlur when the popover is closed to invoke the validation
-  const [haveBeenOpened, setHaveBeenOpened] = useState<boolean>(false);
-  useEffect(() => {
-    if (!isPopoverOpen && haveBeenOpened) {
-      onBlur?.({ target: {} } as React.FocusEvent<HTMLButtonElement>);
-    }
-
-    if (isPopoverOpen) {
-      setHaveBeenOpened(true);
-    }
-  }, [isPopoverOpen, haveBeenOpened, onBlur]);
 
   // handles changes to the "multiple" prop avoiding calling onChange on mount
   const prevMultiple = useRef(multiple);
