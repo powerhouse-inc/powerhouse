@@ -1,6 +1,6 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId, useCallback } from "react";
-import { isAddress } from "ethers";
+import { isAddress } from "viem";
 import { IdAutocompleteFieldRaw } from "@/scalars/components/fragments/id-autocomplete-field";
 import { IdAutocompleteListOption } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-list-option";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";

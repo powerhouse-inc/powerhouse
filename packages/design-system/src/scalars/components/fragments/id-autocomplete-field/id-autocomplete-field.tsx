@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId } from "react";
+import React, { useId, useRef } from "react";
 import { Command } from "@/scalars/components/fragments/command";
 import {
   Popover,
@@ -75,6 +75,16 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
   ) => {
     const prefix = useId();
     const id = idProp ?? `${prefix}-id-autocomplete`;
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    const mergedRef = (node: HTMLInputElement | null) => {
+      inputRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    };
 
     const hasWarning = Array.isArray(warnings) && warnings.length > 0;
     const hasError = Array.isArray(errors) && errors.length > 0;
@@ -108,6 +118,11 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
       fetchOptions: fetchOptionsCallback,
       fetchSelectedOption: fetchSelectedOptionCallback,
     });
+
+    const handleOptionSelection = (optionValue: string) => {
+      toggleOption(optionValue);
+      inputRef.current?.focus();
+    };
 
     const asCard =
       variant === "withValueAndTitle" ||
@@ -162,7 +177,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
                   maxLength={maxLength}
                   handlePaste={handlePaste}
                   {...props}
-                  ref={ref}
+                  ref={mergedRef}
                 />
               </PopoverAnchor>
               {asCard &&
@@ -220,7 +235,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
                   commandListRef={commandListRef}
                   selectedValue={selectedValue}
                   options={options}
-                  toggleOption={toggleOption}
+                  toggleOption={handleOptionSelection}
                   renderOption={renderOption}
                 />
               </PopoverContent>
@@ -243,7 +258,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
             aria-required={required}
             maxLength={maxLength}
             {...props}
-            ref={ref}
+            ref={mergedRef}
           />
         )}
         {!!description && <FormDescription>{description}</FormDescription>}

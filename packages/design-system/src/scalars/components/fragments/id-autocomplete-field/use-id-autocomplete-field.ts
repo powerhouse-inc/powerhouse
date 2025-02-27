@@ -43,7 +43,6 @@ export function useIdAutocompleteField({
     IdAutocompleteOption | undefined
   >(undefined);
   const [commandValue, setCommandValue] = useState("");
-  const [haveBeenOpened, setHaveBeenOpened] = useState(false);
   const [isFetchSelectedOptionSync, setIsFetchSelectedOptionSync] =
     useState(false);
 
@@ -225,16 +224,6 @@ export function useIdAutocompleteField({
     }
     isInternalChange.current = false;
   }, [value]);
-
-  useEffect(() => {
-    if (!isPopoverOpen && haveBeenOpened) {
-      onBlur?.({ target: {} } as React.FocusEvent<HTMLInputElement>);
-    }
-
-    if (isPopoverOpen) {
-      setHaveBeenOpened(true);
-    }
-  }, [isPopoverOpen, haveBeenOpened, onBlur]);
 
   // added to support the Filled variant in stories
   useEffect(() => {
