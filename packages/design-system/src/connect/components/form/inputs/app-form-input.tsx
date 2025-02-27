@@ -12,7 +12,7 @@ export function appToInputOption(app: App): SelectItem<string> {
     description: "Built by Powerhouse",
   };
 }
-type AppFormInputProps<T extends { app: App }> = Omit<
+type AppFormInputProps<T extends { appId: string }> = Omit<
   ComponentPropsWithRef<typeof Select>,
   "id" | "items" | "value" | "onChange"
 > & {
@@ -20,7 +20,7 @@ type AppFormInputProps<T extends { app: App }> = Omit<
   readonly appOptions: App[];
 };
 
-export function AppFormInput<T extends { app: App }>(
+export function AppFormInput<T extends { appId: string }>(
   props: AppFormInputProps<T>,
 ) {
   const { control, appOptions, ...delegatedProps } = props;
