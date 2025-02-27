@@ -5,6 +5,7 @@ import {
     useFilteredDocumentModels,
     useGetDocumentModelModule,
 } from '#store/document-model';
+import { useApps } from '#store/external-packages';
 import { getNodeOptions } from '#utils/drive-sections';
 import { makeNodeSlugFromNodeName } from '#utils/slug';
 import {
@@ -75,6 +76,8 @@ export function useUiNodes() {
         ...documentDriveServer,
         ...readModeContext,
     });
+
+    const apps = useApps();
 
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument | ReadDrive) => {
@@ -319,6 +322,10 @@ export function useUiNodes() {
     const onAddLocalDrive = useCallback(
         async (data: AddLocalDriveInput) => {
             try {
+                const app = apps.find(a => a.id === data.appId);
+                if (!app) {
+                    throw new Error('App not found');
+                }
                 const newDrive = await addDrive(
                     {
                         global: {
@@ -334,7 +341,7 @@ export function useUiNodes() {
                             triggers: [],
                         },
                     },
-                    data.app,
+                    app,
                 );
 
                 toast(t('notifications.addDriveSuccess'), {

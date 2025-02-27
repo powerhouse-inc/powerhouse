@@ -17,8 +17,8 @@ export const manageService: CommandActionType<[string, string]> = async (
 ) => {
   try {
     const config = getConfig();
-    if (config.switchboard?.port) {
-      switchboardPort = config.switchboard.port;
+    if (config.reactor?.port) {
+      switchboardPort = config.reactor.port;
     }
     if (config.studio?.port) {
       connectPort = config.studio.port;

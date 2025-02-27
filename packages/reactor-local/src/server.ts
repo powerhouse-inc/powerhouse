@@ -48,10 +48,13 @@ export type StartServerOptions = {
   dbPath?: string;
   drive?: DriveInput;
   packages?: string[];
-  https?: {
-    keyPath: string;
-    certPath: string;
-  };
+  https?:
+    | {
+        keyPath: string;
+        certPath: string;
+      }
+    | boolean
+    | undefined;
   logLevel?: "info" | "warn" | "error" | "debug" | "verbose" | "silent";
 };
 

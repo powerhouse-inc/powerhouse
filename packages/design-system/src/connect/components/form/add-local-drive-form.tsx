@@ -15,7 +15,7 @@ export type AddLocalDriveInput = {
   name: string;
   sharingType: SharingType;
   availableOffline: boolean;
-  app: App;
+  appId: string;
 };
 
 type AddLocalDriveFormProps = {
@@ -34,10 +34,10 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
     formState: { errors },
   } = useForm<AddLocalDriveInput>({
     defaultValues: {
-      name: props.appOptions[0].id,
+      name: "",
       sharingType: LOCAL,
       availableOffline: false,
-      app: props.appOptions[0],
+      appId: props.appOptions[0].id,
     },
   });
 
