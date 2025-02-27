@@ -3,12 +3,11 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "rootDir": "./src",
     "outDir": "./dist",
     "isolatedModules": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "*.config.ts", "package.json"],
+  "include": ["**/*", "package.json"],
   "references": [
     {
       "path": "../../packages/codegen"
