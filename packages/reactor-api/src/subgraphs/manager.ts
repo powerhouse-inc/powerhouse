@@ -1,6 +1,7 @@
 import { Db } from "#types.js";
 import { createSchema } from "#utils/create-schema.js";
 import { ApolloServer } from "@apollo/server";
+import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
@@ -82,10 +83,8 @@ export class SubgraphManager {
       const path = `/${subgraphConfig.name}`;
       newRouter.use(
         path,
-        /* eslint-disable */
-        // @ts-ignore
+        // @ts-expect-error todo check type defs
         expressMiddleware(server, {
-          // @ts-ignore
           context: ({ req }): Context => ({
             headers: req.headers,
             driveId: req.params.drive ?? undefined,
@@ -94,7 +93,6 @@ export class SubgraphManager {
             ...this.getAdditionalContextFields(),
           }),
         }),
-        /* eslint-enable */
       );
     }
 
