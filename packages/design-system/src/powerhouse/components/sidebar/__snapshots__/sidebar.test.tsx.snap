@@ -3,7 +3,7 @@
 exports[`Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="collapsed group flex h-full flex-col bg-slate-50"
+    class="group flex h-full flex-col bg-slate-50"
     style="width: 100px;"
   >
     <div
