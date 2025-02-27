@@ -1,10 +1,11 @@
-import { promptDirectories, parseArgs } from "#utils/cli";
+import { parseArgs, promptDirectories } from "#utils/cli";
 import { getPackageManager } from "#utils/package-manager";
 import arg from "arg";
 import { execSync } from "child_process";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
+
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
 

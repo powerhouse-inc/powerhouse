@@ -652,7 +652,7 @@ export function useDocumentDriveServer() {
     );
 
     const onSyncStatus = useCallback(
-        (cb?: (driveId: string, status: SyncStatus, error?: Error) => void) => {
+        (cb: (driveId: string, status: SyncStatus, error?: Error) => void) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }

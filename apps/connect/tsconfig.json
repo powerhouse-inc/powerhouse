@@ -42,6 +42,9 @@
         },
         {
             "path": "../../packages/reactor-browser"
+        },
+        {
+            "path": "../../packages/common"
         }
     ],
     "include": ["src", "src/**/*.json", "package.json"],
