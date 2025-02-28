@@ -3,7 +3,7 @@ import { DriveInput } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { ADMIN_USERS } from "./env/index.js";
-import { SystemContext } from "./types.js";
+import { AppInput, SystemContext } from "./types.js";
 
 export class SystemSubgraph extends Subgraph {
   name = "system";
@@ -17,6 +17,7 @@ export class SystemSubgraph extends Subgraph {
     type Mutation {
       addDrive(
         global: DocumentDriveStateInput!
+        app: AppInput
       ): DocumentDrive_DocumentDriveState
       deleteDrive(id: ID!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
@@ -29,6 +30,12 @@ export class SystemSubgraph extends Subgraph {
       slug: String
       icon: String
     }
+
+    input AppInput {
+      id: String!
+      name: String!
+      driveEditor: String!
+    }
   `;
 
   resolvers = {
@@ -40,7 +47,7 @@ export class SystemSubgraph extends Subgraph {
     Mutation: {
       addDrive: async (
         parent: unknown,
-        args: DriveInput,
+        args: DriveInput & { app?: AppInput },
         ctx: SystemContext,
       ) => {
         try {
@@ -48,7 +55,10 @@ export class SystemSubgraph extends Subgraph {
           if (!isAdmin) {
             throw new GraphQLError("Unauthorized");
           }
-          const drive = await this.reactor.addDrive(args);
+          const drive = await this.reactor.addDrive(
+            { global: args.global, local: args.local },
+            args.app,
+          );
           return drive.state.global;
         } catch (e) {
           console.error(e);
