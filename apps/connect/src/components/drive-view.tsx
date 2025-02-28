@@ -82,16 +82,14 @@ export function DriveView() {
                         <div className="flex w-full flex-wrap gap-4">
                             {documentModels?.map(doc => (
                                 <Button
-                                    key={doc.documentModelState.id}
-                                    aria-details={
-                                        doc.documentModelState.description
-                                    }
+                                    key={doc.documentModel.id}
+                                    aria-details={doc.documentModel.description}
                                     className="bg-gray-200 text-slate-800"
                                     onClick={() => createDocument(doc)}
                                 >
                                     <span className="text-sm">
                                         {getDocumentModelName(
-                                            doc.documentModelState.name,
+                                            doc.documentModel.name,
                                         )}
                                     </span>
                                 </Button>

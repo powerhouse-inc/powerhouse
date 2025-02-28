@@ -559,7 +559,7 @@ export class BaseDocumentDriveServer
     documentType: string,
   ) {
     const documentModelModule = this.documentModelModules.find(
-      (module) => module.documentType === documentType,
+      (module) => module.documentModel.id === documentType,
     );
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);

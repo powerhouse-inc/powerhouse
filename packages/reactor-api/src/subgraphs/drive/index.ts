@@ -232,13 +232,12 @@ export class DriveSubgraph extends Subgraph {
 
         const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
-          ({ documentModelState }) =>
-            documentModelState.id === document.documentType,
+          ({ documentModel }) => documentModel.id === document.documentType,
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
         const typeName = pascalCase(
-          (dm?.documentModelState.name || "").replaceAll("/", " "),
+          (dm?.documentModel.name || "").replaceAll("/", " "),
         );
         const response = {
           ...document,

@@ -26,14 +26,7 @@ function getUniqueDocumentModels(
     const uniqueModels = new Map<string, DocumentModelModule>();
 
     for (const model of documentModels) {
-        if ('documentModelState' in model) {
-            uniqueModels.set(model.documentType, model);
-        } else {
-            console.error(
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                `Document model ${(model as any).documentModel.id} needs to be migrated!`,
-            );
-        }
+        uniqueModels.set(model.documentModel.id, model);
     }
 
     return Array.from(uniqueModels.values());
@@ -107,7 +100,7 @@ function getDocumentModelModule<TDocument extends PHDocument>(
     documentType: string,
     documentModels: DocumentModelModule[] | undefined,
 ) {
-    return documentModels?.find(d => d.documentType === documentType) as
+    return documentModels?.find(d => d.documentModel.id === documentType) as
         | DocumentModelModule<TDocument>
         | undefined;
 }
@@ -146,7 +139,7 @@ export const useFilteredDocumentModels = () => {
     }
 
     const filteredDocumentModels = documentModels.filter(
-        model => model.documentType !== 'powerhouse/document-drive',
+        model => model.documentModel.id !== 'powerhouse/document-drive',
     );
 
     if (enabledEditors === '*') {
@@ -159,13 +152,13 @@ export const useFilteredDocumentModels = () => {
 
     if (disabledEditors) {
         return filteredDocumentModels.filter(
-            d => !disabledEditors.includes(d.documentType),
+            d => !disabledEditors.includes(d.documentModel.id),
         );
     }
 
     if (enabledEditors) {
         return filteredDocumentModels.filter(d =>
-            enabledEditors.includes(d.documentType),
+            enabledEditors.includes(d.documentModel.id),
         );
     }
 

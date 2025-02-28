@@ -313,7 +313,7 @@ function joinDocumentModelModules(...modules: DocumentModelModule[][]) {
     .toReversed()
     .reduce<DocumentModelModule[]>(
       (acc, curr) =>
-        acc.find((dm) => dm.documentType === curr.documentType)
+        acc.find((dm) => dm.documentModel.id === curr.documentModel.id)
           ? acc
           : [...acc, curr],
       [],

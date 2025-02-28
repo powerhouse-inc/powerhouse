@@ -77,7 +77,7 @@ function getUniqueDocumentModels(
 
   for (const models of documentModels) {
     for (const model of models) {
-      uniqueModels.set(model.documentType, model);
+      uniqueModels.set(model.documentModel.id, model);
     }
   }
 

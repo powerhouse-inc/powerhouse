@@ -5,8 +5,8 @@ import { useCallback } from 'react';
 
 const mapDocumentModelsToOptions = (documentModels: DocumentModelModule[]) =>
     documentModels.map(document => ({
-        label: document.documentModelState.name,
-        value: document.documentModelState.id,
+        label: document.documentModel.name,
+        value: document.documentModel.id,
     }));
 
 const documentModelEditorOptions = [
