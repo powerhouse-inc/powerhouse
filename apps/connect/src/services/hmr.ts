@@ -11,6 +11,10 @@ export async function getHMRModule(): Promise<ViteHotContext | undefined> {
         return import.meta.hot;
     }
 
+    if (process.env.NODE_ENV === 'production') {
+        return undefined;
+    }
+
     try {
         const module = await import('PH:HMR_MODULE');
         const hmr = module.hmr;
