@@ -70,6 +70,7 @@
       }
     },
     "changelog": {
+      "automaticFromRef": true,
       "projectChangelogs": {
         "createRelease": "github"
       }
