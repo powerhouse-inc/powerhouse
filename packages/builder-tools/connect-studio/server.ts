@@ -116,38 +116,58 @@ export async function startServer(
       host: HOST,
     },
     resolve: {
-      alias: {
-        jszip: "jszip/dist/jszip.min.js",
-        // Resolve to the node_modules in the project root
-        // "@powerhousedao/design-system/scalars": join(
-        //   projectRoot,
-        //   "node_modules",
-        //   "@powerhousedao",
-        //   "design-system",
-        //   "dist",
-        //   "scalars",
-        // ),
-        // "@powerhousedao/design-system": join(
-        //   projectRoot,
-        //   "node_modules",
-        //   "@powerhousedao",
-        //   "design-system",
-        // ),
-        // "@powerhousedao/scalars": join(
-        //   projectRoot,
-        //   "node_modules",
-        //   "@powerhousedao",
-        //   "scalars",
-        // ),
-        "@powerhousedao/reactor-browser": join(
-          projectRoot,
-          "node_modules",
-          "@powerhousedao",
-          "reactor-browser",
-        ),
-        react: join(projectRoot, "node_modules", "react"),
-        "react-dom": join(projectRoot, "node_modules", "react-dom"),
-      },
+      alias: [
+        { find: "jszip", replacement: "jszip/dist/jszip.min.js" },
+        {
+          find: "react",
+          replacement: join(projectRoot, "node_modules", "react"),
+        },
+        {
+          find: "react-dom",
+          replacement: join(projectRoot, "node_modules", "react-dom"),
+        },
+        {
+          find: "@powerhousedao/reactor-browser",
+          replacement: join(
+            projectRoot,
+            "node_modules",
+            "@powerhousedao",
+            "reactor-browser",
+            "dist/src",
+          ),
+        },
+      ],
+      // Resolve to the node_modules in the project root
+      // "@powerhousedao/design-system/scalars": join(
+      //   projectRoot,
+      //   "node_modules",
+      //   "@powerhousedao",
+      //   "design-system",
+      //   "dist",
+      //   "scalars",
+      // ),
+      // "@powerhousedao/design-system": join(
+      //   projectRoot,
+      //   "node_modules",
+      //   "@powerhousedao",
+      //   "design-system",
+      // ),
+      // "@powerhousedao/scalars": join(
+      //   projectRoot,
+      //   "node_modules",
+      //   "@powerhousedao",
+      //   "scalars",
+      // ),
+      // "@powerhousedao/reactor-browser/hooks/useUiNodesContext": join(
+      //   projectRoot,
+      //   "node_modules",
+      //   "@powerhousedao",
+      //   "reactor-browser",
+      //   "dist/src/hooks",
+      // ),
+      // react: join(projectRoot, "node_modules", "react"),
+      // "react-dom": join(projectRoot, "node_modules", "react-dom"),
+      // },
     },
     plugins: [
       viteConnectDevStudioPlugin(true, connectPath),

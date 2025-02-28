@@ -86,7 +86,6 @@ export const DriveContextProvider: React.FC<
  */
 export function useDriveContext() {
   const context = useContext(DriveContext);
-  console.log("HELLO");
   if (!context) {
     throw new Error(
       "useDriveContext must be used within a DriveContextProvider",

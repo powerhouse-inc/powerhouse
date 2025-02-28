@@ -40,7 +40,7 @@
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
         "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
-        "build:studio": "BUILD_STUDIO=true npm run build:web -- --mode development",
+        "build:studio": "BUILD_STUDIO=true npm run build:web",
         "build": "npm run build:studio",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
@@ -55,9 +55,6 @@
         "@powerhousedao/design-system": "workspace:*"
     },
     "devDependencies": {
-        "@vitejs/plugin-basic-ssl": "^1.2.0",
-        "vite-envs": "^4.4.11",
-        "vite-plugin-node-polyfills": "^0.23.0",
         "@electron-forge/cli": "^6.1.1",
         "@electron-forge/maker-deb": "^6.1.1",
         "@electron-forge/maker-rpm": "^6.1.1",
@@ -82,6 +79,7 @@
         "@types/react-dom": "^18.2.18",
         "@types/uuid": "^9.0.7",
         "@types/wicg-file-system-access": "^2020.9.6",
+        "@vitejs/plugin-basic-ssl": "^1.2.0",
         "@vitejs/plugin-react": "^4.2.1",
         "asar": "^3.2.0",
         "autoprefixer": "^10.4.14",
@@ -121,7 +119,10 @@
         "tw-colors": "^1.2.6",
         "uuid": "^9.0.1",
         "viem": "^2.8.13",
+        "vite": "^6.1.1",
+        "vite-envs": "^4.4.11",
         "vite-plugin-html": "^3.2.2",
+        "vite-plugin-node-polyfills": "^0.23.0",
         "vite-plugin-svgr": "^4.2.0",
         "vite-tsconfig-paths": "^4.2.0",
         "xvfb-maybe": "^0.2.1"

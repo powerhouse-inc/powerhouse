@@ -1,4 +1,5 @@
 import {
+    generateImportMapPlugin,
     viteConnectDevStudioPlugin,
     viteLoadExternalPackages,
 } from '@powerhousedao/builder-tools/connect-studio';
@@ -14,28 +15,13 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
+
 import pkg from './package.json';
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
-
-const reactImportScript = `
-    <script type="importmap">
-        {
-            "imports": 
-            {
-                "react": "https://esm.sh/react",
-                "react/": "https://esm.sh/react/",
-                "react-dom": "https://esm.sh/react-dom",
-                "react-dom/": "https://esm.sh/react-dom/"
-            }
-        }
-    </script>
-`;
-
-process.env.VITE_IMPORT_REACT_SCRIPT = isBuildStudio ? '' : reactImportScript;
-
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
+    const outDir = path.resolve(__dirname, './dist');
     const isProd = mode === 'production';
     const env = loadEnv(mode, process.cwd());
 
@@ -70,11 +56,7 @@ export default defineConfig(({ mode }) => {
                 process: false,
             },
         }),
-        viteConnectDevStudioPlugin(
-            false,
-            path.resolve(__dirname, './dist'),
-            env,
-        ),
+        viteConnectDevStudioPlugin(false, outDir, env),
         viteLoadExternalPackages(undefined),
         react({
             include: 'src/**/*.tsx',
@@ -119,6 +101,16 @@ export default defineConfig(({ mode }) => {
                 org,
                 project,
             }) as PluginOption,
+        );
+    }
+
+    if (isProd) {
+        plugins.push(
+            generateImportMapPlugin(outDir, [
+                { name: 'react', provider: 'esm.sh' },
+                { name: 'react-dom', provider: 'esm.sh' },
+                '@powerhousedao/reactor-browser',
+            ]),
         );
     }
 
