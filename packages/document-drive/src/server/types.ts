@@ -14,7 +14,6 @@ import { RunAsap } from "#utils/run-asap";
 import {
   Action,
   ActionContext,
-  App,
   BaseState,
   CreateChildDocumentInput,
   DocumentModelModule,
@@ -337,7 +336,10 @@ export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
   setDocumentModelModules(models: DocumentModelModule[]): void;
   getDrives(): Promise<string[]>;
-  addDrive(input: DriveInput, app?: App): Promise<DocumentDriveDocument>;
+  addDrive(
+    input: DriveInput,
+    preferredEditor?: string,
+  ): Promise<DocumentDriveDocument>;
   addRemoteDrive(
     url: string,
     options: RemoteDriveOptions,

@@ -42,6 +42,14 @@ export class DriveSubgraph extends Subgraph {
 
   name = "d/:drive";
   typeDefs = gql`
+    type DriveMeta {
+      preferredEditor: String
+    }
+
+    extend type DocumentDrive_DocumentDriveState {
+      meta: DriveMeta
+    }
+
     type Query {
       system: System
       drive: DocumentDrive_DocumentDriveState
@@ -212,6 +220,7 @@ export class DriveSubgraph extends Subgraph {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const drive = await this.reactor.getDrive(ctx.driveId);
         return {
+          meta: drive.meta,
           ...drive.state.global,
           nodes: drive.state.global.nodes.map((n) => ({
             ...n,

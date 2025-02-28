@@ -3,7 +3,7 @@ import { DriveInput } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { ADMIN_USERS } from "./env/index.js";
-import { AppInput, SystemContext } from "./types.js";
+import { SystemContext } from "./types.js";
 
 export class SystemSubgraph extends Subgraph {
   name = "system";
@@ -17,7 +17,7 @@ export class SystemSubgraph extends Subgraph {
     type Mutation {
       addDrive(
         global: DocumentDriveStateInput!
-        app: AppInput
+        preferredEditor: String
       ): DocumentDrive_DocumentDriveState
       deleteDrive(id: ID!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
@@ -30,12 +30,6 @@ export class SystemSubgraph extends Subgraph {
       slug: String
       icon: String
     }
-
-    input AppInput {
-      id: String!
-      name: String!
-      driveEditor: String!
-    }
   `;
 
   resolvers = {
@@ -47,7 +41,7 @@ export class SystemSubgraph extends Subgraph {
     Mutation: {
       addDrive: async (
         parent: unknown,
-        args: DriveInput & { app?: AppInput },
+        args: DriveInput & { preferredEditor?: string },
         ctx: SystemContext,
       ) => {
         try {
@@ -57,7 +51,7 @@ export class SystemSubgraph extends Subgraph {
           }
           const drive = await this.reactor.addDrive(
             { global: args.global, local: args.local },
-            args.app,
+            args.preferredEditor,
           );
           return drive.state.global;
         } catch (e) {

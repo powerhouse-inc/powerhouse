@@ -323,9 +323,6 @@ export function useUiNodes() {
         async (data: AddLocalDriveInput) => {
             try {
                 const app = apps.find(a => a.id === data.appId);
-                if (!app) {
-                    throw new Error('App not found');
-                }
                 const newDrive = await addDrive(
                     {
                         global: {
@@ -341,7 +338,7 @@ export function useUiNodes() {
                             triggers: [],
                         },
                     },
-                    app,
+                    app?.driveEditor,
                 );
 
                 toast(t('notifications.addDriveSuccess'), {

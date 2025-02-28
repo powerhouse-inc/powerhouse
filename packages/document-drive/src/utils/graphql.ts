@@ -59,8 +59,8 @@ export type DriveInfo = {
   name: string;
   slug: string;
   icon?: string;
-  meta: {
-    preferredEditor: string;
+  meta?: {
+    preferredEditor?: string;
   };
 };
 
