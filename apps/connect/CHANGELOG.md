@@ -1,3 +1,13 @@
+## 1.0.0-dev.205 (2025-02-28)
+
+### 🩹 Fixes
+
+- **reactor-api:** added missing dependency ([e5c5c981](https://github.com/powerhouse-inc/powerhouse/commit/e5c5c981))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.204 (2025-02-28)
 
 ### 🩹 Fixes

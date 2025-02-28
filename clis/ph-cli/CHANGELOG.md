@@ -1,3 +1,24 @@
+## 0.34.3-dev.0 (2025-02-28)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.205
+
+## 0.34.2 (2025-02-28)
+
+### 🩹 Fixes
+
+- **reactor-api:** added missing dependency ([e5c5c981](https://github.com/powerhouse-inc/powerhouse/commit/e5c5c981))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-local to 1.21.1
+- Updated @powerhousedao/connect to 1.0.2
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 0.34.2-dev.0 (2025-02-28)
 
 ### 🧱 Updated Dependencies
