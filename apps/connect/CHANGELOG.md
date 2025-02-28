@@ -1,3 +1,13 @@
+## 1.0.0-dev.206 (2025-02-28)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+# 1.0.0 (2025-02-28)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/common to 1.3.0
+
 ## 1.0.0-dev.205 (2025-02-28)
 
 ### 🩹 Fixes
