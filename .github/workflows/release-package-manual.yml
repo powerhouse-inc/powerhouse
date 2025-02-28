@@ -44,7 +44,7 @@ jobs:
         shell: bash
 
       - name: Build packages and studio
-        run: pnpm nx run-many --target='build,build:studio' --all
+        run: pnpm nx run-many --target='build' --all
         shell: bash
 
       - name: Print Environment Info

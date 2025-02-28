@@ -142,9 +142,8 @@ async function importFromNodeModules(
 
   // Bundle and tree-shake only dependencies (exclude the actual library code)
   await build({
-    // TODO: read exports from package.json and use them as entries
-    entryPoints: Array.from(
-      entries.values().map((value) => path.join(srcPath, value.file)),
+    entryPoints: Array.from(entries.values()).map((value) =>
+      path.join(srcPath, value.file),
     ),
     outdir: outputPath,
     bundle: true,
@@ -168,6 +167,53 @@ async function importFromNodeModules(
   return importMap;
 }
 
+async function generateImportMap(
+  outputDir: string,
+  dependencies: (string | { name: string; provider: Provider })[],
+) {
+  const modulesDir = path.join(outputDir, "/modules");
+  await fs.mkdir(modulesDir, { recursive: true });
+  const importMapDeps = new Set(
+    dependencies.map((dep) => (typeof dep === "string" ? dep : dep.name)),
+  );
+
+  let importMap: Record<string, string> = {};
+
+  for (const dependency of dependencies) {
+    const name = typeof dependency === "string" ? dependency : dependency.name;
+    const provider =
+      typeof dependency === "string" ? "node_modules" : dependency.provider;
+
+    if (provider === "esm.sh") {
+      const imports = importFromEsmSh(name);
+      importMap = { ...importMap, ...imports };
+    } else if (provider.toString() === "node_modules") {
+      const imports = await importFromNodeModules(
+        name,
+        modulesDir,
+        importMapDeps,
+      );
+      importMap = { ...importMap, ...imports };
+    } else {
+      throw new Error(`Unsupported provider: ${provider as string}`);
+    }
+  }
+
+  const indexPath = path.join(outputDir, "index.html");
+
+  let html = await fs.readFile(indexPath, "utf-8");
+  const importMapScript = `<script type="importmap">${JSON.stringify(
+    { imports: importMap },
+    null,
+    2,
+  )}</script>`;
+
+  html = html.replace("</head>", `${importMapScript}\n</head>`);
+  await fs.writeFile(indexPath, html, "utf-8");
+
+  console.log("✅ Import map added to index.html");
+}
+
 /**
  * Vite plugin to bundle or copy dependencies and inject an import map into `index.html`.
  *
@@ -187,49 +233,11 @@ export function generateImportMapPlugin(
 ): PluginOption {
   return {
     name: "vite-plugin-importmap",
-    async buildStart() {
-      const modulesDir = path.join(outputDir, "/modules");
-      await fs.mkdir(modulesDir, { recursive: true });
-      const importMapDeps = new Set(
-        dependencies.map((dep) => (typeof dep === "string" ? dep : dep.name)),
-      );
-
-      let importMap: Record<string, string> = {};
-
-      for (const dependency of dependencies) {
-        const name =
-          typeof dependency === "string" ? dependency : dependency.name;
-        const provider =
-          typeof dependency === "string" ? "node_modules" : dependency.provider;
-
-        if (provider === "esm.sh") {
-          const imports = importFromEsmSh(name);
-          importMap = { ...importMap, ...imports };
-        } else if (provider.toString() === "node_modules") {
-          const imports = await importFromNodeModules(
-            name,
-            modulesDir,
-            importMapDeps,
-          );
-          importMap = { ...importMap, ...imports };
-        } else {
-          throw new Error(`Unsupported provider: ${provider as string}`);
-        }
-      }
-
-      const indexPath = path.join(outputDir, "index.html");
-
-      let html = await fs.readFile(indexPath, "utf-8");
-      const importMapScript = `<script type="importmap">${JSON.stringify(
-        { imports: importMap },
-        null,
-        2,
-      )}</script>`;
-
-      html = html.replace("</head>", `${importMapScript}\n</head>`);
-      await fs.writeFile(indexPath, html, "utf-8");
-
-      console.log("✅ Import map added to index.html");
+    async closeBundle() {
+      await generateImportMap(outputDir, dependencies);
+    },
+    async configureServer() {
+      await generateImportMap(outputDir, dependencies);
     },
   };
 }

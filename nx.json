@@ -50,20 +50,6 @@
         "^noTests"
       ]
     },
-    "build:studio": {
-      "cache": true,
-      "dependsOn": ["^build"],
-      "inputs": [
-        "noMarkdown",
-        "^noMarkdown",
-        "noStories",
-        "^noStories",
-        "noLicenses",
-        "^noLicenses",
-        "noTests",
-        "^noTests"
-      ]
-    },
     "@nx/js:tsc": {
       "cache": true,
       "dependsOn": ["^build"],
