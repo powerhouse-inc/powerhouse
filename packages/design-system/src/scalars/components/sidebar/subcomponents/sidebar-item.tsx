@@ -113,6 +113,7 @@ export const SidebarItem = ({
           )}
         >
           <div
+            tabIndex={0}
             id={`sidebar-item-${node.id}`}
             // eslint-disable-next-line tailwindcss/no-custom-classname
             className={cn(
