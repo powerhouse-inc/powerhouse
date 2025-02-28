@@ -183,12 +183,13 @@ export function viteReplaceImports(
 export async function findPackageJson(packageName: string) {
   let packagePath;
   try {
-    const require = createRequire(process.cwd());
-
     // Locate the package entry point
-    packagePath = require.resolve(packageName);
+    const require = createRequire(process.cwd());
+    packagePath = require.resolve(packageName, { paths: [process.cwd()] });
   } catch (err) {
-    throw new Error(`Failed to resolve package: ${packageName}`);
+    throw new Error(`Failed to resolve package: ${packageName}`, {
+      cause: err,
+    });
   }
 
   // Walk up the directory tree to find package.json

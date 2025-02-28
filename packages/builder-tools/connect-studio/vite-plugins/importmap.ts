@@ -187,7 +187,8 @@ export function generateImportMapPlugin(
 ): PluginOption {
   return {
     name: "vite-plugin-importmap",
-    async closeBundle() {
+    async buildStart() {
+      console.log("ADDDING IMPORT MAP");
       const modulesDir = path.join(outputDir, "/modules");
       await fs.mkdir(modulesDir, { recursive: true });
       const importMapDeps = new Set(

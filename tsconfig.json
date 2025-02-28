@@ -32,6 +32,12 @@
       "path": "./apps/switchboard"
     },
     {
+      "path": "./clis/ph-cli"
+    },
+    {
+      "path": "./clis/ph-cmd"
+    },
+    {
       "path": "./tools/scalar-generator"
     },
     {
