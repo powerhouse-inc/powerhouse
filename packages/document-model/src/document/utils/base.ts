@@ -493,6 +493,7 @@ export function replayDocument<TDocument extends PHDocument>(
     ...result,
     operations: resultOperations,
     lastModified,
+    meta: header?.meta ?? {},
   } as TDocument;
 }
 

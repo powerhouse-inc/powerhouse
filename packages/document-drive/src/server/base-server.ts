@@ -1846,9 +1846,9 @@ export class BaseDocumentDriveServer
       }
 
       if (this.shouldSyncRemoteDrive(document)) {
-        this.startSyncRemoteDrive(document.state.global.id);
+        this.startSyncRemoteDrive(driveId);
       } else {
-        this.stopSyncRemoteDrive(document.state.global.id);
+        this.stopSyncRemoteDrive(driveId);
       }
 
       // after applying all the valid operations,throws

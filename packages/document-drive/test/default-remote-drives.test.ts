@@ -1,18 +1,18 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { DocumentDriveServer } from "../src/server/base.js";
+import { driveDocumentModelModule } from "#drive-document-model/module";
+import { ReactorBuilder } from "#server/builder";
 import {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
-  generateUUID,
-  ReactorBuilder,
-} from "../src";
+} from "#server/types";
+import { generateUUID } from "#utils/misc";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { MemoryStorage } from "../src/storage/memory";
-import { DriveInfo } from "../src/utils/graphql";
-} from "../src/server/types.js";
-import { MemoryStorage } from "../src/storage/memory.js";
 import { DriveInfo } from "../src/utils/graphql.js";
-import { generateUUID } from "../src/utils/misc.js";
 
 type DriveInput = {
   url: string;
@@ -147,9 +147,9 @@ vi.mock(import("graphql-request"), async () => {
 });
 
 const documentModels = [
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
-] as BaseDocumentModel[];
+  driveDocumentModelModule,
+  documentModelDocumentModelModule,
+] as DocumentModelModule[];
 
 describe("default remote drives", () => {
   const documentDriveServerOptions: DocumentDriveServerOptions = {
