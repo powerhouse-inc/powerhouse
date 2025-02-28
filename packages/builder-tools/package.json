@@ -1,7 +1,11 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
+  "license": "AGPL-3.0-only",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],
