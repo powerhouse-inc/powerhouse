@@ -1,14 +1,21 @@
+import { driveDocumentModelModule } from "#drive-document-model/module";
+import { BaseDocumentDriveServer } from "#server/base-server";
 import {
   Action,
   ActionFromDocument,
-  DocumentModelDocument,
+  documentModelDocumentModelModule,
+  DocumentModelModule,
   Operation,
   OperationFromDocument,
   PHDocument,
   PHReducer,
 } from "document-model";
 import { ExpectStatic } from "vitest";
-import { BaseDocumentDriveServer } from "#server/base-server";
+
+export const baseDocumentModels = [
+  driveDocumentModelModule,
+  documentModelDocumentModelModule,
+] as DocumentModelModule[];
 
 export function expectUUID(expect: ExpectStatic): unknown {
   return expect.stringMatching(
@@ -112,10 +119,10 @@ export class BasicClient {
   async syncDocument() {
     this.clearUnsyncedOperations();
 
-    const remoteDocument = (await this.server.getDocument(
+    const remoteDocument = await this.server.getDocument(
       this.driveId,
       this.documentId,
-    )) as DocumentModelDocument;
+    );
 
     const remoteDocumentOperations = Object.values(
       remoteDocument.operations,

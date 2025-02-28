@@ -1,40 +1,25 @@
-import { DocumentModelModule } from "document-model";
-import { bench, BenchOptions, describe, vi } from "vitest";
-import { DocumentDriveServer } from "../../src/server/base.js";
+import { driveDocumentModelModule } from "#drive-document-model/module";
+import { ReactorBuilder } from "#server/builder";
 import {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
-  generateUUID,
-  ReactorBuilder,
-  RunAsap,
-} from "../../src";
+} from "#server/types";
+import { generateUUID } from "#utils/misc";
+import { RunAsap } from "#utils/run-asap";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
+import { bench, BenchOptions, describe, vi } from "vitest";
 import { BrowserStorage } from "../../src/storage/browser";
-import { setLogger } from "../../src/utils/logger";
 import GetDrive from "./getDrive.json";
 import Strands from "./strands.small.json";
-} from "../../src/server/types.js";
-import { BrowserStorage } from "../../src/storage/browser.js";
-import { setLogger } from "../../src/utils/logger.js";
-import { generateUUID } from "../../src/utils/misc.js";
-import { RunAsap } from "../../src/utils/run-asap.js";
-// @ts-ignore
-import Strands from "./strands.small.json" assert { type: "json" };
 
 const DRIVE_ID = GetDrive.data.drive.id;
-const documentModels = Object.values(
-  documentModelsMap,
-) as DocumentModelModule[];
-
-setLogger({
-  log: function (...data: any[]): void {},
-  info: function (...data: any[]): void {},
-  warn: function (...data: any[]): void {},
-  error: function (...data: any[]): void {
-    console.error(data);
-  },
-  debug: function (...data: any[]): void {},
-  trace: function (...data: any[]): void {},
-});
+const documentModels = [
+  driveDocumentModelModule,
+  documentModelDocumentModelModule,
+] as DocumentModelModule[];
 
 vi.mock(import("graphql-request"), async () => {
   const originalModule = await vi.importActual("graphql-request");
