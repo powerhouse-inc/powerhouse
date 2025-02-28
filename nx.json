@@ -52,7 +52,7 @@
     },
     "build:studio": {
       "cache": true,
-      "dependsOn": ["^build", "generate"],
+      "dependsOn": ["^build"],
       "inputs": [
         "noMarkdown",
         "^noMarkdown",
