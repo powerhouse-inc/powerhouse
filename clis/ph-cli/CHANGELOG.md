@@ -1,3 +1,24 @@
+## 0.34.2-dev.0 (2025-02-28)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.204
+
+## 0.34.1 (2025-02-28)
+
+### 🩹 Fixes
+
+- **builder-tools:** added missing dependencies ([540b7913](https://github.com/powerhouse-inc/powerhouse/commit/540b7913))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/builder-tools to 0.2.1
+- Updated @powerhousedao/connect to 1.0.2
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 0.34.1-dev.0 (2025-02-28)
 
 ### 🧱 Updated Dependencies

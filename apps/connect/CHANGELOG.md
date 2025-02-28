@@ -1,3 +1,29 @@
+## 1.0.0-dev.204 (2025-02-28)
+
+### 🩹 Fixes
+
+- **builder-tools:** added missing dependencies ([540b7913](https://github.com/powerhouse-inc/powerhouse/commit/540b7913))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 1.0.2 (2025-02-28)
+
+### 🩹 Fixes
+
+- **builder-tools:** added missing dependencies ([540b7913](https://github.com/powerhouse-inc/powerhouse/commit/540b7913))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/builder-tools to 0.2.1
+- Updated @powerhousedao/builder-tools to 0.2.1
+- Updated @powerhousedao/common to 1.2.1
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.203 (2025-02-28)
 
 ### 🚀 Features
