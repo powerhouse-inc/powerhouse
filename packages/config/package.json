@@ -5,6 +5,7 @@
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
+  "module": "./dist/src/index.js",
   "exports": {
     "./powerhouse": "./dist/src/powerhouse.js",
     "./tailwind": "./dist/src/tailwind.js"
