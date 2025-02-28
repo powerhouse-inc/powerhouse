@@ -28,7 +28,6 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "devDependencies": {
-    "@powerhousedao/analytics-engine-graphql": "^0.2.2",
     "@powerhousedao/scalars": "workspace:*",
     "@sky-ph/atlas": "^1.0.14",
     "@types/body-parser": "^1.19.5",
@@ -45,6 +44,7 @@
     "tinybench": "^3.1.1"
   },
   "dependencies": {
+    "@powerhousedao/analytics-engine-graphql": "^0.2.2",
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.9.2",
     "@electric-sql/pglite": "^0.2.12",
