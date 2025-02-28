@@ -1,7 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
-  Action,
   AttachmentInput,
   BaseStateFromDocument,
   DocumentHeader,

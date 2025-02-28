@@ -38,7 +38,7 @@ export class SubgraphManager {
     console.log(`Initializing Subgraph Manager...`);
     const models = this.reactor.getDocumentModelModules();
     const driveModel = models.find(
-      (it) => it.documentModelState.name === "DocumentDrive",
+      (it) => it.documentModel.name === "DocumentDrive",
     );
     if (!driveModel) {
       throw new Error("DocumentDrive model required");

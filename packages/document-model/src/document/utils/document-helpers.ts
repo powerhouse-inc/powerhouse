@@ -541,7 +541,7 @@ export function skipHeaderOperations<TOpIndex extends OperationIndex>(
     sortOperations([...operations, skipOperationIndex]),
   );
 
-  return (clearedOperations.at(0) ?? []) as TOpIndex[];
+  return clearedOperations.slice(0, -1) as TOpIndex[]; //clearedOperation ? [clearedOperation as TOpIndex] : [];
 }
 
 export function garbageCollectDocumentOperations<

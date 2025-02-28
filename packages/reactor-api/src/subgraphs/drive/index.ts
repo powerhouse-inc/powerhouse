@@ -42,6 +42,14 @@ export class DriveSubgraph extends Subgraph {
 
   name = "d/:drive";
   typeDefs = gql`
+    type DriveMeta {
+      preferredEditor: String
+    }
+
+    extend type DocumentDrive_DocumentDriveState {
+      meta: DriveMeta
+    }
+
     type Query {
       system: System
       drive: DocumentDrive_DocumentDriveState
@@ -212,6 +220,7 @@ export class DriveSubgraph extends Subgraph {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const drive = await this.reactor.getDrive(ctx.driveId);
         return {
+          meta: drive.meta,
           ...drive.state.global,
           nodes: drive.state.global.nodes.map((n) => ({
             ...n,
@@ -232,13 +241,12 @@ export class DriveSubgraph extends Subgraph {
 
         const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
-          ({ documentModelState }) =>
-            documentModelState.id === document.documentType,
+          ({ documentModel }) => documentModel.id === document.documentType,
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
         const typeName = pascalCase(
-          (dm?.documentModelState.name || "").replaceAll("/", " "),
+          (dm?.documentModel.name || "").replaceAll("/", " "),
         );
         const response = {
           ...document,

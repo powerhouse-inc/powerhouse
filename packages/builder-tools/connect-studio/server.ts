@@ -9,12 +9,13 @@ import { backupIndexHtml, removeBase64EnvValues } from "./helpers.js";
 import { StartServerOptions } from "./types.js";
 import { getStudioConfig } from "./vite-plugins/base.js";
 import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
+import { generateImportMapPlugin } from "./vite-plugins/importmap.js";
 import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
 
 function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation
   const require = createRequire(root);
-  return require.resolve(packageName);
+  return require.resolve(packageName, { paths: [root] });
 }
 
 function resolveConnect(root = process.cwd()) {
@@ -181,6 +182,11 @@ export async function startServer(
         basicSsl({
           name: "Powerhouse Connect Studio",
         }),
+      generateImportMapPlugin(connectPath, [
+        { name: "react", provider: "esm.sh" },
+        { name: "react-dom", provider: "esm.sh" },
+        "@powerhousedao/reactor-browser",
+      ]),
     ],
     build: {
       rollupOptions: {

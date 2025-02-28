@@ -6,7 +6,10 @@
   "files": [
     "/dist"
   ],
-  "exports": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./dist/*.js"
+  },
   "types": "./dist/index.d.ts",
   "imports": {
     "#document-models/*": "./dist/document-models/*.js",
