@@ -48,5 +48,5 @@
         }
     ],
     "include": ["**/*", "**/*.json"],
-    "exclude": ["ts-dist/**", "studio/**"]
+    "exclude": ["ts-dist/**", "dist/**", "studio/**"]
 }
