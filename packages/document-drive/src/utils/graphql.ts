@@ -59,6 +59,9 @@ export type DriveInfo = {
   name: string;
   slug: string;
   icon?: string;
+  meta: {
+    preferredEditor: string;
+  };
 };
 
 function getFields(type: GraphQLOutputType): string {
@@ -147,6 +150,9 @@ export async function requestPublicDrive(url: string): Promise<DriveInfo> {
             name
             icon
             slug
+            meta {
+              preferredEditor
+            }
           }
         }
       `,
