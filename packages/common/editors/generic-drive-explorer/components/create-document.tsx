@@ -8,13 +8,10 @@ interface CreateDocumentProps {
 
 function getDocumentSpec(doc: DocumentModelModule) {
   if ("documentModelState" in doc) {
-    return doc.documentModelState;
+    return doc.documentModelState as DocumentModelModule["documentModel"];
   }
 
-  return (
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    (doc as any).documentModel as DocumentModelModule["documentModelState"]
-  );
+  return doc.documentModel;
 }
 
 export const CreateDocument: React.FC<CreateDocumentProps> = ({
@@ -31,7 +28,7 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
           const spec = getDocumentSpec(doc);
           return (
             <Button
-              key={doc.documentType}
+              key={spec.id}
               aria-details={spec.description}
               className="bg-gray-200 text-slate-800"
               onClick={() => createDocument(doc)}

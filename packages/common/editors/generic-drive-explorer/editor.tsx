@@ -69,7 +69,7 @@ export default function Editor(props: IProps) {
       const document = documentModel.utils.createDocument();
       await addDocument(
         name,
-        documentModel.documentModelName,
+        documentModel.documentModel.name,
         document,
         selectedNode?.id,
       );

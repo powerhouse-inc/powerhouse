@@ -99,7 +99,7 @@ const DriveContextDecorator: Decorator<
         },
         showCreateDocumentModal(documentModel: DocumentModelModule) {
           return Promise.resolve({
-            name: `New ${documentModel.documentModelName}`,
+            name: `New ${documentModel.documentModel.name}`,
           });
         },
       }}

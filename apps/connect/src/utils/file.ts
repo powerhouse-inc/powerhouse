@@ -37,7 +37,7 @@ export async function exportFile(
         );
     }
 
-    const extension = documentModelModule.fileExtension;
+    const extension = documentModelModule.documentModel.extension;
 
     // Fallback for browsers that don't support showSaveFilePicker
     if (!window.showSaveFilePicker) {
