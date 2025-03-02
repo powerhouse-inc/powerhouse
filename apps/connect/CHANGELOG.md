@@ -1,3 +1,33 @@
+## 1.0.0-dev.207 (2025-03-02)
+
+### 🩹 Fixes
+
+- **connect,design-system:** fix tailwind theme ([0a05af92](https://github.com/powerhouse-inc/powerhouse/commit/0a05af92))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 1.0.10 (2025-03-02)
+
+### 🩹 Fixes
+
+- **connect,design-system:** fix tailwind theme ([0a05af92](https://github.com/powerhouse-inc/powerhouse/commit/0a05af92))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.11.1
+- Updated document-drive to 1.20.1
+- Updated @powerhousedao/builder-tools to 0.2.2
+- Updated @powerhousedao/builder-tools to 0.2.2
+- Updated @powerhousedao/design-system to 1.29.1
+- Updated @powerhousedao/common to 1.3.1
+- Updated @powerhousedao/config to 1.18.1
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.206 (2025-02-28)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
