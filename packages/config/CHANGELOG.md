@@ -1,3 +1,15 @@
+## 1.18.1 (2025-03-02)
+
+### 🩹 Fixes
+
+- **connect,design-system:** fix tailwind theme ([0a05af92](https://github.com/powerhouse-inc/powerhouse/commit/0a05af92))
+- **reactor-api:** added missing dependency ([e5c5c981](https://github.com/powerhouse-inc/powerhouse/commit/e5c5c981))
+- **builder-tools:** added missing dependencies ([540b7913](https://github.com/powerhouse-inc/powerhouse/commit/540b7913))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 1.18.0 (2025-02-28)
 
 ### 🚀 Features
