@@ -2,11 +2,8 @@
 import { Decorator } from "@storybook/react";
 import { Checkbox, Form } from "../components";
 import { Button } from "@/powerhouse";
-import { useState, useId } from "react";
-import { useCallback } from "react";
-import { useRef } from "react";
+import { useState, useId, useCallback, useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
-import React from "react";
 import { Args, DecoratorFunction } from "@storybook/types";
 
 function _isValidRegex(pattern: unknown): boolean {
