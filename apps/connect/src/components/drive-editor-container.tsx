@@ -130,9 +130,13 @@ export function DriveEditorContainer() {
         driveEditor?.Component ?? GenericDriveExplorer.Component;
 
     return (
-        <DriveContextProvider value={driveContext}>
-            <ErrorBoundary fallbackRender={DriveEditorError}>
+        <DriveContextProvider value={driveContext} key={selectedDriveNode?.id}>
+            <ErrorBoundary
+                fallbackRender={DriveEditorError}
+                key={selectedDriveNode?.id}
+            >
                 <DriveEditorComponent
+                    key={selectedDriveNode?.id}
                     {...editorProps}
                     onSwitchboardLinkClick={undefined} // TODO
                     document={document}
