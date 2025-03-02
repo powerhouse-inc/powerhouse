@@ -21,6 +21,7 @@ export const PH_CLI_COMMANDS = [
   "service",
   "list",
   "inspect",
+  "version",
 ];
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const HOME_DIR = homedir();
@@ -146,11 +147,10 @@ export function forwardPHCommand(
   packageManager: PackageManager,
   projectPath: string,
   args: string,
-  isPackageScript: boolean,
   debug?: boolean,
 ) {
   const manager = packageManagers[packageManager];
-  const command = isPackageScript ? manager.execScript : manager.execCommand;
+  const command = manager.execScript;
   const execCommand = command.replace("{{arguments}}", args);
 
   const commandOptions = { cwd: projectPath };

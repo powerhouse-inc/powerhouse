@@ -6,7 +6,6 @@ import {
 
 type ForwardPHCommandOptions = {
   debug?: boolean;
-  isPackageScript?: boolean;
 };
 
 type FSError = {
@@ -34,17 +33,10 @@ export const forwardCommand = (
     console.log(">>> packageManager:", packageManager);
     console.log(">>> projectPath:", projectInfo.path);
     console.log(">>> args:", args);
-    console.log(">>> isPackageScript:", options.isPackageScript ?? false);
   }
 
   try {
-    forwardPHCommand(
-      packageManager,
-      projectInfo.path,
-      args,
-      options.isPackageScript ?? false,
-      options.debug,
-    );
+    forwardPHCommand(packageManager, projectInfo.path, args, options.debug);
   } catch (error) {
     console.error("❌ Failed to forward command");
     if ((error as FSError).code === "ENOENT") {
