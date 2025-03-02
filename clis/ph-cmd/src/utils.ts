@@ -150,7 +150,7 @@ export function forwardPHCommand(
   debug?: boolean,
 ) {
   const manager = packageManagers[packageManager];
-  const command = manager.execScript;
+  const command = manager.execCommand;
   const execCommand = command.replace("{{arguments}}", args);
 
   const commandOptions = { cwd: projectPath };

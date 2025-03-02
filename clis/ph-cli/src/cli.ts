@@ -9,7 +9,7 @@ program.name("ph-cli").description("CLI tool for Powerhouse DAO");
 
 try {
   const version = getVersion(false);
-  program.version(version);
+  program.version(version, "-v", "--version");
 } catch {
   /* empty */
 }

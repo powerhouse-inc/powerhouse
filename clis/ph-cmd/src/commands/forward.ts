@@ -42,7 +42,8 @@ export const forwardCommand = (
     if ((error as FSError).code === "ENOENT") {
       console.error("Have you run `ph setup-globals` or `ph init`?");
     }
-
-    throw error;
+    if (options.debug) {
+      throw error;
+    }
   }
 };
