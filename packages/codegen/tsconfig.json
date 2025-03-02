@@ -3,14 +3,12 @@
   "compilerOptions": {
     "outDir": "./dist"
   },
-  "include": [
-    "**/*",
-    // needed because . files are ignored by default
-    "**/.hygen/**/*"
-  ],
+  "include": ["**/*"],
+  "exclude": ["**/.hygen/**/*", "dist/"],
   "references": [
     { "path": "../document-model" },
     { "path": "../scalars" },
-    { "path": "../config" }
-  ],
+    { "path": "../config" },
+    { "path": "./tsconfig.hygen.json" }
+  ]
 }
