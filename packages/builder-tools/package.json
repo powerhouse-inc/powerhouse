@@ -24,7 +24,6 @@
     "build:css": "npx @tailwindcss/cli -i ./styles.css -o ./dist/styles.css",
     "build": "npm run build:css && tsc --build",
     "storybook": "storybook dev -p 6006",
-    "test": "vitest run",
     "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",

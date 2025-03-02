@@ -28,6 +28,6 @@
       "path": "../reactor-browser"
     }
   ],
-  "include": ["src/**/*", "**/*.json", "./*.ts"],
+  "include": ["src/**/*", "**/*.json", "./*.ts", "scripts/*"],
   "exclude": ["node_modules", "./dist/**/*", "storybook-static"]
 }

@@ -23,9 +23,6 @@
     "build": "tsc --build",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test": "vitest run",
-    "test:nogen": "vitest run",
-    "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
