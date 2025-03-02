@@ -1,4 +1,3 @@
-#! /usr/bin/env node
 import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/scalars";
 import { paramCase, pascalCase } from "change-case";
