@@ -58,7 +58,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: pnpm nx release --projects='packages/*' --skip-publish
+        run: pnpm nx release --projects='packages/*,apps/connect,clis/*' --skip-publish
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

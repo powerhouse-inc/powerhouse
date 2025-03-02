@@ -59,9 +59,6 @@
   "release": {
     "projects": ["packages/*", "clis/*", "apps/connect"],
     "projectsRelationship": "independent",
-    "tags": {
-      "apps/connect": "dev"
-    },
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
