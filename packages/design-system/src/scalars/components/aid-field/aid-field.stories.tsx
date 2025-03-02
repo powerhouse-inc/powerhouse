@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "@/scalars/lib/decorators";
 import { AIDField } from "./aid-field";
-import { fetchOptions, fetchSelectedOption } from "./mocks";
+import { mockedOptions, fetchOptions, fetchSelectedOption } from "./mocks";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -139,6 +139,31 @@ export const Empty: Story = {
     placeholder: "did:ethr:",
     isOpenByDefault: true,
     defaultValue: "did:ethr:",
+    variant: "withValueTitleAndDescription",
+    fetchOptionsCallback: fetchOptions,
+    fetchSelectedOptionCallback: fetchSelectedOption,
+  },
+};
+
+export const Open: Story = {
+  args: {
+    label: "AID field",
+    placeholder: "did:ethr:",
+    isOpenByDefault: true,
+    defaultValue: "did:ethr:",
+    variant: "withValueTitleAndDescription",
+    initialOptions: mockedOptions,
+    fetchOptionsCallback: fetchOptions,
+    fetchSelectedOptionCallback: fetchSelectedOption,
+  },
+};
+
+export const Filled: Story = {
+  args: {
+    label: "AID field",
+    placeholder: "did:ethr:",
+    defaultValue: mockedOptions[0].value,
+    initialOptions: mockedOptions,
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
