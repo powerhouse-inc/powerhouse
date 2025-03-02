@@ -22,16 +22,11 @@ const config: StorybookConfig = {
     builder: {
       name: "@storybook/builder-vite",
       options: {
-        viteConfigPath: "vite.config.ts",
         rollupOptions: {
-          external: [
-            /@codemirror\/.*/,
-            'thememirror',
-            'cm6-graphql'
-          ]
-        }
-      }
-    }
-  }
+          external: [/@codemirror\/.*/, "thememirror", "cm6-graphql"],
+        },
+      },
+    },
+  },
 };
 export default config;
