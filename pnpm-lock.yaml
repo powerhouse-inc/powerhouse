@@ -584,15 +584,9 @@ importers:
       '@powerhousedao/connect':
         specifier: workspace:*
         version: link:../../apps/connect
-      '@powerhousedao/design-system':
-        specifier: workspace:*
-        version: link:../../packages/design-system
       '@powerhousedao/reactor-local':
         specifier: workspace:*
         version: link:../../packages/reactor-local
-      '@powerhousedao/scalars':
-        specifier: workspace:*
-        version: link:../../packages/scalars
       colorette:
         specifier: ^2.0.20
         version: 2.0.20
@@ -602,9 +596,6 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../../packages/document-model
-      graphql:
-        specifier: ^16.9.0
-        version: 16.10.0
       pm2:
         specifier: ^5.4.3
         version: 5.4.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
