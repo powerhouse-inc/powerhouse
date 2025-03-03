@@ -5,7 +5,7 @@ import preserveDirectives from "rollup-preserve-directives";
 import { defineConfig, UserConfig } from "vite";
 import dts from "vite-plugin-dts";
 import pkg from "./package.json";
-
+import tailwind from "@tailwindcss/vite";
 const bundleReport = process.env.BUNDLE_REPORT === "true";
 
 const dependencies = Object.keys(pkg.dependencies).concat(
@@ -29,6 +29,7 @@ export default defineConfig(() => {
     plugins: [
       react(),
       preserveDirectives(),
+      tailwind(),
       dts({
         include: ["src/**"],
         exclude: ["src/**/*.stories.*"],
