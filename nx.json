@@ -62,6 +62,7 @@
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
+        "updateDependents": "auto",
         "fallbackCurrentVersionResolver": "disk",
         "preserveLocalDependencyProtocols": true
       }
