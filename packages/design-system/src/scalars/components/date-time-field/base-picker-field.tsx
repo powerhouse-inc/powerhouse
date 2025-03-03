@@ -60,11 +60,11 @@ export const BasePickerField = React.forwardRef<
         <div
           className={cn(
             "flex w-[275px] rounded-md text-sm",
-            "focus-within:ring-ring focus-within:ring-1 focus-within:ring-offset-0 ring-gray-900 dark:ring-charcoal-300",
+            "focus-within:ring-ring dark:ring-charcoal-300 ring-gray-900 focus-within:ring-1 focus-within:ring-offset-0",
             "dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white",
             // focus
             "focus:[&_.input-field]:bg-transparent",
-            "focus-within:hover:bg-white dark:focus-within:hover:bg-charcoal-900 focus-within:hover:cursor-default",
+            "dark:focus-within:hover:bg-charcoal-900 focus-within:hover:cursor-default focus-within:hover:bg-white",
             disabled &&
               "dark:bg-charcoal-900 dark:hover:bg-charcoal-900 cursor-not-allowed bg-white hover:bg-transparent",
           )}
@@ -76,9 +76,9 @@ export const BasePickerField = React.forwardRef<
                 disabled={disabled}
                 className={cn(
                   "rounded-l-md border-none pl-3 pr-2",
-                  "focus:bg-none focus:text-selected-foreground",
+                  "focus:text-selected-foreground focus:bg-none",
                   "button-ghost",
-                  disabled && "cursor-not-allowed  hover:bg-transparent",
+                  disabled && "cursor-not-allowed hover:bg-transparent",
                 )}
                 onClick={() => !disabled && setIsOpen(isOpen)}
               >
@@ -93,7 +93,7 @@ export const BasePickerField = React.forwardRef<
               align="start"
               className={cn(
                 "relative w-[275px]",
-                "border-gray-300 bg-white dark:bg-slate-600 dark:border-gray-900",
+                "border-gray-300 bg-white dark:border-gray-900 dark:bg-slate-600",
                 "rounded-lg",
                 "shadow-[0px_2px_4px_0px_rgba(0,0,0,0.08),0px_3px_10px_0px_rgba(0,0,0,0.10)]",
                 "mt-[14px]",
@@ -115,7 +115,7 @@ export const BasePickerField = React.forwardRef<
             className={cn(
               "w-full rounded-l-none border-none text-right placeholder:text-right",
               // focus
-              "focus-visible:ring-0 focus-visible:ring-offset-0 focus:bg-white",
+              "focus:bg-white focus-visible:ring-0 focus-visible:ring-offset-0",
               "input-field",
             )}
             placeholder={placeholder}

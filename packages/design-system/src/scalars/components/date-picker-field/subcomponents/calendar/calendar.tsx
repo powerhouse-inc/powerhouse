@@ -251,7 +251,7 @@ const Calendar = ({
 
                 <div
                   className={cn(
-                    "grid grid-cols-3  gap-x-[14px] gap-y-[15px]",
+                    "grid grid-cols-3 gap-x-[14px] gap-y-[15px]",
                     className,
                   )}
                   {...props}
@@ -314,7 +314,7 @@ const Calendar = ({
               <div className="mt-[15px] flex flex-col gap-3">
                 <CalendarDateHeader navView={navView} setNavView={setNavView} />
 
-                <div className="grid grid-cols-3  gap-x-[14px] gap-y-[15px]">
+                <div className="grid grid-cols-3 gap-x-[14px] gap-y-[15px]">
                   {MONTHS.flat().map((month) => (
                     <Button
                       key={month}

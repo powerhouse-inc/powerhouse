@@ -111,7 +111,7 @@ const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
           handleBlur={() => {}}
           className={cn(
             // Add custom styles when the time is open
-            isCalendarView ? "pt-3 px-4 pb-6" : "pt-3 pr-4 pb-4 pl-4",
+            isCalendarView ? "px-4 pb-6 pt-3" : "pb-4 pl-4 pr-4 pt-3",
           )}
         >
           <DateTimePickerContent

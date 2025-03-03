@@ -122,7 +122,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
             ...inputProps,
             onKeyDown: handleKeyDown,
           }}
-          className={cn("pt-3 pr-4 pb-4 pl-4")}
+          className={cn("pb-4 pl-4 pr-4 pt-3")}
         >
           <TimePickerContent
             selectedHour={selectedHour}

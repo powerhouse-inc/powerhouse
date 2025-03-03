@@ -20,17 +20,17 @@ export const SidebarUser: React.FC<SidebarUserProps> = ({ address }) => {
 
   const ensNameAndAddress = (
     <>
-      <p className="mb-2 h-4 text-sm text-gray-800 duration-1000 animate-in fade-in">
+      <p className="animate-in fade-in mb-2 h-4 text-sm text-gray-800 duration-1000">
         {ensName}
       </p>
-      <p className="h-3 text-xs text-gray-600 duration-1000 animate-in fade-in">
+      <p className="animate-in fade-in h-3 text-xs text-gray-600 duration-1000">
         {formattedAddress}
       </p>
     </>
   );
 
   const addressOnly = (
-    <p className="text-sm text-gray-800 duration-1000 animate-in fade-in">
+    <p className="animate-in fade-in text-sm text-gray-800 duration-1000">
       {formattedAddress}
     </p>
   );

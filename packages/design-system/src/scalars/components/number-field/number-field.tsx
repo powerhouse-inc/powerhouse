@@ -154,7 +154,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                   size={10}
                   name="ChevronDown"
                   className={cn(
-                    " items-center justify-center text-gray-700 dark:text-gray-300",
+                    "items-center justify-center text-gray-700 dark:text-gray-300",
                     canDecrement && "cursor-not-allowed",
                   )}
                 />

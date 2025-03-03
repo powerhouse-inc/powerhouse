@@ -7,7 +7,7 @@ export interface SidebarLoginProps {
 export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
   return (
     <button
-      className="group/sidebar-footer w-full cursor-pointer items-baseline justify-start text-sm font-semibold leading-10 text-gray-600 flex"
+      className="group/sidebar-footer flex w-full cursor-pointer items-baseline justify-start text-sm font-semibold leading-10 text-gray-600"
       onClick={onLogin}
     >
       <span>Login with</span>

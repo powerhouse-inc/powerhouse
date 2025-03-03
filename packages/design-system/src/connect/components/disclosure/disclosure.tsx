@@ -30,7 +30,7 @@ export function Disclosure(props: DisclosureProps) {
         )}
         onClick={onOpenChange}
       >
-        <h2 className=" font-semibold text-inherit">{title}</h2>
+        <h2 className="font-semibold text-inherit">{title}</h2>
         <Icon
           className={twJoin("transition", isOpen ? "" : "-rotate-90")}
           size={16}
