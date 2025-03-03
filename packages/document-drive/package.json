@@ -62,5 +62,8 @@
     "vitest-fetch-mock": "^0.3.0",
     "webdriverio": "^9.0.9",
     "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.7"
   }
 }
