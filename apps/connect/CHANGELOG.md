@@ -1,3 +1,32 @@
+## 1.0.0-dev.208 (2025-03-03)
+
+### 🩹 Fixes
+
+- **codegen,connect:** fix build issues ([55a81e10](https://github.com/powerhouse-inc/powerhouse/commit/55a81e10))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 1.0.9 (2025-03-03)
+
+### 🩹 Fixes
+
+- **codegen,connect:** fix build issues ([55a81e10](https://github.com/powerhouse-inc/powerhouse/commit/55a81e10))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.11.2
+- Updated document-drive to 1.20.2
+- Updated @powerhousedao/builder-tools to 0.2.3
+- Updated @powerhousedao/builder-tools to 0.2.3
+- Updated @powerhousedao/design-system to 1.29.2
+- Updated @powerhousedao/common to 1.3.2
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.207 (2025-03-02)
 
 ### 🩹 Fixes
