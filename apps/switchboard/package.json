@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.1.411",
+  "version": "2.1.414",
   "main": "index.js",
   "scripts": {
     "build:tsc": "tsc --build",
