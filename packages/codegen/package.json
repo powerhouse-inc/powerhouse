@@ -5,7 +5,7 @@
   "private": false,
   "type": "module",
   "files": [
-    "/dist"
+    "dist/*"
   ],
   "exports": "./dist/index.js",
   "imports": {
