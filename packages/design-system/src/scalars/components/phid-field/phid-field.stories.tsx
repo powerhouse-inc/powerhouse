@@ -29,6 +29,15 @@ const meta: Meta<typeof PHIDField> = {
     ...PrebuiltArgTypes.placeholder,
     ...PrebuiltArgTypes.maxLength,
 
+    allowUris: {
+      control: "boolean",
+      description: "Enables URI format as valid input in the field",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
     allowedScopes: {
       control: "object",
       description: "List of allowed scopes.",
@@ -36,16 +45,7 @@ const meta: Meta<typeof PHIDField> = {
         type: { summary: "string[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-    },
-
-    allowUris: {
-      control: "boolean",
-      description: "Enables URI format as valid input in the field",
-      table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "true" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
+      if: { arg: "allowUris", eq: true },
     },
 
     autoComplete: {

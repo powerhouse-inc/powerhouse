@@ -241,6 +241,7 @@ describe("PHIDField Component", () => {
         <PHIDField
           name="phid"
           label="Test Label"
+          allowUris
           allowedScopes={["public"]}
           fetchOptionsCallback={defaultGetOptions}
           fetchSelectedOptionCallback={defaultGetSelectedOption}

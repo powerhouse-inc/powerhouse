@@ -43,7 +43,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onClick,
       onMouseDown,
       allowedScopes, // used in field validation
-      allowUris = true, // used in field validation
+      allowUris, // used in field validation
       autoComplete: autoCompleteProp,
       variant = "withValue",
       maxLength,
@@ -170,8 +170,8 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         }
 
         // If it's not a URL and URIs are not allowed, return error
-        if (allowUris === false) {
-          return "Please use a URL format: phd://<domain>/<documentID>";
+        if (allowUris !== true) {
+          return "Invalid format. Please use URL format: phd://<domain>/<documentID>";
         }
 
         // URI patterns
@@ -189,7 +189,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
           new RegExp(format).test(value),
         );
         if (!isValidURIFormat) {
-          return "Invalid format. Please use either: URL format: phd://<domain>/<documentID> or URI format: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
+          return "Invalid format. Please use either URL format: phd://<domain>/<documentID> or URI format: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
         }
 
         // Validate scope

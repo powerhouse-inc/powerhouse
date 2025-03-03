@@ -202,7 +202,7 @@ export const withFieldValidation = <T extends PossibleProps>(
               message: "This field does not match the required pattern",
             },
           }),
-          ...(props.maxLength !== undefined
+          ...(props.maxLength !== undefined && props.maxLength >= 0
             ? {
                 maxLength: {
                   value: props.maxLength,
@@ -212,7 +212,7 @@ export const withFieldValidation = <T extends PossibleProps>(
             : {
                 maxLength: undefined,
               }),
-          ...(props.minLength !== undefined
+          ...(props.minLength !== undefined && props.minLength >= 0
             ? {
                 minLength: {
                   value: props.minLength,
