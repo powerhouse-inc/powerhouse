@@ -189,7 +189,7 @@ export class PrismaStorage implements IDriveStorage {
           skip: op.skip,
           context: op.context,
           resultingState: op.resultingState
-            ? Buffer.from(JSON.stringify(op.resultingState))
+            ? Buffer.from(op.resultingState)
             : undefined,
         })),
       });
