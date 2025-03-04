@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDebounceCallback } from "usehooks-ts";
+import { useIdAutocompleteContext } from "./id-autocomplete-context";
 import type { IdAutocompleteProps, IdAutocompleteOption } from "./types";
 
 interface UseIdAutocompleteFieldParams {
@@ -25,6 +26,7 @@ export function useIdAutocompleteField({
   fetchOptions,
   fetchSelectedOption,
 }: UseIdAutocompleteFieldParams) {
+  const context = useIdAutocompleteContext();
   const shouldFetchOptions = useRef(false);
   const isInternalChange = useRef(false);
   const commandListRef = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ export function useIdAutocompleteField({
         setIsLoading(true);
 
         try {
-          const result = fetchOptions(newValue);
+          const result = fetchOptions(newValue, context);
           Promise.resolve(result)
             .then((newOptions) => {
               setOptions(newOptions);
@@ -94,7 +96,7 @@ export function useIdAutocompleteField({
           setIsLoading(false);
         }
       },
-      [clear, autoComplete, fetchOptions],
+      [clear, autoComplete, fetchOptions, context],
     ),
   );
 

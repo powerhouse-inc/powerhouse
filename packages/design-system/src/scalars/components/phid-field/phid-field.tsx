@@ -1,7 +1,8 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useCallback } from "react";
+import React, { useId, useCallback, useMemo } from "react";
 import { IdAutocompleteFieldRaw } from "@/scalars/components/fragments/id-autocomplete-field";
 import { IdAutocompleteListOption } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-list-option";
+import { IdAutocompleteContext } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-context";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import type {
   FieldCommonProps,
@@ -42,8 +43,8 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onBlur,
       onClick,
       onMouseDown,
-      allowedScopes, // used in field validation
-      allowUris, // used in field validation
+      allowUris,
+      allowedScopes,
       autoComplete: autoCompleteProp,
       variant = "withValue",
       maxLength,
@@ -58,6 +59,11 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
     const prefix = useId();
     const id = idProp ?? `${prefix}-phid`;
     const autoComplete = autoCompleteProp ?? true;
+
+    const contextValue = useMemo(
+      () => ({ allowUris, allowedScopes }),
+      [allowUris, allowedScopes],
+    );
 
     const renderOption = useCallback(
       (
@@ -89,58 +95,62 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       [variant],
     );
 
-    return autoComplete && fetchOptionsCallback ? (
-      <IdAutocompleteFieldRaw
-        id={id}
-        name={name}
-        className={className}
-        label={label}
-        description={description}
-        value={value}
-        defaultValue={defaultValue}
-        disabled={disabled}
-        placeholder={placeholder}
-        required={required}
-        errors={errors}
-        warnings={warnings}
-        onChange={onChange}
-        onBlur={onBlur}
-        onClick={onClick}
-        onMouseDown={onMouseDown}
-        autoComplete={true}
-        variant={variant}
-        maxLength={maxLength}
-        fetchOptionsCallback={fetchOptionsCallback}
-        fetchSelectedOptionCallback={fetchSelectedOptionCallback}
-        isOpenByDefault={isOpenByDefault}
-        initialOptions={initialOptions}
-        renderOption={renderOption}
-        {...props}
-        ref={ref}
-      />
-    ) : (
-      <IdAutocompleteFieldRaw
-        id={id}
-        name={name}
-        className={className}
-        label={label}
-        description={description}
-        value={value}
-        defaultValue={defaultValue}
-        disabled={disabled}
-        placeholder={placeholder}
-        required={required}
-        errors={errors}
-        warnings={warnings}
-        onChange={onChange}
-        onBlur={onBlur}
-        onClick={onClick}
-        onMouseDown={onMouseDown}
-        autoComplete={false}
-        maxLength={maxLength}
-        {...props}
-        ref={ref}
-      />
+    return (
+      <IdAutocompleteContext.Provider value={contextValue}>
+        {autoComplete && fetchOptionsCallback ? (
+          <IdAutocompleteFieldRaw
+            id={id}
+            name={name}
+            className={className}
+            label={label}
+            description={description}
+            value={value}
+            defaultValue={defaultValue}
+            disabled={disabled}
+            placeholder={placeholder}
+            required={required}
+            errors={errors}
+            warnings={warnings}
+            onChange={onChange}
+            onBlur={onBlur}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            autoComplete={true}
+            variant={variant}
+            maxLength={maxLength}
+            fetchOptionsCallback={fetchOptionsCallback}
+            fetchSelectedOptionCallback={fetchSelectedOptionCallback}
+            isOpenByDefault={isOpenByDefault}
+            initialOptions={initialOptions}
+            renderOption={renderOption}
+            {...props}
+            ref={ref}
+          />
+        ) : (
+          <IdAutocompleteFieldRaw
+            id={id}
+            name={name}
+            className={className}
+            label={label}
+            description={description}
+            value={value}
+            defaultValue={defaultValue}
+            disabled={disabled}
+            placeholder={placeholder}
+            required={required}
+            errors={errors}
+            warnings={warnings}
+            onChange={onChange}
+            onBlur={onBlur}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            autoComplete={false}
+            maxLength={maxLength}
+            {...props}
+            ref={ref}
+          />
+        )}
+      </IdAutocompleteContext.Provider>
     );
   },
 );
@@ -170,7 +180,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         }
 
         // If it's not a URL and URIs are not allowed, return error
-        if (allowUris !== true) {
+        if (!allowUris) {
           return "Invalid format. Please use URL format: phd://<domain>/<documentID>";
         }
 

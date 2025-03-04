@@ -1,8 +1,9 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useCallback } from "react";
+import React, { useId, useCallback, useMemo } from "react";
 import { isAddress } from "viem";
 import { IdAutocompleteFieldRaw } from "@/scalars/components/fragments/id-autocomplete-field";
 import { IdAutocompleteListOption } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-list-option";
+import { IdAutocompleteContext } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-context";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import type {
   FieldCommonProps,
@@ -43,7 +44,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
       onBlur,
       onClick,
       onMouseDown,
-      supportedNetworks, // used in field validation
+      supportedNetworks,
       autoComplete: autoCompleteProp,
       variant = "withValue",
       maxLength,
@@ -58,6 +59,11 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
     const prefix = useId();
     const id = idProp ?? `${prefix}-aid`;
     const autoComplete = autoCompleteProp ?? true;
+
+    const contextValue = useMemo(
+      () => ({ supportedNetworks }),
+      [supportedNetworks],
+    );
 
     const renderOption = useCallback(
       (
@@ -90,58 +96,62 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
       [variant],
     );
 
-    return autoComplete && fetchOptionsCallback ? (
-      <IdAutocompleteFieldRaw
-        id={id}
-        name={name}
-        className={className}
-        label={label}
-        description={description}
-        value={value}
-        defaultValue={defaultValue}
-        disabled={disabled}
-        placeholder={placeholder}
-        required={required}
-        errors={errors}
-        warnings={warnings}
-        onChange={onChange}
-        onBlur={onBlur}
-        onClick={onClick}
-        onMouseDown={onMouseDown}
-        autoComplete={true}
-        variant={variant}
-        maxLength={maxLength}
-        fetchOptionsCallback={fetchOptionsCallback}
-        fetchSelectedOptionCallback={fetchSelectedOptionCallback}
-        isOpenByDefault={isOpenByDefault}
-        initialOptions={initialOptions}
-        renderOption={renderOption}
-        {...props}
-        ref={ref}
-      />
-    ) : (
-      <IdAutocompleteFieldRaw
-        id={id}
-        name={name}
-        className={className}
-        label={label}
-        description={description}
-        value={value}
-        defaultValue={defaultValue}
-        disabled={disabled}
-        placeholder={placeholder}
-        required={required}
-        errors={errors}
-        warnings={warnings}
-        onChange={onChange}
-        onBlur={onBlur}
-        onClick={onClick}
-        onMouseDown={onMouseDown}
-        autoComplete={false}
-        maxLength={maxLength}
-        {...props}
-        ref={ref}
-      />
+    return (
+      <IdAutocompleteContext.Provider value={contextValue}>
+        {autoComplete && fetchOptionsCallback ? (
+          <IdAutocompleteFieldRaw
+            id={id}
+            name={name}
+            className={className}
+            label={label}
+            description={description}
+            value={value}
+            defaultValue={defaultValue}
+            disabled={disabled}
+            placeholder={placeholder}
+            required={required}
+            errors={errors}
+            warnings={warnings}
+            onChange={onChange}
+            onBlur={onBlur}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            autoComplete={true}
+            variant={variant}
+            maxLength={maxLength}
+            fetchOptionsCallback={fetchOptionsCallback}
+            fetchSelectedOptionCallback={fetchSelectedOptionCallback}
+            isOpenByDefault={isOpenByDefault}
+            initialOptions={initialOptions}
+            renderOption={renderOption}
+            {...props}
+            ref={ref}
+          />
+        ) : (
+          <IdAutocompleteFieldRaw
+            id={id}
+            name={name}
+            className={className}
+            label={label}
+            description={description}
+            value={value}
+            defaultValue={defaultValue}
+            disabled={disabled}
+            placeholder={placeholder}
+            required={required}
+            errors={errors}
+            warnings={warnings}
+            onChange={onChange}
+            onBlur={onBlur}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            autoComplete={false}
+            maxLength={maxLength}
+            {...props}
+            ref={ref}
+          />
+        )}
+      </IdAutocompleteContext.Provider>
     );
   },
 );

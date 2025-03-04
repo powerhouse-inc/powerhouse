@@ -27,6 +27,7 @@ export type IdAutocompleteProps = IdAutocompleteBaseProps &
         initialOptions?: IdAutocompleteOption[];
         fetchOptionsCallback: (
           userInput: string,
+          context?: Record<string, unknown>,
         ) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[];
         fetchSelectedOptionCallback?: (
           value: string,

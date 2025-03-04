@@ -62,8 +62,8 @@ const meta: Meta<typeof PHIDField> = {
     fetchOptionsCallback: {
       control: "object",
       description:
-        "Function to fetch options based on user input. " +
-        "Must return an array of objects with the following properties:\n\n" +
+        "Function to fetch options based on user input and context. " +
+        "Must return a Promise that resolves to an array of objects or an array of objects with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
         "path?: string\n\n" +
@@ -72,7 +72,8 @@ const meta: Meta<typeof PHIDField> = {
       table: {
         type: {
           summary:
-            "(userInput: string) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
+            "(userInput: string, context?: { allowUris?: boolean, " +
+            "allowedScopes?: string[] }) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -84,7 +85,7 @@ const meta: Meta<typeof PHIDField> = {
       control: "object",
       description:
         "Function to fetch details for a selected option. " +
-        "Must return an object with the following properties:\n\n" +
+        "Must return a Promise that resolves to an object or an object with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
         "path?: string\n\n" +
@@ -160,8 +161,9 @@ export const Open: Story = {
     placeholder: "phd:",
     isOpenByDefault: true,
     defaultValue: "phd:",
-    variant: "withValueTitleAndDescription",
     initialOptions: mockedOptions,
+    allowUris: true,
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -173,6 +175,7 @@ export const Filled: Story = {
     placeholder: "phd:",
     defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
+    allowUris: true,
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
