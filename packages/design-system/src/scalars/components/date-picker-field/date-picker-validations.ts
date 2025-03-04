@@ -1,11 +1,8 @@
 import { format } from "date-fns";
 import { DatePickerFieldProps } from "./date-picker-field";
-import {
-  formatDateToValidCalendarDateFormat,
-  getDateFromValue,
-  isDateFormatAllowed,
-} from "./utils";
+import { formatDateToValidCalendarDateFormat, getDateFromValue } from "./utils";
 import { DateFieldValue } from "./types";
+import { isDateFormatAllowed } from "../date-time-field/utils";
 
 export const validateDatePicker =
   ({ minDate, maxDate, dateFormat }: DatePickerFieldProps) =>

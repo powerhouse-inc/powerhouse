@@ -1,21 +1,18 @@
 import React, { forwardRef } from "react";
-import { DatePickerField } from "../date-picker-field/date-picker-field";
-import { TimePickerField } from "../time-picker-field/time-picker-field";
 import { DateFieldValue } from "../date-picker-field/types";
-import Calendar from "@/assets/icon-components/Calendar";
 import { cn } from "@/scalars/lib";
-import { id } from "date-fns/locale";
-import { date } from "zod";
 import {
   FormGroup,
   FormLabel,
   FormDescription,
   FormMessageList,
+  withFieldValidation,
 } from "../fragments";
 import { BasePickerField } from "./base-picker-field";
 import { FieldCommonProps } from "../types";
-import { useDateTimePicker } from "./use-date-time-picker";
+import { useDateTime } from "./use-date-time";
 import DateTimePickerContent from "./date-time-picker-contet";
+import { dateTimeFieldValidations } from "./date-time-field-validations";
 
 interface DateTimePickerProps extends FieldCommonProps<DateFieldValue> {
   name: string;
@@ -30,8 +27,18 @@ interface DateTimePickerProps extends FieldCommonProps<DateFieldValue> {
   dateIntervals?: number;
   timeZone?: string;
   showTimezoneSelect?: boolean;
+  // Date Picker Field
+  disablePastDates?: boolean;
+  disableFutureDates?: boolean;
+  dateFormat?: string;
+  weekStart?: string;
+  autoClose?: boolean;
+  minDate?: string;
+  maxDate?: string;
+  onChangeDate?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlurDate?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
-const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
+const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
   (
     {
       name,
@@ -45,23 +52,43 @@ const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
       placeholder,
       description,
       warnings,
-      // Time Picker Field
-      onChange: onChangeTime,
-      onBlur: onBlurTime,
+      onChange,
+      onBlur,
+
+      // Date Picker Field
+      disablePastDates,
+      disableFutureDates,
+      dateFormat,
+      weekStart,
+      autoClose,
+      onChangeDate,
+      onBlurDate,
       timeFormat,
       dateIntervals,
       timeZone,
       showTimezoneSelect,
+      ...props
     },
     ref,
   ) => {
     const {
       isOpen,
       setIsOpen,
-      inputValue,
+      // inputValue,
       activeTab,
       onChangeTabs,
       isCalendarView,
+      dateTimeToDisplay,
+      handleInputChangeField,
+
+      // Date Picker Field
+      date,
+      handleDateSelect,
+      disabledDates,
+      weekStartDay,
+      handleDayClick,
+      handleOnBlur,
+
       // Time Picker Field
       selectedHour,
       selectedMinute,
@@ -71,17 +98,33 @@ const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
       setSelectedPeriod,
       hours,
       minutes,
-    } = useDateTimePicker({
+      onCancel,
+      handleSave,
+      timeZonesOptions,
+      selectedTimeZone,
+      is12HourFormat,
+      setSelectedTimeZone,
+      isDisableSelect,
+    } = useDateTime({
       value,
       defaultValue,
-      onChange: onChangeTime,
-      onBlur: onBlurTime,
+      onChange,
+      onBlur,
+      // Date Picker Field
+      autoClose,
+      disableFutureDates,
+      disablePastDates,
+      dateFormat,
+      weekStart,
+      onChangeDate,
+      onBlurDate,
+
+      // Time Picker Field
       timeFormat,
       dateIntervals,
       timeZone,
       showTimezoneSelect,
     });
-
     return (
       <FormGroup>
         {label && (
@@ -98,7 +141,7 @@ const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
           ref={ref}
           label={label}
           id={id}
-          value={inputValue}
+          value={dateTimeToDisplay}
           name={name}
           errors={errors}
           disabled={disabled}
@@ -107,8 +150,9 @@ const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
           placeholder={placeholder}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
-          onInputChange={() => {}}
-          handleBlur={() => {}}
+          onInputChange={handleInputChangeField}
+          handleBlur={handleOnBlur}
+          data-cast={`DateTimeString:${dateFormat}`}
           className={cn(
             // Add custom styles when the time is open
             isCalendarView ? "pt-3 px-4 pb-6" : "pt-3 pr-4 pb-4 pl-4",
@@ -117,6 +161,13 @@ const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
           <DateTimePickerContent
             activeTab={activeTab}
             onChangeTabs={onChangeTabs}
+            // Date Picker Field
+            date={date}
+            handleDateSelect={handleDateSelect}
+            disabledDates={disabledDates}
+            weekStartDay={weekStartDay}
+            handleDayClick={handleDayClick}
+            // Time Picker Field
             selectedHour={selectedHour}
             selectedMinute={selectedMinute}
             selectedPeriod={selectedPeriod}
@@ -125,9 +176,14 @@ const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
             setSelectedPeriod={setSelectedPeriod}
             hours={hours}
             minutes={minutes}
-            timeZonesOptions={[]}
-            is12HourFormat={true}
-            isDisableSelect={false}
+            timeZonesOptions={timeZonesOptions}
+            selectedTimeZone={selectedTimeZone as string}
+            setSelectedTimeZone={setSelectedTimeZone}
+            timeZone={timeZone}
+            is12HourFormat={is12HourFormat}
+            isDisableSelect={isDisableSelect}
+            onCancel={onCancel}
+            onSave={handleSave}
           />
         </BasePickerField>
         {description && <FormDescription>{description}</FormDescription>}
@@ -138,4 +194,13 @@ const DateTimePickerRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
   },
 );
 
-export default DateTimePickerRaw;
+export const DateTimeField = withFieldValidation<DateTimePickerProps>(
+  DateTimeRaw,
+  {
+    validations: {
+      _datePickerType: dateTimeFieldValidations,
+    },
+  },
+);
+
+DateTimeField.displayName = "DateTimeField";

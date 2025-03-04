@@ -1,7 +1,7 @@
-import { parse } from "date-fns";
+import { parse, format } from "date-fns";
 import { AmountValue } from "../components/amount-field/types";
-import { parseInputString } from "../components/date-picker-field/utils";
 import { getDateFromValue } from "../components/date-picker-field/utils";
+import { parseInputString } from "../components/date-time-field/utils";
 
 export type ValueCast =
   | "BigInt"
@@ -9,7 +9,8 @@ export type ValueCast =
   | "URLTrim"
   | "AmountNumber"
   | "AmountBigInt"
-  | "DateString";
+  | "DateString"
+  | "DateTimeString";
 
 export const castFunctions: Record<
   ValueCast,
@@ -45,6 +46,14 @@ export const castFunctions: Record<
     const newValue = parseInputString(date, dateFormat);
     const fechaUTC = parse(newValue, dateFormat, new Date());
     return fechaUTC;
+  },
+  DateTimeString: (value: string, dateFormat = "yyyy-MM-dd") => {
+    const [datePart, timePart] = value.split("T");
+    const date = getDateFromValue(datePart);
+    const normalizedDate = parseInputString(date, dateFormat);
+    const parsedDate = parse(normalizedDate, dateFormat, new Date());
+    const isoDate = format(parsedDate, "yyyy-MM-dd");
+    return `${isoDate}T${timePart}`;
   },
 };
 

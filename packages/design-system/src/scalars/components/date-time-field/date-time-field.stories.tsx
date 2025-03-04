@@ -147,6 +147,22 @@ const meta: Meta<typeof DateTimeField> = {
       if: { arg: "showTimeSelect", truthy: true },
       defaultValue: { summary: false },
     },
+    timeZone: {
+      control: "text",
+      description: "Timezone",
+      if: { arg: "showTimeSelect", truthy: true },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    dateIntervals: {
+      control: "number",
+      description: "Date intervals",
+      if: { arg: "showTimeSelect", truthy: true },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
 
   args: {
@@ -189,7 +205,7 @@ export const TimePicker: Story = {
 export const DateTimePicker: Story = {
   args: {
     label: "Date Time Picker Field",
-    description: "This is a date time picker ield",
+    description: "This is a date time picker field",
     showDateSelect: true,
     showTimeSelect: true,
     placeholder: "2025/01/27 12:00",

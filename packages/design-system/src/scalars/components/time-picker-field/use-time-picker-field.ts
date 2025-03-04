@@ -11,11 +11,13 @@ import {
   getHoursAndMinutes,
   getInputValue,
   getMinutes,
-  getOffset,
   getOptions,
   getTimezone,
   isValidTimeInput,
 } from "./utils";
+import { createBlurEvent } from "../date-picker-field/utils";
+import { getOffset } from "../date-time-field/utils";
+
 export const convertTimeFrom24To12Hours = (time: string) => {
   if (time === "") return "";
   const hours = Number(time);
@@ -84,14 +86,14 @@ export const useTimePickerField = ({
       if (input === "") {
         setInputValue(input);
         onChange?.(createChangeEvent(""));
-        onBlur?.(e);
+        onBlur?.(createBlurEvent(""));
         return;
       }
       // Create an empty but valid time value that matches the format expected by the value prop
       const inValid = formatInputsToValueFormat("", "", "±00:00");
       setInputValue(input);
       onChange?.(createChangeEvent(inValid));
-      onBlur?.(e);
+      onBlur?.(createBlurEvent(input));
       return;
     }
     const validDisplay = formatInputToDisplayValid(
@@ -99,6 +101,14 @@ export const useTimePickerField = ({
       is12HourFormat,
       dateIntervals,
     );
+    // Check if the validDisplay is empty and if it is, set the inputValue to an empty string
+    if (!validDisplay) {
+      setInputValue("");
+      onChange?.(createChangeEvent(""));
+      onBlur?.(createBlurEvent(""));
+      return;
+    }
+
     setInputValue(validDisplay);
 
     const validValue = convert12hTo24h(validDisplay);
@@ -117,7 +127,7 @@ export const useTimePickerField = ({
     setSelectedHour(clearHours);
     setSelectedMinute(clearMinutes);
     onChange?.(createChangeEvent(datetime));
-    onBlur?.(e);
+    onBlur?.(createBlurEvent(validDisplay));
   };
 
   // Generate hours according to the format
@@ -138,7 +148,9 @@ export const useTimePickerField = ({
 
   const handleSave = () => {
     setIsOpen(false);
-    const offsetUTC = getOffset(selectedTimeZone as string);
+    const offsetUTC = timeZone
+      ? getOffset(timeZone)
+      : getOffset(selectedTimeZone as string);
 
     // Value to save in the onSubmit
     const datetime = formatInputsToValueFormat(
