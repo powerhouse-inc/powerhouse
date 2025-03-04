@@ -1,4 +1,4 @@
-@import url('../node_modules/@powerhousedao/design-system/dist/style.css');
+@import '../../../packages/design-system/dist/style.css';
 
 @tailwind components;
 @tailwind utilities;
@@ -6,4 +6,5 @@
 :root {
     --app-height: calc(100vh - 32px);
     --search-bar-width: 642px;
+    --shadow-button: 0px 2px 4px 0px rgba(0, 0, 0, 0.15);
 }

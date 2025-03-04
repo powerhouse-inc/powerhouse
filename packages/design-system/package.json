@@ -3,7 +3,8 @@
   "version": "1.28.0",
   "description": "",
   "files": [
-    "/dist"
+    "/dist",
+    "/dist/style.css"
   ],
   "type": "module",
   "main": "dist/index.js",
@@ -16,9 +17,6 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./style.css": {
-      "import": "./dist/style.css"
     },
     "./scalars": {
       "types": "./dist/src/scalars/index.d.ts",

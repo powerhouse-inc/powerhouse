@@ -6,8 +6,7 @@
   "private": false,
   "type": "module",
   "exports": {
-    "./powerhouse": "./dist/src/powerhouse.js",
-    "./tailwind": "./dist/src/tailwind.js"
+    "./powerhouse": "./dist/src/powerhouse.js"
   },
   "publishConfig": {
     "access": "public"
@@ -24,9 +23,6 @@
     "clean:node_modules": "rimraf node_modules"
   },
   "dependencies": {
-    "@microsoft/api-extractor": "^7.48.1",
-    "tailwind-scrollbar": "^3.1.0",
-    "tailwindcss": "^3.4.16",
-    "tailwindcss-animate": "^1.0.7"
+    "@microsoft/api-extractor": "^7.48.1"
   }
 }
