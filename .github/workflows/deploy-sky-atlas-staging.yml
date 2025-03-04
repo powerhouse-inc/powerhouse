@@ -1,8 +1,7 @@
 name: Deploy Sky Atlas (Staging)
 
 on:
-  push:
-    branches: [sky-atlas-staging]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -18,9 +17,8 @@ jobs:
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          dockerfile_directory: ./
-          dockerfile_name: apps/switchboard/Dockerfile
+          heroku_app_name: sky-atlas-switchboard-staging
+          dockerfile_directory: ./apps/switchboard
           process_type: web
       # - name: Build, Push and Release Frontend to Heroku. # Your custom step name
       #   uses: gonuit/heroku-docker-deploy@v1.3.3

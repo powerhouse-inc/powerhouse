@@ -81,6 +81,7 @@ export type {
   RemoteDriveOptions,
   StrandUpdate,
   SyncStatus,
+  GetDocumentOptions,
 } from "#server/types";
 export { MemoryStorage } from "#storage/memory";
 export { requestPublicDrive } from "#utils/graphql";

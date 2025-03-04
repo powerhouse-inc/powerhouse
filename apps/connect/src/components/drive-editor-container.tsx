@@ -5,6 +5,7 @@ import { useSyncStatus } from '#hooks/useSyncStatus';
 import { useUiNodes } from '#hooks/useUiNodes';
 import { useFilteredDocumentModels } from '#store/document-model';
 import { useDriveEditor } from '#store/external-packages';
+import { useAsyncReactor } from '#store/reactor';
 import { useDocumentDispatch } from '#utils/document-model';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import {
@@ -17,6 +18,7 @@ import { DocumentModelModule, Operation } from 'document-model';
 import { useCallback, useEffect, useMemo } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal';
+import { useDocumentsState } from '@powerhousedao/reactor-browser/hooks/useDocumentsState';
 
 function DriveEditorError({ error }: FallbackProps) {
     return (
@@ -58,6 +60,13 @@ export function DriveEditorContainer() {
         driveDocumentModelModule.reducer,
         documentDrive,
     );
+    const reactor = useAsyncReactor();
+    const statesByDocumentId = useDocumentsState({
+        reactor,
+        driveId: selectedDriveNode?.id,
+    });
+
+    console.log('statesByDocumentId', statesByDocumentId);
 
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
