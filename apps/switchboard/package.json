@@ -2,15 +2,20 @@
   "name": "@powerhousedao/switchboard",
   "type": "module",
   "version": "2.1.420",
-  "main": "index.js",
+  "main": "dist/src/cli.js",
+  "bin": {
+    "switchboard": "dist/src/cli.js"
+  },
   "scripts": {
     "build:tsc": "tsc --build",
-    "build": "tsup",
-    "start": "vite-node src/index.ts",
+    "build": "pnpm build:tsc",
+    "start": "node dist/src/cli.js",
+    "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "codegen": "gql-gen --config codegen.yml",
-    "postinstall": "pnpx prisma generate --schema node_modules/document-drive/prisma/schema.prisma"
+    "postinstall": "pnpx prisma generate --schema node_modules/document-drive/prisma/schema.prisma && pnpm build:tsc",
+    "prepublishOnly": "npm run build"
   },
   "author": "",
   "license": "ISC",
@@ -68,8 +73,8 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
     "graphql-codegen-typescript-common": "0.18.2",
-    "tsup": "^8.3.6",
-    "vite-node": "^2.1.8"
+    "nodemon": "^3.1.9"
   }
 }
