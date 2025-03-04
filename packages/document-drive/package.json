@@ -28,7 +28,7 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "migrate": "prisma generate && prisma db push",
-    "postinstall": "prisma generate"
+    "prebuild": "prisma generate"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
