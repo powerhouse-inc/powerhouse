@@ -1,3 +1,56 @@
+## 1.0.0-dev.211 (2025-03-04)
+
+### 🚀 Features
+
+- **reactor-browser:** add documents state hook ([7a788d67](https://github.com/powerhouse-inc/powerhouse/commit/7a788d67))
+
+### 🩹 Fixes
+
+- keep consistent zod version across projects ([97cdadab](https://github.com/powerhouse-inc/powerhouse/commit/97cdadab))
+- **codegen,document-model,document-drive:** updated codegen templates ([5e41b78f](https://github.com/powerhouse-inc/powerhouse/commit/5e41b78f))
+- **document-drive:** fixing some more compiler errors ([345be42a](https://github.com/powerhouse-inc/powerhouse/commit/345be42a))
+- **switchboard:** use tsc instead up tsup and vite node ([de2e7104](https://github.com/powerhouse-inc/powerhouse/commit/de2e7104))
+- **document-drive:** fixing some document-helpers tests by fixing imports ([a41ef5f8](https://github.com/powerhouse-inc/powerhouse/commit/a41ef5f8))
+- adding vitest as dev dependency ([8c9cac84](https://github.com/powerhouse-inc/powerhouse/commit/8c9cac84))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- ryanwolhuter
+
+## 1.0.11 (2025-03-04)
+
+### 🚀 Features
+
+- **reactor-browser:** add documents state hook ([7a788d67](https://github.com/powerhouse-inc/powerhouse/commit/7a788d67))
+
+### 🩹 Fixes
+
+- keep consistent zod version across projects ([97cdadab](https://github.com/powerhouse-inc/powerhouse/commit/97cdadab))
+- **codegen,document-model,document-drive:** updated codegen templates ([5e41b78f](https://github.com/powerhouse-inc/powerhouse/commit/5e41b78f))
+- **document-drive:** fixing some more compiler errors ([345be42a](https://github.com/powerhouse-inc/powerhouse/commit/345be42a))
+- **switchboard:** use tsc instead up tsup and vite node ([de2e7104](https://github.com/powerhouse-inc/powerhouse/commit/de2e7104))
+- **document-drive:** fixing some document-helpers tests by fixing imports ([a41ef5f8](https://github.com/powerhouse-inc/powerhouse/commit/a41ef5f8))
+- adding vitest as dev dependency ([8c9cac84](https://github.com/powerhouse-inc/powerhouse/commit/8c9cac84))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.12.0
+- Updated document-drive to 1.21.0
+- Updated document-model to 2.21.1
+- Updated @powerhousedao/builder-tools to 0.2.6
+- Updated @powerhousedao/design-system to 1.29.5
+- Updated @powerhousedao/scalars to 1.25.1
+- Updated @powerhousedao/common to 1.3.5
+- Updated @powerhousedao/config to 1.18.2
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- ryanwolhuter @ryanwolhuter
+
 ## 1.0.0-dev.210 (2025-03-03)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
