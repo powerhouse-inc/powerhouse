@@ -7,7 +7,7 @@ import {
 } from "../date-picker-field/date-picker-field";
 import { TimePickerField, TimePickerFieldProps } from "../time-picker-field";
 import { TimeFieldValue } from "../time-picker-field/type";
-import DateTimePickerRaw from "./date-time-picker";
+import { DateTimeField as DateTimeRaw } from "./date-time";
 
 type CommonOmittedProps =
   | "name"
@@ -37,14 +37,14 @@ interface DateTimeFieldProps
   showTimeSelect?: boolean;
   name: string;
   label?: string;
-  // Props específicas de DateTimeField
-  dateFormat?: string;
+  onChange?: (value: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 
+  // Specific DateTimeField props
+  dateFormat?: string;
   weekStart?: string;
   minDate?: string;
   maxDate?: string;
-  onChange?: (value: React.ChangeEvent<HTMLInputElement>) => void;
-  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   placeholder?: string;
   disablePastDates?: boolean;
   disableFutureDates?: boolean;
@@ -52,6 +52,8 @@ interface DateTimeFieldProps
   // Time picker props
   showTimezoneSelect?: boolean;
   timeFormat?: string;
+  timeZone?: string;
+  dateIntervals?: number;
 }
 export const DateTimeField: React.FC<
   DateTimeFieldProps & DateTimeFieldPropsDate & DateTimeFieldPropsTime
@@ -73,6 +75,8 @@ export const DateTimeField: React.FC<
   autoClose,
   showTimezoneSelect,
   value,
+  timeZone,
+  dateIntervals,
   ...props
 }) => {
   if (!showDateSelect && !showTimeSelect) {
@@ -98,12 +102,22 @@ export const DateTimeField: React.FC<
   return (
     <div>
       {showDateSelect && showTimeSelect && (
-        <DateTimePickerRaw
+        <DateTimeRaw
           name={name}
           value={value}
           placeholder={placeholder}
           label={label}
-          //  Add rest props WIP
+          weekStart={weekStart}
+          autoClose={autoClose}
+          disableFutureDates={disableFutureDates}
+          disablePastDates={disablePastDates}
+          minDate={minDate}
+          maxDate={maxDate}
+          dateFormat={dateFormat}
+          onChange={onChange}
+          onBlur={onBlur}
+          timeZone={timeZone}
+          timeFormat={timeFormat}
           {...props}
         />
       )}
@@ -133,6 +147,8 @@ export const DateTimeField: React.FC<
           placeholder={placeholder}
           timeFormat={timeFormat}
           showTimezoneSelect={showTimezoneSelect}
+          timeZone={timeZone}
+          dateIntervals={dateIntervals}
           {...props}
         />
       )}

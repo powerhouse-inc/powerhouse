@@ -1,35 +1,14 @@
 import { format, isValid, parse } from "date-fns";
 import { DateFieldValue } from "./types";
+import { ALLOWED_FORMATS, dateFormatRegexes } from "../date-time-field/utils";
 
-export const ALLOWED_FORMATS = [
-  "yyyy-MM-dd",
-  "dd/MM/yyyy",
-  "MM/dd/yyyy",
-  "dd-MMM-yyyy",
-  "MMM-dd-yyyy",
-];
+export const splitIso8601DateTime = (isoString: string) => {
+  const [datePart, timePart] = isoString.split("T");
 
-export const isFormatAllowed = (dateString: string) =>
-  Object.values(dateFormatRegexes).some((regex) => regex.test(dateString));
-
-export const isDateFormatAllowed = (
-  dateString: string,
-  dateFormat?: string,
-) => {
-  if (!dateFormat) return isFormatAllowed(dateString);
-  const regex = dateFormatRegexes[dateFormat as keyof typeof dateFormatRegexes];
-  if (!regex) return false;
-  return regex.test(dateString);
-};
-
-export const dateFormatRegexes = {
-  "yyyy-MM-dd": /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,
-  "dd/MM/yyyy": /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/,
-  "MM/dd/yyyy": /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$/,
-  "dd-MMM-yyyy":
-    /^(0[1-9]|[12]\d|3[01])-(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{4}$/,
-  "MMM-dd-yyyy":
-    /^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(0[1-9]|[12]\d|3[01])-\d{4}$/,
+  return {
+    date: datePart,
+    time: timePart,
+  };
 };
 
 const splitDateTime = (
@@ -42,13 +21,14 @@ const splitDateTime = (
   }
 
   if (typeof value === "string") {
-    const [date, time] = value.split("T");
+    const { date, time } = splitIso8601DateTime(value);
+
     return { date, time };
   }
 
   if (isValid(value)) {
     const dateString = value.toISOString();
-    const [date, time] = dateString.split("T");
+    const { date, time } = splitIso8601DateTime(dateString);
     return { date, time };
   }
 
@@ -60,31 +40,9 @@ export const getDateFromValue = (value: DateFieldValue): string => {
   return date;
 };
 
-export const parseInputString = (
-  inputString: string,
-  dateFormat = ALLOWED_FORMATS[0],
-): string => {
-  if (!dateFormat || !inputString) return inputString;
-  // First check the specified format
-  const specifiedFormatRegex =
-    dateFormatRegexes[dateFormat as keyof typeof dateFormatRegexes];
-  if (specifiedFormatRegex.test(inputString)) {
-    const parsedDate = parse(inputString, dateFormat, new Date());
-    if (isValid(parsedDate)) {
-      return format(parsedDate, dateFormat);
-    }
-  }
-
-  for (const [formatStr, regex] of Object.entries(dateFormatRegexes)) {
-    if (regex.test(inputString)) {
-      const parsedDate = parse(inputString, formatStr, new Date());
-      if (isValid(parsedDate)) {
-        const newValue = format(parsedDate, dateFormat || formatStr);
-        return newValue;
-      }
-    }
-  }
-  return inputString;
+export const getTimeFromValue = (value: DateFieldValue): string => {
+  const { time } = splitDateTime(value);
+  return time;
 };
 
 export const formatDateToValue = (inputDate: Date): string => {
@@ -116,10 +74,6 @@ export const convertToISODateFormat = (
   dateFormat = ALLOWED_FORMATS[0],
 ): string => {
   if (!dateFormat || !inputString) return inputString;
-  // if (dateFormatRegexes["MM/dd/yyyy"].test(inputString)) {
-  //   const [month, day, year] = inputString.split("/");
-  //   return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  // }
 
   for (const [formatStr, regex] of Object.entries(dateFormatRegexes)) {
     if (regex.test(inputString)) {

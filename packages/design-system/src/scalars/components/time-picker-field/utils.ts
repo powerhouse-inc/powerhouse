@@ -1,3 +1,4 @@
+import { getOffset } from "../date-time-field/utils";
 import { TimePeriod } from "./type";
 
 export const createChangeEvent = (
@@ -87,6 +88,7 @@ export const transformInputTime = (
   is12HourFormat: boolean,
   interval = 1,
 ): { hour: string; minute: string; period?: TimePeriod } => {
+  if (!input) return { hour: "", minute: "", period: undefined };
   input = input.trim();
   let hourStr = "";
   let minuteStr = "";
@@ -152,6 +154,7 @@ export const transformInputTime = (
  * @returns Whether the input time is valid and can be transformed into a proper time format
  */
 export const isValidTimeInput = (input: string): boolean => {
+  if (!input) return true;
   input = input.trim();
   // Allow change the format and convert the time
   if (input.includes(":")) {
@@ -169,62 +172,6 @@ export const isValidTimeInput = (input: string): boolean => {
     const minuteNum = parseInt(minuteStr, 10);
     return hourNum >= 0 && hourNum <= 23 && minuteNum >= 0 && minuteNum <= 59;
   }
-};
-/**
- * Get the local system timezone offset in ±HH:MM format
- * @returns The local timezone offset (e.g., "+02:00", "-05:00")
- * @example
- * getLocalOffset() // Returns "+01:00" for GMT+1
- * getLocalOffset() // Returns "-05:00" for GMT-5
- */
-export const getLocalOffset = (): string => {
-  const localOffset = new Date().getTimezoneOffset();
-  const sign = localOffset <= 0 ? "+" : "-";
-  const hours = String(Math.floor(Math.abs(localOffset) / 60)).padStart(2, "0");
-  const minutes = String(Math.abs(localOffset) % 60).padStart(2, "0");
-  return `${sign}${hours}:${minutes}`;
-};
-
-/**
- * Gets the current UTC offset for a specific time zone
- * @param timeZone - The IANA time zone name (e.g. "America/New_York", "Europe/London").
- *                   If not provided or invalid, falls back to local system timezone.
- * @returns The offset in ISO 8601 format (±HH:mm) based on current DST rules.
- * @example
- * getOffset("America/New_York") // Returns "-04:00" (EDT) or "-05:00" (EST)
- * getOffset("Asia/Kolkata")     // Returns "+05:30" (IST - no DST)
- * getOffset("Invalid/Zone")     // Returns local system offset (e.g. "-03:00")
- * getOffset()                   // Returns local system offset
- */
-export const getOffset = (timeZone?: string) => {
-  // Handle edge cases first
-  if (!timeZone || typeof timeZone !== "string") return getLocalOffset();
-
-  // Create a formatter in a safe way
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour12: false,
-    timeZoneName: "shortOffset",
-  });
-
-  // Extract the offset from the format
-  const offsetPart = formatter
-    .formatToParts(new Date())
-    .find((part) => part.type === "timeZoneName")?.value;
-
-  if (!offsetPart) return getLocalOffset();
-
-  // Handle multiple formats
-  const offsetMatch =
-    /^(?:GMT|UTC)?([+-])(\d{1,2})(?::?(\d{2}))?/i.exec(offsetPart) ||
-    /(UTC|GMT)([+-]\d{2}:\d{2})/.exec(offsetPart);
-
-  if (!offsetMatch) return getLocalOffset();
-  const sign = offsetMatch[1] || "+";
-  const hours = (offsetMatch[2] || "00").padStart(2, "0");
-  const minutes = (offsetMatch[3] || "00").padStart(2, "0");
-
-  return `${sign}${hours}:${minutes}`;
 };
 
 /**
@@ -274,10 +221,8 @@ export const splitDatetime = (datetime?: string) => {
   if (!datetime) return { hours: "", minutes: "", timezoneOffset: "" };
   const offsetMatch = /([+-]\d{2}:\d{2})$/.exec(datetime);
   const timezoneOffset = offsetMatch ? offsetMatch[0] : "";
-
   const time = removeDate(datetime);
   const [hours, minutes] = time.split(":");
-
   return {
     hours: hours.padStart(2, "0"),
     minutes: minutes.padStart(2, "0"),
@@ -306,6 +251,7 @@ export const getMinutes = (datetime?: string) => {
 };
 
 export const getInputValue = (datetime?: string) => {
+  if (!datetime) return "";
   const { hours, minutes } = splitDatetime(datetime);
   if (!hours && !minutes) return "";
   return `${hours}:${minutes}`;
@@ -401,7 +347,11 @@ export const formatInputToDisplayValid = (
     is12HourFormat,
     dateIntervals,
   );
-  return is12HourFormat ? `${hour}:${minute} ${period}` : `${hour}:${minute}`;
+  if (!hour && !minute) return "";
+
+  return is12HourFormat
+    ? `${hour}:${minute} ${period ?? ""}`
+    : `${hour}:${minute}`;
 };
 
 /**
