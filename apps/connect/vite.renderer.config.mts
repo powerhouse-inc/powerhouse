@@ -3,6 +3,7 @@ import {
     viteLoadExternalPackages,
 } from '@powerhousedao/builder-tools/connect-studio';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
+import tailwind from "@tailwindcss/vite";
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
@@ -61,6 +62,7 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const plugins: PluginOption[] = [
+        tailwind(),
         nodePolyfills({
             include: ['events'],
             globals: {
