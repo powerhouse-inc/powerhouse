@@ -1,3 +1,20 @@
+## 1.0.0-dev.212 (2025-03-04)
+
+### 🚀 Features
+
+- extend DriveContext to support useDocumentEditorProps ([6f6d5f7e](https://github.com/powerhouse-inc/powerhouse/commit/6f6d5f7e))
+- added useDocumentEditor hook ([361e8327](https://github.com/powerhouse-inc/powerhouse/commit/361e8327))
+
+### 🩹 Fixes
+
+- **document-drive:** copy prisma schema to dist folder ([5c7f7635](https://github.com/powerhouse-inc/powerhouse/commit/5c7f7635))
+- **document-drive:** run prisma generate before build ([17ce0913](https://github.com/powerhouse-inc/powerhouse/commit/17ce0913))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 1.0.0-dev.211 (2025-03-04)
 
 ### 🚀 Features

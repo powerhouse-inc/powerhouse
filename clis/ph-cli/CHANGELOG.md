@@ -1,3 +1,27 @@
+## 0.34.11-dev.0 (2025-03-04)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.212
+
+## 0.34.10 (2025-03-04)
+
+### 🩹 Fixes
+
+- **document-drive:** copy prisma schema to dist folder ([5c7f7635](https://github.com/powerhouse-inc/powerhouse/commit/5c7f7635))
+- **document-drive:** run prisma generate before build ([17ce0913](https://github.com/powerhouse-inc/powerhouse/commit/17ce0913))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.21.1
+- Updated @powerhousedao/builder-tools to 0.2.7
+- Updated @powerhousedao/reactor-local to 1.21.7
+- Updated @powerhousedao/connect to 1.0.6
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 0.34.10-dev.0 (2025-03-04)
 
 ### 🧱 Updated Dependencies
