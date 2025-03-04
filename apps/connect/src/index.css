@@ -4,5 +4,4 @@
 @theme {
     --spacing-app-height: calc(100vh - 32px);
     --spacing-search-bar-width: 642px;
-    --shadow-button: 0px 2px 4px 0px rgba(0, 0, 0, 0.15);
 }
