@@ -86,6 +86,11 @@ const DriveContextDecorator: Decorator<
   return (
     <DriveContextProvider
       value={{
+        useDocumentEditorProps: () => ({
+          dispatch: () => {},
+          document: context.args.document,
+          error: undefined,
+        }),
         showSearchBar: false,
         isAllowedToCreateDocuments: true,
         documentModels: [

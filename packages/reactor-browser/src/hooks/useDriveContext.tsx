@@ -1,5 +1,10 @@
 import { Node, SyncStatus } from "document-drive";
-import { DocumentModelModule } from "document-model";
+import {
+  Action,
+  ActionErrorCallback,
+  DocumentModelModule,
+  PHDocument,
+} from "document-model";
 import { createContext, PropsWithChildren, useContext } from "react";
 import type { UiNode } from "../uiNodes/types.js";
 
@@ -60,6 +65,17 @@ export interface IDriveContext {
     driveId: string,
     documentId?: string,
   ) => SyncStatus | undefined;
+
+  useDocumentEditorProps: (props: {
+    driveId: string;
+    documentId: string;
+    documentType: string;
+    documentModelModule: DocumentModelModule<PHDocument>;
+  }) => {
+    dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
+    document: PHDocument | undefined;
+    error: unknown;
+  };
 }
 
 const DriveContext = createContext<IDriveContext | undefined>(undefined);

@@ -1,5 +1,6 @@
 import { useDocumentDriveById } from '#hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
+import { useDocumentEditor } from '#hooks/useDocumentEditor';
 import { useEditorProps } from '#hooks/useEditorProps';
 import { useSyncStatus } from '#hooks/useSyncStatus';
 import { useUiNodes } from '#hooks/useUiNodes';
@@ -111,6 +112,7 @@ export function DriveEditorContainer() {
             addFile,
             showCreateDocumentModal,
             useSyncStatus: useSyncStatus,
+            useDocumentEditorProps: useDocumentEditor,
         }),
         [
             editorProps.isAllowedToCreateDocuments,
