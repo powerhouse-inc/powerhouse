@@ -13,6 +13,9 @@ const meta: Meta<typeof DatePickerField> = {
   component: DatePickerField,
   parameters: {
     layout: "centered",
+    form: {
+      resetBehavior: "unmount",
+    },
   },
   decorators: [withForm, withTimestampsAsISOStrings],
   tags: ["autodocs"],
