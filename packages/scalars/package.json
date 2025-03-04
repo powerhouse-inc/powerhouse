@@ -25,10 +25,10 @@
   "devDependencies": {
     "glob": "^11.0.0",
     "graphql": "^16.9.0",
-    "zod": "^3.23.8"
+    "zod": "^3.24.2"
   },
   "peerDependencies": {
     "graphql": "^16.9.0",
-    "zod": "^3.23.8"
+    "zod": "^3.24.2"
   }
 }
