@@ -51,7 +51,7 @@ import {
   replayDocument,
   reshuffleByTimestamp,
   skipHeaderOperations,
-  sortOperations
+  sortOperations,
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { Unsubscribe } from "nanoevents";

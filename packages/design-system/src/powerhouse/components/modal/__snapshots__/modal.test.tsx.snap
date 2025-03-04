@@ -4,7 +4,7 @@ exports[`Modal Component > should match snapshot 1`] = `
 <div
   aria-describedby="radix-:r2:"
   aria-labelledby="radix-:r1:"
-  class="bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in"
+  class="data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in bg-white"
   data-state="open"
   data-testid="modal"
   id="radix-:r0:"

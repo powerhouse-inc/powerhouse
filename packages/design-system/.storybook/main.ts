@@ -23,14 +23,12 @@ const config: StorybookConfig = {
     autodocs: 'tag',
     defaultName: '_Readme'
   },
-  viteFinal(config) {
-    return {
-      ...config,
-      plugins: config.plugins?.filter(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-        (plugin) => !["vite:dts"].includes((plugin as any)?.name),
-      ),
-    };
+  viteFinal: async (config) => {
+    const { mergeConfig } = await import('vite');
+    const { default: tailwindcss } = await import("@tailwindcss/vite");
+    return mergeConfig(config, {
+      plugins: [tailwindcss()],
+    });
   },
 };
 export default config;

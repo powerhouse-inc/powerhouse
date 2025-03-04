@@ -14,12 +14,12 @@ const User = () => {
       <div className="flex flex-col gap-8 pt-14">
         <button
           type="submit"
-          className={`bg-orange-500 text-xs  hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded   mx-auto`}
+          className={`mx-auto rounded bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-600`}
           onClick={() => {
             signIn();
           }}
         >
-          <div className="flex flex-row items-center text-white rounded">
+          <div className="flex flex-row items-center rounded text-white">
             <div className="w-8">
               <ArrowRightStartOnRectangleIcon className="" />
             </div>{" "}
@@ -31,8 +31,8 @@ const User = () => {
   }
   return (
     <div className="flex flex-col gap-8 pt-14">
-      <div className="bg-white px-5 flex flex-row gap-4 items-center my-auto">
-        <div className="flex py-2 border-b-4 border-orange-600 text-orange-500">
+      <div className="my-auto flex flex-row items-center gap-4 bg-white px-5">
+        <div className="flex border-b-4 border-orange-600 py-2 text-orange-500">
           API Tokens
         </div>
         <div className="flex grow justify-end">
@@ -42,7 +42,7 @@ const User = () => {
             }}
             href={"/"}
           >
-            <div className="flex flex-row items-center text-orange-400 hover:bg-gray-300 rounded">
+            <div className="flex flex-row items-center rounded text-orange-400 hover:bg-gray-300">
               <div className="w-20">Sign Out</div>{" "}
               <div className="w-8">
                 <ArrowRightStartOnRectangleIcon className="text-orange-500" />
@@ -52,8 +52,8 @@ const User = () => {
         </div>
       </div>
       <TokenForm />
-      <div className="bg-white p-5 flex-flex-col gap-4">
-        <div className="font-semibold  mb-4">Existing Tokens</div>
+      <div className="flex-flex-col gap-4 bg-white p-5">
+        <div className="mb-4 font-semibold">Existing Tokens</div>
         <TokensTable />
       </div>
     </div>

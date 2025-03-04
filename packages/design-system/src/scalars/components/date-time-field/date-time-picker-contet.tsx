@@ -48,18 +48,18 @@ const DateTimePickerContent = ({
   isDisableSelect,
 }: DateTimePickerContentProps) => {
   return (
-    <div className={cn("w-full max-w-md mx-auto", className)}>
+    <div className={cn("mx-auto w-full max-w-md", className)}>
       <Tabs value={activeTab} onValueChange={onChangeTabs} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-8 bg-white mb-4">
+        <TabsList className="mb-4 grid h-8 w-full grid-cols-2 bg-white">
           <TabsTrigger
             value="date"
             className={cn(
               "relative transition-all duration-200",
-              "flex items-center justify-center h-full",
+              "flex h-full items-center justify-center",
               "border-b-2",
               activeTab === "date"
-                ? "border-gray-900 text-gray-900 font-medium"
-                : "border-gray-100 text-gray-300 hover:text-gray-300 hover:border-gray-100",
+                ? "border-gray-900 font-medium text-gray-900"
+                : "border-gray-100 text-gray-300 hover:border-gray-100 hover:text-gray-300",
             )}
           >
             <Icon name="CalendarTime" className="h-6 w-6" />
@@ -68,11 +68,11 @@ const DateTimePickerContent = ({
             value="time"
             className={cn(
               "relative transition-all duration-200",
-              "flex items-center justify-center h-full",
+              "flex h-full items-center justify-center",
               "border-b-2",
               activeTab === "time"
-                ? "border-gray-900 text-gray-900 font-medium"
-                : "border-transparent text-gray-300 hover:text-gray-300 hover:border-gray-100",
+                ? "border-gray-900 font-medium text-gray-900"
+                : "border-transparent text-gray-300 hover:border-gray-100 hover:text-gray-300",
             )}
           >
             <Icon name="Clock" className="h-6 w-6" />

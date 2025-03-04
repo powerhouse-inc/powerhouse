@@ -14,7 +14,7 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
   onSelect,
 }) => (
   <div className="relative w-[43px] overflow-hidden">
-    <div className="absolute inset-0 flex flex-col items-center overflow-y-auto scrollbar-hide gap-1 no-scrollbar">
+    <div className="scrollbar-hide no-scrollbar absolute inset-0 flex flex-col items-center gap-1 overflow-y-auto">
       <div className="h-[60px]" />
       {options.map((value) => (
         <Button
@@ -22,10 +22,10 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
           key={value}
           onClick={() => onSelect(value)}
           className={cn(
-            "text-[12px] leading-[20px] flex cursor-pointer items-center justify-center",
+            "flex cursor-pointer items-center justify-center text-[12px] leading-[20px]",
             selectedValue === value
-              ? "rounded-[6px] bg-white border border-gray-300 text-gray-900 font-normal px-3 py-2 "
-              : "text-gray-900 w-[16px] h-[20px] font-normal",
+              ? "rounded-[6px] border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900"
+              : "h-[20px] w-[16px] font-normal text-gray-900",
           )}
         >
           {value}

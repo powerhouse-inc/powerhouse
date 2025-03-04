@@ -120,7 +120,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           data-cast="DateString"
           className={cn(
             // custom styles
-            "pt-3 pr-4 pb-6 pl-4",
+            "pb-6 pl-4 pr-4 pt-3",
           )}
         >
           <Calendar

@@ -138,7 +138,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                   "rounded-l-md rounded-r-none border border-gray-300",
                   "border-r-[0.5px]",
                   // focus state
-                  "focus:border-r-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
+                  "focus:border-r-none focus:z-10 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                   "focus:outline-none",
                   selectProps?.className,
                 )}
@@ -202,7 +202,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                   "rounded-l-none rounded-r-md border border-gray-300",
                   "border-l-[0.5px]",
                   // focus state
-                  "focus:border-l-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
+                  "focus:border-l-none focus:z-10 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                   "focus:outline-none",
                   selectProps?.className,
                 )}
