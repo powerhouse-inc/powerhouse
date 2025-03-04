@@ -1,22 +1,21 @@
 {
-  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    // required configs for monorepo
     "outDir": "./dist",
-    "lib": ["es2022"]
-  },
-  "include": ["/**/*"],
-  "references": [
-    {
-      "path": "../../packages/scalars"
-    },
-    {
-      "path": "../../packages/switchboard-gui"
-    },
-    {
-      "path": "../../packages/document-drive"
-    },
-    {
-      "path": "../../packages/document-model"
-    }
-  ]
+    "lib": ["ESNext"],
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    // required configs for esm interoperability
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "forceConsistentCasingInFileNames": true
+  }
 }
