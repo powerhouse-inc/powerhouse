@@ -21,6 +21,7 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
+    "postbuild": "npm run copy-prisma",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
@@ -28,7 +29,8 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "migrate": "prisma generate && prisma db push",
-    "prebuild": "prisma generate"
+    "copy-prisma": "copyfiles prisma/schema.prisma dist/",
+    "prebuild": "prisma generate --no-hints"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
@@ -61,6 +63,7 @@
   "devDependencies": {
     "@types/node": "^20.14.11",
     "@types/uuid": "^9.0.8",
+    "copyfiles": "^2.4.1",
     "fake-indexeddb": "^5.0.2",
     "msw": "^2.3.1",
     "vitest": "^3.0.7",
