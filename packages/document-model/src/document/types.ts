@@ -434,6 +434,11 @@ export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
 
 export type ValidationError = { message: string; details: object };
 
+type ExtractPHDocumentGenerics<T> =
+  T extends BaseDocument<infer State, infer LocalState, infer Action>
+    ? { state: State; localState: LocalState; action: Action }
+    : never;
+
 export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   reducer: Reducer<TDocument>;
   actions: Record<
@@ -443,11 +448,6 @@ export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   utils: DocumentModelUtils<TDocument>;
   documentModel: DocumentModelState;
 };
-
-type ExtractPHDocumentGenerics<T> =
-  T extends BaseDocument<infer State, infer LocalState, infer Action>
-    ? { state: State; localState: LocalState; action: Action }
-    : never;
 
 export type GlobalStateFromDocument<
   TDocument extends BaseDocument<any, any, any>,

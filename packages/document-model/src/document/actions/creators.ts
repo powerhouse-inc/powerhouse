@@ -5,7 +5,7 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
-import { ExtendedState, OperationScope } from "../types.js";
+import { DefaultAction, ExtendedState, OperationScope } from "../types.js";
 import { createAction } from "../utils/base.js";
 import {
   LoadStateAction,
@@ -109,4 +109,12 @@ export const loadState = <S, T>(
 export const noop = (scope: OperationScope = "global") =>
   createAction<NOOPAction>("NOOP", undefined, undefined, undefined, scope);
 
-export const actions = [setName, undo, redo, prune, loadState, noop] as const;
+export const actions = {
+  setName,
+  undo,
+  redo,
+  prune,
+  loadState,
+  noop,
+} as unknown as Record<string, (input: any) => DefaultAction>;
+// TODO improve base actions type
