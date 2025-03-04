@@ -1,4 +1,5 @@
-import { IdAutocompleteOption } from "@/scalars/components/fragments/id-autocomplete-field/types";
+import type { IdAutocompleteOption } from "@/scalars/components/fragments/id-autocomplete-field/types";
+import type { Network } from "./types";
 
 export const mockedOptions: IdAutocompleteOption[] = [
   {
@@ -178,9 +179,37 @@ export const mockedOptions: IdAutocompleteOption[] = [
   },
 ];
 
+const filterOptions = (
+  options: IdAutocompleteOption[],
+  userInput: string,
+  context?: Record<string, unknown>,
+) => {
+  const normalizedInput = userInput.toLowerCase();
+  const supportedNetworks = Array.isArray(context?.supportedNetworks)
+    ? (context.supportedNetworks as Network[])
+    : [];
+
+  return options.filter((opt) => {
+    if (supportedNetworks.length > 0) {
+      const chainId = opt.value.split(":")[2];
+      if (!supportedNetworks.some((network) => network.chainId === chainId)) {
+        return false;
+      }
+    }
+
+    return (
+      opt.title?.toLowerCase().includes(normalizedInput) ||
+      opt.path?.toLowerCase().includes(normalizedInput) ||
+      opt.value.toLowerCase().includes(normalizedInput) ||
+      opt.description?.toLowerCase().includes(normalizedInput)
+    );
+  });
+};
+
 // Async versions
 export const fetchOptions = async (
   userInput: string,
+  context?: Record<string, unknown>,
 ): Promise<IdAutocompleteOption[]> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -190,16 +219,7 @@ export const fetchOptions = async (
     throw new Error();
   }
 
-  const normalizedInput = userInput.toLowerCase();
-  return normalizedInput === ""
-    ? mockedOptions
-    : mockedOptions.filter(
-        (option) =>
-          option.title?.toLowerCase().includes(normalizedInput) ||
-          option.path?.toLowerCase().includes(normalizedInput) ||
-          option.value.toLowerCase().includes(normalizedInput) ||
-          option.description?.toLowerCase().includes(normalizedInput),
-      );
+  return filterOptions(mockedOptions, userInput, context);
 };
 
 export const fetchSelectedOption = async (
@@ -211,17 +231,11 @@ export const fetchSelectedOption = async (
 };
 
 // Sync versions
-export const fetchOptionsSync = (userInput: string): IdAutocompleteOption[] => {
-  const normalizedInput = userInput.toLowerCase();
-  return normalizedInput === ""
-    ? mockedOptions
-    : mockedOptions.filter(
-        (option) =>
-          option.title?.toLowerCase().includes(normalizedInput) ||
-          option.path?.toLowerCase().includes(normalizedInput) ||
-          option.value.toLowerCase().includes(normalizedInput) ||
-          option.description?.toLowerCase().includes(normalizedInput),
-      );
+export const fetchOptionsSync = (
+  userInput: string,
+  context?: Record<string, unknown>,
+): IdAutocompleteOption[] => {
+  return filterOptions(mockedOptions, userInput, context);
 };
 
 export const fetchSelectedOptionSync = (

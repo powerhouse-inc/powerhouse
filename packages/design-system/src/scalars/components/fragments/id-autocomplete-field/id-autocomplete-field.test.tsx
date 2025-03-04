@@ -142,7 +142,7 @@ describe("IdAutocompleteField Component", () => {
     await user.type(input, "test");
 
     await waitFor(() => {
-      expect(defaultGetOptions).toHaveBeenCalledWith("test");
+      expect(defaultGetOptions).toHaveBeenCalledWith("test", {});
     });
 
     await waitFor(() => {

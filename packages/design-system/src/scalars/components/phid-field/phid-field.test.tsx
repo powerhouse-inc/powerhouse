@@ -143,7 +143,10 @@ describe("PHIDField Component", () => {
     await user.type(input, "test");
 
     await waitFor(() => {
-      expect(defaultGetOptions).toHaveBeenCalledWith("test");
+      expect(defaultGetOptions).toHaveBeenCalledWith("test", {
+        allowUris: undefined,
+        allowedScopes: undefined,
+      });
     });
 
     await waitFor(() => {

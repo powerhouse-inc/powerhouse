@@ -32,7 +32,7 @@ const meta: Meta<typeof AIDField> = {
     supportedNetworks: {
       control: "object",
       description:
-        "List of supported networks for DID validation. Each network must have a chainId (string) and optional name (string).",
+        "List of supported networks for DID validation. Network interface: { chainId: string; name?: string; }",
       table: {
         type: { summary: "Network[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
@@ -53,8 +53,8 @@ const meta: Meta<typeof AIDField> = {
     fetchOptionsCallback: {
       control: "object",
       description:
-        "Function to fetch options based on user input. " +
-        "Must return an array of objects with the following properties:\n\n" +
+        "Function to fetch options based on user input and context. " +
+        "Must return a Promise that resolves to an array of objects or an array of objects with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
         "path?: string\n\n" +
@@ -63,7 +63,7 @@ const meta: Meta<typeof AIDField> = {
       table: {
         type: {
           summary:
-            "(userInput: string) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
+            "(userInput: string, context?: { supportedNetworks?: Network[] }) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -75,7 +75,7 @@ const meta: Meta<typeof AIDField> = {
       control: "object",
       description:
         "Function to fetch details for a selected option. " +
-        "Must return an object with the following properties:\n\n" +
+        "Must return a Promise that resolves to an object or an object with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
         "path?: string\n\n" +
