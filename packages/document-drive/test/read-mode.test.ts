@@ -1,6 +1,12 @@
-import { DocumentModelModule } from "document-model";
+import { createState } from "#drive-document-model/gen/utils";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+  PHDocument,
+} from "document-model";
 import { beforeEach, describe, it, vi } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
+import { createDocument } from "../../document-model/dist/src/document-model/gen/utils.js";
 import {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
@@ -13,23 +19,23 @@ import { DocumentModelNotFoundError } from "../src/server/error.js";
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
 
-const documentModels = Object.values(
-  documentModelsMap,
-) as DocumentModelModule[];
+const documentModels = [
+  documentModelDocumentModelModule,
+] as DocumentModelModule[];
 
-function getDocumentModelModule(id: string) {
-  const documentModel = documentModels.find(
-    (d) => d.documentModelState.id === id,
-  );
+function getDocumentModelModule<TDocument extends PHDocument>(
+  id: string,
+): DocumentModelModule<TDocument> {
+  const documentModel = documentModels.find((d) => d.documentModel.id === id);
   if (!documentModel) {
     throw new Error(`Document model not found for id: ${id}`);
   }
-  return documentModel;
+  return documentModel as unknown as DocumentModelModule<TDocument>;
 }
 
 function buildDrive(state: Partial<DocumentDrive.DocumentDriveState>) {
-  return DocumentDrive.utils.createDocument({
-    state: DocumentDrive.utils.createState({
+  return createDocument({
+    state: createState({
       global: state,
     }),
   });

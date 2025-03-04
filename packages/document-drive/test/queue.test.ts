@@ -1,10 +1,19 @@
-import { DocumentModelModule } from "document-model";
+import { addListener } from "#drive-document-model/gen/creators";
+import { generateUUID } from "#utils/misc";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
 import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
-import { generateUUID } from "../../document-model/dist/src/document/utils/browser.js";
 import InMemoryCache from "../src/cache/memory";
+import {
+  addFile,
+  addFolder,
+} from "../src/drive-document-model/gen/node/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
 import { BaseQueueManager } from "../src/queue/base";
 import { RedisQueueManager } from "../src/queue/redis";
 import { IQueueManager } from "../src/queue/types";
@@ -19,8 +28,7 @@ import { buildOperation, buildOperations } from "./utils";
 const REDIS_TLS_URL = process.env.REDIS_TLS_URL;
 
 const documentModels = [
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
+  documentModelDocumentModelModule,
 ] as DocumentModelModule[];
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
@@ -78,7 +86,7 @@ describe.each(queueLayers)(
         const id = generateUUID();
         drive = reducer(
           drive,
-          DocumentDriveUtils.generateAddNodeAction(
+          generateAddNodeAction(
             drive.state.global,
             {
               id,
@@ -113,8 +121,8 @@ describe.each(queueLayers)(
         let drive = await createDrive(server);
         const driveId = drive.state.global.id;
         const driveOperations = buildOperations(reducer, drive, [
-          actions.addFolder({ id: "folder 1", name: "folder 1" }),
-          actions.addFile({
+          addFolder({ id: "folder 1", name: "folder 1" }),
+          addFile({
             id: "file 1",
             name: "file 1",
             parentFolder: "folder 1",
@@ -191,8 +199,8 @@ describe.each(queueLayers)(
       let drive = await createDrive(server);
       const driveId = drive.state.global.id;
       const driveOperations = buildOperations(reducer, drive, [
-        actions.addFolder({ id: "folder 1", name: "folder 1" }),
-        actions.addFile({
+        addFolder({ id: "folder 1", name: "folder 1" }),
+        addFile({
           id: "file 1",
           name: "file 1",
           parentFolder: "folder 1",
@@ -218,7 +226,7 @@ describe.each(queueLayers)(
           buildOperation(
             reducer,
             drive,
-            actions.addFolder({
+            addFolder({
               id: "folder 2",
               name: "folder 2",
             }),
@@ -313,7 +321,7 @@ describe.each(queueLayers)(
 
         // add file op
         const driveOperations = buildOperations(reducer, drive, [
-          actions.addFile({
+          addFile({
             id: "file 1",
             name: "file 1",
             parentFolder: "folder 1",
@@ -340,7 +348,7 @@ describe.each(queueLayers)(
         // delete node op
         drive = await server.getDrive(driveId);
         const deleteNode = buildOperations(reducer, drive, [
-          actions.deleteNode({ id: "file 1" }),
+          deleteNode({ id: "file 1" }),
         ]);
 
         // queue delete node op
@@ -424,7 +432,7 @@ describe.each(queueLayers)(
         await server.initialize();
         const drive = await createDrive(server);
         const driveId = drive.state.global.id;
-        const action = actions.addListener({
+        const action = addListener({
           listener: {
             block: true,
             callInfo: {

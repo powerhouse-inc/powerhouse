@@ -1,7 +1,8 @@
 import {
   Action,
   DocumentModelDocument,
-  DocumentModelLib,
+  documentModelDocumentModelModule,
+  DocumentModelModule,
   garbageCollect,
   Operation,
   setModelExtension,
@@ -27,9 +28,8 @@ const mapExpectedOperations = (operations: Operation[]) =>
 
 describe("processOperations", () => {
   const documentModels = [
-    DocumentModelLib,
-    ...Object.values(DocumentModelsLibs),
-  ] as DocumentModelLib<any, any>[];
+    documentModelDocumentModelModule,
+  ] as DocumentModelModule[];
 
   let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
