@@ -845,6 +845,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
+      '@powerhousedao/scalars':
+        specifier: workspace:*
+        version: link:../scalars
       '@types/node':
         specifier: ^20.11.2
         version: 20.17.16
@@ -870,12 +873,6 @@ importers:
         specifier: ^3.4.2
         version: 3.4.2
     devDependencies:
-      '@powerhousedao/codegen':
-        specifier: workspace:*
-        version: 'link:'
-      '@powerhousedao/scalars':
-        specifier: workspace:*
-        version: link:../scalars
       copyfiles:
         specifier: ^2.4.1
         version: 2.4.1

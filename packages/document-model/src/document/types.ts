@@ -81,7 +81,7 @@ export type Action<
   TType extends string = string,
   TInput = unknown,
   TScope extends OperationScope = OperationScope,
-> = DefaultAction | BaseAction<TType, TInput, TScope>;
+> = BaseAction<TType, TInput, TScope>;
 
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */
@@ -219,7 +219,7 @@ export type PartialState<TGlobalOrLocalState> =
   | TGlobalOrLocalState
   | Partial<TGlobalOrLocalState>;
 
-export type CreateState<TDocument extends BaseDocument<any, any, any>> = (
+export type CreateState<TDocument extends PHDocument> = (
   state?: Partial<
     BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
@@ -340,6 +340,7 @@ export type PHDocument<
 export type AttachmentRef = string; // TODO `attachment://${string}`;
 
 export type DocumentModelUtils<TDocument extends PHDocument> = {
+  fileExtension: string;
   createState: CreateState<TDocument>;
   createExtendedState: CreateExtendedState<TDocument>;
   createDocument: CreateDocument<TDocument>;

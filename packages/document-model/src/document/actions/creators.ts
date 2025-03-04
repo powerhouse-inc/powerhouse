@@ -1,13 +1,3 @@
-import { ExtendedState, OperationScope } from "../types.js";
-import { createAction } from "../utils/base.js";
-import {
-  LoadStateAction,
-  PruneAction,
-  RedoAction,
-  SetNameAction,
-  UndoAction,
-  NOOPAction,
-} from "./types.js";
 import {
   LoadStateActionInputSchema,
   PruneActionInputSchema,
@@ -15,6 +5,16 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
+import { ExtendedState, OperationScope } from "../types.js";
+import { createAction } from "../utils/base.js";
+import {
+  LoadStateAction,
+  NOOPAction,
+  PruneAction,
+  RedoAction,
+  SetNameAction,
+  UndoAction,
+} from "./types.js";
 
 /**
  * Changes the name of the document.
@@ -108,3 +108,5 @@ export const loadState = <S, T>(
 
 export const noop = (scope: OperationScope = "global") =>
   createAction<NOOPAction>("NOOP", undefined, undefined, undefined, scope);
+
+export const actions = [setName, undo, redo, prune, loadState, noop] as const;

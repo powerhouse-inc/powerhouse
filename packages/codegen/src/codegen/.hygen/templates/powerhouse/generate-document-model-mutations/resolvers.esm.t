@@ -8,7 +8,7 @@ force: true
 import { Subgraph } from "@powerhousedao/reactor-api";
 import { actions } from "../../document-models/<%- h.changeCase.param(documentType) %>";
 import { actions as driveActions } from "document-model-libs/document-drive";
-import { utils as docUtils } from "document-model/document";
+import { utils as docUtils } from "document-model";
 
 export const getResolvers = (subgraph: Subgraph, driveId: string) => {
   const reactor = subgraph.reactor;
