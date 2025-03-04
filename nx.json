@@ -62,6 +62,7 @@
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
+        "installIgnoreScripts": true,
         "updateDependents": "auto",
         "fallbackCurrentVersionResolver": "disk",
         "preserveLocalDependencyProtocols": true
