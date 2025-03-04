@@ -38,8 +38,8 @@ export default function Header() {
     }
   };
   return (
-    <header className="bg-orange-100 fixed w-full top-0 text-black h-14">
-      <nav className="flex justify-between items-center flex-row h-14">
+    <header className="fixed top-0 h-14 w-full bg-orange-100 text-black">
+      <nav className="flex h-14 flex-row items-center justify-between">
         <div className="flex items-start">
           <SwitchboardLink href="/">
             <div className="flex flex-row items-center">
@@ -54,13 +54,13 @@ export default function Header() {
             </div>
           </SwitchboardLink>
         </div>
-        <div className="flex  justify-center gap-4">
+        <div className="flex justify-center gap-4">
           {address !== "" ? (
             <select
               id="graphqlPlayground"
               name="graphqlPlayground"
               aria-placeholder="Select GraphQL Playground"
-              className="p-2 border border-gray-300 rounded-md w-full"
+              className="w-full rounded-md border border-gray-300 p-2"
               onChange={selectGraphQLPlayground}
             >
               <option value="">GraphQL Playgrounds</option>
@@ -76,9 +76,9 @@ export default function Header() {
           )}
         </div>
         <div className="flex flex-row gap-2">
-          <div className="flex items-center  text-orange-300">
+          <div className="flex items-center text-orange-300">
             <SwitchboardLink
-              className="bg-orange-200 rounded-2xl px-4 text-orange-400 flex flex-row items-center gap-2 py-2"
+              className="flex flex-row items-center gap-2 rounded-2xl bg-orange-200 px-4 py-2 text-orange-400"
               href="/user"
             >
               <span>
@@ -91,7 +91,7 @@ export default function Header() {
               </span>
             </SwitchboardLink>
           </div>
-          <div className="text-orange-300 pr-2 my-auto">
+          <div className="my-auto pr-2 text-orange-300">
             <Link
               href="https://github.com/powerhouse-inc/switchboard-boilerplate"
               target="_blank"

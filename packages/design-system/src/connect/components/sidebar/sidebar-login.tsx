@@ -5,7 +5,6 @@ export interface SidebarLoginProps {
   onLogin: () => void;
 }
 
-
 export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
   return (
     <button
@@ -18,6 +17,5 @@ export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
         src={renownShortHover}
       />
     </button>
-
   );
 };
