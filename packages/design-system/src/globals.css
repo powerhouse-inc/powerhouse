@@ -1,6 +1,6 @@
-@import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import 'react-toastify/dist/ReactToastify.css';
+@import 'tailwindcss';
 
 @theme {
   --color-white: hsl(0 0% 100%);
@@ -104,8 +104,85 @@
     0px -1px 1px 0px rgba(0, 0, 0, 0.04) inset,
     0px 2px 0px 0px rgba(255, 255, 255, 0.25) inset,
     0px 4px 8px -4px rgba(0, 0, 0, 0.1);
-}
+    
+  --animate-fade-in: fadeIn 0.3s ease-in-out;
+  --animate-fade-out: fadeOut 0.1s ease-in-out;
+  --animate-zoom-in: zoomIn 0.3s ease-in-out;
+  --animate-zoom-out: zoomOut 0.1s ease-in-out;
+  --animate-slide-in-from-top: slideInFromTop 0.2s ease-in-out;
+  --animate-slide-in-from-bottom: slideInFromBottom 0.2s ease-in-out;
+  --animate-slide-in-from-left: slideInFromLeft 0.2s ease-in-out;
+  --animate-slide-in-from-right: slideInFromRight 0.2s ease-in-out;
 
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes fadeOut {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes zoomIn {
+    0% {
+      transform: scale(0.95);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes zoomOut {
+    0% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(0.95);
+    }
+  }
+  @keyframes slideInFromTop {
+    0% {
+      transform: translateY(-0.5rem);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInFromBottom {
+    0% {
+      transform: translateY(0.5rem);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInFromLeft {
+    0% {
+      transform: translateX(0.5rem);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInFromRight {
+    0% {
+      transform: translateX(-0.5rem);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+}
 :root {
   /* Toastify */
   --toastify-toast-min-height: 48px;
