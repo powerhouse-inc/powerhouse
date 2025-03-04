@@ -27,7 +27,8 @@
     "bench": "vitest bench",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
-    "migrate": "prisma generate && prisma db push"
+    "migrate": "prisma generate && prisma db push",
+    "postinstall": "prisma generate"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
@@ -42,28 +43,28 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
-    "@types/node": "^20.14.11",
-    "@types/uuid": "^9.0.8",
     "change-case": "^5.4.4",
     "document-model": "workspace:*",
     "exponential-backoff": "^3.1.1",
-    "fake-indexeddb": "^5.0.2",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
     "localforage": "^1.10.0",
-    "msw": "^2.3.1",
     "nanoevents": "^9.0.0",
     "prisma": "^5.18.0",
     "sanitize-filename": "^1.6.3",
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
     "uuid": "^11.0.5",
-    "webdriverio": "^9.0.9",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/node": "^20.14.11",
+    "@types/uuid": "^9.0.8",
+    "fake-indexeddb": "^5.0.2",
+    "msw": "^2.3.1",
     "vitest": "^3.0.7",
-    "vitest-fetch-mock": "^0.4.5"
+    "vitest-fetch-mock": "^0.4.5",
+    "webdriverio": "^9.0.9"
   }
 }
