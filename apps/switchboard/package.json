@@ -2,9 +2,9 @@
   "name": "@powerhousedao/switchboard",
   "type": "module",
   "version": "2.1.420",
-  "main": "dist/src/cli.js",
+  "main": "dist/src/index.js",
   "bin": {
-    "switchboard": "dist/src/cli.js"
+    "switchboard": "dist/src/index.js"
   },
   "scripts": {
     "build:tsc": "tsc --build",
