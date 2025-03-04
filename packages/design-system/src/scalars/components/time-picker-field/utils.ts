@@ -237,7 +237,12 @@ export const getOffset = (timeZone?: string) => {
  * getOffsetToDisplay()                   // Returns "UTC±00:00"
  */
 export const getOffsetToDisplay = (timeZone?: string) => {
-  return `UTC${getOffset(timeZone)}`;
+  const offset = getOffset(timeZone);
+  // Normalizar el formato para la visualización
+  const normalizedOffset = offset.endsWith(":00")
+    ? offset.slice(0, -3)
+    : offset;
+  return `UTC${normalizedOffset}`;
 };
 
 /**
