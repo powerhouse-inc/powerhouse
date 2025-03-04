@@ -4,7 +4,7 @@ import {
   checkCleanedOperationsIntegrity,
   reshuffleByTimestampAndIndex,
 } from "../../../document-model/src/document/utils/document-helpers.js";
-import { buildOperations } from "../utils.js";
+import { buildOperations } from "./utils.js";
 
 describe("merge", () => {
   const scenarios = [

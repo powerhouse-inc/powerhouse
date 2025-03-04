@@ -1,5 +1,6 @@
 import { DocumentModelModule } from "document-model";
 import { beforeEach, describe, it, vi } from "vitest";
+import createFetchMock from "vitest-fetch-mock";
 import {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,

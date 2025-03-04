@@ -1235,9 +1235,6 @@ importers:
       uuid:
         specifier: ^11.0.5
         version: 11.0.5
-      vitest-fetch-mock:
-        specifier: ^0.3.0
-        version: 0.3.0(encoding@0.1.13)(vitest@3.0.7)
       webdriverio:
         specifier: ^9.0.9
         version: 9.7.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -1270,6 +1267,9 @@ importers:
       vitest:
         specifier: ^3.0.7
         version: 3.0.7(@types/debug@4.1.12)(@types/node@20.17.16)(@vitest/browser@3.0.7)(jiti@2.4.2)(jsdom@24.1.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(lightningcss@1.29.1)(msw@2.7.0(@types/node@20.17.16)(typescript@5.7.3))(terser@5.37.0)(tsx@4.19.3)(yaml@2.7.0)
+      vitest-fetch-mock:
+        specifier: ^0.4.5
+        version: 0.4.5(vitest@3.0.7)
 
   packages/document-model:
     dependencies:
@@ -15637,9 +15637,9 @@ packages:
       yaml:
         optional: true
 
-  vitest-fetch-mock@0.3.0:
-    resolution: {integrity: sha512-g6upWcL8/32fXL43/5f4VHcocuwQIi9Fj5othcK9gPO8XqSEGtnIZdenr2IaipDr61ReRFt+vaOEgo8jiUUX5w==}
-    engines: {node: '>=14.14.0'}
+  vitest-fetch-mock@0.4.5:
+    resolution: {integrity: sha512-nhWdCQIGtaSEUVl96pMm0WggyDGPDv5FUy/Q9Hx3cs2RGmh3Q/uRsLClGbdG3kXBkJ3br5yTUjB2MeW25TwdOA==}
+    engines: {node: '>=18.0.0'}
     peerDependencies:
       vitest: '>=2.0.0'
 
@@ -29159,7 +29159,7 @@ snapshots:
       whatwg-encoding: 3.1.1
       whatwg-mimetype: 4.0.0
       whatwg-url: 14.1.0
-      ws: 8.18.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      ws: 8.18.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - bufferutil
@@ -33864,12 +33864,9 @@ snapshots:
       tsx: 4.19.3
       yaml: 2.7.0
 
-  vitest-fetch-mock@0.3.0(encoding@0.1.13)(vitest@3.0.7):
+  vitest-fetch-mock@0.4.5(vitest@3.0.7):
     dependencies:
-      cross-fetch: 4.1.0(encoding@0.1.13)
       vitest: 3.0.7(@types/debug@4.1.12)(@types/node@20.17.16)(@vitest/browser@3.0.7)(jiti@2.4.2)(jsdom@24.1.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(lightningcss@1.29.1)(msw@2.7.0(@types/node@20.17.16)(typescript@5.7.3))(terser@5.37.0)(tsx@4.19.3)(yaml@2.7.0)
-    transitivePeerDependencies:
-      - encoding
 
   vitest@2.1.9(@types/node@22.12.0)(@vitest/browser@3.0.7(@types/node@22.13.5)(bufferutil@4.0.9)(playwright@1.50.1)(typescript@5.7.3)(utf-8-validate@5.0.10)(vite@6.2.0(@types/node@22.13.5)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.37.0)(tsx@4.19.3)(yaml@2.7.0))(vitest@3.0.7)(webdriverio@9.7.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)))(jsdom@24.1.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(lightningcss@1.29.1)(msw@2.7.3(@types/node@22.12.0)(typescript@5.7.3))(terser@5.37.0):
     dependencies:

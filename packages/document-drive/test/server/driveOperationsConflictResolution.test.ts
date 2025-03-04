@@ -1,8 +1,6 @@
 import { BaseAction, Operation } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { IOperationResult, ReactorBuilder } from "../../src";
-import { DriveBasicClient } from "../utils";
-import { DocumentDriveServer } from "../../src/server/base.js";
+import { ReactorBuilder } from "../../src/server/builder.js";
 import { IOperationResult } from "../../src/server/types.js";
 import { DriveBasicClient } from "../utils.js";
 
