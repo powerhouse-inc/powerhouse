@@ -1,4 +1,5 @@
 import { format, isValid, parse } from "date-fns";
+import { normalizeMonthFormat } from "../date-picker-field/utils";
 
 export const ALLOWED_FORMATS = [
   "yyyy-MM-dd",
@@ -131,20 +132,23 @@ export const parseInputString = (
   inputString: string,
   dateFormat = ALLOWED_FORMATS[0],
 ): string => {
+  const newInputString = normalizeMonthFormat(inputString);
+
   if (!dateFormat || !inputString) return inputString;
+
   // First check the specified format
   const specifiedFormatRegex =
     dateFormatRegexes[dateFormat as keyof typeof dateFormatRegexes];
-  if (specifiedFormatRegex.test(inputString)) {
-    const parsedDate = parse(inputString, dateFormat, new Date());
+  if (specifiedFormatRegex.test(newInputString)) {
+    const parsedDate = parse(newInputString, dateFormat, new Date());
     if (isValid(parsedDate)) {
       return format(parsedDate, dateFormat);
     }
   }
 
   for (const [formatStr, regex] of Object.entries(dateFormatRegexes)) {
-    if (regex.test(inputString)) {
-      const parsedDate = parse(inputString, formatStr, new Date());
+    if (regex.test(newInputString)) {
+      const parsedDate = parse(newInputString, formatStr, new Date());
       if (isValid(parsedDate)) {
         const newValue = format(parsedDate, dateFormat || formatStr);
         return newValue;

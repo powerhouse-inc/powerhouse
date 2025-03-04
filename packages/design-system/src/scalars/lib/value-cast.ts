@@ -1,6 +1,10 @@
 import { parse, format } from "date-fns";
 import { AmountValue } from "../components/amount-field/types";
-import { getDateFromValue } from "../components/date-picker-field/utils";
+import {
+  getDateFormat,
+  getDateFromValue,
+  normalizeMonthFormat,
+} from "../components/date-picker-field/utils";
 import { parseInputString } from "../components/date-time-field/utils";
 
 export type ValueCast =
@@ -42,9 +46,10 @@ export const castFunctions: Record<
     }
   },
   DateString: (value: string, dateFormat = "yyyy-MM-dd") => {
-    const date = getDateFromValue(value);
-    const newValue = parseInputString(date, dateFormat);
-    const fechaUTC = parse(newValue, dateFormat, new Date());
+    const date = normalizeMonthFormat(getDateFromValue(value));
+    const correctFormat = getDateFormat(dateFormat);
+    const newValue = parseInputString(date, correctFormat);
+    const fechaUTC = parse(newValue, correctFormat ?? "yyyy-MM-dd", new Date());
     return fechaUTC;
   },
   DateTimeString: (value: string, dateFormat = "yyyy-MM-dd") => {

@@ -4,13 +4,12 @@ import { DateFieldValue, WeekStartDayNumber } from "./types";
 import {
   formatDateToValue,
   formatUTCDateToISOStringWithOutTime,
+  getDateFormat,
   getDateFromValue,
+  normalizeMonthFormat,
 } from "./utils";
 import { createChangeEvent } from "../time-picker-field/utils";
-import {
-  isDateFormatAllowed,
-  parseInputString,
-} from "../date-time-field/utils";
+import { parseInputString } from "../date-time-field/utils";
 
 interface DatePickerFieldProps {
   value?: DateFieldValue;
@@ -35,9 +34,13 @@ export const useDatePickerField = ({
   weekStart = "Monday",
   autoClose = false,
 }: DatePickerFieldProps) => {
+  const internalFormat = getDateFormat(dateFormat ?? "");
   const [isOpen, setIsOpen] = React.useState(false);
   const [inputDisplay, setInputDisplay] = React.useState<string | undefined>(
-    parseInputString(getDateFromValue(value ?? defaultValue ?? ""), dateFormat),
+    parseInputString(
+      getDateFromValue(value ?? defaultValue ?? ""),
+      internalFormat,
+    ),
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,15 +66,15 @@ export const useDatePickerField = ({
       // Take the date without time in ISO format
       const inputValue = formatUTCDateToISOStringWithOutTime(utcDate);
       // Parse the date to the correct format
-      const newInputValue = parseInputString(inputValue, dateFormat);
-      setInputDisplay(newInputValue);
+      const newInputValue = parseInputString(inputValue, internalFormat);
+      setInputDisplay(newInputValue.toUpperCase());
       const newValue = formatDateToValue(utcDate);
 
-      const newValueOnchage = `${newInputValue}T${newValue.split("T")[1]}`;
+      const newValueOnchage = `${newInputValue.toUpperCase()}T${newValue.split("T")[1]}`;
 
       onChange?.(createChangeEvent(newValueOnchage));
     },
-    [dateFormat, onChange],
+    [internalFormat, onChange],
   );
 
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -119,19 +122,18 @@ export const useDatePickerField = ({
   const date = useMemo(() => {
     if (!value) return undefined;
     const dateString = getDateFromValue(value);
-    const isValidDate = isDateFormatAllowed(dateString);
+    const isValidDate = normalizeMonthFormat(dateString);
     if (!isValidDate) return undefined;
 
-    const dateStringFormatted = parseInputString(dateString, dateFormat);
+    const dateStringFormatted = parseInputString(dateString, internalFormat);
     const fechaUTC = parse(
       dateStringFormatted,
-      dateFormat ?? "yyyy-MM-dd",
+      internalFormat ?? "yyyy-MM-dd",
       new Date(),
     );
 
     return fechaUTC;
-  }, [value, dateFormat]);
-
+  }, [value, internalFormat]);
   return {
     date,
     inputValue: inputDisplay,

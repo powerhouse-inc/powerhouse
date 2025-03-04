@@ -6,6 +6,7 @@ import {
   getValidationArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
+import { FORMAT_MAPPING } from "./utils";
 
 const meta: Meta<typeof DatePickerField> = {
   title: "Document Engineering/Fragments/Date Picker Field",
@@ -57,13 +58,7 @@ const meta: Meta<typeof DatePickerField> = {
       control: {
         type: "select",
       },
-      options: [
-        "yyyy-MM-dd",
-        "dd/MM/yyyy",
-        "MM/dd/yyyy",
-        "dd-MMM-yyyy",
-        "MMM-dd-yyyy",
-      ],
+      options: Object.keys(FORMAT_MAPPING),
       table: {
         defaultValue: { summary: "yyyy-MM-dd" },
         type: {
