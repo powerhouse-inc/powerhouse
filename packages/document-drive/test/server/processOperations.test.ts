@@ -9,19 +9,16 @@ import {
   setModelName,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { IOperationResult, ReactorBuilder } from "../../src";
-import { OperationError } from "../../src/server/error";
-import { garbageCollect } from "../../src/utils/document-helpers";
-import { BasicClient, buildOperation, buildOperations } from "../utils";
 
 import { undo } from "../../../document-model/src/document/actions/creators.js";
 import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
 import { reducer } from "../../src/drive-document-model/gen/reducer.js";
 import { generateAddNodeAction } from "../../src/drive-document-model/src/utils.js";
-import { DocumentDriveServer } from "../../src/server/base.js";
+import { ReactorBuilder } from "../../src/server/builder.js";
 import { OperationError } from "../../src/server/error.js";
 import { IOperationResult } from "../../src/server/types.js";
 import { BasicClient, buildOperation, buildOperations } from "../utils.js";
+
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
     const { timestamp, ...operation } = op;

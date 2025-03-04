@@ -26,7 +26,6 @@ import {
   StrandUpdateSource,
 } from "./types.js";
 
-const ENABLE_SYNC_DEBUG = false;
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
 };
