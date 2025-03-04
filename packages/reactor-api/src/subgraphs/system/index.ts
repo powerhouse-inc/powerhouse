@@ -17,6 +17,7 @@ export class SystemSubgraph extends Subgraph {
     type Mutation {
       addDrive(
         global: DocumentDriveStateInput!
+        preferredEditor: String
       ): DocumentDrive_DocumentDriveState
       deleteDrive(id: ID!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
@@ -40,7 +41,7 @@ export class SystemSubgraph extends Subgraph {
     Mutation: {
       addDrive: async (
         parent: unknown,
-        args: DriveInput,
+        args: DriveInput & { preferredEditor?: string },
         ctx: SystemContext,
       ) => {
         try {
@@ -48,7 +49,10 @@ export class SystemSubgraph extends Subgraph {
           if (!isAdmin) {
             throw new GraphQLError("Unauthorized");
           }
-          const drive = await this.reactor.addDrive(args);
+          const drive = await this.reactor.addDrive(
+            { global: args.global, local: args.local },
+            args.preferredEditor,
+          );
           return drive.state.global;
         } catch (e) {
           console.error(e);

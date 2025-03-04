@@ -59,6 +59,9 @@ export type DriveInfo = {
   name: string;
   slug: string;
   icon?: string;
+  meta?: {
+    preferredEditor?: string;
+  };
 };
 
 function getFields(type: GraphQLOutputType): string {
@@ -147,6 +150,9 @@ export async function requestPublicDrive(url: string): Promise<DriveInfo> {
             name
             icon
             slug
+            meta {
+              preferredEditor
+            }
           }
         }
       `,
@@ -183,9 +189,9 @@ export async function fetchDocument<TDocument extends PHDocument>(
     document: DocumentGraphQLResult<TDocument>;
   }>
 > {
-  const { documentModelState, utils } = documentModelModule;
-  const stateFields = generateDocumentStateQueryFields(documentModelState);
-  const name = pascalCase(documentModelState.name);
+  const { documentModel, utils } = documentModelModule;
+  const stateFields = generateDocumentStateQueryFields(documentModel);
+  const name = pascalCase(documentModel.name);
   const result = await requestGraphql<{
     document: DocumentGraphQLResult<TDocument>;
   }>(

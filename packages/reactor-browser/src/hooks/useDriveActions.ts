@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/require-await */ // TODO dispatch should return a promise
-import { UiNode } from "@powerhousedao/design-system";
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
@@ -19,6 +17,7 @@ import {
   generateId as _generateId,
 } from "document-model";
 import { useMemo } from "react";
+import { UiNode } from "../uiNodes/types.js";
 import { IDriveContext } from "./useDriveContext.js";
 
 const generateId = () => _generateId().toString();

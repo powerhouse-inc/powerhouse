@@ -18,7 +18,6 @@ export function AddDriveModal(props: Props) {
     const apps = useApps();
 
     async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
-        console.log('onAddLocalDriveSubmit', data);
         await onAddLocalDrive(data);
         onClose();
     }

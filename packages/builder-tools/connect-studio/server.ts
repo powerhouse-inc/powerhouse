@@ -9,12 +9,13 @@ import { backupIndexHtml, removeBase64EnvValues } from "./helpers.js";
 import { StartServerOptions } from "./types.js";
 import { getStudioConfig } from "./vite-plugins/base.js";
 import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
+import { generateImportMapPlugin } from "./vite-plugins/importmap.js";
 import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
 
 function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation
   const require = createRequire(root);
-  return require.resolve(packageName);
+  return require.resolve(packageName, { paths: [root] });
 }
 
 function resolveConnect(root = process.cwd()) {
@@ -116,32 +117,58 @@ export async function startServer(
       host: HOST,
     },
     resolve: {
-      alias: {
-        jszip: "jszip/dist/jszip.min.js",
-        // Resolve to the node_modules in the project root
-        // "@powerhousedao/design-system/scalars": join(
-        //   projectRoot,
-        //   "node_modules",
-        //   "@powerhousedao",
-        //   "design-system",
-        //   "dist",
-        //   "scalars",
-        // ),
-        // "@powerhousedao/design-system": join(
-        //   projectRoot,
-        //   "node_modules",
-        //   "@powerhousedao",
-        //   "design-system",
-        // ),
-        // "@powerhousedao/scalars": join(
-        //   projectRoot,
-        //   "node_modules",
-        //   "@powerhousedao",
-        //   "scalars",
-        // ),
-        react: join(projectRoot, "node_modules", "react"),
-        "react-dom": join(projectRoot, "node_modules", "react-dom"),
-      },
+      alias: [
+        { find: "jszip", replacement: "jszip/dist/jszip.min.js" },
+        {
+          find: "react",
+          replacement: join(projectRoot, "node_modules", "react"),
+        },
+        {
+          find: "react-dom",
+          replacement: join(projectRoot, "node_modules", "react-dom"),
+        },
+        {
+          find: "@powerhousedao/reactor-browser",
+          replacement: join(
+            projectRoot,
+            "node_modules",
+            "@powerhousedao",
+            "reactor-browser",
+            "dist/src",
+          ),
+        },
+      ],
+      // Resolve to the node_modules in the project root
+      // "@powerhousedao/design-system/scalars": join(
+      //   projectRoot,
+      //   "node_modules",
+      //   "@powerhousedao",
+      //   "design-system",
+      //   "dist",
+      //   "scalars",
+      // ),
+      // "@powerhousedao/design-system": join(
+      //   projectRoot,
+      //   "node_modules",
+      //   "@powerhousedao",
+      //   "design-system",
+      // ),
+      // "@powerhousedao/scalars": join(
+      //   projectRoot,
+      //   "node_modules",
+      //   "@powerhousedao",
+      //   "scalars",
+      // ),
+      // "@powerhousedao/reactor-browser/hooks/useUiNodesContext": join(
+      //   projectRoot,
+      //   "node_modules",
+      //   "@powerhousedao",
+      //   "reactor-browser",
+      //   "dist/src/hooks",
+      // ),
+      // react: join(projectRoot, "node_modules", "react"),
+      // "react-dom": join(projectRoot, "node_modules", "react-dom"),
+      // },
     },
     plugins: [
       viteConnectDevStudioPlugin(true, connectPath),
@@ -155,6 +182,11 @@ export async function startServer(
         basicSsl({
           name: "Powerhouse Connect Studio",
         }),
+      generateImportMapPlugin(connectPath, [
+        { name: "react", provider: "esm.sh" },
+        { name: "react-dom", provider: "esm.sh" },
+        "@powerhousedao/reactor-browser",
+      ]),
     ],
     build: {
       rollupOptions: {

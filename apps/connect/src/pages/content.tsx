@@ -29,7 +29,7 @@ export default function Content() {
             {fileNodeDocument ? (
                 <DocumentEditorContainer key={fileNodeDocument.documentId} />
             ) : selectedDriveNode ? (
-                <DriveEditorContainer />
+                <DriveEditorContainer key={selectedDriveNode.id} />
             ) : null}
             <div className="flex w-full flex-row justify-end pr-3 pt-3">
                 <Footer />

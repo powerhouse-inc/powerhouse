@@ -35,7 +35,6 @@ import {
 } from "document-drive";
 import {
   Action,
-  App,
   DocumentHeader,
   DocumentModelModule,
   Operation,
@@ -52,7 +51,7 @@ import {
   replayDocument,
   reshuffleByTimestamp,
   skipHeaderOperations,
-  sortOperations,
+  sortOperations
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { Unsubscribe } from "nanoevents";
@@ -559,7 +558,7 @@ export class BaseDocumentDriveServer
     documentType: string,
   ) {
     const documentModelModule = this.documentModelModules.find(
-      (module) => module.documentType === documentType,
+      (module) => module.documentModel.id === documentType,
     );
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);
@@ -571,7 +570,10 @@ export class BaseDocumentDriveServer
     return [...this.documentModelModules];
   }
 
-  async addDrive(input: DriveInput, app?: App): Promise<DocumentDriveDocument> {
+  async addDrive(
+    input: DriveInput,
+    preferredEditor?: string,
+  ): Promise<DocumentDriveDocument> {
     const id = input.global.id || generateUUID();
     if (!id) {
       throw new Error("Invalid Drive Id");
@@ -587,7 +589,7 @@ export class BaseDocumentDriveServer
     });
 
     document.meta = {
-      preferredEditor: app?.driveEditor,
+      preferredEditor: preferredEditor,
     };
 
     await this.storage.createDrive(id, document);
@@ -607,7 +609,7 @@ export class BaseDocumentDriveServer
     url: string,
     options: RemoteDriveOptions,
   ): Promise<DocumentDriveDocument> {
-    const { id, name, slug, icon } =
+    const { id, name, slug, icon, meta } =
       options.expectedDriveInfo || (await requestPublicDrive(url));
 
     const {
@@ -625,20 +627,23 @@ export class BaseDocumentDriveServer
         pullInterval,
       });
 
-    return await this.addDrive({
-      global: {
-        id: id,
-        name,
-        slug,
-        icon: icon ?? null,
+    return await this.addDrive(
+      {
+        global: {
+          id: id,
+          name,
+          slug,
+          icon: icon ?? null,
+        },
+        local: {
+          triggers: [...triggers, pullTrigger],
+          listeners: listeners,
+          availableOffline,
+          sharingType,
+        },
       },
-      local: {
-        triggers: [...triggers, pullTrigger],
-        listeners: listeners,
-        availableOffline,
-        sharingType,
-      },
-    });
+      meta?.preferredEditor,
+    );
   }
 
   public async registerPullResponderTrigger(
@@ -1846,9 +1851,9 @@ export class BaseDocumentDriveServer
       }
 
       if (this.shouldSyncRemoteDrive(document)) {
-        this.startSyncRemoteDrive(document.state.global.id);
+        this.startSyncRemoteDrive(driveId);
       } else {
-        this.stopSyncRemoteDrive(document.state.global.id);
+        this.stopSyncRemoteDrive(driveId);
       }
 
       // after applying all the valid operations,throws

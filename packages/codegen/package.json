@@ -1,11 +1,11 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.36.1",
+  "version": "0.37.4",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
   "files": [
-    "/dist"
+    "dist/*"
   ],
   "exports": "./dist/index.js",
   "imports": {
@@ -18,9 +18,12 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "clean": "rimraf dist/",
-    "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
+    "copy-templates": "copyfiles src/codegen/.hygen/templates/**/*.esm.t dist/",
+    "copy-hygen-pkg": "copyfiles src/codegen/.hygen/package.json dist/",
+    "prebuild": "rimraf dist/src/codegen/.hygen/**/*.esm.t",
     "build": "tsc --build",
-    "prepublishOnly": "npm run build",
+    "postbuild": "npm run copy-templates && npm run copy-hygen-pkg",
+    "prepublishOnly": "npm run prebuild && npm run build && npm run postbuild",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",

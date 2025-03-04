@@ -6,7 +6,7 @@ export const GenericDriveExplorer: EditorModule<DocumentDriveDocument> = {
   Component: Editor,
   documentTypes: ["powerhouse/document-drive"],
   config: {
-    id: "editor-id",
+    id: "GenericDriveExplorer",
     disableExternalControls: true,
     documentToolbarEnabled: true,
     showSwitchboardLink: true,

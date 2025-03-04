@@ -434,16 +434,13 @@ export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
 export type ValidationError = { message: string; details: object };
 
 export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
-  documentModelName: string;
-  documentType: string;
-  fileExtension: string;
   reducer: Reducer<TDocument>;
   actions: Record<
     string,
     (input: any) => ActionFromDocument<TDocument> | DefaultAction
   >;
   utils: DocumentModelUtils<TDocument>;
-  documentModelState: DocumentModelState;
+  documentModel: DocumentModelState;
 };
 
 type ExtractPHDocumentGenerics<T> =

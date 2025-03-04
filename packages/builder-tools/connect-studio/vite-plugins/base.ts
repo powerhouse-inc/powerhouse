@@ -1,11 +1,15 @@
+import fs from "fs/promises";
 import MagicString from "magic-string";
-import path from "node:path";
+import { createRequire } from "node:module";
+import path, { basename, dirname } from "node:path";
+import type { Package } from "resolve.exports";
 import { Alias, AliasOptions, Plugin, PluginOption, normalizePath } from "vite";
 
-// matches react, react-dom, and all it's sub-imports like react-dom/client
-export const externalIds = /^react(-dom)?(\/.*)?$/;
-// used to find react imports in the code for text replacement
-export const externalImports = /react(-dom)?/;
+// matches @powerhousedao/connect, react, react-dom and all their sub-imports like react-dom/client
+export const externalIds = [
+  /^react(-dom)?(\/.*)?$/,
+  /^@powerhousedao\/reactor-browser(\/.*)?$/,
+];
 
 export const LOCAL_DOCUMENT_MODELS_IMPORT = "LOCAL_DOCUMENT_MODELS";
 export const LOCAL_DOCUMENT_EDITORS_IMPORT = "LOCAL_DOCUMENT_EDITORS";
@@ -174,4 +178,35 @@ export function viteReplaceImports(
       }
     },
   };
+}
+
+export async function findPackageJson(packageName: string) {
+  let packagePath;
+  try {
+    // Locate the package entry point
+    const require = createRequire(process.cwd());
+    packagePath = require.resolve(packageName, { paths: [process.cwd()] });
+  } catch (err) {
+    throw new Error(`Failed to resolve package: ${packageName}`, {
+      cause: err,
+    });
+  }
+
+  // Walk up the directory tree to find package.json
+  let dir = dirname(packagePath);
+  while (dir !== "/" && dir !== "." && dir !== "node_modules") {
+    if (basename(dir) === "dist") {
+      dir = dirname(dir);
+    }
+    const pkgJsonPath = `${dir}/package.json`;
+    try {
+      await fs.access(pkgJsonPath);
+      const file = await fs.readFile(pkgJsonPath, "utf-8");
+      return { packageJson: JSON.parse(file) as Package, path: dir };
+    } catch {
+      dir = dirname(dir); // Move up one level
+    }
+  }
+
+  throw new Error(`package.json not found for ${packageName}`);
 }

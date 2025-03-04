@@ -1,7 +1,7 @@
 import { IReadModeContext } from '#context/read-mode';
 import { documentToHash } from '#hooks/useDocumentDrives';
 import { TDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { TUiNodesContext } from '@powerhousedao/design-system';
+import { TUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { logger } from 'document-drive';
 import {
     hashDocumentStateForScope,

@@ -7,31 +7,25 @@ export const getDocumentModelTypeDefs = (
 ) => {
   const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
-  documentModels.forEach(({ documentModelState }) => {
+  documentModels.forEach(({ documentModel }) => {
     dmSchema += `
-        ${documentModelState.specifications
+        ${documentModel.specifications
           .map((specification) =>
             specification.state.global.schema
-              .replaceAll(" Account ", ` ${documentModelState.name}Account `)
-              .replaceAll(`: Account`, `: ${documentModelState.name}Account`)
-              .replaceAll(
-                `[Account!]!`,
-                `[${documentModelState.name}Account!]!`,
-              )
+              .replaceAll(" Account ", ` ${documentModel.name}Account `)
+              .replaceAll(`: Account`, `: ${documentModel.name}Account`)
+              .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
               .replaceAll("scalar DateTime", "")
               .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
           )
           .join("\n")};
 
-        ${documentModelState.specifications
+        ${documentModel.specifications
           .map((specification) =>
             specification.state.local.schema
-              .replaceAll(" Account ", ` ${documentModelState.name}Account `)
-              .replaceAll(`: Account`, `: ${documentModelState.name}Account`)
-              .replaceAll(
-                `[Account!]!`,
-                `[${documentModelState.name}Account!]!`,
-              )
+              .replaceAll(" Account ", ` ${documentModel.name}Account `)
+              .replaceAll(`: Account`, `: ${documentModel.name}Account`)
+              .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
               .replaceAll("scalar DateTime", "")
               .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
               .replaceAll("type AccountSnapshotLocalState", "")
@@ -40,14 +34,14 @@ export const getDocumentModelTypeDefs = (
           )
           .join("\n")};
 
-        type ${documentModelState.name} implements IDocument {
+        type ${documentModel.name} implements IDocument {
             id: ID!
             name: String!
             documentType: String!
             revision: Int!
             created: DateTime!
             lastModified: DateTime!
-            ${documentModelState.name !== "DocumentModel" ? `state: ${documentModelState.name}State!` : ""}
+            ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ""}
         }\n`;
   });
 

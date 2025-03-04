@@ -1,7 +1,9 @@
 import {
+    generateImportMapPlugin,
     viteConnectDevStudioPlugin,
     viteLoadExternalPackages,
 } from '@powerhousedao/builder-tools/connect-studio';
+import { externalIds } from '@powerhousedao/builder-tools/connect-studio/vite-plugins/base';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import tailwind from "@tailwindcss/vite";
 import react from '@vitejs/plugin-react';
@@ -14,28 +16,13 @@ import { createHtmlPlugin } from 'vite-plugin-html';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
+
 import pkg from './package.json';
 const isBuildStudio = process.env.BUILD_STUDIO === 'true';
-
-const reactImportScript = `
-    <script type="importmap">
-        {
-            "imports": 
-            {
-                "react": "https://esm.sh/react",
-                "react/": "https://esm.sh/react/",
-                "react-dom": "https://esm.sh/react-dom",
-                "react-dom/": "https://esm.sh/react-dom/"
-            }
-        }
-    </script>
-`;
-
-process.env.VITE_IMPORT_REACT_SCRIPT = isBuildStudio ? '' : reactImportScript;
-
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
+    const outDir = path.resolve(__dirname, './dist');
     const isProd = mode === 'production';
     const env = loadEnv(mode, process.cwd());
 
@@ -71,11 +58,7 @@ export default defineConfig(({ mode }) => {
                 process: false,
             },
         }),
-        viteConnectDevStudioPlugin(
-            false,
-            path.resolve(__dirname, './dist'),
-            env,
-        ),
+        viteConnectDevStudioPlugin(false, outDir, env),
         viteLoadExternalPackages(undefined),
         react({
             include: 'src/**/*.tsx',
@@ -123,11 +106,21 @@ export default defineConfig(({ mode }) => {
         );
     }
 
+    if (isProd) {
+        plugins.push(
+            generateImportMapPlugin(outDir, [
+                { name: 'react', provider: 'esm.sh' },
+                { name: 'react-dom', provider: 'esm.sh' },
+                '@powerhousedao/reactor-browser',
+            ]),
+        );
+    }
+
     return {
         plugins,
         build: {
-            minify: isProd,
-            sourcemap: true,
+            minify: false,
+            sourcemap: false,
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
@@ -142,7 +135,7 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: externalAndExclude,
+                external: [...externalAndExclude, ...externalIds],
             },
         },
         resolve: {
@@ -156,7 +149,7 @@ export default defineConfig(({ mode }) => {
             },
         },
         optimizeDeps: {
-            include: ['did-key-creator', '@powerhousedao/reactor-browser'],
+            include: ['did-key-creator'],
             exclude: externalAndExclude,
         },
         define: {

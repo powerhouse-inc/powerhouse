@@ -218,8 +218,8 @@ export default class SynchronizationManager implements ISynchronizationManager {
       driveId,
       documentId,
       documentType,
-      lastUpdated: lastOperation?.timestamp ?? document.lastModified,
-      revision: lastOperation?.index ?? 0,
+      lastUpdated: lastOperation.timestamp ?? document.lastModified,
+      revision: lastOperation.index ?? 0,
     };
   }
 
@@ -328,7 +328,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
   private getDocumentModelModule(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
-      (m) => m.documentType === documentType,
+      (m) => m.documentModel.id === documentType,
     );
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);

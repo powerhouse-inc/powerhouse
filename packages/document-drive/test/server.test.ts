@@ -1,14 +1,18 @@
+import { driveDocumentModelModule } from "#drive-document-model/module";
+import * as DriveUtils from "#drive-document-model/src/utils";
+import { ReactorBuilder } from "#server/builder";
 import { PrismaClient } from "@prisma/client";
 import {
   ActionContext,
   DocumentModelDocument,
-  DocumentModelModule,
+  documentModelDocumentModelModule,
+  PHDocument,
 } from "document-model";
+import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
-import { ReactorBuilder } from "../src/server/base.js";
 import { BrowserStorage } from "../src/storage/browser.js";
 import { FilesystemStorage } from "../src/storage/filesystem.js";
 import { MemoryStorage } from "../src/storage/memory.js";
@@ -16,12 +20,14 @@ import { PrismaStorage } from "../src/storage/prisma.js";
 import { SequelizeStorage } from "../src/storage/sequelize.js";
 import { IDriveStorage } from "../src/storage/types.js";
 import { generateUUID } from "../src/utils/misc.js";
-import { expectUUID } from "./utils.js";
+import { baseDocumentModels, expectUUID } from "./utils.js";
 
-const documentModels = [
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
-] as DocumentModelModule[];
+const documentModels = baseDocumentModels;
+
+const DocumentDriveUtils = { ...driveDocumentModelModule.utils, ...DriveUtils };
+const DocumentModelUtils = documentModelDocumentModelModule.utils;
+
+const actions = driveDocumentModelModule.actions;
 
 const FileStorageDir = path.join(__dirname, "./file-storage");
 const prismaClient = new PrismaClient();
@@ -46,13 +52,14 @@ const storageLayers = [
 ] as unknown as [string, () => Promise<IDriveStorage>][];
 
 let file: PHDocument | undefined = undefined;
-try {
-  file = await DocumentModelsLibs.RealWorldAssets.utils.loadFromFile(
-    "./test/rwa-document.zip",
-  );
-} catch {
-  /* empty */
-}
+// TODO import RealWorldAssets
+// try {
+//   file = await DocumentModelsLibs.RealWorldAssets.utils.loadFromFile(
+//     "./test/rwa-document.zip",
+//   );
+// } catch {
+//   /* empty */
+// }
 
 describe.each(storageLayers)(
   "Document Drive Server with %s",
@@ -116,7 +123,7 @@ describe.each(storageLayers)(
       expect(drives.includes("1")).toBeTruthy();
     });
 
-    it("adds file to server", async ({ expect }) => {
+    it.skipIf(!file)("adds file to server", async ({ expect }) => {
       const server = new ReactorBuilder(documentModels)
         .withStorage(await buildStorage())
         .build();
@@ -214,6 +221,10 @@ describe.each(storageLayers)(
       const operation = drive.operations.global[0]!;
 
       const result = await server.addDriveOperation("1", operation);
+      if (result.error) {
+        console.error(result.error);
+        throw result.error;
+      }
       expect(result.status).toBe("SUCCESS");
 
       const document = await server.getDocument("1", "1.1");
@@ -611,9 +622,10 @@ describe.each(storageLayers)(
         "1",
         "1.1",
       )) as DocumentModelDocument;
-      document = DocumentModelLib.reducer(
+
+      document = documentModelDocumentModelModule.reducer(
         document,
-        DocumentModelActions.setName("Test"),
+        documentModelDocumentModelModule.actions.setModelName("Test"),
       );
       const operation = document.operations.global[0]!;
       const result = await server.addOperation("1", "1.1", operation);
@@ -659,7 +671,7 @@ describe.each(storageLayers)(
             name: "name",
             key: "key",
           },
-          signature: "test",
+          signatures: ["test" as any],
         },
       };
 
@@ -746,7 +758,7 @@ describe.each(storageLayers)(
           id,
           name: "name",
           parentFolder: null,
-          documentType: file.documentType,
+          documentType: file!.documentType,
 
           document: file,
         },
@@ -798,9 +810,9 @@ describe.each(storageLayers)(
         "1",
         "1.1",
       )) as DocumentModelDocument;
-      document = DocumentModelLib.reducer(
+      document = documentModelDocumentModelModule.reducer(
         document,
-        DocumentModelActions.setName("Test"),
+        documentModelDocumentModelModule.actions.setModelName("Test"),
       );
       const operation = document.operations.global[0]!;
       await server.addOperation("1", "1.1", operation);
@@ -873,7 +885,7 @@ describe.each(storageLayers)(
             name: "name",
             key: "key",
           },
-          signature: "test",
+          signatures: ["test" as any],
         },
       };
 

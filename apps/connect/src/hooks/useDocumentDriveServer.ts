@@ -40,7 +40,7 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { App, Operation, PHDocument, hashKey } from 'document-model';
+import { Operation, PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useDocumentDrives } from './useDocumentDrives';
@@ -498,7 +498,7 @@ export function useDocumentDriveServer() {
     );
 
     const addDrive = useCallback(
-        async (drive: DriveInput, app?: App) => {
+        async (drive: DriveInput, preferredEditor?: string) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -513,7 +513,7 @@ export function useDocumentDriveServer() {
                     global: { ...drive.global, id },
                     local: drive.local,
                 },
-                app,
+                preferredEditor,
             );
             await refreshDocumentDrives();
             return newDrive;

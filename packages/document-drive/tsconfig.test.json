@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../codegen"
+    }
+  ],
+  "include": ["src/**/*", "test/**/*"]
+}

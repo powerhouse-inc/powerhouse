@@ -1,10 +1,5 @@
-import {
-    DRIVE,
-    FILE,
-    UiDriveNode,
-    UiNode,
-    useUiNodesContext,
-} from '@powerhousedao/design-system';
+import { DRIVE, FILE, UiDriveNode, UiNode } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 

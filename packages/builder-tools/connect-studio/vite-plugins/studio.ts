@@ -91,7 +91,12 @@ export function viteConnectDevStudioPlugin(
   const localDocumentEditorsPath = studioConfig[LOCAL_DOCUMENT_EDITORS_IMPORT];
 
   return [
-    enabled && viteIgnoreStaticImport(["react", "react-dom"]),
+    enabled &&
+      viteIgnoreStaticImport([
+        "react",
+        "react-dom",
+        "@powerhousedao/reactor-browser",
+      ]),
     localDocumentModelsPath
       ? viteReplaceImports({
           [LOCAL_DOCUMENT_MODELS_IMPORT]: localDocumentModelsPath,
@@ -120,7 +125,7 @@ export function viteConnectDevStudioPlugin(
         }
 
         const buildStudioExternals = enabled
-          ? [externalIds, ...STUDIO_IMPORTS]
+          ? [...externalIds, ...STUDIO_IMPORTS]
           : STUDIO_IMPORTS;
 
         config.build.rollupOptions.external.push(...buildStudioExternals);

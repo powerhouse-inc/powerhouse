@@ -40,8 +40,8 @@ export const CreateDocumentModal: React.FC<
 
         const node = await addDocument(
             selectedParentNode.driveId,
-            documentName || `New ${documentModel.documentModelState.name}`,
-            documentModel.documentModelState.id,
+            documentName || `New ${documentModel.documentModel.name}`,
+            documentModel.documentModel.id,
             selectedParentNode.id,
         );
 

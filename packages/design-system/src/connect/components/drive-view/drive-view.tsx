@@ -2,10 +2,10 @@ import {
   ConnectTreeView,
   NodeProps,
   SharingType,
-  TUiNodesContext,
   UiDriveNode,
 } from "@/connect";
 import { Icon } from "@/powerhouse";
+import type { TUiNodesContext } from "@powerhousedao/reactor-browser";
 import { ReactNode } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
