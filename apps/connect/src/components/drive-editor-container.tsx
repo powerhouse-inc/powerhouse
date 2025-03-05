@@ -10,9 +10,10 @@ import { useAsyncReactor } from '#store/reactor';
 import { useDocumentDispatch } from '#utils/document-model';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { useDocumentsState } from '@powerhousedao/reactor-browser/hooks/useDocumentsState';
+import { useDocumentState } from '@powerhousedao/reactor-browser/hooks/useDocumentState';
 import {
-  DriveContextProvider,
-  type IDriveContext,
+    DriveContextProvider,
+    type IDriveContext,
 } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { driveDocumentModelModule } from 'document-drive';
@@ -69,6 +70,14 @@ export function DriveEditorContainer() {
     });
 
     console.log('statesByDocumentId', statesByDocumentId);
+
+    const documentState = useDocumentState({
+        reactor,
+        driveId: selectedDriveNode?.id,
+        documentId: 'MgmEqlPP+rSnSRHfMPpdr2YIiqw=',
+    });
+
+    console.log('documentState', documentState);
 
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
