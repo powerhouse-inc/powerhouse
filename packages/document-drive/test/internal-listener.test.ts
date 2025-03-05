@@ -10,10 +10,12 @@ import {
 import { expectUTCTimestamp, expectUUID } from "./utils";
 
 import { documentModelDocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
     documentModelDocumentModelModule,
+    driveDocumentModelModule,
   ] as DocumentModelModule[];
 
   async function buildServer(receiver: IReceiver) {
