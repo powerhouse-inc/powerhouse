@@ -22,6 +22,7 @@
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
     "postbuild": "npm run copy-prisma",
+    "postinstall": "prisma generate",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
