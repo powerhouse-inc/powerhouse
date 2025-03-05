@@ -45,7 +45,8 @@ export const useLoadInitialData = () => {
 
         if (
             import.meta.env.MODE === 'development' ||
-            connectConfig.studioMode
+            connectConfig.studioMode ||
+            !connectConfig.warnOutdatedApp
         ) {
             console.warn(
                 `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,
