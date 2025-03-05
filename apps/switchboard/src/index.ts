@@ -3,9 +3,14 @@ import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
-import { SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
+import {
+  Subgraph,
+  SubgraphManager,
+  getDbClient,
+} from "@powerhousedao/reactor-api";
 import { PrismaClient } from "@prisma/client";
 import { documentModels as atlasDocumentModels } from "@sky-ph/atlas";
+import * as atlasSubgraphs from "@sky-ph/atlas/subgraphs";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorage } from "document-drive/storage/prisma";
@@ -63,6 +68,12 @@ const main = async () => {
     );
     // init router
     await subgraphManager.init();
+
+    for (const [name, module] of Object.entries(
+      atlasSubgraphs as Record<string, Record<string, typeof Subgraph>>,
+    )) {
+      await subgraphManager.registerSubgraph(module[name]);
+    }
 
     // // load switchboard-gui
     // app.use(

@@ -34,7 +34,7 @@
     "@powerhousedao/scalars": "1.25.1",
     "@powerhousedao/switchboard-gui": "0.2.0",
     "@prisma/client": "^6.4.1",
-    "@sky-ph/atlas": "0.2.3",
+    "@sky-ph/atlas": "0.2.4",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "document-drive": "1.21.1",
