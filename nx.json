@@ -62,7 +62,7 @@
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
-        "installArgs": "--loglevel=debug",
+        "skipLockFileUpdate": true,
         "updateDependents": "auto",
         "fallbackCurrentVersionResolver": "disk",
         "preserveLocalDependencyProtocols": true
