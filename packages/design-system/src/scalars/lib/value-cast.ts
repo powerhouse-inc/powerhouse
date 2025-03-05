@@ -50,7 +50,6 @@ export const castFunctions: Record<
     const date = normalizeMonthFormat(momentDate);
 
     const correctFormat = getDateFormat(dateFormat);
-    console.log("dateFormat", correctFormat);
     const newValue = parseInputString(date, correctFormat);
 
     const fechaUTC = parse(newValue, correctFormat ?? "yyyy-MM-dd", new Date());
@@ -62,7 +61,7 @@ export const castFunctions: Record<
     const unFormattedDate = getDateFromValue(datePart);
     const date = normalizeMonthFormat(unFormattedDate);
     const correctFormat = getDateFormat(dateFormat);
-    // console.log("timePart", timePart);
+
     const normalizedDate = parseInputString(date, correctFormat);
 
     const parsedDate = parse(normalizedDate, correctFormat ?? "", new Date());
