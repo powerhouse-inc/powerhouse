@@ -7,6 +7,7 @@ import {
 } from "document-model";
 import { createContext, PropsWithChildren, useContext } from "react";
 import type { UiNode } from "../uiNodes/types.js";
+import { HookState } from "./document-state.js";
 
 /**
  * Interface representing the context values provided by the host application
@@ -85,7 +86,7 @@ export interface IDriveContext {
   useDriveDocumentStates: (props: {
     driveId: string;
     documentIds?: string[];
-  }) => Record<string, PHDocument["state"]>;
+  }) => Record<string, HookState>;
 
   /**
    * Retrieves the state of a document in a drive

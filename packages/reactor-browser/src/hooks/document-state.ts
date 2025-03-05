@@ -2,8 +2,9 @@ import { GetDocumentOptions, IDocumentDriveServer } from "document-drive";
 import { PHDocument } from "document-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type HookState = PHDocument["state"] &
+export type HookState = PHDocument["state"] &
   Pick<PHDocument, "documentType" | "revision" | "created" | "lastModified">;
+
 export function useDocumentsState(args: {
   reactor: IDocumentDriveServer | undefined | null;
   driveId: string | undefined | null;
