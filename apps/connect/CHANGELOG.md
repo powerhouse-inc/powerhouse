@@ -1,3 +1,17 @@
+## 1.0.0-dev.215 (2025-03-05)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.4 (2025-03-05)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.16.0
+- Updated @powerhousedao/builder-tools to 0.3.2
+- Updated @powerhousedao/builder-tools to 0.3.2
+- Updated @powerhousedao/design-system to 1.30.2
+- Updated @powerhousedao/common to 1.5.2
+
 ## 1.0.0-dev.214 (2025-03-05)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

@@ -1,3 +1,16 @@
+## 0.35.3-dev.0 (2025-03-05)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.215
+
+## 0.35.2 (2025-03-05)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/builder-tools to 0.3.2
+- Updated @powerhousedao/connect to 1.0.4
+
 ## 0.35.2-dev.0 (2025-03-05)
 
 ### 🧱 Updated Dependencies
