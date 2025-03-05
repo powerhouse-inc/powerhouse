@@ -19,7 +19,7 @@ export class <%= pascalName %>Subgraph extends Subgraph {
 <% if (loadFromFile) { %>
   typeDefs = gql`${gqlCode}`;
 
-  resolvers = getResolvers(this, "powerhouse");
+  resolvers = getResolvers(this);
   additionalContextFields = {};
   async onSetup() {}
   async onDisconnect() {}
