@@ -62,6 +62,7 @@
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
+        "installArgs": "logLevel=debug",
         "updateDependents": "auto",
         "fallbackCurrentVersionResolver": "disk",
         "preserveLocalDependencyProtocols": true
