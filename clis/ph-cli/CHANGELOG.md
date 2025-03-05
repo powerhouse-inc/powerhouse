@@ -1,3 +1,26 @@
+## 0.35.4-dev.0 (2025-03-05)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.216
+
+## 0.35.3 (2025-03-05)
+
+### 🚀 Features
+
+- **connect:** atlas import route ([2021bc20](https://github.com/powerhouse-inc/powerhouse/commit/2021bc20))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.22.2
+- Updated @powerhousedao/builder-tools to 0.3.3
+- Updated @powerhousedao/reactor-local to 1.22.2
+- Updated @powerhousedao/connect to 1.0.5
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 0.35.3-dev.0 (2025-03-05)
 
 ### 🧱 Updated Dependencies

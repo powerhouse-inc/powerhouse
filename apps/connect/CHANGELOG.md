@@ -1,3 +1,13 @@
+## 1.0.0-dev.216 (2025-03-05)
+
+### 🚀 Features
+
+- **connect:** atlas import route ([2021bc20](https://github.com/powerhouse-inc/powerhouse/commit/2021bc20))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.215 (2025-03-05)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
