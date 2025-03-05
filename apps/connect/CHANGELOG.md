@@ -1,3 +1,28 @@
+## 1.0.0-dev.213 (2025-03-05)
+
+### 🚀 Features
+
+- regenerate lockfile ([6c70fbfc](https://github.com/powerhouse-inc/powerhouse/commit/6c70fbfc))
+- **monorepo:** regenerate lockfile ([258eefbd](https://github.com/powerhouse-inc/powerhouse/commit/258eefbd))
+- **atlas:** add atlas subgraphs to switchboard ([777434d6](https://github.com/powerhouse-inc/powerhouse/commit/777434d6))
+- **reactor-browser:** add document state hooks to drive context ([77dc9c96](https://github.com/powerhouse-inc/powerhouse/commit/77dc9c96))
+- **reactor-browser:** add document state helper hook ([f4435f97](https://github.com/powerhouse-inc/powerhouse/commit/f4435f97))
+- **reactor-browser:** add documents filter ([a965c17e](https://github.com/powerhouse-inc/powerhouse/commit/a965c17e))
+
+### 🩹 Fixes
+
+- **switchboard:** added outdated deployment ([339d7b8e](https://github.com/powerhouse-inc/powerhouse/commit/339d7b8e))
+- **connect:** fixed prod bundle ([ee948b3c](https://github.com/powerhouse-inc/powerhouse/commit/ee948b3c))
+- **common:** fixed missing useDocumentState hooks in storybook ([0af73b9a](https://github.com/powerhouse-inc/powerhouse/commit/0af73b9a))
+- **codegen,document-drive,reactor-api:** fix ph generate command for GraphQL mutations ([2aa75720](https://github.com/powerhouse-inc/powerhouse/commit/2aa75720))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- ryanwolhuter @ryanwolhuter
+- Wouter Kampmann
+
 ## 1.0.0-dev.212 (2025-03-04)
 
 ### 🚀 Features
