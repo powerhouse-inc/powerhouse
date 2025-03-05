@@ -56,16 +56,22 @@ jobs:
     steps:
       - name: Send Discord Notification
         run: |
-          COMMIT_MESSAGE=$(echo "${{ github.event.head_commit.message }}" | jq -Rs .)
+          COMMIT_MESSAGE=$(echo "ci: add commit message to failed job notification" | jq -Rs .)
+          JSON_PAYLOAD=$(jq -n \
+            --arg commit "76941716984b6299cc7a17e44ed44c587f50685f" \
+            --arg commit_url "https://github.com/powerhouse-inc/powerhouse/commit/76941716984b6299cc7a17e44ed44c587f50685f" \
+            --arg commit_message "$COMMIT_MESSAGE" \
+            --arg workflow_url "https://github.com/powerhouse-inc/powerhouse/actions/runs/13676130299" \
+            '{
+              username: "GitHub Actions",
+              avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              embeds: [{
+                title: "⚠️ Job Failed: CI Build",
+                description: "**Commit**: [\($commit)](\($commit_url))\n**Message**: \($commit_message)\n**Workflow**: [View Workflow](\($workflow_url))",
+                color: 15158332
+              }]
+            }')
           curl -H "Content-Type: application/json" \
           -X POST \
-          -d '{
-            "username": "GitHub Actions",
-            "avatar_url": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-            "embeds": [{
-              "title": "⚠️ Job Failed: CI Build",
-              "description": "**Commit**: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})\n**Message**: '"$COMMIT_MESSAGE"'\n**Workflow**: [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})",
-              "color": 15158332
-            }]
-          }' \
+          -d "$JSON_PAYLOAD" \
           ${{ secrets.DISCORD_WEBHOOK }}
