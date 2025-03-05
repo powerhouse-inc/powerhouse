@@ -113,32 +113,7 @@ const meta: Meta<typeof EnumField> = {
 
 export default meta;
 
-type EnumFieldArgs = {
-  defaultValue?: string | string[];
-  description?: string;
-  disabled?: boolean;
-  errors?: string[];
-  label?: string;
-  multiple?: boolean;
-  name?: string;
-  options?: {
-    value: string;
-    label: string;
-    icon?: React.ComponentType;
-    description?: string;
-    disabled?: boolean;
-  }[];
-  selectionIcon?: "auto" | "checkmark";
-  selectionIconPosition?: "left" | "right";
-  placeholder?: string;
-  required?: boolean;
-  searchable?: boolean;
-  value?: string | string[];
-  variant: "auto" | "RadioGroup" | "Select";
-  warnings?: string[];
-};
-
-type Story = StoryObj<EnumFieldArgs>;
+type Story = StoryObj<typeof EnumField>;
 
 const IconComponent = (
   name: IconName,
@@ -178,6 +153,11 @@ const defaultOptionsWithIcon = [
   },
 ];
 
+type StoryProps = {
+  variant: "auto" | "RadioGroup" | "Select";
+  [key: string]: any;
+};
+
 export const Default: Story = {
   args: {
     label: "Select an option",
@@ -197,7 +177,7 @@ export const WithDescription: Story = {
         index === 2 ? `Description for ${opt.label} option` : undefined,
     })),
     placeholder: "Choose from the list",
-  },
+  } as StoryProps,
 };
 
 export const Required: Story = {
@@ -207,7 +187,7 @@ export const Required: Story = {
     options: defaultOptions,
     placeholder: "Choose from the list",
     required: true,
-  },
+  } as StoryProps,
 };
 
 export const WithDefaultValue: Story = {
@@ -217,7 +197,7 @@ export const WithDefaultValue: Story = {
     options: defaultOptions,
     placeholder: "Choose from the list",
     defaultValue: "Drive",
-  },
+  } as StoryProps,
 };
 
 export const Disabled: Story = {
@@ -228,7 +208,7 @@ export const Disabled: Story = {
     placeholder: "Choose from the list",
     value: "Drive",
     disabled: true,
-  },
+  } as StoryProps,
 };
 
 // Validation states
@@ -240,7 +220,7 @@ export const WithError: Story = {
     placeholder: "Choose from the list",
     value: "Drive",
     errors: ["Please select a different option"],
-  },
+  } as StoryProps,
 };
 
 export const WithWarning: Story = {
@@ -251,7 +231,7 @@ export const WithWarning: Story = {
     placeholder: "Choose from the list",
     value: "Drive",
     warnings: ["This option may be deprecated soon"],
-  },
+  } as StoryProps,
 };
 
 // Variant examples
