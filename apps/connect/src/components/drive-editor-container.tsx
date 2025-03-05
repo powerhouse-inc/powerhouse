@@ -9,9 +9,10 @@ import { useDriveEditor } from '#store/external-packages';
 import { useAsyncReactor } from '#store/reactor';
 import { useDocumentDispatch } from '#utils/document-model';
 import { GenericDriveExplorer } from '@powerhousedao/common';
+import { useDocumentsState } from '@powerhousedao/reactor-browser/hooks/useDocumentsState';
 import {
-    DriveContextProvider,
-    type IDriveContext,
+  DriveContextProvider,
+  type IDriveContext,
 } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { driveDocumentModelModule } from 'document-drive';
@@ -19,7 +20,6 @@ import { DocumentModelModule, Operation } from 'document-model';
 import { useCallback, useEffect, useMemo } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal';
-import { useDocumentsState } from '@powerhousedao/reactor-browser/hooks/useDocumentsState';
 
 function DriveEditorError({ error }: FallbackProps) {
     return (
@@ -65,6 +65,7 @@ export function DriveEditorContainer() {
     const statesByDocumentId = useDocumentsState({
         reactor,
         driveId: selectedDriveNode?.id,
+        documentIds: ['MgmEqlPP+rSnSRHfMPpdr2YIiqw='],
     });
 
     console.log('statesByDocumentId', statesByDocumentId);

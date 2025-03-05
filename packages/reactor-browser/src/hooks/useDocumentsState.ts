@@ -5,17 +5,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 type Args = {
   reactor: IDocumentDriveServer | undefined | null;
   driveId: string | undefined | null;
+  documentIds?: string[];
   options?: GetDocumentOptions;
 };
 
 export function useDocumentsState(
   args: Args,
 ): Record<string, PHDocument["state"]> {
-  const { reactor, driveId, options } = args;
+  const { reactor, driveId, documentIds, options } = args;
   const [statesByDocumentId, setStatesByDocumentId] = useState<
     Record<string, PHDocument["state"]>
   >({});
   const isInitialized = useRef(false);
+  const isSubscribed = useRef(false);
 
   useEffect(() => {
     async function initialize() {
@@ -23,9 +25,9 @@ export function useDocumentsState(
       if (!reactor || !driveId) return;
       isInitialized.current = true;
 
-      const documentIds = await reactor.getDocuments(driveId);
+      const ids = documentIds ?? (await reactor.getDocuments(driveId));
       const statesByDocumentId: Record<string, PHDocument["state"]> = {};
-      for (const id of documentIds) {
+      for (const id of ids) {
         const document = await reactor.getDocument(driveId, id, options);
         statesByDocumentId[id] = document.state;
       }
@@ -36,7 +38,13 @@ export function useDocumentsState(
 
   useEffect(() => {
     if (!reactor || !driveId) return;
+    if (isSubscribed.current) return;
+    isSubscribed.current = true;
+    console.log("subscribing to strandUpdate");
     const unsubscribe = reactor.on("strandUpdate", async (update) => {
+      console.log("strandUpdate", update);
+      if (documentIds && !documentIds.includes(update.documentId)) return;
+
       const updatedDocument = await reactor.getDocument(
         driveId,
         update.documentId,
