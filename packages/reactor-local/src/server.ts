@@ -128,6 +128,26 @@ const startServer = async (
     .withStorage(new FilesystemStorage(storagePath))
     .build();
 
+  const packagesManager = new PackagesManager(
+    packages?.length
+      ? { packages }
+      : configFile
+        ? { configFile }
+        : { packages: [] },
+    (error) => console.error(error),
+  );
+  const docModules = await packagesManager.loadDocumentModels();
+  if (Array.isArray(docModules)) {
+    driveServer.setDocumentModelModules(
+      joinDocumentModelModules(baseDocumentModelModules, docModules),
+    );
+  }
+  packagesManager.onDocumentModelsChange((documentModelModules) => {
+    driveServer.setDocumentModelModules(
+      joinDocumentModelModules(baseDocumentModelModules, documentModelModules),
+    );
+  });
+
   // init drive server
   await driveServer.initialize();
 
@@ -150,20 +170,6 @@ const startServer = async (
       throw e;
     }
   }
-
-  const packagesManager = new PackagesManager(
-    packages?.length
-      ? { packages }
-      : configFile
-        ? { configFile }
-        : { packages: [] },
-    (error) => console.error(error),
-  );
-  packagesManager.onDocumentModelsChange((documentModelModules) => {
-    driveServer.setDocumentModelModules(
-      joinDocumentModelModules(baseDocumentModelModules, documentModelModules),
-    );
-  });
 
   try {
     // start api
