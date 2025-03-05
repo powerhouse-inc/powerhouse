@@ -5,7 +5,7 @@ import {
 } from "@powerhousedao/analytics-engine-knex";
 import { SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
 import { PrismaClient } from "@prisma/client";
-import * as SkyPHAtlas from "@sky-ph/atlas";
+import { documentModels as atlasDocumentModels } from "@sky-ph/atlas";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorage } from "document-drive/storage/prisma";
@@ -41,7 +41,7 @@ const main = async () => {
     const driveServer = new ReactorBuilder([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
-      SkyPHAtlas,
+      ...atlasDocumentModels,
     ] as DocumentModelModule[])
       .withStorage(storage)
       .withCache(redisCache)
