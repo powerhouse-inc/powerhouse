@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "codegen": "gql-gen --config codegen.yml",
-    "postinstall": "pnpx prisma generate --schema prisma/schema.prisma && pnpm build:tsc",
+    "postinstall": "pnpx prisma generate --schema prisma/schema.prisma",
     "prepublishOnly": "npm run build"
   },
   "author": "",
