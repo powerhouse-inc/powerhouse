@@ -1,3 +1,18 @@
+## 0.35.2-dev.0 (2025-03-05)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.214
+
+## 0.35.1 (2025-03-05)
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.22.1
+- Updated @powerhousedao/builder-tools to 0.3.1
+- Updated @powerhousedao/reactor-local to 1.22.1
+- Updated @powerhousedao/connect to 1.0.5
+
 ## 0.35.1-dev.0 (2025-03-05)
 
 ### 🧱 Updated Dependencies
