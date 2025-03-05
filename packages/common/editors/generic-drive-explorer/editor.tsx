@@ -38,8 +38,6 @@ export default function Editor(props: IProps) {
     isAllowedToCreateDocuments,
     documentModels,
     showCreateDocumentModal,
-    useDriveDocumentStates,
-    useDriveDocumentState,
   } = useDriveContext();
   const {
     driveNodes,
@@ -48,8 +46,7 @@ export default function Editor(props: IProps) {
     getNodeById,
     setSelectedNode,
   } = useUiNodesContext();
-  const driveDocumentStates = useDriveDocumentStates({ driveId });
-  console.log("states", driveDocumentStates);
+
   const driveNode = useMemo(
     () => driveNodes.find((n) => n.id === driveId),
     [driveNodes, driveId],
