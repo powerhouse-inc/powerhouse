@@ -2,15 +2,17 @@ import { GetDocumentOptions, IDocumentDriveServer } from "document-drive";
 import { PHDocument } from "document-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+type HookState = PHDocument["state"] &
+  Pick<PHDocument, "documentType" | "revision" | "created" | "lastModified">;
 export function useDocumentsState(args: {
   reactor: IDocumentDriveServer | undefined | null;
   driveId: string | undefined | null;
   documentIds?: string[];
   options?: GetDocumentOptions;
-}): Record<string, PHDocument["state"]> {
+}): Record<string, HookState> {
   const { reactor, driveId, documentIds, options } = args;
   const [statesByDocumentId, setStatesByDocumentId] = useState<
-    Record<string, PHDocument["state"]>
+    Record<string, HookState>
   >({});
   const isInitialized = useRef(false);
   const isSubscribed = useRef(false);
@@ -22,10 +24,16 @@ export function useDocumentsState(args: {
       isInitialized.current = true;
 
       const ids = documentIds ?? (await reactor.getDocuments(driveId));
-      const statesByDocumentId: Record<string, PHDocument["state"]> = {};
+      const statesByDocumentId: Record<string, HookState> = {};
       for (const id of ids) {
         const document = await reactor.getDocument(driveId, id, options);
-        statesByDocumentId[id] = document.state;
+        statesByDocumentId[id] = {
+          ...document.state,
+          documentType: document.documentType,
+          revision: document.revision,
+          created: document.created,
+          lastModified: document.lastModified,
+        };
       }
       setStatesByDocumentId(statesByDocumentId);
     }
@@ -48,7 +56,13 @@ export function useDocumentsState(args: {
       );
       setStatesByDocumentId((prev) => {
         const newStatesByDocumentId = { ...prev };
-        newStatesByDocumentId[update.documentId] = updatedDocument.state;
+        newStatesByDocumentId[update.documentId] = {
+          ...updatedDocument.state,
+          documentType: updatedDocument.documentType,
+          revision: updatedDocument.revision,
+          created: updatedDocument.created,
+          lastModified: updatedDocument.lastModified,
+        };
         return newStatesByDocumentId;
       });
     });
