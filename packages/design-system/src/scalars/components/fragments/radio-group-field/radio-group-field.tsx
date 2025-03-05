@@ -8,12 +8,22 @@ import { RadioGroupProps } from "@/scalars/components/enum-field/types";
 import { Radio } from "./radio";
 import { RadioGroup } from "./radio-group";
 
-export interface RadioGroupFieldProps
-  extends FieldCommonProps<string>,
-    ErrorHandling,
-    RadioGroupProps {}
+type RadioGroupFieldBaseProps = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  | keyof FieldCommonProps<string>
+  | keyof ErrorHandling
+  | keyof RadioGroupProps
+  | "dir"
+> & {
+  dir?: "ltr" | "rtl";
+};
 
-const RadioGroupFieldRaw = React.forwardRef<
+export type RadioGroupFieldProps = RadioGroupFieldBaseProps &
+  FieldCommonProps<string> &
+  ErrorHandling &
+  RadioGroupProps;
+
+export const RadioGroupFieldRaw = React.forwardRef<
   HTMLDivElement,
   RadioGroupFieldProps
 >(

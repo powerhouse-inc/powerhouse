@@ -34,14 +34,3 @@ export type SelectProps =
       selectionIcon: "checkmark";
       selectionIconPosition?: "left" | "right";
     });
-
-export type EnumProps =
-  | ({
-      variant?: "auto";
-    } & (RadioGroupProps | SelectProps))
-  | ({
-      variant: "RadioGroup";
-    } & RadioGroupProps)
-  | ({
-      variant: "Select";
-    } & SelectProps);
