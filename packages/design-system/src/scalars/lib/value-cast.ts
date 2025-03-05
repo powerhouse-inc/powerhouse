@@ -46,17 +46,26 @@ export const castFunctions: Record<
     }
   },
   DateString: (value: string, dateFormat = "yyyy-MM-dd") => {
-    const date = normalizeMonthFormat(getDateFromValue(value));
+    const momentDate = getDateFromValue(value);
+    const date = normalizeMonthFormat(momentDate);
+
     const correctFormat = getDateFormat(dateFormat);
+    console.log("dateFormat", correctFormat);
     const newValue = parseInputString(date, correctFormat);
+
     const fechaUTC = parse(newValue, correctFormat ?? "yyyy-MM-dd", new Date());
     return fechaUTC;
   },
   DateTimeString: (value: string, dateFormat = "yyyy-MM-dd") => {
     const [datePart, timePart] = value.split("T");
-    const date = getDateFromValue(datePart);
-    const normalizedDate = parseInputString(date, dateFormat);
-    const parsedDate = parse(normalizedDate, dateFormat, new Date());
+
+    const unFormattedDate = getDateFromValue(datePart);
+    const date = normalizeMonthFormat(unFormattedDate);
+    const correctFormat = getDateFormat(dateFormat);
+    // console.log("timePart", timePart);
+    const normalizedDate = parseInputString(date, correctFormat);
+
+    const parsedDate = parse(normalizedDate, correctFormat ?? "", new Date());
     const isoDate = format(parsedDate, "yyyy-MM-dd");
     return `${isoDate}T${timePart}`;
   },

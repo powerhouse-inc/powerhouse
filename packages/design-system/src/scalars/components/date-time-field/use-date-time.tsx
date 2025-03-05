@@ -9,8 +9,10 @@ import { TimeFieldValue, TimePeriod } from "../time-picker-field/type";
 import { format, parse } from "date-fns";
 import {
   createBlurEvent,
+  getDateFormat,
   getDateFromValue,
   getTimeFromValue,
+  normalizeMonthFormat,
 } from "../date-picker-field/utils";
 import {
   cleanTime,
@@ -158,19 +160,22 @@ export const useDateTime = ({
   timeZone,
   showTimezoneSelect = true,
 }: DateTimeFieldProps) => {
+  const internalFormat = getDateFormat(dateFormat ?? "");
   const [isOpen, setIsOpen] = React.useState(false);
   const [activeTab, setActiveTab] = useState<"date" | "time">("date");
 
   const [dateTimeToDisplay, setDateTimeToDisplay] = useState(
-    parseDateTimeValueToInput(value ?? defaultValue ?? "", dateFormat ?? ""),
+    parseDateTimeValueToInput(
+      value ?? defaultValue ?? "",
+      internalFormat ?? "",
+    ),
   );
   // formatInputsToValueFormat
   const onChangeDate = (e: React.ChangeEvent<HTMLInputElement>) => {
     // TODO: parse date and time to correct format
     const date = e.target.value;
     const newValue = putDateInValue(value ?? defaultValue ?? "", date);
-
-    const newVInput = parseDateTimeValueToInput(newValue, dateFormat);
+    const newVInput = parseDateTimeValueToInput(newValue, internalFormat);
 
     const splitTime = newVInput.split(" ")[1];
     const splitDate = newVInput.split(" ")[0];
@@ -188,7 +193,8 @@ export const useDateTime = ({
     if (is12HourFormat) {
       setSelectedPeriod(period as TimePeriod);
     }
-    const inputDisplay = `${splitDate} ${transformedTime}`;
+    const inputDisplay = `${splitDate.toLocaleUpperCase()} ${transformedTime}`;
+
     setDateTimeToDisplay(inputDisplay);
     onChange?.(createChangeEvent(newValue));
   };
@@ -216,11 +222,10 @@ export const useDateTime = ({
 
   const onChangeTime = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsOpen(false);
-    // TODO: parse date and time to correct format
     const time = e.target.value;
 
     const newValue = putTimeInValue(value ?? defaultValue ?? "", time);
-    const newVInput = parseDateTimeValueToInput(newValue, dateFormat);
+    const newVInput = parseDateTimeValueToInput(newValue, internalFormat);
     setDateTimeToDisplay(newVInput);
     onChange?.(createChangeEvent(newValue));
   };
@@ -309,9 +314,6 @@ export const useDateTime = ({
     const { date, time } = splitDateTimeStringFromInput(inputValue);
     const offset = getOffset(timeZone);
     let formattedDateTime = formatToISODateTimeWithOffset(date, time, offset);
-    // Agregar milisegundos .000 si no existen
-    // const formattedTime =
-    //   formattedDateTime.replace(/(:\d{2})([+-].*|Z)/, "$1.000$2") || "";
     if (!time && !date) {
       formattedDateTime = inputValue;
     }
@@ -380,13 +382,14 @@ export const useDateTime = ({
       : `${hourToUse}:${selectedMinute}`;
 
     const newValue = putTimeInValue(value ?? defaultValue ?? "", newValueTime);
-    const valueDate = parseDateTimeValueToInput(newValue, dateFormat).split(
+    const valueDate = parseDateTimeValueToInput(newValue, internalFormat).split(
       " ",
     )[0];
+    // Convert to uppercase for the value and for the input display
+    const upperValueDate = valueDate.toUpperCase();
 
-    const valueWithFormat = putDateInValue(newValue, valueDate);
-
-    const inputDisplay = `${valueDate} ${timeToDisplay}`;
+    const valueWithFormat = putDateInValue(newValue, upperValueDate);
+    const inputDisplay = `${upperValueDate} ${timeToDisplay}`;
     setDateTimeToDisplay(inputDisplay);
     onChange?.(createChangeEvent(valueWithFormat));
   };
@@ -394,7 +397,6 @@ export const useDateTime = ({
   return {
     isOpen,
     setIsOpen,
-    // inputValue,
     activeTab,
     onChangeTabs,
     isCalendarView,

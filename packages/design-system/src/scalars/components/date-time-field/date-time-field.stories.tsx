@@ -6,6 +6,7 @@ import {
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
 import { DateTimeField } from "./date-time-field";
+import { FORMAT_MAPPING } from "../date-picker-field/utils";
 
 const meta: Meta<typeof DateTimeField> = {
   title: "Document Engineering/Simple Components/Date Time Field",
@@ -73,13 +74,7 @@ const meta: Meta<typeof DateTimeField> = {
       control: {
         type: "select",
       },
-      options: [
-        "yyyy-MM-dd",
-        "dd/MM/yyyy",
-        "MM/dd/yyyy",
-        "dd-MMM-yyyy",
-        "MMM-dd-yyyy",
-      ],
+      options: Object.keys(FORMAT_MAPPING),
       table: {
         defaultValue: { summary: "yyyy-MM-dd" },
         type: {
@@ -170,6 +165,9 @@ const meta: Meta<typeof DateTimeField> = {
   },
   parameters: {
     layout: "centered",
+    form: {
+      resetBehavior: "unmount",
+    },
     docs: {
       description: {
         component:
