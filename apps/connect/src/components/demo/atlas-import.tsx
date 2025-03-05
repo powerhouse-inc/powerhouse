@@ -86,12 +86,16 @@ export function AtlasImport() {
     useEffect(() => {
         if (!driveId || !reactor || status.current !== 'forked') return;
         status.current = 'addingDrive';
-        addForkDrive(driveId).catch(setError);
+        new Promise<void>(resolve => {
+            setTimeout(resolve, 500);
+        })
+            .then(() => addForkDrive(driveId))
+            .catch(setError);
     }, [driveId, reactor, status]);
 
     return (
-        <div>
-            <h1>Atlas Import</h1>
+        <div className="p-10">
+            <h1 className="font-semibold mb-4">Atlas Import</h1>
             {error ? (
                 <div>
                     Error:{' '}

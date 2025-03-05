@@ -20,7 +20,7 @@ import {
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { driveDocumentModelModule } from 'document-drive';
 import { DocumentModelModule, Operation } from 'document-model';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal';
 
@@ -128,13 +128,6 @@ export function DriveEditorContainer() {
     );
 
     const driveEditor = useDriveEditor(document?.meta?.preferredEditor);
-
-    useEffect(() => {
-        console.debug(
-            `App Drive Editor for ${selectedDriveNode?.name}:`,
-            driveEditor,
-        );
-    }, [driveEditor?.config.id, selectedDriveNode]);
 
     if (!document) {
         return null;
