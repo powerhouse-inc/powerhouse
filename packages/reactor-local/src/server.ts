@@ -123,13 +123,31 @@ const startServer = async (
 
   const serverPort = Number(process.env.PORT ?? port);
 
-  // start document drive server with all available document models & filesystem storage
+  const packagesManager = new PackagesManager(
+    packages?.length
+      ? { packages }
+      : configFile
+        ? { configFile }
+        : { packages: [] },
+    (error) => console.error(error),
+  );
+  const documentModelModules = await packagesManager.loadDocumentModels();
+  if (Array.isArray(documentModelModules)) {
+    // start document drive server with all available document models & filesystem storage
+    for (const documentModelModule of documentModelModules) {
+      baseDocumentModelModules.push(documentModelModule);
+    }
+  }
   const driveServer = new ReactorBuilder(baseDocumentModelModules)
     .withStorage(new FilesystemStorage(storagePath))
     .build();
-
   // init drive server
   await driveServer.initialize();
+  packagesManager.onDocumentModelsChange((documentModelModules) => {
+    driveServer.setDocumentModelModules(
+      joinDocumentModelModules(baseDocumentModelModules, documentModelModules),
+    );
+  });
 
   let driveId = drive.global.slug ?? drive.global.id;
   let driveUrl = "";
@@ -150,20 +168,6 @@ const startServer = async (
       throw e;
     }
   }
-
-  const packagesManager = new PackagesManager(
-    packages?.length
-      ? { packages }
-      : configFile
-        ? { configFile }
-        : { packages: [] },
-    (error) => console.error(error),
-  );
-  packagesManager.onDocumentModelsChange((documentModelModules) => {
-    driveServer.setDocumentModelModules(
-      joinDocumentModelModules(baseDocumentModelModules, documentModelModules),
-    );
-  });
 
   try {
     // start api

@@ -96,17 +96,21 @@ export class PackagesManager implements IPackagesManager {
     protected onError?: (e: unknown) => void,
   ) {
     this.eventEmitter.setMaxListeners(0);
+  }
 
-    if ("packages" in options) {
-      void this.loadPackages(options.packages).catch(onError);
-    } else if ("configFile" in options) {
-      void this.initConfigFile(options.configFile).catch(onError);
+  public async loadDocumentModels() {
+    if ("packages" in this.options) {
+      return await this.loadPackages(this.options.packages).catch(this.onError);
+    } else if ("configFile" in this.options) {
+      return await this.initConfigFile(this.options.configFile).catch(
+        this.onError,
+      );
     }
   }
 
   private async loadPackages(packages: string[]) {
     const packagesMap = await loadPackagesDocumentModels(packages);
-    this.updatePackagesMap(packagesMap);
+    return this.updatePackagesMap(packagesMap);
   }
 
   private loadFromConfigFile(configFile: string) {
@@ -150,6 +154,7 @@ export class PackagesManager implements IPackagesManager {
       ...Array.from(packagesMap.values()),
     );
     this.eventEmitter.emit("documentModelsChange", documentModels);
+    return documentModels;
   }
 
   onDocumentModelsChange(
