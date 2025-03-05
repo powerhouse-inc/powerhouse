@@ -6,14 +6,8 @@ import {
 } from "../time-picker-field/use-time-picker-field";
 import { useDatePickerField } from "../date-picker-field/use-date-picker-field";
 import { TimeFieldValue, TimePeriod } from "../time-picker-field/type";
-import { format, parse } from "date-fns";
-import {
-  createBlurEvent,
-  getDateFormat,
-  getDateFromValue,
-  getTimeFromValue,
-  normalizeMonthFormat,
-} from "../date-picker-field/utils";
+import { format } from "date-fns";
+import { getDateFromValue, getTimeFromValue } from "../date-picker-field/utils";
 import {
   cleanTime,
   convert12hTo24h,
@@ -25,6 +19,8 @@ import {
   isValidTimeInput,
 } from "../time-picker-field/utils";
 import {
+  createBlurEvent,
+  getDateFormat,
   getOffset,
   parseInputString,
   splitDateTimeStringFromInput,

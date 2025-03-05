@@ -6,7 +6,7 @@ import {
   getValidationArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
-import { FORMAT_MAPPING } from "./utils";
+import { FORMAT_MAPPING } from "../date-time-field/utils";
 
 const meta: Meta<typeof DatePickerField> = {
   title: "Document Engineering/Fragments/Date Picker Field",

@@ -15,8 +15,7 @@ import {
   getTimezone,
   isValidTimeInput,
 } from "./utils";
-import { createBlurEvent } from "../date-picker-field/utils";
-import { getOffset } from "../date-time-field/utils";
+import { createBlurEvent, getOffset } from "../date-time-field/utils";
 
 export const convertTimeFrom24To12Hours = (time: string) => {
   if (time === "") return "";

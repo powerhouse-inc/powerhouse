@@ -6,7 +6,7 @@ import {
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
 import { DateTimeField } from "./date-time-field";
-import { FORMAT_MAPPING } from "../date-picker-field/utils";
+import { FORMAT_MAPPING } from "./utils";
 
 const meta: Meta<typeof DateTimeField> = {
   title: "Document Engineering/Simple Components/Date Time Field",

@@ -4,12 +4,14 @@ import { DateFieldValue, WeekStartDayNumber } from "./types";
 import {
   formatDateToValue,
   formatUTCDateToISOStringWithOutTime,
-  getDateFormat,
   getDateFromValue,
-  normalizeMonthFormat,
 } from "./utils";
 import { createChangeEvent } from "../time-picker-field/utils";
-import { parseInputString } from "../date-time-field/utils";
+import {
+  getDateFormat,
+  normalizeMonthFormat,
+  parseInputString,
+} from "../date-time-field/utils";
 
 interface DatePickerFieldProps {
   value?: DateFieldValue;
