@@ -1,9 +1,10 @@
 import { dirname, isAbsolute, join } from "path";
+import { build } from "vite";
 import { readJsonFile } from "./helpers.js";
-import { startServer } from "./server.js";
+import { buildViteConfig, startServer } from "./server.js";
 import { ConnectStudioOptions, StartServerOptions } from "./types.js";
 
-export function startConnectStudio(options: ConnectStudioOptions) {
+function buildConnectConfig(options: ConnectStudioOptions) {
   const serverOptions: StartServerOptions = {};
 
   if (options.port) {
@@ -78,7 +79,17 @@ export function startConnectStudio(options: ConnectStudioOptions) {
     serverOptions.logLevel = options.logLevel;
   }
 
+  return serverOptions;
+}
+export function startConnectStudio(options: ConnectStudioOptions) {
+  const serverOptions = buildConnectConfig(options);
   return startServer(serverOptions).catch((error) => {
     throw error;
   });
+}
+
+export function buildConnect(options: ConnectStudioOptions) {
+  const serverOptions = buildConnectConfig(options);
+  const config = buildViteConfig(serverOptions, false);
+  return build(config);
 }

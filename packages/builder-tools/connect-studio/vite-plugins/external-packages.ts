@@ -44,7 +44,7 @@ export function generateImportScript(packages: string[]) {
 
   const fileContent = `${imports.join("\n")}\n\n${exportStatement}`;
   fs.writeFileSync(IMPORT_SCRIPT_FILE, fileContent);
-
+  console.log("Generated external packages", IMPORT_SCRIPT_FILE);
   return IMPORT_SCRIPT_FILE;
 }
 

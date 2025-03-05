@@ -10,6 +10,7 @@ export type ConnectStudioOptions = {
   packages?: { packageName: string }[];
   phCliVersion?: string;
   logLevel?: "verbose" | "debug" | "info" | "warn" | "error" | "silent";
+  build?: boolean;
 };
 
 export type StartServerOptions = {

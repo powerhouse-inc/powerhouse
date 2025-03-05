@@ -1,16 +1,11 @@
-import basicSsl from "@vitejs/plugin-basic-ssl";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { createLogger, createServer, InlineConfig, Plugin } from "vite";
-import { viteEnvs } from "vite-envs";
 import { backupIndexHtml, removeBase64EnvValues } from "./helpers.js";
 import { StartServerOptions } from "./types.js";
 import { getStudioConfig } from "./vite-plugins/base.js";
-import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
-import { generateImportMapPlugin } from "./vite-plugins/importmap.js";
-import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
 
 function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation
@@ -72,6 +67,79 @@ function runShellScriptPlugin(scriptName: string, connectPath: string): Plugin {
   };
 }
 
+export function buildViteConfig(
+  options: StartServerOptions = {
+    logLevel: "debug",
+  },
+  studioMode: boolean,
+  env: Record<string, unknown> = {},
+) {
+  const connectPath = options.connectPath ?? resolveConnect();
+  const projectRoot = process.cwd();
+
+  const config: InlineConfig = {
+    customLogger: logger,
+    configFile: false,
+    root: connectPath,
+    optimizeDeps: {
+      include: [],
+    },
+    // resolve: {
+    //   alias: [
+    //     { find: "jszip", replacement: "jszip/dist/jszip.min.js" },
+    //     {
+    //       find: "react",
+    //       replacement: join(projectRoot, "node_modules", "react"),
+    //     },
+    //     {
+    //       find: "react-dom",
+    //       replacement: join(projectRoot, "node_modules", "react-dom"),
+    //     },
+    //     {
+    //       find: "@powerhousedao/reactor-browser",
+    //       replacement: join(
+    //         projectRoot,
+    //         "node_modules",
+    //         "@powerhousedao",
+    //         "reactor-browser",
+    //         "dist/src",
+    //       ),
+    //     },
+    //   ],
+    // },
+    plugins: [
+      // viteConnectDevStudioPlugin(studioMode, connectPath),
+      // viteLoadExternalPackages(options.packages, studioMode),
+      // viteEnvs({
+      //   declarationFile: join(connectPath, ".env"),
+      //   computedEnv: env,
+      // }),
+      // runShellScriptPlugin("vite-envs.sh", connectPath),
+      // options.https &&
+      //   basicSsl({
+      //     name: "Powerhouse Connect Studio",
+      //   }),
+      // generateImportMapPlugin(connectPath, [
+      //   { name: "react", provider: "esm.sh" },
+      //   { name: "react-dom", provider: "esm.sh" },
+      //   "@powerhousedao/reactor-browser",
+      // ]),
+    ],
+    build: {
+      outDir: join(projectRoot, ".ph", "connect"),
+      rollupOptions: {
+        input: join(connectPath, "index.html"),
+        external(source, importer, isResolved) {
+          console.log("source:", source);
+          return importer === join(connectPath, "index.html");
+        },
+      },
+    },
+  };
+
+  return config;
+}
+
 export async function startServer(
   options: StartServerOptions = {
     logLevel: "debug",
@@ -84,7 +152,6 @@ export async function startServer(
   ensureNodeVersion();
 
   const connectPath = options.connectPath ?? resolveConnect();
-  const projectRoot = process.cwd();
 
   // backups index html if running on windows
   backupIndexHtml(connectPath, true);
@@ -106,92 +173,13 @@ export async function startServer(
   process.env.PH_CONNECT_STUDIO_MODE = "true";
   process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
   const computedEnv = { ...studioConfig, LOG_LEVEL: options.logLevel };
-
+  const baseConfig = buildViteConfig(options, true, computedEnv);
   const config: InlineConfig = {
-    customLogger: logger,
-    configFile: false,
-    root: connectPath,
+    ...baseConfig,
     server: {
       port: PORT,
       open: options.open ?? OPEN_BROWSER,
       host: HOST,
-    },
-    resolve: {
-      alias: [
-        { find: "jszip", replacement: "jszip/dist/jszip.min.js" },
-        {
-          find: "react",
-          replacement: join(projectRoot, "node_modules", "react"),
-        },
-        {
-          find: "react-dom",
-          replacement: join(projectRoot, "node_modules", "react-dom"),
-        },
-        {
-          find: "@powerhousedao/reactor-browser",
-          replacement: join(
-            projectRoot,
-            "node_modules",
-            "@powerhousedao",
-            "reactor-browser",
-            "dist/src",
-          ),
-        },
-      ],
-      // Resolve to the node_modules in the project root
-      // "@powerhousedao/design-system/scalars": join(
-      //   projectRoot,
-      //   "node_modules",
-      //   "@powerhousedao",
-      //   "design-system",
-      //   "dist",
-      //   "scalars",
-      // ),
-      // "@powerhousedao/design-system": join(
-      //   projectRoot,
-      //   "node_modules",
-      //   "@powerhousedao",
-      //   "design-system",
-      // ),
-      // "@powerhousedao/scalars": join(
-      //   projectRoot,
-      //   "node_modules",
-      //   "@powerhousedao",
-      //   "scalars",
-      // ),
-      // "@powerhousedao/reactor-browser/hooks/useUiNodesContext": join(
-      //   projectRoot,
-      //   "node_modules",
-      //   "@powerhousedao",
-      //   "reactor-browser",
-      //   "dist/src/hooks",
-      // ),
-      // react: join(projectRoot, "node_modules", "react"),
-      // "react-dom": join(projectRoot, "node_modules", "react-dom"),
-      // },
-    },
-    plugins: [
-      viteConnectDevStudioPlugin(true, connectPath),
-      viteLoadExternalPackages(options.packages, true),
-      viteEnvs({
-        declarationFile: join(connectPath, ".env"),
-        computedEnv,
-      }),
-      runShellScriptPlugin("vite-envs.sh", connectPath),
-      options.https &&
-        basicSsl({
-          name: "Powerhouse Connect Studio",
-        }),
-      generateImportMapPlugin(connectPath, [
-        { name: "react", provider: "esm.sh" },
-        { name: "react-dom", provider: "esm.sh" },
-        "@powerhousedao/reactor-browser",
-      ]),
-    ],
-    build: {
-      rollupOptions: {
-        input: "index.html",
-      },
     },
   };
 

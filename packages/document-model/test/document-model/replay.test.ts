@@ -46,6 +46,7 @@ describe("DocumentModel Class", () => {
     documentType: "",
     created: "",
     lastModified: "",
+    meta: {},
     state: {
       global: {
         count: 0,

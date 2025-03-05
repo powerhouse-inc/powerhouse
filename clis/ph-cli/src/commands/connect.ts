@@ -1,4 +1,5 @@
 import {
+  buildConnect,
   ConnectStudioOptions,
   startConnectStudio,
 } from "@powerhousedao/builder-tools/connect-studio";
@@ -20,6 +21,7 @@ export function connectCommand(program: Command) {
     .description("Starts Connect Studio")
     .option("-p, --port <port>", "Port to run the server on", "3000")
     .option("-h, --host", "Expose the server to the network")
+    .option("--build", "Build Connect web app")
     .option("--https", "Enable HTTPS")
     .option("--open", "Open the browser")
     .option(
@@ -38,7 +40,7 @@ export function connectCommand(program: Command) {
       const connectOptions = args.at(0) || {};
       const { documentModelsDir, editorsDir, packages, studio, logLevel } =
         getConfig();
-      await startConnectStudio({
+      const options: ConnectStudioOptions = {
         port: studio?.port?.toString() || undefined,
         packages,
         phCliVersion: typeof version === "string" ? version : undefined,
@@ -47,7 +49,12 @@ export function connectCommand(program: Command) {
         open: studio?.openBrowser,
         logLevel: logLevel,
         ...connectOptions,
-      });
+      };
+      if (connectOptions.build) {
+        await buildConnect(options);
+      } else {
+        await startConnectStudio(options);
+      }
     });
 }
 
