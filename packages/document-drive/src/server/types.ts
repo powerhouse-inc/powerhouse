@@ -614,6 +614,7 @@ export interface IEventEmitter {
 }
 
 export interface ISynchronizationManager {
+  setDocumentModelModules(arg0: DocumentModelModule[]): void;
   getSynchronizationUnits(
     driveId: string,
     documentId?: string[],

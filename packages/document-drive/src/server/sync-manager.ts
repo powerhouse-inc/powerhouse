@@ -32,7 +32,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
   constructor(
     private readonly storage: IDriveStorage,
     private readonly cache: ICache,
-    private readonly documentModelModules: DocumentModelModule[],
+    private documentModelModules: DocumentModelModule[],
     private readonly eventEmitter?: IEventEmitter,
   ) {}
 
@@ -324,6 +324,10 @@ export default class SynchronizationManager implements ISynchronizationManager {
         reuseOperationResultingState: true,
       },
     );
+  }
+
+  setDocumentModelModules(modules: DocumentModelModule[]) {
+    this.documentModelModules = modules;
   }
 
   private getDocumentModelModule(documentType: string) {
