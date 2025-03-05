@@ -1,7 +1,11 @@
 import { parse, format } from "date-fns";
 import { AmountValue } from "../components/amount-field/types";
 import { getDateFromValue } from "../components/date-picker-field/utils";
-import { parseInputString } from "../components/date-time-field/utils";
+import {
+  getDateFormat,
+  normalizeMonthFormat,
+  parseInputString,
+} from "../components/date-time-field/utils";
 
 export type ValueCast =
   | "BigInt"
@@ -42,16 +46,25 @@ export const castFunctions: Record<
     }
   },
   DateString: (value: string, dateFormat = "yyyy-MM-dd") => {
-    const date = getDateFromValue(value);
-    const newValue = parseInputString(date, dateFormat);
-    const fechaUTC = parse(newValue, dateFormat, new Date());
+    const momentDate = getDateFromValue(value);
+    const date = normalizeMonthFormat(momentDate);
+
+    const correctFormat = getDateFormat(dateFormat);
+    const newValue = parseInputString(date, correctFormat);
+
+    const fechaUTC = parse(newValue, correctFormat ?? "yyyy-MM-dd", new Date());
     return fechaUTC;
   },
   DateTimeString: (value: string, dateFormat = "yyyy-MM-dd") => {
     const [datePart, timePart] = value.split("T");
-    const date = getDateFromValue(datePart);
-    const normalizedDate = parseInputString(date, dateFormat);
-    const parsedDate = parse(normalizedDate, dateFormat, new Date());
+
+    const unFormattedDate = getDateFromValue(datePart);
+    const date = normalizeMonthFormat(unFormattedDate);
+    const correctFormat = getDateFormat(dateFormat);
+
+    const normalizedDate = parseInputString(date, correctFormat);
+
+    const parsedDate = parse(normalizedDate, correctFormat ?? "", new Date());
     const isoDate = format(parsedDate, "yyyy-MM-dd");
     return `${isoDate}T${timePart}`;
   },

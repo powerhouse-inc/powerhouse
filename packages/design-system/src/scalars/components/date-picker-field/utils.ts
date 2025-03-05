@@ -125,15 +125,3 @@ export const formatUTCDateToISOStringWithOutTime = (date: Date): string => {
 export function swapAmbiguousDayMonthFormat(utcDate: Date, separator: string) {
   return `${utcDate.getUTCDate().toString().padStart(2, "0")}${separator}${(utcDate.getUTCMonth() + 1).toString().padStart(2, "0")}${separator}${utcDate.getUTCFullYear()}`;
 }
-
-// Create a blurEvent
-export const createBlurEvent = (
-  value: string,
-): React.FocusEvent<HTMLInputElement> => {
-  const nativeEvent = new Event("blur", { bubbles: true, cancelable: true });
-  Object.defineProperty(nativeEvent, "target", {
-    value: { value },
-    writable: false,
-  });
-  return nativeEvent as unknown as React.FocusEvent<HTMLInputElement>;
-};

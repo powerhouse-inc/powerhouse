@@ -131,20 +131,23 @@ export const parseInputString = (
   inputString: string,
   dateFormat = ALLOWED_FORMATS[0],
 ): string => {
+  const newInputString = normalizeMonthFormat(inputString);
+
   if (!dateFormat || !inputString) return inputString;
+
   // First check the specified format
   const specifiedFormatRegex =
     dateFormatRegexes[dateFormat as keyof typeof dateFormatRegexes];
-  if (specifiedFormatRegex.test(inputString)) {
-    const parsedDate = parse(inputString, dateFormat, new Date());
+  if (specifiedFormatRegex.test(newInputString)) {
+    const parsedDate = parse(newInputString, dateFormat, new Date());
     if (isValid(parsedDate)) {
       return format(parsedDate, dateFormat);
     }
   }
 
   for (const [formatStr, regex] of Object.entries(dateFormatRegexes)) {
-    if (regex.test(inputString)) {
-      const parsedDate = parse(inputString, formatStr, new Date());
+    if (regex.test(newInputString)) {
+      const parsedDate = parse(newInputString, formatStr, new Date());
       if (isValid(parsedDate)) {
         const newValue = format(parsedDate, dateFormat || formatStr);
         return newValue;
@@ -152,4 +155,73 @@ export const parseInputString = (
     }
   }
   return inputString;
+};
+
+// Create a blurEvent
+export const createBlurEvent = (
+  value: string,
+): React.FocusEvent<HTMLInputElement> => {
+  const nativeEvent = new Event("blur", { bubbles: true, cancelable: true });
+  Object.defineProperty(nativeEvent, "target", {
+    value: { value },
+    writable: false,
+  });
+  return nativeEvent as unknown as React.FocusEvent<HTMLInputElement>;
+};
+
+export const FORMAT_MAPPING = {
+  "YYYY-MM-DD": "yyyy-MM-dd",
+  "DD/MM/YYYY": "dd/MM/yyyy",
+  "MM/DD/YYYY": "MM/dd/yyyy",
+  "DD-MMM-YYYY": "dd-MMM-yyyy",
+  "MMM-DD-YYYY": "MMM-dd-yyyy",
+};
+
+export const getDateFormat = (displayFormat: string): string | undefined => {
+  switch (displayFormat) {
+    case "YYYY-MM-DD":
+      return "yyyy-MM-dd";
+    case "DD/MM/YYYY":
+      return "dd/MM/yyyy";
+    case "MM/DD/YYYY":
+      return "MM/dd/yyyy";
+    case "DD-MMM-YYYY":
+      return "dd-MMM-yyyy";
+    case "MMM-DD-YYYY":
+      return "MMM-dd-yyyy";
+    default:
+      return undefined;
+  }
+};
+
+export const normalizeMonthFormat = (dateString: string): string => {
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
+
+  return dateString.replace(
+    /(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/i,
+    (month) => {
+      const upperMonth = month.toUpperCase();
+      const monthIndex = months.indexOf(upperMonth);
+      if (monthIndex !== -1) {
+        return (
+          months[monthIndex].charAt(0) +
+          months[monthIndex].slice(1).toLowerCase()
+        );
+      }
+      return month;
+    },
+  );
 };

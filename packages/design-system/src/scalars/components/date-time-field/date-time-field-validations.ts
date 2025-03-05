@@ -1,10 +1,17 @@
 import { format } from "date-fns";
 import {
   formatDateToValidCalendarDateFormat,
+  getDateFromValue,
   splitIso8601DateTime,
 } from "../date-picker-field/utils";
 import { DatePickerFieldProps } from "../date-picker-field/date-picker-field";
-import { isDateFormatAllowed, isValidTime } from "./utils";
+import {
+  getDateFormat,
+  isDateFormatAllowed,
+  isValidTime,
+  normalizeMonthFormat,
+} from "./utils";
+import { DateFieldValue } from "../date-picker-field/types";
 
 export const dateTimeFieldValidations =
   ({ minDate, maxDate, dateFormat }: DatePickerFieldProps) =>
@@ -17,26 +24,32 @@ export const dateTimeFieldValidations =
     const { date, time } = splitIso8601DateTime(value as string);
 
     if (!date || !time) {
-      return "Invalid format. Use DATE TIME separated by space";
+      return "Invalid format. Use DATE and TIME separated by a space.";
     }
 
-    const isValid = isDateFormatAllowed(date, dateFormat);
+    const internalFormat = getDateFormat(dateFormat ?? "");
+    const stringDate = normalizeMonthFormat(
+      getDateFromValue(value as DateFieldValue),
+    );
+
+    const isValid = isDateFormatAllowed(stringDate, internalFormat);
 
     if (!isValid) {
-      return "Invalid date format";
+      return "Invalid date format.";
     }
 
     if (!isValidTime(time)) {
-      return "Invalid time format. Use HH:mm";
+      return "Invalid time format. Use HH:mm.";
     }
 
-    const isoDate = formatDateToValidCalendarDateFormat(date);
+    const isoDate = formatDateToValidCalendarDateFormat(stringDate);
     const validDate = new Date(isoDate);
+
     if (minDate) {
       const minDateValue = new Date(minDate);
       if (validDate < minDateValue) {
         const formattedMinDate = format(minDateValue, "dd/MM/yyyy");
-        return `Date must be on or after ${formattedMinDate}`;
+        return `Date must be on or after ${formattedMinDate}.`;
       }
     }
 
@@ -44,7 +57,7 @@ export const dateTimeFieldValidations =
       const maxDateValue = new Date(maxDate);
       if (validDate > maxDateValue) {
         const formattedMaxDate = format(maxDateValue, "dd/MM/yyyy");
-        return `Date must be on or before ${formattedMaxDate}`;
+        return `Date must be on or before ${formattedMaxDate}.`;
       }
     }
 

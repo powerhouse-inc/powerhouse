@@ -2,7 +2,11 @@ import { format } from "date-fns";
 import { DatePickerFieldProps } from "./date-picker-field";
 import { formatDateToValidCalendarDateFormat, getDateFromValue } from "./utils";
 import { DateFieldValue } from "./types";
-import { isDateFormatAllowed } from "../date-time-field/utils";
+import {
+  getDateFormat,
+  isDateFormatAllowed,
+  normalizeMonthFormat,
+} from "../date-time-field/utils";
 
 export const validateDatePicker =
   ({ minDate, maxDate, dateFormat }: DatePickerFieldProps) =>
@@ -10,8 +14,13 @@ export const validateDatePicker =
     if (value === "" || value === undefined) {
       return true;
     }
-    const stringDate = getDateFromValue(value as DateFieldValue);
-    const isValid = isDateFormatAllowed(stringDate, dateFormat);
+
+    const internalFormat = getDateFormat(dateFormat ?? "");
+    const stringDate = normalizeMonthFormat(
+      getDateFromValue(value as DateFieldValue),
+    );
+
+    const isValid = isDateFormatAllowed(stringDate, internalFormat);
 
     if (!isValid) {
       return `Invalid date format. Please use a valid format`;
