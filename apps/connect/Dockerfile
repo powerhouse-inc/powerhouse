@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 # Install system dependencies required by node-gyp
@@ -11,7 +11,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
-RUN pnpm build:all
+RUN pnpm nx run @powerhousedao/connect:build
 RUN pnpm --filter "@powerhousedao/connect" build:web --base ${BASE_PATH}
 RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned
 
