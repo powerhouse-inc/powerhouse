@@ -1,9 +1,8 @@
+import { Subgraph } from "#subgraphs/base/index.js";
 import { DriveInput } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import { ADMIN_USERS } from "./env/index.js";
 import { SystemContext } from "./types.js";
-import { Subgraph } from "#subgraphs/base/index.js";
 
 export class SystemSubgraph extends Subgraph {
   name = "system";
@@ -66,10 +65,12 @@ export class SystemSubgraph extends Subgraph {
     await super.onSetup();
     this.subgraphManager.setAdditionalContextFields({
       isAdmin: (ctx: SystemContext) => {
+        const adminUsers =
+          process.env.ADMIN_USERS?.split(",").map((user) => user.trim()) ?? [];
         return (
-          ADMIN_USERS.length === 0 ||
+          adminUsers.length === 0 ||
           (ctx.session.address &&
-            ADMIN_USERS.includes(ctx.session.address.toLocaleLowerCase()))
+            adminUsers.includes(ctx.session.address.toLocaleLowerCase()))
         );
       },
     });
