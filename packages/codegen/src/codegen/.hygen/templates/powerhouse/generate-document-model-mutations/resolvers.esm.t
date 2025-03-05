@@ -6,9 +6,9 @@ force: true
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Subgraph } from "@powerhousedao/reactor-api";
+import { addFile } from "document-drive";
 import { actions } from "../../document-models/<%- h.changeCase.param(documentType) %>";
-import { actions as driveActions } from "document-model-libs/document-drive";
-import { utils as docUtils } from "document-model";
+import { generateId, hashKey } from "document-model";
 
 export const getResolvers = (subgraph: Subgraph, driveId: string) => {
   const reactor = subgraph.reactor;
@@ -17,9 +17,9 @@ export const getResolvers = (subgraph: Subgraph, driveId: string) => {
     Mutation: {
 
       <%- h.changeCase.pascal(documentType) %>_createDocument: async (_: any, args: any) => {
-        const docId = docUtils.generateId();
+        const docId = generateId();
         
-        await reactor.addDriveAction(driveId, driveActions.addFile({
+        await reactor.addDriveAction(driveId, addFile({
           id: docId,
           name: args.name,
           documentType: "<%- documentTypeId %>",
@@ -27,12 +27,12 @@ export const getResolvers = (subgraph: Subgraph, driveId: string) => {
             { 
               branch: "main", 
               scope: "global", 
-              syncId: docUtils.hashKey(), 
+              syncId: hashKey(), 
             },
             { 
               branch: "main", 
               scope: "local", 
-              syncId: docUtils.hashKey(), 
+              syncId: hashKey(), 
             }
           ],
         }));

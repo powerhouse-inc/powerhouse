@@ -9,12 +9,9 @@ import {
   RemoteDriveOptions,
   StrandUpdate,
 } from "#server/types";
-import {
-  childLogger,
-  generateUUID,
-  ListenerFilter,
-  Trigger,
-} from "document-drive";
+
+import { childLogger } from "#utils/logger";
+import { generateUUID } from "#utils/misc";
 
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
@@ -25,6 +22,7 @@ import {
   PullResponderTrigger,
   StrandUpdateSource,
 } from "./types.js";
+import { ListenerFilter, Trigger } from "#drive-document-model/gen/types";
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
