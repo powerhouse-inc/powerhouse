@@ -56,7 +56,7 @@ jobs:
     steps:
       - name: Send Discord Notification
         run: |
-          COMMIT_MESSAGE=$(echo "ci: add commit message to failed job notification" | jq -Rs .)
+          COMMIT_MESSAGE=$(echo "ci: add commit message to failed job notification" | jq -Rs . | tr -d '\n')
           JSON_PAYLOAD=$(jq -n \
             --arg commit "76941716984b6299cc7a17e44ed44c587f50685f" \
             --arg commit_url "https://github.com/powerhouse-inc/powerhouse/commit/76941716984b6299cc7a17e44ed44c587f50685f" \
