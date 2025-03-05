@@ -1,17 +1,13 @@
 import { GetDocumentOptions, IDocumentDriveServer } from "document-drive";
 import { PHDocument } from "document-model";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type Args = {
+export function useDocumentsState(args: {
   reactor: IDocumentDriveServer | undefined | null;
   driveId: string | undefined | null;
   documentIds?: string[];
   options?: GetDocumentOptions;
-};
-
-export function useDocumentsState(
-  args: Args,
-): Record<string, PHDocument["state"]> {
+}): Record<string, PHDocument["state"]> {
   const { reactor, driveId, documentIds, options } = args;
   const [statesByDocumentId, setStatesByDocumentId] = useState<
     Record<string, PHDocument["state"]>
@@ -60,4 +56,60 @@ export function useDocumentsState(
   }, [reactor, driveId, options]);
 
   return useMemo(() => statesByDocumentId, [statesByDocumentId]);
+}
+
+export function makeDriveDocumentStatesHook(
+  reactor: IDocumentDriveServer | undefined | null,
+) {
+  const useDriveDocumentStates = useCallback(
+    (args: {
+      driveId: string | undefined | null;
+      documentIds?: string[];
+      options?: GetDocumentOptions;
+    }) => {
+      const { driveId, documentIds, options } = args;
+      return useDocumentsState({
+        reactor,
+        driveId,
+        documentIds,
+        options,
+      });
+    },
+    [reactor],
+  );
+
+  return useDriveDocumentStates;
+}
+
+export function makeDriveDocumentStateHook(
+  reactor: IDocumentDriveServer | undefined | null,
+) {
+  const useDriveDocumentState = useCallback(
+    (args: { driveId: string | undefined | null; documentId: string }) => {
+      const { driveId, documentId } = args;
+      return useDocumentState({
+        reactor,
+        driveId,
+        documentId,
+      });
+    },
+    [reactor],
+  );
+
+  return useDriveDocumentState;
+}
+
+export function useDocumentState(args: {
+  reactor: IDocumentDriveServer | undefined | null;
+  driveId: string | undefined | null;
+  documentId: string;
+}) {
+  const { reactor, driveId, documentId } = args;
+  const state = useDocumentsState({
+    reactor,
+    driveId,
+    documentIds: [documentId],
+  });
+
+  return useMemo(() => state[documentId], [state, documentId]);
 }

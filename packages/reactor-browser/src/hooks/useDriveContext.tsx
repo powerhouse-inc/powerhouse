@@ -21,7 +21,6 @@ export interface IDriveContext {
 
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
-
   /** Currently selected node (file/folder) in the drive */
   selectedNode: Node | null;
 
@@ -76,6 +75,29 @@ export interface IDriveContext {
     document: PHDocument | undefined;
     error: unknown;
   };
+
+  /**
+   * Retrieves the states of all documents in a drive
+   * @param driveId - ID of the drive to retrieve document states for
+   * @param documentIds - IDs of the documents to retrieve states for (all if not provided)
+   * @returns Record of document IDs to their states
+   */
+  useDriveDocumentStates: (props: {
+    driveId: string;
+    documentIds?: string[];
+  }) => Record<string, PHDocument["state"]>;
+
+  /**
+   * Retrieves the state of a document in a drive
+   * @param driveId - ID of the drive to retrieve document state for
+   * @param documentId - ID of the document to retrieve state for
+   * @type TDocument - Type of the document to retrieve state for if known
+   * @returns State of the document
+   */
+  useDriveDocumentState: <TDocument extends PHDocument = PHDocument>(props: {
+    driveId: string;
+    documentId: string;
+  }) => TDocument["state"] | undefined;
 }
 
 const DriveContext = createContext<IDriveContext | undefined>(undefined);

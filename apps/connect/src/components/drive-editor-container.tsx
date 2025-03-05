@@ -9,8 +9,10 @@ import { useDriveEditor } from '#store/external-packages';
 import { useAsyncReactor } from '#store/reactor';
 import { useDocumentDispatch } from '#utils/document-model';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import { useDocumentsState } from '@powerhousedao/reactor-browser/hooks/useDocumentsState';
-import { useDocumentState } from '@powerhousedao/reactor-browser/hooks/useDocumentState';
+import {
+    makeDriveDocumentStateHook,
+    makeDriveDocumentStatesHook,
+} from '@powerhousedao/reactor-browser/hooks/document-state';
 import {
     DriveContextProvider,
     type IDriveContext,
@@ -63,21 +65,6 @@ export function DriveEditorContainer() {
         documentDrive,
     );
     const reactor = useAsyncReactor();
-    const statesByDocumentId = useDocumentsState({
-        reactor,
-        driveId: selectedDriveNode?.id,
-        documentIds: ['MgmEqlPP+rSnSRHfMPpdr2YIiqw='],
-    });
-
-    console.log('statesByDocumentId', statesByDocumentId);
-
-    const documentState = useDocumentState({
-        reactor,
-        driveId: selectedDriveNode?.id,
-        documentId: 'MgmEqlPP+rSnSRHfMPpdr2YIiqw=',
-    });
-
-    console.log('documentState', documentState);
 
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
@@ -112,19 +99,25 @@ export function DriveEditorContainer() {
 
     const { addFile } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
+    const useDriveDocumentStates = makeDriveDocumentStatesHook(reactor);
+    const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
     const driveContext: IDriveContext = useMemo(
         () => ({
             showSearchBar: false,
             isAllowedToCreateDocuments: editorProps.isAllowedToCreateDocuments,
             documentModels: documentModels ?? [],
-            selectedNode: selectedNode,
+            selectedDriveNode,
+            selectedNode,
             selectNode: setSelectedNode,
             addFile,
             showCreateDocumentModal,
-            useSyncStatus: useSyncStatus,
+            useSyncStatus,
             useDocumentEditorProps: useDocumentEditor,
+            useDriveDocumentStates,
+            useDriveDocumentState,
         }),
         [
+            reactor,
             editorProps.isAllowedToCreateDocuments,
             documentModels,
             selectedNode,
