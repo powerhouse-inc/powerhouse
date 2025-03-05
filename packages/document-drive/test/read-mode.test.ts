@@ -8,6 +8,10 @@ import { beforeEach, describe, it, vi } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 import { createDocument } from "../../document-model/dist/src/document-model/gen/utils.js";
 import {
+  DocumentDriveDocument,
+  DocumentDriveState,
+} from "../src/drive-document-model/gen/types.js";
+import {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
   ReadDriveSlugNotFoundError,
@@ -33,7 +37,7 @@ function getDocumentModelModule<TDocument extends PHDocument>(
   return documentModel as unknown as DocumentModelModule<TDocument>;
 }
 
-function buildDrive(state: Partial<DocumentDrive.DocumentDriveState>) {
+function buildDrive(state: Partial<DocumentDriveState>) {
   return createDocument({
     state: createState({
       global: state,
@@ -54,7 +58,7 @@ function buildDocumentResponse(drive: PHDocument) {
   };
 }
 
-function mockAddDrive(url: string, drive: DocumentDrive.DocumentDriveDocument) {
+function mockAddDrive(url: string, drive: DocumentDriveDocument) {
   fetchMocker.mockIf(url, async (req) => {
     const { operationName } = (await req.json()) as {
       operationName: string;

@@ -10,7 +10,13 @@ import {
   addFolder,
   copyNode,
 } from "../../src/drive-document-model/gen/node/creators.js";
-import { Node } from "../../src/drive-document-model/gen/types.js";
+import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
+import {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+  Node,
+} from "../../src/drive-document-model/gen/types.js";
+import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
 import { generateNodesCopy } from "../../src/drive-document-model/src/utils.js";
 import { ReactorBuilder } from "../../src/server/builder.js";
 import { IOperationResult } from "../../src/server/types.js";
@@ -23,6 +29,7 @@ function sortNodes(nodes: Node[]) {
 describe("Drive Operations", () => {
   const documentModels = [
     documentModelDocumentModelModule,
+    driveDocumentModelModule,
   ] as DocumentModelModule[];
 
   let server = new ReactorBuilder(documentModels).build();
@@ -51,20 +58,20 @@ describe("Drive Operations", () => {
     const initialDriveDocument = await buildDrive();
     let pushOperationResult: IOperationResult;
 
-    DocumentDrive.utils.createDocument();
+    createDocument();
 
     const client1 = new DriveBasicClient(
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     const client2 = new DriveBasicClient(
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     client1.dispatchDriveAction(addFolder({ id: "1", name: "test1" }));
@@ -79,7 +86,7 @@ describe("Drive Operations", () => {
     expect(client1.getUnsyncedOperations()).toMatchObject([]);
 
     const syncedOperations = client1.getDocument().operations
-      .global as Operation<DocumentDrive.DocumentDriveAction | BaseAction>[];
+      .global as Operation<DocumentDriveAction | BaseAction<string, unknown>>[];
     client1.setUnsyncedOperations(syncedOperations);
 
     pushOperationResult = await client1.pushOperationsToServer();
@@ -120,35 +127,35 @@ describe("Drive Operations", () => {
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     const client2 = new DriveBasicClient(
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     const client3 = new DriveBasicClient(
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     const client4 = new DriveBasicClient(
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     const client5 = new DriveBasicClient(
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     // Client1 Add folder and push to server
@@ -167,7 +174,7 @@ describe("Drive Operations", () => {
 
     // Clien1 push already synced operations to server (this should not create new operations in the server document)
     const syncedOperations = client1.getDocument().operations
-      .global as Operation<DocumentDrive.DocumentDriveAction | BaseAction>[];
+      .global as Operation<DocumentDriveAction | BaseAction<string, unknown>>[];
 
     client1.setUnsyncedOperations(syncedOperations);
     pushOperationResult = await client1.pushOperationsToServer();
@@ -266,7 +273,7 @@ describe("Drive Operations", () => {
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     const addFolderAction = addFolder({
@@ -329,14 +336,14 @@ describe("Drive Operations", () => {
         server,
         driveId,
         initialDriveDocument,
-        DocumentDrive.reducer,
+        documentDriveReducer,
       );
 
       const client2 = new DriveBasicClient(
         server,
         driveId,
         initialDriveDocument,
-        DocumentDrive.reducer,
+        documentDriveReducer,
       );
 
       client1.dispatchDriveAction(
@@ -419,14 +426,14 @@ describe("Drive Operations", () => {
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     const client2 = new DriveBasicClient(
       server,
       driveId,
       initialDriveDocument,
-      DocumentDrive.reducer,
+      documentDriveReducer,
     );
 
     const idFolder1 = generateId();
@@ -462,8 +469,7 @@ describe("Drive Operations", () => {
         targetParentFolder: undefined,
       },
       generateId,
-      (client1.getDocument() as DocumentDrive.DocumentDriveDocument).state
-        .global.nodes,
+      (client1.getDocument() as DocumentDriveDocument).state.global.nodes,
     );
 
     const copyActions = copyNodesInput.map((copyNodeInput) =>
@@ -497,8 +503,7 @@ describe("Drive Operations", () => {
         targetParentFolder: undefined,
       },
       generateId,
-      (client2.getDocument() as DocumentDrive.DocumentDriveDocument).state
-        .global.nodes,
+      (client2.getDocument() as DocumentDriveDocument).state.global.nodes,
     );
 
     const copyNodesInput3 = generateNodesCopy(
@@ -508,8 +513,7 @@ describe("Drive Operations", () => {
         targetParentFolder: undefined,
       },
       generateId,
-      (client2.getDocument() as DocumentDrive.DocumentDriveDocument).state
-        .global.nodes,
+      (client2.getDocument() as DocumentDriveDocument).state.global.nodes,
     );
 
     const copyActions2 = copyNodesInput2.map((copyNodeInput) =>
@@ -549,9 +553,8 @@ describe("Drive Operations", () => {
     // sync client 2 with server
     await client2.syncDocument();
 
-    const client2Nodes = (
-      client2.getDocument() as DocumentDrive.DocumentDriveDocument
-    ).state.global.nodes;
+    const client2Nodes = (client2.getDocument() as DocumentDriveDocument).state
+      .global.nodes;
 
     // TODO: validate that there are not duplicated operations after operation id implementation
     expect(client2Nodes).toHaveLength(8);
