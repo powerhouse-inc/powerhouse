@@ -1,3 +1,13 @@
+## 1.0.0-dev.217 (2025-03-06)
+
+### 🚀 Features
+
+- added small wait before adding fork drive ([b03f1e5e](https://github.com/powerhouse-inc/powerhouse/commit/b03f1e5e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.216 (2025-03-05)
 
 ### 🚀 Features
