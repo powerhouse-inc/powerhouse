@@ -49,29 +49,28 @@ jobs:
 
       - name: Run checks for affected projects
         run: pnpm affected:check:ci
+
   notify-discord:
-    runs-on: ubuntu-latest
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
     needs: verify
-    if: failure()
     steps:
-      - name: Send Discord Notification
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
         run: |
-          COMMIT_MESSAGE=$(echo "ci: add commit message to failed job notification" | jq -Rs . | tr -d '\n')
-          JSON_PAYLOAD=$(jq -n \
-            --arg commit "76941716984b6299cc7a17e44ed44c587f50685f" \
-            --arg commit_url "https://github.com/powerhouse-inc/powerhouse/commit/76941716984b6299cc7a17e44ed44c587f50685f" \
-            --arg commit_message "$COMMIT_MESSAGE" \
-            --arg workflow_url "https://github.com/powerhouse-inc/powerhouse/actions/runs/13676130299" \
-            '{
-              username: "GitHub Actions",
-              avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-              embeds: [{
-                title: "⚠️ Job Failed: CI Build",
-                description: "**Commit**: [\($commit)](\($commit_url))\n**Message**: \($commit_message)\n**Workflow**: [View Workflow](\($workflow_url))",
-                color: 15158332
-              }]
-            }')
-          curl -H "Content-Type: application/json" \
-          -X POST \
-          -d "$JSON_PAYLOAD" \
-          ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
+          
+          MENTION_STRING=""
+          if [ ! -z "$DISCORD_USER" ]; then
+            MENTION_STRING="<@${DISCORD_USER}> "
+          fi
+
+          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
+            "embeds": [{
+              "title": "⚠️ Job Failed: CI Build",
+              "description": "'"${MENTION_STRING}"'Commit: [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \nMessage: ${{ github.event.head_commit.message }} \n[View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 16711680
+            }]
+          }'
