@@ -227,6 +227,7 @@ export class BaseDocumentDriveServer
 
   setDocumentModelModules(modules: DocumentModelModule[]): void {
     this.documentModelModules = [...modules];
+    this.synchronizationManager.setDocumentModelModules([...modules]);
     this.eventEmitter.emit("documentModelModules", [...modules]);
   }
 

@@ -1,12 +1,18 @@
 import { useDocumentDriveById } from '#hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
+import { useDocumentEditor } from '#hooks/useDocumentEditor';
 import { useEditorProps } from '#hooks/useEditorProps';
 import { useSyncStatus } from '#hooks/useSyncStatus';
 import { useUiNodes } from '#hooks/useUiNodes';
 import { useFilteredDocumentModels } from '#store/document-model';
 import { useDriveEditor } from '#store/external-packages';
+import { useAsyncReactor } from '#store/reactor';
 import { useDocumentDispatch } from '#utils/document-model';
 import { GenericDriveExplorer } from '@powerhousedao/common';
+import {
+    makeDriveDocumentStateHook,
+    makeDriveDocumentStatesHook,
+} from '@powerhousedao/reactor-browser/hooks/document-state';
 import {
     DriveContextProvider,
     type IDriveContext,
@@ -14,7 +20,7 @@ import {
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { driveDocumentModelModule } from 'document-drive';
 import { DocumentModelModule, Operation } from 'document-model';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal';
 
@@ -58,6 +64,7 @@ export function DriveEditorContainer() {
         driveDocumentModelModule.reducer,
         documentDrive,
     );
+    const reactor = useAsyncReactor();
 
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
@@ -92,18 +99,25 @@ export function DriveEditorContainer() {
 
     const { addFile } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
+    const useDriveDocumentStates = makeDriveDocumentStatesHook(reactor);
+    const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
     const driveContext: IDriveContext = useMemo(
         () => ({
             showSearchBar: false,
             isAllowedToCreateDocuments: editorProps.isAllowedToCreateDocuments,
             documentModels: documentModels ?? [],
-            selectedNode: selectedNode,
+            selectedDriveNode,
+            selectedNode,
             selectNode: setSelectedNode,
             addFile,
             showCreateDocumentModal,
-            useSyncStatus: useSyncStatus,
+            useSyncStatus,
+            useDocumentEditorProps: useDocumentEditor,
+            useDriveDocumentStates,
+            useDriveDocumentState,
         }),
         [
+            reactor,
             editorProps.isAllowedToCreateDocuments,
             documentModels,
             selectedNode,
@@ -114,13 +128,6 @@ export function DriveEditorContainer() {
     );
 
     const driveEditor = useDriveEditor(document?.meta?.preferredEditor);
-
-    useEffect(() => {
-        console.debug(
-            `App Drive Editor for ${selectedDriveNode?.name}:`,
-            driveEditor,
-        );
-    }, [driveEditor?.config.id, selectedDriveNode]);
 
     if (!document) {
         return null;

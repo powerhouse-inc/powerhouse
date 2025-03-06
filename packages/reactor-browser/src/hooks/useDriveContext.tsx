@@ -1,7 +1,13 @@
 import { Node, SyncStatus } from "document-drive";
-import { DocumentModelModule } from "document-model";
+import {
+  Action,
+  ActionErrorCallback,
+  DocumentModelModule,
+  PHDocument,
+} from "document-model";
 import { createContext, PropsWithChildren, useContext } from "react";
 import type { UiNode } from "../uiNodes/types.js";
+import { HookState } from "./document-state.js";
 
 /**
  * Interface representing the context values provided by the host application
@@ -16,7 +22,6 @@ export interface IDriveContext {
 
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
-
   /** Currently selected node (file/folder) in the drive */
   selectedNode: Node | null;
 
@@ -60,6 +65,40 @@ export interface IDriveContext {
     driveId: string,
     documentId?: string,
   ) => SyncStatus | undefined;
+
+  useDocumentEditorProps: (props: {
+    driveId: string;
+    documentId: string;
+    documentType: string;
+    documentModelModule: DocumentModelModule<PHDocument>;
+  }) => {
+    dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
+    document: PHDocument | undefined;
+    error: unknown;
+  };
+
+  /**
+   * Retrieves the states of all documents in a drive
+   * @param driveId - ID of the drive to retrieve document states for
+   * @param documentIds - IDs of the documents to retrieve states for (all if not provided)
+   * @returns Record of document IDs to their states
+   */
+  useDriveDocumentStates: (props: {
+    driveId: string;
+    documentIds?: string[];
+  }) => Record<string, HookState>;
+
+  /**
+   * Retrieves the state of a document in a drive
+   * @param driveId - ID of the drive to retrieve document state for
+   * @param documentId - ID of the document to retrieve state for
+   * @type TDocument - Type of the document to retrieve state for if known
+   * @returns State of the document
+   */
+  useDriveDocumentState: <TDocument extends PHDocument = PHDocument>(props: {
+    driveId: string;
+    documentId: string;
+  }) => TDocument["state"] | undefined;
 }
 
 const DriveContext = createContext<IDriveContext | undefined>(undefined);

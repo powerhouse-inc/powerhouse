@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "0.2.5",
+  "version": "0.3.3",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {
@@ -92,7 +92,7 @@
     "vite": "^6.1.1",
     "vite-envs": "^4.4.5",
     "tailwindcss": "^4.0.9",
-    "zod": "^3.24.1"
+    "zod": "^3.24.2"
   },
   "peerDependencies": {
     "react": "^18.0.0",

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.29.4",
+  "version": "1.30.3",
   "description": "",
   "files": [
     "/dist",
@@ -125,6 +125,6 @@
     "viem": "^2.16.1",
     "wagmi": "^2.12.17",
     "world-countries": "^5.0.0",
-    "zod": "^3.23.8"
+    "zod": "^3.24.2"
   }
 }

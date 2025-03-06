@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.210",
+    "version": "1.0.0-dev.217",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "imports": {
@@ -49,6 +49,7 @@
     },
     "dependencies": {
         "commander": "^12.1.0",
+        "graphql-request": "^6.1.0",
         "magic-string": "^0.30.17"
     },
     "peerDependencies": {

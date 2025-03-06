@@ -12,7 +12,7 @@ import {
 <% documentTypes.forEach(type => { _%>
 import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
 %><% }); _%>
-<% if(documentTypes.length === 0) { %>import { Document } from "document-model/document";<% } %>
+<% if(documentTypes.length === 0) { %>import { Document } from "document-model";<% } %>
 type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>Document<% } %>;
 
 export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {

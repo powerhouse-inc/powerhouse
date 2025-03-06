@@ -1,32 +1,53 @@
-import { DocumentModelModule } from "document-model";
+import { addListener, deleteNode } from "#drive-document-model/gen/creators";
+import { generateUUID } from "#utils/misc";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
+import { documentModels as legacyDocumentModels } from "document-model-libs";
 import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
-import { generateUUID, IOperationResult } from "../src";
 import InMemoryCache from "../src/cache/memory";
+import {
+  addFile,
+  addFolder,
+} from "../src/drive-document-model/gen/node/creators.js";
+import {
+  reducer as documentDriveReducer,
+  reducer,
+} from "../src/drive-document-model/gen/reducer.js";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
 import { BaseQueueManager } from "../src/queue/base";
 import { RedisQueueManager } from "../src/queue/redis";
 import { IQueueManager } from "../src/queue/types";
 import { ReactorBuilder } from "../src/server/builder";
-import { IBaseDocumentDriveServer } from "../src/server/types";
+import {
+  IBaseDocumentDriveServer,
+  IOperationResult,
+} from "../src/server/types";
 import { MemoryStorage } from "../src/storage/memory";
 import { buildOperation, buildOperations } from "./utils";
-import InMemoryCache from "../src/cache/memory.js";
-import { reducer } from "../src/drive-document-model/gen/reducer.js";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { BaseQueueManager } from "../src/queue/base.js";
-import { RedisQueueManager } from "../src/queue/redis.js";
-import { IQueueManager } from "../src/queue/types.js";
-import { DocumentDriveServer } from "../src/server/base.js";
-import { IOperationResult } from "../src/server/types.js";
-import { MemoryStorage } from "../src/storage/memory.js";
-import { generateUUID } from "../src/utils/misc.js";
-import { buildOperation, buildOperations } from "./utils.js";
+
+const docModelByName = (name: string) => {
+  const docModel = legacyDocumentModels.find((m) => m.name === name);
+  if (!docModel) {
+    throw new Error(`Document model with name ${name} not found`);
+  }
+  return docModel;
+};
+
+const {
+  actions: budgetStatementActions,
+  BudgetStatementDocument,
+  reducer: budgetStatementReducer,
+  utils,
+} = docModelByName("budget-statement");
 
 const REDIS_TLS_URL = process.env.REDIS_TLS_URL;
 
 const documentModels = [
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
+  documentModelDocumentModelModule,
 ] as DocumentModelModule[];
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
@@ -84,7 +105,7 @@ describe.each(queueLayers)(
         const id = generateUUID();
         drive = reducer(
           drive,
-          DocumentDriveUtils.generateAddNodeAction(
+          generateAddNodeAction(
             drive.state.global,
             {
               id,
@@ -119,8 +140,8 @@ describe.each(queueLayers)(
         let drive = await createDrive(server);
         const driveId = drive.state.global.id;
         const driveOperations = buildOperations(reducer, drive, [
-          actions.addFolder({ id: "folder 1", name: "folder 1" }),
-          actions.addFile({
+          addFolder({ id: "folder 1", name: "folder 1" }),
+          addFile({
             id: "file 1",
             name: "file 1",
             parentFolder: "folder 1",
@@ -130,11 +151,11 @@ describe.each(queueLayers)(
             ],
           }),
         ]);
-        let budget = BudgetStatement.utils.createDocument();
+        let budget = utils.createDocument();
         const budgetOperation = buildOperation(
-          BudgetStatement.reducer,
+          budgetStatementReducer,
           budget,
-          BudgetStatement.actions.addAccount({
+          budgetStatementActions.addAccount({
             address: "0x123",
           }),
         );
@@ -179,7 +200,7 @@ describe.each(queueLayers)(
         budget = (await server.getDocument(
           driveId,
           "file 1",
-        )) as BudgetStatement.BudgetStatementDocument;
+        )) as BudgetStatementDocument;
         expect(budget.state.global.accounts).toStrictEqual([
           expect.objectContaining({ address: "0x123" }),
         ]);
@@ -197,8 +218,8 @@ describe.each(queueLayers)(
       let drive = await createDrive(server);
       const driveId = drive.state.global.id;
       const driveOperations = buildOperations(reducer, drive, [
-        actions.addFolder({ id: "folder 1", name: "folder 1" }),
-        actions.addFile({
+        addFolder({ id: "folder 1", name: "folder 1" }),
+        addFile({
           id: "file 1",
           name: "file 1",
           parentFolder: "folder 1",
@@ -208,11 +229,11 @@ describe.each(queueLayers)(
           ],
         }),
       ]);
-      let budget = BudgetStatement.utils.createDocument();
+      let budget = utils.createDocument();
       const budgetOperation = buildOperation(
-        BudgetStatement.reducer,
+        budgetStatementReducer,
         budget,
-        BudgetStatement.actions.addAccount({
+        budgetStatementActions.addAccount({
           address: "0x123",
         }),
       );
@@ -224,7 +245,7 @@ describe.each(queueLayers)(
           buildOperation(
             reducer,
             drive,
-            actions.addFolder({
+            addFolder({
               id: "folder 2",
               name: "folder 2",
             }),
@@ -278,7 +299,7 @@ describe.each(queueLayers)(
       budget = (await server.getDocument(
         driveId,
         "file 1",
-      )) as BudgetStatement.BudgetStatementDocument;
+      )) as BudgetStatementDocument;
       expect(budget.state.global.accounts).toStrictEqual([
         expect.objectContaining({ address: "0x123" }),
       ]);
@@ -297,29 +318,29 @@ describe.each(queueLayers)(
         let drive = await createDrive(server);
         const driveId = drive.state.global.id;
 
-        const budget = BudgetStatement.utils.createDocument();
+        const budget = utils.createDocument();
 
         // first doc op
         const budgetOperation = buildOperation(
-          BudgetStatement.reducer,
+          budgetStatementReducer,
           budget,
-          BudgetStatement.actions.addAccount({
+          budgetStatementActions.addAccount({
             address: "0x123",
           }),
         );
 
         // second doc op
         const budgetOperation2 = buildOperation(
-          BudgetStatement.reducer,
+          budgetStatementReducer,
           budget,
-          BudgetStatement.actions.addAccount({
+          budgetStatementActions.addAccount({
             address: "0x123456",
           }),
         );
 
         // add file op
         const driveOperations = buildOperations(reducer, drive, [
-          actions.addFile({
+          addFile({
             id: "file 1",
             name: "file 1",
             parentFolder: "folder 1",
@@ -345,12 +366,12 @@ describe.each(queueLayers)(
 
         // delete node op
         drive = await server.getDrive(driveId);
-        const deleteNode = buildOperations(reducer, drive, [
-          actions.deleteNode({ id: "file 1" }),
+        const deleteNodeOps = buildOperations(documentDriveReducer, drive, [
+          deleteNode({ id: "file 1" }),
         ]);
 
         // queue delete node op
-        await server.queueDriveOperations(driveId, deleteNode);
+        await server.queueDriveOperations(driveId, deleteNodeOps);
         // ==> receives deleteNode and addFile operation?
 
         await expect(
@@ -430,7 +451,7 @@ describe.each(queueLayers)(
         await server.initialize();
         const drive = await createDrive(server);
         const driveId = drive.state.global.id;
-        const action = actions.addListener({
+        const action = addListener({
           listener: {
             block: true,
             callInfo: {

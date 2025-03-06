@@ -108,6 +108,27 @@ async function getPackageExports(
     }
   }
 
+  // if the main entry file was resolved to a shorter path then updates it
+  const main = entries.get(".");
+  const resolvedEntry = main
+    ? Array.from(entries.entries()).find(
+        ([key, entry]) =>
+          key != "." && [entry.file, `./${entry.file}`].includes(main.file),
+      )
+    : undefined;
+  const resolvedExport = resolvedEntry?.at(1) as
+    | {
+        export: string;
+        file: string;
+      }
+    | undefined;
+  if (resolvedExport) {
+    entries.set(".", {
+      export: resolvedExport.export,
+      file: resolvedExport.file,
+    });
+  }
+
   return entries;
 }
 

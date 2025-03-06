@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "1.22.5",
+  "version": "1.23.2",
   "description": "",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -69,6 +69,6 @@
     "siwe": "^2.3.2",
     "uuid": "^9.0.1",
     "wildcard-match": "^5.1.3",
-    "zod": "^3.24.1"
+    "zod": "^3.24.2"
   }
 }

@@ -86,6 +86,11 @@ const DriveContextDecorator: Decorator<
   return (
     <DriveContextProvider
       value={{
+        useDocumentEditorProps: () => ({
+          dispatch: () => {},
+          document: context.args.document,
+          error: undefined,
+        }),
         showSearchBar: false,
         isAllowedToCreateDocuments: true,
         documentModels: [
@@ -94,6 +99,8 @@ const DriveContextDecorator: Decorator<
         selectedNode,
         selectNode: setSelectedNode,
         useSyncStatus: () => "SUCCESS",
+        useDriveDocumentState: () => undefined,
+        useDriveDocumentStates: () => ({}),
         addFile() {
           throw new Error("addFile not implemented");
         },

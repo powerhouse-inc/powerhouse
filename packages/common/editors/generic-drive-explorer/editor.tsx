@@ -30,7 +30,7 @@ export default function Editor(props: IProps) {
 
   const {
     state: {
-      global: { id },
+      global: { id: driveId },
     },
   } = document;
   const {
@@ -48,8 +48,8 @@ export default function Editor(props: IProps) {
   } = useUiNodesContext();
 
   const driveNode = useMemo(
-    () => driveNodes.find((n) => n.id === id),
-    [driveNodes, id],
+    () => driveNodes.find((n) => n.id === driveId),
+    [driveNodes, driveId],
   );
 
   const {
