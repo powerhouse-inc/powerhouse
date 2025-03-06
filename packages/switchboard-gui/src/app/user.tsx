@@ -14,12 +14,12 @@ const User = () => {
       <div className="flex flex-col gap-8 pt-14">
         <button
           type="submit"
-          className={`mx-auto rounded bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-600`}
+          className={`mx-auto rounded-sm bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-600`}
           onClick={() => {
             signIn();
           }}
         >
-          <div className="flex flex-row items-center rounded text-white">
+          <div className="flex flex-row items-center rounded-sm text-white">
             <div className="w-8">
               <ArrowRightStartOnRectangleIcon className="" />
             </div>{" "}
@@ -42,7 +42,7 @@ const User = () => {
             }}
             href={"/"}
           >
-            <div className="flex flex-row items-center rounded text-orange-400 hover:bg-gray-300">
+            <div className="flex flex-row items-center rounded-sm text-orange-400 hover:bg-gray-300">
               <div className="w-20">Sign Out</div>{" "}
               <div className="w-8">
                 <ArrowRightStartOnRectangleIcon className="text-orange-500" />

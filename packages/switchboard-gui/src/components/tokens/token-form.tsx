@@ -118,18 +118,18 @@ const TokenForm = () => {
       </form>
       {showModal ? (
         <>
-          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden outline-none focus:outline-none">
+          <div className="outline-hidden focus:outline-hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden">
             <div className="relative mx-auto my-6 w-auto max-w-3xl">
               {/*content*/}
-              <div className="relative flex w-full flex-col rounded-lg border-0 bg-white shadow-lg outline-none focus:outline-none">
+              <div className="outline-hidden focus:outline-hidden relative flex w-full flex-col rounded-lg border-0 bg-white shadow-lg">
                 {/*header*/}
                 <div className="border-blueGray-200 flex items-start justify-between rounded-t border-b border-solid p-5">
                   <h3 className="text-3xl font-semibold">API Token</h3>
                   <button
-                    className="float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold leading-none text-black opacity-5 outline-none focus:outline-none"
+                    className="outline-hidden focus:outline-hidden float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold leading-none text-black opacity-5"
                     onClick={() => setShowModal(false)}
                   >
-                    <span className="block h-6 w-6 bg-transparent text-2xl text-black opacity-5 outline-none focus:outline-none">
+                    <span className="outline-hidden focus:outline-hidden block h-6 w-6 bg-transparent text-2xl text-black opacity-5">
                       ×
                     </span>
                   </button>
@@ -143,7 +143,7 @@ const TokenForm = () => {
                 {/*footer*/}
                 <div className="border-blueGray-200 flex items-center justify-end rounded-b border-t border-solid p-6">
                   <button
-                    className="background-transparent mb-1 mr-1 px-6 py-2 text-sm font-bold uppercase text-red-500 outline-none transition-all duration-150 ease-linear focus:outline-none"
+                    className="background-transparent outline-hidden focus:outline-hidden mb-1 mr-1 px-6 py-2 text-sm font-bold uppercase text-red-500 transition-all duration-150 ease-linear"
                     type="button"
                     onClick={() => setShowModal(false)}
                   >

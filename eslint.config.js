@@ -63,26 +63,6 @@ export default tseslint.config(
         },
       },
     },
-    settings: {
-      tailwindcss: {
-        callees: [
-          "classnames",
-          "clsx",
-          "ctl",
-          "twMerge",
-          "twJoin",
-          "mergeClassNameProps",
-          "cn",
-        ],
-        whitelist: [
-          "scrollbar-thin",
-          "scrollbar-thumb-gray-300",
-          "scrollbar-thumb-gray-600",
-          "scrollbar-track-transparent",
-          "scrollbar-track-gray-900",
-        ],
-      },
-    },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/consistent-indexed-object-style": "off",
