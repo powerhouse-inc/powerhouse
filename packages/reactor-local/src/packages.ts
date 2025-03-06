@@ -104,6 +104,16 @@ export class PackagesManager implements IPackagesManager {
     }
   }
 
+  public async loadDocumentModels() {
+    if ("packages" in this.options) {
+      return await this.loadPackages(this.options.packages).catch(this.onError);
+    } else if ("configFile" in this.options) {
+      return await this.initConfigFile(this.options.configFile).catch(
+        this.onError,
+      );
+    }
+  }
+
   private async loadPackages(packages: string[]) {
     const packagesMap = await loadPackagesDocumentModels(packages);
     this.updatePackagesMap(packagesMap);
