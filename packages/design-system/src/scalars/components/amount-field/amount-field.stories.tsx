@@ -12,6 +12,14 @@ import {
   commonFiatCurrencies,
 } from "../currency-code-field";
 
+const mappedFiatCurrencies = commonFiatCurrencies.map((currency) => ({
+  ...currency,
+  label: currency.ticker,
+}));
+const mappedCryptoCurrencies = commonCryptoCurrencies.map((currency) => ({
+  ...currency,
+  label: currency.ticker,
+}));
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",
   component: AmountField,
@@ -175,7 +183,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     placeholder: "0",
-    units: commonFiatCurrencies,
+    units: mappedFiatCurrencies,
     label: "Enter Amount and Select Currency",
     placeholderSelect: "CUR",
     type: "AmountCurrencyFiat",
@@ -188,7 +196,7 @@ export const Default: Story = {
 
 export const WithValue: Story = {
   args: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
     label: "Enter Amount and Select Currency",
@@ -201,7 +209,7 @@ export const WithValue: Story = {
 };
 export const WithAmount: Story = {
   parameters: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     form: {
       defaultValues: {
         "amount-field": "",
@@ -209,7 +217,7 @@ export const WithAmount: Story = {
     },
   },
   args: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amout ",
     type: "Amount",
@@ -218,7 +226,7 @@ export const WithAmount: Story = {
 };
 export const CurrencyIcon: Story = {
   args: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     type: "AmountCurrencyCrypto",
@@ -232,7 +240,7 @@ export const CurrencyIcon: Story = {
 
 export const WithToken: Story = {
   parameters: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     form: {
       defaultValues: {
         "amount-field": {
@@ -243,7 +251,7 @@ export const WithToken: Story = {
     },
   },
   args: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     type: "AmountCurrencyCrypto",
@@ -264,7 +272,7 @@ export const WithValuePercent: Story = {
     },
   },
   args: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     label: "Enter Percentage ",
     placeholder: "Enter Amount",
     type: "AmountPercentage",
@@ -273,7 +281,7 @@ export const WithValuePercent: Story = {
 };
 export const Disable: Story = {
   args: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     label: "Enter Amount ",
     placeholder: "Enter Amount",
     type: "AmountCurrencyFiat",
@@ -298,7 +306,7 @@ export const WithValueUniversalAmountCurrency: Story = {
     },
   },
   args: {
-    units: commonCryptoCurrencies,
+    units: mappedCryptoCurrencies,
     label: "Label",
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
