@@ -1,3 +1,37 @@
+import { Currency } from "../currency-code-field";
+import { AmountFieldPropsGeneric } from "./types";
+export const DEFAULT_FIAT_CURRENCIES: Currency[] = [
+  { ticker: "USD", crypto: false, label: "USD", symbol: "$" },
+  { ticker: "EUR", crypto: false, label: "EUR", symbol: "€" },
+  { ticker: "GBP", crypto: false, label: "GBP", symbol: "£" },
+];
+
+export const DEFAULT_CRYPTO_CURRENCIES: Currency[] = [
+  { ticker: "DAI", crypto: true, label: "DAI", symbol: "DAI" },
+  { ticker: "ETH", crypto: true, label: "ETH", symbol: "ETH" },
+  { ticker: "MKR", crypto: true, label: "MKR", symbol: "MKR" },
+  { ticker: "SKY", crypto: true, label: "SKY", symbol: "SKY" },
+  { ticker: "USDC", crypto: true, label: "USDC", symbol: "USDC" },
+  { ticker: "USDS", crypto: true, label: "USDS", symbol: "USDS" },
+];
+
+export const DEFAULT_ALL_CURRENCIES: Currency[] = [
+  ...DEFAULT_FIAT_CURRENCIES,
+  ...DEFAULT_CRYPTO_CURRENCIES,
+];
+export const getDefaultUnits = (type: AmountFieldPropsGeneric["type"]) => {
+  switch (type) {
+    case "AmountCurrencyFiat":
+      return DEFAULT_FIAT_CURRENCIES;
+    case "AmountCurrencyCrypto":
+      return DEFAULT_CRYPTO_CURRENCIES;
+    case "AmountCurrencyUniversal":
+      return DEFAULT_ALL_CURRENCIES;
+    default:
+      return [];
+  }
+};
+
 export const isValidBigInt = (value: string | undefined): boolean => {
   if (!value) {
     return false;
