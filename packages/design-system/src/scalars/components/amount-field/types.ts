@@ -1,5 +1,3 @@
-import { TokenIcons } from "./amount-field";
-
 export type Amount = number | undefined;
 export type AmountPercentage = number | undefined;
 export interface AmountCurrencyFiat {
@@ -20,7 +18,6 @@ export type AmountFieldPropsGeneric =
       type: "Amount";
       value?: Amount;
       trailingZeros?: boolean;
-
       currencySymbol?: never;
     }
   | {
@@ -35,13 +32,11 @@ export type AmountFieldPropsGeneric =
       value?: AmountPercentage;
       trailingZeros?: boolean;
       currencySymbol?: never;
-      tokenIcons?: never;
     }
   | {
       type: "AmountCurrencyCrypto";
       value?: AmountCurrencyCrypto;
       trailingZeros?: never;
-      tokenIcons?: TokenIcons;
       currencySymbol?: never;
     }
   | {
