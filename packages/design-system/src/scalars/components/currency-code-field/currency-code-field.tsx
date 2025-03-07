@@ -15,7 +15,7 @@ export interface CurrencyCodeFieldProps
   favoriteCurrencies?: string[];
 }
 
-const CurrencyCodeFieldRaw = React.forwardRef<
+export const CurrencyCodeFieldRaw = React.forwardRef<
   HTMLButtonElement,
   CurrencyCodeFieldProps
 >(
