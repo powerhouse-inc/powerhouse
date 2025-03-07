@@ -9,6 +9,7 @@ import { useEllipsis } from "@/scalars/hooks/useEllipsis";
 import CaretDown from "@/assets/icon-components/CaretDown";
 import PinFilled from "@/assets/icon-components/PinFilled";
 import Pin from "@/assets/icon-components/Pin";
+import { isEmpty } from "@/scalars/lib/is-empty";
 
 interface SidebarItemProps {
   node: FlattenedNode;
@@ -52,11 +53,17 @@ export const SidebarItem = ({
     : node.icon;
   const isDescendenceModified = useMemo(() => {
     const check = (n: SidebarNode): boolean => {
-      if (!n.children || n.children.length === 0) {
-        return n.status === NodeStatus.MODIFIED;
+      // Check current node's status first
+      if (n.status !== NodeStatus.UNCHANGED && !isEmpty(n.status)) {
+        return true;
       }
 
-      return n.children.some((child) => check(child));
+      // Then recursively check all children
+      if (n.children && n.children.length > 0) {
+        return n.children.some((child) => check(child));
+      }
+
+      return false;
     };
 
     return check(node);
