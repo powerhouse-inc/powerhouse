@@ -27,7 +27,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       currencies,
       includeCurrencySymbols = true,
       symbolPosition = "right",
-      searchable = true,
+      searchable = false,
       // TODO: implement following props
       // allowedTypes = "Both",
       // favoriteCurrencies,
