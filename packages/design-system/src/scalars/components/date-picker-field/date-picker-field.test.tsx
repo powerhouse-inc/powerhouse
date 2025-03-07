@@ -119,4 +119,40 @@ describe("DatePickerField", () => {
 
     expect(input).toHaveValue("");
   });
+  // Validate minDate when user add value in the input
+  it("should disable dates after minDate when user adds a value in the input", async () => {
+    renderWithForm(
+      <DatePickerField
+        label="Test Label"
+        name="test-date"
+        minDate="2025-01-16"
+        showErrorOnBlur
+      />,
+    );
+    const input = screen.getByRole("textbox");
+
+    expect(input).toBeInTheDocument();
+    // Intentamos escribir una fecha anterior al minDate
+    await userEvent.type(input, "2025-01-10");
+    await userEvent.tab(); // Trigger validation on blur
+    expect(screen.getByText(/Date must be on or after/i)).toBeInTheDocument();
+  });
+});
+// Validate maxDate when user add value in the input
+it("should disable dates after minDate when user adds a value in the input", async () => {
+  renderWithForm(
+    <DatePickerField
+      label="Test Label"
+      name="test-date"
+      maxDate="2025-01-16"
+      showErrorOnBlur
+    />,
+  );
+  const input = screen.getByRole("textbox");
+
+  expect(input).toBeInTheDocument();
+  // Intentamos escribir una fecha anterior al minDate
+  await userEvent.type(input, "2025-01-20");
+  await userEvent.tab(); // Trigger validation on blur
+  expect(screen.getByText(/Date must be on or before/i)).toBeInTheDocument();
 });
