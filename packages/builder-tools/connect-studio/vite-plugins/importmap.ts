@@ -268,12 +268,14 @@ export function generateImportMapPlugin(
 
       // Regex to find existing import map
       const importMapRegex = /<script type="importmap">(.*?)<\/script>/s;
-      const match = html.match(importMapRegex);
+      const match = importMapRegex.exec(html);
 
+      // If an import map exists, merge the imports
       if (match) {
-        // If an import map exists, merge the imports
         try {
-          const existingImportMap = JSON.parse(match[1]);
+          const existingImportMap = JSON.parse(match[1]) as {
+            imports: Record<string, string>;
+          };
           existingImportMap.imports = {
             ...existingImportMap.imports,
             ...importMap,
