@@ -7,6 +7,7 @@ import {
 } from "./types";
 import {
   displayValueAmount,
+  getDefaultUnits,
   isNotSafeValue,
   isValidBigInt,
   isValidNumberGreaterThanMaxSafeInteger,
@@ -24,7 +25,7 @@ interface UseAmountFieldProps {
   precision?: number;
   viewPrecision?: number;
   trailingZeros?: boolean;
-  units: Currency[];
+  units?: Currency[];
 }
 
 export const useAmountField = ({
@@ -485,10 +486,10 @@ export const useAmountField = ({
   const handleIsInputFocused = () => {
     setInputFocused(true);
   };
-  const options = units;
+  const options = units ?? getDefaultUnits(type);
   //Put the placeholder in case that value its not in the options
   const validatedValueSelect =
-    valueSelect && units.some((unit) => unit.ticker === valueSelect)
+    valueSelect && units?.some((unit) => unit.ticker === valueSelect)
       ? valueSelect
       : undefined;
 

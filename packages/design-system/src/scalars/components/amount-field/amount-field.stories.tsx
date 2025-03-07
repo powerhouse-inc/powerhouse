@@ -183,7 +183,6 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     placeholder: "0",
-    units: mappedFiatCurrencies,
     label: "Enter Amount and Select Currency",
     placeholderSelect: "CUR",
     type: "AmountCurrencyFiat",
@@ -196,14 +195,13 @@ export const Default: Story = {
 
 export const WithValue: Story = {
   args: {
-    units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyFiat",
+    type: "AmountCurrencyCrypto",
     value: {
       currency: "USD",
-      amount: 100,
+      amount: 100 as unknown as bigint,
     },
   },
 };

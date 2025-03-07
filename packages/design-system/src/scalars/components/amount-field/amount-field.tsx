@@ -38,7 +38,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     viewPrecision?: number;
     precision?: number;
     placeholderSelect?: string;
-    units: Currency[];
+    units?: Currency[];
     includeCurrencySymbols?: boolean;
   };
 
