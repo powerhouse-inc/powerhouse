@@ -23,6 +23,8 @@ interface DatePickerFieldProps {
   dateFormat?: string;
   weekStart?: string;
   autoClose?: boolean;
+  minDate?: string;
+  maxDate?: string;
 }
 
 export const useDatePickerField = ({
@@ -35,6 +37,8 @@ export const useDatePickerField = ({
   dateFormat,
   weekStart = "Monday",
   autoClose = false,
+  minDate,
+  maxDate,
 }: DatePickerFieldProps) => {
   const internalFormat = getDateFormat(dateFormat ?? "");
   const [isOpen, setIsOpen] = React.useState(false);
@@ -96,10 +100,22 @@ export const useDatePickerField = ({
             ? {
                 after: today,
               }
-            : undefined,
-    [disablePastDates, disableFutureDates, today],
+            : minDate && maxDate
+              ? {
+                  before: minDate as unknown as Date,
+                  after: maxDate as unknown as Date,
+                }
+              : minDate
+                ? {
+                    before: minDate as unknown as Date,
+                  }
+                : maxDate
+                  ? {
+                      after: maxDate as unknown as Date,
+                    }
+                  : undefined,
+    [disablePastDates, disableFutureDates, today, minDate, maxDate],
   );
-
   const weekStartDay = useMemo(() => {
     const days = [
       "sunday",
