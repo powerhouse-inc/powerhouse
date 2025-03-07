@@ -143,6 +143,7 @@ async function importFromNodeModules(
   name: string,
   modulesDir: string,
   importMapDeps: Set<string>,
+  baseUrl: string,
 ): Promise<Record<string, string>> {
   console.log(`Bundling dependency: ${name}`);
   const importMap: Record<string, string> = {};
@@ -173,7 +174,7 @@ async function importFromNodeModules(
     target: "esnext",
     splitting: true,
     external: nodeModules.concat(Array.from(importMapDeps)), // Exclude dependencies already in import map
-    sourcemap: true,
+    sourcemap: false,
     minify: false,
   });
 
@@ -181,8 +182,10 @@ async function importFromNodeModules(
   importMap[name] = `./modules/${name}/${fileName}.js`;
 
   entries.forEach((entry, key) => {
-    importMap[path.join(name, key)] =
-      `./modules/${path.join(name, entry.export)}`;
+    importMap[path.join(name, key)] = path.join(
+      baseUrl,
+      `./modules/${path.join(name, entry.export)}`,
+    );
   });
 
   return importMap;
@@ -191,6 +194,7 @@ async function importFromNodeModules(
 async function generateImportMap(
   outputDir: string,
   dependencies: (string | { name: string; provider: Provider })[],
+  baseUrl: string,
 ) {
   const modulesDir = path.join(outputDir, "/modules");
   await fs.mkdir(modulesDir, { recursive: true });
@@ -213,6 +217,7 @@ async function generateImportMap(
         name,
         modulesDir,
         importMapDeps,
+        baseUrl,
       );
       importMap = { ...importMap, ...imports };
     } else {
@@ -221,13 +226,44 @@ async function generateImportMap(
   }
 
   return importMap;
+}
 
-  // const indexPath = path.join(outputDir, "index.html");
-  // let html = await fs.readFile(indexPath, "utf-8");
-  // html = html.replace("</head>", `${importMapScript}\n</head>`);
-  // await fs.writeFile(indexPath, html, "utf-8");
-  // console.log(indexPath);
-  // console.log("✅ Import map added to index.html");
+async function addImportMapToHTML(
+  importMap: Record<string, string>,
+  html: string,
+) {
+  let newHtml = "";
+
+  // Regex to find existing import map
+  const importMapRegex = /<script type="importmap">(.*?)<\/script>/s;
+  const match = importMapRegex.exec(html);
+
+  // If an import map exists, merge the imports
+  if (match) {
+    try {
+      const existingImportMap = JSON.parse(match[1]) as {
+        imports: Record<string, string>;
+      };
+      existingImportMap.imports = {
+        ...existingImportMap.imports,
+        ...importMap,
+      };
+
+      const mergedImportMapString = JSON.stringify(existingImportMap, null, 2);
+
+      newHtml = html.replace(
+        importMapRegex,
+        `<script type="importmap">${mergedImportMapString}</script>`,
+      );
+    } catch (error) {
+      console.error("⚠️ Error parsing existing import map:", error);
+    }
+  } else {
+    const importMapString = JSON.stringify({ imports: importMap }, null, 2);
+    const importMapScript = `<script type="importmap">${importMapString}</script>`;
+    newHtml = html.replace("</head>", `${importMapScript}\n</head>`);
+  }
+  return newHtml;
 }
 
 /**
@@ -247,58 +283,16 @@ export function generateImportMapPlugin(
   outputDir: string,
   dependencies: (string | { name: string; provider: Provider })[],
 ): PluginOption {
+  let importMap: Record<string, string> = {};
   return {
     name: "vite-plugin-importmap",
     enforce: "post",
-    async configResolved() {
-      // await generateImportMap(outputDir, dependencies);
-    },
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        if (req.url?.includes("/modules/")) {
-          req.url = req.url.replace(/^.*(?=\/modules)/, "");
-        }
-        next();
-      });
-      // await generateImportMap(outputDir, dependencies);
+    async configResolved(config) {
+      importMap = await generateImportMap(outputDir, dependencies, config.base);
     },
     async transformIndexHtml(html) {
-      const importMap = await generateImportMap(outputDir, dependencies);
-      const importMapString = JSON.stringify({ imports: importMap }, null, 2);
-
-      // Regex to find existing import map
-      const importMapRegex = /<script type="importmap">(.*?)<\/script>/s;
-      const match = importMapRegex.exec(html);
-
-      // If an import map exists, merge the imports
-      if (match) {
-        try {
-          const existingImportMap = JSON.parse(match[1]) as {
-            imports: Record<string, string>;
-          };
-          existingImportMap.imports = {
-            ...existingImportMap.imports,
-            ...importMap,
-          };
-
-          const mergedImportMapString = JSON.stringify(
-            existingImportMap,
-            null,
-            2,
-          );
-
-          return html.replace(
-            importMapRegex,
-            `<script type="importmap">${mergedImportMapString}</script>`,
-          );
-        } catch (error) {
-          console.error("⚠️ Error parsing existing import map:", error);
-        }
-      }
-
-      // If no import map exists, add a new one
-      const importMapScript = `<script type="importmap">${importMapString}</script>`;
-      return html.replace("</head>", `${importMapScript}\n</head>`);
+      const newHtml = await addImportMapToHTML(importMap, html);
+      return newHtml || html;
     },
   };
 }

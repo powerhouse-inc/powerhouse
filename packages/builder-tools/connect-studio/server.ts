@@ -94,7 +94,7 @@ export async function startServer(
   copyConnect(connectPath, studioPath);
 
   // backups index html if running on windows
-  backupIndexHtml(connectPath, true);
+  backupIndexHtml(studioPath, true);
 
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
   const HOST = process.env.HOST ? process.env.HOST : "0.0.0.0";
@@ -137,18 +137,18 @@ export async function startServer(
       ],
     },
     plugins: [
-      viteConnectDevStudioPlugin(true, connectPath),
-      viteLoadExternalPackages(options.packages, true),
+      viteConnectDevStudioPlugin(true, studioPath),
+      viteLoadExternalPackages(options.packages, studioPath, true),
       viteEnvs({
-        declarationFile: join(connectPath, ".env"),
+        declarationFile: join(studioPath, ".env"),
         computedEnv,
       }),
-      runShellScriptPlugin("vite-envs.sh", connectPath),
+      runShellScriptPlugin("vite-envs.sh", studioPath),
       options.https &&
         basicSsl({
           name: "Powerhouse Connect Studio",
         }),
-      generateImportMapPlugin(connectPath, [
+      generateImportMapPlugin(studioPath, [
         { name: "react", provider: "esm.sh" },
         { name: "react-dom", provider: "esm.sh" },
         "@powerhousedao/reactor-browser",

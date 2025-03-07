@@ -56,7 +56,7 @@ export default defineConfig(({ mode }) => {
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
-        viteLoadExternalPackages(undefined),
+        viteLoadExternalPackages(undefined, outDir),
         react({
             include: 'src/**/*.tsx',
             babel: {
