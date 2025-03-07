@@ -7,7 +7,10 @@ import {
   PrebuiltArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
-import { Icon, IconName } from "@/powerhouse";
+import {
+  commonCryptoCurrencies,
+  commonFiatCurrencies,
+} from "../currency-code-field";
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",
@@ -26,34 +29,28 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    allowedCurrencies: {
+    units: {
       control: "object",
-      description:
-        "Array of strings — List of accepted fiat currency codes (e.g., ['USD', 'EUR', 'GBP']).",
+      description: "Array of Currency objects",
       table: {
-        type: { summary: "string[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-      if: {
-        arg: "type",
-        neq: ["Amount", "AmountPercentage"],
-      },
-    },
-    allowedTokens: {
-      control: "object",
-      description:
-        "Array of strings — List of accepted cryptocurrency codes (e.g., ['BTC', 'ETH', 'USDT']).",
-      table: {
-        type: { summary: "string[]" },
+        type: { summary: "Currency[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    tokenIcons: {
-      control: "object",
-      description:
-        "Mapping of token identifiers to icon references (e.g., { 'BTC': 'icon-btc', 'ETH': 'icon-eth' }).",
+    includeCurrencySymbols: {
+      control: "boolean",
+      description: " Whether to display currency symbols alongside codes",
       table: {
-        type: { summary: "object" },
+        defaultValue: { summary: "true" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    symbolPosition: {
+      control: "select",
+      description: "Position of the currency symbol",
+      options: ["left", "right"],
+      table: {
+        type: { summary: "string" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -172,20 +169,16 @@ const meta = {
   },
 } satisfies Meta<typeof AmountField>;
 
-const IconComponent = (name: IconName) => {
-  return () => <Icon name={name} size={16} />;
-};
-
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
     placeholder: "0",
+    units: commonFiatCurrencies,
     label: "Enter Amount and Select Currency",
     placeholderSelect: "CUR",
     type: "AmountCurrencyFiat",
-    allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: undefined,
       currency: "",
@@ -195,11 +188,11 @@ export const Default: Story = {
 
 export const WithValue: Story = {
   args: {
+    units: commonCryptoCurrencies,
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
     label: "Enter Amount and Select Currency",
     type: "AmountCurrencyFiat",
-    allowedCurrencies: ["USD", "EUR"],
     value: {
       currency: "USD",
       amount: 100,
@@ -208,6 +201,7 @@ export const WithValue: Story = {
 };
 export const WithAmount: Story = {
   parameters: {
+    units: commonCryptoCurrencies,
     form: {
       defaultValues: {
         "amount-field": "",
@@ -215,6 +209,7 @@ export const WithAmount: Story = {
     },
   },
   args: {
+    units: commonCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amout ",
     type: "Amount",
@@ -223,15 +218,11 @@ export const WithAmount: Story = {
 };
 export const CurrencyIcon: Story = {
   args: {
+    units: commonCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     type: "AmountCurrencyCrypto",
     placeholderSelect: "CUR",
-    allowedTokens: ["BTC", "ETH"],
-    tokenIcons: {
-      BTC: IconComponent("Briefcase"),
-      ETH: IconComponent("Briefcase"),
-    },
     value: {
       amount: 3454564564 as unknown as bigint,
       currency: "BTC",
@@ -241,6 +232,7 @@ export const CurrencyIcon: Story = {
 
 export const WithToken: Story = {
   parameters: {
+    units: commonCryptoCurrencies,
     form: {
       defaultValues: {
         "amount-field": {
@@ -251,11 +243,11 @@ export const WithToken: Story = {
     },
   },
   args: {
+    units: commonCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
     type: "AmountCurrencyCrypto",
     placeholderSelect: "CUR",
-    allowedTokens: ["BTC", "ETH", "USDT"],
     value: {
       amount: 123 as unknown as bigint,
       currency: "BTC",
@@ -272,6 +264,7 @@ export const WithValuePercent: Story = {
     },
   },
   args: {
+    units: commonCryptoCurrencies,
     label: "Enter Percentage ",
     placeholder: "Enter Amount",
     type: "AmountPercentage",
@@ -280,11 +273,11 @@ export const WithValuePercent: Story = {
 };
 export const Disable: Story = {
   args: {
+    units: commonCryptoCurrencies,
     label: "Enter Amount ",
     placeholder: "Enter Amount",
     type: "AmountCurrencyFiat",
     placeholderSelect: "CUR",
-    allowedCurrencies: ["USD", "EUR"],
     disabled: true,
     value: {
       amount: 9,
@@ -305,11 +298,11 @@ export const WithValueUniversalAmountCurrency: Story = {
     },
   },
   args: {
+    units: commonCryptoCurrencies,
     label: "Label",
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
     type: "AmountCurrencyUniversal",
-    allowedCurrencies: ["USD", "EUR"],
     value: {
       amount: 123,
       currency: "USD",

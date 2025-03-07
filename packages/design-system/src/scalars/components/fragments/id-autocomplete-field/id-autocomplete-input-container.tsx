@@ -102,6 +102,12 @@ export const IdAutocompleteInputContainer = React.forwardRef<
                 "ArrowDown",
                 "Enter",
               ].includes(e.key);
+
+              if (e.key === "Enter" && isPopoverOpen && optionsLength === 0) {
+                handleOpenChange?.(false);
+                e.preventDefault();
+                return;
+              }
               if (
                 !(isOptionsRelatedKey && isPopoverOpen && optionsLength > 0)
               ) {
