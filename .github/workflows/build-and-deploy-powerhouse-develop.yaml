@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "apps/connect/**"
+  workflow_dispatch:
 
 env:
   HUSKY: 0
