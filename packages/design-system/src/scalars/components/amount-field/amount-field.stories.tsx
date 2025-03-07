@@ -249,10 +249,9 @@ export const WithToken: Story = {
     },
   },
   args: {
-    units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyCrypto",
+    type: "AmountCurrencyUniversal",
     placeholderSelect: "CUR",
     value: {
       amount: 123 as unknown as bigint,
