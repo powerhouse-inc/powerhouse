@@ -24,18 +24,24 @@ export interface ValidationOptions<T> {
   transformValue?: (value: any) => any;
 }
 
+// returned component type (defined outside the function to break the circular reference)
+export type WithFieldValidationComponentType<T> = React.ComponentType<
+  T & { innerRef?: React.Ref<unknown> }
+>;
+
 export const withFieldValidation = <T extends PossibleProps>(
   Component: React.ComponentType<T>,
   options?: ValidationOptions<T>,
-): React.ComponentType<T> => {
+): WithFieldValidationComponentType<T> => {
   return ({
     value,
     name,
     showErrorOnBlur,
     showErrorOnChange,
     validators: customValidators,
+    innerRef,
     ...props
-  }: T) => {
+  }: T & { innerRef?: React.Ref<unknown> }) => {
     const { onChange: onChangeProp, onBlur: onBlurProp } =
       props as PossibleEventsProps;
     const {
@@ -182,6 +188,7 @@ export const withFieldValidation = <T extends PossibleProps>(
               onBlur={onBlurCallback}
               onChange={onChangeCallback}
               errors={errors}
+              ref={innerRef}
             />
           );
         }}

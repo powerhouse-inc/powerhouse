@@ -3,8 +3,11 @@ import { cn } from "@/scalars/lib/utils";
 import { FormLabel } from "@/scalars/components/fragments/form-label";
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { RadioGroupProps } from "@/scalars/components/enum-field/types";
+import type {
+  FieldCommonProps,
+  ErrorHandling,
+} from "@/scalars/components/types";
+import type { RadioGroupProps } from "@/scalars/components/enum-field/types";
 import { Radio } from "./radio";
 import { RadioGroup } from "./radio-group";
 
@@ -106,10 +109,14 @@ export const RadioGroupFieldRaw = React.forwardRef<
   },
 );
 
-export const RadioGroupField = withFieldValidation<RadioGroupFieldProps>(
-  RadioGroupFieldRaw,
-) as React.ForwardRefExoticComponent<
-  RadioGroupFieldProps & React.RefAttributes<HTMLDivElement>
->;
+const RadioGroupFieldWithValidation =
+  withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);
+
+export const RadioGroupField = React.forwardRef<
+  HTMLDivElement,
+  RadioGroupFieldProps
+>((props, ref) => {
+  return <RadioGroupFieldWithValidation {...props} innerRef={ref} />;
+});
 
 RadioGroupField.displayName = "RadioGroupField";

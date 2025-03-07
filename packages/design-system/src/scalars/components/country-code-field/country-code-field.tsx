@@ -3,14 +3,23 @@ import { SelectFieldRaw } from "@/scalars/components/fragments/select-field";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import countries from "world-countries";
 import { CircleFlag } from "react-circle-flags";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { CountryCodeProps } from "./types";
+import type {
+  FieldCommonProps,
+  ErrorHandling,
+} from "@/scalars/components/types";
+import type { CountryCodeProps } from "./types";
 
-export type CountryCodeFieldProps = FieldCommonProps<string> &
+type CountryCodeFieldBaseProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  keyof FieldCommonProps<string> | keyof ErrorHandling | keyof CountryCodeProps
+>;
+
+export type CountryCodeFieldProps = CountryCodeFieldBaseProps &
+  FieldCommonProps<string> &
   ErrorHandling &
   CountryCodeProps;
 
-const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
+const CountryCodeFieldRaw = React.forwardRef<
   HTMLButtonElement,
   CountryCodeFieldProps
 >(
@@ -78,9 +87,8 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
   },
 );
 
-export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
-  CountryCodeFieldRaw,
-  {
+const CountryCodeFieldWithValidation =
+  withFieldValidation<CountryCodeFieldProps>(CountryCodeFieldRaw, {
     validations: {
       _validOption:
         ({ allowedCountries, excludedCountries, includeDependentAreas }) =>
@@ -119,7 +127,13 @@ export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
           return true;
         },
     },
-  },
-);
+  });
+
+export const CountryCodeField = React.forwardRef<
+  HTMLButtonElement,
+  CountryCodeFieldProps
+>((props, ref) => {
+  return <CountryCodeFieldWithValidation {...props} innerRef={ref} />;
+});
 
 CountryCodeField.displayName = "CountryCodeField";

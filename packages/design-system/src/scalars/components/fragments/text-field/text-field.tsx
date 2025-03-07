@@ -3,7 +3,7 @@ import { Input } from "../input";
 import { FormLabel } from "../form-label";
 import { FormMessageList } from "../form-message";
 import { FormGroup } from "../form-group";
-import { ErrorHandling, FieldCommonProps, TextProps } from "../../types";
+import type { ErrorHandling, FieldCommonProps, TextProps } from "../../types";
 import { FormDescription } from "../form-description";
 import { CharacterCounter } from "../character-counter";
 import { withFieldValidation } from "../with-field-validation";
@@ -25,7 +25,7 @@ export interface TextFieldProps
   autoComplete?: boolean;
 }
 
-const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
+export const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
   (
     {
       label,
@@ -107,4 +107,13 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
   },
 );
 
-export const TextField = withFieldValidation<TextFieldProps>(TextFieldRaw);
+const TextFieldWithValidation =
+  withFieldValidation<TextFieldProps>(TextFieldRaw);
+
+export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
+  (props, ref) => {
+    return <TextFieldWithValidation {...props} innerRef={ref} />;
+  },
+);
+
+TextField.displayName = "TextField";

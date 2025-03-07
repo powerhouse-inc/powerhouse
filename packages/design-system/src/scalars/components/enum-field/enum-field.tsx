@@ -1,11 +1,11 @@
 import React from "react";
 import {
   RadioGroupField,
-  RadioGroupFieldProps,
+  type RadioGroupFieldProps,
 } from "@/scalars/components/fragments/radio-group-field";
 import {
   SelectField,
-  SelectFieldProps,
+  type SelectFieldProps,
 } from "@/scalars/components/fragments/select-field";
 
 export type EnumFieldProps =
