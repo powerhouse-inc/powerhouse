@@ -1,4 +1,6 @@
+import prettier from "@prettier/sync";
 import camelCase from "camelcase";
+import { execSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -7,7 +9,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import prettier from "@prettier/sync";
 
 const iconsDir = join("public/icons");
 const outputDirPath = join("src/assets/icon-components");
@@ -15,6 +16,24 @@ const outputDirPath = join("src/assets/icon-components");
 const toPascalCase = (filename: string): string => {
   return camelCase(filename.replace(".svg", ""), { pascalCase: true });
 };
+
+// Check if there are changes in the icons directory
+const hasChanges = () => {
+  try {
+    const output = execSync(`git status --porcelain ${iconsDir}`).toString();
+    return output.trim().length > 0;
+  } catch (error) {
+    console.error("Error checking git status:", error);
+    return false;
+  }
+};
+
+if (!hasChanges()) {
+  console.log(
+    "No changes detected in the icons directory. Skipping generation.",
+  );
+  process.exit(0);
+}
 
 if (!existsSync(outputDirPath)) {
   mkdirSync(outputDirPath);
@@ -41,7 +60,6 @@ readdir(iconsDir, (err, files) => {
     const svgData = readFileSync(filePath, "utf8");
     const svgDataWithProps = svgData
       .replace("<svg", "<svg {...props}")
-      // turn props into camelCase
       .replace(
         /([a-z-]+)="([^"]*)"/g,
         (_, attrName: string, attrValue: string) => {

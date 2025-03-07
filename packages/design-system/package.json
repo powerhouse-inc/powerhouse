@@ -27,8 +27,6 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
-    "prepare": "npm run create-icon-components",
-    "prepublish": "npm run create-icon-components",
     "build": "vite build",
     "build:watch": "vite build --watch",
     "build:report": "BUNDLE_REPORT=\"true\" vite build",
