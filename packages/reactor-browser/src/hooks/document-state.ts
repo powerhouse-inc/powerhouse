@@ -45,10 +45,13 @@ export function useDocumentsState(args: {
     if (!reactor || !driveId) return;
     if (isSubscribed.current) return;
     isSubscribed.current = true;
-    console.log("subscribing to strandUpdate");
+
     const unsubscribe = reactor.on("strandUpdate", async (update) => {
-      console.log("strandUpdate", update);
-      if (documentIds && !documentIds.includes(update.documentId)) return;
+      if (
+        update.driveId !== driveId ||
+        (documentIds && !documentIds.includes(update.documentId))
+      )
+        return;
 
       const updatedDocument = await reactor.getDocument(
         driveId,
