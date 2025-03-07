@@ -378,6 +378,21 @@ const SidebarProvider = ({
     }
   }, [activeSearchIndex, openPathToNode]);
 
+  const setNodes = useCallback(
+    (newNodes: SidebarNode[]) =>
+      dispatch({ type: SidebarActionType.SET_NODES, payload: newNodes }),
+    [dispatch],
+  );
+
+  const changeSearchTerm = useCallback(
+    (newTerm: string) =>
+      dispatch({
+        type: SidebarActionType.CHANGE_SEARCH_TERM,
+        payload: newTerm,
+      }),
+    [dispatch],
+  );
+
   return (
     <SidebarContext.Provider
       value={{
@@ -397,15 +412,10 @@ const SidebarProvider = ({
         closeNode,
         togglePin,
         openLevel,
-        changeSearchTerm: (newTerm: string) =>
-          dispatch({
-            type: SidebarActionType.CHANGE_SEARCH_TERM,
-            payload: newTerm,
-          }),
+        changeSearchTerm,
         nextSearchResult,
         previousSearchResult,
-        setNodes: (newNodes: SidebarNode[]) =>
-          dispatch({ type: SidebarActionType.SET_NODES, payload: newNodes }),
+        setNodes,
         activeNodeId: _state.activeNodeId,
         syncActiveNodeId,
         onActiveNodeChange,
