@@ -1,4 +1,5 @@
 import {
+  formatDateToValidCalendarDateFormat,
   getDateFromValue,
   splitIso8601DateTime,
 } from "../date-picker-field/utils";
@@ -10,9 +11,10 @@ import {
   normalizeMonthFormat,
 } from "./utils";
 import { DateFieldValue } from "../date-picker-field/types";
+import { format } from "date-fns";
 
 export const dateTimeFieldValidations =
-  ({ dateFormat }: DatePickerFieldProps) =>
+  ({ dateFormat, minDate, maxDate }: DatePickerFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;
@@ -38,6 +40,24 @@ export const dateTimeFieldValidations =
 
     if (!isValidTime(time)) {
       return "Invalid time format. Use HH:mm.";
+    }
+    const isoDate = formatDateToValidCalendarDateFormat(stringDate);
+    const validDate = new Date(isoDate);
+
+    if (minDate) {
+      const minDateValue = new Date(minDate);
+      if (validDate < minDateValue) {
+        const formattedMinDate = format(minDateValue, "dd/MM/yyyy");
+        return `Date must be on or after ${formattedMinDate}.`;
+      }
+    }
+
+    if (maxDate) {
+      const maxDateValue = new Date(maxDate);
+      if (validDate > maxDateValue) {
+        const formattedMaxDate = format(maxDateValue, "dd/MM/yyyy");
+        return `Date must be on or before ${formattedMaxDate}.`;
+      }
     }
 
     return true;
