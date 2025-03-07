@@ -1,4 +1,3 @@
-import { TokenIcons } from "./amount-field";
 import {
   AmountCurrencyCrypto,
   AmountCurrencyFiat,
@@ -8,42 +7,36 @@ import {
 } from "./types";
 import {
   displayValueAmount,
-  getCountryCurrencies,
-  getTokens,
   isNotSafeValue,
   isValidBigInt,
   isValidNumberGreaterThanMaxSafeInteger,
 } from "./utils";
 import { isValidNumber } from "../number-field/number-field-validations";
 import { useEffect, useMemo, useState } from "react";
+import { Currency } from "../currency-code-field";
 
 interface UseAmountFieldProps {
   value?: AmountValue;
   defaultValue?: AmountValue;
   type: AmountFieldPropsGeneric["type"];
-  allowedCurrencies?: string[];
-  allowedTokens?: string[];
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
-  tokenIcons?: TokenIcons;
-
   precision?: number;
   viewPrecision?: number;
   trailingZeros?: boolean;
+  units: Currency[];
 }
 
 export const useAmountField = ({
   value,
   defaultValue,
   type,
-  allowedCurrencies = [],
-  allowedTokens = [],
   onChange,
   onBlur,
-  tokenIcons,
   precision,
   viewPrecision,
   trailingZeros,
+  units,
 }: UseAmountFieldProps) => {
   const currentValue = value ?? defaultValue;
 
@@ -64,6 +57,7 @@ export const useAmountField = ({
           ? (currentValue as AmountCurrencyUniversal).amount
           : (currentValue as AmountCurrencyFiat | AmountCurrencyCrypto).amount;
   }, [currentValue, type]);
+
   useEffect(() => {
     if (type === "Amount" || type === "AmountPercentage") {
       if (typeof currentValue === "object") {
@@ -197,28 +191,6 @@ export const useAmountField = ({
     type === "AmountCurrencyFiat" ||
     type === "AmountCurrencyCrypto" ||
     type === "AmountCurrencyUniversal";
-
-  // Filter only if allowedCurrencies is provided
-  const optionsCurrencies = getCountryCurrencies(allowedCurrencies);
-  const optionsTokenIcons = getTokens(allowedTokens, tokenIcons);
-
-  // Options for AmountCurrencyUniversal type
-  const optionsForUniversal =
-    optionsCurrencies.length > 0
-      ? optionsCurrencies
-      : optionsTokenIcons.length > 0
-        ? optionsTokenIcons
-        : [];
-
-  const options =
-    type === "AmountCurrencyFiat"
-      ? optionsCurrencies
-      : type === "AmountCurrencyCrypto"
-        ? optionsTokenIcons
-        : // this can also currency fiat but its not possible to select the currency for simbol of the currency
-          type === "AmountCurrencyUniversal"
-          ? optionsForUniversal
-          : [];
 
   // Handle the change of the input
   const handleOnChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -513,15 +485,19 @@ export const useAmountField = ({
   const handleIsInputFocused = () => {
     setInputFocused(true);
   };
+  const options = units;
   //Put the placeholder in case that value its not in the options
-  const selectValueIsNotInOptions =
-    options.find((option) => option.value === valueSelect)?.value ?? "";
+  const validatedValueSelect =
+    valueSelect && units.some((unit) => unit.ticker === valueSelect)
+      ? valueSelect
+      : undefined;
+
   return {
     isPercent,
     isShowSelect,
     options,
     valueInput: displayValueAmountState,
-    valueSelect: selectValueIsNotInOptions,
+    valueSelect: validatedValueSelect,
     handleOnChangeInput,
     handleOnChangeSelect,
     handleBlur,

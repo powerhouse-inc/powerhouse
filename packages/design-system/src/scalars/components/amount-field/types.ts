@@ -20,47 +20,35 @@ export type AmountFieldPropsGeneric =
       type: "Amount";
       value?: Amount;
       trailingZeros?: boolean;
-      allowedCurrencies?: never;
+
       currencySymbol?: never;
-      allowedTokens?: never;
-      tokenIcons?: never;
     }
   | {
       type: "AmountCurrencyFiat";
       value?: AmountCurrencyFiat;
       trailingZeros?: boolean;
-      allowedCurrencies: string[];
       // Disable currencySymbol for AmountCurrencyFiat
       currencySymbol?: never;
-      allowedTokens?: never;
-      tokenIcons?: never;
     }
   | {
       type: "AmountPercentage";
       value?: AmountPercentage;
       trailingZeros?: boolean;
-      allowedCurrencies?: never;
       currencySymbol?: never;
-      allowedTokens?: never;
       tokenIcons?: never;
     }
   | {
       type: "AmountCurrencyCrypto";
       value?: AmountCurrencyCrypto;
       trailingZeros?: never;
-      allowedTokens?: string[];
       tokenIcons?: TokenIcons;
-      allowedCurrencies?: never;
       currencySymbol?: never;
     }
   | {
       type: "AmountCurrencyUniversal";
       value?: AmountCurrencyUniversal;
       trailingZeros?: boolean;
-      allowedCurrencies?: string[];
       currencySymbol?: string;
-      allowedTokens?: string[];
-      tokenIcons?: TokenIcons;
     };
 
 export type AmountValue =
