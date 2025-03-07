@@ -1,5 +1,4 @@
 import {
-  API,
   IProcessorManager,
   isProcessorClass,
   isSubgraphClass,
@@ -120,67 +119,61 @@ const startServer = async (
 
   // be aware: this may not log anything if the log level is above info
   logger.info(`Setting log level to ${logLevel}.`);
-
   const serverPort = Number(process.env.PORT ?? port);
 
-  // start document drive server with all available document models & filesystem storage
-  const driveServer = new ReactorBuilder(baseDocumentModelModules)
-    .withStorage(new FilesystemStorage(storagePath))
-    .build();
+  // If dev load local document models
+  let docModels: DocumentModelModule[] = [];
+  const vite: ViteDevServer | undefined = dev
+    ? await startDevServer()
+    : undefined;
 
-  // init drive server
-  await driveServer.initialize();
-
-  let driveId = drive.global.slug ?? drive.global.id;
-  let driveUrl = "";
-  try {
-    // add default drive
-    const driveDoc = await driveServer.addDrive(drive);
-    driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
-  } catch (e) {
-    if (e instanceof DriveAlreadyExistsError) {
-      console.info("Default drive already exists. Skipping...");
-      if (driveId) {
-        const driveDoc = await (drive.global.slug
-          ? driveServer.getDriveBySlug(drive.global.slug)
-          : driveServer.getDrive(driveId));
-        driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
-      }
-    } else {
-      throw e;
-    }
+  if (vite) {
+    const documentModelsPath = path.join(process.cwd(), "./document-models"); // TODO get path from powerhouse config
+    docModels = joinDocumentModelModules(
+      (await loadDocumentModels(documentModelsPath, vite)) ?? [],
+      baseDocumentModelModules,
+    );
   }
 
+  // Load packages from package manager
   const packagesManager = new PackagesManager(
     packages?.length
       ? { packages }
       : configFile
         ? { configFile }
         : { packages: [] },
-    (error) => console.error(error),
   );
-  packagesManager.onDocumentModelsChange((documentModelModules) => {
-    driveServer.setDocumentModelModules(
-      joinDocumentModelModules(baseDocumentModelModules, documentModelModules),
-    );
+  const packageDocModels = (await packagesManager.loadDocumentModels()) ?? [];
+  docModels = joinDocumentModelModules(docModels, packageDocModels);
+
+  // start document drive server with all available document models & filesystem storage
+  const driveServer = new ReactorBuilder(docModels)
+    .withStorage(new FilesystemStorage(storagePath))
+    .build();
+
+  // init drive server
+  await driveServer.initialize();
+  const driveUrl = await addDefaultDrive(driveServer, drive, serverPort);
+
+  // start api
+  const api = await startAPI(driveServer, {
+    port: serverPort,
+    dbPath,
+    https: options?.https,
   });
 
-  try {
-    // start api
-    const api = await startAPI(driveServer, {
-      port: serverPort,
-      dbPath,
-      https: options?.https,
-    });
-    driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
-    console.log(`  ➜  Reactor:   ${driveUrl}`);
+  if (vite) {
+    api.app.use(vite.middlewares);
+    // load local processors
+    const processorsPath = path.join(process.cwd(), "./processors"); // TODO get path from powerhouse config
+    await loadProcessors(processorsPath, vite, api.processorManager);
 
-    if (dev) {
-      await startDevMode(api, driveServer);
-    }
-  } catch (e) {
-    console.error("Error starting API", e);
+    // load local subgraphs
+    const subgraphsPath = path.join(process.cwd(), "./subgraphs"); // TODO get path from powerhouse config
+    await loadSubgraphs(subgraphsPath, vite, api.subgraphManager);
   }
+
+  console.log(`  ➜  Reactor:   ${driveUrl}`);
 
   return {
     driveUrl,
@@ -200,7 +193,34 @@ const startServer = async (
   };
 };
 
-async function startDevMode(api: API, driveServer: IDocumentDriveServer) {
+async function addDefaultDrive(
+  driveServer: IDocumentDriveServer,
+  drive: DriveInput,
+  serverPort: number,
+) {
+  let driveId = drive.global.slug ?? drive.global.id;
+  try {
+    // add default drive
+    const driveDoc = await driveServer.addDrive(drive);
+    driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
+  } catch (e) {
+    if (e instanceof DriveAlreadyExistsError) {
+      if (driveId) {
+        const driveDoc = await (drive.global.slug
+          ? driveServer.getDriveBySlug(drive.global.slug)
+          : driveServer.getDrive(driveId));
+        driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
+      }
+    } else {
+      throw e;
+    }
+  }
+
+  const driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
+  return driveUrl;
+}
+
+async function startDevServer() {
   const vite = await createViteServer({
     server: { middlewareMode: true, watch: null },
     appType: "custom",
@@ -210,30 +230,11 @@ async function startDevMode(api: API, driveServer: IDocumentDriveServer) {
       },
     },
   });
-  api.app.use(vite.middlewares);
 
-  // load local document models
-  const documentModelsPath = path.join(process.cwd(), "./document-models"); // TODO get path from powerhouse config
-  await loadDocumentModels(documentModelsPath, vite, driveServer);
-
-  // load local processors
-  const processorsPath = path.join(process.cwd(), "./processors"); // TODO get path from powerhouse config
-  await loadProcessors(processorsPath, vite, api.processorManager);
-
-  // load local subgraphs
-  const subgraphsPath = path.join(process.cwd(), "./subgraphs"); // TODO get path from powerhouse config
-  await loadSubgraphs(subgraphsPath, vite, api.subgraphManager);
-
-  /**
-   * TODO: watch code changes on processors and document models
-   */
+  return vite;
 }
 
-async function loadDocumentModels(
-  path: string,
-  vite: ViteDevServer,
-  driveServer: IDocumentDriveServer,
-) {
+async function loadDocumentModels(path: string, vite: ViteDevServer) {
   try {
     console.log("> Loading document models from", path);
     await access(path);
@@ -242,12 +243,7 @@ async function loadDocumentModels(
       DocumentModelModule
     >;
     const localDocumentModelModules = Object.values(localDMs);
-    driveServer.setDocumentModelModules(
-      joinDocumentModelModules(
-        driveServer.getDocumentModelModules(),
-        localDocumentModelModules,
-      ),
-    );
+    return localDocumentModelModules;
   } catch (e) {
     if ((e as FSError).code === "ENOENT") {
       console.warn("No local document models found");
