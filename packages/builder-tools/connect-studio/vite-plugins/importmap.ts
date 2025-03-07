@@ -220,19 +220,14 @@ async function generateImportMap(
     }
   }
 
-  const indexPath = path.join(outputDir, "index.html");
+  return importMap;
 
-  let html = await fs.readFile(indexPath, "utf-8");
-  const importMapScript = `<script type="importmap">${JSON.stringify(
-    { imports: importMap },
-    null,
-    2,
-  )}</script>`;
-
-  html = html.replace("</head>", `${importMapScript}\n</head>`);
-  await fs.writeFile(indexPath, html, "utf-8");
-
-  console.log("✅ Import map added to index.html");
+  // const indexPath = path.join(outputDir, "index.html");
+  // let html = await fs.readFile(indexPath, "utf-8");
+  // html = html.replace("</head>", `${importMapScript}\n</head>`);
+  // await fs.writeFile(indexPath, html, "utf-8");
+  // console.log(indexPath);
+  // console.log("✅ Import map added to index.html");
 }
 
 /**
@@ -254,11 +249,54 @@ export function generateImportMapPlugin(
 ): PluginOption {
   return {
     name: "vite-plugin-importmap",
-    async closeBundle() {
-      await generateImportMap(outputDir, dependencies);
+    enforce: "post",
+    async configResolved() {
+      // await generateImportMap(outputDir, dependencies);
     },
-    async configureServer() {
-      await generateImportMap(outputDir, dependencies);
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.includes("/modules/")) {
+          req.url = req.url.replace(/^.*(?=\/modules)/, "");
+        }
+        next();
+      });
+      // await generateImportMap(outputDir, dependencies);
+    },
+    async transformIndexHtml(html) {
+      const importMap = await generateImportMap(outputDir, dependencies);
+      const importMapString = JSON.stringify({ imports: importMap }, null, 2);
+
+      // Regex to find existing import map
+      const importMapRegex = /<script type="importmap">(.*?)<\/script>/s;
+      const match = html.match(importMapRegex);
+
+      if (match) {
+        // If an import map exists, merge the imports
+        try {
+          const existingImportMap = JSON.parse(match[1]);
+          existingImportMap.imports = {
+            ...existingImportMap.imports,
+            ...importMap,
+          };
+
+          const mergedImportMapString = JSON.stringify(
+            existingImportMap,
+            null,
+            2,
+          );
+
+          return html.replace(
+            importMapRegex,
+            `<script type="importmap">${mergedImportMapString}</script>`,
+          );
+        } catch (error) {
+          console.error("⚠️ Error parsing existing import map:", error);
+        }
+      }
+
+      // If no import map exists, add a new one
+      const importMapScript = `<script type="importmap">${importMapString}</script>`;
+      return html.replace("</head>", `${importMapScript}\n</head>`);
     },
   };
 }
