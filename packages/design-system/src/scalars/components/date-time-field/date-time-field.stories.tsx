@@ -38,16 +38,18 @@ const meta: Meta<typeof DateTimeField> = {
     },
     minDate: {
       control: "date",
-      description: "Minimum date",
+      description: "Minimum selectable date in the date picker",
       table: {
+        type: { summary: "date" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "showDateSelect", truthy: true },
     },
     maxDate: {
       control: "date",
-      description: "Maximum date",
+      description: "Maximum selectable date in the date picker",
       table: {
+        type: { summary: "date" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "showDateSelect", truthy: true },
