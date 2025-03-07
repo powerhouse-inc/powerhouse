@@ -1,5 +1,5 @@
 import { renderWithForm } from "@/scalars/lib/testing";
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { DatePickerField } from "./date-picker-field";
 import userEvent from "@testing-library/user-event";
 
@@ -132,9 +132,8 @@ describe("DatePickerField", () => {
     const input = screen.getByRole("textbox");
 
     expect(input).toBeInTheDocument();
-    // Intentamos escribir una fecha anterior al minDate
     await userEvent.type(input, "2025-01-10");
-    await userEvent.tab(); // Trigger validation on blur
+    await userEvent.tab();
     expect(screen.getByText(/Date must be on or after/i)).toBeInTheDocument();
   });
 });
@@ -151,8 +150,7 @@ it("should disable dates after minDate when user adds a value in the input", asy
   const input = screen.getByRole("textbox");
 
   expect(input).toBeInTheDocument();
-  // Intentamos escribir una fecha anterior al minDate
   await userEvent.type(input, "2025-01-20");
-  await userEvent.tab(); // Trigger validation on blur
+  await userEvent.tab();
   expect(screen.getByText(/Date must be on or before/i)).toBeInTheDocument();
 });
