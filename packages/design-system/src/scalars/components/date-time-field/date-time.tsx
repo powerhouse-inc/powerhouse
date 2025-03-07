@@ -67,6 +67,8 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
       dateIntervals,
       timeZone,
       showTimezoneSelect,
+      minDate,
+      maxDate,
       ...props
     },
     ref,
@@ -124,6 +126,8 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
       dateIntervals,
       timeZone,
       showTimezoneSelect,
+      minDate,
+      maxDate,
     });
     return (
       <FormGroup>
