@@ -1,4 +1,4 @@
-import { build } from "esbuild";
+import { build, BuildResult } from "esbuild";
 import fg from "fast-glob";
 import fs from "node:fs/promises";
 import { builtinModules } from "node:module";
@@ -139,13 +139,14 @@ function importFromEsmSh(name: string) {
   };
 }
 
+type BuildModule = () => Promise<BuildResult>;
+
 async function importFromNodeModules(
   name: string,
   modulesDir: string,
   importMapDeps: Set<string>,
   baseUrl: string,
-): Promise<Record<string, string>> {
-  console.log(`Bundling dependency: ${name}`);
+): Promise<{ importMap: Record<string, string>; buildModule: BuildModule }> {
   const importMap: Record<string, string> = {};
 
   const { packageJson, path: srcPath } = await findPackageJson(name);
@@ -163,20 +164,23 @@ async function importFromNodeModules(
   const outputPath = path.join(modulesDir, name);
 
   // Bundle and tree-shake only dependencies (exclude the actual library code)
-  await build({
-    entryPoints: Array.from(entries.values()).map((value) =>
-      path.join(srcPath, value.file),
-    ),
-    outdir: outputPath,
-    bundle: true,
-    format: "esm",
-    platform: "browser",
-    target: "esnext",
-    splitting: true,
-    external: nodeModules.concat(Array.from(importMapDeps)), // Exclude dependencies already in import map
-    sourcemap: false,
-    minify: false,
-  });
+  const buildModule = () => {
+    console.log(`Bundling dependency: ${name}`);
+    return build({
+      entryPoints: Array.from(entries.values()).map((value) =>
+        path.join(srcPath, value.file),
+      ),
+      outdir: outputPath,
+      bundle: true,
+      format: "esm",
+      platform: "browser",
+      target: "esnext",
+      splitting: true,
+      external: nodeModules.concat(Array.from(importMapDeps)), // Exclude dependencies already in import map
+      sourcemap: false,
+      minify: false,
+    });
+  };
 
   // Add entry to import map
   importMap[name] = `./modules/${name}/${fileName}.js`;
@@ -188,14 +192,17 @@ async function importFromNodeModules(
     );
   });
 
-  return importMap;
+  return { importMap, buildModule };
 }
 
 async function generateImportMap(
   outputDir: string,
   dependencies: (string | { name: string; provider: Provider })[],
   baseUrl: string,
-) {
+): Promise<{
+  importMap: Record<string, string>;
+  buildModules: undefined | (() => Promise<void>);
+}> {
   const modulesDir = path.join(outputDir, "/modules");
   await fs.mkdir(modulesDir, { recursive: true });
   const importMapDeps = new Set(
@@ -203,6 +210,8 @@ async function generateImportMap(
   );
 
   let importMap: Record<string, string> = {};
+
+  const buildModules: BuildModule[] = [];
 
   for (const dependency of dependencies) {
     const name = typeof dependency === "string" ? dependency : dependency.name;
@@ -213,19 +222,25 @@ async function generateImportMap(
       const imports = importFromEsmSh(name);
       importMap = { ...importMap, ...imports };
     } else if (provider.toString() === "node_modules") {
-      const imports = await importFromNodeModules(
+      const { importMap: imports, buildModule } = await importFromNodeModules(
         name,
         modulesDir,
         importMapDeps,
         baseUrl,
       );
       importMap = { ...importMap, ...imports };
+      buildModules.push(buildModule);
     } else {
       throw new Error(`Unsupported provider: ${provider as string}`);
     }
   }
 
-  return importMap;
+  return {
+    importMap,
+    buildModules: async () => {
+      await Promise.all(buildModules.map((build) => build()));
+    },
+  };
 }
 
 async function addImportMapToHTML(
@@ -283,13 +298,31 @@ export function generateImportMapPlugin(
   outputDir: string,
   dependencies: (string | { name: string; provider: Provider })[],
 ): PluginOption {
+  let buildModules: (() => Promise<void>) | undefined = undefined;
   let importMap: Record<string, string> = {};
   return {
     name: "vite-plugin-importmap",
     enforce: "post",
+    // generates import map according to the base url
+    // and collects build method for each dependency
     async configResolved(config) {
-      importMap = await generateImportMap(outputDir, dependencies, config.base);
+      const result = await generateImportMap(
+        outputDir,
+        dependencies,
+        config.base,
+      );
+      importMap = result.importMap;
+      buildModules = result.buildModules;
     },
+    // builds modules when building the bundle
+    closeBundle() {
+      return buildModules?.();
+    },
+    // builds modules when starting the dev server
+    configureServer() {
+      return buildModules?.();
+    },
+    // adds importmap to the html
     async transformIndexHtml(html) {
       const newHtml = await addImportMapToHTML(importMap, html);
       return newHtml || html;

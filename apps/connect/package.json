@@ -12,7 +12,9 @@
         "node": ">=20.0.0"
     },
     "files": [
-        "dist"
+        "dist",
+        "nginx.conf",
+        "nginx.sh"
     ],
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",
@@ -39,21 +41,13 @@
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
-        "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
-        "build": "npm run build:web",
+        "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
         "cy:open": "cypress open",
         "build:service-worker": "tsc --build ./tsconfig.sw.json"
     },
-    "dependencies": {
-        "commander": "^12.1.0",
-        "graphql-request": "^6.1.0",
-        "magic-string": "^0.30.17"
-    },
-    "peerDependencies": {
-        "@powerhousedao/design-system": "workspace:*"
-    },
+    "dependencies": {},
     "devDependencies": {
         "@electron-forge/cli": "^6.1.1",
         "@electron-forge/maker-deb": "^6.1.1",
@@ -93,6 +87,7 @@
         "electron-store": "^8.1.0",
         "esbuild": "^0.24.0",
         "graphql": "^16.8.1",
+        "graphql-request": "^6.1.0",
         "i18next": "^23.7.6",
         "jotai": "^2.1.0",
         "jotai-effect": "^1.1.6",
