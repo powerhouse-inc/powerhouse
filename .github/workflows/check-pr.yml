@@ -70,7 +70,7 @@ jobs:
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
               "title": "⚠️ Job Failed: CI Build",
-              "description": "**Author:** '"${MENTION_STRING}"\n'**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`${{ github.job }}`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`Verify`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
           }'
