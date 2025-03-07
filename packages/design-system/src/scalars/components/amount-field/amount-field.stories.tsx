@@ -45,6 +45,15 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    symbolPosition: {
+      control: "select",
+      description: "Position of the currency symbol",
+      options: ["left", "right"],
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     step: {
       control: "number",
       description: "The step value for the amount field",

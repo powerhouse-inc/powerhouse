@@ -32,6 +32,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
     currencyPosition?: "left" | "right";
+    symbolPosition?: "left" | "right";
     allowNegative?: boolean;
     // handle precision
     viewPrecision?: number;
@@ -71,6 +72,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
       placeholderSelect,
       units,
       includeCurrencySymbols,
+      symbolPosition,
     },
     ref,
   ) => {
@@ -127,6 +129,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                 onChange={handleOnChangeSelect}
                 placeholder={placeholderSelect}
                 includeCurrencySymbols={includeCurrencySymbols}
+                symbolPosition={symbolPosition}
                 className={cn(
                   "rounded-l-md rounded-r-none border border-gray-300",
                   "border-r-[0.5px]",
@@ -190,6 +193,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               onChange={handleOnChangeSelect}
               name=""
               placeholder={placeholderSelect}
+              symbolPosition={symbolPosition}
               className={cn(
                 "rounded-l-none rounded-r-md border border-gray-300",
                 "border-l-[0.5px]",
