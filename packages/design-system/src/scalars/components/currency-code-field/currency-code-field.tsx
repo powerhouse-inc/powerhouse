@@ -13,6 +13,7 @@ export interface CurrencyCodeFieldProps
   includeCurrencySymbols?: boolean;
   allowedTypes?: CurrencyType | "Both";
   favoriteCurrencies?: string[];
+  symbolPosition?: "left" | "right";
 }
 
 export const CurrencyCodeFieldRaw = React.forwardRef<
@@ -24,6 +25,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       placeholder,
       currencies,
       includeCurrencySymbols = true,
+      symbolPosition = "right",
       // TODO: implement following props
       // allowedTypes = "Both",
       // favoriteCurrencies,
@@ -36,7 +38,10 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
         currencies?.map((currency) => {
           let label = currency.label ?? currency.ticker;
           if (includeCurrencySymbols && currency.symbol) {
-            label = `${label} (${currency.symbol})`;
+            label =
+              symbolPosition === "right"
+                ? `${label} (${currency.symbol})`
+                : `(${currency.symbol}) ${label}`;
           }
           return {
             label,
@@ -44,7 +49,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
           };
         }) ?? []
       );
-    }, [currencies, includeCurrencySymbols]);
+    }, [currencies, includeCurrencySymbols, symbolPosition]);
 
     return (
       <SelectFieldRaw
