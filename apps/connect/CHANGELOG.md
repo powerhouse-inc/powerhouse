@@ -1,3 +1,14 @@
+## 1.0.0-dev.218 (2025-03-07)
+
+### 🩹 Fixes
+
+- **connect,builder-tools:** fixed connect bundling ([7b1e6f67](https://github.com/powerhouse-inc/powerhouse/commit/7b1e6f67))
+- **connect:** fixed importmap generation ([cffcb97b](https://github.com/powerhouse-inc/powerhouse/commit/cffcb97b))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 1.0.0-dev.217 (2025-03-06)
 
 ### 🚀 Features
