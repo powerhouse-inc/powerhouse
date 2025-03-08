@@ -109,14 +109,7 @@ export const RadioGroupFieldRaw = React.forwardRef<
   },
 );
 
-const RadioGroupFieldWithValidation =
+export const RadioGroupField =
   withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);
-
-export const RadioGroupField = React.forwardRef<
-  HTMLDivElement,
-  RadioGroupFieldProps
->((props, ref) => {
-  return <RadioGroupFieldWithValidation {...props} innerRef={ref} />;
-});
 
 RadioGroupField.displayName = "RadioGroupField";

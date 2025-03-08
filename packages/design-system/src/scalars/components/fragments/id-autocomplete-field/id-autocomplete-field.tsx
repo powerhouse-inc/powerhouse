@@ -269,14 +269,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
   },
 );
 
-const IdAutocompleteFieldWithValidation =
+export const IdAutocompleteField =
   withFieldValidation<IdAutocompleteFieldProps>(IdAutocompleteFieldRaw);
-
-export const IdAutocompleteField = React.forwardRef<
-  HTMLInputElement,
-  IdAutocompleteFieldProps
->((props, ref) => {
-  return <IdAutocompleteFieldWithValidation {...props} innerRef={ref} />;
-});
 
 IdAutocompleteField.displayName = "IdAutocompleteField";

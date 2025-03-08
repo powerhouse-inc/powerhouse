@@ -107,13 +107,6 @@ export const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
   },
 );
 
-const TextFieldWithValidation =
-  withFieldValidation<TextFieldProps>(TextFieldRaw);
-
-export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
-  (props, ref) => {
-    return <TextFieldWithValidation {...props} innerRef={ref} />;
-  },
-);
+export const TextField = withFieldValidation<TextFieldProps>(TextFieldRaw);
 
 TextField.displayName = "TextField";

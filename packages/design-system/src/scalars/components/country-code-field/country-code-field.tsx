@@ -87,8 +87,9 @@ const CountryCodeFieldRaw = React.forwardRef<
   },
 );
 
-const CountryCodeFieldWithValidation =
-  withFieldValidation<CountryCodeFieldProps>(CountryCodeFieldRaw, {
+export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
+  CountryCodeFieldRaw,
+  {
     validations: {
       _validOption:
         ({ allowedCountries, excludedCountries, includeDependentAreas }) =>
@@ -127,13 +128,7 @@ const CountryCodeFieldWithValidation =
           return true;
         },
     },
-  });
-
-export const CountryCodeField = React.forwardRef<
-  HTMLButtonElement,
-  CountryCodeFieldProps
->((props, ref) => {
-  return <CountryCodeFieldWithValidation {...props} innerRef={ref} />;
-});
+  },
+);
 
 CountryCodeField.displayName = "CountryCodeField";

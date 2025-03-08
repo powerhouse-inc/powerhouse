@@ -213,14 +213,7 @@ export const SelectFieldRaw = React.forwardRef<
   },
 );
 
-const SelectFieldWithValidation =
+export const SelectField =
   withFieldValidation<SelectFieldProps>(SelectFieldRaw);
-
-export const SelectField = React.forwardRef<
-  HTMLButtonElement,
-  SelectFieldProps
->((props, ref) => {
-  return <SelectFieldWithValidation {...props} innerRef={ref} />;
-});
 
 SelectField.displayName = "SelectField";

@@ -156,7 +156,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
   },
 );
 
-const AIDFieldWithValidation = withFieldValidation<AIDFieldProps>(AIDFieldRaw, {
+export const AIDField = withFieldValidation<AIDFieldProps>(AIDFieldRaw, {
   validations: {
     _validAIDFormat:
       ({ supportedNetworks }) =>
@@ -212,11 +212,5 @@ const AIDFieldWithValidation = withFieldValidation<AIDFieldProps>(AIDFieldRaw, {
       },
   },
 });
-
-export const AIDField = React.forwardRef<HTMLInputElement, AIDFieldProps>(
-  (props, ref) => {
-    return <AIDFieldWithValidation {...props} innerRef={ref} />;
-  },
-);
 
 AIDField.displayName = "AIDField";

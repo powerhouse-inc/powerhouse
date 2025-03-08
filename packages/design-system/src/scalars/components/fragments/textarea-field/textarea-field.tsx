@@ -217,14 +217,7 @@ export const TextareaFieldRaw = React.forwardRef<
   },
 );
 
-const TextareaFieldWithValidation =
+export const TextareaField =
   withFieldValidation<TextareaProps>(TextareaFieldRaw);
-
-export const TextareaField = React.forwardRef<
-  HTMLTextAreaElement,
-  TextareaProps
->((props, ref) => {
-  return <TextareaFieldWithValidation {...props} innerRef={ref} />;
-});
 
 TextareaField.displayName = "TextareaField";
