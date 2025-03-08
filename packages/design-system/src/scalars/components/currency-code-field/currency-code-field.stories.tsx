@@ -63,7 +63,16 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    searchable: {
+      control: "boolean",
+      description: "Whether the dropdown is searchable",
+      table: {
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
+
   args: {
     name: "currency-code-field",
     placeholder: "Select a currency",

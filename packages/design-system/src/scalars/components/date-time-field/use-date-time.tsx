@@ -155,6 +155,8 @@ export const useDateTime = ({
   dateIntervals,
   timeZone,
   showTimezoneSelect = true,
+  minDate,
+  maxDate,
 }: DateTimeFieldProps) => {
   const internalFormat = getDateFormat(dateFormat ?? "");
   const [isOpen, setIsOpen] = React.useState(false);
@@ -212,6 +214,8 @@ export const useDateTime = ({
     disableFutureDates,
     autoClose,
     weekStart,
+    minDate,
+    maxDate,
   });
 
   const timeInput = getTimeFromValue(value ?? defaultValue ?? "");

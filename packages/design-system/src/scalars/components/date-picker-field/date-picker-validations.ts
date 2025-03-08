@@ -9,7 +9,7 @@ import {
 } from "../date-time-field/utils";
 
 export const validateDatePicker =
-  ({ minDate, maxDate, dateFormat }: DatePickerFieldProps) =>
+  ({ dateFormat, minDate, maxDate }: DatePickerFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;
@@ -27,21 +27,21 @@ export const validateDatePicker =
     }
     const isoDate = formatDateToValidCalendarDateFormat(stringDate);
     const validDate = new Date(isoDate);
+
     if (minDate) {
       const minDateValue = new Date(minDate);
       if (validDate < minDateValue) {
-        const formattedMinDate = format(minDateValue, "yyyy-MM-dd");
-        return `Date must be on or after ${formattedMinDate}`;
+        const formattedMinDate = format(minDateValue, "dd/MM/yyyy");
+        return `Date must be on or after ${formattedMinDate}.`;
       }
     }
 
     if (maxDate) {
       const maxDateValue = new Date(maxDate);
       if (validDate > maxDateValue) {
-        const formattedMaxDate = format(maxDateValue, "yyyy-MM-dd");
-        return `Date must be on or before ${formattedMaxDate}`;
+        const formattedMaxDate = format(maxDateValue, "dd/MM/yyyy");
+        return `Date must be on or before ${formattedMaxDate}.`;
       }
     }
-
     return true;
   };

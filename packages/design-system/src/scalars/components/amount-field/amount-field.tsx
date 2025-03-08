@@ -38,7 +38,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     viewPrecision?: number;
     precision?: number;
     placeholderSelect?: string;
-    units: Currency[];
+    units?: Currency[];
     includeCurrencySymbols?: boolean;
   };
 
@@ -130,6 +130,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                 placeholder={placeholderSelect}
                 includeCurrencySymbols={includeCurrencySymbols}
                 symbolPosition={symbolPosition}
+                searchable={false}
                 className={cn(
                   "rounded-l-md rounded-r-none border border-gray-300",
                   "border-r-[0.5px]",
@@ -194,6 +195,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               name=""
               placeholder={placeholderSelect}
               symbolPosition={symbolPosition}
+              searchable={false}
               className={cn(
                 "rounded-l-none rounded-r-md border border-gray-300",
                 "border-l-[0.5px]",

@@ -14,6 +14,7 @@ export interface CurrencyCodeFieldProps
   allowedTypes?: CurrencyType | "Both";
   favoriteCurrencies?: string[];
   symbolPosition?: "left" | "right";
+  searchable?: boolean;
 }
 
 export const CurrencyCodeFieldRaw = React.forwardRef<
@@ -26,6 +27,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       currencies,
       includeCurrencySymbols = true,
       symbolPosition = "right",
+      searchable = false,
       // TODO: implement following props
       // allowedTypes = "Both",
       // favoriteCurrencies,
@@ -56,7 +58,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
         ref={ref}
         options={options}
         selectionIcon="checkmark"
-        searchable
+        searchable={searchable}
         multiple={false}
         placeholder={placeholder}
         {...props}

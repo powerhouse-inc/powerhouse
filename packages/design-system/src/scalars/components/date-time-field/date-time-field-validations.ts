@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import {
   formatDateToValidCalendarDateFormat,
   getDateFromValue,
@@ -12,9 +11,10 @@ import {
   normalizeMonthFormat,
 } from "./utils";
 import { DateFieldValue } from "../date-picker-field/types";
+import { format } from "date-fns";
 
 export const dateTimeFieldValidations =
-  ({ minDate, maxDate, dateFormat }: DatePickerFieldProps) =>
+  ({ dateFormat, minDate, maxDate }: DatePickerFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;
@@ -41,7 +41,6 @@ export const dateTimeFieldValidations =
     if (!isValidTime(time)) {
       return "Invalid time format. Use HH:mm.";
     }
-
     const isoDate = formatDateToValidCalendarDateFormat(stringDate);
     const validDate = new Date(isoDate);
 
