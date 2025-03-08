@@ -53,6 +53,21 @@ export const withFieldValidation = <T extends PossibleProps>(
       } = useFormContext();
       const { submitCount } = useFormState();
 
+      const onBlurControllerRef = React.useRef<(() => void) | null>(null);
+      const internalValueRef = React.useRef<unknown>(null);
+
+      const [internalValueSignal, setInternalValueSignal] = useState(false);
+
+      const updateInternalValueRefAndSignal = useCallback(
+        (internalValue: unknown) => {
+          if (internalValueRef.current !== internalValue) {
+            internalValueRef.current = internalValue;
+            setInternalValueSignal((prev) => !prev);
+          }
+        },
+        [],
+      );
+
       const errors = [
         ...(formErrors[name]?.types
           ? (Object.values(formErrors[name].types ?? []) as string[])
@@ -97,8 +112,6 @@ export const withFieldValidation = <T extends PossibleProps>(
           `[Field: ${name}] Value prop provided without onChange so it will be ignored. Use disabled/readOnly if you want to prevent changes.`,
         );
       }
-
-      const onBlurControllerRef = React.useRef<(() => void) | null>(null);
 
       const onBlurCallback = useCallback(
         (event: React.FocusEvent<HTMLInputElement>) => {
@@ -149,14 +162,19 @@ export const withFieldValidation = <T extends PossibleProps>(
             if (submitCount > 0) {
               void trigger(name);
             }
-          } else {
+          } else if (showErrorOnChange) {
             // default validation behavior was overridden
-            if (showErrorOnChange) {
-              void trigger(name);
-            }
+            void trigger(name);
           }
         },
-        [showErrorOnChange, showErrorOnBlur],
+        [
+          // internalValueSignal is used to detect changes in the value of the field (internalValue) that is controlled by the form
+          // internalValue is used to trigger the validation on change, so we need to add internalValueSignal to the dependencies
+          // otherwise the validation will not be triggered on change
+          internalValueSignal,
+          showErrorOnChange,
+          showErrorOnBlur,
+        ],
       );
 
       return (
@@ -176,8 +194,10 @@ export const withFieldValidation = <T extends PossibleProps>(
               ...rest
             },
           }) => {
-            // ref with current value of onBlurController
+            // ref to onBlurController
             onBlurControllerRef.current = onBlurController;
+            // update internalValueRef & internalValueSignal if internalValue changed
+            updateInternalValueRefAndSignal(internalValue);
 
             // extract ref from rest
             const { ref: fieldRef } = rest;
