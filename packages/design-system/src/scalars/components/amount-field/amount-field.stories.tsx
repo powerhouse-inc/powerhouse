@@ -30,7 +30,7 @@ const meta = {
       defaultValues: {
         "amount-field": {
           amount: undefined,
-          currency: "",
+          unit: "",
         },
       },
     },
@@ -183,12 +183,13 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     placeholder: "0",
+    units: mappedFiatCurrencies,
     label: "Enter Amount and Select Currency",
     placeholderSelect: "CUR",
-    type: "AmountCurrencyFiat",
+    type: "AmountFiat",
     value: {
       amount: undefined,
-      currency: "",
+      unit: "",
     },
   },
 };
@@ -198,9 +199,9 @@ export const WithValue: Story = {
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyCrypto",
+    type: "AmountCrypto",
     value: {
-      currency: "USD",
+      unit: "BTC",
       amount: 100 as unknown as bigint,
     },
   },
@@ -227,11 +228,11 @@ export const CurrencyIcon: Story = {
     units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyCrypto",
+    type: "AmountCrypto",
     placeholderSelect: "CUR",
     value: {
       amount: 3454564564 as unknown as bigint,
-      currency: "BTC",
+      unit: "BTC",
     },
   },
 };
@@ -243,7 +244,7 @@ export const WithToken: Story = {
       defaultValues: {
         "amount-field": {
           amount: "",
-          currency: "",
+          unit: "",
         },
       },
     },
@@ -251,11 +252,11 @@ export const WithToken: Story = {
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyUniversal",
+    type: "AmountCurrency",
     placeholderSelect: "CUR",
     value: {
       amount: 123 as unknown as bigint,
-      currency: "BTC",
+      unit: "BTC",
     },
   },
 };
@@ -281,12 +282,12 @@ export const Disable: Story = {
     units: mappedCryptoCurrencies,
     label: "Enter Amount ",
     placeholder: "Enter Amount",
-    type: "AmountCurrencyFiat",
+    type: "AmountFiat",
     placeholderSelect: "CUR",
     disabled: true,
     value: {
       amount: 9,
-      currency: "USD",
+      unit: "ETH",
     },
   },
 };
@@ -297,7 +298,7 @@ export const WithValueUniversalAmountCurrency: Story = {
       defaultValues: {
         "amount-field": {
           amount: 123,
-          currency: "USD",
+          unit: "BTC",
         },
       },
     },
@@ -307,10 +308,10 @@ export const WithValueUniversalAmountCurrency: Story = {
     label: "Label",
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
-    type: "AmountCurrencyUniversal",
+    type: "AmountCurrency",
     value: {
       amount: 123,
-      currency: "USD",
+      unit: "BTC",
     },
   },
 };
