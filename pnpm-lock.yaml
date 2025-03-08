@@ -608,30 +608,9 @@ importers:
         specifier: ^5.4.3
         version: 5.4.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
     devDependencies:
-      '@powerhousedao/analytics-engine-core':
-        specifier: ^0.3.2
-        version: 0.3.2
-      '@powerhousedao/analytics-engine-graphql':
-        specifier: ^0.2.2
-        version: 0.2.2
-      '@powerhousedao/analytics-engine-pg':
-        specifier: ^0.4.0
-        version: 0.4.0
       concurrently:
         specifier: ^9.1.2
         version: 9.1.2
-      document-drive:
-        specifier: workspace:*
-        version: link:../../packages/document-drive
-      graphql-tag:
-        specifier: ^2.12.6
-        version: 2.12.6(graphql@16.10.0)
-      knex:
-        specifier: ^3.1.0
-        version: 3.1.0(pg@8.13.3)(sqlite3@5.1.7)
-      luxon:
-        specifier: ^3.5.0
-        version: 3.5.0
       nodemon:
         specifier: ^3.1.9
         version: 3.1.9
@@ -5016,9 +4995,6 @@ packages:
 
   '@powerhousedao/analytics-engine-knex@0.4.0':
     resolution: {integrity: sha512-WzMwRR8K1p/MA8SpkOXv6IR5KUjJv7QRce8Y372H5agjBlZvE8WwDUDgsNRcGEX+1ArD87vverkN/c6j+ui+ag==}
-
-  '@powerhousedao/analytics-engine-pg@0.4.0':
-    resolution: {integrity: sha512-Io/8qZU1jBuCNJoD9zaekT8Vesy7nhGIAiqQCal1O31cs3zkn62/vUjbtwMFSvEPMKFF8xeod8jkBJ3c7DWTaA==}
 
   '@powerhousedao/builder-tools@0.2.7':
     resolution: {integrity: sha512-FubI1x7kOqgrsDYDZ7OJg/nv2ZF7iVXNG3AFuZgJKSr4Vt8bxsSblw+LpNZ0toGvys/fUw1x1ZPQDfnFPC1TjA==}
@@ -20653,23 +20629,6 @@ snapshots:
       '@types/luxon': 3.4.2
       '@types/node': 22.13.9
       '@types/pg': 8.11.11
-      date-fns: 3.6.0
-      knex: 3.1.0(pg@8.13.3)(sqlite3@5.1.7)
-      luxon: 3.5.0
-      pg: 8.13.3
-    transitivePeerDependencies:
-      - better-sqlite3
-      - mysql
-      - mysql2
-      - pg-native
-      - sqlite3
-      - supports-color
-      - tedious
-
-  '@powerhousedao/analytics-engine-pg@0.4.0':
-    dependencies:
-      '@powerhousedao/analytics-engine-core': 0.3.0
-      '@powerhousedao/analytics-engine-knex': 0.4.0(sqlite3@5.1.7)
       date-fns: 3.6.0
       knex: 3.1.0(pg@8.13.3)(sqlite3@5.1.7)
       luxon: 3.5.0
