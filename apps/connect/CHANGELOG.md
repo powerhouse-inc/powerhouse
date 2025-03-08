@@ -1,3 +1,15 @@
+## 1.0.0-dev.219 (2025-03-08)
+
+### 🩹 Fixes
+
+- **ph-cmd:** build with tsc ([26965361](https://github.com/powerhouse-inc/powerhouse/commit/26965361))
+- **ph-cli:** cleanup dependencies ([c1fb1b63](https://github.com/powerhouse-inc/powerhouse/commit/c1fb1b63))
+- **switchboard:** updated sky-ph dependency ([39ddbfdf](https://github.com/powerhouse-inc/powerhouse/commit/39ddbfdf))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.218 (2025-03-07)
 
 ### 🩹 Fixes
