@@ -1,7 +1,7 @@
 import { DocumentEditorContainer } from '#components/document-editor-container';
 import { DriveEditorContainer } from '#components/drive-editor-container';
 import { useUiNodes } from '#hooks/useUiNodes';
-import { FILE, Footer } from '@powerhousedao/design-system';
+import { FILE } from '@powerhousedao/design-system';
 import { useEffect } from 'react';
 
 export default function Content() {
@@ -31,9 +31,6 @@ export default function Content() {
             ) : selectedDriveNode ? (
                 <DriveEditorContainer key={selectedDriveNode.id} />
             ) : null}
-            <div className="flex w-full flex-row justify-end pr-3 pt-3">
-                <Footer />
-            </div>
         </div>
     );
 }

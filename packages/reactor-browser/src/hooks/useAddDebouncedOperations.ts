@@ -1,5 +1,5 @@
 import { Operation, PHDocument } from "document-model";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { IDocumentDriveServer } from "document-drive";
 import { useDocumentDrives } from "./useDocumentDrives.js";
@@ -56,10 +56,16 @@ export function useAddDebouncedOperations(
   const { driveId, documentId } = props;
   const [documentDrives] = useDocumentDrives(reactor);
 
+  const documentDrivesRef = useRef(documentDrives);
+
   const { isAllowedToEditDocuments } = useUserPermissions() || {
     isAllowedToCreateDocuments: false,
     isAllowedToEditDocuments: false,
   };
+
+  useEffect(() => {
+    documentDrivesRef.current = documentDrives;
+  }, [documentDrives]);
 
   const addOperations = useCallback(
     async (driveId: string, id: string, operations: Operation[]) => {
@@ -71,7 +77,7 @@ export function useAddDebouncedOperations(
         throw new Error("Reactor is not loaded");
       }
 
-      const drive = documentDrives.find(
+      const drive = documentDrivesRef.current.find(
         (drive) => drive.state.global.id === driveId,
       );
       if (!drive) {
@@ -85,7 +91,7 @@ export function useAddDebouncedOperations(
       );
       return newDocument.document;
     },
-    [documentDrives, isAllowedToEditDocuments, reactor],
+    [isAllowedToEditDocuments, reactor],
   );
 
   const addDebouncedOperations = useMemo(() => {

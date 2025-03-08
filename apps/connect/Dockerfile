@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 # Install system dependencies required by node-gyp
@@ -11,8 +11,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
-RUN pnpm build:all
-RUN pnpm --filter "@powerhousedao/connect" build:web --base ${BASE_PATH}
+RUN pnpm nx run @powerhousedao/connect:build --base ${BASE_PATH}
 RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned
 
 # Final production image
@@ -29,8 +28,8 @@ ENV PH_CONNECT_SENTRY_DSN=${PH_CONNECT_SENTRY_DSN}
 ARG PH_CONNECT_SENTRY_ENV=""
 ENV PH_CONNECT_SENTRY_ENV=${PH_CONNECT_SENTRY_ENV}
 COPY --from=build /app/pruned/dist /usr/share/nginx/html
-COPY --from=build /app/apps/connect/nginx.conf /etc/nginx/conf.d/default.conf.template
-COPY --from=build /app/apps/connect/nginx.sh /usr/share/nginx/nginx.sh
+COPY --from=build /app/pruned/nginx.conf /etc/nginx/conf.d/default.conf.template
+COPY --from=build /app/pruned/nginx.sh /usr/share/nginx/nginx.sh
 RUN chmod +x /usr/share/nginx/nginx.sh
 RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || echo "Link already exists"
 ENTRYPOINT ["/usr/share/nginx/nginx.sh"]

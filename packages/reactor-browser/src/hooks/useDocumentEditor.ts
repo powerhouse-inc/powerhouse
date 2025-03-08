@@ -6,6 +6,7 @@ import {
   OperationFromDocument,
   PHDocument,
 } from "document-model";
+import { DID, IConnectCrypto } from "../crypto/index.js";
 import { User } from "../renown/types.js";
 import { addActionContext, signOperation } from "../utils/signature.js";
 import { useAddDebouncedOperations } from "./useAddDebouncedOperations.js";
@@ -31,9 +32,12 @@ export type UseDocumentEditorProps<TDocument extends PHDocument> = {
   onChange?: (document: TDocument) => void;
 };
 
-export function useDocumentEditor<TDocument extends PHDocument>(
+export function useDocumentEditorProps<TDocument extends PHDocument>(
   reactor: IDocumentDriveServer | undefined,
-  props: UseDocumentEditorProps<TDocument>,
+  props: UseDocumentEditorProps<TDocument> & {
+    connectDid?: DID;
+    sign: IConnectCrypto["sign"];
+  },
 ) {
   const {
     nodeId,
@@ -41,10 +45,9 @@ export function useDocumentEditor<TDocument extends PHDocument>(
     documentModelModule,
     document: initialDocument,
     user,
+    connectDid,
+    sign,
   } = props;
-
-  const connectDid = useConnectDid();
-  const { sign } = useConnectCrypto();
 
   const addDebouncedOprations = useAddDebouncedOperations(reactor, {
     driveId,
@@ -92,4 +95,20 @@ export function useDocumentEditor<TDocument extends PHDocument>(
     document,
     error,
   };
+}
+
+export function useDocumentEditor<TDocument extends PHDocument>(
+  reactor: IDocumentDriveServer | undefined,
+  props: UseDocumentEditorProps<TDocument>,
+) {
+  const connectDid = useConnectDid();
+  const { sign } = useConnectCrypto();
+
+  const documentEditorDispatch = useDocumentEditorProps(reactor, {
+    ...props,
+    connectDid,
+    sign,
+  });
+
+  return documentEditorDispatch;
 }

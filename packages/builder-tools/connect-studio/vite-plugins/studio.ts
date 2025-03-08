@@ -96,6 +96,7 @@ export function viteConnectDevStudioPlugin(
         "react",
         "react-dom",
         "@powerhousedao/reactor-browser",
+        ...externalIds,
       ]),
     localDocumentModelsPath
       ? viteReplaceImports({

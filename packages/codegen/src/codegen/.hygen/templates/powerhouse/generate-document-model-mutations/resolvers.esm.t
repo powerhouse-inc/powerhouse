@@ -6,20 +6,23 @@ force: true
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Subgraph } from "@powerhousedao/reactor-api";
+import { addFile } from "document-drive";
 import { actions } from "../../document-models/<%- h.changeCase.param(documentType) %>";
-import { actions as driveActions } from "document-model-libs/document-drive";
-import { utils as docUtils } from "document-model/document";
+import { generateId, hashKey } from "document-model";
 
-export const getResolvers = (subgraph: Subgraph, driveId: string) => {
+const DEFAULT_DRIVE_ID = "powerhouse";
+
+export const getResolvers = (subgraph: Subgraph) => {
   const reactor = subgraph.reactor;
 
   return ({
     Mutation: {
 
       <%- h.changeCase.pascal(documentType) %>_createDocument: async (_: any, args: any) => {
-        const docId = docUtils.generateId();
+        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
+        const docId = generateId();
         
-        await reactor.addDriveAction(driveId, driveActions.addFile({
+        await reactor.addDriveAction(driveId, addFile({
           id: docId,
           name: args.name,
           documentType: "<%- documentTypeId %>",
@@ -27,12 +30,12 @@ export const getResolvers = (subgraph: Subgraph, driveId: string) => {
             { 
               branch: "main", 
               scope: "global", 
-              syncId: docUtils.hashKey(), 
+              syncId: hashKey(), 
             },
             { 
               branch: "main", 
               scope: "local", 
-              syncId: docUtils.hashKey(), 
+              syncId: hashKey(), 
             }
           ],
         }));
@@ -44,6 +47,7 @@ export const getResolvers = (subgraph: Subgraph, driveId: string) => {
 <% module.operations.forEach(op => { _%>
         <%- h.changeCase.pascal(documentType) + '_' + h.changeCase.camel(op.name) 
         %>: async (_: any, args: any) => {
+            const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
             const docId: string = args.docId || "";
             const doc = await reactor.getDocument(driveId, docId);
 

@@ -8,7 +8,7 @@ unless_exists: true
  */
 
 import { generateMock } from '@powerhousedao/codegen';
-import { utils as documentModelUtils } from 'document-model/document';
+import { utils as documentModelUtils } from 'document-model';
 
 import utils from '../../gen/utils';
 import {

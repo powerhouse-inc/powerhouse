@@ -9,6 +9,7 @@ import { Alias, AliasOptions, Plugin, PluginOption, normalizePath } from "vite";
 export const externalIds = [
   /^react(-dom)?(\/.*)?$/,
   /^@powerhousedao\/reactor-browser(\/.*)?$/,
+  /^node:.*$/,
 ];
 
 export const LOCAL_DOCUMENT_MODELS_IMPORT = "LOCAL_DOCUMENT_MODELS";

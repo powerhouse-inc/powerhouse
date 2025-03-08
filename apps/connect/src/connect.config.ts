@@ -4,6 +4,8 @@ import { LogLevel } from 'vite';
 import { version } from '../package.json';
 
 const APP_VERSION = import.meta.env.APP_VERSION || version;
+const WARN_OUTDATED_APP =
+    import.meta.env.PH_CONNECT_WARN_OUTDATED_APP || 'false';
 const PH_CONNECT_STUDIO_MODE =
     import.meta.env.PH_CONNECT_STUDIO_MODE || 'false';
 
@@ -52,6 +54,7 @@ logger.info(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
 export default {
     appVersion: APP_VERSION,
     studioMode: PH_CONNECT_STUDIO_MODE.toString() === 'true',
+    warnOutdatedApp: WARN_OUTDATED_APP === 'true',
     routerBasename: PH_CONNECT_ROUTER_BASENAME,
     sentry: {
         dsn: PH_CONNECT_SENTRY_DSN,

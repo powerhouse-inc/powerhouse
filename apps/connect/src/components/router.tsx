@@ -7,6 +7,7 @@ import {
     createBrowserRouter,
     createMemoryRouter,
 } from 'react-router-dom';
+import { AtlasImport } from './demo/atlas-import';
 
 const Root = React.lazy(() => import('./root'));
 const Content = React.lazy(() => import('#pages/content'));
@@ -44,6 +45,10 @@ const RouterAsync = async () => {
                             <Content />
                         </Suspense>
                     ),
+                },
+                {
+                    path: 'import/:documentId',
+                    element: <AtlasImport />,
                 },
             ],
         },

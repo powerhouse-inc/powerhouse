@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Drive {
+  slug String @id
+  id   String
+}
+
+model Document {
+  id                  String
+  driveId             String
+  created             DateTime             @default(now())
+  lastModified        DateTime             @default(now())
+  revision            String
+  name                String?
+  operations          Operation[]
+  initialState        String // json object with the scope as keys of the root object
+  documentType        String
+  syncronizationUnits SyncronizationUnit[]
+
+  @@id([id, driveId])
+}
+
+model Operation {
+  id          String       @id @default(uuid())
+  opId        String?
+  driveId     String
+  Document    Document?    @relation(fields: [driveId, documentId], references: [driveId, id], onDelete: Cascade)
+  documentId  String
+  scope       String
+  branch      String
+  index       Int
+  skip        Int
+  hash        String
+  timestamp   DateTime
+  input       String
+  type        String
+  attachments Attachment[]
+  syncId      String?
+  clipboard   Boolean?     @default(false)
+  context     Json?
+  resultingState Bytes?
+
+  SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
+
+  @@unique([driveId, documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
+}
+
+model SyncronizationUnit {
+  id         String
+  driveId    String
+  documentId String
+
+  Document   Document    @relation(fields: [documentId, driveId], references: [id, driveId], onDelete: Cascade)
+  scope      String
+  branch     String
+  operations Operation[]
+
+  @@id([id, driveId])
+}
+
+model Attachment {
+  id          String    @id @default(uuid())
+  operationId String
+  Operation   Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  mimeType  String
+  data      String
+  filename  String?
+  extension String?
+  hash      String
+}
+
+model Listener {
+  listenerId String @id @default(uuid())
+  driveId    String
+
+  label  String?
+  block  Boolean
+  system Boolean
+
+  filter   Json
+  callInfo Json
+}

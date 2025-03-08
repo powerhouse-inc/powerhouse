@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "2.21.0",
+  "version": "2.22.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -47,6 +47,6 @@
     "mutative": "^1.0.5",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
-    "zod": "^3.22.4"
+    "zod": "^3.24.2"
   }
 }

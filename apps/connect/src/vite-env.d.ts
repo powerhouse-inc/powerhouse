@@ -17,6 +17,7 @@ type ImportMetaEnv = {
   SENTRY_ORG: string
   SENTRY_PROJECT: string
   LOG_LEVEL: string
+  PH_CONNECT_WARN_OUTDATED_APP: string
   PH_CONNECT_STUDIO_MODE: string
   PH_CONNECT_ROUTER_BASENAME: string
   PH_CONNECT_DEFAULT_DRIVES_URL: string

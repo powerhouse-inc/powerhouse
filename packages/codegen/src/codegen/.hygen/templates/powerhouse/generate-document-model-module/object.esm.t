@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/object.ts"
 force: true
 ---
-import { BaseDocument<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model/document';
+import { BaseDocumentClass<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model';
 import {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
     <%= h.changeCase.pascal(action.name) %>Input,
@@ -17,10 +17,10 @@ import {
 } from './creators';
 import { <%= h.changeCase.pascal(documentType) %>Action } from '../actions';
 
-export default class <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module) %> extends BaseDocument<
+export default class <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module) %> extends BaseDocumentClass<
     <%= h.changeCase.pascal(documentType) %>State,
-    <%= h.changeCase.pascal(documentType) %>Action,
-    <%= h.changeCase.pascal(documentType) %>LocalState
+    <%= h.changeCase.pascal(documentType) %>LocalState,
+    <%= h.changeCase.pascal(documentType) %>Action
 > {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
     public <%= h.changeCase.camel(action.name) %>(input: <%= h.changeCase.pascal(action.name) %>Input<%if(action.hasAttachment){ %>, attachments: AttachmentInput[] <% } %>) {
