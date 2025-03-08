@@ -431,7 +431,7 @@ importers:
         version: 1.19.0(@types/node@22.13.9)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))
       '@powerhousedao/ph-cli':
         specifier: 0.34.11-dev.0
-        version: 0.34.11-dev.0(6jqwz34xaqxd3bqx5vcg52baka)
+        version: 0.34.11-dev.0(ddme2kpkykzgxfbhu6gy7txpuq)
       '@powerhousedao/reactor-api':
         specifier: 1.22.7
         version: 1.22.7(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@prisma/client@6.4.1(prisma@6.4.1(typescript@5.8.2))(typescript@5.8.2))(@types/pg@8.11.11)(@types/react@18.3.18)(encoding@0.1.13)(ethers@6.13.5(bufferutil@4.0.9)(utf-8-validate@5.0.10))(prisma@6.4.1(typescript@5.8.2))(react@18.3.1)(sqlite3@5.1.7)
@@ -445,8 +445,8 @@ importers:
         specifier: ^6.4.1
         version: 6.4.1(prisma@6.4.1(typescript@5.8.2))(typescript@5.8.2)
       '@sky-ph/atlas':
-        specifier: 0.2.4
-        version: 0.2.4(q46ds5qik3hu7bmvrendbqpxxe)
+        specifier: 0.2.7
+        version: 0.2.7(pymf4lrphpaw6js3r7xal3ro6a)
       body-parser:
         specifier: ^1.20.3
         version: 1.20.3
@@ -5026,8 +5026,8 @@ packages:
       react: ^18.0.0
       react-dom: ^18.0.0
 
-  '@powerhousedao/builder-tools@0.3.3':
-    resolution: {integrity: sha512-wPx97v/8bA50F1yAh+iG+aNtducRtoZ45JYtsEZXQ6+L1n6jsg/q36mRgVHDtVaDUoUYYEvMBAMxdkbM9v4H8w==}
+  '@powerhousedao/builder-tools@0.3.4':
+    resolution: {integrity: sha512-PZdTw/li6+CMlWln01xvp2OHzdYI/H3eFRQWQXFzzGjRsRP9gUAe3GoxLD8QOTIufMsy7oxEOPr6OPl0XF1ctg==}
     peerDependencies:
       react: ^18.0.0
       react-dom: ^18.0.0
@@ -5035,13 +5035,13 @@ packages:
   '@powerhousedao/codegen@0.38.0':
     resolution: {integrity: sha512-Wu9i6l8OZSyrYVvVH9IEiutJ5tQLHSjPYaFRFZo4EkVhXFneSm8RK67GNCmh5chzXHAb4UND6LVqA40qa4XHfA==}
 
-  '@powerhousedao/codegen@0.39.0':
-    resolution: {integrity: sha512-CK1GDFvs013UouKyGkllAbGyi64stMNW6BKesXPnuSiknn634aNmG7yeOVopJH9S9sxYEGqH/cl+ZBkZLUNb2w==}
+  '@powerhousedao/codegen@0.40.0':
+    resolution: {integrity: sha512-2ZyEY/2NmbBgEERE7OG/gzYycgN+4CAAqnD8NO8qZodCaW/AuBcvAlsBxbIiW6r+hg2Q1FibDxxh8XXQYmY2fQ==}
 
-  '@powerhousedao/common@1.5.4':
-    resolution: {integrity: sha512-LeDh423L+daRhFIgk6cx79Vo+yruAiqUhQLj1FTUbuHib04/gPYYzEv8d7dABE2FGKjY+h62tRaADbW1PA/vTA==}
+  '@powerhousedao/common@1.5.5':
+    resolution: {integrity: sha512-iacI8zwmxXWLW/E0B7GQqQBE72XIDAjY6RAKW8NLbNSk1+FxcJ+qagHbBQ3aEqbLkynpxfPgizHPDhGOGPuDJg==}
     peerDependencies:
-      '@powerhousedao/reactor-browser': 1.16.1
+      '@powerhousedao/reactor-browser': 1.16.2
       react: ^18.3.1
       react-dom: ^18.3.1
 
@@ -5063,8 +5063,8 @@ packages:
       react: ^18.3.1
       react-dom: ^18.3.1
 
-  '@powerhousedao/design-system@1.30.3':
-    resolution: {integrity: sha512-IKelEX07YDB939j8Cj+B8y/+Cren2kS/LkNWXNzGR9sDExeCaP+CZinR6zcgvsPAOxuj2C6tmQHo7XSgKX42cg==}
+  '@powerhousedao/design-system@1.30.4':
+    resolution: {integrity: sha512-AN1+HuJ9kwO0ZURDCUNWBKcEPW6n6Er81Jv/QKY06r50ZXMSKCUMHlKZ5Ami4jCTpYkx2jCzbN0llWVC5QWMYg==}
     peerDependencies:
       react: ^18.3.1
       react-dom: ^18.3.1
@@ -5076,8 +5076,8 @@ packages:
   '@powerhousedao/reactor-api@1.22.7':
     resolution: {integrity: sha512-JMi1U+dt4enDz6yoPXb+5Zs3aFWucsVIMLto/j2J03YFShoYGQOIZl2QwbHq1Byk/guyrTudo0NgrFarzzAPzw==}
 
-  '@powerhousedao/reactor-browser@1.16.1':
-    resolution: {integrity: sha512-JQpOwK2Fs/UEk2wJsDfua+6RmyGpYZZlOTXWkuZghAthQFZDj71dPsiF9iOR/GKzdU+1zAowLnpgw/OdnWp8FQ==}
+  '@powerhousedao/reactor-browser@1.16.2':
+    resolution: {integrity: sha512-dNY+JESMtxaMwu6xstFcoanbWSb39MPcPc72mlyk9fqbcPI54/Zy2DiulbDUWCtq2/esTG+i5m/s5oBNaI97+w==}
     peerDependencies:
       react: ^18.3.1
       react-dom: ^18.3.1
@@ -6252,8 +6252,8 @@ packages:
   '@sinonjs/fake-timers@10.3.0':
     resolution: {integrity: sha512-V4BG07kuYSUkTCSBHG8G8TNhM+F19jXFWnQtzj+we8DrkpSBCee9Z3Ms8yiGer/dlmhe35/Xdgyo3/0rQKg7YA==}
 
-  '@sky-ph/atlas@0.2.4':
-    resolution: {integrity: sha512-18UHdf1veuVcW1sG2jjXvKxyKV3t5bXLZ98GGuv7CD0ND6NEYBw5xntC3HBpXLBEE69AWix/gFNOuEWfQjjlNQ==}
+  '@sky-ph/atlas@0.2.7':
+    resolution: {integrity: sha512-J6NzZnL5LKc+jyL7PmPy0H8wRMjKLXiOZ+S+r3QI8snbpIFjp0HoVyx+riYJRRHBhSkDOyOOTdgDEJrpyUnOFw==}
     peerDependencies:
       '@powerhousedao/reactor-browser': ^1.11.0
       document-model: ^2.21.0
@@ -9258,8 +9258,8 @@ packages:
   document-drive@1.21.1:
     resolution: {integrity: sha512-ztswWBE3nBtbLRoFeAqci4bCzoWpnb2NtqOq1OKPlejjiK4ZXvbPPYGysd2j7B+OP6tjuE4urWvT0pMijqQ4aQ==}
 
-  document-drive@1.22.2:
-    resolution: {integrity: sha512-lteMSUePdz+kIhPBVfmNPKKD18b6nOelE9OHhYjZj4UHWxLWkDmwAewHB2U/tq1Ekd2NV+kq/sMlm4iucGzMVg==}
+  document-drive@1.22.3:
+    resolution: {integrity: sha512-KahU3ZGnhSZ0/zGO1BbA+DuvR4R9ELh0ZRGw/MFdsmqeTRx6aj6y+7wviOtrw58VUTsDXhp/skgE+n5oWA3qJQ==}
 
   document-model-libs@1.130.1:
     resolution: {integrity: sha512-I3zvuBIwgPclb5PeA6eeI2AYvMsiduvOQSDDkbOjEVCFLtode/JkWDrSuNINX9Im9dNzHpKi0vrhWsKaJTMzwg==}
@@ -20791,7 +20791,7 @@ snapshots:
       - utf-8-validate
       - yaml
 
-  '@powerhousedao/builder-tools@0.3.3(2vaw26fc2grwdtinw5mh6q5nei)':
+  '@powerhousedao/builder-tools@0.3.4(2vaw26fc2grwdtinw5mh6q5nei)':
     dependencies:
       '@codemirror/autocomplete': 6.18.6
       '@codemirror/commands': 6.8.0
@@ -20807,7 +20807,7 @@ snapshots:
       '@graphql-tools/utils': 10.8.4(graphql@16.10.0)
       '@hookform/resolvers': 3.10.0(react-hook-form@7.54.2(react@18.3.1))
       '@powerhousedao/config': 1.19.0(@types/node@22.13.9)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))
-      '@powerhousedao/design-system': 1.30.3(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@4.0.9)(typescript@5.8.2)(utf-8-validate@5.0.10)
+      '@powerhousedao/design-system': 1.30.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@4.0.9)(typescript@5.8.2)(utf-8-validate@5.0.10)
       '@powerhousedao/scalars': 1.26.0(graphql@16.10.0)(zod@3.24.2)
       '@prettier/sync': 0.5.2(prettier@3.5.3)
       '@radix-ui/react-checkbox': 1.1.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -20930,7 +20930,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@powerhousedao/codegen@0.39.0(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)':
+  '@powerhousedao/codegen@0.40.0(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)':
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema': 0.12.3(encoding@0.1.13)(graphql@16.10.0)
       '@anatine/zod-mock': 3.13.5(@faker-js/faker@8.4.1)(zod@3.24.2)
@@ -20961,13 +20961,13 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@powerhousedao/common@1.5.4(zyqa3oys76lmt667x62cxjsfby)':
+  '@powerhousedao/common@1.5.5(z4zavkgwapl2qwiviymlagj52m)':
     dependencies:
-      '@powerhousedao/builder-tools': 0.3.3(2vaw26fc2grwdtinw5mh6q5nei)
-      '@powerhousedao/design-system': 1.30.3(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10)
-      '@powerhousedao/reactor-browser': 1.16.1(@parcel/watcher@2.5.1)(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)
+      '@powerhousedao/builder-tools': 0.3.4(2vaw26fc2grwdtinw5mh6q5nei)
+      '@powerhousedao/design-system': 1.30.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10)
+      '@powerhousedao/reactor-browser': 1.16.2(@parcel/watcher@2.5.1)(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)
       '@tanstack/react-virtual': 3.13.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      document-drive: 1.22.2(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)
+      document-drive: 1.22.3(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)
       document-model: 2.22.0
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -21078,9 +21078,9 @@ snapshots:
       - '@types/node'
       - ts-node
 
-  '@powerhousedao/connect@1.0.0-dev.212(@powerhousedao/design-system@1.30.3(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10))':
+  '@powerhousedao/connect@1.0.0-dev.212(@powerhousedao/design-system@1.30.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10))':
     dependencies:
-      '@powerhousedao/design-system': 1.30.3(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10)
+      '@powerhousedao/design-system': 1.30.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10)
       commander: 12.1.0
       magic-string: 0.30.17
     optionalDependencies:
@@ -21162,7 +21162,7 @@ snapshots:
       - uploadthing
       - utf-8-validate
 
-  '@powerhousedao/design-system@1.30.3(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10)':
+  '@powerhousedao/design-system@1.30.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10)':
     dependencies:
       '@internationalized/date': 3.7.0
       '@powerhousedao/scalars': 1.26.0(graphql@16.10.0)(zod@3.24.2)
@@ -21237,7 +21237,7 @@ snapshots:
       - uploadthing
       - utf-8-validate
 
-  '@powerhousedao/design-system@1.30.3(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@4.0.9)(typescript@5.8.2)(utf-8-validate@5.0.10)':
+  '@powerhousedao/design-system@1.30.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@4.0.9)(typescript@5.8.2)(utf-8-validate@5.0.10)':
     dependencies:
       '@internationalized/date': 3.7.0
       '@powerhousedao/scalars': 1.26.0(graphql@16.10.0)(zod@3.24.2)
@@ -21312,12 +21312,12 @@ snapshots:
       - uploadthing
       - utf-8-validate
 
-  '@powerhousedao/ph-cli@0.34.11-dev.0(6jqwz34xaqxd3bqx5vcg52baka)':
+  '@powerhousedao/ph-cli@0.34.11-dev.0(ddme2kpkykzgxfbhu6gy7txpuq)':
     dependencies:
       '@powerhousedao/builder-tools': 0.2.7(2vaw26fc2grwdtinw5mh6q5nei)
       '@powerhousedao/codegen': 0.38.0(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)
       '@powerhousedao/config': 1.18.2(@types/node@22.13.9)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))
-      '@powerhousedao/connect': 1.0.0-dev.212(@powerhousedao/design-system@1.30.3(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10))
+      '@powerhousedao/connect': 1.0.0-dev.212(@powerhousedao/design-system@1.30.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(tailwindcss@3.4.17(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2)))(typescript@5.8.2)(utf-8-validate@5.0.10))
       '@powerhousedao/reactor-local': 1.21.7(@parcel/watcher@2.5.1)(@prisma/client@6.4.1(prisma@6.4.1(typescript@5.8.2))(typescript@5.8.2))(@types/pg@8.11.11)(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(ethers@6.13.5(bufferutil@4.0.9)(utf-8-validate@5.0.10))(pg@8.13.3)(prisma@6.4.1(typescript@5.8.2))(react@18.3.1)(sqlite3@5.1.7)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)
       colorette: 2.0.20
       commander: 12.1.0
@@ -21474,10 +21474,10 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/reactor-browser@1.16.1(@parcel/watcher@2.5.1)(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)':
+  '@powerhousedao/reactor-browser@1.16.2(@parcel/watcher@2.5.1)(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)':
     dependencies:
       did-key-creator: 1.2.0
-      document-drive: 1.22.2(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)
+      document-drive: 1.22.3(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)
       document-model: 2.22.0
       jotai: 2.12.1(@types/react@18.3.18)(react@18.3.1)
       react: 18.3.1
@@ -22976,10 +22976,10 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@sky-ph/atlas@0.2.4(q46ds5qik3hu7bmvrendbqpxxe)':
+  '@sky-ph/atlas@0.2.7(pymf4lrphpaw6js3r7xal3ro6a)':
     dependencies:
-      '@powerhousedao/common': 1.5.4(zyqa3oys76lmt667x62cxjsfby)
-      '@powerhousedao/reactor-browser': 1.16.1(@parcel/watcher@2.5.1)(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)
+      '@powerhousedao/common': 1.5.5(z4zavkgwapl2qwiviymlagj52m)
+      '@powerhousedao/reactor-browser': 1.16.2(@parcel/watcher@2.5.1)(@types/react@18.3.18)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)
       '@types/diff': 7.0.1
       '@types/lodash': 4.17.16
       diff: 7.0.0
@@ -27019,9 +27019,9 @@ snapshots:
       - uWebSockets.js
       - utf-8-validate
 
-  document-drive@1.22.2(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10):
+  document-drive@1.22.3(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(pg@8.13.3)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10):
     dependencies:
-      '@powerhousedao/codegen': 0.39.0(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)
+      '@powerhousedao/codegen': 0.40.0(@parcel/watcher@2.5.1)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.10.0)(ts-node@10.9.1(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)(typescript@5.8.2))(typescript@5.8.2)(utf-8-validate@5.0.10)(zod@3.24.2)
       change-case: 5.4.4
       document-model: 2.22.0
       graphql: 16.10.0
