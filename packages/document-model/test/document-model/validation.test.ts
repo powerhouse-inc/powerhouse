@@ -190,7 +190,7 @@ describe("DocumentModel Validation Error", () => {
       errors = [
         ...errors,
         ...validateStateSchemaName(
-          doc.state.global.specifications[0].state.local.schema,
+          newDoc2.state.global.specifications[0].state.local.schema,
           documentName,
           "local",
         ),
