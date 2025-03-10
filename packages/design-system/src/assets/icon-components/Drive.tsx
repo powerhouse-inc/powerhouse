@@ -1,4 +1,4 @@
-import type { Props } from "./types";
+import type { Props } from "./types.js";
 export default function Drive(props: Props) {
   return (
     <svg {...props} viewBox="0 0 20 16" fill="currentcolor">

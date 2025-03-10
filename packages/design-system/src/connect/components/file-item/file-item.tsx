@@ -16,7 +16,7 @@ import {
 import { Icon } from "#powerhouse";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { SyncStatusIcon } from "../status-icon";
+import { SyncStatusIcon } from "../status-icon/index.js";
 
 export type FileItemProps = {
   uiNode: UiFileNode;

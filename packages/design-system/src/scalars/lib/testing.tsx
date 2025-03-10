@@ -1,5 +1,5 @@
 import { render, type RenderResult } from "@testing-library/react";
-import { Form } from "../components";
+import { Form } from "#scalars";
 
 export const renderWithForm = (
   children: React.ReactNode,

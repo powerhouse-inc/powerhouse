@@ -7,12 +7,12 @@ import {
 import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import React from "react";
-import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
+import mockPackageJson from "../../../utils/mocks/mock-package-json.json" with { type: "json" };
 import { About } from "./about.js";
 import { DangerZone } from "./danger-zone.js";
 import { DefaultEditor } from "./default-editor.js";
 import { mockDocumentModelEditorOptions } from "./mocks.js";
-import { PackageManagerWrapper } from "./package-manager/package-manager.stories";
+import { PackageManagerWrapper } from "./package-manager/package-manager.stories.js";
 import { SettingsModal } from "./settings-modal.js";
 
 const meta: Meta<typeof SettingsModal> = {

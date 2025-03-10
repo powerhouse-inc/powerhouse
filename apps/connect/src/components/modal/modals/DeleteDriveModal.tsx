@@ -1,8 +1,8 @@
 import {
     ConnectDeleteDriveModal,
-    UiDriveNode,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
-import React from 'react';
+import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface DeleteDriveModalProps {

@@ -1,13 +1,13 @@
 import { format, getHours, getMinutes, parse } from "date-fns";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { type TimeFieldValue } from "./type";
+import { type TimeFieldValue } from "./type.js";
 import {
   createChangeEvent,
   isValidTimeInput,
   roundMinute,
   transformInputTime,
-} from "./utils";
+} from "./utils.js";
 
 interface TimePickerFieldProps {
   value?: TimeFieldValue;

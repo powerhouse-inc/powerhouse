@@ -1,5 +1,5 @@
 import { Button, Icon } from "#powerhouse";
-import { SettingsRow, type SettingsRowProps } from "./row";
+import { SettingsRow, type SettingsRowProps } from "./row.js";
 
 export interface ClearStorageSettingsRowProps extends SettingsRowProps {
   onClearStorage: () => void;

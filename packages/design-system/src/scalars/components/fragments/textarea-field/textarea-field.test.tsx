@@ -1,8 +1,8 @@
 import { renderWithForm } from "#scalars";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { TextareaField } from "./textarea-field";
+import { TextareaField } from "./textarea-field.js";
 
 describe("TextareaField Component", () => {
   it("should match snapshot with props", () => {

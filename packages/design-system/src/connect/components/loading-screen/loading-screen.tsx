@@ -1,7 +1,7 @@
 import { type Size } from "#powerhouse";
 import { twMerge } from "tailwind-merge";
 
-import { AnimatedLoader } from "../animated-loader";
+import { AnimatedLoader } from "../animated-loader/index.js";
 
 export interface LoadingScreenProps {
   showLoadingScreen: boolean;

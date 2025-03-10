@@ -10,7 +10,7 @@ export * from "./id-field/index.js";
 export * from "./number-field/index.js";
 export * from "./phid-field/index.js";
 export * from "./sidebar/index.js";
-export * from "./sidebar/subcomponents/sidebar-provider";
+export * from "./sidebar/subcomponents/sidebar-provider.js";
 export * from "./string-field/index.js";
 export * from "./time-picker-field/index.js";
 export * from "./types.js";

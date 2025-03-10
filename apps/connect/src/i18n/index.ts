@@ -1,4 +1,4 @@
-import i18n, { Resource } from 'i18next';
+import i18n, { type Resource } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 import translationEN from './locales/en.json';

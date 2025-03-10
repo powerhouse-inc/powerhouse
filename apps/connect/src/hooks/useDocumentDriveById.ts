@@ -1,4 +1,4 @@
-import { DocumentDriveState } from 'document-drive';
+import { type DocumentDriveState } from 'document-drive';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
 type ExtendedDocumentDriveState = DocumentDriveState & { remoteUrl?: string };

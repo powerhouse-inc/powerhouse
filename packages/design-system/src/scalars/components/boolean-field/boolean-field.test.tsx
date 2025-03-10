@@ -1,5 +1,5 @@
 import { renderWithForm } from "#scalars";
-import { BooleanField } from "./boolean-field";
+import { BooleanField } from "./boolean-field.js";
 
 describe("BooleanField", () => {
   const commonProps = {

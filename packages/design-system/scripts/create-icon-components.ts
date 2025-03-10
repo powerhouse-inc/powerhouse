@@ -66,7 +66,7 @@ readdir(iconsDir, (err, files) => {
           return `${camelCase(attrName)}="${attrValue}"`;
         },
       );
-    let iconContent = 'import type { Props } from "./types";\n';
+    let iconContent = 'import type { Props } from "./types.js";\n';
     iconContent += `export default function ${componentName}(props: Props) {\n`;
     iconContent += `  return (\n${svgDataWithProps}\n  );\n`;
     iconContent += `}\n\n`;

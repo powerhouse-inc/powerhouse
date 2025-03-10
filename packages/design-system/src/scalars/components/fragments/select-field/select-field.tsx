@@ -17,9 +17,9 @@ import {
   type SelectProps,
 } from "#scalars";
 import React, { useCallback, useId } from "react";
-import { Content } from "./content";
-import { SelectedContent } from "./selected-content";
-import { useSelectField } from "./use-select-field";
+import { Content } from "./content.js";
+import { SelectedContent } from "./selected-content.js";
+import { useSelectField } from "./use-select-field.js";
 
 type SelectFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,

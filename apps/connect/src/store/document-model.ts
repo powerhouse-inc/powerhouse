@@ -2,9 +2,9 @@ import { useFeatureFlag } from '#hooks/useFeatureFlags/index';
 import { driveDocumentModelModule } from 'document-drive';
 import {
     documentModelDocumentModelModule,
-    DocumentModelLib,
-    DocumentModelModule,
-    PHDocument,
+    type DocumentModelLib,
+    type DocumentModelModule,
+    type PHDocument,
 } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';

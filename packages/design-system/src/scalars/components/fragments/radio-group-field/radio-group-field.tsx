@@ -8,8 +8,8 @@ import {
   type RadioGroupProps,
 } from "#scalars";
 import React, { useId } from "react";
-import { Radio } from "./radio";
-import { RadioGroup } from "./radio-group";
+import { Radio } from "./radio.js";
+import { RadioGroup } from "./radio-group.js";
 
 export interface RadioGroupFieldProps
   extends FieldCommonProps<string>,

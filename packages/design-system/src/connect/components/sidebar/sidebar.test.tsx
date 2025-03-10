@@ -5,7 +5,7 @@ import {
   waitForElementToBeRemoved,
 } from "@testing-library/react";
 import { it } from "vitest";
-import { ConnectSidebar } from ".";
+import { ConnectSidebar } from "./index.js";
 
 describe("Connect Sidebar Component", () => {
   it("should match snapshot", async () => {

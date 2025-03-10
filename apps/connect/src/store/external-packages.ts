@@ -1,5 +1,5 @@
 import { getHMRModule, subscribeExternalPackages } from '#services/hmr';
-import { App, DocumentModelLib } from 'document-model';
+import { type App, type DocumentModelLib } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';

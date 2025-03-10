@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import { DefaultEditorLoader } from "./default-editor-loader";
+import { DefaultEditorLoader } from "./default-editor-loader.js";
 
 const meta: Meta = {
   title: "Connect/Components/Default Editor Loader",

@@ -1,6 +1,6 @@
 import { useArgs } from "@storybook/preview-api";
 import { type Meta, type StoryObj } from "@storybook/react";
-import { AddDriveModal } from "./add-drive-modal";
+import { AddDriveModal } from "./add-drive-modal.js";
 
 const meta = {
   title: "Connect/Components/Add Drive Modal",

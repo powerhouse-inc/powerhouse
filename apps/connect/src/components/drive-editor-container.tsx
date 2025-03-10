@@ -19,9 +19,9 @@ import {
 } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { driveDocumentModelModule } from 'document-drive';
-import { DocumentModelModule, Operation } from 'document-model';
+import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
-import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
+import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal';
 
 function DriveEditorError({ error }: FallbackProps) {

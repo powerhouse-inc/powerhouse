@@ -5,7 +5,7 @@ import type {
   FieldCommonProps,
   ErrorHandling,
   ValidatorHandler,
-} from "../../types";
+} from "../../types.js";
 
 interface PossibleProps extends FieldCommonProps<unknown>, ErrorHandling {
   pattern?: RegExp;

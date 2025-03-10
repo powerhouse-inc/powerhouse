@@ -1,6 +1,6 @@
 import { cn } from "#scalars";
 import type * as React from "react";
-import { Button } from "../../fragments/button";
+import { Button } from "../../fragments/button/index.js";
 
 interface TimeSelectorProps {
   options: string[];

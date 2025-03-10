@@ -1,5 +1,5 @@
-import { type TimePickerFieldProps } from "./time-picker-field";
-import { isFormatTimeAllowed, TIME_PATTERNS } from "./utils";
+import { type TimePickerFieldProps } from "./time-picker-field.js";
+import { isFormatTimeAllowed, TIME_PATTERNS } from "./utils.js";
 
 export const validateTimePicker =
   ({ timeFormat }: TimePickerFieldProps) =>

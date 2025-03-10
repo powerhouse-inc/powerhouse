@@ -1,7 +1,7 @@
 import { renderWithForm } from "#scalars";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { CheckboxField } from "./checkbox-field";
+import { CheckboxField } from "./checkbox-field.js";
 
 describe("CheckboxField", () => {
   it("should match snapshot", () => {

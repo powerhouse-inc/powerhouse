@@ -1,6 +1,6 @@
-import { type AmountValue } from "../components/amount-field/types";
-import { parseInputString } from "../components/date-picker-field/utils";
-import { getDateFromValue } from "../components/date-picker-field/utils";
+import { type AmountValue } from "../components/amount-field/types.js";
+import { parseInputString } from "../components/date-picker-field/utils.js";
+import { getDateFromValue } from "../components/date-picker-field/utils.js";
 
 export type ValueCast =
   | "BigInt"

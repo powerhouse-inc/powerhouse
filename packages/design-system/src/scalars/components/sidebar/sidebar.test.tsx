@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { screen, render } from "@testing-library/react";
 import { Icon } from "#powerhouse";
-import { SidebarProvider } from "./subcomponents/sidebar-provider";
-import { Sidebar } from "./sidebar";
+import { SidebarProvider } from "./subcomponents/sidebar-provider.js";
+import { Sidebar } from "./sidebar.js";
 
 const mockNodes = [
   {

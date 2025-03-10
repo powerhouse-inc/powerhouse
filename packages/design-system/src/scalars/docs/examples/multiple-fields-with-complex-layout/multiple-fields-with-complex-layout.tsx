@@ -1,6 +1,6 @@
 import { Button } from "#powerhouse";
-import { BooleanField, NumberField, StringField } from "../../../components";
-import { Form, RadioGroupField } from "../../../components";
+import { BooleanField, NumberField, StringField } from "../../../components/index.js";
+import { Form, RadioGroupField } from "../../../components/index.js";
 
 const MultipleFieldsWithComplexLayout = () => {
   const onSubmit = async (data: any) => {

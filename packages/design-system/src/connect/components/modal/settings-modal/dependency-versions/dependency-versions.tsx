@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { object, record, string } from "zod";
-import { Disclosure } from "../../../disclosure";
+import { Disclosure } from "../../../disclosure/index.js";
 
 const REQUIRED_DEPENDENCIES = [
   "@powerhousedao/design-system",

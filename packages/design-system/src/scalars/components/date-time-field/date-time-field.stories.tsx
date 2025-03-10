@@ -5,7 +5,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { DateTimeField } from "./date-time-field";
+import { DateTimeField } from "./date-time-field.js";
 
 const meta: Meta<typeof DateTimeField> = {
   title: "Document Engineering/Simple Components/Date Time Field",

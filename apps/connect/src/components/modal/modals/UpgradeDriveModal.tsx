@@ -1,5 +1,5 @@
 import { ConnectUpgradeDriveModal } from '@powerhousedao/design-system';
-import React from 'react';
+import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface UpgradeDriveModalProps {

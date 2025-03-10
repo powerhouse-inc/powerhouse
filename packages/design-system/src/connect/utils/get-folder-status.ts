@@ -1,4 +1,4 @@
-import { type SyncStatus } from "../types";
+import { type SyncStatus } from "../types/index.js";
 
 export type FileStatus = { path: string; status?: SyncStatus };
 

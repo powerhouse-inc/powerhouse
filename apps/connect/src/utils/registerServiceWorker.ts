@@ -1,5 +1,5 @@
 import connectConfig from '../connect.config';
-import { ServiceWorkerMessage } from '../service-worker';
+import { type ServiceWorkerMessage } from '../service-worker';
 
 const VERSION_CHECK_INTERVAL =
     parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL as string) ||

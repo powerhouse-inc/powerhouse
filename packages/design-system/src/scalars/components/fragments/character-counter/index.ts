@@ -1,1 +1,1 @@
-export * from "./character-counter";
+export * from "./character-counter.js";

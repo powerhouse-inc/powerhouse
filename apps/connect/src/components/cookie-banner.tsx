@@ -1,7 +1,7 @@
 import { useAcceptedCookies } from '#hooks/useAcceptedCookies/index';
 import { useCookieBanner } from '#hooks/useCookieBanner/index';
 import {
-    CookieInput,
+    type CookieInput,
     CookieBanner as PHCookieBanner,
 } from '@powerhousedao/design-system';
 import { Trans, useTranslation } from 'react-i18next';

@@ -2,9 +2,9 @@ import { Icon } from "#powerhouse";
 import { type OperationScope } from "document-model";
 import { type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
-import { Branch } from "./branch";
-import { DocId } from "./doc-id";
-import { Scope } from "./scope";
+import { Branch } from "./branch.js";
+import { DocId } from "./doc-id.js";
+import { Scope } from "./scope.js";
 
 interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   readonly title: ReactNode;

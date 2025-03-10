@@ -1,13 +1,13 @@
 import { startOfDay } from "date-fns";
 import React, { useCallback, useMemo } from "react";
-import { createChangeEvent } from "../time-picker-field/utils";
-import { type DateFieldValue, type WeekStartDayNumber } from "./types";
+import { createChangeEvent } from "../time-picker-field/utils.js";
+import { type DateFieldValue, type WeekStartDayNumber } from "./types.js";
 import {
   formatDateToValue,
   getDateFromValue,
   isDateFormatAllowed,
   parseInputString,
-} from "./utils";
+} from "./utils.js";
 
 interface DatePickerFieldProps {
   value?: DateFieldValue;

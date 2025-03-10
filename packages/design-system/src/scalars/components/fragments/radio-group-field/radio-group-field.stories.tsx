@@ -5,7 +5,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { RadioGroupField } from "./radio-group-field";
+import { RadioGroupField } from "./radio-group-field.js";
 
 const meta = {
   title: "Document Engineering/Fragments/RadioGroupField",

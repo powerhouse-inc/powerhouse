@@ -4,15 +4,15 @@ import {
   type ErrorHandling,
   type FieldCommonProps,
   type TextProps,
-} from "../../types";
-import { CharacterCounter } from "../character-counter";
-import { FormDescription } from "../form-description";
-import { FormGroup } from "../form-group";
-import { FormLabel } from "../form-label";
-import { FormMessageList } from "../form-message";
-import { Input } from "../input";
-import ValueTransformer from "../value-transformer";
-import { withFieldValidation } from "../with-field-validation";
+} from "../../types.js";
+import { CharacterCounter } from "../character-counter/index.js";
+import { FormDescription } from "../form-description/index.js";
+import { FormGroup } from "../form-group/index.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import { Input } from "../input/index.js";
+import ValueTransformer from "../value-transformer/index.js";
+import { withFieldValidation } from "../with-field-validation/index.js";
 
 export interface TextFieldProps
   extends Omit<

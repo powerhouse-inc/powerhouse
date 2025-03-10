@@ -31,7 +31,7 @@ import { Icon } from "#powerhouse";
 import { type TUiNodesContext } from "@powerhousedao/reactor-browser";
 import { type MouseEventHandler, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { DropIndicator } from "./drop-indicator";
+import { DropIndicator } from "./drop-indicator.js";
 
 export type ConnectTreeViewProps = TUiNodesContext &
   NodeProps & {

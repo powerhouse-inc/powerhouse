@@ -1,4 +1,4 @@
-import { type NumberFieldProps } from "./number-field";
+import { type NumberFieldProps } from "./number-field.js";
 
 export const isInteger = (value: unknown): boolean =>
   Number.isInteger(Number(value));

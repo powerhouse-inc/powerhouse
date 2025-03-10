@@ -1,14 +1,14 @@
 import { type ValidatorResult } from "#scalars";
-import { isValidNumber } from "../number-field/number-field-validations";
-import { type AmountFieldProps } from "./amount-field";
+import { isValidNumber } from "../number-field/number-field-validations.js";
+import { type AmountFieldProps } from "./amount-field.js";
 import {
   type AmountCurrencyCrypto,
   type AmountCurrencyFiat,
   type AmountCurrencyUniversal,
   type AmountFieldPropsGeneric,
   type AmountValue,
-} from "./types";
-import { isValidBigInt } from "./utils";
+} from "./types.js";
+import { isValidBigInt } from "./utils.js";
 
 const isAmountCurrencyFiat = (
   type: AmountFieldPropsGeneric["type"],

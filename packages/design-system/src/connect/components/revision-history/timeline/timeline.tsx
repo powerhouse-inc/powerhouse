@@ -1,10 +1,10 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { type Operation, type OperationScope } from "document-model";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Revision } from "../revision";
-import { Skip } from "../skip";
-import { makeRows } from "../utils";
-import { Day } from "./day";
+import { Revision } from "../revision/index.js";
+import { Skip } from "../skip/index.js";
+import { makeRows } from "../utils.js";
+import { Day } from "./day.js";
 
 export type TimelineProps = {
   readonly localOperations: Operation[];

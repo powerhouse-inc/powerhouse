@@ -7,8 +7,8 @@ import {
   useImperativeHandle,
 } from "react";
 import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
-import { FormServerErrorMessage } from "../fragments/form-message/form-server-error-message";
-import { defaultOnError } from "./utils";
+import { FormServerErrorMessage } from "../fragments/form-message/form-server-error-message.js";
+import { defaultOnError } from "./utils.js";
 
 interface FormProps {
   /**

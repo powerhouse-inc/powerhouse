@@ -8,7 +8,6 @@
         "moduleResolution": "Bundler",
         "jsx": "react-jsx",
         "resolveJsonModule": true,
-        "noEmit": true,
         "paths": {
             "@/assets": ["./assets"],
             "connect-config": ["./src/connect.config.ts"],
@@ -48,5 +47,5 @@
         }
     ],
     "include": ["**/*", "**/*.json"],
-    "exclude": ["ts-dist/**", "dist/**", "studio/**"]
+    "exclude": ["ts-dist", "dist", "studio"]
 }

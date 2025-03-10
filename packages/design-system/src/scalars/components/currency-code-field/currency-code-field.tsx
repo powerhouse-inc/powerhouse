@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
-import { type ErrorHandling, type FieldCommonProps } from "../types";
-import { SelectFieldRaw, withFieldValidation } from "../fragments";
-import type { SelectOption } from "../enum-field/types";
-import type { Currency, CurrencyType } from "./types";
+import { type ErrorHandling, type FieldCommonProps } from "../types.js";
+import { SelectFieldRaw, withFieldValidation } from "../fragments/index.js";
+import type { SelectOption } from "../enum-field/types.js";
+import type { Currency, CurrencyType } from "./types.js";
 export interface CurrencyCodeFieldProps
   extends FieldCommonProps<string | string[]>,
     ErrorHandling {

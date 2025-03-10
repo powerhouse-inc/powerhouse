@@ -1,4 +1,4 @@
-import { IRenown, User } from '#services/renown/types';
+import { type IRenown, type User } from '#services/renown/types';
 import { atom, useAtom } from 'jotai';
 import { useConnectCrypto } from './useConnectCrypto';
 

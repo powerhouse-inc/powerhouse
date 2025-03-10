@@ -1,7 +1,7 @@
 import { atomWithStorage } from '#store/utils';
 import defaultConfig, {
     FEATURE_FLAG_KEY_STORAGE,
-    FeatureFlag,
+    type FeatureFlag,
 } from './default-config';
 
 export const featureFlagAtom = atomWithStorage<FeatureFlag>(

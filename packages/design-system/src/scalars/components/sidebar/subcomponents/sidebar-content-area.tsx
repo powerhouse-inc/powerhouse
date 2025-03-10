@@ -4,8 +4,8 @@ import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
 import { useEffect, useRef } from "react";
 import { AutoSizer, List } from "react-virtualized";
-import { SidebarItem } from "./sidebar-item";
-import { useSidebar } from "./sidebar-provider";
+import { SidebarItem } from "./sidebar-item.js";
+import { useSidebar } from "./sidebar-provider.js";
 
 interface SidebarContentAreaProps {
   allowPinning?: boolean;

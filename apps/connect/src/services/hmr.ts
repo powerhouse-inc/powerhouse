@@ -1,4 +1,4 @@
-import { ExternalPackage } from '#store/external-packages';
+import { type ExternalPackage } from '#store/external-packages';
 import type { ViteHotContext } from 'vite/types/hot.js';
 export type PackagesUpdate = {
     url: string;

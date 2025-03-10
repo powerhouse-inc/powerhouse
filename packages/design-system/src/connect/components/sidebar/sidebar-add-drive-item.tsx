@@ -1,5 +1,5 @@
 import { Icon } from "#powerhouse";
-import { SidebarItem } from "./sidebar-item";
+import { SidebarItem } from "./sidebar-item.js";
 
 type SidebarAddDriveItemProps = {
   readonly containerClassName?: string;

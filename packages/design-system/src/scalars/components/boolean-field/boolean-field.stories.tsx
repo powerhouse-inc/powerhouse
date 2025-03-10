@@ -5,7 +5,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { BooleanField } from "./boolean-field";
+import { BooleanField } from "./boolean-field.js";
 
 const meta = {
   title: "Document Engineering/Simple Components/Boolean Field",

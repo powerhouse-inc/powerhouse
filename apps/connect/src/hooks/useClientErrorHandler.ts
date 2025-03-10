@@ -1,9 +1,9 @@
 import { LOCAL } from '@powerhousedao/design-system';
 import {
     logger,
-    PullResponderTrigger,
-    PullResponderTriggerData,
-    Trigger,
+    type PullResponderTrigger,
+    type PullResponderTriggerData,
+    type Trigger,
 } from 'document-drive';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';

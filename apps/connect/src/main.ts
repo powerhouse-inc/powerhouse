@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as Sentry from '@sentry/browser';
-import { PHDocument } from 'document-model';
+import { type PHDocument } from 'document-model';
 import {
     BrowserWindow,
     Menu,
@@ -20,10 +20,10 @@ import store from './app/store';
 import { ConnectCrypto } from './services/crypto';
 import {
     ElectronKeyStorage,
-    KeyStorageElectronStore,
+    type KeyStorageElectronStore,
 } from './services/crypto/electron';
 import { initRenownElectron } from './services/renown/electron';
-import { Theme, isTheme } from './store/';
+import { type Theme, isTheme } from './store/';
 import { baseDocumentModels } from './store/document-model';
 const isMac = process.platform === 'darwin';
 

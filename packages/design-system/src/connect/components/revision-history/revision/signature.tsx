@@ -1,6 +1,6 @@
 import { Tooltip } from "#connect";
 import { Icon } from "#powerhouse";
-import { type Signature } from "../types";
+import { type Signature } from "../types.js";
 
 export type SignatureProps = {
   readonly signatures: Signature[] | undefined;

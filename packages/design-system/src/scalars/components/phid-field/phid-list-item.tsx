@@ -1,7 +1,7 @@
 import { Icon, type IconName } from "#powerhouse";
 import { cn } from "#scalars";
 import React from "react";
-import type { PHIDItem, PHIDProps } from "./types";
+import type { PHIDItem, PHIDProps } from "./types.js";
 
 const IconRenderer: React.FC<{
   customIcon?: IconName | React.ReactElement;

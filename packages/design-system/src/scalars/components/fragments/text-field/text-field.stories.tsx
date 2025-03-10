@@ -6,7 +6,7 @@ import {
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { TextField } from "./text-field";
+import { TextField } from "./text-field.js";
 
 const meta = {
   title: "Document Engineering/Fragments/TextField",

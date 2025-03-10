@@ -1,4 +1,4 @@
-import { TUiNodes } from '#hooks/useUiNodes';
+import { type TUiNodes } from '#hooks/useUiNodes';
 import { sortUiNodesByName } from '#utils/index';
 import {
     FILE,

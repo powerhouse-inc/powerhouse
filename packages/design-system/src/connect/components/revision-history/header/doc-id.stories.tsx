@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import { DocId } from "./doc-id";
+import { DocId } from "./doc-id.js";
 
 const meta = {
   title: "Connect/Components/Revision History/Header/DocId",

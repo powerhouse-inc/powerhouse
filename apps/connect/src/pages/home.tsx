@@ -6,7 +6,7 @@ import {
     HomeScreenAddDriveItem,
     HomeScreenItem,
     Icon,
-    UiDriveNode,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
 import { useCallback } from 'react';
 

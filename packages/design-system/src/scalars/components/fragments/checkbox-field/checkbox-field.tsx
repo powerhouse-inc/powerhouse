@@ -1,10 +1,10 @@
 import { cn } from "#scalars";
 import { useId } from "react";
-import { type FieldCommonProps } from "../../types";
-import { FormLabel } from "../form-label";
-import { FormMessageList } from "../form-message";
-import { withFieldValidation } from "../with-field-validation";
-import { Checkbox, type CheckboxValue } from "./checkbox";
+import { type FieldCommonProps } from "../../types.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import { withFieldValidation } from "../with-field-validation/index.js";
+import { Checkbox, type CheckboxValue } from "./checkbox.js";
 
 export interface CheckboxFieldProps extends FieldCommonProps<CheckboxValue> {
   onChange?: (checked: CheckboxValue) => void;

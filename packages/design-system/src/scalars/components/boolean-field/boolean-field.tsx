@@ -1,8 +1,11 @@
 import {
   CheckboxField,
   type CheckboxFieldProps,
-} from "../fragments/checkbox-field";
-import { ToggleField, type ToggleFieldProps } from "../fragments/toggle-field";
+} from "../fragments/checkbox-field/index.js";
+import {
+  ToggleField,
+  type ToggleFieldProps,
+} from "../fragments/toggle-field/index.js";
 
 export interface BooleanFieldProps
   extends Omit<CheckboxFieldProps, "defaultValue" | "onChange" | "value">,

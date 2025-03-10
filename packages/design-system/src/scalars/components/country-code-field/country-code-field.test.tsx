@@ -1,8 +1,8 @@
 import { renderWithForm } from "#scalars";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { CountryCodeField } from "./country-code-field";
+import { CountryCodeField } from "./country-code-field.js";
 
 describe("CountryCodeField Component", () => {
   const defaultProps = {

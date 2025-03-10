@@ -8,7 +8,7 @@ import {
 import { cn } from "#scalars";
 import { type ChangeEvent, useMemo } from "react";
 import { twMerge } from "tailwind-merge";
-import { FilterItem, type FilterItemType } from "./filter-item";
+import { FilterItem, type FilterItemType } from "./filter-item.js";
 
 export interface ConnectSearchBarProps {
   value?: string;

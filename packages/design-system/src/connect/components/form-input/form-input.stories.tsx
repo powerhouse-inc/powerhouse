@@ -1,6 +1,6 @@
 import { Icon } from "#powerhouse";
 import { type Meta, type StoryObj } from "@storybook/react";
-import { FormInput } from "./form-input";
+import { FormInput } from "./form-input.js";
 
 const meta = {
   title: "Connect/Components/Form Input",

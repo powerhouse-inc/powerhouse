@@ -6,7 +6,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { TextareaField } from "./textarea-field";
+import { TextareaField } from "./textarea-field.js";
 
 const meta = {
   title: "Document Engineering/Fragments/TextareaField",

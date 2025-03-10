@@ -1,6 +1,6 @@
 import { cn } from "#scalars";
-import { Button } from "../../../fragments/button/button";
-import { type DatePickerView } from "../../types";
+import { Button } from "../../../fragments/button/button.js";
+import { type DatePickerView } from "../../types.js";
 type CalendarDateHeaderProps = {
   navView: DatePickerView;
   setNavView: (navView: DatePickerView) => void;

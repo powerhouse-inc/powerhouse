@@ -1,15 +1,15 @@
 import { renderWithForm } from "#scalars";
 import { act, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { Form } from "../../form";
-import { type ValidatorHandler } from "../../types";
-import { FormGroup } from "../form-group";
-import { FormLabel } from "../form-label";
-import { FormMessageList } from "../form-message";
-import { Input } from "../input";
-import { type TextFieldProps } from "../text-field";
-import { withFieldValidation } from "./with-field-validation";
+import { Form } from "../../form/index.js";
+import { type ValidatorHandler } from "../../types.js";
+import { FormGroup } from "../form-group/index.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import { Input } from "../input/index.js";
+import { type TextFieldProps } from "../text-field/index.js";
+import { withFieldValidation } from "./with-field-validation.js";
 
 // Test component that will be wrapped
 

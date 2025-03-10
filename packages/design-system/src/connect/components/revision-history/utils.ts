@@ -1,5 +1,5 @@
 import { type Operation } from "document-model";
-import { type Day, type Revision, type Signature, type Skip } from "./types";
+import { type Day, type Revision, type Signature, type Skip } from "./types.js";
 
 export function makeRows(operations: Operation[]) {
   const revisionsAndSkips: (Revision | Skip | Day)[] = [];

@@ -4,7 +4,7 @@ import {
   type SelectProps,
 } from "react-multi-select-component";
 import { twMerge } from "tailwind-merge";
-import { SettingsRow, type SettingsRowProps } from "./row";
+import { SettingsRow, type SettingsRowProps } from "./row.js";
 
 export interface DocumentSelectSettingsRowProps
   extends Omit<SettingsRowProps, "onChange"> {

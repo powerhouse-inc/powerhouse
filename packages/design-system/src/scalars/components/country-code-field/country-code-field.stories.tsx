@@ -6,7 +6,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { CountryCodeField } from "./country-code-field";
+import { CountryCodeField } from "./country-code-field.js";
 
 const meta: Meta<typeof CountryCodeField> = {
   title: "Document Engineering/Simple Components/Country Code Field",

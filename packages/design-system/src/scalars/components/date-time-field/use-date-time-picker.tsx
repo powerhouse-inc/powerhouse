@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { type DateFieldValue } from "../date-picker-field/types";
-import { useTimePickerField } from "../time-picker-field/use-time-picker-field";
+import { type DateFieldValue } from "../date-picker-field/types.js";
+import { useTimePickerField } from "../time-picker-field/use-time-picker-field.js";
 const parseDateTimeToInputValue = (value: DateFieldValue) => {
   if (!value) return "";
   const date = new Date(value);

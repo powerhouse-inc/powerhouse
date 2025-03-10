@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import { DocumentToolbar } from "./document-toolbar";
+import { DocumentToolbar } from "./document-toolbar.js";
 
 const meta = {
   title: "Connect/Components/DocumentToolbar",

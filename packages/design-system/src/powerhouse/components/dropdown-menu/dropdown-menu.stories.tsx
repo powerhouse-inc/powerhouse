@@ -5,7 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "./dropdown-menu";
+} from "./dropdown-menu.js";
 
 const meta = {
   title: "Powerhouse/Components/DropdownMenu",

@@ -3,7 +3,11 @@ import { EventEmitter } from 'events';
 import type { IStorage } from '../storage';
 import { getEnsInfo } from '../viem';
 import { RENOWN_URL } from './constants';
-import { PowerhouseVerifiableCredential, RenownStorage, User } from './types';
+import {
+    type PowerhouseVerifiableCredential,
+    type RenownStorage,
+    type User,
+} from './types';
 import { parsePkhDid } from './utils';
 
 export type { PowerhouseVerifiableCredential } from './types';

@@ -1,5 +1,5 @@
 import { Icon, type IconName } from "#powerhouse";
-import { NodeStatus } from "../types";
+import { NodeStatus } from "../types.js";
 
 interface StatusIconProps {
   status: NodeStatus;

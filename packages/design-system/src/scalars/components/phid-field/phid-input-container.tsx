@@ -3,7 +3,7 @@ import { cn, Input, Tooltip, TooltipProvider } from "#scalars";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
-import type { PHIDItem } from "./types";
+import type { PHIDItem } from "./types.js";
 
 interface PHIDInputContainerProps {
   id: string;

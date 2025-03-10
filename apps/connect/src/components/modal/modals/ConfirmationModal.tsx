@@ -1,5 +1,5 @@
 import { ConnectConfirmationModal } from '@powerhousedao/design-system';
-import React from 'react';
+import type React from 'react';
 
 export interface ConfirmationModalProps {
     body: React.ReactNode;

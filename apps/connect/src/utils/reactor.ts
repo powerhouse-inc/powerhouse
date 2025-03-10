@@ -1,14 +1,14 @@
 import {
-    BaseDocumentDriveServer,
+    type BaseDocumentDriveServer,
     BaseQueueManager,
-    DefaultRemoteDriveInput,
-    DocumentDriveServerOptions,
+    type DefaultRemoteDriveInput,
+    type DocumentDriveServerOptions,
     InMemoryCache,
-    IReadModeDriveServer,
+    type IReadModeDriveServer,
     ReactorBuilder,
 } from 'document-drive';
 import { BrowserStorage } from 'document-drive/storage/browser';
-import { DocumentModelModule } from 'document-model';
+import { type DocumentModelModule } from 'document-model';
 
 const DEFAULT_DRIVES_URL =
     import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;

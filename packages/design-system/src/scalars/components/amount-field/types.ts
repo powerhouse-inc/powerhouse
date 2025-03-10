@@ -1,4 +1,4 @@
-import { type TokenIcons } from "./amount-field";
+import { type TokenIcons } from "./amount-field.js";
 
 export type Amount = number | undefined;
 export type AmountPercentage = number | undefined;

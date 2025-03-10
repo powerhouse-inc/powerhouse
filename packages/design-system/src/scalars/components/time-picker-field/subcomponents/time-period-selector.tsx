@@ -1,6 +1,6 @@
 import { cn } from "#scalars";
-import { Button } from "../../fragments/button";
-import { type TimePeriod } from "../type";
+import { Button } from "../../fragments/button/index.js";
+import { type TimePeriod } from "../type.js";
 
 interface TimePeriodSelectorProps {
   selectedPeriod?: TimePeriod;

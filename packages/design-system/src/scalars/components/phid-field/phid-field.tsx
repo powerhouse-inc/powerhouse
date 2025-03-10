@@ -16,11 +16,11 @@ import {
   withFieldValidation,
 } from "#scalars";
 import React, { useId } from "react";
-import { PHIDInputContainer } from "./phid-input-container";
-import { PHIDList } from "./phid-list";
-import { PHIDListItem } from "./phid-list-item";
-import type { PHIDProps } from "./types";
-import { usePHIDField } from "./use-phid-field";
+import { PHIDInputContainer } from "./phid-input-container.js";
+import { PHIDList } from "./phid-list.js";
+import { PHIDListItem } from "./phid-list-item.js";
+import type { PHIDProps } from "./types.js";
+import { usePHIDField } from "./use-phid-field.js";
 
 type PHIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,

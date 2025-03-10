@@ -1,7 +1,7 @@
 import { useConnectConfig } from '#hooks/useConnectConfig';
 import { useUiNodes } from '#hooks/useUiNodes';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
-import { DocumentModelModule } from 'document-model';
+import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
 import Button from './button';
 import FolderView from './folder-view';

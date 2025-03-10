@@ -1,6 +1,6 @@
 import { getSwitchboardUrl } from '#utils/getSwitchboardUrl';
 import { openUrl } from '#utils/openUrl';
-import { FILE, UiNode } from '@powerhousedao/design-system';
+import { FILE, type UiNode } from '@powerhousedao/design-system';
 import { useDocumentDriveById } from './useDocumentDriveById';
 
 export const useOpenSwitchboardLink = (driveId: string | undefined) => {

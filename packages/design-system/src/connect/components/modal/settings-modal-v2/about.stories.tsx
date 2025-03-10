@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
+import mockPackageJson from "../../../utils/mocks/mock-package-json.json" with { type: "json" };
 import { About } from "./about.js";
 const meta: Meta<typeof About> = {
   title: "Connect/Components/Modal/SettingsModalV2/About",

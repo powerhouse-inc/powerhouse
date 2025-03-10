@@ -1,6 +1,6 @@
-import { TUiNodes } from '#hooks/useUiNodes';
+import { type TUiNodes } from '#hooks/useUiNodes';
 import { useWindowSize } from '#hooks/useWindowSize';
-import { FileItem, UiFileNode } from '@powerhousedao/design-system';
+import { FileItem, type UiFileNode } from '@powerhousedao/design-system';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';

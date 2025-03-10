@@ -3,12 +3,12 @@ import { makeNodeSlugFromNodeName } from '#utils/slug';
 import {
     CreateDocumentModal as ConnectCreateDocumentModal,
     FILE,
-    TDocumentType,
-    UiDriveNode,
-    UiFolderNode,
-    UiNode,
+    type TDocumentType,
+    type UiDriveNode,
+    type UiFolderNode,
+    type UiNode,
 } from '@powerhousedao/design-system';
-import { DocumentModelModule } from 'document-model';
+import { type DocumentModelModule } from 'document-model';
 
 export interface CreateDocumentModalProps {
     open: boolean;

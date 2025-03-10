@@ -1,1 +1,1 @@
-export * from "./home-screen-item";
+export * from "./home-screen-item.js";

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { allGroupTransactionTypes, tableNames } from "../constants";
+import { allGroupTransactionTypes, tableNames } from "../constants/index.js";
 import {
   type Account,
   type AccountFormInputs,
@@ -12,8 +12,8 @@ import {
   type SPVFormInputs,
   type TableItemType,
   type TableName,
-} from "../types";
-import { isoDateStringToDateInput } from "../utils";
+} from "../types/index.js";
+import { isoDateStringToDateInput } from "../utils/index.js";
 
 export function useDefaultFormValues(args: {
   tableName: TableName;

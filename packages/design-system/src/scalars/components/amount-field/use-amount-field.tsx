@@ -1,11 +1,11 @@
-import { type TokenIcons } from "./amount-field";
+import { type TokenIcons } from "./amount-field.js";
 import {
   type AmountCurrencyCrypto,
   type AmountCurrencyFiat,
   type AmountCurrencyUniversal,
   type AmountFieldPropsGeneric,
   type AmountValue,
-} from "./types";
+} from "./types.js";
 import {
   displayValueAmount,
   getCountryCurrencies,
@@ -13,8 +13,8 @@ import {
   isNotSafeValue,
   isValidBigInt,
   isValidNumberGreaterThanMaxSafeInteger,
-} from "./utils";
-import { isValidNumber } from "../number-field/number-field-validations";
+} from "./utils.js";
+import { isValidNumber } from "../number-field/number-field-validations.js";
 import { useEffect, useMemo, useState } from "react";
 
 interface UseAmountFieldProps {

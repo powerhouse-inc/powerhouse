@@ -1,10 +1,10 @@
 import {
-    DocumentModelDocument,
-    PHDocument,
+    type DocumentModelDocument,
+    type PHDocument,
     validateInitialState,
     validateModules,
     validateStateSchemaName,
-    ValidationError,
+    type ValidationError,
 } from 'document-model';
 export const validateDocument = (document: PHDocument) => {
     const errors: ValidationError[] = [];

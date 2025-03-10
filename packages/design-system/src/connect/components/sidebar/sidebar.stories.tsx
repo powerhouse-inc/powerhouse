@@ -4,8 +4,8 @@ import { useUiNodesContext } from "@powerhousedao/reactor-browser";
 import { useEffect } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentPropsWithoutRef } from "react";
-import { ConnectSidebar } from "..";
-import { SidebarItem } from "./sidebar-item";
+import { ConnectSidebar } from "../index.js";
+import { SidebarItem } from "./sidebar-item.js";
 
 type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
   driveNodes?: UiDriveNode[];

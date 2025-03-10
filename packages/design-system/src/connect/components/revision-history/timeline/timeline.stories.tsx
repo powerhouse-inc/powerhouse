@@ -1,7 +1,7 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import { TooltipProvider } from "../../tooltip";
-import { globalOperations, localOperations } from "../mocks";
-import { Timeline } from "./timeline";
+import { TooltipProvider } from "../../tooltip/index.js";
+import { globalOperations, localOperations } from "../mocks.js";
+import { Timeline } from "./timeline.js";
 
 const meta = {
   title: "Connect/Components/Revision History/Timeline",

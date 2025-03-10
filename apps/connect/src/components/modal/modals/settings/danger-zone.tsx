@@ -2,7 +2,7 @@ import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
 import { useUiNodes } from '#hooks/useUiNodes';
 import {
     DangerZone as BaseDangerZone,
-    UiDriveNode,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
 import { useCallback } from 'react';

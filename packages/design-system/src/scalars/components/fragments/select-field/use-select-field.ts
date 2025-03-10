@@ -1,6 +1,6 @@
 import { type SelectProps } from "#scalars";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { type SelectFieldProps } from "./select-field";
+import { type SelectFieldProps } from "./select-field.js";
 
 interface UseSelectFieldProps {
   options?: SelectProps["options"];

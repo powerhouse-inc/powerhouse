@@ -11,7 +11,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { useEffect } from "react";
-import { Breadcrumbs } from ".";
+import { Breadcrumbs } from "./index.js";
 
 const meta: Meta<typeof Breadcrumbs> = {
   title: "Connect/Components/Breadcrumbs",

@@ -5,8 +5,8 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { CurrencyCodeField } from "./currency-code-field";
-import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults";
+import { CurrencyCodeField } from "./currency-code-field.js";
+import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults.js";
 
 const meta: Meta<typeof CurrencyCodeField> = {
   title: "Document Engineering/Simple Components/Currency Code Field",

@@ -1,4 +1,4 @@
-import type { NodeStatus, SidebarNode } from "./types";
+import type { NodeStatus, SidebarNode } from "./types.js";
 
 export const nodesSearch = (
   nodes: SidebarNode[],

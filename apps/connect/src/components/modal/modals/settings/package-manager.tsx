@@ -5,8 +5,9 @@ import {
     useMutableExternalPackages,
 } from '#store/external-packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
-import { Manifest } from 'document-model';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { type Manifest } from 'document-model';
+import type React from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';

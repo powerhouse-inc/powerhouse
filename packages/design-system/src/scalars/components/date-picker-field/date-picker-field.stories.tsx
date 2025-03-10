@@ -6,7 +6,7 @@ import {
   withTimestampsAsISOStrings,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { DatePickerField } from "./date-picker-field";
+import { DatePickerField } from "./date-picker-field.js";
 
 const meta: Meta<typeof DatePickerField> = {
   title: "Document Engineering/Fragments/Date Picker Field",

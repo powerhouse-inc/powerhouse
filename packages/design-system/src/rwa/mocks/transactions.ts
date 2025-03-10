@@ -10,7 +10,7 @@ import {
   mockAccounts,
   mockFixedIncomes,
   mockPrincipalLenderAccountId,
-} from "./assets";
+} from "./assets.js";
 
 export const mockFixedIncomeTransaction: BaseTransaction = {
   id: "fixed-income-transaction-1",

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import MultipleFieldsWithComplexLayout from "./multiple-fields-with-complex-layout";
+import MultipleFieldsWithComplexLayout from "./multiple-fields-with-complex-layout.js";
 
 const meta = {
   title:

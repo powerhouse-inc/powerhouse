@@ -1,4 +1,4 @@
-import { createPublicClient, http, PublicClient } from 'viem';
+import { createPublicClient, http, type PublicClient } from 'viem';
 import { getEnsAvatar, getEnsName } from 'viem/actions';
 import * as chains from 'viem/chains';
 

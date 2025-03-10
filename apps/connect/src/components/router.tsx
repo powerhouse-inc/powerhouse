@@ -2,7 +2,7 @@ import { Home } from '#pages/home';
 import connectConfig from 'connect-config';
 import React, { Suspense } from 'react';
 import {
-    RouteObject,
+    type RouteObject,
     RouterProvider,
     createBrowserRouter,
     createMemoryRouter,

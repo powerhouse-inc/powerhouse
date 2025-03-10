@@ -1,6 +1,6 @@
 import { renderWithForm } from "#scalars";
 import { screen, waitFor } from "@testing-library/react";
-import { AmountField } from "./amount-field";
+import { AmountField } from "./amount-field.js";
 
 describe("AmountField Component", () => {
   it("should match snapshot", () => {

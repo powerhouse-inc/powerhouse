@@ -1,4 +1,4 @@
-import type { Props } from "./types";
+import type { Props } from "./types.js";
 export default function GlobeWww(props: Props) {
   return (
     <svg

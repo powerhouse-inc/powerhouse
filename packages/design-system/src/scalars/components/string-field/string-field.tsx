@@ -1,5 +1,11 @@
-import { TextField, type TextFieldProps } from "../fragments/text-field";
-import { TextareaField, type TextareaProps } from "../fragments/textarea-field";
+import {
+  TextField,
+  type TextFieldProps,
+} from "../fragments/text-field/index.js";
+import {
+  TextareaField,
+  type TextareaProps,
+} from "../fragments/textarea-field/index.js";
 
 export interface StringFieldProps
   extends Omit<TextFieldProps, keyof TextareaProps>,

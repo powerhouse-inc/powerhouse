@@ -6,8 +6,8 @@ import {
 } from "#scalars";
 import React from "react";
 import { CircleFlag } from "react-circle-flags";
-import countries from "world-countries";
-import { type CountryCodeProps } from "./types";
+import countries, { type Countries } from "world-countries";
+import { type CountryCodeProps } from "./types.js";
 
 export type CountryCodeFieldProps = FieldCommonProps<string> &
   ErrorHandling &
@@ -31,7 +31,7 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
     },
     ref,
   ) => {
-    const defaultOptions = countries
+    const defaultOptions = (countries as unknown as Countries)
       .filter(
         (country) =>
           (includeDependentAreas ? true : country.independent) &&
@@ -92,7 +92,7 @@ export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
             return true;
           }
 
-          const validCountries = countries
+          const validCountries = (countries as unknown as Countries)
             .filter(
               (country) =>
                 (includeDependentAreas ? true : country.independent) &&

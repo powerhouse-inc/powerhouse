@@ -1,7 +1,7 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
-import { Button } from "../../../fragments/button";
-import { type DatePickerView } from "../../types";
+import { Button } from "../../../fragments/button/index.js";
+import { type DatePickerView } from "../../types.js";
 
 interface CaptionLabelProps extends React.PropsWithChildren {
   showYearSwitcher: boolean;

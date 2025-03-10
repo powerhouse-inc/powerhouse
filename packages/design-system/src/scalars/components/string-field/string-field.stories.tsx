@@ -6,7 +6,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { StringField } from "./string-field";
+import { StringField } from "./string-field.js";
 
 const meta: Meta<typeof StringField> = {
   title: "Document Engineering/Simple Components/String Field",

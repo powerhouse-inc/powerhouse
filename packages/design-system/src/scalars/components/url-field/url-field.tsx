@@ -9,11 +9,11 @@ import {
   FormMessageList,
   Input,
   withFieldValidation,
-} from "../fragments";
-import ValueTransformer from "../fragments/value-transformer";
-import { type ErrorHandling, type FieldCommonProps } from "../types";
-import UrlFavicon from "./url-favicon";
-import { useURLWarnings } from "./useURLWarnings";
+} from "../fragments/index.js";
+import ValueTransformer from "../fragments/value-transformer/index.js";
+import { type ErrorHandling, type FieldCommonProps } from "../types.js";
+import UrlFavicon from "./url-favicon.js";
+import { useURLWarnings } from "./useURLWarnings.js";
 
 export type PlatformIcon = IconName | React.ReactElement;
 

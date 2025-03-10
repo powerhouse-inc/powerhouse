@@ -1,4 +1,4 @@
-import type { Props } from "./types";
+import type { Props } from "./types.js";
 export default function ArrowFilledRight(props: Props) {
   return (
     <svg {...props} viewBox="0 0 9 12" fill="currentcolor">

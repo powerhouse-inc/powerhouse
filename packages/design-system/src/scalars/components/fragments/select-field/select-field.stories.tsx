@@ -7,7 +7,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { SelectField } from "./select-field";
+import { SelectField } from "./select-field.js";
 
 const meta: Meta<typeof SelectField> = {
   title: "Document Engineering/Fragments/SelectField",

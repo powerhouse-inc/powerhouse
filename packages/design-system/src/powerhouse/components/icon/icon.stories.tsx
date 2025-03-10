@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import { Icon, iconNames } from "./icon";
+import { Icon, iconNames } from "./icon.js";
 
 const meta = {
   title: "Powerhouse/Components/Icon",

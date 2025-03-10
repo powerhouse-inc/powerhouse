@@ -1,8 +1,8 @@
 import {
-    AddLocalDriveInput,
+    type AddLocalDriveInput,
     AddLocalDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
-import { App } from 'document-model';
+import { type App } from 'document-model';
 type Props = {
     open: boolean;
     onAddLocalDrive: (data: AddLocalDriveInput) => Promise<void>;

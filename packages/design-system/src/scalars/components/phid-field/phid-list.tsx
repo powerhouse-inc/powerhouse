@@ -8,8 +8,8 @@ import {
 import { useCommandState } from "cmdk";
 import type React from "react";
 import { useEffect } from "react";
-import { PHIDListItem } from "./phid-list-item";
-import type { PHIDItem, PHIDProps } from "./types";
+import { PHIDListItem } from "./phid-list-item.js";
+import type { PHIDItem, PHIDProps } from "./types.js";
 
 interface PHIDListProps {
   variant: PHIDProps["variant"];

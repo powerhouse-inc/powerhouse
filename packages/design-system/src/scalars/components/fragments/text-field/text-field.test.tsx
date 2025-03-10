@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { TextField } from "./text-field";
-import { renderWithForm } from "../../../lib/testing";
+import { userEvent } from "@testing-library/user-event";
+import { renderWithForm } from "../../../lib/testing.js";
+import { TextField } from "./text-field.js";
 
 describe("TextField", () => {
   it("should match snapshot", () => {

@@ -1,6 +1,6 @@
 import { documentTypes, mockUiFileNode } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
-import { FileItem } from "./file-item";
+import { FileItem } from "./file-item.js";
 
 const meta: Meta<typeof FileItem> = {
   title: "Connect/Components/FileItem",

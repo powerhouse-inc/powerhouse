@@ -6,7 +6,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { NumberField } from "./number-field";
+import { NumberField } from "./number-field.js";
 
 const meta = {
   title: "Document Engineering/Simple Components/Number Field",

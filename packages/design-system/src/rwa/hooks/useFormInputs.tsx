@@ -28,8 +28,8 @@ import {
   type UseFormRegister,
   type UseFormWatch,
 } from "react-hook-form";
-import { EntryTimeLabel } from "../components/inputs/entry-time-label";
-import { CashBalanceChange } from "../components/table/transactions/cash-balance-change";
+import { EntryTimeLabel } from "../components/inputs/entry-time-label.js";
+import { CashBalanceChange } from "../components/table/transactions/cash-balance-change.js";
 
 type Input = {
   label: string;

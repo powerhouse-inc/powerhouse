@@ -3,7 +3,7 @@ import {
   type TypographySize,
   inputStyle,
   typographySizes,
-} from "./stylesVariant";
+} from "./stylesVariant.js";
 
 interface TextInputProps {
   readonly theme: "light" | "dark";

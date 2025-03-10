@@ -6,8 +6,8 @@ import type {
     DriveInput,
     RemoteDriveOptions,
 } from 'document-drive';
-import { Action, Operation, PHDocument } from 'document-model';
-import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
+import { type Action, type Operation, type PHDocument } from 'document-model';
+import { type IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { platformInfo } from './app/detect-platform';
 import type { IConnectCrypto } from './services/crypto';
 import type { IRenown, User } from './services/renown/types';

@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Sidebar } from "./sidebar";
+import { Sidebar } from "./sidebar.js";
 import { Icon } from "#powerhouse";
-import { SidebarProvider } from "./subcomponents/sidebar-provider";
-import mockedTree from "./mocked_tree.json";
+import { SidebarProvider } from "./subcomponents/sidebar-provider.js";
+import mockedTree from "./mocked_tree.json" with { type: "json" };
 import { useState } from "react";
-import { type SidebarNode } from "./types";
+import { type SidebarNode } from "./types.js";
 
 /**
  * The `Sidebar` component can be used within a page layout to provide a sidebar navigation.

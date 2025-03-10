@@ -14,7 +14,7 @@ import {
 } from "#scalars";
 import React, { useEffect, useId, useMemo, useRef } from "react";
 import { useResizeObserver } from "usehooks-ts";
-import ValueTransformer from "../value-transformer";
+import ValueTransformer from "../value-transformer/index.js";
 
 type TextareaFieldBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,

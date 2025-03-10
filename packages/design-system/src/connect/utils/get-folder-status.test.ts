@@ -3,7 +3,7 @@ import {
   getFolderStatus,
   removeSuccessFiles,
   sortFilesByStatus,
-} from "./get-folder-status";
+} from "./get-folder-status.js";
 import { it } from "vitest";
 const filesStatus: FileStatus[] = [
   {

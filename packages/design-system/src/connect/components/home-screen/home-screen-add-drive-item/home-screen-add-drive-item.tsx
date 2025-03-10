@@ -1,5 +1,5 @@
 import { Icon } from "#powerhouse";
-import { HomeScreenItem } from "../home-screen-item";
+import { HomeScreenItem } from "../home-screen-item/index.js";
 
 type HomeScreenAddDriveItemProps = {
   readonly containerClassName?: string;

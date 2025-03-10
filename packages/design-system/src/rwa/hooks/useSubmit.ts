@@ -12,7 +12,7 @@ import {
   type SubmitHandler,
   useForm,
 } from "react-hook-form";
-import { useDefaultFormValues } from "./useDefaultFormValues";
+import { useDefaultFormValues } from "./useDefaultFormValues.js";
 
 function useWrappedForm<TValues extends FieldValues>(defaultValues: TValues) {
   const form = useForm<TValues>({

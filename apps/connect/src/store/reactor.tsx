@@ -1,6 +1,6 @@
 import connectConfig from '#connect.config';
 import { createBrowserDocumentDriveServer } from '#utils/reactor';
-import { IDocumentDriveServer, logger } from 'document-drive';
+import { type IDocumentDriveServer, logger } from 'document-drive';
 import { hashKey } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, unwrap } from 'jotai/utils';

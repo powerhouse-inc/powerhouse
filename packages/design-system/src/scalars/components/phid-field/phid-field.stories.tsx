@@ -6,8 +6,8 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { PHIDField } from "./phid-field";
-import { fetchOptions, fetchSelectedOption, mockedOptions } from "./utils";
+import { PHIDField } from "./phid-field.js";
+import { fetchOptions, fetchSelectedOption, mockedOptions } from "./utils.js";
 
 const meta: Meta<typeof PHIDField> = {
   title: "Document Engineering/Simple Components/PHID Field",

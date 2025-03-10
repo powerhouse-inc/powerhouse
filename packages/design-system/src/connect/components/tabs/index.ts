@@ -1,2 +1,2 @@
-export * from "./tab-content";
-export * from "./tabs";
+export * from "./tab-content.js";
+export * from "./tabs.js";

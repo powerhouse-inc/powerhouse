@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { type SidebarNode, type FlattenedNode, NodeStatus } from "../types";
+import { type SidebarNode, type FlattenedNode, NodeStatus } from "../types.js";
 import {
   filterStatuses,
   getMaxDepth,
@@ -16,7 +16,7 @@ import {
   getOpenLevels,
   isOpenLevel,
   nodesSearch,
-} from "../utils";
+} from "../utils.js";
 
 type SidebarContextType = {
   nodes: SidebarNode[];

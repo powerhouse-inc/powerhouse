@@ -1,7 +1,7 @@
 import { useApps } from '#store/external-packages';
 import {
-    AddLocalDriveInput,
-    AddRemoteDriveInput,
+    type AddLocalDriveInput,
+    type AddRemoteDriveInput,
     AddDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
 import { requestPublicDrive } from 'document-drive';

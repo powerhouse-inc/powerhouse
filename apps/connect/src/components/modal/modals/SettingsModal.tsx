@@ -3,7 +3,8 @@ import {
     SettingsModal as SettingsModalV2,
 } from '@powerhousedao/design-system';
 import { t } from 'i18next';
-import React, { useCallback, useMemo } from 'react';
+import type React from 'react';
+import { useCallback, useMemo } from 'react';
 import { About } from './settings/about';
 import { DangerZone } from './settings/danger-zone';
 import { DefaultEditor } from './settings/default-editor';

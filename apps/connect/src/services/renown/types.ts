@@ -1,6 +1,6 @@
 import type { User as EditorUser } from 'document-model';
 import type { IStorage } from '../storage';
-import { CREDENTIAL_TYPES } from './constants';
+import { type CREDENTIAL_TYPES } from './constants';
 
 export type User = EditorUser & {
     did: string;

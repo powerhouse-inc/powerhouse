@@ -1,6 +1,6 @@
 import { Icon } from "#powerhouse";
 import { type Meta, type StoryObj } from "@storybook/react";
-import { HomeScreenItem } from "./home-screen-item";
+import { HomeScreenItem } from "./home-screen-item.js";
 
 const meta = {
   title: "Connect/Components/Home Screen Item",

@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import { Branch } from "./branch";
+import { Branch } from "./branch.js";
 
 const meta = {
   title: "Connect/Components/Revision History/Header/Branch",

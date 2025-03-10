@@ -5,12 +5,12 @@ import { cn } from "#scalars";
 import { differenceInCalendarDays, format } from "date-fns";
 import * as React from "react";
 import { DayPicker, useDayPicker, type DayPickerProps } from "react-day-picker";
-import { Button, buttonVariants } from "../../../fragments/button/button";
-import { type DatePickerView } from "../../types";
-import CalendarDateHeader from "../calendar-date-header/calendar-date-header";
-import NavCalendar from "../calendar-nav/calendar-nav";
-import CaptionLabel from "../caption-label/caption-label";
-import { MONTHS } from "../utils";
+import { Button, buttonVariants } from "../../../fragments/button/button.js";
+import { type DatePickerView } from "../../types.js";
+import CalendarDateHeader from "../calendar-date-header/calendar-date-header.js";
+import NavCalendar from "../calendar-nav/calendar-nav.js";
+import CaptionLabel from "../caption-label/caption-label.js";
+import { MONTHS } from "../utils.js";
 
 export type CalendarProps = DayPickerProps & {
   /**

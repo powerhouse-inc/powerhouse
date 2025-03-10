@@ -1,4 +1,4 @@
-import { expect, Page, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 import { getApp } from './utils/app-manager';
 import { beforeAll } from './utils/before-all';

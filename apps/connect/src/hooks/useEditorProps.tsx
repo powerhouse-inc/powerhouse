@@ -3,20 +3,23 @@ import { useGetDocumentModelModule } from '#store/document-model';
 import { themeAtom } from '#store/theme';
 import { useUser } from '#store/user';
 import {
-    DocumentDispatch,
-    DocumentDispatchCallback,
+    type DocumentDispatch,
+    type DocumentDispatchCallback,
 } from '#utils/document-model';
 import { exportFile } from '#utils/file';
 import { addActionContext, signOperation } from '#utils/signature';
 import { validateDocument } from '#utils/validate-document';
-import { UiDriveNode, UiFileNode } from '@powerhousedao/design-system';
+import {
+    type UiDriveNode,
+    type UiFileNode,
+} from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
 import {
-    Action,
-    ActionErrorCallback,
-    EditorContext,
-    Operation,
-    PHDocument,
+    type Action,
+    type ActionErrorCallback,
+    type EditorContext,
+    type Operation,
+    type PHDocument,
     redo,
     undo,
 } from 'document-model';

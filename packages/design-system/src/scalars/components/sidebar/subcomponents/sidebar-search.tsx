@@ -3,8 +3,8 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
 import { useCallback, useRef } from "react";
-import { Input } from "../../fragments";
-import { useSidebar } from "./sidebar-provider";
+import { Input } from "../../fragments/index.js";
+import { useSidebar } from "./sidebar-provider.js";
 
 interface SidebarSearchProps {
   showStatusFilter: boolean;

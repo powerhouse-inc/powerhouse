@@ -7,7 +7,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { AmountField } from "./amount-field";
+import { AmountField } from "./amount-field.js";
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",

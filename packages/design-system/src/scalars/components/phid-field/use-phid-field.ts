@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useDebounceCallback } from "usehooks-ts";
-import type { PHIDProps, PHIDItem } from "./types";
+import type { PHIDProps, PHIDItem } from "./types.js";
 
 interface UsePHIDFieldParams {
   autoComplete: PHIDProps["autoComplete"];

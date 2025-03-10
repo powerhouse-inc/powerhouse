@@ -1,5 +1,5 @@
 import { useDefaultDocumentModelEditor } from '#hooks/useDefaultDocumentModelEditor/index';
-import { DocumentModelLib, EditorModule } from 'document-model';
+import { type DocumentModelLib, type EditorModule } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';

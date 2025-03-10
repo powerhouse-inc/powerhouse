@@ -9,24 +9,24 @@ import { useApps } from '#store/external-packages';
 import { getNodeOptions } from '#utils/drive-sections';
 import { makeNodeSlugFromNodeName } from '#utils/slug';
 import {
-    AddLocalDriveInput,
-    AddRemoteDriveInput,
+    type AddLocalDriveInput,
+    type AddRemoteDriveInput,
     CLOUD,
     DRIVE,
     FILE,
     FOLDER,
     LOCAL,
     PUBLIC,
-    SharingType,
+    type SharingType,
     SUCCESS,
     toast,
-    UiDriveNode,
-    UiFileNode,
-    UiFolderNode,
-    UiNode,
+    type UiDriveNode,
+    type UiFileNode,
+    type UiFolderNode,
+    type UiNode,
 } from '@powerhousedao/design-system';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
-import { DocumentDriveDocument, ReadDrive } from 'document-drive';
+import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentDriveById } from './useDocumentDriveById';

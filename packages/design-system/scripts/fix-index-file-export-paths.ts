@@ -1,4 +1,4 @@
-// index.ts
+// fix-imports.ts
 import {
   existsSync,
   readdirSync,
@@ -8,74 +8,34 @@ import {
 } from "fs";
 import { dirname, join, resolve } from "path";
 
-interface ExportMatch {
-  fullMatch: string;
-  path: string;
-  startIndex: number;
-  endIndex: number;
-}
-
-function findExportStatements(content: string): ExportMatch[] {
-  // Match both "export * from './path'" and "export { something } from './path'"
-  const exportPattern =
-    /export\s+(?:\*|(?:{[^}]+}))\s+from\s+['"]([^'"]+)['"]/g;
-  const matches: ExportMatch[] = [];
-
-  let match;
-  while ((match = exportPattern.exec(content)) !== null) {
-    matches.push({
-      fullMatch: match[0],
-      path: match[1],
-      startIndex: match.index,
-      endIndex: match.index + match[0].length,
-    });
-  }
-
-  return matches;
-}
-
-function processIndexFile(filePath: string): void {
+function processFile(filePath: string): void {
   try {
     const content = readFileSync(filePath, "utf-8");
-    const dir = dirname(filePath);
-    let modifiedContent = content;
-    let offset = 0;
 
-    const exportMatches = findExportStatements(content);
+    // Simple regex to match imports and exports
+    const regex = /(import|export)[\s\S]*?from\s+['"]([^'"]+)['"]/g;
 
-    for (const match of exportMatches) {
-      const originalPath = match.path;
-      // Preserve the original prefix (./ or ../) by splitting it from the path
-      const pathPrefix = /^\.{1,2}\//.exec(originalPath)?.[0] || "";
-      const cleanPath = originalPath
-        .replace(/^\.{1,2}\//, "")
-        .replace(/\/$/, "");
-      const fullPath = resolve(dir, cleanPath);
+    // Replace all matches
+    const newContent = content.replace(
+      regex,
+      (match, statement: string, path: string) => {
+        // Only process relative imports
+        if (!path.startsWith(".")) return match;
+        // Skip if already has .js extension
+        if (path.endsWith(".js")) return match;
 
-      let newPath: string;
+        // Add appropriate extension
+        const newPath =
+          path.endsWith("/") || existsSync(resolve(dirname(filePath), path))
+            ? `${path}/index.js`.replace(/\/+/g, "/") // Path is a directory
+            : `${path}.js`; // Path is a file
 
-      if (existsSync(`${fullPath}.ts`)) {
-        // File exists, change extension to .js
-        newPath = `${pathPrefix}${cleanPath}.js`;
-      } else if (existsSync(fullPath) && statSync(fullPath).isDirectory()) {
-        // It's a directory, point to index.js
-        newPath = `${pathPrefix}${cleanPath}/index.js`;
-      } else {
-        // Path doesn't exist or is not accessible, skip it
-        continue;
-      }
+        return match.replace(path, newPath);
+      },
+    );
 
-      // Replace the old path with the new path
-      const beforeMatch = modifiedContent.slice(0, match.startIndex + offset);
-      const afterMatch = modifiedContent.slice(match.endIndex + offset);
-      const newExport = match.fullMatch.replace(originalPath, newPath);
-
-      modifiedContent = beforeMatch + newExport + afterMatch;
-      offset += newExport.length - match.fullMatch.length;
-    }
-
-    if (content !== modifiedContent) {
-      writeFileSync(filePath, modifiedContent);
+    if (content !== newContent) {
+      writeFileSync(filePath, newContent);
       console.log(`Updated ${filePath}`);
     }
   } catch (error) {
@@ -84,26 +44,26 @@ function processIndexFile(filePath: string): void {
 }
 
 function processDirectory(dirPath: string): void {
-  const ignoreDirs = new Set(["node_modules", "dist", "storybook-static"]);
+  const ignoreDirs = new Set([
+    "node_modules",
+    "dist",
+    "storybook-static",
+    ".git",
+  ]);
 
   try {
     const entries = readdirSync(dirPath);
 
     for (const entry of entries) {
+      if (ignoreDirs.has(entry)) continue;
+
       const fullPath = join(dirPath, entry);
+      const stats = statSync(fullPath);
 
-      try {
-        const stats = statSync(fullPath);
-
-        if (stats.isDirectory()) {
-          if (!ignoreDirs.has(entry)) {
-            processDirectory(fullPath);
-          }
-        } else if (entry === "index.ts") {
-          processIndexFile(fullPath);
-        }
-      } catch (error) {
-        console.error(`Error accessing ${fullPath}:`, error);
+      if (stats.isDirectory()) {
+        processDirectory(fullPath);
+      } else if (entry.endsWith(".ts") || entry.endsWith(".tsx")) {
+        processFile(fullPath);
       }
     }
   } catch (error) {

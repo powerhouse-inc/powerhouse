@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import { AnimatedLoader } from "./animated-loader";
+import { AnimatedLoader } from "./animated-loader.js";
 
 const meta: Meta = {
   title: "Connect/Components/Animated Loader",

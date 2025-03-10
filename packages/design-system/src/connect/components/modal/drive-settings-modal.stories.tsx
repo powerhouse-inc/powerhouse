@@ -1,7 +1,7 @@
 import { mockLocalDrive } from "#connect";
 import { useArgs } from "@storybook/preview-api";
 import { type Meta, type StoryObj } from "@storybook/react";
-import { DriveSettingsModal } from ".";
+import { DriveSettingsModal } from "./index.js";
 
 const meta = {
   title: "Connect/Components/Drive Settings Modal",

@@ -1,4 +1,4 @@
-import type { Props } from "./types";
+import type { Props } from "./types.js";
 export default function Renown(props: Props) {
   return (
     <svg {...props} viewBox="0 0 71 19" fill="currentcolor">

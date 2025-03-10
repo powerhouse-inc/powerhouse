@@ -1,2 +1,2 @@
-export * from "./enum-field";
+export * from "./enum-field.js";
 export * from "./types.js";

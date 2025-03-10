@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/react";
-import { Scope } from "./scope";
+import { Scope } from "./scope.js";
 
 const meta = {
   title: "Connect/Components/Revision History/Header/Scope",

@@ -1,7 +1,7 @@
 import { Icon, SidebarFooter, type SidebarFooterProps } from "#powerhouse";
 import { twMerge } from "tailwind-merge";
-import { SidebarLogin } from "./sidebar-login";
-import { SidebarUser } from "./sidebar-user";
+import { SidebarLogin } from "./sidebar-login.js";
+import { SidebarUser } from "./sidebar-user.js";
 
 export interface ConnectSidebarFooterProps extends SidebarFooterProps {
   address: `0x${string}` | undefined;

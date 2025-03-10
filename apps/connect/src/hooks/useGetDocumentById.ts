@@ -1,4 +1,4 @@
-import { Node } from 'document-drive';
+import { type Node } from 'document-drive';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
 export function useGetDocumentById(): (

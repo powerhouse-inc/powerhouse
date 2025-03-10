@@ -3,13 +3,13 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
 import { useEffect } from "react";
-import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
-import { SidebarHeader } from "./subcomponents/sidebar-header";
-import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
-import { useSidebar } from "./subcomponents/sidebar-provider";
-import { SidebarSearch } from "./subcomponents/sidebar-search";
-import { type SidebarNode } from "./types";
-import { useSidebarResize } from "./use-sidebar-resize";
+import { SidebarContentArea } from "./subcomponents/sidebar-content-area.js";
+import { SidebarHeader } from "./subcomponents/sidebar-header.js";
+import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area.js";
+import { useSidebar } from "./subcomponents/sidebar-provider.js";
+import { SidebarSearch } from "./subcomponents/sidebar-search.js";
+import { type SidebarNode } from "./types.js";
+import { useSidebarResize } from "./use-sidebar-resize.js";
 
 export interface SidebarProps {
   /**

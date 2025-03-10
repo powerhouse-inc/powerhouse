@@ -1,4 +1,4 @@
-import { Node } from 'document-drive';
+import { type Node } from 'document-drive';
 
 export const sanitizePath = (path: string) =>
     path.replace(/\s/g, '-').toLowerCase();

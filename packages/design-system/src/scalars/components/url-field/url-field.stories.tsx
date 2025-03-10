@@ -6,7 +6,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { UrlField } from "./url-field";
+import { UrlField } from "./url-field.js";
 
 const meta: Meta<typeof UrlField> = {
   title: "Document Engineering/Simple Components/Url Field",

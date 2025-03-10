@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { type ConnectToastOptions, ToastContainer, toast } from "./toast";
+import { type ConnectToastOptions, ToastContainer, toast } from "./toast.js";
 
 const meta: Meta<ConnectToastOptions & { content: React.ReactNode }> = {
   title: "Connect/Components/Toast",

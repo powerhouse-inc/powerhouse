@@ -3,7 +3,7 @@ import {
     useDocument,
     useDocumentEditorProps,
 } from '@powerhousedao/reactor-browser';
-import { DocumentModelModule, PHDocument } from 'document-model';
+import { type DocumentModelModule, type PHDocument } from 'document-model';
 
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 

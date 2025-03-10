@@ -10,12 +10,15 @@ import {
   type SelectFieldProps,
   SelectFieldRaw,
   withFieldValidation,
-} from "../fragments";
-import { type NumberFieldProps, NumberFieldRaw } from "../number-field";
-import { type InputNumberProps } from "../number-field/types";
-import { validateAmount } from "./amount-field-validations";
-import { type AmountFieldPropsGeneric, type AmountValue } from "./types";
-import { useAmountField } from "./use-amount-field";
+} from "../fragments/index.js";
+import {
+  type NumberFieldProps,
+  NumberFieldRaw,
+} from "../number-field/index.js";
+import { type InputNumberProps } from "../number-field/types.js";
+import { validateAmount } from "./amount-field-validations.js";
+import { type AmountFieldPropsGeneric, type AmountValue } from "./types.js";
+import { useAmountField } from "./use-amount-field.js";
 
 export interface TokenIcons {
   [key: string]: IconName | (() => React.JSX.Element);

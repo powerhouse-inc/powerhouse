@@ -8,18 +8,18 @@ import {
     ERROR,
     FILE,
     LOCAL,
-    SharingType,
-    UiNode,
+    type SharingType,
+    type UiNode,
 } from '@powerhousedao/design-system';
 import {
-    DocumentDriveAction,
-    DocumentDriveDocument,
-    DriveInput,
-    RemoteDriveOptions,
-    StrandUpdate,
-    SyncStatus,
+    type DocumentDriveAction,
+    type DocumentDriveDocument,
+    type DriveInput,
+    type RemoteDriveOptions,
+    type StrandUpdate,
+    type SyncStatus,
     SynchronizationUnitNotFoundError,
-    Trigger,
+    type Trigger,
     addFolder,
     addTrigger,
     childLogger,
@@ -40,7 +40,7 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { Operation, PHDocument, hashKey } from 'document-model';
+import { type Operation, type PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
 import { useDocumentDrives } from './useDocumentDrives';
