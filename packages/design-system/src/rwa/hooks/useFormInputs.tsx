@@ -20,7 +20,7 @@ import {
   UnitPrice,
   useEditorContext,
   useModal,
-} from "@/rwa";
+} from "#rwa";
 import { type ReactElement, type ReactNode, useCallback, useMemo } from "react";
 import {
   type Control,

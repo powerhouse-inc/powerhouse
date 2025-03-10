@@ -17,7 +17,7 @@ import {
   useColumnPriority,
   useEditorContext,
   useTableHeight,
-} from "@/rwa";
+} from "#rwa";
 import { useCallback, useRef } from "react";
 import { Fragment } from "react/jsx-runtime";
 

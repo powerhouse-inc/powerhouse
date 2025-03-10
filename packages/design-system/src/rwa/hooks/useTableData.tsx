@@ -4,7 +4,7 @@ import {
   type TableName,
   useEditorContext,
   useSortTableItems,
-} from "@/rwa";
+} from "#rwa";
 import { useMemo } from "react";
 
 export function useTableData<TTableName extends TableName>(

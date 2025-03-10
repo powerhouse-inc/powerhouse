@@ -4,7 +4,7 @@ import {
   RWANumberInput,
   RWATableSelect,
   type ServiceProviderFeeType,
-} from "@/rwa";
+} from "#rwa";
 import {
   type Control,
   type FieldErrors,

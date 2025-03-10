@@ -4,7 +4,7 @@ import {
   PortfolioTab,
   TransactionsTab,
   useEditorContext,
-} from "@/rwa";
+} from "#rwa";
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
 import { useCallback } from "react";
 

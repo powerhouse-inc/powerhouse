@@ -1,4 +1,4 @@
-import { tableNames, TableWithForm } from "@/rwa";
+import { tableNames, TableWithForm } from "#rwa";
 import { AccountsTable } from "../table/accounts";
 
 export function OtherTab() {

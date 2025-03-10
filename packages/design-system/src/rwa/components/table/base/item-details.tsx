@@ -8,7 +8,7 @@ import {
   useEditorContext,
   useModal,
   useTableForm,
-} from "@/rwa";
+} from "#rwa";
 import { memo, useCallback } from "react";
 
 type Props = {

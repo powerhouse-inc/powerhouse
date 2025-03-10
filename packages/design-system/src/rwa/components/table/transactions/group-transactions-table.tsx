@@ -9,7 +9,7 @@ import {
   tableNames,
   useEditorContext,
   useTableData,
-} from "@/rwa";
+} from "#rwa";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function GroupTransactionsTable() {

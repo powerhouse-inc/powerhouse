@@ -4,7 +4,7 @@ import {
   tableLabels,
   type TableName,
   useTableForm,
-} from "@/rwa";
+} from "#rwa";
 import { type ComponentPropsWithoutRef, memo, useCallback } from "react";
 import { twMerge } from "tailwind-merge";
 

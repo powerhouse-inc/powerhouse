@@ -1,4 +1,4 @@
-import { RWATableTextInput } from "@/rwa";
+import { RWATableTextInput } from "#rwa";
 import { type ComponentPropsWithRef } from "react";
 import {
   type Control,

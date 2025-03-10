@@ -13,7 +13,7 @@ import {
   type RealWorldAssetsState,
   type TableItemType,
   type TableName,
-} from "@/rwa";
+} from "#rwa";
 import {
   createContext,
   type ReactNode,

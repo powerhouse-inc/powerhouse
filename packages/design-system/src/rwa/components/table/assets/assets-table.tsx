@@ -7,7 +7,7 @@ import {
   sumTotalForProperty,
   tableNames,
   useEditorContext,
-} from "@/rwa";
+} from "#rwa";
 import { Fragment, useCallback, useMemo } from "react";
 
 export function AssetsTable() {

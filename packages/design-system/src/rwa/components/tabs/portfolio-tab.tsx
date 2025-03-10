@@ -1,4 +1,4 @@
-import { AssetsTable, RwaTabContent } from "@/rwa";
+import { AssetsTable, RwaTabContent } from "#rwa";
 
 export function PortfolioTab() {
   return (

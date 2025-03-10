@@ -6,7 +6,7 @@ import {
   type TableName,
   useEditorContext,
   useTableData,
-} from "@/rwa";
+} from "#rwa";
 import type React from "react";
 
 type Props = {

@@ -18,7 +18,7 @@ import {
   type TableItemType,
   type TableName,
   type TransactionFeeInput,
-} from "@/rwa";
+} from "#rwa";
 import { type InputMaybe } from "document-model";
 
 export function handleDateInTable(

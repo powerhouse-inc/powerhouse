@@ -2,7 +2,7 @@ import {
   calculateUnitPrice,
   FormattedNumber,
   type GroupTransactionFormInputs,
-} from "@/rwa";
+} from "#rwa";
 import { type Control, useWatch } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
