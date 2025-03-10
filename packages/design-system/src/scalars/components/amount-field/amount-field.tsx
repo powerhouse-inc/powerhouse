@@ -125,6 +125,8 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
           <div className={cn("relative flex items-center")}>
             {isShowSelect && currencyPosition === "left" && (
               <CurrencyCodeFieldRaw
+                align="start"
+                classNameContent="min-w-[160px]"
                 disabled={disabled}
                 currencies={options}
                 onChange={handleOnChangeSelect}
@@ -135,7 +137,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                 className={cn(
                   "rounded-l-md rounded-r-none border border-gray-300",
                   "border-r-[0.5px]",
-                  //       // focus state
+                  // focus state
                   "focus:border-r-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
                   "focus:outline-none",
                   selectProps?.className,
@@ -189,6 +191,8 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
 
           {isShowSelect && currencyPosition === "right" && (
             <CurrencyCodeFieldRaw
+              align="end"
+              classNameContent="min-w-[160px]"
               disabled={disabled}
               includeCurrencySymbols={includeCurrencySymbols}
               currencies={options}
