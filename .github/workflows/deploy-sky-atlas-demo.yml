@@ -1,0 +1,23 @@
+name: Deploy Sky Atlas (Staging)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    environment: Sky Atlas Demo
+    runs-on: ubuntu-latest
+    steps:
+      # Check-out your repository.
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
+      - name: Build, Push and Release API to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: "sky-atlas-demo-switchboard"
+          dockerfile_directory: ./apps/switchboard
+          process_type: web
