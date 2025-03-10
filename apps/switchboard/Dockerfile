@@ -5,8 +5,7 @@ RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || 
 RUN npm install --global pnpm@9
 COPY . .
 RUN pnpm install
-RUN cp -r ./packages/document-drive/prisma/schema.prisma ./schema.prisma
-RUN pnpm nx run @powerhousedao/switchboard:build
+RUN pnpm run build
 ENV API_ORIGIN=http://localhost:3000
 ENV JWT_SECRET="secret"
 ENV PORT=4001
@@ -15,7 +14,7 @@ ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
 ENV REDIS_URL=redis://localhost:6379
 ENV REDIS_TLS_URL=rediss://localhost:6379
 ENV PH_PACKAGES=
-CMD pnpm nx run @powerhousedao/switchboard:start
+CMD pnpx prisma generate && pnpm start
 # RUN mkdir pruned && pnpm --filter "@powerhousedao/switchboard" deploy --prod pruned
 
 # # Final production image
