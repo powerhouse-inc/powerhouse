@@ -24,7 +24,10 @@ export interface ValidationOptions<T> {
   transformValue?: (value: any) => any;
 }
 
-export const withFieldValidation = <T extends PossibleProps, R = unknown>(
+export const withFieldValidation = <
+  T extends PossibleProps,
+  R extends React.ElementRef<any>,
+>(
   Component: React.ComponentType<T>,
   options?: ValidationOptions<T>,
 ): React.ForwardRefExoticComponent<
