@@ -1,3 +1,4 @@
+import { OperationError } from "#server/error";
 import { StrandUpdateSource } from "#server/listener/transmitter/types";
 import {
   DefaultListenerManagerOptions,
@@ -17,7 +18,6 @@ import {
 } from "#server/types";
 import { childLogger, ListenerFilter } from "document-drive";
 import { OperationScope } from "document-model";
-import { OperationError } from "#server/error";
 import { debounce } from "./util.js";
 
 const ENABLE_SYNC_DEBUG = false;
@@ -248,7 +248,7 @@ export class ListenerManager implements IListenerManager {
             return;
           } else {
             this.logger.verbose(
-              `Listener out-of-date for sync unit ${syncUnit.syncId}: ${unitState?.listenerRev} < ${syncUnit.revision}`,
+              `Listener out-of-date for sync unit (${syncUnit.driveId}, ${syncUnit.scope}, ${syncUnit.documentId}): ${unitState?.listenerRev} < ${syncUnit.revision}`,
             );
           }
 

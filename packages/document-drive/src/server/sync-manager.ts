@@ -5,7 +5,7 @@ import {
 } from "#drive-document-model/gen/types";
 import { isFileNode } from "#drive-document-model/src/utils";
 import { IDriveStorage } from "#storage/types";
-import { logger } from "#utils/logger";
+import { childLogger } from "#utils/logger";
 import { isBefore, isDocumentDrive } from "#utils/misc";
 import {
   DocumentModelModule,
@@ -28,6 +28,8 @@ import {
 
 export default class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new Map<string, SyncUnitStatusObject>();
+
+  private logger = childLogger(["SynchronizationManager"]);
 
   constructor(
     private readonly storage: IDriveStorage,
@@ -277,7 +279,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
         return cachedDocument;
       }
     } catch (e) {
-      logger.error("Error getting drive from cache", e);
+      this.logger.error("Error getting drive from cache", e);
     }
     const driveStorage = await this.storage.getDrive(driveId);
     const result = this._buildDocument(driveStorage);
@@ -297,7 +299,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
         return cachedDocument;
       }
     } catch (e) {
-      logger.error("Error getting document from cache", e);
+      this.logger.error("Error getting document from cache", e);
     }
     const documentStorage = await this.storage.getDocument(driveId, documentId);
     return this._buildDocument(documentStorage);
