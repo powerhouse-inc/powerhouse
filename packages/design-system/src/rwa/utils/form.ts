@@ -1,4 +1,4 @@
-import { type FixedIncome } from "@/rwa";
+import { type FixedIncome } from "#rwa";
 
 export function makeFixedIncomeOptionLabel(fixedIncome: FixedIncome) {
   let label = fixedIncome.name;

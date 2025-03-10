@@ -4,7 +4,7 @@ import {
   type UiFileNode,
   type UiFolderNode,
   type UiNode,
-} from "@/connect";
+} from "#connect";
 
 export type NodeProps = {
   nodeOptions: TNodeOptions;

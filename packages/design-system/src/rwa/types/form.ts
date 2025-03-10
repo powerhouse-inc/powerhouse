@@ -3,7 +3,7 @@ import {
   type Operation,
   type TableItemType,
   type TableName,
-} from "@/rwa";
+} from "#rwa";
 
 export type AssetFormInputs = {
   id?: string;

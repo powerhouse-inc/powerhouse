@@ -4,7 +4,7 @@ import {
   type TableItemType,
   type TableName,
   useEditorContext,
-} from "@/rwa";
+} from "#rwa";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   type DefaultValues,

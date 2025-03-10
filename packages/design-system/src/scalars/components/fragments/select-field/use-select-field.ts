@@ -1,5 +1,5 @@
-import { useCallback, useState, useEffect, useRef } from "react";
-import { type SelectProps } from "@/scalars/components/enum-field/types";
+import { type SelectProps } from "#scalars";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type SelectFieldProps } from "./select-field";
 
 interface UseSelectFieldProps {

@@ -5,14 +5,10 @@
     "emitDeclarationOnly": true,
     "outDir": "./dist",
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
   },
   "references": [
     {

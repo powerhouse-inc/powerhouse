@@ -3,7 +3,7 @@ import {
   type CashAsset,
   type FixedIncomeType,
   type SPV,
-} from "@/rwa";
+} from "#rwa";
 
 export const mockPrincipalLenderAccountId = "principal-lender-account-id";
 

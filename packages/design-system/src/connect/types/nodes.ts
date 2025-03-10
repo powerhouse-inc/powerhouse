@@ -5,9 +5,8 @@ import {
   type SharingType,
   type SyncStatus,
   type TDocumentType,
-} from "@/connect";
+} from "#connect";
 import { type Maybe, type SynchronizationUnitInput } from "document-model";
-import { Scalars } from "zod";
 
 export type UiFileNode = {
   kind: typeof FILE;

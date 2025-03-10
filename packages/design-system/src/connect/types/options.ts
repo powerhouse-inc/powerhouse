@@ -7,7 +7,7 @@ import {
   type normalNodeOptions,
   type SharingType,
   type UiNode,
-} from "@/connect";
+} from "#connect";
 import { type ReactNode } from "react";
 
 export type OptionMetadata = {

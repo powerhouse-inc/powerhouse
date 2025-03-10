@@ -3,7 +3,7 @@ import {
   type FileNode,
   type FolderNode,
   type sharingTypes,
-} from "@/connect";
+} from "#connect";
 
 export type SharingTypes = typeof sharingTypes;
 export type SharingType = SharingTypes[number];

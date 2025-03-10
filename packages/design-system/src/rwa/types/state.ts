@@ -1,7 +1,7 @@
 import {
   type allGroupTransactionTypes,
   type assetGroupTransactions,
-} from "@/rwa";
+} from "#rwa";
 import { type Maybe, type Scalars } from "document-model";
 
 export type RealWorldAssetsState = {

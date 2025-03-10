@@ -5,7 +5,7 @@ import {
   allGroupTransactionTypes,
   calculateCashBalanceChange,
   isAssetGroupTransactionType,
-} from "@/rwa";
+} from "#rwa";
 import {
   mockAccounts,
   mockFixedIncomes,

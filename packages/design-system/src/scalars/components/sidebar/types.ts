@@ -1,4 +1,4 @@
-import { type IconName } from "@/powerhouse";
+import { type IconName } from "#powerhouse";
 
 export enum NodeStatus {
   CREATED = "CREATED",

@@ -4,7 +4,7 @@ import {
   type ServiceProviderFeeType,
   type TableName,
   useEditorContext,
-} from "@/rwa";
+} from "#rwa";
 import { useMemo } from "react";
 
 export type DependentItemProps = {

@@ -1,4 +1,4 @@
-import { FILE, type NodeProps, UI_NODE, type UiNode } from "@/connect";
+import { FILE, type NodeProps, UI_NODE, type UiNode } from "#connect";
 import { type DragEvent, useCallback, useMemo, useState } from "react";
 
 type Props = Pick<NodeProps, "onAddFile" | "onCopyNode" | "onMoveNode"> & {

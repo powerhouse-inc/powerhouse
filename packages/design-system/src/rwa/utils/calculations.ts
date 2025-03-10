@@ -4,7 +4,7 @@ import {
   type FixedIncome,
   type FixedIncomeType,
   type GroupTransaction,
-} from "@/rwa";
+} from "#rwa";
 import { all, create } from "mathjs";
 
 type NumericKeys<T> = {

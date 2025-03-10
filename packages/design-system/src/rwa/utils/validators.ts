@@ -5,7 +5,7 @@ import {
   type CashAsset,
   type FixedIncome,
   type GroupTransactionType,
-} from "@/rwa";
+} from "#rwa";
 
 export function isAssetGroupTransactionType(
   type: GroupTransactionType,

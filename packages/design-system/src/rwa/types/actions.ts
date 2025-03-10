@@ -13,7 +13,7 @@ import {
   type SPVFormInputs,
   type TableDataByTableName,
   type TableName,
-} from "@/rwa";
+} from "#rwa";
 
 export type FormInputsByTableName = {
   ASSET: AssetFormInputs;

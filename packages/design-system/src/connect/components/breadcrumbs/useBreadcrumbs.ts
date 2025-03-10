@@ -1,4 +1,4 @@
-import { type BreadcrumbNode, type UiNode } from "@/connect";
+import { type BreadcrumbNode, type UiNode } from "#connect";
 import { useCallback, useMemo } from "react";
 
 interface UseBreadcrumbsProps {
