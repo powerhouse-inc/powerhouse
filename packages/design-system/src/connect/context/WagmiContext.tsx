@@ -1,4 +1,4 @@
-import { wagmiConfig as defaultWagmiConfig } from "@/services";
+import { wagmiConfig as defaultWagmiConfig } from "#services";
 import {
   QueryClient,
   QueryClientProvider,

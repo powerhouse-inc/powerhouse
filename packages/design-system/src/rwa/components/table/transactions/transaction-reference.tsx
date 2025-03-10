@@ -1,6 +1,6 @@
 import { Tooltip, TooltipProvider } from "#connect";
 import { type GroupTransactionFormInputs, RWATableTextInput } from "#rwa";
-import { getIsTransaction } from "@/services";
+import { getIsTransaction } from "#services";
 import {
   type ComponentPropsWithRef,
   type ForwardedRef,
