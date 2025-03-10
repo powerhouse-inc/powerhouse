@@ -9,7 +9,6 @@ import {
   getDbClient,
 } from "@powerhousedao/reactor-api";
 import { PrismaClient } from "@prisma/client";
-import * as atlasDocumentModelsMap from "@sky-ph/atlas/document-models";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorage } from "document-drive/storage/prisma";
@@ -23,8 +22,6 @@ import http from "http";
 import { initRedis } from "./clients/redis.js";
 import { PackagesManager } from "./utils/package-manager.js";
 dotenv.config();
-
-const atlasDocumentModels = Object.values(atlasDocumentModelsMap);
 
 // Create a monolith express app for all subgraphs
 const app = express();
