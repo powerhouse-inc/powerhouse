@@ -1,1 +1,1 @@
-export * from "./icon-components/types";
+export * from "./icon-components/types.js";
