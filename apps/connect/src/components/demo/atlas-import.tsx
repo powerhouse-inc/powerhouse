@@ -61,7 +61,6 @@ export function AtlasImport() {
                         },
                     ],
                     triggers: [],
-                    pullInterval: 3000,
                 });
                 status.current = 'done';
                 console.log('Added remote drive:', addedDrive);

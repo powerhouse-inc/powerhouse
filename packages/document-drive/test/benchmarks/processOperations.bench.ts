@@ -109,7 +109,6 @@ describe("Process Operations", () => {
           },
         ],
         triggers: [],
-        pullInterval: 3000,
         accessLevel: "WRITE",
       },
     },

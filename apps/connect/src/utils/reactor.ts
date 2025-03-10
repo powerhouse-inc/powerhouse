@@ -46,7 +46,6 @@ export const getReactorDefaultDrivesConfig = (): Pick<
                     },
                 ],
                 triggers: [],
-                pullInterval: 3000,
             },
         }),
     );

@@ -13,6 +13,7 @@ import {
 import { childLogger } from "#utils/logger";
 import { generateUUID } from "#utils/misc";
 
+import { ListenerFilter, Trigger } from "#drive-document-model/gen/types";
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
@@ -22,7 +23,6 @@ import {
   PullResponderTrigger,
   StrandUpdateSource,
 } from "./types.js";
-import { ListenerFilter, Trigger } from "#drive-document-model/gen/types";
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
@@ -291,9 +291,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         // since ?
       );
 
+      this.staticLogger.verbose("Pulled strands...");
+
       // if there are no new strands then do nothing
       if (!strands.length) {
         onRevisions?.([]);
+
+        this.staticLogger.verbose("No new strands, skipping...");
         return;
       }
 
@@ -305,6 +309,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           scope: strand.scope,
           branch: strand.branch,
         }));
+
+        this.staticLogger.verbose("Processing strand...");
 
         let error: Error | undefined = undefined;
         try {
@@ -335,7 +341,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         });
       }
 
+      this.staticLogger.verbose("Processed strands...");
+
       onRevisions?.(listenerRevisions);
+
+      this.staticLogger.verbose("Acknowledging strands...");
 
       await PullResponderTransmitter.acknowledgeStrands(
         driveId,
@@ -347,8 +357,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         }),
       )
         .then((result) => onAcknowledge?.(result))
+        .then(() => this.staticLogger.verbose("Acknowledged strands..."))
         .catch((error) => this.staticLogger.error("ACK error", error));
     } catch (error) {
+      this.staticLogger.error("Pull error", error);
+
       onError(error as Error);
     }
   }
