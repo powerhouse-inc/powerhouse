@@ -15,8 +15,8 @@ export interface CurrencyCodeFieldProps
   favoriteCurrencies?: string[];
   symbolPosition?: "left" | "right";
   searchable?: boolean;
-  classNameContent?: string;
-  align?: "start" | "end" | "center";
+  contentClassName?: string;
+  contentAlign?: "start" | "end" | "center";
 }
 
 export const CurrencyCodeFieldRaw = React.forwardRef<
@@ -30,8 +30,8 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       includeCurrencySymbols = true,
       symbolPosition = "right",
       searchable = false,
-      classNameContent,
-      align = "start",
+      contentClassName,
+      contentAlign = "start",
       // TODO: implement following props
       // allowedTypes = "Both",
       // favoriteCurrencies,
@@ -65,8 +65,8 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
         searchable={searchable}
         multiple={false}
         placeholder={placeholder}
-        align={align}
-        classNameContent={classNameContent}
+        contentAlign={contentAlign}
+        contentClassName={contentClassName}
         {...props}
       />
     );

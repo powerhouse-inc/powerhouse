@@ -71,7 +71,7 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    align: {
+    contentAlign: {
       control: "select",
       description: "Alignment of the dropdown",
       options: ["start", "end", "center"],
@@ -80,7 +80,7 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    classNameContent: {
+    contentClassName: {
       control: "text",
       description: "Custom class name for the dropdown content",
       table: {

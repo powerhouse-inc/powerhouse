@@ -66,8 +66,8 @@ export const SelectFieldRaw = React.forwardRef<
       description,
       placeholder,
       className,
-      classNameContent,
-      align = "start",
+      contentClassName,
+      contentAlign = "start",
 
       ...props
     },
@@ -172,12 +172,12 @@ export const SelectFieldRaw = React.forwardRef<
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            align={align}
+            align={contentAlign}
             onEscapeKeyDown={(e) => {
               e.preventDefault();
               handleOpenChange(false);
             }}
-            className={classNameContent}
+            className={contentClassName}
           >
             <Command
               defaultValue={
