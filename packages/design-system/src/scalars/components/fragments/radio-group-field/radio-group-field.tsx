@@ -26,7 +26,7 @@ export type RadioGroupFieldProps = RadioGroupFieldBaseProps &
   ErrorHandling &
   RadioGroupProps;
 
-export const RadioGroupFieldRaw = React.forwardRef<
+const RadioGroupFieldRaw = React.forwardRef<
   HTMLDivElement,
   RadioGroupFieldProps
 >(
