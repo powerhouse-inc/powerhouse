@@ -10,7 +10,9 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
         units={commonCryptoCurrencies}
       />,
     );
@@ -23,7 +25,9 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
         units={commonCryptoCurrencies}
       />,
     );
@@ -36,7 +40,9 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
         errors={["Error 1", "Error 2"]}
         validators={() => "Error 3"}
         units={commonCryptoCurrencies}
@@ -69,7 +75,9 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
         units={commonCryptoCurrencies}
         disabled
       />,
@@ -85,7 +93,9 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
         required
         units={commonCryptoCurrencies}
       />,
@@ -99,7 +109,9 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
         units={commonCryptoCurrencies}
         disabled
         description="This is a description"

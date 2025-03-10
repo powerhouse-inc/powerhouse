@@ -90,3 +90,52 @@ export const displayValueAmount = (
   }
   return value;
 };
+
+export const exampleUseAmountField = [
+  {
+    ticker: "lbs",
+    crypto: false,
+    label: "Lbs",
+    symbol: "lbs",
+  },
+  {
+    ticker: "kg",
+    crypto: false,
+    label: "Kg",
+    symbol: "kg",
+  },
+  {
+    ticker: "ptc",
+    crypto: false,
+    label: "Ptc",
+    symbol: "ptc",
+  },
+];
+
+export const handleEventOnChange = <T>(value: T) => {
+  const nativeEvent = new Event("change", { bubbles: true, cancelable: true });
+
+  Object.defineProperty(nativeEvent, "target", {
+    value: { value },
+
+    writable: false,
+  });
+
+  return nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>;
+};
+
+export const handleEventOnBlur = <T>(value: T) => {
+  const nativeEvent = new Event("blur", { bubbles: true, cancelable: true });
+
+  Object.defineProperty(nativeEvent, "target", {
+    value: { value },
+
+    writable: false,
+  });
+
+  return nativeEvent as unknown as React.FocusEvent<HTMLInputElement>;
+};
+
+export const createAmountValue = (inputValue: string) => {
+  return inputValue === "" ? undefined : inputValue;
+};

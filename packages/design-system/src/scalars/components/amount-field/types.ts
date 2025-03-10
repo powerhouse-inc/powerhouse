@@ -1,6 +1,9 @@
 import { Currency } from "../currency-code-field";
-export type Amount = number | undefined;
-
+// export type Amount = number | undefined;
+export type Amount = {
+  amount: number;
+  unit?: CurrencyTicker;
+};
 export type AmountPercentage = number | undefined;
 export type CurrencyTicker = Currency["ticker"];
 
