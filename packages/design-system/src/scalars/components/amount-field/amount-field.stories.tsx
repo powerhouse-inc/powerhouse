@@ -161,10 +161,10 @@ const meta = {
       control: "select",
       options: [
         "Amount",
-        "AmountCurrencyFiat",
+        "AmountFiat",
         "AmountPercentage",
-        "AmountCurrencyCrypto",
-        "AmountCurrencyUniversal",
+        "AmountCrypto",
+        "AmountCurrency",
       ],
       description: "The type of amount field.",
       table: {
