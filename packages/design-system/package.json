@@ -6,8 +6,6 @@
     "/dist"
   ],
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "publishConfig": {
     "access": "public"
   },
@@ -15,12 +13,21 @@
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/src/index.js"
     },
     "./scalars": {
       "types": "./dist/src/scalars/index.d.ts",
-      "import": "./dist/scalars/index.js"
+      "import": "./dist/src/scalars/index.js"
     }
+  },
+  "imports": {
+    "#assets": "./dist/src/assets/index.js",
+    "#assets/*": "./dist/src/assets/*",
+    "#connect": "./dist/src/connect/index.js",
+    "#powerhouse": "./dist/src/powerhouse/index.js",
+    "#rwa": "./dist/src/rwa/index.js",
+    "#scalars": "./dist/src/scalars/index.js",
+    "#services": "./dist/src/services/index.js"
   },
   "scripts": {
     "build:tsc": "tsc --build",
