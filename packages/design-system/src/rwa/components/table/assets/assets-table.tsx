@@ -1,7 +1,7 @@
 import {
   RWATableCell,
   RWATableRow,
-  TableColumn,
+  type TableColumn,
   TableWithForm,
   handleTableDatum,
   sumTotalForProperty,

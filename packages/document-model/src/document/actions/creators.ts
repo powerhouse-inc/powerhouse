@@ -5,15 +5,19 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
-import { DefaultAction, ExtendedState, OperationScope } from "../types.js";
+import {
+  type DefaultAction,
+  type ExtendedState,
+  type OperationScope,
+} from "../types.js";
 import { createAction } from "../utils/base.js";
 import {
-  LoadStateAction,
-  NOOPAction,
-  PruneAction,
-  RedoAction,
-  SetNameAction,
-  UndoAction,
+  type LoadStateAction,
+  type NOOPAction,
+  type PruneAction,
+  type RedoAction,
+  type SetNameAction,
+  type UndoAction,
 } from "./types.js";
 
 /**

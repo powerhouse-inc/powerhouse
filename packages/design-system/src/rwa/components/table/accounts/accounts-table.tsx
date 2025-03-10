@@ -1,7 +1,7 @@
 import { Icon } from "@/powerhouse";
 import { tableNames } from "@/rwa/constants";
 import { useEditorContext } from "@/rwa/context";
-import { TableColumn } from "@/rwa/types";
+import { type TableColumn } from "@/rwa/types";
 import { useCallback } from "react";
 import { Fragment } from "react/jsx-runtime";
 import { RWATableCell, RWATableRow, TableWithForm } from "../base";

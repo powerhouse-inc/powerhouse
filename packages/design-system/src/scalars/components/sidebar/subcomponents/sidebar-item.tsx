@@ -1,4 +1,4 @@
-import { SidebarNode, FlattenedNode, NodeStatus } from "../types";
+import { type SidebarNode, type FlattenedNode, NodeStatus } from "../types";
 import { useCallback } from "react";
 import { cn } from "@/scalars/lib";
 import { Tooltip, TooltipProvider } from "../../fragments";

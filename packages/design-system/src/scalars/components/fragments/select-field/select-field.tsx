@@ -14,8 +14,11 @@ import { FormDescription } from "@/scalars/components/fragments/form-description
 import { FormMessageList } from "@/scalars/components/fragments/form-message";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import { cn } from "@/scalars/lib/utils";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { SelectProps } from "@/scalars/components/enum-field/types";
+import {
+  type FieldCommonProps,
+  type ErrorHandling,
+} from "@/scalars/components/types";
+import { type SelectProps } from "@/scalars/components/enum-field/types";
 import { useSelectField } from "./use-select-field";
 import { SelectedContent } from "./selected-content";
 import { Content } from "./content";

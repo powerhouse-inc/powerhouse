@@ -1,5 +1,5 @@
 import { PUBLIC } from "@/connect/constants";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { AddRemoteDriveForm } from "./add-remote-drive-form";
 
 const meta = {

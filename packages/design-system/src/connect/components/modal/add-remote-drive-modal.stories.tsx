@@ -1,6 +1,6 @@
 import { LOCAL } from "@/connect/constants";
 import { useArgs } from "@storybook/preview-api";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { AddRemoteDriveModal } from "./add-remote-drive-modal";
 
 const meta = {

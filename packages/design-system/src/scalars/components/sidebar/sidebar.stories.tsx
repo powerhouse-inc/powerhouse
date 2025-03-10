@@ -4,7 +4,7 @@ import { Icon } from "@/powerhouse";
 import { SidebarProvider } from "./subcomponents/sidebar-provider";
 import mockedTree from "./mocked_tree.json";
 import { useState } from "react";
-import { SidebarNode } from "./types";
+import { type SidebarNode } from "./types";
 
 /**
  * The `Sidebar` component can be used within a page layout to provide a sidebar navigation.

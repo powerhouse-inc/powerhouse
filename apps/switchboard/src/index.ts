@@ -4,7 +4,7 @@ import {
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
 import {
-  Subgraph,
+  type Subgraph,
   SubgraphManager,
   getDbClient,
 } from "@powerhousedao/reactor-api";
@@ -15,7 +15,7 @@ import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorage } from "document-drive/storage/prisma";
 import {
-  DocumentModelModule,
+  type DocumentModelModule,
   documentModelDocumentModelModule,
 } from "document-model";
 import dotenv from "dotenv";

@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { CheckboxField } from "./checkbox-field";
 import { withForm } from "@/scalars/lib/decorators";
 import {

@@ -1,29 +1,29 @@
-import { ICache } from "#cache/types";
+import { type ICache } from "#cache/types";
 import {
-  DocumentDriveDocument,
-  FileNode,
+  type DocumentDriveDocument,
+  type FileNode,
 } from "#drive-document-model/gen/types";
 import { isFileNode } from "#drive-document-model/src/utils";
-import { IDriveStorage } from "#storage/types";
+import { type IDriveStorage } from "#storage/types";
 import { logger } from "#utils/logger";
 import { isBefore, isDocumentDrive } from "#utils/misc";
 import {
-  DocumentModelModule,
-  OperationScope,
-  PHDocument,
+  type DocumentModelModule,
+  type OperationScope,
+  type PHDocument,
   garbageCollectDocumentOperations,
   replayDocument,
 } from "document-model";
 import { SynchronizationUnitNotFoundError } from "./error.js";
 import {
-  GetStrandsOptions,
-  IEventEmitter,
-  ISynchronizationManager,
-  OperationUpdate,
-  SyncStatus,
-  SyncUnitStatusObject,
-  SynchronizationUnit,
-  SynchronizationUnitQuery,
+  type GetStrandsOptions,
+  type IEventEmitter,
+  type ISynchronizationManager,
+  type OperationUpdate,
+  type SyncStatus,
+  type SyncUnitStatusObject,
+  type SynchronizationUnit,
+  type SynchronizationUnitQuery,
 } from "./types.js";
 
 export default class SynchronizationManager implements ISynchronizationManager {

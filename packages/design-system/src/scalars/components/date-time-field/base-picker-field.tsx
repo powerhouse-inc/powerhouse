@@ -1,8 +1,8 @@
-import React, { PropsWithChildren } from "react";
-import { ErrorHandling, FieldCommonProps } from "../types";
-import { Input, InputProps } from "../fragments";
+import React, { type PropsWithChildren } from "react";
+import { type ErrorHandling, type FieldCommonProps } from "../types";
+import { Input, type InputProps } from "../fragments";
 import { cn } from "@/scalars/lib/utils";
-import { IconName } from "@/powerhouse";
+import { type IconName } from "@/powerhouse";
 import { Button } from "../fragments/button/button";
 import { Popover, PopoverContent } from "../fragments/popover/popover";
 import { PopoverTrigger } from "../fragments/popover/popover";

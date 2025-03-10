@@ -1,15 +1,15 @@
-import { DocumentModelHeaderAction } from "#document-model/gen/actions.js";
-import { DocumentModelState } from "#document-model/gen/types.js";
+import { type DocumentModelHeaderAction } from "#document-model/gen/actions.js";
+import { type DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
-import { DocumentAction } from "./actions/types.js";
+import { type DocumentAction } from "./actions/types.js";
 import type {
   CreateChildDocumentInput,
   Signal,
   SignalDispatch,
   SynchronizationUnitInput,
 } from "./signal.js";
-import { FileInput } from "./utils/file.js";
+import { type FileInput } from "./utils/file.js";
 export type { NOOPAction } from "./schema/types.js";
 export type {
   CreateChildDocumentInput,

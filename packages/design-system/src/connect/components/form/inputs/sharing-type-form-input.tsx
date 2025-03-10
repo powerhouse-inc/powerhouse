@@ -1,6 +1,6 @@
-import { Select, SharingType, sharingTypeOptions } from "@/connect";
-import { ComponentPropsWithRef } from "react";
-import { Control, Controller, Path } from "react-hook-form";
+import { Select, type SharingType, sharingTypeOptions } from "@/connect";
+import { type ComponentPropsWithRef } from "react";
+import { type Control, Controller, type Path } from "react-hook-form";
 
 type SharingTypeFormInputProps<T extends { sharingType: SharingType }> = Omit<
   ComponentPropsWithRef<typeof Select>,

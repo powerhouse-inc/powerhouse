@@ -7,9 +7,9 @@ import { CharacterCounter } from "@/scalars/components/fragments/character-count
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import { cn } from "@/scalars/lib/utils";
 import {
-  FieldCommonProps,
-  ErrorHandling,
-  TextProps,
+  type FieldCommonProps,
+  type ErrorHandling,
+  type TextProps,
 } from "@/scalars/components/types";
 import ValueTransformer, {
   type TransformerType,

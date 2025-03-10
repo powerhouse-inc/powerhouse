@@ -1,5 +1,6 @@
 import { Button, Icon, Modal } from "@/powerhouse";
-import React, { ComponentPropsWithoutRef } from "react";
+import { type ComponentPropsWithoutRef } from "react";
+import type React from "react";
 import { twMerge } from "tailwind-merge";
 
 export type SettingsModalOldProps = ComponentPropsWithoutRef<typeof Modal> & {

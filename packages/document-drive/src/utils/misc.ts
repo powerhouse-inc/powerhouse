@@ -1,15 +1,15 @@
 import {
   DocumentOperations,
-  Operation,
-  OperationFromDocument,
-  OperationScope,
-  OperationsFromDocument,
-  PHDocument,
+  type Operation,
+  type OperationFromDocument,
+  type OperationScope,
+  type OperationsFromDocument,
+  type PHDocument,
   generateId,
 } from "document-model";
 
 import { driveDocumentType } from "#drive-document-model/constants";
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { OperationError } from "#server/error";
 import { RunAsap } from "./run-asap.js";
 

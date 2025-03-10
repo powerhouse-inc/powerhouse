@@ -16,7 +16,7 @@ import {
 } from "../../src/document/utils/node.js";
 import { validateOperations } from "../../src/document/utils/validation.js";
 import {
-  CountDocument,
+  type CountDocument,
   countReducer,
   increment,
   mutableCountReducer,

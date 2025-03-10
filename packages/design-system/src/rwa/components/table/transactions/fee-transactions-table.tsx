@@ -1,11 +1,16 @@
 import { Icon } from "@/powerhouse";
 import {
-  GroupTransactionFormInputs,
+  type GroupTransactionFormInputs,
   RWANumberInput,
   RWATableSelect,
-  ServiceProviderFeeType,
+  type ServiceProviderFeeType,
 } from "@/rwa";
-import { Control, FieldErrors, Path, useFieldArray } from "react-hook-form";
+import {
+  type Control,
+  type FieldErrors,
+  type Path,
+  useFieldArray,
+} from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
 type Props = {

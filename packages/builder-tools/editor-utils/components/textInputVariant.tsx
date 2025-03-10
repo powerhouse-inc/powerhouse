@@ -1,7 +1,7 @@
-import { KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   inputStyle,
-  TypographySize,
+  type TypographySize,
   typographySizes,
 } from "./stylesVariant.js";
 

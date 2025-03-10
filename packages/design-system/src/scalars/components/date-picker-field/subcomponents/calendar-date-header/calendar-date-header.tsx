@@ -1,6 +1,6 @@
 import { cn } from "@/scalars/lib/utils";
 import { Button } from "../../../fragments/button/button";
-import { DatePickerView } from "../../types";
+import { type DatePickerView } from "../../types";
 type CalendarDateHeaderProps = {
   navView: DatePickerView;
   setNavView: (navView: DatePickerView) => void;

@@ -1,4 +1,4 @@
-import { DocumentModelDocument } from "../../index.js";
+import { type DocumentModelDocument } from "../../index.js";
 import {
   setAuthorName,
   setAuthorWebsite,

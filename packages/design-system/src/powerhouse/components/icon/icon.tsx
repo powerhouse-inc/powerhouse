@@ -1,9 +1,9 @@
-import { type IconName, Props } from "@/assets/icon-components/types";
-import { Color, getDimensions, Size } from "@/powerhouse";
+import { type IconName, type Props } from "@/assets/icon-components/types";
+import { type Color, getDimensions, type Size } from "@/powerhouse";
 import {
-  ComponentPropsWithoutRef,
-  ComponentType,
-  ElementType,
+  type ComponentPropsWithoutRef,
+  type ComponentType,
+  type ElementType,
   lazy,
   Suspense,
   useMemo,

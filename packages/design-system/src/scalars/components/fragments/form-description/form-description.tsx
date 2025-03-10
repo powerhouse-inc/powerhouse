@@ -1,5 +1,5 @@
 import { cn } from "@/scalars/lib/utils";
-import React from "react";
+import type React from "react";
 
 export interface FormDescriptionProps extends React.PropsWithChildren {
   as?: React.ElementType;

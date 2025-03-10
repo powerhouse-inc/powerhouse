@@ -2,8 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import { Icon } from "#powerhouse";
 import { cn } from "../../lib/utils";
 import { Calendar } from "../date-picker-field/subcomponents/calendar/calendar";
-import { SelectBaseProps } from "../enum-field/types";
-import { SelectFieldProps } from "../fragments";
+import { type SelectBaseProps } from "../enum-field/types";
+import { type SelectFieldProps } from "../fragments";
 import TimePickerContent from "../time-picker-field/subcomponents/time-picker-content";
 
 interface DateTimePickerContentProps {

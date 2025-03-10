@@ -1,5 +1,5 @@
 import { AnimatedLoader } from "@/connect";
-import { DivProps } from "@/powerhouse";
+import { type DivProps } from "@/powerhouse";
 
 type DefaultEditorLoaderProps = DivProps & {
   readonly message?: string;

@@ -1,4 +1,4 @@
-import { TransformerObject } from "../components/fragments/value-transformer/value-transformer";
+import { type TransformerObject } from "../components/fragments/value-transformer/value-transformer";
 
 export const sharedValueTransformers: Record<
   string,

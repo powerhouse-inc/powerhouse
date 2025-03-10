@@ -7,19 +7,19 @@ import {
   formatDateForDisplay,
   FormattedNumber,
   getFixedIncomeAssets,
-  GroupTransactionType,
+  type GroupTransactionType,
   groupTransactionTypeLabels,
   isAssetGroupTransactionType,
   isISODate,
-  Item,
-  ItemData,
-  RealWorldAssetsState,
-  TableItem,
-  TableItemType,
-  TableName,
-  TransactionFeeInput,
+  type Item,
+  type ItemData,
+  type RealWorldAssetsState,
+  type TableItem,
+  type TableItemType,
+  type TableName,
+  type TransactionFeeInput,
 } from "@/rwa";
-import { InputMaybe } from "document-model";
+import { type InputMaybe } from "document-model";
 
 export function handleDateInTable(
   maybeDate: string | Date,

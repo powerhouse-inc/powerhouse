@@ -5,7 +5,7 @@ import {
   BUDGET,
   DEFAULT,
   MAKERDAO_RWA_PORTFOLIO,
-  TDocumentType,
+  type TDocumentType,
 } from "@/connect";
 
 export const iconMap: Record<TDocumentType, string> = {

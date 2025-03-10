@@ -1,4 +1,4 @@
-import { TokenIcons } from "./amount-field";
+import { type TokenIcons } from "./amount-field";
 
 export const getOptions = (items: string[] = []) => {
   return items.map((item) => ({

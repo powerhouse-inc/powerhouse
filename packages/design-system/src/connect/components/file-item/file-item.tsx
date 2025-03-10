@@ -5,11 +5,11 @@ import {
   DUPLICATE,
   getDocumentIconSrc,
   NodeInput,
-  NodeOption,
+  type NodeOption,
   nodeOptionsMap,
   READ,
   RENAME,
-  UiFileNode,
+  type UiFileNode,
   useDrag,
   WRITE,
 } from "@/connect";

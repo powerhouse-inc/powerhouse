@@ -1,7 +1,7 @@
 import {
   GraphQLError,
   GraphQLScalarType,
-  GraphQLScalarTypeConfig,
+  type GraphQLScalarTypeConfig,
   Kind,
 } from "graphql";
 import { z } from "zod";

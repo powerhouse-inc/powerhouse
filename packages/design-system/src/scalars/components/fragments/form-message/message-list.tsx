@@ -1,5 +1,5 @@
-import React from "react";
-import { FormMessage, FormMessageType } from "./form-message";
+import type React from "react";
+import { FormMessage, type FormMessageType } from "./form-message";
 import { cn } from "@/scalars/lib";
 
 interface FormMessageListProps {

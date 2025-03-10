@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { isNotSafeValue } from "../amount-field/utils";
-import { NumericType } from "./types";
+import { type NumericType } from "./types";
 import { getDisplayValue } from "./utils";
 
 interface UseNumberFieldProps {

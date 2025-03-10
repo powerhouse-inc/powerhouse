@@ -2,10 +2,10 @@ import { wagmiConfig as defaultWagmiConfig } from "@/services";
 import {
   QueryClient,
   QueryClientProvider,
-  QueryClientProviderProps,
+  type QueryClientProviderProps,
 } from "@tanstack/react-query";
-import { ReactNode } from "react";
-import { WagmiProvider, WagmiProviderProps } from "wagmi";
+import { type ReactNode } from "react";
+import { WagmiProvider, type WagmiProviderProps } from "wagmi";
 
 const defaultQueryClient = new QueryClient();
 

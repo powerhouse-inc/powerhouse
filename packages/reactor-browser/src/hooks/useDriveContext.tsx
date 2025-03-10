@@ -1,13 +1,13 @@
-import { Node, SyncStatus } from "document-drive";
+import { type Node, type SyncStatus } from "document-drive";
 import {
-  Action,
-  ActionErrorCallback,
-  DocumentModelModule,
-  PHDocument,
+  type Action,
+  type ActionErrorCallback,
+  type DocumentModelModule,
+  type PHDocument,
 } from "document-model";
-import { createContext, PropsWithChildren, useContext } from "react";
+import { createContext, type PropsWithChildren, useContext } from "react";
 import type { UiNode } from "../uiNodes/types.js";
-import { HookState } from "./document-state.js";
+import { type HookState } from "./document-state.js";
 
 /**
  * Interface representing the context values provided by the host application

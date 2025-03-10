@@ -1,5 +1,5 @@
 import { CLOUD, PUBLIC } from "@/connect/constants";
-import { UiDriveNode } from "@/connect/types/nodes.js";
+import { type UiDriveNode } from "@/connect/types/nodes.js";
 import { Icon } from "@/powerhouse/components/icon/icon.js";
 import { cn } from "@/scalars";
 import { capitalCase } from "change-case";

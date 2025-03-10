@@ -3,7 +3,7 @@ import {
   FormInputs,
   RWAButton,
   tableLabels,
-  TableName,
+  type TableName,
   useDependentItemProps,
   useEditorContext,
   useModal,

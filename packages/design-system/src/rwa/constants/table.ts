@@ -1,9 +1,9 @@
 import {
-  EditorAction,
-  GroupTransactionType,
-  RealWorldAssetsState,
-  TableName,
-  TableNameFor,
+  type EditorAction,
+  type GroupTransactionType,
+  type RealWorldAssetsState,
+  type TableName,
+  type TableNameFor,
 } from "@/rwa";
 
 export const defaultColumnCountByTableWidth = {

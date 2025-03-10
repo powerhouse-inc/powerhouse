@@ -1,5 +1,5 @@
 import { format, isValid, parse } from "date-fns";
-import { DateFieldValue } from "./types";
+import { type DateFieldValue } from "./types";
 
 export const ALLOWED_FORMATS = [
   "yyyy-MM-dd",

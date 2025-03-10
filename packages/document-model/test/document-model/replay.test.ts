@@ -5,10 +5,10 @@ import {
   replayDocument,
 } from "../../src/document/utils/base.js";
 import {
-  CountAction,
-  CountDocument,
-  CountLocalState,
-  CountState,
+  type CountAction,
+  type CountDocument,
+  type CountLocalState,
+  type CountState,
   baseCountReducer,
   countReducer,
   increment,

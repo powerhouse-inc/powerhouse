@@ -1,15 +1,15 @@
 import { twMerge } from "tailwind-merge";
 import {
   PackageManagerInput,
-  PackageManagerInputProps,
+  type PackageManagerInputProps,
 } from "./package-manager-input";
 import {
   PackageManagerList,
-  PackageManagerListProps,
+  type PackageManagerListProps,
 } from "./package-manager-list";
 import {
   PackageManagerReactorSelect,
-  PackageManagerReactorSelectProps,
+  type PackageManagerReactorSelectProps,
 } from "./package-manager-select";
 
 type Props = PackageManagerReactorSelectProps &

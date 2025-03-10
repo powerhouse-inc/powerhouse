@@ -1,4 +1,4 @@
-import { IDocumentDriveServer } from "document-drive";
+import { type IDocumentDriveServer } from "document-drive";
 
 export * from "./context/index.js";
 export * from "./document-model.js";

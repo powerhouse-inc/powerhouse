@@ -1,5 +1,5 @@
 import { Icon } from "@/powerhouse";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { Footer } from "./footer";
 import { FooterLink } from "./footer-link";
 

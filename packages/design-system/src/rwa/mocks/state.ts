@@ -1,4 +1,4 @@
-import { RealWorldAssetsState } from "../types";
+import { type RealWorldAssetsState } from "../types";
 import {
   mockAccounts,
   mockCashAsset,

@@ -2,8 +2,8 @@ import { TooltipProvider } from "@/connect";
 import { Pagination, usePagination } from "@/powerhouse";
 import {
   garbageCollect,
-  Operation,
-  OperationScope,
+  type Operation,
+  type OperationScope,
   sortOperations,
 } from "document-model";
 import { useMemo, useState } from "react";

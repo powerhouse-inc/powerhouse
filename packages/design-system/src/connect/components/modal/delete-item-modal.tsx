@@ -1,5 +1,5 @@
 import {
-  ConfirmationModalProps,
+  type ConfirmationModalProps,
   ConnectConfirmationModal,
 } from "./confirmation-modal";
 

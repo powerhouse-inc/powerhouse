@@ -1,6 +1,6 @@
 import { Icon, Modal } from "@/powerhouse";
-import { DependentItemProps, tableLabels, TableName } from "@/rwa";
-import { ComponentPropsWithoutRef, memo, useCallback } from "react";
+import { type DependentItemProps, tableLabels, type TableName } from "@/rwa";
+import { type ComponentPropsWithoutRef, memo, useCallback } from "react";
 
 export type RWADeleteItemModalProps = ComponentPropsWithoutRef<typeof Modal> & {
   readonly tableName: TableName;

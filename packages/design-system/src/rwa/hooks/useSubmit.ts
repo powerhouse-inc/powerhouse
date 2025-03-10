@@ -1,15 +1,15 @@
 import {
-  FormInputsByTableName,
-  Operation,
-  TableItemType,
-  TableName,
+  type FormInputsByTableName,
+  type Operation,
+  type TableItemType,
+  type TableName,
   useEditorContext,
 } from "@/rwa";
 import { useCallback, useEffect, useMemo } from "react";
 import {
-  DefaultValues,
-  FieldValues,
-  SubmitHandler,
+  type DefaultValues,
+  type FieldValues,
+  type SubmitHandler,
   useForm,
 } from "react-hook-form";
 import { useDefaultFormValues } from "./useDefaultFormValues";

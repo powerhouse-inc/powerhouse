@@ -1,4 +1,4 @@
-import { Icon, IconName } from "@/powerhouse";
+import { Icon, type IconName } from "@/powerhouse";
 import { NodeStatus } from "../types";
 
 interface StatusIconProps {

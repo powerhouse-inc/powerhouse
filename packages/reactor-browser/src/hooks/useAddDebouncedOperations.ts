@@ -1,7 +1,7 @@
-import { Operation, PHDocument } from "document-model";
+import { type Operation, type PHDocument } from "document-model";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
-import { IDocumentDriveServer } from "document-drive";
+import { type IDocumentDriveServer } from "document-drive";
 import { useDocumentDrives } from "./useDocumentDrives.js";
 import { useUserPermissions } from "./useUserPermissions.js";
 

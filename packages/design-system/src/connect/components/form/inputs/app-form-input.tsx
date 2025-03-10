@@ -1,8 +1,8 @@
-import { Select, SelectItem } from "@/connect";
+import { Select, type SelectItem } from "@/connect";
 import { Icon } from "@/powerhouse/components/icon";
-import { App } from "document-model";
-import { ComponentPropsWithRef } from "react";
-import { Control, Controller, Path } from "react-hook-form";
+import { type App } from "document-model";
+import { type ComponentPropsWithRef } from "react";
+import { type Control, Controller, type Path } from "react-hook-form";
 
 export function appToInputOption(app: App): SelectItem<string> {
   return {

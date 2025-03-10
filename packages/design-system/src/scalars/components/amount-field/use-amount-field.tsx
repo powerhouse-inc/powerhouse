@@ -1,10 +1,10 @@
-import { TokenIcons } from "./amount-field";
+import { type TokenIcons } from "./amount-field";
 import {
-  AmountCurrencyCrypto,
-  AmountCurrencyFiat,
-  AmountCurrencyUniversal,
-  AmountFieldPropsGeneric,
-  AmountValue,
+  type AmountCurrencyCrypto,
+  type AmountCurrencyFiat,
+  type AmountCurrencyUniversal,
+  type AmountFieldPropsGeneric,
+  type AmountValue,
 } from "./types";
 import {
   displayValueAmount,

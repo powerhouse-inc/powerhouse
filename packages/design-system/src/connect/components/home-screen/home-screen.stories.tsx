@@ -1,7 +1,7 @@
 import Hdd from "@/assets/icon-components/Hdd";
 import M from "@/assets/icon-components/M";
 import PowerhouseLogoSmall from "@/assets/icon-components/PowerhouseLogoSmall";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { HomeScreen } from "./home-screen";
 import { HomeScreenAddDriveItem } from "./home-screen-add-drive-item";
 import { HomeScreenItem } from "./home-screen-item";

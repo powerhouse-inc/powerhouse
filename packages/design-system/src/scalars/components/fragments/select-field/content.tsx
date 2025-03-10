@@ -1,5 +1,6 @@
 /* eslint-disable react/jsx-max-depth */
-import React, { useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 import {
   CommandInput,
   CommandList,
@@ -9,7 +10,7 @@ import {
 } from "@/scalars/components/fragments/command";
 import { useCommandState } from "cmdk";
 import { cn } from "@/scalars/lib/utils";
-import { SelectProps } from "@/scalars/components/enum-field/types";
+import { type SelectProps } from "@/scalars/components/enum-field/types";
 import { Icon, type IconName } from "@/powerhouse/components/icon";
 
 interface ContentProps {

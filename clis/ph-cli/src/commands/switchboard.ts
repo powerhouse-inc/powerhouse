@@ -1,13 +1,16 @@
 import { generateFromFile } from "@powerhousedao/codegen";
-import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import {
+  getConfig,
+  type PowerhouseConfig,
+} from "@powerhousedao/config/powerhouse";
 import {
   DefaultStartServerOptions,
-  LocalReactor,
+  type LocalReactor,
   startServer,
-  StartServerOptions,
+  type StartServerOptions,
 } from "@powerhousedao/reactor-local";
-import { Command } from "commander";
-import { CommandActionType } from "../types.js";
+import { type Command } from "commander";
+import { type CommandActionType } from "../types.js";
 
 export type SwitchboardOptions = StartServerOptions & {
   configFile?: string;

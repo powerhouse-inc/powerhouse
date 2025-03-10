@@ -1,4 +1,4 @@
-import { TimePeriod } from "./type";
+import { type TimePeriod } from "./type";
 
 export const createChangeEvent = (
   value: string,

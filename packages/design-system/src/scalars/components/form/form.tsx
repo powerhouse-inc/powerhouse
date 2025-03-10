@@ -1,6 +1,6 @@
 import { deepEqual } from "@/scalars/lib/deep-equal";
 import { isEmpty } from "@/scalars/lib/is-empty";
-import { castValue, ValueCast } from "@/scalars/lib/value-cast";
+import { castValue, type ValueCast } from "@/scalars/lib/value-cast";
 import {
   forwardRef,
   useCallback,
@@ -8,7 +8,7 @@ import {
   useId,
   useImperativeHandle,
 } from "react";
-import { FormProvider, useForm, UseFormReturn } from "react-hook-form";
+import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
 import { FormServerErrorMessage } from "../fragments/form-message/form-server-error-message";
 import { defaultOnError } from "./utils";
 

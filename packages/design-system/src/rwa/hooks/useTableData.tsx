@@ -1,7 +1,7 @@
 import {
   makeTableData,
-  TableItemType,
-  TableName,
+  type TableItemType,
+  type TableName,
   useEditorContext,
   useSortTableItems,
 } from "@/rwa";

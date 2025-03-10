@@ -1,40 +1,43 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-  ListenerCallInfo,
-  ListenerFilter,
-  Trigger,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
+  type DocumentDriveLocalState,
+  type DocumentDriveState,
+  type ListenerCallInfo,
+  type ListenerFilter,
+  type Trigger,
 } from "#drive-document-model/gen/types";
-import { IReadModeDriveServer } from "#read-mode/types";
-import { IDefaultDrivesManager } from "#utils/default-drives-manager";
-import { DriveInfo } from "#utils/graphql";
-import { RunAsap } from "#utils/run-asap";
+import { type IReadModeDriveServer } from "#read-mode/types";
+import { type IDefaultDrivesManager } from "#utils/default-drives-manager";
+import { type DriveInfo } from "#utils/graphql";
+import { type RunAsap } from "#utils/run-asap";
 import {
-  Action,
-  ActionContext,
-  BaseState,
-  CreateChildDocumentInput,
-  DocumentModelModule,
-  Operation,
-  OperationFromDocument,
-  OperationScope,
-  PHDocument,
-  ReducerOptions,
-  Signal,
+  type Action,
+  type ActionContext,
+  type BaseState,
+  type CreateChildDocumentInput,
+  type DocumentModelModule,
+  type Operation,
+  type OperationFromDocument,
+  type OperationScope,
+  type PHDocument,
+  type ReducerOptions,
+  type Signal,
 } from "document-model";
-import { Unsubscribe } from "nanoevents";
-import { BaseDocumentDriveServer } from "./base-server.js";
-import { OperationError, SynchronizationUnitNotFoundError } from "./error.js";
+import { type Unsubscribe } from "nanoevents";
+import { type BaseDocumentDriveServer } from "./base-server.js";
 import {
-  IInternalTransmitter,
-  IReceiver,
+  type OperationError,
+  type SynchronizationUnitNotFoundError,
+} from "./error.js";
+import {
+  type IInternalTransmitter,
+  type IReceiver,
 } from "./listener/transmitter/internal.js";
 import {
-  ITransmitter,
-  PullResponderTrigger,
-  StrandUpdateSource,
+  type ITransmitter,
+  type PullResponderTrigger,
+  type StrandUpdateSource,
 } from "./listener/transmitter/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;

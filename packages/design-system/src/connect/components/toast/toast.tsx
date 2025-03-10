@@ -1,9 +1,9 @@
 import {
   ToastContainer as RToastContainer,
-  ToastContainerProps,
-  ToastContent,
-  ToastOptions,
-  TypeOptions,
+  type ToastContainerProps,
+  type ToastContent,
+  type ToastOptions,
+  type TypeOptions,
   toast as rToast,
 } from "react-toastify";
 

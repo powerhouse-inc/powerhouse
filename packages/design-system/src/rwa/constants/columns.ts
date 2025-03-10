@@ -1,4 +1,4 @@
-import { TableColumn, TableName } from "@/rwa";
+import { type TableColumn, type TableName } from "@/rwa";
 
 export type ColumnsByTableName = {
   [K in TableName]: TableColumn[];

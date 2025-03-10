@@ -1,5 +1,5 @@
-import { Item, TableItem } from "@/rwa";
-import { Identifier, Order, orderBy } from "natural-orderby";
+import { type Item, type TableItem } from "@/rwa";
+import { type Identifier, type Order, orderBy } from "natural-orderby";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 /**

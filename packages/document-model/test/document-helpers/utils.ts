@@ -1,4 +1,4 @@
-import { Operation } from "../../src/document/types.js";
+import { type Operation } from "../../src/document/types.js";
 
 export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;

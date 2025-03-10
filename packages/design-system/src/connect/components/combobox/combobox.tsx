@@ -1,9 +1,9 @@
 import { Icon } from "@/powerhouse";
-import { ComponentPropsWithoutRef, ReactNode } from "react";
+import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 import Select, {
-  ClearIndicatorProps,
-  DropdownIndicatorProps,
-  MenuListProps,
+  type ClearIndicatorProps,
+  type DropdownIndicatorProps,
+  type MenuListProps,
   components,
 } from "react-select";
 

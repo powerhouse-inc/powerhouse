@@ -8,9 +8,9 @@ import {
   FormDescription,
   FormMessageList,
 } from "../fragments";
-import { ErrorHandling, FieldCommonProps } from "../types";
+import { type ErrorHandling, type FieldCommonProps } from "../types";
 import { cn } from "@/scalars/lib";
-import { IconName } from "@/powerhouse";
+import { type IconName } from "@/powerhouse";
 import { useURLWarnings } from "./useURLWarnings";
 import UrlFavicon from "./url-favicon";
 import ValueTransformer from "../fragments/value-transformer";

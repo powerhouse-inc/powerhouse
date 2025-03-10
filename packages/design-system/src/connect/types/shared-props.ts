@@ -1,9 +1,9 @@
 import {
-  TNodeOptions,
-  UiDriveNode,
-  UiFileNode,
-  UiFolderNode,
-  UiNode,
+  type TNodeOptions,
+  type UiDriveNode,
+  type UiFileNode,
+  type UiFolderNode,
+  type UiNode,
 } from "@/connect";
 
 export type NodeProps = {

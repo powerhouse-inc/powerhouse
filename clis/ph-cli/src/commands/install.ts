@@ -1,12 +1,12 @@
-import { Command } from "commander";
+import { type Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 
-import { CommandActionType } from "../types.js";
+import { type CommandActionType } from "../types.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
-  PackageManager,
+  type PackageManager,
   packageManagers,
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,

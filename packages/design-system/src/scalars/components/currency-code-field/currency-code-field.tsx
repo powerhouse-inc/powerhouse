@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { ErrorHandling, FieldCommonProps } from "../types";
+import { type ErrorHandling, type FieldCommonProps } from "../types";
 import { SelectFieldRaw, withFieldValidation } from "../fragments";
 import type { SelectOption } from "../enum-field/types";
 import type { Currency, CurrencyType } from "./types";

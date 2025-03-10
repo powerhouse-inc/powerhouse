@@ -1,5 +1,8 @@
-import { GetDocumentOptions, IDocumentDriveServer } from "document-drive";
-import { PHDocument } from "document-model";
+import {
+  type GetDocumentOptions,
+  type IDocumentDriveServer,
+} from "document-drive";
+import { type PHDocument } from "document-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type HookState = PHDocument["state"] &

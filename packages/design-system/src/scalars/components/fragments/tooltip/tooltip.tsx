@@ -6,8 +6,8 @@ import {
   Portal,
   Provider,
   Root,
-  TooltipContentProps,
-  TooltipProps as TooltipPrimitiveProps,
+  type TooltipContentProps,
+  type TooltipProps as TooltipPrimitiveProps,
   Trigger,
 } from "@radix-ui/react-tooltip";
 import * as React from "react";

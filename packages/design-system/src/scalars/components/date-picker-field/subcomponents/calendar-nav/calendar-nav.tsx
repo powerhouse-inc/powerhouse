@@ -1,10 +1,11 @@
-import React, { useCallback, useMemo } from "react";
+import type React from "react";
+import { useCallback, useMemo } from "react";
 import { cn } from "@/scalars/lib/utils";
 import { differenceInCalendarDays } from "date-fns";
 import { useDayPicker } from "react-day-picker";
 import { Icon } from "@/powerhouse";
 import { Button } from "../../../fragments/button/button";
-import { DatePickerView } from "../../types";
+import { type DatePickerView } from "../../types";
 
 interface NavProps {
   className?: string;

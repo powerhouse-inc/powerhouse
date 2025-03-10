@@ -1,5 +1,5 @@
-import { IDocumentDriveServer, StrandUpdate } from "document-drive";
-import { PHDocument } from "document-model";
+import { type IDocumentDriveServer, type StrandUpdate } from "document-drive";
+import { type PHDocument } from "document-model";
 import { useCallback, useEffect, useState } from "react";
 
 export type DocumentMeta = {

@@ -1,20 +1,21 @@
-import React, { useId, forwardRef } from "react";
-import { NumberFieldProps, NumberFieldRaw } from "../number-field";
+import type React from "react";
+import { useId, forwardRef } from "react";
+import { type NumberFieldProps, NumberFieldRaw } from "../number-field";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
-  SelectFieldProps,
+  type SelectFieldProps,
   SelectFieldRaw,
   withFieldValidation,
 } from "../fragments";
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
-import { InputNumberProps } from "../number-field/types";
-import { AmountValue } from "./types";
-import { AmountFieldPropsGeneric } from "./types";
-import { IconName } from "@/powerhouse";
+import { type InputNumberProps } from "../number-field/types";
+import { type AmountValue } from "./types";
+import { type AmountFieldPropsGeneric } from "./types";
+import { type IconName } from "@/powerhouse";
 import { validateAmount } from "./amount-field-validations";
 
 export interface TokenIcons {

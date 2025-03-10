@@ -1,8 +1,9 @@
 import { Icon } from "@/powerhouse";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { FormInput } from "../form-input";
 import {
-  ConfirmationModalProps,
+  type ConfirmationModalProps,
   ConnectConfirmationModal,
 } from "./confirmation-modal";
 

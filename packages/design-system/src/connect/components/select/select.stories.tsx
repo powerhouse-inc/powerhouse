@@ -1,7 +1,7 @@
 import { Icon } from "@/powerhouse";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { Select, SelectItem } from ".";
+import { Select, type SelectItem } from ".";
 
 const meta: Meta<typeof Select> = {
   title: "Connect/Components/Select",

@@ -1,9 +1,9 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
 import { DriveNotFoundError } from "#server/error";
-import { SynchronizationUnitQuery } from "#server/types";
+import { type SynchronizationUnitQuery } from "#server/types";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations } from "#utils/misc";
 import type {
@@ -13,7 +13,7 @@ import type {
   PHDocument,
 } from "document-model";
 import LocalForage from "localforage";
-import { IDriveStorage } from "./types.js";
+import { type IDriveStorage } from "./types.js";
 
 export class BrowserStorage implements IDriveStorage {
   private db: Promise<LocalForage>;

@@ -4,16 +4,16 @@ import {
   FormGroup,
   FormLabel,
   FormMessageList,
-  InputProps,
-  SelectFieldProps,
+  type InputProps,
+  type SelectFieldProps,
   withFieldValidation,
 } from "../fragments";
-import { ErrorHandling, FieldCommonProps } from "../types";
-import { TimeFieldValue } from "./type";
+import { type ErrorHandling, type FieldCommonProps } from "../types";
+import { type TimeFieldValue } from "./type";
 import { BasePickerField } from "../date-time-field/base-picker-field";
 import TimePickerContent from "./subcomponents/time-picker-content";
 import { useTimePickerField } from "./use-time-picker-field";
-import { InputNumberProps } from "../number-field/types";
+import { type InputNumberProps } from "../number-field/types";
 import { validateTimePicker } from "./time-picker-validations";
 import { cn } from "@/scalars/lib";
 import { handleKeyDown } from "./utils";

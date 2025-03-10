@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/scalars/lib/utils";
-import { SelectProps } from "@/scalars/components/enum-field/types";
+import { type SelectProps } from "@/scalars/components/enum-field/types";
 import { Icon, type IconName } from "@/powerhouse/components/icon";
 
 interface SelectedContentProps {

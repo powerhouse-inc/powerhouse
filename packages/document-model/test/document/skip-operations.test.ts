@@ -8,7 +8,7 @@ import {
 import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
 import {
   baseCountReducer,
-  CountDocument,
+  type CountDocument,
   countReducer,
   createFakeOperation,
   error,

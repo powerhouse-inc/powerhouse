@@ -1,7 +1,7 @@
 import {
-  DocumentOperations,
-  OperationScope,
-  ValidationError,
+  type DocumentOperations,
+  type OperationScope,
+  type ValidationError,
 } from "../types.js";
 
 export function validateOperations(operations: DocumentOperations) {

@@ -1,10 +1,10 @@
-import { DRIVE, FOLDER, SUCCESS, UiFolderNode } from "@/connect";
+import { DRIVE, FOLDER, SUCCESS, type UiFolderNode } from "@/connect";
 import { mockDriveNodes } from "@/connect/utils/mocks/ui-drive-node";
 import {
   UiNodesContextProvider,
   useUiNodesContext,
 } from "@powerhousedao/reactor-browser";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { useEffect } from "react";
 import { Breadcrumbs } from ".";
 

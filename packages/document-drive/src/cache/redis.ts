@@ -1,6 +1,6 @@
-import { Action, PHDocument } from "document-model";
+import { Action, type PHDocument } from "document-model";
 import type { RedisClientType } from "redis";
-import { ICache } from "./types.js";
+import { type ICache } from "./types.js";
 
 class RedisCache implements ICache {
   private redis: RedisClientType;

@@ -3,7 +3,13 @@ import MagicString from "magic-string";
 import { createRequire } from "node:module";
 import path, { basename, dirname } from "node:path";
 import type { Package } from "resolve.exports";
-import { Alias, AliasOptions, Plugin, PluginOption, normalizePath } from "vite";
+import {
+  type Alias,
+  type AliasOptions,
+  type Plugin,
+  type PluginOption,
+  normalizePath,
+} from "vite";
 
 // matches @powerhousedao/connect, react, react-dom and all their sub-imports like react-dom/client
 export const externalIds = [

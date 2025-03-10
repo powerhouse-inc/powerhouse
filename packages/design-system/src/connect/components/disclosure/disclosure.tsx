@@ -1,5 +1,5 @@
 import { Icon } from "@/powerhouse";
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 type DisclosureProps = {

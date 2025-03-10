@@ -1,22 +1,22 @@
-import { StrandUpdateSource } from "#server/listener/transmitter/types";
+import { type StrandUpdateSource } from "#server/listener/transmitter/types";
 import {
   DefaultListenerManagerOptions,
-  DriveUpdateErrorHandler,
-  ErrorStatus,
-  GetStrandsOptions,
-  IListenerManager,
-  ISynchronizationManager,
-  Listener,
-  ListenerManagerOptions,
-  ListenerState,
-  ListenerUpdate,
-  OperationUpdate,
-  StrandUpdate,
-  SynchronizationUnit,
-  SynchronizationUnitQuery,
+  type DriveUpdateErrorHandler,
+  type ErrorStatus,
+  type GetStrandsOptions,
+  type IListenerManager,
+  type ISynchronizationManager,
+  type Listener,
+  type ListenerManagerOptions,
+  type ListenerState,
+  type ListenerUpdate,
+  type OperationUpdate,
+  type StrandUpdate,
+  type SynchronizationUnit,
+  type SynchronizationUnitQuery,
 } from "#server/types";
-import { childLogger, ListenerFilter } from "document-drive";
-import { OperationScope } from "document-model";
+import { childLogger, type ListenerFilter } from "document-drive";
+import { type OperationScope } from "document-model";
 import { OperationError } from "#server/error";
 import { debounce } from "./util.js";
 

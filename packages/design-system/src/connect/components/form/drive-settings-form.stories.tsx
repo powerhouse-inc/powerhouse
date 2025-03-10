@@ -1,5 +1,5 @@
 import { mockLocalDrive } from "@/connect/utils/mocks";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { DriveSettingsForm } from ".";
 
 const meta = {

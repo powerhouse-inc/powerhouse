@@ -1,4 +1,4 @@
-import { UiDriveNode } from "@/connect/types/nodes.js";
+import { type UiDriveNode } from "@/connect/types/nodes.js";
 import {
   mockCloudDrive,
   mockLocalDrive,

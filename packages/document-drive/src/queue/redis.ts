@@ -1,6 +1,12 @@
-import { RedisClientType } from "redis";
+import { type RedisClientType } from "redis";
 import { BaseQueueManager } from "./base.js";
-import { IJob, IQueue, IQueueManager, IServerDelegate, Job } from "./types.js";
+import {
+  type IJob,
+  type IQueue,
+  type IQueueManager,
+  type IServerDelegate,
+  type Job,
+} from "./types.js";
 
 export class RedisQueue<T> implements IQueue<T> {
   private id: string;

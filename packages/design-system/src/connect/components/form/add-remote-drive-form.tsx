@@ -6,7 +6,7 @@ import {
   FormInput,
   LocationInfo,
   PUBLIC,
-  SharingType,
+  type SharingType,
   SWITCHBOARD,
 } from "@/connect";
 import { Button } from "@/powerhouse";

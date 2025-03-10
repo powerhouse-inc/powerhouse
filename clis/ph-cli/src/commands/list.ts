@@ -1,7 +1,7 @@
-import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
-import { Command } from "commander";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type Command } from "commander";
 import path from "node:path";
-import { CommandActionType } from "../types.js";
+import { type CommandActionType } from "../types.js";
 import { getProjectInfo } from "../utils.js";
 
 export const list: CommandActionType<

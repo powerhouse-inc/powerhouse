@@ -1,4 +1,4 @@
-import { Size } from "../types";
+import { type Size } from "../types";
 
 export function getDimensions(size?: Size) {
   if (!size) return {};

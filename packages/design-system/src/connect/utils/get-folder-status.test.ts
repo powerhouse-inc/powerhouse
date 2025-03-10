@@ -1,5 +1,5 @@
 import {
-  FileStatus,
+  type FileStatus,
   getFolderStatus,
   removeSuccessFiles,
   sortFilesByStatus,

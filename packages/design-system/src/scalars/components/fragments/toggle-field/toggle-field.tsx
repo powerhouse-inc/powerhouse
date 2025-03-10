@@ -1,4 +1,5 @@
-import React, { useId } from "react";
+import type React from "react";
+import { useId } from "react";
 import { Toggle } from "./toggle";
 import { cn } from "@/scalars/lib/utils";
 import { FormLabel } from "../form-label";

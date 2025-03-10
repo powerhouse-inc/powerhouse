@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Operation, OperationScope } from "document-model";
+import { type Operation, type OperationScope } from "document-model";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Revision } from "../revision";
 import { Skip } from "../skip";

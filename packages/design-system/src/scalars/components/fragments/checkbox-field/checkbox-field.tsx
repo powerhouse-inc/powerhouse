@@ -1,9 +1,9 @@
 import { useId } from "react";
 import { FormLabel } from "../form-label";
-import { Checkbox, CheckboxValue } from "./checkbox";
+import { Checkbox, type CheckboxValue } from "./checkbox";
 import { cn } from "@/scalars/lib/utils";
 import { FormMessageList } from "../form-message";
-import { FieldCommonProps } from "../../types";
+import { type FieldCommonProps } from "../../types";
 import { withFieldValidation } from "../with-field-validation";
 
 export interface CheckboxFieldProps extends FieldCommonProps<CheckboxValue> {

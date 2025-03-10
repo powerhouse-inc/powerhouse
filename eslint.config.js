@@ -68,7 +68,13 @@ export default tseslint.config(
       "@typescript-eslint/consistent-indexed-object-style": "off",
       "@typescript-eslint/no-duplicate-type-constituents": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
-      "@typescript-eslint/consistent-type-imports": "off",
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "type-imports",
+          fixStyle: "inline-type-imports",
+        },
+      ],
       "@typescript-eslint/array-type": "off",
       "@typescript-eslint/prefer-function-type": "off",
       "@typescript-eslint/strict-boolean-expressions": "off",

@@ -1,7 +1,7 @@
-import { Command } from "commander";
+import { type Command } from "commander";
 // import { Manifest } from "document-model";
 import path from "node:path";
-import { CommandActionType } from "../types.js";
+import { type CommandActionType } from "../types.js";
 import { getProjectInfo } from "../utils.js";
 export const inspect: CommandActionType<
   [

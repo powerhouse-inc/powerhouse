@@ -1,4 +1,4 @@
-import { OperationScope, PHDocument } from "./types.js";
+import { type OperationScope, type PHDocument } from "./types.js";
 
 export interface ISignal<TType extends string, TInput> {
   type: TType;

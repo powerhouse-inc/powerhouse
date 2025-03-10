@@ -1,10 +1,10 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
-import { Argument, Command } from "commander";
+import { Argument, type Command } from "commander";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import pm2, { StartOptions } from "pm2";
-import { CommandActionType } from "../types.js";
+import pm2, { type StartOptions } from "pm2";
+import { type CommandActionType } from "../types.js";
 
 const actions = ["start", "stop", "status", "list", "startup", "unstartup"];
 const services = ["switchboard", "connect", "all"];

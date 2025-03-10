@@ -1,6 +1,6 @@
 import { FormInput } from "@/connect";
 import { Button, Icon, Modal } from "@/powerhouse";
-import { ComponentPropsWithoutRef, useState } from "react";
+import { type ComponentPropsWithoutRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 const buttonStyles =

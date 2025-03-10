@@ -1,6 +1,7 @@
 import { format, getHours, getMinutes, parse } from "date-fns";
-import React, { useMemo, useState } from "react";
-import { TimeFieldValue } from "./type";
+import type React from "react";
+import { useMemo, useState } from "react";
+import { type TimeFieldValue } from "./type";
 import {
   createChangeEvent,
   isValidTimeInput,

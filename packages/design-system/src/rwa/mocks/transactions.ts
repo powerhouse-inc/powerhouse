@@ -1,7 +1,7 @@
 import {
-  BaseTransaction,
+  type BaseTransaction,
   FEES_PAYMENT,
-  GroupTransaction,
+  type GroupTransaction,
   allGroupTransactionTypes,
   calculateCashBalanceChange,
   isAssetGroupTransactionType,

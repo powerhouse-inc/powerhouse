@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { ComponentPropsWithoutRef, useState } from "react";
+import { type ComponentPropsWithoutRef, useState } from "react";
 import { mockPackages, mockReactorOptions } from "../mocks";
 import { PackageManager } from "./package-manager";
 

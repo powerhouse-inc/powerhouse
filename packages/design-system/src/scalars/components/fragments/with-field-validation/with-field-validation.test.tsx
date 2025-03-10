@@ -4,12 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { withFieldValidation } from "./with-field-validation";
 import { Form } from "../../form";
 import { FormGroup } from "../form-group";
-import { TextFieldProps } from "../text-field";
+import { type TextFieldProps } from "../text-field";
 import { FormLabel } from "../form-label";
 import { Input } from "../input";
 import { FormMessageList } from "../form-message";
 import { renderWithForm } from "@/scalars/lib/testing";
-import { ValidatorHandler } from "../../types";
+import { type ValidatorHandler } from "../../types";
 
 // Test component that will be wrapped
 

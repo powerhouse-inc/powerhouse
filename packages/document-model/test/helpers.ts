@@ -1,9 +1,9 @@
 import {
-  BaseAction,
-  Operation,
-  OperationScope,
-  PHDocument,
-  StateReducer,
+  type BaseAction,
+  type Operation,
+  type OperationScope,
+  type PHDocument,
+  type StateReducer,
 } from "../src/document/types.js";
 import { createAction, createReducer } from "../src/document/utils/base.js";
 

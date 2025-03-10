@@ -1,11 +1,11 @@
-import { UiDriveNode } from "@/connect/types/nodes.js";
+import { type UiDriveNode } from "@/connect/types/nodes.js";
 import {
   mockCloudDrive,
   mockLocalDrive,
   mockPublicDrive,
 } from "@/connect/utils/mocks/ui-drive-node.js";
 import { useArgs } from "@storybook/preview-api";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { useCallback } from "react";
 import { DangerZone } from "./danger-zone.js";
 

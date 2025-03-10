@@ -1,5 +1,5 @@
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { SynchronizationUnitQuery } from "#server/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type SynchronizationUnitQuery } from "#server/types";
 import type {
   DocumentHeader,
   Operation,

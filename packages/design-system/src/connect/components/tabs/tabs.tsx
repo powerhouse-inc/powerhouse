@@ -1,6 +1,6 @@
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
 import React from "react";
-import { TabContentProps } from "./tab-content";
+import { type TabContentProps } from "./tab-content";
 
 export function Tabs({
   children,

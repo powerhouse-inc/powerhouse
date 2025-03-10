@@ -1,15 +1,15 @@
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { DriveNotFoundError } from "#server/error";
-import { SynchronizationUnitQuery } from "#server/types";
+import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
-  DocumentHeader,
-  Operation,
-  OperationFromDocument,
-  OperationScope,
-  PHDocument,
+  type DocumentHeader,
+  type Operation,
+  type OperationFromDocument,
+  type OperationScope,
+  type PHDocument,
 } from "document-model";
-import { IDriveStorage } from "./types.js";
+import { type IDriveStorage } from "./types.js";
 
 export class MemoryStorage implements IDriveStorage {
   private documents: Record<string, Record<string, PHDocument>>;

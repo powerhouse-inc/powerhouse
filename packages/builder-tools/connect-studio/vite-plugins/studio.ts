@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PluginOption, ViteDevServer } from "vite";
+import { type PluginOption, type ViteDevServer } from "vite";
 import {
   externalIds,
   getStudioConfig,

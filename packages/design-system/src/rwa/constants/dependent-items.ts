@@ -1,8 +1,8 @@
 import {
-  FixedIncome,
-  GroupTransaction,
-  ServiceProviderFeeType,
-  TableName,
+  type FixedIncome,
+  type GroupTransaction,
+  type ServiceProviderFeeType,
+  type TableName,
   useEditorContext,
 } from "@/rwa";
 import { useMemo } from "react";

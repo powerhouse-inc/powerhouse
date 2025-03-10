@@ -1,4 +1,4 @@
-import { Icon, SidebarFooter, SidebarFooterProps } from "@/powerhouse";
+import { Icon, SidebarFooter, type SidebarFooterProps } from "@/powerhouse";
 import { twMerge } from "tailwind-merge";
 import { SidebarLogin } from "./sidebar-login";
 import { SidebarUser } from "./sidebar-user";

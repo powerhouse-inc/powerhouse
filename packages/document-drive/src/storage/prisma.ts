@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { type Prisma, type PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   AttachmentInput,
@@ -12,15 +12,15 @@ import type {
   OperationsFromDocument,
   PHDocument,
 } from "document-model";
-import { IBackOffOptions, backOff } from "exponential-backoff";
+import { type IBackOffOptions, backOff } from "exponential-backoff";
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
 } from "../drive-document-model/gen/types.js";
 import { ConflictOperationError, DriveNotFoundError } from "../server/error.js";
-import { SynchronizationUnitQuery } from "../server/types.js";
+import { type SynchronizationUnitQuery } from "../server/types.js";
 import { logger } from "../utils/logger.js";
-import { IDriveStorage, IStorageDelegate } from "./types.js";
+import { type IDriveStorage, type IStorageDelegate } from "./types.js";
 
 type Transaction =
   | Omit<

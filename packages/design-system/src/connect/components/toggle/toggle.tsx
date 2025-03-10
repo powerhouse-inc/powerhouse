@@ -1,4 +1,8 @@
-import { ComponentPropsWithRef, ForwardedRef, forwardRef } from "react";
+import {
+  type ComponentPropsWithRef,
+  type ForwardedRef,
+  forwardRef,
+} from "react";
 
 type ToggleProps = Omit<ComponentPropsWithRef<"input">, "type">;
 

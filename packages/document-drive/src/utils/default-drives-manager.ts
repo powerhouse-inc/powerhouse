@@ -1,13 +1,13 @@
-import { IReadModeDriveServer } from "#read-mode/types";
+import { type IReadModeDriveServer } from "#read-mode/types";
 import { DriveNotFoundError } from "#server/error";
 import {
-  DefaultRemoteDriveInfo,
-  DocumentDriveServerOptions,
-  DriveEvents,
-  IBaseDocumentDriveServer,
-  RemoteDriveAccessLevel,
-  RemoveDriveStrategy,
-  RemoveOldRemoteDrivesOption,
+  type DefaultRemoteDriveInfo,
+  type DocumentDriveServerOptions,
+  type DriveEvents,
+  type IBaseDocumentDriveServer,
+  type RemoteDriveAccessLevel,
+  type RemoveDriveStrategy,
+  type RemoveOldRemoteDrivesOption,
 } from "#server/types";
 import { requestPublicDrive } from "./graphql.js";
 import { logger } from "./logger.js";

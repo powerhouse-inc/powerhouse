@@ -1,5 +1,5 @@
 import { MAX_SAFE_INTEGER } from "./number-field-validations";
-import { NumericType } from "./types";
+import { type NumericType } from "./types";
 
 export const regex = /^-?\d*\.?\d*$/;
 

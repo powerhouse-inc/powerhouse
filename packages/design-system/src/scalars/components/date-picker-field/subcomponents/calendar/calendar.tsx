@@ -8,7 +8,7 @@ import { buttonVariants } from "../../../fragments/button/button";
 import { Button } from "../../../fragments/button/button";
 import { Icon } from "@/powerhouse";
 import { MONTHS } from "../utils";
-import { DatePickerView } from "../../types";
+import { type DatePickerView } from "../../types";
 import CaptionLabel from "../caption-label/caption-label";
 import NavCalendar from "../calendar-nav/calendar-nav";
 import CalendarDateHeader from "../calendar-date-header/calendar-date-header";

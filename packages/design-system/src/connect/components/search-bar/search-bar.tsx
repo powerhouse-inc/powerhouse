@@ -6,9 +6,9 @@ import {
   Icon,
 } from "@/powerhouse";
 import { cn } from "@/scalars";
-import { ChangeEvent, useMemo } from "react";
+import { type ChangeEvent, useMemo } from "react";
 import { twMerge } from "tailwind-merge";
-import { FilterItem, FilterItemType } from "./filter-item";
+import { FilterItem, type FilterItemType } from "./filter-item";
 
 export interface ConnectSearchBarProps {
   value?: string;

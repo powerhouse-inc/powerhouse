@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Revision as RevisionProps } from "../types";
+import { type Revision as RevisionProps } from "../types";
 import { Address } from "./address";
 import { Errors } from "./errors";
 import { Operation } from "./operation";

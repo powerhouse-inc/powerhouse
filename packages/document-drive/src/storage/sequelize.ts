@@ -1,21 +1,21 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
+  type DocumentDriveLocalState,
+  type DocumentDriveState,
 } from "#drive-document-model/gen/types";
-import { SynchronizationUnitQuery } from "#server/types";
+import { type SynchronizationUnitQuery } from "#server/types";
 import {
   Action,
-  AttachmentInput,
-  DocumentHeader,
-  ExtendedState,
-  Operation,
-  OperationScope,
-  PHDocument,
+  type AttachmentInput,
+  type DocumentHeader,
+  type ExtendedState,
+  type Operation,
+  type OperationScope,
+  type PHDocument,
 } from "document-model";
-import { DataTypes, Options, Sequelize } from "sequelize";
-import { IDriveStorage } from "./types.js";
+import { DataTypes, type Options, Sequelize } from "sequelize";
+import { type IDriveStorage } from "./types.js";
 
 export class SequelizeStorage implements IDriveStorage {
   private db: Sequelize;

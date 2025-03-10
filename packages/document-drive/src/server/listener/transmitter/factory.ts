@@ -1,13 +1,13 @@
 import {
-  IBaseDocumentDriveServer,
-  IListenerManager,
-  ITransmitterFactory,
-  Listener,
+  type IBaseDocumentDriveServer,
+  type IListenerManager,
+  type ITransmitterFactory,
+  type Listener,
 } from "#server/types";
 import { InternalTransmitter } from "./internal.js";
 import { PullResponderTransmitter } from "./pull-responder.js";
 import { SwitchboardPushTransmitter } from "./switchboard-push.js";
-import { ITransmitter } from "./types.js";
+import { type ITransmitter } from "./types.js";
 
 export default class TransmitterFactory implements ITransmitterFactory {
   private readonly listenerManager: IListenerManager;

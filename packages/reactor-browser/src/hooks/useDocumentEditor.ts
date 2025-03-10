@@ -1,13 +1,13 @@
-import { IDocumentDriveServer } from "document-drive";
+import { type IDocumentDriveServer } from "document-drive";
 import {
-  ActionErrorCallback,
-  ActionFromDocument,
-  DocumentModelModule,
-  OperationFromDocument,
-  PHDocument,
+  type ActionErrorCallback,
+  type ActionFromDocument,
+  type DocumentModelModule,
+  type OperationFromDocument,
+  type PHDocument,
 } from "document-model";
-import { DID, IConnectCrypto } from "../crypto/index.js";
-import { User } from "../renown/types.js";
+import { type DID, type IConnectCrypto } from "../crypto/index.js";
+import { type User } from "../renown/types.js";
 import { addActionContext, signOperation } from "../utils/signature.js";
 import { useAddDebouncedOperations } from "./useAddDebouncedOperations.js";
 import { useConnectCrypto, useConnectDid } from "./useConnectCrypto.js";

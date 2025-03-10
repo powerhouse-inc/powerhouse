@@ -1,11 +1,11 @@
 import { Combobox } from "@/connect";
-import { ComponentPropsWithoutRef } from "react";
+import { type ComponentPropsWithoutRef } from "react";
 import {
-  Control,
+  type Control,
   Controller,
-  ControllerProps,
-  FieldValues,
-  Path,
+  type ControllerProps,
+  type FieldValues,
+  type Path,
 } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 

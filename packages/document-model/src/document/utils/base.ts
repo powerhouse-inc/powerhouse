@@ -10,30 +10,30 @@ import {
   UNDO,
 } from "../actions/types.js";
 import { baseReducer, updateHeader } from "../reducer.js";
-import { UndoAction, UndoRedoAction } from "../schema/types.js";
-import { SignalDispatch } from "../signal.js";
+import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
+import { type SignalDispatch } from "../signal.js";
 import {
-  ActionFromDocument,
-  BaseAction,
-  BaseStateFromDocument,
-  CreateState,
-  DocumentAction,
-  DocumentHeader,
-  DocumentOperations,
-  DocumentOperationsIgnoreMap,
-  ExtendedState,
-  ExtendedStateFromDocument,
-  GlobalStateFromDocument,
-  LocalStateFromDocument,
-  MappedOperation,
-  Operation,
-  OperationScope,
-  OperationsFromDocument,
-  PartialState,
-  PHDocument,
-  Reducer,
-  ReducerOptions,
-  StateReducer,
+  type ActionFromDocument,
+  type BaseAction,
+  type BaseStateFromDocument,
+  type CreateState,
+  type DocumentAction,
+  type DocumentHeader,
+  type DocumentOperations,
+  type DocumentOperationsIgnoreMap,
+  type ExtendedState,
+  type ExtendedStateFromDocument,
+  type GlobalStateFromDocument,
+  type LocalStateFromDocument,
+  type MappedOperation,
+  type Operation,
+  type OperationScope,
+  type OperationsFromDocument,
+  type PartialState,
+  type PHDocument,
+  type Reducer,
+  type ReducerOptions,
+  type StateReducer,
 } from "../types.js";
 import { sortOperations } from "./document-helpers.js";
 import {

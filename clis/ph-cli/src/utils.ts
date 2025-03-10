@@ -1,4 +1,4 @@
-import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import path, { dirname } from "node:path";

@@ -1,12 +1,12 @@
 import {
-  Action,
-  ActionSigner,
+  type Action,
+  type ActionSigner,
   buildSignedOperation,
-  Operation,
-  OperationSignatureContext,
-  PHDocument,
-  Reducer,
-  User,
+  type Operation,
+  type OperationSignatureContext,
+  type PHDocument,
+  type Reducer,
+  type User,
 } from "document-model";
 import type { User as RenownUser } from "../renown/types.js";
 

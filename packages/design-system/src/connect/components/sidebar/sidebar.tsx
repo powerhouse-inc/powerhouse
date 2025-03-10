@@ -1,11 +1,11 @@
-import { Sidebar, SidebarPanel, SidebarProps } from "@/powerhouse";
+import { Sidebar, SidebarPanel, type SidebarProps } from "@/powerhouse";
 import {
   ConnectSidebarFooter,
-  ConnectSidebarFooterProps,
+  type ConnectSidebarFooterProps,
 } from "./sidebar-footer";
 import {
   ConnectSidebarHeader,
-  ConnectSidebarHeaderProps,
+  type ConnectSidebarHeaderProps,
 } from "./sidebar-header";
 
 export interface ConnectSidebarProps

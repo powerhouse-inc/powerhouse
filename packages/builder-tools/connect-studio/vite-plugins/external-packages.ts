@@ -1,7 +1,7 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import fs from "node:fs";
 import { join } from "node:path";
-import { PluginOption } from "vite";
+import { type PluginOption } from "vite";
 import { viteIgnoreStaticImport, viteReplaceImports } from "./base.js";
 
 // TODO use config path?

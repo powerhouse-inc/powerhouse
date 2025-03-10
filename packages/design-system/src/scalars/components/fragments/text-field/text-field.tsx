@@ -3,7 +3,11 @@ import { Input } from "../input";
 import { FormLabel } from "../form-label";
 import { FormMessageList } from "../form-message";
 import { FormGroup } from "../form-group";
-import { ErrorHandling, FieldCommonProps, TextProps } from "../../types";
+import {
+  type ErrorHandling,
+  type FieldCommonProps,
+  type TextProps,
+} from "../../types";
 import { FormDescription } from "../form-description";
 import { CharacterCounter } from "../character-counter";
 import { withFieldValidation } from "../with-field-validation";

@@ -3,14 +3,19 @@ import { exec } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
-import { createLogger, createServer, InlineConfig, Plugin } from "vite";
+import {
+  createLogger,
+  createServer,
+  type InlineConfig,
+  type Plugin,
+} from "vite";
 import { viteEnvs } from "vite-envs";
 import {
   backupIndexHtml,
   copyConnect,
   removeBase64EnvValues,
 } from "./helpers.js";
-import { StartServerOptions } from "./types.js";
+import { type StartServerOptions } from "./types.js";
 import { getStudioConfig } from "./vite-plugins/base.js";
 import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
 import { generateImportMapPlugin } from "./vite-plugins/importmap.js";

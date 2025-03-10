@@ -1,15 +1,15 @@
 import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
-import { SignalDispatch } from "./signal.js";
+import { type SignalDispatch } from "./signal.js";
 import {
-  Action,
-  AttachmentRef,
-  BaseDocument,
-  BaseState,
-  DefaultAction,
-  Operation,
-  OperationScope,
-  Reducer,
-  ReducerOptions,
+  type Action,
+  type AttachmentRef,
+  type BaseDocument,
+  type BaseState,
+  type DefaultAction,
+  type Operation,
+  type OperationScope,
+  type Reducer,
+  type ReducerOptions,
 } from "./types.js";
 import { readOnly } from "./utils/base.js";
 import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";

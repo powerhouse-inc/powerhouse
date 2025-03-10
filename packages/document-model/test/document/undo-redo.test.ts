@@ -6,8 +6,8 @@ import {
   baseCreateExtendedState,
 } from "../../src/document/utils/base.js";
 import {
-  CountAction,
-  CountDocument,
+  type CountAction,
+  type CountDocument,
   countReducer,
   increment,
 } from "../helpers.js";

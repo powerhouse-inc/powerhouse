@@ -9,7 +9,7 @@ import { withFieldValidation } from "../fragments/with-field-validation";
 import { validateNumericType } from "./number-field-validations";
 import { Icon } from "@/powerhouse/components/icon";
 import { regex } from "./utils";
-import { InputNumberProps } from "./types";
+import { type InputNumberProps } from "./types";
 import { useNumberField } from "./use-number-field";
 
 export interface NumberFieldProps extends InputNumberProps {

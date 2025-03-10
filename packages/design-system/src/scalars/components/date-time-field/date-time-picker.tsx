@@ -1,7 +1,8 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import { DatePickerField } from "../date-picker-field/date-picker-field";
 import { TimePickerField } from "../time-picker-field/time-picker-field";
-import { DateFieldValue } from "../date-picker-field/types";
+import { type DateFieldValue } from "../date-picker-field/types";
 import Calendar from "@/assets/icon-components/Calendar";
 import { cn } from "@/scalars/lib";
 import { id } from "date-fns/locale";
@@ -13,7 +14,7 @@ import {
   FormMessageList,
 } from "../fragments";
 import { BasePickerField } from "./base-picker-field";
-import { FieldCommonProps } from "../types";
+import { type FieldCommonProps } from "../types";
 import { useDateTimePicker } from "./use-date-time-picker";
 import DateTimePickerContent from "./date-time-picker-contet";
 

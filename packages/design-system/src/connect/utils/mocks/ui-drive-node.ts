@@ -12,14 +12,14 @@ import {
   SUCCESS,
 } from "@/connect/constants";
 import {
-  DocumentDriveDocument,
-  FileNode,
-  FolderNode,
-  SharingType,
-  SyncStatus,
-  UiDriveNode,
-  UiFileNode,
-  UiFolderNode,
+  type DocumentDriveDocument,
+  type FileNode,
+  type FolderNode,
+  type SharingType,
+  type SyncStatus,
+  type UiDriveNode,
+  type UiFileNode,
+  type UiFolderNode,
 } from "@/connect/types";
 
 const mockDriveId = "mock-drive-id";

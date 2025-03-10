@@ -4,7 +4,7 @@ import type {
   OperationScope,
   PHDocument,
 } from "document-model";
-import { RevisionsFilter, StrandUpdate } from "./types.js";
+import { type RevisionsFilter, type StrandUpdate } from "./types.js";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],

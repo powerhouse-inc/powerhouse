@@ -3,7 +3,7 @@
 import { SidebarHeader } from "./subcomponents/sidebar-header";
 import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
 import { SidebarSearch } from "./subcomponents/sidebar-search";
-import { SidebarNode } from "./types";
+import { type SidebarNode } from "./types";
 import { useSidebar } from "./subcomponents/sidebar-provider";
 import { useSidebarResize } from "./use-sidebar-resize";
 import { SidebarContentArea } from "./subcomponents/sidebar-content-area";

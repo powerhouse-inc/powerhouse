@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { HomeScreenAddDriveItem } from "./home-screen-add-drive-item";
 
 const meta = {

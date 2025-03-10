@@ -1,5 +1,5 @@
-import { DRIVE, UI_NODE, UiNode } from "@/connect";
-import { DragEvent, useCallback, useMemo, useState } from "react";
+import { DRIVE, UI_NODE, type UiNode } from "@/connect";
+import { type DragEvent, useCallback, useMemo, useState } from "react";
 
 type Props = {
   uiNode: UiNode | null;

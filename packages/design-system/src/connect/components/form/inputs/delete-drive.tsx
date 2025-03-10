@@ -1,4 +1,4 @@
-import { DriveNameInput, UiDriveNode } from "@/connect";
+import { DriveNameInput, type UiDriveNode } from "@/connect";
 import { Button, Icon } from "@/powerhouse";
 import { useState } from "react";
 

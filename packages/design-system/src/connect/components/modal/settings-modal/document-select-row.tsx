@@ -1,6 +1,10 @@
-import { MultiSelect, Option, SelectProps } from "react-multi-select-component";
+import {
+  MultiSelect,
+  type Option,
+  type SelectProps,
+} from "react-multi-select-component";
 import { twMerge } from "tailwind-merge";
-import { SettingsRow, SettingsRowProps } from "./row";
+import { SettingsRow, type SettingsRowProps } from "./row";
 
 export interface DocumentSelectSettingsRowProps
   extends Omit<SettingsRowProps, "onChange"> {

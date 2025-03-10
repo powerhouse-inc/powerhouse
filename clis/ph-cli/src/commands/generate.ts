@@ -7,8 +7,8 @@ import {
   generateSubgraph,
 } from "@powerhousedao/codegen";
 import { getConfig } from "@powerhousedao/config/powerhouse";
-import { Command } from "commander";
-import { CommandActionType } from "../types.js";
+import { type Command } from "commander";
+import { type CommandActionType } from "../types.js";
 
 export const generate: CommandActionType<
   [

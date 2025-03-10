@@ -1,15 +1,18 @@
-import { ExtendedStateFromDocument, Reducer } from "#document/types.js";
+import {
+  type ExtendedStateFromDocument,
+  type Reducer,
+} from "#document/types.js";
 import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
 import JSZip from "jszip";
 import mime from "mime/lite";
 import {
-  Attachment,
-  AttachmentInput,
-  DocumentHeader,
-  DocumentOperations,
-  PHDocument,
+  type Attachment,
+  type AttachmentInput,
+  type DocumentHeader,
+  type DocumentOperations,
+  type PHDocument,
 } from "../types.js";
-import { replayDocument, ReplayDocumentOptions } from "./base.js";
+import { replayDocument, type ReplayDocumentOptions } from "./base.js";
 import {
   filterDocumentOperationsResultingState,
   garbageCollectDocumentOperations,

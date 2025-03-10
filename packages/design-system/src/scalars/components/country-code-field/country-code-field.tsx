@@ -3,8 +3,11 @@ import { SelectFieldRaw } from "@/scalars/components/fragments/select-field";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import countries from "world-countries";
 import { CircleFlag } from "react-circle-flags";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { CountryCodeProps } from "./types";
+import {
+  type FieldCommonProps,
+  type ErrorHandling,
+} from "@/scalars/components/types";
+import { type CountryCodeProps } from "./types";
 
 export type CountryCodeFieldProps = FieldCommonProps<string> &
   ErrorHandling &

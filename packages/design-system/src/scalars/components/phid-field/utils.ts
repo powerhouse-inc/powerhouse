@@ -1,4 +1,4 @@
-import { PHIDItem } from "./types";
+import { type PHIDItem } from "./types";
 
 export const mockedOptions: PHIDItem[] = [
   {

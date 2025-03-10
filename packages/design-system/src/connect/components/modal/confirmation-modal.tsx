@@ -1,5 +1,6 @@
-import { DivProps, Modal, mergeClassNameProps } from "@/powerhouse";
-import React, { ComponentPropsWithoutRef } from "react";
+import { type DivProps, Modal, mergeClassNameProps } from "@/powerhouse";
+import { type ComponentPropsWithoutRef } from "react";
+import type React from "react";
 import { twMerge } from "tailwind-merge";
 
 const buttonStyles =

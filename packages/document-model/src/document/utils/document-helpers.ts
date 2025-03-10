@@ -1,9 +1,9 @@
 import stringify from "safe-stable-stringify";
 import {
-  Action,
-  DocumentOperations,
-  Operation,
-  OperationScope,
+  type Action,
+  type DocumentOperations,
+  type Operation,
+  type OperationScope,
 } from "../types.js";
 
 export type OperationIndex = {
