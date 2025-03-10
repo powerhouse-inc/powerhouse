@@ -21,11 +21,11 @@ export const DEFAULT_ALL_CURRENCIES: Currency[] = [
 ];
 export const getDefaultUnits = (type: AmountFieldPropsGeneric["type"]) => {
   switch (type) {
-    case "AmountCurrencyFiat":
+    case "AmountFiat":
       return DEFAULT_FIAT_CURRENCIES;
-    case "AmountCurrencyCrypto":
+    case "AmountCrypto":
       return DEFAULT_CRYPTO_CURRENCIES;
-    case "AmountCurrencyUniversal":
+    case "AmountCurrency":
       return DEFAULT_ALL_CURRENCIES;
     default:
       return [];

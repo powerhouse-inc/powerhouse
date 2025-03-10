@@ -125,6 +125,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
           <div className={cn("relative flex items-center")}>
             {isShowSelect && currencyPosition === "left" && (
               <CurrencyCodeFieldRaw
+                disabled={disabled}
                 currencies={options}
                 onChange={handleOnChangeSelect}
                 placeholder={placeholderSelect}
@@ -188,6 +189,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
 
           {isShowSelect && currencyPosition === "right" && (
             <CurrencyCodeFieldRaw
+              disabled={disabled}
               includeCurrencySymbols={includeCurrencySymbols}
               currencies={options}
               value={valueSelect}

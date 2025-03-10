@@ -24,24 +24,24 @@ export const castFunctions: Record<
   Number: (value: string) => Number(value),
   URLTrim: (value?: string) => value?.trim(),
   AmountNumber: (value: AmountValue) => {
-    if (typeof value === "object" && "currency" in value) {
+    if (typeof value === "object" && "unit" in value) {
       return {
         ...value,
 
         amount: value.amount !== undefined ? Number(value.amount) : null,
-        currency: value.currency !== "" ? value.currency : null,
+        unit: value.unit !== "" ? value.unit : null,
       };
     }
     return Number(value);
   },
 
   AmountBigInt: (value: AmountValue) => {
-    if (typeof value === "object" && "currency" in value) {
+    if (typeof value === "object" && "unit" in value) {
       return {
         ...value,
 
         amount: value.amount !== undefined ? BigInt(value.amount) : null,
-        currency: value.currency !== "" ? value.currency : null,
+        unit: value.unit !== "" ? value.unit : null,
       };
     }
   },

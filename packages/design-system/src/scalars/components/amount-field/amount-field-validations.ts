@@ -1,9 +1,9 @@
 import { AmountFieldProps } from "./amount-field";
 import {
-  AmountCurrencyFiat,
+  AmountFiat,
   AmountFieldPropsGeneric,
-  AmountCurrencyCrypto,
-  AmountCurrencyUniversal,
+  AmountCrypto,
+  AmountCurrency,
   AmountValue,
 } from "./types";
 import { isValidNumber } from "../number-field/number-field-validations";
@@ -12,15 +12,15 @@ import { isValidBigInt } from "./utils";
 
 const isAmountCurrencyFiat = (
   type: AmountFieldPropsGeneric["type"],
-): type is "AmountCurrencyFiat" => type === "AmountCurrencyFiat";
+): type is "AmountFiat" => type === "AmountFiat";
 
 const isAmountCurrencyCrypto = (
   type: AmountFieldPropsGeneric["type"],
-): type is "AmountCurrencyCrypto" => type === "AmountCurrencyCrypto";
+): type is "AmountCrypto" => type === "AmountCrypto";
 
 const isAmountCurrencyUniversal = (
   type: AmountFieldPropsGeneric["type"],
-): type is "AmountCurrencyUniversal" => type === "AmountCurrencyUniversal";
+): type is "AmountCurrency" => type === "AmountCurrency";
 
 const getAmount = (
   value: AmountValue,
@@ -33,12 +33,7 @@ const getAmount = (
   ) {
     if (!value) return undefined;
     return (
-      (
-        value as
-          | AmountCurrencyFiat
-          | AmountCurrencyCrypto
-          | AmountCurrencyUniversal
-      ).amount ?? undefined
+      (value as AmountFiat | AmountCrypto | AmountCurrency).amount ?? undefined
     );
   }
   return value as number;
@@ -61,19 +56,19 @@ export const validateAmount =
       }
       return true;
     }
-    if (!isValidNumber(amount) && type !== "AmountCurrencyUniversal") {
+    if (!isValidNumber(amount) && type !== "AmountCurrency") {
       return "Value is not a valid number";
     }
     if (!allowNegative && amount < 0) {
       return "Value must be positive";
     }
-    if (type === "AmountCurrencyCrypto") {
+    if (type === "AmountCrypto") {
       if (!isValidBigInt(amount.toString())) {
         return "Value is not an bigint";
       }
       return true;
     }
-    if (type === "AmountCurrencyUniversal") {
+    if (type === "AmountCurrency") {
       if (!isValidNumber(amount)) {
         return "Value is not a valid number";
       }
@@ -98,7 +93,7 @@ export const validateAmount =
     }
     if (
       Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER &&
-      (type === "AmountCurrencyFiat" ||
+      (type === "AmountFiat" ||
         type === "AmountPercentage" ||
         type === "Amount")
     ) {
