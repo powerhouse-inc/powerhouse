@@ -32,6 +32,13 @@ export const castFunctions: Record<
         unit: value.unit !== "" ? value.unit : null,
       };
     }
+    if (typeof value === "object") {
+      return {
+        ...value,
+
+        amount: Number(value.amount),
+      };
+    }
     return Number(value);
   },
 

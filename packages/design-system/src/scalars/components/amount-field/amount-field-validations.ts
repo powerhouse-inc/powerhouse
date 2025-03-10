@@ -5,6 +5,7 @@ import {
   AmountCrypto,
   AmountCurrency,
   AmountValue,
+  Amount,
 } from "./types";
 import { isValidNumber } from "../number-field/number-field-validations";
 import { ValidatorResult } from "@/scalars";
@@ -22,6 +23,9 @@ const isAmountCurrencyUniversal = (
   type: AmountFieldPropsGeneric["type"],
 ): type is "AmountCurrency" => type === "AmountCurrency";
 
+const isAmount = (type: AmountFieldPropsGeneric["type"]): type is "Amount" =>
+  type === "Amount";
+
 const getAmount = (
   value: AmountValue,
   type: AmountFieldPropsGeneric["type"],
@@ -29,11 +33,13 @@ const getAmount = (
   if (
     isAmountCurrencyFiat(type) ||
     isAmountCurrencyCrypto(type) ||
-    isAmountCurrencyUniversal(type)
+    isAmountCurrencyUniversal(type) ||
+    isAmount(type)
   ) {
     if (!value) return undefined;
     return (
-      (value as AmountFiat | AmountCrypto | AmountCurrency).amount ?? undefined
+      (value as AmountFiat | AmountCrypto | AmountCurrency | Amount).amount ??
+      undefined
     );
   }
   return value as number;

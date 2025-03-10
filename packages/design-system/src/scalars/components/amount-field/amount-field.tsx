@@ -89,7 +89,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
       handleBlur,
       isBigInt,
       handleIsInputFocused,
-      isAmount,
+      isAmountWithoutUnit,
       inputFocused,
     } = useAmountField({
       value,
@@ -138,6 +138,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                   //       // focus state
                   "focus:border-r-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
                   "focus:outline-none",
+
                   selectProps?.className,
                 )}
                 {...(selectProps ?? { name: "" })}
@@ -168,7 +169,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                 isPercent && "rounded-md pr-7",
                 // focus state
                 "focus:border-r-0",
-                isAmount && "rounded-md",
+                isAmountWithoutUnit && "rounded-md",
                 className,
               )}
               onBlur={handleBlur}

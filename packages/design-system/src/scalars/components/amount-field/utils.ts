@@ -90,3 +90,24 @@ export const displayValueAmount = (
   }
   return value;
 };
+
+export const exampleUseAmountField = [
+  {
+    ticker: "lbs",
+    crypto: false,
+    label: "Lbs",
+    symbol: "lbs",
+  },
+  {
+    ticker: "kg",
+    crypto: false,
+    label: "Kg",
+    symbol: "kg",
+  },
+  {
+    ticker: "ptc",
+    crypto: false,
+    label: "Ptc",
+    symbol: "ptc",
+  },
+];
