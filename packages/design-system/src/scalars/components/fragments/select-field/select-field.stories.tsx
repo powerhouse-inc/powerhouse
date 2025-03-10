@@ -89,7 +89,7 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
-    align: {
+    contentAlign: {
       control: "select",
       description: "Alignment of the dropdown",
       options: ["start", "end", "center"],
@@ -99,7 +99,7 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
-    classNameContent: {
+    contentClassName: {
       control: "text",
       description: "Custom class name for the dropdown content",
       table: {
