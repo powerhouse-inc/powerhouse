@@ -1,4 +1,4 @@
-import ConnectLoaderVideo from "@/assets/connect-loader.mp4";
+import ConnectLoaderVideo from "#assets/connect-loader.mp4";
 import { getDimensions, type Size } from "#powerhouse";
 import { type ComponentPropsWithoutRef, type CSSProperties } from "react";
 

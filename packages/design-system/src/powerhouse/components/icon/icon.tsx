@@ -1,4 +1,4 @@
-import { type IconName, type Props } from "@/assets/icon-components/types";
+import { type IconName, iconNames, type Props } from "#assets";
 import { type Color, getDimensions, type Size } from "#powerhouse";
 import {
   type ComponentPropsWithoutRef,
@@ -9,8 +9,7 @@ import {
   useMemo,
 } from "react";
 
-export { iconNames } from "@/assets/icon-components/types";
-export type { IconName } from "@/assets/icon-components/types";
+export { iconNames, type IconName, type Props };
 
 export type IconProps = ComponentPropsWithoutRef<"svg"> & {
   readonly name: IconName;

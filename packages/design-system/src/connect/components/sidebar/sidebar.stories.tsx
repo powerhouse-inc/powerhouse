@@ -1,5 +1,5 @@
+import connectLogo from "#assets/connect.png";
 import { type SharingType, type UiDriveNode, type UiNode } from "#connect";
-import connectLogo from "@/assets/connect.png";
 import { useUiNodesContext } from "@powerhousedao/reactor-browser";
 import { useEffect } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";

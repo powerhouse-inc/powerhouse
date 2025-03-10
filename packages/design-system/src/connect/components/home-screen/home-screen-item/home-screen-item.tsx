@@ -1,4 +1,4 @@
-import PeopleFill from "@/assets/icon-components/PeopleFill";
+import { Icon } from "#powerhouse";
 import { twMerge } from "tailwind-merge";
 
 type HomeScreenItemProps = {
@@ -39,7 +39,7 @@ export const HomeScreenItem = function HomeScreenItem(
       {shareable && (
         <div className="mb-4 flex w-full justify-start">
           <div className="absolute left-8 top-8">
-            <PeopleFill width={12} height={12} />
+            <Icon name="PeopleFill" width={12} height={12} />
           </div>
         </div>
       )}

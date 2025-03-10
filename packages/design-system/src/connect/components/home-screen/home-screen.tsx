@@ -1,4 +1,4 @@
-import HomeBg from "@/assets/home-bg.png";
+import HomeBg from "#assets/home-bg.png";
 import { twMerge } from "tailwind-merge";
 
 type HomeScreenProps = {
