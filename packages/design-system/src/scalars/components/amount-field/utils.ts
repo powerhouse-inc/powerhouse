@@ -21,11 +21,11 @@ export const DEFAULT_ALL_CURRENCIES: Currency[] = [
 ];
 export const getDefaultUnits = (type: AmountFieldPropsGeneric["type"]) => {
   switch (type) {
-    case "AmountCurrencyFiat":
+    case "AmountFiat":
       return DEFAULT_FIAT_CURRENCIES;
-    case "AmountCurrencyCrypto":
+    case "AmountCrypto":
       return DEFAULT_CRYPTO_CURRENCIES;
-    case "AmountCurrencyUniversal":
+    case "AmountCurrency":
       return DEFAULT_ALL_CURRENCIES;
     default:
       return [];
@@ -89,4 +89,53 @@ export const displayValueAmount = (
     return trailingZeros ? formattedValue : parseFloat(formattedValue);
   }
   return value;
+};
+
+export const exampleUseAmountField = [
+  {
+    ticker: "lbs",
+    crypto: false,
+    label: "Lbs",
+    symbol: "lbs",
+  },
+  {
+    ticker: "kg",
+    crypto: false,
+    label: "Kg",
+    symbol: "kg",
+  },
+  {
+    ticker: "ptc",
+    crypto: false,
+    label: "Ptc",
+    symbol: "ptc",
+  },
+];
+
+export const handleEventOnChange = <T>(value: T) => {
+  const nativeEvent = new Event("change", { bubbles: true, cancelable: true });
+
+  Object.defineProperty(nativeEvent, "target", {
+    value: { value },
+
+    writable: false,
+  });
+
+  return nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>;
+};
+
+export const handleEventOnBlur = <T>(value: T) => {
+  const nativeEvent = new Event("blur", { bubbles: true, cancelable: true });
+
+  Object.defineProperty(nativeEvent, "target", {
+    value: { value },
+
+    writable: false,
+  });
+
+  return nativeEvent as unknown as React.FocusEvent<HTMLInputElement>;
+};
+
+export const createAmountValue = (inputValue: string) => {
+  return inputValue === "" ? undefined : inputValue;
 };

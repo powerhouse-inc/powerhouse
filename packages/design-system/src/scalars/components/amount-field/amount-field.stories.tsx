@@ -11,6 +11,7 @@ import {
   commonCryptoCurrencies,
   commonFiatCurrencies,
 } from "../currency-code-field";
+import { exampleUseAmountField } from "./utils";
 
 const mappedFiatCurrencies = commonFiatCurrencies.map((currency) => ({
   ...currency,
@@ -20,6 +21,7 @@ const mappedCryptoCurrencies = commonCryptoCurrencies.map((currency) => ({
   ...currency,
   label: currency.ticker,
 }));
+
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",
   component: AmountField,
@@ -30,7 +32,7 @@ const meta = {
       defaultValues: {
         "amount-field": {
           amount: undefined,
-          currency: "",
+          unit: "",
         },
       },
     },
@@ -159,10 +161,10 @@ const meta = {
       control: "select",
       options: [
         "Amount",
-        "AmountCurrencyFiat",
+        "AmountFiat",
         "AmountPercentage",
-        "AmountCurrencyCrypto",
-        "AmountCurrencyUniversal",
+        "AmountCrypto",
+        "AmountCurrency",
       ],
       description: "The type of amount field.",
       table: {
@@ -183,12 +185,13 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     placeholder: "0",
+    units: mappedFiatCurrencies,
     label: "Enter Amount and Select Currency",
     placeholderSelect: "CUR",
-    type: "AmountCurrencyFiat",
+    type: "Amount",
     value: {
-      amount: undefined,
-      currency: "",
+      amount: 234,
+      unit: "EUR",
     },
   },
 };
@@ -197,17 +200,15 @@ export const WithValue: Story = {
   args: {
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
-    label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyCrypto",
+    label: "Enter Amount",
+    type: "Amount",
     value: {
-      currency: "USD",
-      amount: 100 as unknown as bigint,
+      amount: 100,
     },
   },
 };
 export const WithAmount: Story = {
   parameters: {
-    units: mappedCryptoCurrencies,
     form: {
       defaultValues: {
         "amount-field": "",
@@ -215,11 +216,14 @@ export const WithAmount: Story = {
     },
   },
   args: {
-    units: mappedCryptoCurrencies,
+    units: mappedFiatCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amout ",
-    type: "Amount",
-    value: 345,
+    type: "AmountFiat",
+    value: {
+      amount: 345,
+      unit: "EUR",
+    },
   },
 };
 export const CurrencyIcon: Story = {
@@ -227,11 +231,11 @@ export const CurrencyIcon: Story = {
     units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyCrypto",
+    type: "AmountCrypto",
     placeholderSelect: "CUR",
     value: {
       amount: 3454564564 as unknown as bigint,
-      currency: "BTC",
+      unit: "BTC",
     },
   },
 };
@@ -243,7 +247,7 @@ export const WithToken: Story = {
       defaultValues: {
         "amount-field": {
           amount: "",
-          currency: "",
+          unit: "",
         },
       },
     },
@@ -251,11 +255,11 @@ export const WithToken: Story = {
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyUniversal",
+    type: "AmountCurrency",
     placeholderSelect: "CUR",
     value: {
       amount: 123 as unknown as bigint,
-      currency: "BTC",
+      unit: "BTC",
     },
   },
 };
@@ -281,12 +285,12 @@ export const Disable: Story = {
     units: mappedCryptoCurrencies,
     label: "Enter Amount ",
     placeholder: "Enter Amount",
-    type: "AmountCurrencyFiat",
+    type: "AmountFiat",
     placeholderSelect: "CUR",
     disabled: true,
     value: {
       amount: 9,
-      currency: "USD",
+      unit: "ETH",
     },
   },
 };
@@ -297,7 +301,7 @@ export const WithValueUniversalAmountCurrency: Story = {
       defaultValues: {
         "amount-field": {
           amount: 123,
-          currency: "USD",
+          unit: "BTC",
         },
       },
     },
@@ -307,10 +311,10 @@ export const WithValueUniversalAmountCurrency: Story = {
     label: "Label",
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
-    type: "AmountCurrencyUniversal",
+    type: "AmountCurrency",
     value: {
       amount: 123,
-      currency: "USD",
+      unit: "BTC",
     },
   },
 };
