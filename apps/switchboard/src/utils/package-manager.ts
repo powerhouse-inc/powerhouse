@@ -121,8 +121,15 @@ function getUniqueSubgraphs(
   for (const subgraphss of subgraphs) {
     const keys = Object.keys(subgraphss);
     for (const key of keys) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      uniqueSubgraphs.set(key, subgraphss[key][key]);
+      uniqueSubgraphs.set(
+        key,
+        (
+          subgraphss as unknown as Record<
+            string,
+            Record<string, typeof Subgraph>
+          >
+        )[key][key],
+      );
     }
   }
   return Array.from(uniqueSubgraphs.values());
