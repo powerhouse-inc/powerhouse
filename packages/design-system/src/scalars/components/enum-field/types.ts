@@ -23,6 +23,8 @@ export interface SelectBaseProps {
   multiple?: boolean;
   searchable?: boolean;
   onChange?: (value: string | string[]) => void;
+  contentClassName?: string;
+  contentAlign?: "start" | "end" | "center";
 }
 
 export type SelectProps =
