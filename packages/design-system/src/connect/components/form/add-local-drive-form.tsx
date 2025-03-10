@@ -6,7 +6,7 @@ import {
   LOCAL,
   type SharingType,
   SharingTypeFormInput,
-} from "@/connect";
+} from "#connect";
 import { Button } from "#powerhouse";
 import { type App } from "document-model";
 import { type SubmitHandler, useForm } from "react-hook-form";

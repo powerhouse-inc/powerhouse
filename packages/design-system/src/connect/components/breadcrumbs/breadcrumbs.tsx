@@ -1,4 +1,4 @@
-import { NodeInput } from "@/connect";
+import { NodeInput } from "#connect";
 import { Icon } from "#powerhouse";
 import { Fragment, useCallback, useState } from "react";
 

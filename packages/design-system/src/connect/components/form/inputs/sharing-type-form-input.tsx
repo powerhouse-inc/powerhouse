@@ -1,4 +1,4 @@
-import { Select, type SharingType, sharingTypeOptions } from "@/connect";
+import { Select, type SharingType, sharingTypeOptions } from "#connect";
 import { type ComponentPropsWithRef } from "react";
 import { type Control, Controller, type Path } from "react-hook-form";
 

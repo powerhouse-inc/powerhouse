@@ -1,4 +1,4 @@
-import { syncStatuses } from "@/connect";
+import { syncStatuses } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { capitalCase } from "change-case";
 import { SyncStatusIcon } from ".";

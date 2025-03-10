@@ -1,4 +1,4 @@
-import { AnimatedLoader } from "@/connect";
+import { AnimatedLoader } from "#connect";
 import { type DivProps } from "#powerhouse";
 
 type DefaultEditorLoaderProps = DivProps & {

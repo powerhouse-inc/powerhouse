@@ -1,5 +1,10 @@
-import { DRIVE, FOLDER, SUCCESS, type UiFolderNode } from "@/connect";
-import { mockDriveNodes } from "@/connect/utils/mocks/ui-drive-node";
+import {
+  DRIVE,
+  FOLDER,
+  mockDriveNodes,
+  SUCCESS,
+  type UiFolderNode,
+} from "#connect";
 import {
   UiNodesContextProvider,
   useUiNodesContext,

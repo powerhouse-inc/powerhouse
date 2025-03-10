@@ -1,4 +1,4 @@
-import { AddLocalDriveForm, type AddLocalDriveInput, Divider } from "@/connect";
+import { AddLocalDriveForm, type AddLocalDriveInput, Divider } from "#connect";
 import { type DivProps, Icon, Modal } from "#powerhouse";
 import { type App } from "document-model";
 import { type ComponentPropsWithoutRef } from "react";

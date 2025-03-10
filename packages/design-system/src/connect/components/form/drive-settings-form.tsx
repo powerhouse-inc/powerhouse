@@ -11,7 +11,7 @@ import {
   SharingTypeFormInput,
   SWITCHBOARD,
   type UiDriveNode,
-} from "@/connect";
+} from "#connect";
 import { Button, Icon } from "#powerhouse";
 import { useState } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";

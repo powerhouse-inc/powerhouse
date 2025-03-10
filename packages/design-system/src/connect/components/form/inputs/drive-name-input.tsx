@@ -1,4 +1,4 @@
-import { FormInput } from "@/connect";
+import { FormInput } from "#connect";
 import { Icon } from "#powerhouse";
 import {
   type ComponentPropsWithRef,

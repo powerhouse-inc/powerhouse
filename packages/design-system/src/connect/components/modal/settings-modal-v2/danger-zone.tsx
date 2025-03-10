@@ -1,5 +1,4 @@
-import { CLOUD, PUBLIC } from "@/connect/constants";
-import { type UiDriveNode } from "@/connect/types/nodes.js";
+import { CLOUD, PUBLIC, type UiDriveNode } from "#connect";
 import { Icon } from "#powerhouse";
 import { cn } from "@/scalars";
 import { capitalCase } from "change-case";

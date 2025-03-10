@@ -1,5 +1,4 @@
-import { documentTypes } from "@/connect/constants";
-import { mockUiFileNode } from "@/connect/utils/mocks";
+import { documentTypes, mockUiFileNode } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { FileItem } from "./file-item";
 

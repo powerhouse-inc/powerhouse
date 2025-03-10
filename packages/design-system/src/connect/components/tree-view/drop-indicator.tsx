@@ -1,4 +1,4 @@
-import { type NodeProps, type UiNode, useDrop } from "@/connect";
+import { type NodeProps, type UiNode, useDrop } from "#connect";
 import { type TUiNodesContext } from "@powerhousedao/reactor-browser";
 import { twMerge } from "tailwind-merge";
 

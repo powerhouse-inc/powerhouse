@@ -1,5 +1,5 @@
+import { TooltipProvider } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
-import { TooltipProvider } from "@/connect";
 import { Errors } from "./errors";
 
 const meta = {

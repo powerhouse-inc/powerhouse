@@ -1,4 +1,4 @@
-import { mockUiFolderNode } from "@/connect/utils/mocks";
+import { mockUiFolderNode } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { FolderItem } from "./folder-item";
 

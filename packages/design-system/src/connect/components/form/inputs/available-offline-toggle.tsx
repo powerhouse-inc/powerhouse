@@ -1,4 +1,4 @@
-import { Toggle } from "@/connect";
+import { Toggle } from "#connect";
 import {
   type ComponentPropsWithRef,
   type ForwardedRef,

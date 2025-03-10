@@ -14,7 +14,7 @@ import {
   useDrag,
   useDrop,
   WRITE,
-} from "@/connect";
+} from "#connect";
 import { Icon } from "#powerhouse";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";

@@ -1,4 +1,4 @@
-import { Select, type SelectItem } from "@/connect";
+import { Select, type SelectItem } from "#connect";
 import { Icon } from "#powerhouse";
 import { type App } from "document-model";
 import { type ComponentPropsWithRef } from "react";

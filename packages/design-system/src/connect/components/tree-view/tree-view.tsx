@@ -26,7 +26,7 @@ import {
   nodeOptionsMap,
   useDrag,
   useDrop,
-} from "@/connect";
+} from "#connect";
 import { Icon } from "#powerhouse";
 import { type TUiNodesContext } from "@powerhousedao/reactor-browser";
 import { type MouseEventHandler, useState } from "react";

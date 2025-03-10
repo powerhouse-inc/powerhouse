@@ -1,4 +1,4 @@
-import { Tooltip } from "@/connect";
+import { Tooltip } from "#connect";
 import { Icon } from "#powerhouse";
 
 export type OperationProps = {

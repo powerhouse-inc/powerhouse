@@ -1,4 +1,4 @@
-import { Tooltip } from "@/connect";
+import { Tooltip } from "#connect";
 import { Icon } from "#powerhouse";
 import { twMerge } from "tailwind-merge";
 

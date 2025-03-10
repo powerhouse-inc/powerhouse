@@ -1,4 +1,4 @@
-import { Tooltip, TooltipProvider } from "@/connect";
+import { Tooltip, TooltipProvider } from "#connect";
 import { type GroupTransactionFormInputs, RWATableTextInput } from "@/rwa";
 import { getIsTransaction } from "@/services";
 import {

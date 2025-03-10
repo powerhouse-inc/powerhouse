@@ -8,7 +8,7 @@ import {
   PUBLIC,
   type SharingType,
   SWITCHBOARD,
-} from "@/connect";
+} from "#connect";
 import { Button } from "#powerhouse";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";

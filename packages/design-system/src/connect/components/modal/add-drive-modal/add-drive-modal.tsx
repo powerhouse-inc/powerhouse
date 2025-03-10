@@ -5,7 +5,7 @@ import {
   type AddRemoteDriveInput,
   TabContent,
   Tabs,
-} from "@/connect";
+} from "#connect";
 import { type DivProps, Modal } from "#powerhouse";
 import { type App } from "document-model";
 import { type ComponentPropsWithoutRef } from "react";

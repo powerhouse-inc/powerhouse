@@ -1,4 +1,4 @@
-import { EditorActionButtons } from "@/connect";
+import { EditorActionButtons } from "#connect";
 import {
   OtherTab,
   PortfolioTab,

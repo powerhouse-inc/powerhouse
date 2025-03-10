@@ -1,6 +1,6 @@
+import { TooltipProvider } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { Operation } from "./operation";
-import { TooltipProvider } from "@/connect";
 
 const meta = {
   title: "Connect/Components/Revision History/Revision/Operation",

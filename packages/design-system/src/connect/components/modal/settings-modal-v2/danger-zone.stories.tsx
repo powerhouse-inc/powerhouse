@@ -1,9 +1,9 @@
-import { type UiDriveNode } from "@/connect/types/nodes.js";
 import {
   mockCloudDrive,
   mockLocalDrive,
   mockPublicDrive,
-} from "@/connect/utils/mocks/ui-drive-node.js";
+  type UiDriveNode,
+} from "#connect";
 import { useArgs } from "@storybook/preview-api";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { useCallback } from "react";

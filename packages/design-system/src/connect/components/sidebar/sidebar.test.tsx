@@ -1,4 +1,4 @@
-import { WagmiContext } from "@/connect/context/WagmiContext";
+import { WagmiContext } from "#connect";
 import {
   render,
   screen,

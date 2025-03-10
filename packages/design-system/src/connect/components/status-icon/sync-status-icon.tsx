@@ -6,7 +6,7 @@ import {
   SUCCESS,
   SYNCING,
   type SyncStatus,
-} from "@/connect";
+} from "#connect";
 import { Icon, type IconName } from "#powerhouse";
 
 import { type ComponentPropsWithoutRef } from "react";

@@ -3,7 +3,7 @@ import {
   type NodeProps,
   type SharingType,
   type UiDriveNode,
-} from "@/connect";
+} from "#connect";
 import { Icon } from "#powerhouse";
 import type { TUiNodesContext } from "@powerhousedao/reactor-browser";
 import { type ReactNode } from "react";

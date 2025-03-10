@@ -3,7 +3,7 @@ import {
   mockLocalDrive,
   mockNodeOptions,
   mockPublicDrive,
-} from "@/connect/utils/mocks";
+} from "#connect";
 import {
   UiNodesContextProvider,
   useUiNodesContext,

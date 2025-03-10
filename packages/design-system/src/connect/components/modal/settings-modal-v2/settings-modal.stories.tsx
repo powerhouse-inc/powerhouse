@@ -1,9 +1,9 @@
-import { type UiDriveNode } from "@/connect/types/nodes.js";
 import {
   mockCloudDrive,
   mockLocalDrive,
   mockPublicDrive,
-} from "@/connect/utils/mocks/ui-drive-node.js";
+  type UiDriveNode,
+} from "#connect";
 import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import React from "react";
@@ -28,7 +28,6 @@ const tabs = [
     icon: <Icon name="PackageManager" size={12} />,
     label: "Package Manager",
     content: () => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [reactor, setReactor] = React.useState("");
       return (
         <PackageManagerWrapper
@@ -43,7 +42,6 @@ const tabs = [
     icon: <Icon name="Edit" size={12} />,
     label: "Default Editors",
     content() {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [editor, setEditor] = React.useState(
         mockDocumentModelEditorOptions[0].value,
       );
@@ -61,7 +59,6 @@ const tabs = [
     icon: <Icon name="Danger" size={12} className="text-red-900" />,
     label: <span className="text-red-900">Danger Zone</span>,
     content() {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [drives, setDrives] = React.useState([
         mockCloudDrive,
         mockLocalDrive,

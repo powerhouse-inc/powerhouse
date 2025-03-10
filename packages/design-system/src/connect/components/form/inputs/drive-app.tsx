@@ -1,4 +1,4 @@
-import { type DriveLocation } from "@/connect";
+import { type DriveLocation } from "#connect";
 import { type DivProps, Icon } from "#powerhouse";
 import { twMerge } from "tailwind-merge";
 

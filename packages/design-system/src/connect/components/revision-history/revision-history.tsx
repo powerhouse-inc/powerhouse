@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@/connect";
+import { TooltipProvider } from "#connect";
 import { Pagination, usePagination } from "#powerhouse";
 import {
   garbageCollect,

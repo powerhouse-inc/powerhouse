@@ -1,4 +1,4 @@
-import { ENSAvatar } from "@/connect";
+import { ENSAvatar } from "#connect";
 
 export interface SidebarUserProps {
   address: `0x${string}`;

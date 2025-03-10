@@ -6,7 +6,7 @@ import {
   type NormalNodeOption,
   type OptionMetadata,
   PUBLIC,
-} from "@/connect";
+} from "#connect";
 import { Icon } from "#powerhouse";
 
 export const NEW = "NEW";
