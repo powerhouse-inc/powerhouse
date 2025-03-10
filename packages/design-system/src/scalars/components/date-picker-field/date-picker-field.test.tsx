@@ -1,7 +1,7 @@
-import { renderWithForm } from "@/scalars/lib/testing";
+import { renderWithForm } from "#scalars";
 import { screen } from "@testing-library/react";
-import { DatePickerField } from "./date-picker-field";
 import userEvent from "@testing-library/user-event";
+import { DatePickerField } from "./date-picker-field";
 
 vi.mock("#powerhouse", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (

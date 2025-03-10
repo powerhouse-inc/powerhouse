@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "#scalars";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
+import { describe, expect, it, vi } from "vitest";
 import { CountryCodeField } from "./country-code-field";
 
 describe("CountryCodeField Component", () => {

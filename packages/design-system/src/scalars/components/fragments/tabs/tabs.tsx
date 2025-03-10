@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
+import { cn } from "#scalars";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { cn } from "@/scalars/lib/utils";
+import * as React from "react";
 
 const Tabs = TabsPrimitive.Root;
 
@@ -51,4 +51,4 @@ const TabsContent = React.forwardRef<
 ));
 TabsContent.displayName = TabsPrimitive.Content.displayName;
 
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+export { Tabs, TabsContent, TabsList, TabsTrigger };

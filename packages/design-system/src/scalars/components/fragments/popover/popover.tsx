@@ -1,4 +1,4 @@
-import { cn } from "@/scalars/lib/utils";
+import { cn } from "#scalars";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import React from "react";
 

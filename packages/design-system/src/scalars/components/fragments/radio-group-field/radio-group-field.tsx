@@ -1,13 +1,13 @@
-import React, { useId } from "react";
-import { cn } from "@/scalars/lib/utils";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import {
-  type FieldCommonProps,
+  cn,
+  FormLabel,
+  FormMessageList,
+  withFieldValidation,
   type ErrorHandling,
-} from "@/scalars/components/types";
-import { type RadioGroupProps } from "@/scalars/components/enum-field/types";
+  type FieldCommonProps,
+  type RadioGroupProps,
+} from "#scalars";
+import React, { useId } from "react";
 import { Radio } from "./radio";
 import { RadioGroup } from "./radio-group";
 

@@ -1,5 +1,5 @@
+import { cn } from "#scalars";
 import type * as React from "react";
-import { cn } from "@/scalars/lib/utils";
 import { Button } from "../../fragments/button";
 
 interface TimeSelectorProps {

@@ -1,6 +1,6 @@
 import { Button } from "#powerhouse";
+import { IdField } from "#scalars";
 import { Form, NumberField, StringField } from "../../../components";
-import { IdField } from "@/scalars/components/id-field";
 
 const FormWithResetOnSuccessfulSubmit = () => {
   return (

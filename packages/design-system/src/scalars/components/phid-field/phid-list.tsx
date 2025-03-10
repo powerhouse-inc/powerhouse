@@ -1,15 +1,15 @@
-import type React from "react";
-import { useEffect } from "react";
 import {
-  CommandList,
+  cn,
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from "@/scalars/components/fragments/command";
+  CommandList,
+} from "#scalars";
 import { useCommandState } from "cmdk";
-import { cn } from "@/scalars/lib/utils";
+import type React from "react";
+import { useEffect } from "react";
 import { PHIDListItem } from "./phid-list-item";
-import type { PHIDProps, PHIDItem } from "./types";
+import type { PHIDItem, PHIDProps } from "./types";
 
 interface PHIDListProps {
   variant: PHIDProps["variant"];

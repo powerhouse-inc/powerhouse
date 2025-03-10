@@ -1,4 +1,4 @@
-import { cn } from "@/scalars/lib";
+import { cn } from "#scalars";
 import type React from "react";
 import { forwardRef } from "react";
 import { type DateFieldValue } from "../date-picker-field/types";

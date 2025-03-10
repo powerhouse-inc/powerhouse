@@ -1,6 +1,4 @@
-import { deepEqual } from "@/scalars/lib/deep-equal";
-import { isEmpty } from "@/scalars/lib/is-empty";
-import { castValue, type ValueCast } from "@/scalars/lib/value-cast";
+import { castValue, deepEqual, isEmpty, type ValueCast } from "#scalars";
 import {
   forwardRef,
   useCallback,

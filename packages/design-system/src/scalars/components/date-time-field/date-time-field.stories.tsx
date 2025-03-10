@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
 import { DateTimeField } from "./date-time-field";
 
 const meta: Meta<typeof DateTimeField> = {

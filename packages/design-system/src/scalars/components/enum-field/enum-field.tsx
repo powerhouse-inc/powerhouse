@@ -1,10 +1,10 @@
-import type React from "react";
-import { RadioGroupField } from "@/scalars/components/fragments/radio-group-field";
-import { SelectField } from "@/scalars/components/fragments/select-field";
 import {
-  type FieldCommonProps,
+  RadioGroupField,
+  SelectField,
   type ErrorHandling,
-} from "@/scalars/components/types";
+  type FieldCommonProps,
+} from "#scalars";
+import type React from "react";
 import { type EnumProps } from "./types";
 
 export type EnumFieldProps = FieldCommonProps<string | string[]> &

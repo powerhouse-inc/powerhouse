@@ -1,13 +1,8 @@
-import React, { useState } from "react";
-import { Command as CommandPrimitive } from "cmdk";
-import { useMediaQuery } from "usehooks-ts";
 import { Icon } from "#powerhouse";
-import { Input } from "@/scalars/components/fragments/input";
-import {
-  Tooltip,
-  TooltipProvider,
-} from "@/scalars/components/fragments/tooltip";
-import { cn } from "@/scalars/lib/utils";
+import { cn, Input, Tooltip, TooltipProvider } from "#scalars";
+import { Command as CommandPrimitive } from "cmdk";
+import React, { useState } from "react";
+import { useMediaQuery } from "usehooks-ts";
 import type { PHIDItem } from "./types";
 
 interface PHIDInputContainerProps {

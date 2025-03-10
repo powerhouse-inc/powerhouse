@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
-import { PHIDField } from "./phid-field";
-import { mockedOptions, fetchOptions, fetchSelectedOption } from "./utils";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { PHIDField } from "./phid-field";
+import { fetchOptions, fetchSelectedOption, mockedOptions } from "./utils";
 
 const meta: Meta<typeof PHIDField> = {
   title: "Document Engineering/Simple Components/PHID Field",

@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
-import { AmountField } from "./amount-field";
+import { Icon, type IconName } from "#powerhouse";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import { Icon, type IconName } from "#powerhouse";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { AmountField } from "./amount-field";
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",

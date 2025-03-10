@@ -1,11 +1,11 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { CurrencyCodeField } from "./currency-code-field";
-import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { CurrencyCodeField } from "./currency-code-field";
 import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults";
 
 const meta: Meta<typeof CurrencyCodeField> = {

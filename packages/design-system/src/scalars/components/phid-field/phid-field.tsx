@@ -1,29 +1,26 @@
 /* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId } from "react";
-import { Command } from "@/scalars/components/fragments/command";
+import type { ErrorHandling, FieldCommonProps } from "#scalars";
 import {
+  cn,
+  Command,
+  FormDescription,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
+  Input,
   Popover,
-  PopoverContent,
   PopoverAnchor,
-} from "@/scalars/components/fragments/popover";
-import { FormGroup } from "@/scalars/components/fragments/form-group";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { Input } from "@/scalars/components/fragments/input";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { cn } from "@/scalars/lib/utils";
-import type {
-  FieldCommonProps,
-  ErrorHandling,
-} from "@/scalars/components/types";
-import type { PHIDProps } from "./types";
-import { usePHIDField } from "./use-phid-field";
+  PopoverContent,
+  withFieldValidation,
+} from "#scalars";
+import React, { useId } from "react";
 import { PHIDInputContainer } from "./phid-input-container";
 import { PHIDList } from "./phid-list";
 import { PHIDListItem } from "./phid-list-item";
+import type { PHIDProps } from "./types";
+import { usePHIDField } from "./use-phid-field";
 
 type PHIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,

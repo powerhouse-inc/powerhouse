@@ -1,6 +1,7 @@
+import { type IconName } from "#powerhouse";
+import { cn } from "#scalars";
 import type React from "react";
-import { useId, forwardRef } from "react";
-import { type NumberFieldProps, NumberFieldRaw } from "../number-field";
+import { forwardRef, useId } from "react";
 import {
   FormDescription,
   FormGroup,
@@ -10,13 +11,11 @@ import {
   SelectFieldRaw,
   withFieldValidation,
 } from "../fragments";
-import { useAmountField } from "./use-amount-field";
-import { cn } from "@/scalars/lib";
+import { type NumberFieldProps, NumberFieldRaw } from "../number-field";
 import { type InputNumberProps } from "../number-field/types";
-import { type AmountValue } from "./types";
-import { type AmountFieldPropsGeneric } from "./types";
-import { type IconName } from "#powerhouse";
 import { validateAmount } from "./amount-field-validations";
+import { type AmountFieldPropsGeneric, type AmountValue } from "./types";
+import { useAmountField } from "./use-amount-field";
 
 export interface TokenIcons {
   [key: string]: IconName | (() => React.JSX.Element);

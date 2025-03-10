@@ -1,6 +1,6 @@
+import { cn } from "#scalars";
 import type React from "react";
 import { FormMessage, type FormMessageType } from "./form-message";
-import { cn } from "@/scalars/lib";
 
 interface FormMessageListProps {
   messages: string[];

@@ -1,8 +1,8 @@
-import { type SidebarNode, type FlattenedNode, NodeStatus } from "../types";
-import { useCallback } from "react";
-import { cn } from "@/scalars/lib";
-import { Tooltip, TooltipProvider } from "../../fragments";
 import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
+import { useCallback } from "react";
+import { Tooltip, TooltipProvider } from "../../fragments";
+import { type FlattenedNode, NodeStatus, type SidebarNode } from "../types";
 import { StatusIcon } from "./status-icon";
 
 interface SidebarItemProps {

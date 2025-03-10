@@ -1,11 +1,11 @@
 "use client";
 
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
 import { useEffect, useRef } from "react";
-import { useSidebar } from "./sidebar-provider";
 import { AutoSizer, List } from "react-virtualized";
 import { SidebarItem } from "./sidebar-item";
-import { cn } from "@/scalars/lib";
-import { Icon } from "#powerhouse";
+import { useSidebar } from "./sidebar-provider";
 
 interface SidebarContentAreaProps {
   allowPinning?: boolean;

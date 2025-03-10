@@ -1,12 +1,12 @@
-import React from "react";
-import { SelectFieldRaw } from "@/scalars/components/fragments/select-field";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import countries from "world-countries";
-import { CircleFlag } from "react-circle-flags";
 import {
-  type FieldCommonProps,
+  SelectFieldRaw,
+  withFieldValidation,
   type ErrorHandling,
-} from "@/scalars/components/types";
+  type FieldCommonProps,
+} from "#scalars";
+import React from "react";
+import { CircleFlag } from "react-circle-flags";
+import countries from "world-countries";
 import { type CountryCodeProps } from "./types";
 
 export type CountryCodeFieldProps = FieldCommonProps<string> &

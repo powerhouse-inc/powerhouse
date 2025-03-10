@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { Form } from "#scalars";
 import { render, screen } from "@testing-library/react";
-import { IdField } from "./id-field";
-import { Form } from "@/scalars/components/form";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { IdField } from "./id-field";
 
 describe("IdField", () => {
   it("should render a hidden input field", () => {

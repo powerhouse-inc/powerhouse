@@ -1,9 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { Form, renderWithForm } from "#scalars";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
+import { describe, expect, it, vi } from "vitest";
 import { PHIDField } from "./phid-field";
-import { Form } from "@/scalars/components/form";
 
 describe("PHIDField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();

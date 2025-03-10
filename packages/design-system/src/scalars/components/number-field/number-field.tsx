@@ -1,16 +1,16 @@
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
 import { forwardRef, useId } from "react";
-import { Input } from "../fragments/input";
+import { FormDescription } from "../fragments/form-description";
+import { FormGroup } from "../fragments/form-group";
 import { FormLabel } from "../fragments/form-label";
 import { FormMessageList } from "../fragments/form-message";
-import { FormGroup } from "../fragments/form-group";
-import { FormDescription } from "../fragments/form-description";
-import { cn } from "@/scalars/lib";
+import { Input } from "../fragments/input";
 import { withFieldValidation } from "../fragments/with-field-validation";
 import { validateNumericType } from "./number-field-validations";
-import { Icon } from "#powerhouse";
-import { regex } from "./utils";
 import { type InputNumberProps } from "./types";
 import { useNumberField } from "./use-number-field";
+import { regex } from "./utils";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;

@@ -1,4 +1,4 @@
-import { deepEqual } from "@/scalars/lib/deep-equal";
+import { deepEqual } from "#scalars";
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 

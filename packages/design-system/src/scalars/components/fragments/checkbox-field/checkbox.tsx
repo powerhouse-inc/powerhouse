@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/scalars/lib/utils";
+import { cn } from "#scalars";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
 

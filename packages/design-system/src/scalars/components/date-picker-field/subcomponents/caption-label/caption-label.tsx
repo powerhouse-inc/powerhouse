@@ -1,6 +1,6 @@
-import { cn } from "@/scalars/lib/utils";
-import { Button } from "../../../fragments/button";
 import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
+import { Button } from "../../../fragments/button";
 import { type DatePickerView } from "../../types";
 
 interface CaptionLabelProps extends React.PropsWithChildren {

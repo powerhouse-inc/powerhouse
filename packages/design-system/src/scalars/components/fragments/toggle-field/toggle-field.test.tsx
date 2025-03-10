@@ -1,7 +1,7 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithForm } from "#scalars";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
 import { ToggleField } from "./toggle-field";
-import { renderWithForm } from "@/scalars/lib/testing";
 
 describe("ToggleField Component", () => {
   const mockOnChange = vi.fn();

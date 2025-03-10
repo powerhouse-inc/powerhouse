@@ -1,7 +1,7 @@
-import React from "react";
-import { Command as CommandPrimitive } from "cmdk";
 import { Icon } from "#powerhouse";
-import { cn } from "@/scalars/lib/utils";
+import { cn } from "#scalars";
+import { Command as CommandPrimitive } from "cmdk";
+import React from "react";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,

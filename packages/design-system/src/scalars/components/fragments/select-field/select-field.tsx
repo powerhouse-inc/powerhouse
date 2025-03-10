@@ -1,27 +1,25 @@
 /* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useCallback } from "react";
-import { Command } from "@/scalars/components/fragments/command";
-import { Button } from "@/scalars/components/fragments/button";
 import {
+  Button,
+  cn,
+  Command,
+  FormDescription,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/scalars/components/fragments/popover";
-import { FormGroup } from "@/scalars/components/fragments/form-group";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { cn } from "@/scalars/lib/utils";
-import {
-  type FieldCommonProps,
+  withFieldValidation,
   type ErrorHandling,
-} from "@/scalars/components/types";
-import { type SelectProps } from "@/scalars/components/enum-field/types";
-import { useSelectField } from "./use-select-field";
-import { SelectedContent } from "./selected-content";
+  type FieldCommonProps,
+  type SelectProps,
+} from "#scalars";
+import React, { useCallback, useId } from "react";
 import { Content } from "./content";
+import { SelectedContent } from "./selected-content";
+import { useSelectField } from "./use-select-field";
 
 type SelectFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,

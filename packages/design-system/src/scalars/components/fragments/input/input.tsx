@@ -1,5 +1,5 @@
+import { cn } from "#scalars";
 import * as React from "react";
-import { cn } from "@/scalars/lib/utils";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 

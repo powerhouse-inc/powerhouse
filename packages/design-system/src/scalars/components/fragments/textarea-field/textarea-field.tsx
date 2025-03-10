@@ -1,21 +1,20 @@
-import React, { useId, useEffect, useMemo, useRef } from "react";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { FormGroup } from "@/scalars/components/fragments/form-group";
-import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { CharacterCounter } from "@/scalars/components/fragments/character-counter";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { cn } from "@/scalars/lib/utils";
 import {
-  type FieldCommonProps,
+  CharacterCounter,
+  cn,
+  FormDescription,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
+  sharedValueTransformers,
+  withFieldValidation,
   type ErrorHandling,
+  type FieldCommonProps,
   type TextProps,
-} from "@/scalars/components/types";
-import ValueTransformer, {
   type TransformerType,
-} from "@/scalars/components/fragments/value-transformer";
-import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
+} from "#scalars";
+import React, { useEffect, useId, useMemo, useRef } from "react";
 import { useResizeObserver } from "usehooks-ts";
+import ValueTransformer from "../value-transformer";
 
 type TextareaFieldBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,

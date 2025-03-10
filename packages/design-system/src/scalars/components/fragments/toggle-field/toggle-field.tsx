@@ -1,11 +1,11 @@
+import { cn } from "#scalars";
 import type React from "react";
 import { useId } from "react";
-import { Toggle } from "./toggle";
-import { cn } from "@/scalars/lib/utils";
+import type { FieldCommonProps } from "../../types";
 import { FormLabel } from "../form-label";
 import { FormMessageList } from "../form-message";
-import type { FieldCommonProps } from "../../types";
 import { withFieldValidation } from "../with-field-validation";
+import { Toggle } from "./toggle";
 
 export interface ToggleFieldProps extends FieldCommonProps<boolean> {
   onChange?: (checked: boolean) => void;

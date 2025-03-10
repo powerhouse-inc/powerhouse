@@ -1,6 +1,6 @@
+import { withForm } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
 import { IdField } from "./id-field";
-import { withForm } from "@/scalars/lib/decorators";
 
 const meta = {
   title: "Document Engineering/Simple Components/IdField",

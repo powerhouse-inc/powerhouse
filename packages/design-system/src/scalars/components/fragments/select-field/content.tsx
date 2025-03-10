@@ -1,17 +1,17 @@
 /* eslint-disable react/jsx-max-depth */
-import type React from "react";
-import { useEffect } from "react";
+import { Icon, type IconName } from "#powerhouse";
 import {
-  CommandInput,
-  CommandList,
+  cn,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
-} from "@/scalars/components/fragments/command";
+  CommandList,
+  type SelectProps,
+} from "#scalars";
 import { useCommandState } from "cmdk";
-import { cn } from "@/scalars/lib/utils";
-import { type SelectProps } from "@/scalars/components/enum-field/types";
-import { Icon, type IconName } from "#powerhouse";
+import type React from "react";
+import { useEffect } from "react";
 
 interface ContentProps {
   searchable?: boolean;

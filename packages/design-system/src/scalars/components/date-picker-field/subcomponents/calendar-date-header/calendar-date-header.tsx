@@ -1,4 +1,4 @@
-import { cn } from "@/scalars/lib/utils";
+import { cn } from "#scalars";
 import { Button } from "../../../fragments/button/button";
 import { type DatePickerView } from "../../types";
 type CalendarDateHeaderProps = {

@@ -1,15 +1,15 @@
 "use client";
 
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
+import { useEffect } from "react";
+import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
 import { SidebarHeader } from "./subcomponents/sidebar-header";
 import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
+import { useSidebar } from "./subcomponents/sidebar-provider";
 import { SidebarSearch } from "./subcomponents/sidebar-search";
 import { type SidebarNode } from "./types";
-import { useSidebar } from "./subcomponents/sidebar-provider";
 import { useSidebarResize } from "./use-sidebar-resize";
-import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
-import { useEffect } from "react";
-import { cn } from "@/scalars/lib";
-import { Icon } from "#powerhouse";
 
 export interface SidebarProps {
   /**

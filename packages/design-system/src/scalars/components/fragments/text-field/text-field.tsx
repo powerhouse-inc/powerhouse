@@ -1,21 +1,18 @@
+import { cn, sharedValueTransformers, type TransformerType } from "#scalars";
 import { forwardRef, useId, useMemo } from "react";
-import { Input } from "../input";
-import { FormLabel } from "../form-label";
-import { FormMessageList } from "../form-message";
-import { FormGroup } from "../form-group";
 import {
   type ErrorHandling,
   type FieldCommonProps,
   type TextProps,
 } from "../../types";
-import { FormDescription } from "../form-description";
 import { CharacterCounter } from "../character-counter";
+import { FormDescription } from "../form-description";
+import { FormGroup } from "../form-group";
+import { FormLabel } from "../form-label";
+import { FormMessageList } from "../form-message";
+import { Input } from "../input";
+import ValueTransformer from "../value-transformer";
 import { withFieldValidation } from "../with-field-validation";
-import ValueTransformer, {
-  type TransformerType,
-} from "@/scalars/components/fragments/value-transformer";
-import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
-import { cn } from "@/scalars/lib/utils";
 
 export interface TextFieldProps
   extends Omit<

@@ -5,7 +5,7 @@ import {
   DropdownMenuTrigger,
   Icon,
 } from "#powerhouse";
-import { cn } from "@/scalars";
+import { cn } from "#scalars";
 import { type ChangeEvent, useMemo } from "react";
 import { twMerge } from "tailwind-merge";
 import { FilterItem, type FilterItemType } from "./filter-item";

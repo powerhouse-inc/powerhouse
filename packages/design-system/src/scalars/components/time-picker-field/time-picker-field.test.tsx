@@ -1,7 +1,7 @@
+import { renderWithForm } from "#scalars";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimePickerField } from "./time-picker-field";
-import { renderWithForm } from "@/scalars/lib/testing";
 vi.mock("#powerhouse", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (
     <div data-testid={`mock-icon-${name}`} className={className}>

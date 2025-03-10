@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "#scalars";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { CurrencyCodeField } from "./currency-code-field";
+import { describe, expect, it, vi } from "vitest";
 import { Form } from "../form";
+import { CurrencyCodeField } from "./currency-code-field";
 
 describe("CurrencyCodeField", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();

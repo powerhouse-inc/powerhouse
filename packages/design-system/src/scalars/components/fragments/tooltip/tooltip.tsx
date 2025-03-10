@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/scalars/lib/utils";
+import { cn } from "#scalars";
 import {
   Content,
   Portal,

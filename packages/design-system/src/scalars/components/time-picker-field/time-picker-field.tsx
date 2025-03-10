@@ -1,4 +1,6 @@
+import { cn } from "#scalars";
 import { forwardRef } from "react";
+import { BasePickerField } from "../date-time-field/base-picker-field";
 import {
   FormDescription,
   FormGroup,
@@ -8,14 +10,12 @@ import {
   type SelectFieldProps,
   withFieldValidation,
 } from "../fragments";
-import { type ErrorHandling, type FieldCommonProps } from "../types";
-import { type TimeFieldValue } from "./type";
-import { BasePickerField } from "../date-time-field/base-picker-field";
-import TimePickerContent from "./subcomponents/time-picker-content";
-import { useTimePickerField } from "./use-time-picker-field";
 import { type InputNumberProps } from "../number-field/types";
+import { type ErrorHandling, type FieldCommonProps } from "../types";
+import TimePickerContent from "./subcomponents/time-picker-content";
 import { validateTimePicker } from "./time-picker-validations";
-import { cn } from "@/scalars/lib";
+import { type TimeFieldValue } from "./type";
+import { useTimePickerField } from "./use-time-picker-field";
 import { handleKeyDown } from "./utils";
 
 export interface TimePickerFieldProps

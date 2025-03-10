@@ -1,6 +1,6 @@
-import { cn } from "@/scalars/lib/utils";
-import { type TimePeriod } from "../type";
+import { cn } from "#scalars";
 import { Button } from "../../fragments/button";
+import { type TimePeriod } from "../type";
 
 interface TimePeriodSelectorProps {
   selectedPeriod?: TimePeriod;
