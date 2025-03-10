@@ -26,7 +26,7 @@ export interface ValidationOptions<T> {
 
 export const withFieldValidation = <
   T extends PossibleProps,
-  R extends React.ElementRef<any>,
+  R extends React.ElementRef<any> = React.ElementRef<any>,
 >(
   Component: React.ComponentType<T>,
   options?: ValidationOptions<T>,
