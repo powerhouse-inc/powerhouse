@@ -49,10 +49,7 @@ const textareaBaseStyles = cn(
   "disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300",
 );
 
-export const TextareaFieldRaw = React.forwardRef<
-  HTMLTextAreaElement,
-  TextareaProps
->(
+const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
     {
       autoComplete,

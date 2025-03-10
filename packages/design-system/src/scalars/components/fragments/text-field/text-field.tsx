@@ -25,7 +25,7 @@ export interface TextFieldProps
   autoComplete?: boolean;
 }
 
-export const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
+const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
   (
     {
       label,
