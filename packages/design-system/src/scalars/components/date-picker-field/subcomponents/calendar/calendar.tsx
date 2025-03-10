@@ -6,7 +6,7 @@ import * as React from "react";
 import { DayPicker, useDayPicker, type DayPickerProps } from "react-day-picker";
 import { buttonVariants } from "../../../fragments/button/button";
 import { Button } from "../../../fragments/button/button";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { MONTHS } from "../utils";
 import { type DatePickerView } from "../../types";
 import CaptionLabel from "../caption-label/caption-label";

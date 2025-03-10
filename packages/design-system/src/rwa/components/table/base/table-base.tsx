@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type SortDirection, type TableBaseProps } from "@/rwa";
 import { type Order } from "natural-orderby";
 import type React from "react";

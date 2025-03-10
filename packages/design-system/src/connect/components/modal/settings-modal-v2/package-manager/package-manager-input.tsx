@@ -1,4 +1,4 @@
-import { Button } from "@/powerhouse/components/button";
+import { Button } from "#powerhouse";
 import { Input } from "@/scalars/components/fragments/input";
 import { useCallback, useState } from "react";
 

@@ -2,11 +2,11 @@ import React, { type PropsWithChildren } from "react";
 import { type ErrorHandling, type FieldCommonProps } from "../types";
 import { Input, type InputProps } from "../fragments";
 import { cn } from "@/scalars/lib/utils";
-import { type IconName } from "@/powerhouse";
+import { type IconName } from "#powerhouse";
 import { Button } from "../fragments/button/button";
 import { Popover, PopoverContent } from "../fragments/popover/popover";
 import { PopoverTrigger } from "../fragments/popover/popover";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 
 export interface BasePickerFieldProps
   extends FieldCommonProps<string>,

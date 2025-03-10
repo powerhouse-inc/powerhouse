@@ -1,4 +1,4 @@
-import { Button } from "@/powerhouse/components/button";
+import { Button } from "#powerhouse";
 import { BooleanField, NumberField, StringField } from "../../../components";
 import { Form, RadioGroupField } from "../../../components";
 

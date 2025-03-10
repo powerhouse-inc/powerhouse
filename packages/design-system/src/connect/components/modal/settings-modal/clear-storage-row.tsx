@@ -1,4 +1,4 @@
-import { Button, Icon } from "@/powerhouse";
+import { Button, Icon } from "#powerhouse";
 import { SettingsRow, type SettingsRowProps } from "./row";
 
 export interface ClearStorageSettingsRowProps extends SettingsRowProps {

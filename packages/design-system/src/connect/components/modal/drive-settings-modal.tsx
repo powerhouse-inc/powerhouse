@@ -5,7 +5,7 @@ import {
   type SharingType,
   type UiDriveNode,
 } from "@/connect";
-import { type DivProps, Icon, Modal } from "@/powerhouse";
+import { type DivProps, Icon, Modal } from "#powerhouse";
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 

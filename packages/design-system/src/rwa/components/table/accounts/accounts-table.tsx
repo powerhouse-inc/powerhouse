@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { tableNames } from "@/rwa/constants";
 import { useEditorContext } from "@/rwa/context";
 import { type TableColumn } from "@/rwa/types";

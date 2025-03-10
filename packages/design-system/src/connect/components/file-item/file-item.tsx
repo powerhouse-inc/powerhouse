@@ -13,7 +13,7 @@ import {
   useDrag,
   WRITE,
 } from "@/connect";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { SyncStatusIcon } from "../status-icon";

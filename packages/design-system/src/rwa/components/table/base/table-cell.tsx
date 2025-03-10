@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type TableItemType, type TableName, useEditorContext } from "@/rwa";
 import { type ComponentPropsWithoutRef } from "react";
 import type React from "react";

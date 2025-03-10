@@ -1,5 +1,5 @@
 import { Combobox } from "@/connect";
-import { Pagination, usePagination } from "@/powerhouse";
+import { Pagination, usePagination } from "#powerhouse";
 import {
   allGroupTransactionTypes,
   groupTransactionTypeLabels,

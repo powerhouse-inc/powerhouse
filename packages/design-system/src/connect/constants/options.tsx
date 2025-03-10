@@ -7,7 +7,7 @@ import {
   type OptionMetadata,
   PUBLIC,
 } from "@/connect";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 
 export const NEW = "NEW";
 export const DUPLICATE = "DUPLICATE";

@@ -7,7 +7,7 @@ import {
   toast as rToast,
 } from "react-toastify";
 
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 
 export type ConnectTypeOptions =
   | "connect-success"

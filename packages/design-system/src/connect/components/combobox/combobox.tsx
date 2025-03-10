@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 import Select, {
   type ClearIndicatorProps,

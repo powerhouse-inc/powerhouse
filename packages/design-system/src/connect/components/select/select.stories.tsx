@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { Select, type SelectItem } from ".";

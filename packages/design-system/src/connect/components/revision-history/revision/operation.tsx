@@ -1,5 +1,5 @@
 import { Tooltip } from "@/connect";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 
 export type OperationProps = {
   readonly operationType: string;

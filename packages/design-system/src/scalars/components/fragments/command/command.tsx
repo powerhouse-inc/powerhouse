@@ -1,6 +1,6 @@
 import React from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { Icon } from "@/powerhouse/components/icon";
+import { Icon } from "#powerhouse";
 import { cn } from "@/scalars/lib/utils";
 
 const Command = React.forwardRef<

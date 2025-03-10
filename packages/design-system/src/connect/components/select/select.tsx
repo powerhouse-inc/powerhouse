@@ -1,4 +1,4 @@
-import { Icon, fixedForwardRef } from "@/powerhouse";
+import { Icon, fixedForwardRef } from "#powerhouse";
 import { type CSSProperties, type ForwardedRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 

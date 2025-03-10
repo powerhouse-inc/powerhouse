@@ -1,5 +1,5 @@
 import { Tooltip } from "@/connect";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type Signature } from "../types";
 
 export type SignatureProps = {

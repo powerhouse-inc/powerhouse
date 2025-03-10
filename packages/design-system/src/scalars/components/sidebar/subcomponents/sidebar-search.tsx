@@ -3,7 +3,7 @@
 import { useCallback, useRef } from "react";
 import { useSidebar } from "./sidebar-provider";
 import { Input } from "../../fragments";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { cn } from "@/scalars/lib";
 
 interface SidebarSearchProps {

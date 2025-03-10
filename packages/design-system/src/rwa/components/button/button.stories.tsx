@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import { RWAButton } from "./button";
 

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { NumberField } from "./number-field";
 import { renderWithForm } from "@/scalars/lib/testing";
 import { Form } from "../form/form";
-import { Button } from "@/powerhouse/components/button";
+import { Button } from "#powerhouse";
 
 describe("NumberField", () => {
   const mockOnChange = vi.fn();

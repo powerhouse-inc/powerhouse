@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { SidebarItem } from "./sidebar-item";
 
 type SidebarAddDriveItemProps = {

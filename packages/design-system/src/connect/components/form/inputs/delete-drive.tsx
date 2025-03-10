@@ -1,5 +1,5 @@
 import { DriveNameInput, type UiDriveNode } from "@/connect";
-import { Button, Icon } from "@/powerhouse";
+import { Button, Icon } from "#powerhouse";
 import { useState } from "react";
 
 export type DeleteDriveProps = {

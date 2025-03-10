@@ -7,7 +7,7 @@ import { FormDescription } from "../fragments/form-description";
 import { cn } from "@/scalars/lib";
 import { withFieldValidation } from "../fragments/with-field-validation";
 import { validateNumericType } from "./number-field-validations";
-import { Icon } from "@/powerhouse/components/icon";
+import { Icon } from "#powerhouse";
 import { regex } from "./utils";
 import { type InputNumberProps } from "./types";
 import { useNumberField } from "./use-number-field";

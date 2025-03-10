@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse/components/icon";
+import { Icon } from "#powerhouse";
 import type React from "react";
 import { Tooltip, TooltipProvider } from "../tooltip";
 import { cn } from "@/scalars/lib";

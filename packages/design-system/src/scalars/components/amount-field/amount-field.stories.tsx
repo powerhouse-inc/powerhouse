@@ -7,7 +7,7 @@ import {
   PrebuiltArgTypes,
   StorybookControlCategory,
 } from "@/scalars/lib/storybook-arg-types";
-import { Icon, type IconName } from "@/powerhouse";
+import { Icon, type IconName } from "#powerhouse";
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",

@@ -1,5 +1,5 @@
 import { TooltipProvider } from "@/connect";
-import { Pagination, usePagination } from "@/powerhouse";
+import { Pagination, usePagination } from "#powerhouse";
 import {
   garbageCollect,
   type Operation,

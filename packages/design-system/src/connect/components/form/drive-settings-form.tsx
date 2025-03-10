@@ -12,7 +12,7 @@ import {
   SWITCHBOARD,
   type UiDriveNode,
 } from "@/connect";
-import { Button, Icon } from "@/powerhouse";
+import { Button, Icon } from "#powerhouse";
 import { useState } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 

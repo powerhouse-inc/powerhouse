@@ -15,7 +15,7 @@ import { cn } from "@/scalars/lib";
 import { type InputNumberProps } from "../number-field/types";
 import { type AmountValue } from "./types";
 import { type AmountFieldPropsGeneric } from "./types";
-import { type IconName } from "@/powerhouse";
+import { type IconName } from "#powerhouse";
 import { validateAmount } from "./amount-field-validations";
 
 export interface TokenIcons {

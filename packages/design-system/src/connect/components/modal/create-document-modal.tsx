@@ -1,5 +1,5 @@
 import { FormInput } from "@/connect";
-import { Button, Icon, Modal } from "@/powerhouse";
+import { Button, Icon, Modal } from "#powerhouse";
 import { type ComponentPropsWithoutRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
 

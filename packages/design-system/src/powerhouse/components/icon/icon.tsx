@@ -1,5 +1,5 @@
 import { type IconName, type Props } from "@/assets/icon-components/types";
-import { type Color, getDimensions, type Size } from "@/powerhouse";
+import { type Color, getDimensions, type Size } from "#powerhouse";
 import {
   type ComponentPropsWithoutRef,
   type ComponentType,

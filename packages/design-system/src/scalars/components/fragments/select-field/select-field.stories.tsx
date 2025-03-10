@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
+import { Icon, type IconName } from "#powerhouse";
 import { withForm } from "@/scalars/lib/decorators";
 import { SelectField } from "./select-field";
 import {

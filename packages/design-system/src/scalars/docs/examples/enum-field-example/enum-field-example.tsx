@@ -1,4 +1,4 @@
-import { Button } from "@/powerhouse/components/button";
+import { Button } from "#powerhouse";
 import { Form } from "@/scalars/components";
 import { EnumField } from "@/scalars/components";
 

@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type OperationScope } from "document-model";
 import { type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";

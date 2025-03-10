@@ -1,4 +1,4 @@
-import { Button } from "@/powerhouse/components/button";
+import { Button } from "#powerhouse";
 import { Form, StringField } from "../../../components";
 
 const SubmitChangesOnly = () => {

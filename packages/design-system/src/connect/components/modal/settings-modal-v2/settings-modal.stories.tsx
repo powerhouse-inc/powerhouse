@@ -4,7 +4,7 @@ import {
   mockLocalDrive,
   mockPublicDrive,
 } from "@/connect/utils/mocks/ui-drive-node.js";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import React from "react";
 import mockPackageJson from "../../../utils/mocks/mock-package-json.json";

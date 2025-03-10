@@ -11,7 +11,7 @@ import {
 import { useCommandState } from "cmdk";
 import { cn } from "@/scalars/lib/utils";
 import { type SelectProps } from "@/scalars/components/enum-field/types";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
+import { Icon, type IconName } from "#powerhouse";
 
 interface ContentProps {
   searchable?: boolean;

@@ -1,4 +1,4 @@
-import { Button, type ButtonProps, mergeClassNameProps } from "@/powerhouse";
+import { Button, type ButtonProps, mergeClassNameProps } from "#powerhouse";
 import type React from "react";
 import { twMerge } from "tailwind-merge";
 

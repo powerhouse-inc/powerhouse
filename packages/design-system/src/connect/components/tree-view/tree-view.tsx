@@ -27,7 +27,7 @@ import {
   useDrag,
   useDrop,
 } from "@/connect";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type TUiNodesContext } from "@powerhousedao/reactor-browser";
 import { type MouseEventHandler, useState } from "react";
 import { twMerge } from "tailwind-merge";

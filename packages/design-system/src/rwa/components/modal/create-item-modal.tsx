@@ -1,4 +1,4 @@
-import { Icon, Modal } from "@/powerhouse";
+import { Icon, Modal } from "#powerhouse";
 import {
   ModalFormInputs,
   tableLabels,

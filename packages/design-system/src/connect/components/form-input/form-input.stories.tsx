@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { FormInput } from "./form-input";
 

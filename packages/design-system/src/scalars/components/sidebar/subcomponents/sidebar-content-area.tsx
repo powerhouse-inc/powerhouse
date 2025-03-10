@@ -5,7 +5,7 @@ import { useSidebar } from "./sidebar-provider";
 import { AutoSizer, List } from "react-virtualized";
 import { SidebarItem } from "./sidebar-item";
 import { cn } from "@/scalars/lib";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 
 interface SidebarContentAreaProps {
   allowPinning?: boolean;

@@ -4,7 +4,7 @@ import {
   type SharingType,
   type UiDriveNode,
 } from "@/connect";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import type { TUiNodesContext } from "@powerhousedao/reactor-browser";
 import { type ReactNode } from "react";
 import { twJoin, twMerge } from "tailwind-merge";

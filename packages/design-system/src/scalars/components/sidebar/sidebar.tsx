@@ -9,7 +9,7 @@ import { useSidebarResize } from "./use-sidebar-resize";
 import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
 import { useEffect } from "react";
 import { cn } from "@/scalars/lib";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 
 export interface SidebarProps {
   /**

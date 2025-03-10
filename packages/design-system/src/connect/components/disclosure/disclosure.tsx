@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { type ReactNode } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 

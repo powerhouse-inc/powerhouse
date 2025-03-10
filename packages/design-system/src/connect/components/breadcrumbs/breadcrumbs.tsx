@@ -1,5 +1,5 @@
 import { NodeInput } from "@/connect";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { Fragment, useCallback, useState } from "react";
 
 export type BreadcrumbNode = {

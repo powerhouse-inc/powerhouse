@@ -2,7 +2,7 @@ import {
   Icon,
   type PageItem,
   type UsePaginationBaseResult,
-} from "@/powerhouse";
+} from "#powerhouse";
 import { PaginationButton } from "./pagination-button";
 
 export type PaginationEvent = {

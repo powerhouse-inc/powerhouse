@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { HomeScreenItem } from "../home-screen-item";
 
 type HomeScreenAddDriveItemProps = {

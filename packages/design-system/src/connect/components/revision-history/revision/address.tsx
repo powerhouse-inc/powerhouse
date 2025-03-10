@@ -1,5 +1,5 @@
 import { ENSAvatar, formatEthAddress, Tooltip } from "@/connect";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { useCopyToClipboard } from "usehooks-ts";
 
 export type AddressProps = {

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { type Decorator } from "@storybook/react";
 import { Checkbox, Form } from "../components";
-import { Button } from "@/powerhouse";
+import { Button } from "#powerhouse";
 import { useState, useId } from "react";
 import { useCallback } from "react";
 import { useRef } from "react";

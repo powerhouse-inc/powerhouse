@@ -1,5 +1,5 @@
 import React from "react";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
+import { Icon, type IconName } from "#powerhouse";
 import { cn } from "@/scalars/lib/utils";
 import type { PHIDProps, PHIDItem } from "./types";
 

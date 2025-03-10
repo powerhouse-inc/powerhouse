@@ -3,7 +3,7 @@ import { screen } from "@testing-library/react";
 import { DatePickerField } from "./date-picker-field";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@/powerhouse/components/icon/icon", () => ({
+vi.mock("#powerhouse", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (
     <div data-testid={`mock-icon-${name}`} className={className}>
       Mock Icon: {name}

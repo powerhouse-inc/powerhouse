@@ -1,4 +1,4 @@
-import { Pagination, usePagination } from "@/powerhouse";
+import { Pagination, usePagination } from "#powerhouse";
 import {
   ItemDetails,
   Table,

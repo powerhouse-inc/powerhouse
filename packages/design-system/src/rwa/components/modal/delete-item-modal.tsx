@@ -1,4 +1,4 @@
-import { Icon, Modal } from "@/powerhouse";
+import { Icon, Modal } from "#powerhouse";
 import { type DependentItemProps, tableLabels, type TableName } from "@/rwa";
 import { type ComponentPropsWithoutRef, memo, useCallback } from "react";
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { useMediaQuery } from "usehooks-ts";
-import { Icon } from "@/powerhouse/components/icon";
+import { Icon } from "#powerhouse";
 import { Input } from "@/scalars/components/fragments/input";
 import {
   Tooltip,

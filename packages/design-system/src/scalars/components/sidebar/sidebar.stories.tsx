@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Sidebar } from "./sidebar";
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { SidebarProvider } from "./subcomponents/sidebar-provider";
 import mockedTree from "./mocked_tree.json";
 import { useState } from "react";

@@ -1,4 +1,4 @@
-import { Button } from "@/powerhouse/components/button";
+import { Button } from "#powerhouse";
 import { Form, NumberField, StringField } from "../../../components";
 
 const FormWithResetButton = () => {

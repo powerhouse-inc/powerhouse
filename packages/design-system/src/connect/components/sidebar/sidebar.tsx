@@ -1,4 +1,4 @@
-import { Sidebar, SidebarPanel, type SidebarProps } from "@/powerhouse";
+import { Sidebar, SidebarPanel, type SidebarProps } from "#powerhouse";
 import {
   ConnectSidebarFooter,
   type ConnectSidebarFooterProps,
