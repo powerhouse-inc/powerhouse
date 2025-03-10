@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.217",
+    "version": "1.0.0-dev.219",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "imports": {
@@ -12,7 +12,9 @@
         "node": ">=20.0.0"
     },
     "files": [
-        "dist"
+        "dist",
+        "nginx.conf",
+        "nginx.sh"
     ],
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",
@@ -33,28 +35,19 @@
         "make:linux": "PH_CONNECT_BASE_HREF=./ electron-forge make -p linux",
         "make:windows": "PH_CONNECT_BASE_HREF=./ electron-forge make -p win32",
         "publish:electron": "electron-forge publish",
-        "prepublishOnly": "npm run build:studio",
+        "prepublishOnly": "npm run build",
         "lint": "eslint .",
         "lint:fix": "eslint --fix .",
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
-        "build:web": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
-        "build:studio": "BUILD_STUDIO=true npm run build:web",
-        "build": "npm run build:studio",
+        "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
         "cy:open": "cypress open",
         "build:service-worker": "tsc --build ./tsconfig.sw.json"
     },
-    "dependencies": {
-        "commander": "^12.1.0",
-        "graphql-request": "^6.1.0",
-        "magic-string": "^0.30.17"
-    },
-    "peerDependencies": {
-        "@powerhousedao/design-system": "workspace:*"
-    },
+    "dependencies": {},
     "devDependencies": {
         "@electron-forge/cli": "^6.1.1",
         "@electron-forge/maker-deb": "^6.1.1",
@@ -96,6 +89,7 @@
         "electron-store": "^8.1.0",
         "esbuild": "^0.24.0",
         "graphql": "^16.8.1",
+        "graphql-request": "^6.1.0",
         "i18next": "^23.7.6",
         "jotai": "^2.1.0",
         "jotai-effect": "^1.1.6",

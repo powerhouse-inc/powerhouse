@@ -18,7 +18,6 @@ import svgr from 'vite-plugin-svgr';
 import clientConfig from './client.config';
 
 import pkg from './package.json';
-const isBuildStudio = process.env.BUILD_STUDIO === 'true';
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
@@ -59,7 +58,7 @@ export default defineConfig(({ mode }) => {
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
-        viteLoadExternalPackages(undefined),
+        viteLoadExternalPackages(undefined, outDir),
         react({
             include: 'src/**/*.tsx',
             babel: {

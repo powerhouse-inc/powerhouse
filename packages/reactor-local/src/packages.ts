@@ -1,4 +1,5 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
+import { logger } from "document-drive";
 import { DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import { existsSync, readFileSync, StatWatcher, watchFile } from "node:fs";
@@ -64,7 +65,8 @@ async function loadPackagesDocumentModels(packages: string[]) {
         console.warn(`  ➜  No package found: ${pkg}`);
       }
     } catch (e) {
-      console.error("Error loading package", pkg, e);
+      logger.error("Error loading package", pkg);
+      logger.debug(e);
     }
   }
   return loadedPackages;

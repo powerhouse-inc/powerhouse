@@ -3,26 +3,22 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { Subgraph } from "@powerhousedao/reactor-api";
-import { gql } from "graphql-tag";
 <% if (loadFromFile) { %>
-import { readFileSync } from "fs";
-import path from "path";
+import schema from "./schema.graphql";
 import { getResolvers } from "./resolvers";
-
-// TODO: find a better way to import the graphql schema
-const gqlFile = path.join(path.resolve(path.dirname('')), './subgraphs/<%= h.changeCase.param(name) %>/schema.graphql');
-const gqlCode = readFileSync(gqlFile).toString();
+<% } else { %>
+import { gql } from "graphql-tag";
 <% } %>
 
 export class <%= pascalName %>Subgraph extends Subgraph {
   name = "<%= h.changeCase.param(name) %>";
 <% if (loadFromFile) { %>
-  typeDefs = gql`${gqlCode}`;
-
+  typeDefs = schema;
   resolvers = getResolvers(this);
   additionalContextFields = {};
   async onSetup() {}
   async onDisconnect() {}
+  
 <% } else { %>
 
   resolvers = {

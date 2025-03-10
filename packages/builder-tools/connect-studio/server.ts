@@ -5,7 +5,11 @@ import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { createLogger, createServer, InlineConfig, Plugin } from "vite";
 import { viteEnvs } from "vite-envs";
-import { backupIndexHtml, removeBase64EnvValues } from "./helpers.js";
+import {
+  backupIndexHtml,
+  copyConnect,
+  removeBase64EnvValues,
+} from "./helpers.js";
 import { StartServerOptions } from "./types.js";
 import { getStudioConfig } from "./vite-plugins/base.js";
 import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
@@ -85,9 +89,12 @@ export async function startServer(
 
   const connectPath = options.connectPath ?? resolveConnect();
   const projectRoot = process.cwd();
+  const studioPath = join(projectRoot, ".ph", "connect-studio");
+
+  copyConnect(connectPath, studioPath);
 
   // backups index html if running on windows
-  backupIndexHtml(connectPath, true);
+  backupIndexHtml(studioPath, true);
 
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
   const HOST = process.env.HOST ? process.env.HOST : "0.0.0.0";
@@ -99,8 +106,8 @@ export async function startServer(
   const studioConfig = getStudioConfig();
 
   // needed for viteEnvs
-  if (!fs.existsSync(join(connectPath, "src"))) {
-    fs.mkdirSync(join(connectPath, "src"));
+  if (!fs.existsSync(join(studioPath, "src"))) {
+    fs.mkdirSync(join(studioPath, "src"));
   }
 
   process.env.PH_CONNECT_STUDIO_MODE = "true";
@@ -110,7 +117,7 @@ export async function startServer(
   const config: InlineConfig = {
     customLogger: logger,
     configFile: false,
-    root: connectPath,
+    root: studioPath,
     server: {
       port: PORT,
       open: options.open ?? OPEN_BROWSER,
@@ -127,72 +134,26 @@ export async function startServer(
           find: "react-dom",
           replacement: join(projectRoot, "node_modules", "react-dom"),
         },
-        {
-          find: "@powerhousedao/reactor-browser",
-          replacement: join(
-            projectRoot,
-            "node_modules",
-            "@powerhousedao",
-            "reactor-browser",
-            "dist/src",
-          ),
-        },
       ],
-      // Resolve to the node_modules in the project root
-      // "@powerhousedao/design-system/scalars": join(
-      //   projectRoot,
-      //   "node_modules",
-      //   "@powerhousedao",
-      //   "design-system",
-      //   "dist",
-      //   "scalars",
-      // ),
-      // "@powerhousedao/design-system": join(
-      //   projectRoot,
-      //   "node_modules",
-      //   "@powerhousedao",
-      //   "design-system",
-      // ),
-      // "@powerhousedao/scalars": join(
-      //   projectRoot,
-      //   "node_modules",
-      //   "@powerhousedao",
-      //   "scalars",
-      // ),
-      // "@powerhousedao/reactor-browser/hooks/useUiNodesContext": join(
-      //   projectRoot,
-      //   "node_modules",
-      //   "@powerhousedao",
-      //   "reactor-browser",
-      //   "dist/src/hooks",
-      // ),
-      // react: join(projectRoot, "node_modules", "react"),
-      // "react-dom": join(projectRoot, "node_modules", "react-dom"),
-      // },
     },
     plugins: [
-      viteConnectDevStudioPlugin(true, connectPath),
-      viteLoadExternalPackages(options.packages, true),
+      viteConnectDevStudioPlugin(true, studioPath),
+      viteLoadExternalPackages(options.packages, studioPath, true),
       viteEnvs({
-        declarationFile: join(connectPath, ".env"),
+        declarationFile: join(studioPath, ".env"),
         computedEnv,
       }),
-      runShellScriptPlugin("vite-envs.sh", connectPath),
+      runShellScriptPlugin("vite-envs.sh", studioPath),
       options.https &&
         basicSsl({
           name: "Powerhouse Connect Studio",
         }),
-      generateImportMapPlugin(connectPath, [
+      generateImportMapPlugin(studioPath, [
         { name: "react", provider: "esm.sh" },
         { name: "react-dom", provider: "esm.sh" },
         "@powerhousedao/reactor-browser",
       ]),
     ],
-    build: {
-      rollupOptions: {
-        input: "index.html",
-      },
-    },
   };
 
   const server = await createServer(config);

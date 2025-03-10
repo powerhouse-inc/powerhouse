@@ -61,7 +61,7 @@ jobs:
           DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
         run: |
           DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
-          
+
           MENTION_STRING=""
           if [ ! -z "$DISCORD_USER" ]; then
             MENTION_STRING="<@${DISCORD_USER}> "
@@ -70,7 +70,7 @@ jobs:
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
               "title": "⚠️ Job Failed: CI Build",
-              "description": "'"${MENTION_STRING}"'Commit: [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \nMessage: ${{ github.event.head_commit.message }} \n[View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`Verify`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
           }'
