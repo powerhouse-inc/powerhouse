@@ -150,7 +150,16 @@ export function updateConfigFile(
   const updatedConfig: PowerhouseConfig = {
     ...config,
     packages: isInstall
-      ? [...(config.packages || []), ...mappedPackages]
+      ? [
+          // replace existing packages if they were already listed on the config file
+          ...(config.packages?.filter(
+            (packages) =>
+              !config.packages?.find(
+                (p) => p.packageName === packages.packageName,
+              ),
+          ) || []),
+          ...mappedPackages,
+        ]
       : [...(config.packages || [])].filter(
           (pkg) => !dependencies.includes(pkg.packageName),
         ),
