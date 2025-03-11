@@ -28,7 +28,7 @@ function IconErrorFallback(props: Props) {
 function loadIcon(name: IconName): ElementType {
   try {
     return lazy<ComponentType<Props>>(
-      () => import(`#assets/icon-components/${name}.tsx`),
+      () => import(`../icon-components/${name}.js`),
     );
   } catch (e) {
     console.error(e);

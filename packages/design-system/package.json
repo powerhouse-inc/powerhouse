@@ -18,7 +18,8 @@
     "./scalars": {
       "types": "./dist/src/scalars/index.d.ts",
       "import": "./dist/src/scalars/index.js"
-    }
+    },
+    "./style.css": "./dist/style.css"
   },
   "imports": {
     "#assets": "./dist/src/assets/index.js",

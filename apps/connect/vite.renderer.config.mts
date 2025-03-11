@@ -12,21 +12,17 @@ import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import path from 'path';
 import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
+import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import clientConfig from './client.config.js';
 import pkg from './package.json' with { type: 'json' };
-
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
-    const rootDir = path.resolve(__dirname);
     const outDir = path.resolve(__dirname, './dist');
-    console.log('rootDir', rootDir);
-    console.log('outDir', outDir);
-    console.log('__dirname', __dirname);
     const isProd = mode === 'production';
     const env = loadEnv(mode, process.cwd());
 
@@ -53,19 +49,15 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const plugins: PluginOption[] = [
-        nodeResolve({
-            rootDir: rootDir,
-        }),
-        tsconfigPaths({
-            root: rootDir,
-        }),
+        nodeResolve(),
+        tsconfigPaths(),
         tailwind(),
         nodePolyfills({
             include: ['events'],
             globals: {
                 Buffer: false,
                 global: false,
-                process: false,
+                process: true,
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
@@ -91,15 +83,15 @@ export default defineConfig(({ mode }) => {
                 ],
             },
         }),
-        // viteEnvs({
-        //     computedEnv() {
-        //         return {
-        //             APP_VERSION,
-        //             REQUIRES_HARD_REFRESH,
-        //             SENTRY_RELEASE: release,
-        //         };
-        //     },
-        // }),
+        viteEnvs({
+            computedEnv() {
+                return {
+                    APP_VERSION,
+                    REQUIRES_HARD_REFRESH,
+                    SENTRY_RELEASE: release,
+                };
+            },
+        }),
     ] as const;
 
     if (uploadSentrySourcemaps) {

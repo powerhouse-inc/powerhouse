@@ -1,4 +1,4 @@
-@import '../../../packages/design-system/style.css';
+@import '@powerhousedao/design-system/style.css';
 @import 'tailwindcss';
 
 @theme {

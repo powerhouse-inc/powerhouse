@@ -12,8 +12,6 @@ import {
 
 import { childLogger } from "#utils/logger";
 import { generateUUID } from "#utils/misc";
-
-import { ListenerFilter, Trigger } from "#drive-document-model/gen/types";
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
