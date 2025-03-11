@@ -100,7 +100,6 @@ const getDefaultRemoteDriveInput = (
       },
     ],
     triggers: [],
-    pullInterval: 3000,
   },
 });
 

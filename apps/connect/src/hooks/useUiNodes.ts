@@ -380,7 +380,6 @@ export function useUiNodes() {
                         },
                     ],
                     triggers: [],
-                    pullInterval: 3000,
                 });
 
                 toast(t('notifications.addDriveSuccess'), {

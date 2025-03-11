@@ -1,16 +1,21 @@
-import { createState } from "#drive-document-model/gen/utils";
+import { DocumentDriveState } from "#drive-document-model/gen/types";
+import { createDocument, createState } from "#drive-document-model/gen/utils";
+import { driveDocumentModelModule } from "#drive-document-model/module";
 import {
+  createDocument as createDocumentModelDocument,
+  createState as createDocumentModelState,
+  DocumentModelDocument,
   documentModelDocumentModelModule,
   DocumentModelModule,
+  DocumentModelState,
   PHDocument,
 } from "document-model";
-import { beforeEach, describe, it, vi } from "vitest";
+import { beforeEach, describe, it, vi, vitest } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-import { createDocument } from "../../document-model/dist/src/document-model/gen/utils.js";
-import {
-  DocumentDriveDocument,
-  DocumentDriveState,
-} from "../src/drive-document-model/gen/types.js";
+
+import { addFile, updateNode } from "#drive-document-model/gen/creators";
+import { reducer } from "#drive-document-model/gen/reducer";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
@@ -25,6 +30,7 @@ fetchMocker.enableMocks();
 
 const documentModels = [
   documentModelDocumentModelModule,
+  driveDocumentModelModule,
 ] as DocumentModelModule[];
 
 function getDocumentModelModule<TDocument extends PHDocument>(
@@ -37,9 +43,21 @@ function getDocumentModelModule<TDocument extends PHDocument>(
   return documentModel as unknown as DocumentModelModule<TDocument>;
 }
 
-function buildDrive(state: Partial<DocumentDriveState>) {
+function buildDriveDocument(
+  state: Partial<DocumentDriveState>,
+): DocumentDriveDocument {
   return createDocument({
     state: createState({
+      global: state,
+    }),
+  });
+}
+
+function buildModelDocument(
+  state: Partial<DocumentModelState>,
+): DocumentModelDocument {
+  return createDocumentModelDocument({
+    state: createDocumentModelState({
       global: state,
     }),
   });
@@ -48,13 +66,13 @@ function buildDrive(state: Partial<DocumentDriveState>) {
 function buildDocumentResponse(drive: PHDocument) {
   return {
     ...drive,
-    revision: drive.revision.global,
-    state: drive.state.global,
+    revision: drive.revision,
+    state: drive.state,
     operations: drive.operations.global.map(({ input, ...op }) => ({
       ...op,
       inputText: JSON.stringify(input),
     })),
-    initialState: drive.initialState.state.global,
+    initialState: drive.initialState,
   };
 }
 
@@ -81,6 +99,7 @@ function mockAddDrive(url: string, drive: DocumentDriveDocument) {
 describe("Read mode methods", () => {
   beforeEach(() => {
     fetchMocker.resetMocks();
+    vitest.useFakeTimers();
   });
 
   it("should return read drive when drive ID is found in read drives", async ({
@@ -103,7 +122,8 @@ describe("Read mode methods", () => {
       nodes: [],
       slug: "read-drive",
     };
-    const drive = buildDrive(driveData);
+
+    const drive = buildDriveDocument(driveData);
     mockAddDrive(context.url, drive);
 
     await readModeService.addReadDrive(context.url, context);
@@ -117,6 +137,9 @@ describe("Read mode methods", () => {
             name
             icon
             slug
+            meta {
+              preferredEditor
+            }
           }
         }
       `,
@@ -127,6 +150,7 @@ describe("Read mode methods", () => {
       },
       method: "POST",
     });
+
     expect(fetchMocker).toHaveBeenCalledWith(context.url, {
       body: JSON.stringify({
         query: `
@@ -221,11 +245,12 @@ describe("Read mode methods", () => {
       nodes: [],
       slug: "read-drive",
     };
-    const drive = buildDrive(driveData);
+    const drive = buildDriveDocument(driveData);
     mockAddDrive(context.url, drive);
 
     await readModeService.addReadDrive(context.url, context);
     const result = await readModeService.getReadDriveBySlug("read-drive");
+
     expect(result).toStrictEqual({
       ...drive,
       readContext: context,
@@ -258,7 +283,7 @@ describe("Read mode methods", () => {
         slug: "read-drive",
       },
     };
-    const drive = buildDrive(driveData);
+    const drive = buildDriveDocument(driveData);
     mockAddDrive(context.url, drive);
 
     await readModeService.addReadDrive(context.url);
@@ -271,8 +296,9 @@ describe("Read mode methods", () => {
 
   it("should return read document from drive", async ({ expect }) => {
     const readDriveId = "read-drive";
-    const documentId = "budget-statement";
-    let drive = DocumentDrive.utils.createDocument({
+    const documentId = "my-document";
+
+    let drive = createDocument({
       state: {
         global: {
           id: readDriveId,
@@ -284,19 +310,20 @@ describe("Read mode methods", () => {
         local: {},
       },
     });
-    let budgetStatement = BudgetStatement.utils.createDocument();
-    const addNodeAction = DocumentDrive.actions.addFile({
+    let document = createDocument();
+    const addNodeAction = addFile({
       name: "Document 1",
-      documentType: BudgetStatement.documentModel.id,
+      documentType: documentModelDocumentModelModule.documentModel.id,
       id: documentId,
       synchronizationUnits: [{ syncId: "document-1", scope: "1", branch: "1" }],
     });
 
-    drive = DocumentDrive.reducer(drive, addNodeAction);
-    budgetStatement = BudgetStatement.reducer(
-      budgetStatement,
-      BudgetStatement.actions.addAccount({
-        address: "0x123",
+    drive = reducer(drive, addNodeAction);
+    document = reducer(
+      document,
+      updateNode({
+        name: "bar",
+        id: documentId,
       }),
     );
 
@@ -326,7 +353,7 @@ describe("Read mode methods", () => {
         headers: { "content-type": "application/json; charset=utf-8" },
         body: JSON.stringify({
           data: {
-            document: buildDocumentResponse(budgetStatement),
+            document: buildDocumentResponse(document),
           },
         }),
       };
@@ -335,10 +362,10 @@ describe("Read mode methods", () => {
     const readDocument = await readModeService.fetchDocument(
       readDriveId,
       documentId,
-      BudgetStatement.documentModel.id,
+      driveDocumentModelModule.documentModel.id,
     );
 
-    expect(readDocument).toMatchObject(budgetStatement);
+    expect(readDocument).toMatchObject(document);
   });
 
   it("should return ReadDriveNotFoundError if read drive ID is not found", async ({
@@ -403,7 +430,7 @@ describe("Read mode methods", () => {
       nodes: [],
       slug: "read-drive",
     };
-    const drive = buildDrive(driveData);
+    const drive = buildModelDocument(driveData);
 
     fetchMocker.mockIf(context.url, async (req) => {
       const { operationName } = (await req.json()) as {
@@ -528,7 +555,7 @@ describe("Read mode methods", () => {
       nodes: [],
       slug: "read-drive",
     };
-    const drive = buildDrive(driveData);
+    const drive = buildModelDocument(driveData);
 
     fetchMocker.mockIf(context.url, async (req) => {
       const { operationName } = (await req.json()) as {
@@ -658,7 +685,7 @@ describe("Read mode methods", () => {
       nodes: [],
       slug: "read-drive",
     };
-    const drive = buildDrive(driveData);
+    const drive = buildModelDocument(driveData);
 
     fetchMocker.mockIf(context.url, async (req) => {
       const { operationName } = (await req.json()) as {
@@ -704,8 +731,9 @@ describe("Read mode methods", () => {
       "powerhouse/non-existing-model",
     );
 
-    expect(result2).toStrictEqual(
-      new DocumentModelNotFoundError("powerhouse/non-existing-model"),
+    // DocumentModelNotFoundError has an error inside of it so we just test the id
+    expect((result2 as DocumentModelNotFoundError).id).toBe(
+      "powerhouse/non-existing-model",
     );
   });
 });

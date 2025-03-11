@@ -3,9 +3,6 @@
   "type": "module",
   "version": "1.22.3",
   "main": "dist/server.js",
-  "bin": {
-    "reactor-local": "dist/cli.js"
-  },
   "publishConfig": {
     "access": "public"
   },

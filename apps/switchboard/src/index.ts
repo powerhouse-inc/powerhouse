@@ -9,8 +9,6 @@ import {
   getDbClient,
 } from "@powerhousedao/reactor-api";
 import { PrismaClient } from "@prisma/client";
-import * as atlasDocumentModelsMap from "@sky-ph/atlas/document-models";
-import * as atlasSubgraphs from "@sky-ph/atlas/subgraphs";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorage } from "document-drive/storage/prisma";
@@ -22,9 +20,8 @@ import dotenv from "dotenv";
 import express from "express";
 import http from "http";
 import { initRedis } from "./clients/redis.js";
+import { PackagesManager } from "./utils/package-manager.js";
 dotenv.config();
-
-const atlasDocumentModels = Object.values(atlasDocumentModelsMap);
 
 // Create a monolith express app for all subgraphs
 const app = express();
@@ -32,6 +29,14 @@ const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 const main = async () => {
   try {
+    const packages =
+      process.env.PH_PACKAGES && process.env.PH_PACKAGES !== ""
+        ? process.env.PH_PACKAGES.split(",")
+        : [];
+    const pkgManager = new PackagesManager({
+      packages,
+    });
+    const { documentModels, subgraphs } = await pkgManager.init();
     const redis = await initRedis();
     const prismaClient: PrismaClient = new PrismaClient();
     const connectionString = process.env.DATABASE_URL;
@@ -46,7 +51,7 @@ const main = async () => {
     const driveServer = new ReactorBuilder([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
-      ...atlasDocumentModels,
+      ...documentModels,
     ] as DocumentModelModule[])
       .withStorage(storage)
       .withCache(redisCache)
@@ -69,10 +74,10 @@ const main = async () => {
     // init router
     await subgraphManager.init();
 
-    for (const [name, module] of Object.entries(
-      atlasSubgraphs as Record<string, Record<string, typeof Subgraph>>,
-    )) {
-      await subgraphManager.registerSubgraph(module[name]);
+    for (const subgraph of subgraphs) {
+      await subgraphManager.registerSubgraph(
+        subgraph as unknown as typeof Subgraph,
+      );
     }
 
     // // load switchboard-gui
