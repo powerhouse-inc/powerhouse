@@ -26,6 +26,7 @@
     "@powerhousedao/reactor-api": "1.22.7",
     "@powerhousedao/scalars": "1.26.0",
     "@prisma/client": "^6.4.1",
+    "@sky-ph/atlas": "^0.2.7",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "document-drive": "1.21.1",
