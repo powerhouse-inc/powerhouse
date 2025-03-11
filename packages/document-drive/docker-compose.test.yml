@@ -15,4 +15,3 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    command: redis-server --requirepass password

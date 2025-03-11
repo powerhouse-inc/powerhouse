@@ -33,7 +33,7 @@ import {
 import { MemoryStorage } from "../src/storage/memory";
 import { buildOperation, buildOperations } from "./utils";
 
-const REDIS_TLS_URL = "redis://:password@localhost:6379";
+const REDIS_TLS_URL = "redis://localhost:6379";
 
 const documentModels = [
   documentModelDocumentModelModule,
@@ -45,9 +45,14 @@ const queueLayers: [string, () => Promise<IQueueManager>][] = [
   [
     "Redis Queue",
     async () => {
-      const client = await createClient({ url: REDIS_TLS_URL }).connect();
-      await client.flushAll();
-      return new RedisQueueManager(3, 0, client as RedisClientType);
+      try {
+        const client = await createClient({ url: REDIS_TLS_URL }).connect();
+        await client.flushAll();
+        return new RedisQueueManager(3, 0, client as RedisClientType);
+      } catch (error) {
+        console.error(error);
+        throw error;
+      }
     },
   ],
 ] as unknown as [string, () => Promise<IQueueManager>][];
