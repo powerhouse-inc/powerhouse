@@ -210,7 +210,9 @@ describe.each(queueLayers)(
         .withQueueManager(queue)
         .build();
       await server.initialize();
+
       let drive = await createDrive(server);
+
       const driveId = drive.state.global.id;
       const driveOperations = buildOperations(reducer, drive, [
         addFolder({ id: "folder 1", name: "folder 1" }),
@@ -218,23 +220,24 @@ describe.each(queueLayers)(
           id: "file 1",
           name: "file 1",
           parentFolder: "folder 1",
-          documentType: "powerhouse/budget-statement",
+          documentType: documentModelDocumentModelModule.documentModel.id,
           synchronizationUnits: [
             { syncId: "1", scope: "global", branch: "main" },
           ],
         }),
       ]);
-      let budget = utils.createDocument();
-      const budgetOperation = buildOperation(
-        budgetStatementReducer,
-        budget,
-        budgetStatementActions.addAccount({
-          address: "0x123",
+
+      const document = createDocumentModelDocument();
+      const mutation = buildOperation(
+        documentModelDocumentModelModule.reducer,
+        document,
+        setModelName({
+          name: "foo",
         }),
       );
 
       const results = await Promise.all([
-        server.queueOperations(driveId, "file 1", [budgetOperation]),
+        server.queueOperations(driveId, "file 1", [mutation]),
         server.queueDriveOperations(driveId, driveOperations),
         server.queueDriveOperations(driveId, [
           buildOperation(
@@ -270,7 +273,7 @@ describe.each(queueLayers)(
             name: "file 1",
             kind: "file",
             parentFolder: "folder 1",
-            documentType: "powerhouse/budget-statement",
+            documentType: documentModelDocumentModelModule.documentModel.id,
             synchronizationUnits: [
               { syncId: "1", scope: "global", branch: "main" },
             ],
@@ -291,13 +294,11 @@ describe.each(queueLayers)(
         drive.state.global.nodes.findIndex((n) => n.id === "folder 1"),
       );
 
-      budget = (await server.getDocument(
+      const docModelDocument = (await server.getDocument(
         driveId,
         "file 1",
-      )) as BudgetStatementDocument;
-      expect(budget.state.global.accounts).toStrictEqual([
-        expect.objectContaining({ address: "0x123" }),
-      ]);
+      )) as DocumentModelDocument;
+      expect(docModelDocument.state.global.name).toBe("foo");
     });
 
     it.skipIf(!queueValid)(
@@ -313,23 +314,23 @@ describe.each(queueLayers)(
         let drive = await createDrive(server);
         const driveId = drive.state.global.id;
 
-        const budget = utils.createDocument();
+        const document = createDocumentModelDocument();
 
         // first doc op
-        const budgetOperation = buildOperation(
-          budgetStatementReducer,
-          budget,
-          budgetStatementActions.addAccount({
-            address: "0x123",
+        const mutation = buildOperation(
+          documentModelDocumentModelModule.reducer,
+          document,
+          setModelName({
+            name: "foo",
           }),
         );
 
         // second doc op
-        const budgetOperation2 = buildOperation(
-          budgetStatementReducer,
-          budget,
-          budgetStatementActions.addAccount({
-            address: "0x123456",
+        const mutation2 = buildOperation(
+          documentModelDocumentModelModule.reducer,
+          document,
+          setModelName({
+            name: "bar",
           }),
         );
 
@@ -339,7 +340,7 @@ describe.each(queueLayers)(
             id: "file 1",
             name: "file 1",
             parentFolder: "folder 1",
-            documentType: "powerhouse/budget-statement",
+            documentType: documentModelDocumentModelModule.documentModel.id,
             synchronizationUnits: [
               { syncId: "1", scope: "global", branch: "main" },
             ],
@@ -349,7 +350,7 @@ describe.each(queueLayers)(
         // queue addFile and first doc op
         const results1 = await Promise.all([
           server.queueDriveOperations(driveId, driveOperations),
-          server.queueOperations(driveId, "file 1", [budgetOperation]),
+          server.queueOperations(driveId, "file 1", [mutation]),
         ]);
 
         const errors = results1
@@ -370,7 +371,7 @@ describe.each(queueLayers)(
         // ==> receives deleteNode and addFile operation?
 
         await expect(
-          server.queueOperations(driveId, "file 1", [budgetOperation2]),
+          server.queueOperations(driveId, "file 1", [mutation2]),
         ).rejects.toThrowError("Queue is deleted");
 
         drive = await server.getDrive(driveId);
