@@ -21,3 +21,4 @@ jobs:
           heroku_app_name: "sky-atlas-demo-switchboard"
           dockerfile_directory: ./apps/switchboard
           process_type: web
+          docker_options: "--build-arg PH_PACKAGES=@sky-ph/atlas"

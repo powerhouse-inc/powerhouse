@@ -157,10 +157,6 @@ export class PackagesManager implements IPackagesManager {
 
   private async loadPackages(packages: string[]) {
     // install packages
-    for (const pkg of packages) {
-      console.log("> Installing package:", pkg);
-      execSync(`ph install ${pkg}`);
-    }
     const packagesMap = await loadPackagesDocumentModels(packages);
     const subgraphsMap = await loadPackagesSubgraphs(packages);
     this.updatePackagesMap(packagesMap);
