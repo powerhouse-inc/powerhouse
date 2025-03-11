@@ -41,7 +41,7 @@ cp .env.example .env
 Many of our tests require Postgres to run. This is why we've included a `docker-compose.test.yml`. Spin it up:
 
 ```
-docker compose -f docker-compose.test.yml -d
+docker compose -f docker-compose.test.yml up -d
 ```
 
 Then ensure that the db schema is up to date with:
