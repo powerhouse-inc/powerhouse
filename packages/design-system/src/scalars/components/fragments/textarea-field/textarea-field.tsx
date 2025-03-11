@@ -6,7 +6,7 @@ import { FormDescription } from "@/scalars/components/fragments/form-description
 import { CharacterCounter } from "@/scalars/components/fragments/character-counter";
 import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
 import { cn } from "@/scalars/lib/utils";
-import {
+import type {
   FieldCommonProps,
   ErrorHandling,
   TextProps,
@@ -214,10 +214,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   },
 );
 
-export const TextareaField = withFieldValidation<TextareaProps>(
-  TextareaFieldRaw,
-) as React.ForwardRefExoticComponent<
-  TextareaProps & React.RefAttributes<HTMLTextAreaElement>
->;
+export const TextareaField =
+  withFieldValidation<TextareaProps>(TextareaFieldRaw);
 
 TextareaField.displayName = "TextareaField";
