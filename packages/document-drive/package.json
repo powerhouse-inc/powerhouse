@@ -24,6 +24,7 @@
     "postbuild": "npm run copy-prisma",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
+    "test:flaky": "vitest run --coverage test/flaky",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
     "bench": "vitest bench",
     "clean": "rimraf dist",
