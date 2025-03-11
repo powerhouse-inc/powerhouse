@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.1.433",
+  "version": "2.1.434-dev.0",
   "main": "dist/src/index.js",
   "bin": {
     "switchboard": "dist/src/index.js"
@@ -22,7 +22,7 @@
   "dependencies": {
     "@powerhousedao/analytics-engine-knex": "^0.4.0",
     "@powerhousedao/config": "1.19.0",
-    "@powerhousedao/ph-cli": "^0.35.7",
+    "@powerhousedao/ph-cli": "^0.35.8-dev.0",
     "@powerhousedao/reactor-api": "1.22.7",
     "@powerhousedao/scalars": "1.26.0",
     "@prisma/client": "^6.4.1",
