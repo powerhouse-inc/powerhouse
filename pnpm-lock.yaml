@@ -247,8 +247,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0(sqlite3@5.1.7)
       '@powerhousedao/atlas-feedback-issues':
-        specifier: ^1.0.18
-        version: 1.0.18(@tanstack/react-query@5.62.11(react@18.3.1))(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(date-fns@4.1.0)(encoding@0.1.13)(next@14.2.22(@babel/core@7.26.0)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2)(utf-8-validate@5.0.10)(zod@3.24.1)
+        specifier: ^1.0.19
+        version: 1.0.19(@tanstack/react-query@5.62.11(react@18.3.1))(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(date-fns@4.1.0)(encoding@0.1.13)(next@14.2.22(@babel/core@7.26.0)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2)(utf-8-validate@5.0.10)(zod@3.24.1)
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../../packages/reactor-api
@@ -4487,8 +4487,8 @@ packages:
   '@powerhousedao/analytics-engine-pg@0.3.0':
     resolution: {integrity: sha512-0N90CJzgrjZONA7VzEQKq5ne0DuzGpjTj3ZeZyjoaOq4gKopVdX+6j7zHmbfFKx15bkY6/T/+VoIKt9WN+We0Q==}
 
-  '@powerhousedao/atlas-feedback-issues@1.0.18':
-    resolution: {integrity: sha512-eego1vsxfo7hfDJaO2WUaTnM5G8/twJ2J0BEiv75xxRK4q4vQwkaledGYmeVDMgMMedhjQ0F4ck2uRWxp33sPg==}
+  '@powerhousedao/atlas-feedback-issues@1.0.19':
+    resolution: {integrity: sha512-jwS2hQzZXQgrB1NGiynsFLZ9uFniz1x3F4X6GWwY3NK6pJdRAwRyUSsNSgkfDDKYKFwvtfk1Cc4dgj1OI8JqBA==}
     peerDependencies:
       react: ^18.3.1
       react-dom: ^18.3.1
@@ -18022,7 +18022,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/atlas-feedback-issues@1.0.18(@tanstack/react-query@5.62.11(react@18.3.1))(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(date-fns@4.1.0)(encoding@0.1.13)(next@14.2.22(@babel/core@7.26.0)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2)(utf-8-validate@5.0.10)(zod@3.24.1)':
+  '@powerhousedao/atlas-feedback-issues@1.0.19(@tanstack/react-query@5.62.11(react@18.3.1))(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(bufferutil@4.0.9)(date-fns@4.1.0)(encoding@0.1.13)(next@14.2.22(@babel/core@7.26.0)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2)(utf-8-validate@5.0.10)(zod@3.24.1)':
     dependencies:
       '@hookform/resolvers': 3.9.1(react-hook-form@7.54.2(react@18.3.1))
       '@radix-ui/react-dialog': 1.1.4(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
