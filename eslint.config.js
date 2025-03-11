@@ -46,6 +46,7 @@ export default tseslint.config(
       "**/vite.config.ts.timestamp-*.mjs",
       "apps/connect/src/vite-env.d.ts",
       "**/*.config.*",
+      "clis/ph-cli/.ph/"
     ],
   },
   {
