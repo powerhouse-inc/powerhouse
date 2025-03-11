@@ -98,7 +98,7 @@ describe.each(queueLayers)(
             {
               id,
               name: id,
-              documentType: "powerhouse/budget-statement",
+              documentType: documentModelDocumentModelModule.documentModel.id,
             },
             ["global", "local"],
           ),
@@ -429,6 +429,14 @@ describe.each(queueLayers)(
             return addOperationsToDrive(server, drive);
           }),
         );
+
+        // log errors
+        driveResults.flat().forEach((f) => {
+          if (f.status === "ERROR") {
+            console.error(f.error);
+          }
+        });
+
         expect(
           driveResults.flat().filter((f) => f.status !== "SUCCESS").length,
         ).toBe(0);

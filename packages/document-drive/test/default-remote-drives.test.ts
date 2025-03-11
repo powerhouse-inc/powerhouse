@@ -196,9 +196,6 @@ describe("default remote drives", () => {
     const mockCallback = vi.fn();
 
     server.on("defaultRemoteDrive", mockCallback);
-    server.on("defaultRemoteDrive", (...args: any) => {
-      console.log("WAT args", args);
-    });
 
     await server.initialize();
 
