@@ -1,3 +1,18 @@
+## 1.0.0-dev.221 (2025-03-11)
+
+### 🩹 Fixes
+
+- useDriveDocumentStates ([#1262](https://github.com/powerhouse-inc/powerhouse/pull/1262))
+- **switchboard:** heroku deployment missing sky ph dep ([d47dc3f8](https://github.com/powerhouse-inc/powerhouse/commit/d47dc3f8))
+- **switchboard:** small optimizations on build and runtime ([63ef21b8](https://github.com/powerhouse-inc/powerhouse/commit/63ef21b8))
+- **document-drive:** instead of overriding the default poll time everywhere, update the default ([eea1ebe0](https://github.com/powerhouse-inc/powerhouse/commit/eea1ebe0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+- Guillermo Puente Sandoval
+
 ## 1.0.0-dev.220 (2025-03-10)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

@@ -13,10 +13,7 @@ import {
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import {
-    makeDriveDocumentStateHook,
-    makeDriveDocumentStatesHook,
-} from '@powerhousedao/reactor-browser/hooks/document-state';
+import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
 import {
     DriveContextProvider,
     type IDriveContext,
@@ -103,8 +100,8 @@ export function DriveEditorContainer() {
 
     const { addFile } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
-    const useDriveDocumentStates = makeDriveDocumentStatesHook(reactor);
     const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
+
     const driveContext: IDriveContext = useMemo(
         () => ({
             showSearchBar: false,
@@ -117,7 +114,7 @@ export function DriveEditorContainer() {
             showCreateDocumentModal,
             useSyncStatus,
             useDocumentEditorProps: useDocumentEditor,
-            useDriveDocumentStates,
+            useDriveDocumentStates: useGetDriveDocuments,
             useDriveDocumentState,
         }),
         [

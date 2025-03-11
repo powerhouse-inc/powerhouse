@@ -1,3 +1,30 @@
+## 0.35.8-dev.0 (2025-03-11)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.221
+
+## 0.35.7 (2025-03-11)
+
+### 🩹 Fixes
+
+- **switchboard:** heroku deployment missing sky ph dep ([d47dc3f8](https://github.com/powerhouse-inc/powerhouse/commit/d47dc3f8))
+- **switchboard:** small optimizations on build and runtime ([63ef21b8](https://github.com/powerhouse-inc/powerhouse/commit/63ef21b8))
+- **ph-cli:** replace installed packages if they were already listed in the config file ([93cb2d00](https://github.com/powerhouse-inc/powerhouse/commit/93cb2d00))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model to 2.22.1
+- Updated @powerhousedao/builder-tools to 0.3.6
+- Updated @powerhousedao/reactor-local to 1.22.4
+- Updated @powerhousedao/codegen to 0.40.1
+- Updated @powerhousedao/connect to 1.0.6
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 0.35.7-dev.0 (2025-03-10)
 
 ### 🧱 Updated Dependencies
