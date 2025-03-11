@@ -48,6 +48,8 @@ export interface IPullResponderTransmitter extends ITransmitter {
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]>;
 }
 
+const MAX_REVISIONS_PER_ACK = 100;
+
 export class PullResponderTransmitter implements IPullResponderTransmitter {
   private static staticLogger = childLogger([
     "PullResponderTransmitter",
@@ -235,37 +237,59 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
   }
 
   static async acknowledgeStrands(
-    driveId: string,
     url: string,
     listenerId: string,
     revisions: ListenerRevision[],
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.staticLogger.verbose(
       `acknowledgeStrands(url: ${url}, listener: ${listenerId})`,
       revisions,
     );
 
-    const result = await requestGraphql<{ acknowledge: boolean }>(
-      url,
-      gql`
-        mutation acknowledge(
-          $listenerId: String!
-          $revisions: [ListenerRevisionInput]
-        ) {
-          acknowledge(listenerId: $listenerId, revisions: $revisions)
-        }
-      `,
-      { listenerId, revisions },
-    );
-    const error = result.errors?.at(0);
-    if (error) {
-      throw error;
+    // split revisions into chunks
+    const chunks = [];
+    for (let i = 0; i < revisions.length; i += MAX_REVISIONS_PER_ACK) {
+      chunks.push(revisions.slice(i, i + MAX_REVISIONS_PER_ACK));
     }
 
-    if (result.acknowledge === null) {
+    if (chunks.length > 1) {
+      this.staticLogger.verbose(
+        `Breaking strand acknowledgement into ${chunks.length} chunks...`,
+      );
+    }
+
+    // order does not matter, we can send out requests in parallel
+    const results = await Promise.allSettled(
+      chunks.map(async (chunk) => {
+        const result = await requestGraphql<{ acknowledge: boolean }>(
+          url,
+          gql`
+            mutation acknowledge(
+              $listenerId: String!
+              $revisions: [ListenerRevisionInput]
+            ) {
+              acknowledge(listenerId: $listenerId, revisions: $revisions)
+            }
+          `,
+          { listenerId, revisions: chunk },
+        );
+
+        const error = result.errors?.at(0);
+        if (error) {
+          throw error;
+        }
+
+        if (result.acknowledge === null || !result.acknowledge) {
+          throw new Error("Error acknowledging strands");
+        }
+      }),
+    );
+
+    // throw after we try all chunks
+    const errors = results.filter((result) => result.status === "rejected");
+    if (errors.length > 0) {
       throw new Error("Error acknowledging strands");
     }
-    return result.acknowledge;
   }
 
   private static async executePull(
@@ -349,18 +373,30 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
       this.staticLogger.verbose("Acknowledging strands...");
 
-      await PullResponderTransmitter.acknowledgeStrands(
-        driveId,
-        url,
-        listenerId,
-        listenerRevisions.map((revision) => {
-          const { error, ...rest } = revision;
-          return rest;
-        }),
-      )
-        .then((result) => onAcknowledge?.(result))
-        .then(() => this.staticLogger.verbose("Acknowledged strands..."))
-        .catch((error) => this.staticLogger.error("ACK error", error));
+      let success = false;
+      try {
+        await PullResponderTransmitter.acknowledgeStrands(
+          url,
+          listenerId,
+          listenerRevisions.map((revision) => {
+            const { error, ...rest } = revision;
+            return rest;
+          }),
+        );
+
+        success = true;
+      } catch (error) {
+        this.staticLogger.error("ACK error", error);
+      }
+
+      if (success) {
+        this.staticLogger.verbose("Acknowledged strands successfully.");
+      } else {
+        this.staticLogger.error("Failed to acknowledge strands");
+      }
+
+      // let this throw separately
+      onAcknowledge?.(success);
     } catch (error) {
       this.staticLogger.error("Pull error", error);
 
