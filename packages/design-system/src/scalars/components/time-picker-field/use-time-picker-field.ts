@@ -29,7 +29,7 @@ interface TimePickerFieldProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   timeFormat?: string;
-  dateIntervals?: number;
+  timeIntervals?: number;
   timeZone?: string;
   showTimezoneSelect?: boolean;
 }
@@ -40,7 +40,7 @@ export const useTimePickerField = ({
   onChange,
   onBlur,
   timeFormat = "hh:mm a",
-  dateIntervals = 1,
+  timeIntervals = 1,
   timeZone,
   showTimezoneSelect = true,
 }: TimePickerFieldProps) => {
@@ -98,7 +98,7 @@ export const useTimePickerField = ({
     const validDisplay = formatInputToDisplayValid(
       input,
       is12HourFormat,
-      dateIntervals,
+      timeIntervals,
     );
     // Check if the validDisplay is empty and if it is, set the inputValue to an empty string
     if (!validDisplay) {
@@ -135,15 +135,15 @@ export const useTimePickerField = ({
     : Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")); // 0-23
 
   const minutes = useMemo(() => {
-    if (dateIntervals > 1) {
+    if (timeIntervals > 1) {
       const arr: string[] = [];
-      for (let i = 0; i < 60; i += dateIntervals) {
+      for (let i = 0; i < 60; i += timeIntervals) {
         arr.push(String(i).padStart(2, "0"));
       }
       return arr;
     }
     return Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
-  }, [dateIntervals]);
+  }, [timeIntervals]);
 
   const handleSave = () => {
     setIsOpen(false);

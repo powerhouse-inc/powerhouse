@@ -53,7 +53,7 @@ interface DateTimeFieldProps
   showTimezoneSelect?: boolean;
   timeFormat?: string;
   timeZone?: string;
-  dateIntervals?: number;
+  timeIntervals?: number;
 }
 export const DateTimeField: React.FC<
   DateTimeFieldProps & DateTimeFieldPropsDate & DateTimeFieldPropsTime
@@ -76,7 +76,7 @@ export const DateTimeField: React.FC<
   showTimezoneSelect,
   value,
   timeZone,
-  dateIntervals,
+  timeIntervals,
   ...props
 }) => {
   if (!showDateSelect && !showTimeSelect) {
@@ -118,6 +118,8 @@ export const DateTimeField: React.FC<
           onBlur={onBlur}
           timeZone={timeZone}
           timeFormat={timeFormat}
+          timeIntervals={timeIntervals}
+          showTimezoneSelect={showTimezoneSelect}
           {...props}
         />
       )}
@@ -148,7 +150,7 @@ export const DateTimeField: React.FC<
           timeFormat={timeFormat}
           showTimezoneSelect={showTimezoneSelect}
           timeZone={timeZone}
-          dateIntervals={dateIntervals}
+          timeIntervals={timeIntervals}
           {...props}
         />
       )}

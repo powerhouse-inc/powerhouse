@@ -60,7 +60,8 @@ export const castFunctions: Record<
     const newValue = parseInputString(date, correctFormat);
 
     const fechaUTC = parse(newValue, correctFormat ?? "yyyy-MM-dd", new Date());
-    return fechaUTC;
+    const isoDate = format(fechaUTC, "yyyy-MM-dd");
+    return isoDate;
   },
   DateTimeString: (value: string, dateFormat = "yyyy-MM-dd") => {
     const [datePart, timePart] = value.split("T");
@@ -70,9 +71,14 @@ export const castFunctions: Record<
     const correctFormat = getDateFormat(dateFormat);
 
     const normalizedDate = parseInputString(date, correctFormat);
+    const parsedDate = parse(
+      normalizedDate,
+      correctFormat ?? "yyyy-MM-dd",
+      new Date(),
+    );
 
-    const parsedDate = parse(normalizedDate, correctFormat ?? "", new Date());
     const isoDate = format(parsedDate, "yyyy-MM-dd");
+
     return `${isoDate}T${timePart}`;
   },
 };
