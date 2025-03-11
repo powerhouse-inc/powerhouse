@@ -8,10 +8,12 @@ import { externalPackagesAtom } from './external-packages.js';
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 
 async function loadBaseEditors() {
-    const documentModelEditorModule = (
-        await import('@powerhousedao/builder-tools/document-model-editor')
-    ).documentModelEditorModule;
-    return [documentModelEditorModule] as EditorModule[];
+    const documentModelEditor = await import(
+        '@powerhousedao/builder-tools/document-model-editor'
+    );
+    await import('@powerhousedao/builder-tools/style.css');
+    const module = documentModelEditor.documentModelEditorModule;
+    return [module] as EditorModule[];
 }
 
 function getEditorsFromModules(modules: DocumentModelLib[]) {
@@ -100,7 +102,7 @@ const getEditor = (
 ) => {
     const preferredEditor = editors.find(
         e =>
-            e.config?.id === preferredEditorId &&
+            e.config.id === preferredEditorId &&
             e.documentTypes.includes(documentType),
     );
 
@@ -139,7 +141,7 @@ export const usePreloadEditor = () => {
             const editor = getEditor(documentType, editors);
             if (editor && 'preload' in editor.Component) {
                 console.log(
-                    `Preloading editor for document '${documentType}': ${editor.config?.id}`,
+                    `Preloading editor for document '${documentType}': ${editor.config.id}`,
                 );
                 await (
                     editor.Component as { preload: () => Promise<void> }
