@@ -1,6 +1,6 @@
 import { type IconName } from "#powerhouse";
 import { cn } from "#scalars";
-import type React from "react";
+
 import { forwardRef, useId } from "react";
 import {
   FormDescription,

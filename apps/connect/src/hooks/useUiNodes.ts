@@ -1,13 +1,12 @@
-import { useModal } from '#components/modal/index';
-import { useReadModeContext } from '#context/read-mode';
-import { useFileNodeDocument } from '#store/document-drive';
+import { useModal } from '#components';
+import { useReadModeContext } from '#context';
 import {
+    useApps,
+    useFileNodeDocument,
     useFilteredDocumentModels,
     useGetDocumentModelModule,
-} from '#store/document-model';
-import { useApps } from '#store/external-packages';
-import { getNodeOptions } from '#utils/drive-sections';
-import { makeNodeSlugFromNodeName } from '#utils/slug';
+} from '#store';
+import { getNodeOptions, makeNodeSlugFromNodeName } from '#utils';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
@@ -29,10 +28,10 @@ import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNod
 import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDocumentDriveById } from './useDocumentDriveById';
-import { useDocumentDriveServer } from './useDocumentDriveServer';
-import { useOpenSwitchboardLink } from './useOpenSwitchboardLink';
-import { useUserPermissions } from './useUserPermissions';
+import { useDocumentDriveById } from './useDocumentDriveById.js';
+import { useDocumentDriveServer } from './useDocumentDriveServer.js';
+import { useOpenSwitchboardLink } from './useOpenSwitchboardLink.js';
+import { useUserPermissions } from './useUserPermissions.js';
 
 export function useUiNodes() {
     const { showModal } = useModal();

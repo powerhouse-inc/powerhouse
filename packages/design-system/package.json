@@ -34,7 +34,7 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
-    "build": "tsc --build",
+    "build": "npx @tailwindcss/cli -i style.css -o dist/style.css && mkdir -p dist/src/assets && cp -r src/assets dist/src && tsc --build",
     "build:watch": "build --watch",
     "prebuild": "npm run create-icon-components",
     "storybook": "storybook dev -p 6006",

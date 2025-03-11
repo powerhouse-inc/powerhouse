@@ -1,6 +1,6 @@
 import { Modal } from "#powerhouse";
 import { type ComponentPropsWithoutRef } from "react";
-import type React from "react";
+
 import { twMerge } from "tailwind-merge";
 
 const buttonStyles =

@@ -1,5 +1,5 @@
 import { Icon } from "#powerhouse";
-import type React from "react";
+
 import { useState } from "react";
 import { FormInput } from "../form-input/index.js";
 import {

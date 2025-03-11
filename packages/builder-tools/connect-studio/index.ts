@@ -1,3 +1,4 @@
+export { externalIds } from "./vite-plugins/base.js";
 export { backupIndexHtml, removeBase64EnvValues } from "./helpers.js";
 export { hmr } from "./hmr.js";
 export { startConnectStudio } from "./studio.js";

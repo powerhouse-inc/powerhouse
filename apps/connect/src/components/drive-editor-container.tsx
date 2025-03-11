@@ -1,13 +1,17 @@
-import { useDocumentDriveById } from '#hooks/useDocumentDriveById';
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { useDocumentEditor } from '#hooks/useDocumentEditor';
-import { useEditorProps } from '#hooks/useEditorProps';
-import { useSyncStatus } from '#hooks/useSyncStatus';
-import { useUiNodes } from '#hooks/useUiNodes';
-import { useFilteredDocumentModels } from '#store/document-model';
-import { useDriveEditor } from '#store/external-packages';
-import { useAsyncReactor } from '#store/reactor';
-import { useDocumentDispatch } from '#utils/document-model';
+import {
+    useDocumentDriveById,
+    useDocumentDriveServer,
+    useDocumentEditor,
+    useEditorProps,
+    useSyncStatus,
+    useUiNodes,
+} from '#hooks';
+import {
+    useAsyncReactor,
+    useDriveEditor,
+    useFilteredDocumentModels,
+} from '#store';
+import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import {
     makeDriveDocumentStateHook,
@@ -22,7 +26,7 @@ import { driveDocumentModelModule } from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
-import { useModal } from './modal';
+import { useModal } from './modal/index.js';
 
 function DriveEditorError({ error }: FallbackProps) {
     return (

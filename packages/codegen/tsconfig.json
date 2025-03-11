@@ -4,7 +4,7 @@
     "outDir": "./dist"
   },
   "include": ["**/*"],
-  "exclude": ["**/.hygen/**/*", "dist/", "node_modules"],
+  "exclude": ["**/.hygen/**/*", "dist", "node_modules"],
   "references": [
     { "path": "../document-model" },
     { "path": "../scalars" },

@@ -5,10 +5,10 @@ import {
 import { t } from 'i18next';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
-import { About } from './settings/about';
-import { DangerZone } from './settings/danger-zone';
-import { DefaultEditor } from './settings/default-editor';
-import { PackageManager } from './settings/package-manager';
+import { About } from './settings/about.js';
+import { DangerZone } from './settings/danger-zone.js';
+import { DefaultEditor } from './settings/default-editor.js';
+import { PackageManager } from './settings/package-manager.js';
 
 export interface SettingsModalProps {
     open: boolean;

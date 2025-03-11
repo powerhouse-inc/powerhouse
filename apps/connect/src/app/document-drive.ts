@@ -1,4 +1,4 @@
-import { getReactorDefaultDrivesConfig } from '#utils/reactor';
+import { getReactorDefaultDrivesConfig } from '#utils';
 import {
     BaseQueueManager,
     type DocumentDriveAction,

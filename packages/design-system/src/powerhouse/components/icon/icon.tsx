@@ -1,4 +1,8 @@
-import { type IconName, iconNames, type Props } from "#assets";
+import {
+  type IconName,
+  iconNames,
+  type Props,
+} from "../icon-components/types.js";
 import { type Color, getDimensions, type Size } from "#powerhouse";
 import {
   type ComponentPropsWithoutRef,

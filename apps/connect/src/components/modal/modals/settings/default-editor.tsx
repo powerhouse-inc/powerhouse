@@ -1,4 +1,4 @@
-import { useDefaultDocumentModelEditor } from '#hooks/useDefaultDocumentModelEditor/index';
+import { useDefaultDocumentModelEditor } from '#hooks';
 import { DefaultEditor as BaseDefaultEditor } from '@powerhousedao/design-system';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';

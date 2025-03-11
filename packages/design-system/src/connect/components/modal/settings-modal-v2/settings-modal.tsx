@@ -1,6 +1,6 @@
 import { Icon, Modal } from "#powerhouse";
 import { type ComponentProps } from "react";
-import type React from "react";
+
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 

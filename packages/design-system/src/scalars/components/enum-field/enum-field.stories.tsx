@@ -6,7 +6,7 @@ import {
   withForm,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import type React from "react";
+
 import { EnumField } from "./enum-field.js";
 
 const meta: Meta<typeof EnumField> = {

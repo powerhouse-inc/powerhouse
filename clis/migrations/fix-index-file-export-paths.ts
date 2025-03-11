@@ -1,4 +1,3 @@
-// fix-imports.ts
 import {
   existsSync,
   readdirSync,
@@ -19,6 +18,15 @@ function processFile(filePath: string): void {
     const newContent = content.replace(
       regex,
       (match, statement: string, path: string) => {
+        // Handle JSON imports
+        if (path.endsWith(".json")) {
+          // Check if type assertion is already present
+          if (!match.includes('with { type: "json" }')) {
+            return `${match} with { type: "json" }`;
+          }
+          return match;
+        }
+
         // Only process relative imports
         if (!path.startsWith(".")) return match;
         // Skip if already has .js extension

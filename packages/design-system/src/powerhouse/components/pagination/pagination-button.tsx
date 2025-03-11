@@ -1,5 +1,5 @@
 import { Button, type ButtonProps, mergeClassNameProps } from "#powerhouse";
-import type React from "react";
+
 import { twMerge } from "tailwind-merge";
 
 export interface PaginationButtonProps extends ButtonProps {

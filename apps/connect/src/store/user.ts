@@ -1,5 +1,5 @@
-import { useRenown } from '#hooks/useRenown';
-import type { User } from '#services/renown/types';
+import { useRenown } from '#hooks';
+import type { User } from '#services';
 import {
     setUser as setSentryUser,
     type User as SentryUser,

@@ -1,6 +1,6 @@
 import { ConnectDropdownMenu } from "#connect";
 import { Icon } from "#powerhouse";
-import type React from "react";
+
 import { useCallback, useState, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 

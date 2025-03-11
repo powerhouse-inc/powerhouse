@@ -1,11 +1,11 @@
-import { useUnwrappedReactor } from '#store/reactor';
+import { useUnwrappedReactor } from '#store';
 import {
     useDocument,
     useDocumentEditorProps,
 } from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule, type PHDocument } from 'document-model';
 
-import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
+import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 
 export interface DocumentEditorProps {
     driveId: string;

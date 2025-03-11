@@ -1,5 +1,5 @@
-import { type TUiNodes } from '#hooks/useUiNodes';
-import { sortUiNodesByName } from '#utils/index';
+import { type TUiNodes } from '#hooks';
+import { sortUiNodesByName } from '#utils';
 import {
     FILE,
     FOLDER,
@@ -8,8 +8,8 @@ import {
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
-import { ContentSection } from './content';
-import FileContentView from './file-content-view';
+import { ContentSection } from './content/index.js';
+import FileContentView from './file-content-view.js';
 
 export function FolderView(props: TUiNodes) {
     const { t } = useTranslation();

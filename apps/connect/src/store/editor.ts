@@ -1,9 +1,9 @@
-import { useDefaultDocumentModelEditor } from '#hooks/useDefaultDocumentModelEditor/index';
+import { useDefaultDocumentModelEditor } from '#hooks';
 import { type DocumentModelLib, type EditorModule } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
-import { externalPackagesAtom } from './external-packages';
+import { externalPackagesAtom } from './external-packages.js';
 
 export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
 

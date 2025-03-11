@@ -1,4 +1,4 @@
-import { getEnsInfo, type ENSInfo } from '#services/viem';
+import { getEnsInfo, type ENSInfo } from '#services';
 import { useEffect, useMemo, useState } from 'react';
 
 export function useENSInfo(

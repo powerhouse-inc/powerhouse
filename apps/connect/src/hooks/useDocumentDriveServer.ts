@@ -1,9 +1,14 @@
-import { useGetDocumentModelModule } from '#store/document-model';
-import { useUnwrappedReactor } from '#store/reactor';
-import { useUser } from '#store/user';
-import { uploadDocumentOperations } from '#utils/document-model';
-import { loadFile } from '#utils/file';
-import { addActionContext, signOperation } from '#utils/signature';
+import {
+    useGetDocumentModelModule,
+    useUnwrappedReactor,
+    useUser,
+} from '#store';
+import {
+    addActionContext,
+    loadFile,
+    signOperation,
+    uploadDocumentOperations,
+} from '#utils';
 import {
     ERROR,
     FILE,
@@ -42,9 +47,9 @@ import {
 } from 'document-drive';
 import { type Operation, type PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
-import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
-import { useDocumentDrives } from './useDocumentDrives';
-import { useUserPermissions } from './useUserPermissions';
+import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
+import { useDocumentDrives } from './useDocumentDrives.js';
+import { useUserPermissions } from './useUserPermissions.js';
 
 // TODO this should be added to the document model
 export interface SortOptions {

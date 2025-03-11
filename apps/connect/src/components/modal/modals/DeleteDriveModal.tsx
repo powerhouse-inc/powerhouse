@@ -2,7 +2,6 @@ import {
     ConnectDeleteDriveModal,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
-import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface DeleteDriveModalProps {
@@ -28,7 +27,7 @@ export const DeleteDriveModal: React.FC<DeleteDriveModalProps> = props => {
             cancelLabel={t('common.cancel')}
             continueLabel={t('common.delete')}
             onContinue={() => onDelete(onClose)}
-            onOpenChange={status => {
+            onOpenChange={(status: boolean) => {
                 if (!status) return onClose();
             }}
         />

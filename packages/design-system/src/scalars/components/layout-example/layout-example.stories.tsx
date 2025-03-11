@@ -1,4 +1,3 @@
-import type React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 
 const LayoutExample: React.FC<{ children: React.ReactNode }> = ({

@@ -1,5 +1,4 @@
 import { type DivProps } from "#powerhouse";
-import type React from "react";
 
 export interface RWATableHeaderLabelProps extends DivProps {
   readonly label?: React.ReactNode;

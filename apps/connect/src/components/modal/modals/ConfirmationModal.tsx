@@ -1,5 +1,4 @@
 import { ConnectConfirmationModal } from '@powerhousedao/design-system';
-import type React from 'react';
 
 export interface ConfirmationModalProps {
     body: React.ReactNode;
@@ -33,7 +32,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = props => {
             cancelLabel={cancelLabel}
             continueLabel={continueLabel}
             onContinue={() => onContinue(onClose)}
-            onOpenChange={status => {
+            onOpenChange={(status: boolean) => {
                 if (!status) return onClose();
             }}
         />

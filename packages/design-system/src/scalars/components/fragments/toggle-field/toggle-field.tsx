@@ -1,5 +1,5 @@
 import { cn } from "#scalars";
-import type React from "react";
+
 import { useId } from "react";
 import type { FieldCommonProps } from "../../types.js";
 import { FormLabel } from "../form-label/index.js";

@@ -6,7 +6,7 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import * as fs from 'fs/promises';
 import path from 'path';
-import pkg from './package.json';
+import pkg from './package.json' with { type: "json" };
 
 const config: ForgeConfig = {
     packagerConfig: {
@@ -48,12 +48,12 @@ const config: ForgeConfig = {
             build: [
                 {
                     // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
-                    entry: 'src/main.ts',
-                    config: 'vite.main.config.ts',
+                    entry: './src/main.ts',
+                    config: './vite.main.config.ts',
                 },
                 {
-                    entry: 'src/preload.ts',
-                    config: 'vite.preload.config.ts',
+                    entry: './src/preload.ts',
+                    config: './vite.preload.config.ts',
                 },
             ],
             renderer: [

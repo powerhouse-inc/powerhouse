@@ -8,10 +8,10 @@ import type {
 } from 'document-drive';
 import { type Action, type Operation, type PHDocument } from 'document-model';
 import { type IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
-import { platformInfo } from './app/detect-platform';
-import type { IConnectCrypto } from './services/crypto';
-import type { IRenown, User } from './services/renown/types';
-import type { Theme } from './store';
+import { platformInfo } from './app/detect-platform.js';
+import type { IConnectCrypto } from './services/crypto/index.js';
+import type { IRenown, User } from './services/renown/types.js';
+import type { Theme } from './store/index.js';
 
 const connectCrypto: IConnectCrypto = {
     regenerateDid: (): Promise<void> =>

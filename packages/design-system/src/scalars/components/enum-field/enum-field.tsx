@@ -4,7 +4,7 @@ import {
   type ErrorHandling,
   type FieldCommonProps,
 } from "#scalars";
-import type React from "react";
+
 import { type EnumProps } from "./types.js";
 
 export type EnumFieldProps = FieldCommonProps<string | string[]> &

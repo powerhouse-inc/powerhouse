@@ -20,7 +20,8 @@ export const externalIds = [
 
 export const LOCAL_DOCUMENT_MODELS_IMPORT = "LOCAL_DOCUMENT_MODELS";
 export const LOCAL_DOCUMENT_EDITORS_IMPORT = "LOCAL_DOCUMENT_EDITORS";
-export const HMR_MODULE_IMPORT = "PH:HMR_MODULE";
+export const HMR_MODULE_IMPORT =
+  "@powerhousedao/builder-tools/connect-studio/hmr";
 
 export const STUDIO_IMPORTS = [
   LOCAL_DOCUMENT_MODELS_IMPORT,

@@ -7,7 +7,6 @@ import {
   useEditorContext,
   useTableData,
 } from "#rwa";
-import type React from "react";
 
 type Props = {
   readonly tableName: TableName;

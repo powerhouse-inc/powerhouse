@@ -1,5 +1,5 @@
-import { useGetDocumentModelModule } from '#store/document-model';
-import { loadFile } from '#utils/file';
+import { useGetDocumentModelModule } from '#store';
+import { loadFile } from '#utils';
 import { logger } from 'document-drive';
 import { type PHDocument } from 'document-model';
 

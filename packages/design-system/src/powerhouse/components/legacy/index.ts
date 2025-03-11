@@ -1,4 +1,3 @@
-import "./styles.css";
 export * from "./documentEditor.js";
 export * from "./editorToolbar.js";
 export * from "./editorWorksheet.js";

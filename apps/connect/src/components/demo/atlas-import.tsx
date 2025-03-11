@@ -1,5 +1,5 @@
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { useUnwrappedReactor } from '#store/reactor';
+import { useDocumentDriveServer } from '#hooks';
+import { useUnwrappedReactor } from '#store';
 import { gql, request } from 'graphql-request';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';

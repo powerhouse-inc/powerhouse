@@ -1,5 +1,5 @@
 import { type Node } from 'document-drive';
-import { useDocumentDriveServer } from './useDocumentDriveServer';
+import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 
 export function useGetDocumentById(): (
     driveID: string,

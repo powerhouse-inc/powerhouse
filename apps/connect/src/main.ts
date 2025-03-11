@@ -14,17 +14,17 @@ import isDev from 'electron-is-dev';
 import type ElectronStore from 'electron-store';
 import fs from 'node:fs';
 import path, { basename } from 'path';
-import { addDeeplink } from './app/deeplink';
-import initDocumentDrive from './app/document-drive';
-import store from './app/store';
-import { ConnectCrypto } from './services/crypto';
+import { addDeeplink } from './app/deeplink.js';
+import initDocumentDrive from './app/document-drive.js';
+import store from './app/store.js';
+import { ConnectCrypto } from './services/crypto/index.js';
 import {
     ElectronKeyStorage,
     type KeyStorageElectronStore,
-} from './services/crypto/electron';
-import { initRenownElectron } from './services/renown/electron';
-import { type Theme, isTheme } from './store/';
-import { baseDocumentModels } from './store/document-model';
+} from './services/crypto/electron.js';
+import { initRenownElectron } from './services/renown/electron.js';
+import { type Theme, isTheme } from './store/index.js';
+import { baseDocumentModels } from './store/document-model.js';
 const isMac = process.platform === 'darwin';
 
 async function initApp() {

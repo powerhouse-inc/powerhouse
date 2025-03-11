@@ -1,9 +1,6 @@
-import { useDocumentDrives } from '#hooks/useDocumentDrives';
-import { addExternalPackage, removeExternalPackage } from '#services/hmr';
-import {
-    useExternalPackages,
-    useMutableExternalPackages,
-} from '#store/external-packages';
+import { useDocumentDrives } from '#hooks';
+import { addExternalPackage, removeExternalPackage } from '#services';
+import { useExternalPackages, useMutableExternalPackages } from '#store';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
 import { type Manifest } from 'document-model';
 import type React from 'react';

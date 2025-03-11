@@ -1,11 +1,14 @@
-import connectConfig from '#connect.config';
-import { createBrowserDocumentDriveServer } from '#utils/reactor';
+import connectConfig from '#connect-config';
+import { createBrowserDocumentDriveServer } from '#utils';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import { hashKey } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, unwrap } from 'jotai/utils';
-import { atomStore } from '.';
-import { documentModelsAtom, subscribeDocumentModels } from './document-model';
+import {
+    documentModelsAtom,
+    subscribeDocumentModels,
+} from './document-model.js';
+import { atomStore } from './index.js';
 
 async function initReactor(reactor: IDocumentDriveServer) {
     const errors = await reactor.initialize();

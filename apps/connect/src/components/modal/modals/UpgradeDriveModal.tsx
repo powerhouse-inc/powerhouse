@@ -27,7 +27,7 @@ export const UpgradeDriveModal: React.FC<UpgradeDriveModalProps> = props => {
             body={t('modals.upgradeDrive.body')}
             cancelLabel={t('common.cancel')}
             continueLabel={t('common.continue')}
-            onOpenChange={status => {
+            onOpenChange={(status: boolean) => {
                 if (!status) return onClose();
             }}
         />

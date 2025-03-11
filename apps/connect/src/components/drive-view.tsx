@@ -1,12 +1,11 @@
-import { useConnectConfig } from '#hooks/useConnectConfig';
-import { useUiNodes } from '#hooks/useUiNodes';
+import { useConnectConfig, useUiNodes } from '#hooks';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
-import Button from './button';
-import FolderView from './folder-view';
-import { useModal } from './modal';
-import { SearchBar } from './search-bar';
+import Button from './button.js';
+import FolderView from './folder-view.js';
+import { useModal } from './modal/index.js';
+import { SearchBar } from './search-bar.js';
 
 const getDocumentModelName = (name: string) => {
     if (name === 'RealWorldAssets') {

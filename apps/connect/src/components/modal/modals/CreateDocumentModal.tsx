@@ -1,5 +1,5 @@
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { makeNodeSlugFromNodeName } from '#utils/slug';
+import { useDocumentDriveServer } from '#hooks';
+import { makeNodeSlugFromNodeName } from '#utils';
 import {
     CreateDocumentModal as ConnectCreateDocumentModal,
     FILE,
@@ -64,7 +64,7 @@ export const CreateDocumentModal: React.FC<
         <ConnectCreateDocumentModal
             open={open}
             onContinue={onCreateDocument}
-            onOpenChange={status => {
+            onOpenChange={(status: boolean) => {
                 if (!status) return onClose();
             }}
         />

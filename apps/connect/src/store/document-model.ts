@@ -1,4 +1,4 @@
-import { useFeatureFlag } from '#hooks/useFeatureFlags/index';
+import { useFeatureFlag } from '#hooks';
 import { driveDocumentModelModule } from 'document-drive';
 import {
     documentModelDocumentModelModule,
@@ -9,8 +9,8 @@ import {
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { atomWithLazy, unwrap } from 'jotai/utils';
-import { atomStore } from '.';
-import { externalPackagesAtom } from './external-packages';
+import { externalPackagesAtom } from './external-packages.js';
+import { atomStore } from './index.js';
 
 export const LOCAL_DOCUMENT_MODELS = import.meta.env.LOCAL_DOCUMENT_MODELS;
 

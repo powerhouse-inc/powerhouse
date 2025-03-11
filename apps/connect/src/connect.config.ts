@@ -1,8 +1,9 @@
 import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
 import { logger, setLogLevel } from 'document-drive/utils/logger';
 import { LogLevel } from 'vite';
-import { version } from '../package.json';
+import pkg from '../package.json' with { type: 'json' };
 
+const version = pkg.version;
 const APP_VERSION = import.meta.env.APP_VERSION || version;
 const WARN_OUTDATED_APP =
     import.meta.env.PH_CONNECT_WARN_OUTDATED_APP || 'false';

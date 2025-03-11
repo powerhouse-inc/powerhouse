@@ -1,7 +1,7 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
 import { differenceInCalendarDays } from "date-fns";
-import type React from "react";
+
 import { useCallback, useMemo } from "react";
 import { useDayPicker } from "react-day-picker";
 import { Button } from "../../../fragments/button/button.js";

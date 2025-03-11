@@ -1,4 +1,4 @@
-import { type Unsubscribe } from '#services/renown/types';
+import { type Unsubscribe } from '#services';
 import { childLogger, type IDocumentDriveServer } from 'document-drive';
 import type {
     ActionErrorCallback,

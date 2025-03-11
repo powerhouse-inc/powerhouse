@@ -1,4 +1,3 @@
-import "../style.css";
 export * from "./connect/index.js";
 export * from "./powerhouse/index.js";
 export * from "./rwa/index.js";

@@ -1,4 +1,4 @@
-import { useApps } from '#store/external-packages';
+import { useApps } from '#store';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,

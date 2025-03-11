@@ -1,5 +1,4 @@
-import { drivesToHash } from '#hooks/useDocumentDrives';
-import { useUserPermissions } from '#hooks/useUserPermissions';
+import { drivesToHash, useUserPermissions } from '#hooks';
 import {
     type DocumentModelNotFoundError,
     type IDocumentDriveServer,
@@ -24,7 +23,7 @@ import {
     useMemo,
     useState,
 } from 'react';
-import { useAsyncReactor } from '../store/reactor';
+import { useAsyncReactor } from '../store/reactor.js';
 
 export interface IReadModeContext extends IReadModeDriveServer {
     readDrives: ReadDrive[];

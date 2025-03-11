@@ -1,4 +1,3 @@
-import type React from "react";
 import { type ErrorHandling, type FieldCommonProps } from "../types.js";
 import { type DateFieldValue } from "../date-picker-field/types.js";
 import {

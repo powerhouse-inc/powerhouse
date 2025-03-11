@@ -11,7 +11,7 @@ import {
 import { join } from "node:path";
 
 const iconsDir = join("public/icons");
-const outputDirPath = join("src/assets/icon-components");
+const outputDirPath = join("src/powerhouse/components/icon-components");
 
 const toPascalCase = (filename: string): string => {
   return camelCase(filename.replace(".svg", ""), { pascalCase: true });

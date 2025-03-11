@@ -1,27 +1,32 @@
 import {
+    externalIds,
     generateImportMapPlugin,
     viteConnectDevStudioPlugin,
     viteLoadExternalPackages,
 } from '@powerhousedao/builder-tools/connect-studio';
-import { externalIds } from '@powerhousedao/builder-tools/connect-studio/vite-plugins/base';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
-import tailwind from "@tailwindcss/vite";
+import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import path from 'path';
 import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
-import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
-import clientConfig from './client.config';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import clientConfig from './client.config.js';
+import pkg from './package.json' with { type: 'json' };
 
-import pkg from './package.json';
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
+    const rootDir = path.resolve(__dirname);
     const outDir = path.resolve(__dirname, './dist');
+    console.log('rootDir', rootDir);
+    console.log('outDir', outDir);
+    console.log('__dirname', __dirname);
     const isProd = mode === 'production';
     const env = loadEnv(mode, process.cwd());
 
@@ -48,6 +53,12 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const plugins: PluginOption[] = [
+        nodeResolve({
+            rootDir: rootDir,
+        }),
+        tsconfigPaths({
+            root: rootDir,
+        }),
         tailwind(),
         nodePolyfills({
             include: ['events'],
@@ -60,7 +71,7 @@ export default defineConfig(({ mode }) => {
         viteConnectDevStudioPlugin(false, outDir, env),
         viteLoadExternalPackages(undefined, outDir),
         react({
-            include: 'src/**/*.tsx',
+            include: './src/**/*.tsx',
             babel: {
                 parserOpts: {
                     plugins: ['decorators'],
@@ -80,15 +91,15 @@ export default defineConfig(({ mode }) => {
                 ],
             },
         }),
-        viteEnvs({
-            computedEnv() {
-                return {
-                    APP_VERSION,
-                    REQUIRES_HARD_REFRESH,
-                    SENTRY_RELEASE: release,
-                };
-            },
-        }),
+        // viteEnvs({
+        //     computedEnv() {
+        //         return {
+        //             APP_VERSION,
+        //             REQUIRES_HARD_REFRESH,
+        //             SENTRY_RELEASE: release,
+        //         };
+        //     },
+        // }),
     ] as const;
 
     if (uploadSentrySourcemaps) {
@@ -125,7 +136,7 @@ export default defineConfig(({ mode }) => {
                     main: path.resolve(__dirname, 'index.html'),
                     'service-worker': path.resolve(
                         __dirname,
-                        'src/service-worker.ts',
+                        './src/service-worker.ts',
                     ),
                 },
                 output: {
@@ -135,16 +146,6 @@ export default defineConfig(({ mode }) => {
                             : 'assets/[name].[hash].js',
                 },
                 external: [...externalAndExclude, ...externalIds],
-            },
-        },
-        resolve: {
-            alias: {
-                '@/assets': path.resolve(__dirname, './assets'),
-                src: path.resolve(__dirname, './src'),
-                'connect-config': path.resolve(
-                    __dirname,
-                    './src/connect.config.ts',
-                ),
             },
         },
         optimizeDeps: {

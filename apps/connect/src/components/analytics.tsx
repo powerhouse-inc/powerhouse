@@ -1,5 +1,4 @@
-import { useAcceptedCookies } from '#hooks/useAcceptedCookies/useAcceptedCookies';
-import { useConnectConfig } from '#hooks/useConnectConfig';
+import { useAcceptedCookies, useConnectConfig } from '#hooks';
 import { useEffect } from 'react';
 
 declare global {

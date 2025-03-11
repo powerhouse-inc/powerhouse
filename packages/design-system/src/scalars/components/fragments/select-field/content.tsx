@@ -10,7 +10,7 @@ import {
   type SelectProps,
 } from "#scalars";
 import { useCommandState } from "cmdk";
-import type React from "react";
+
 import { useEffect } from "react";
 
 interface ContentProps {

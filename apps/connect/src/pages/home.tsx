@@ -1,6 +1,5 @@
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { useUiNodes } from '#hooks/useUiNodes';
-import { useGetAppNameForEditorId } from '#store/external-packages';
+import { useDocumentDriveServer, useUiNodes } from '#hooks';
+import { useGetAppNameForEditorId } from '#store';
 import {
     HomeScreen,
     HomeScreenAddDriveItem,

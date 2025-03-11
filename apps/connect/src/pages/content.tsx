@@ -1,8 +1,8 @@
-import { DocumentEditorContainer } from '#components/document-editor-container';
-import { DriveEditorContainer } from '#components/drive-editor-container';
-import { useUiNodes } from '#hooks/useUiNodes';
+import { useUiNodes } from '#hooks';
 import { FILE } from '@powerhousedao/design-system';
 import { useEffect } from 'react';
+import { DocumentEditorContainer } from '../components/document-editor-container.js';
+import { DriveEditorContainer } from '../components/drive-editor-container.js';
 
 export default function Content() {
     const uiNodes = useUiNodes();

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import type React from "react";
+
 import { describe, expect, it } from "vitest";
 import { Tooltip, TooltipProvider } from "./tooltip.js";
 

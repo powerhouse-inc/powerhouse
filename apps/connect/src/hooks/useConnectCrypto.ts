@@ -1,4 +1,4 @@
-import { type DID, type IConnectCrypto } from '#services/crypto/index';
+import { type DID, type IConnectCrypto } from '#services';
 import { logger } from 'document-drive';
 import { atom, useAtom } from 'jotai';
 import { useEffect, useMemo } from 'react';
@@ -10,8 +10,8 @@ const connectCrypto = (async () => {
         return window.connectCrypto;
     }
 
-    const { ConnectCrypto } = await import('#services/crypto/index');
-    const { BrowserKeyStorage } = await import('#services/crypto/browser');
+    const { ConnectCrypto } = await import('#services');
+    const { BrowserKeyStorage } = await import('#services');
     const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
     await connectCrypto.did();
     return connectCrypto;
