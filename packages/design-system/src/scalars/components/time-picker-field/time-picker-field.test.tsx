@@ -54,13 +54,13 @@ describe("TimePickerField", () => {
     expect(label).toHaveClass("text-gray-700");
   });
 
-  it("should handle dateIntervals prop correctly with 15-minute intervals", async () => {
+  it("should handle timeIntervals prop correctly with 15-minute intervals", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <TimePickerField
         name="test-time"
         label="Test Label"
-        dateIntervals={15}
+        timeIntervals={15}
       />,
     );
     // Open the time picker using the button instead of the input
@@ -84,13 +84,13 @@ describe("TimePickerField", () => {
     });
   });
 
-  it("should handle dateIntervals prop correctly with 30-minute intervals", async () => {
+  it("should handle timeIntervals prop correctly with 30-minute intervals", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <TimePickerField
         name="test-time"
         label="Test Label"
-        dateIntervals={30}
+        timeIntervals={30}
       />,
     );
 

@@ -24,7 +24,7 @@ interface DateTimePickerProps extends FieldCommonProps<DateFieldValue> {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   timeFormat?: string;
-  dateIntervals?: number;
+  timeIntervals?: number;
   timeZone?: string;
   showTimezoneSelect?: boolean;
   // Date Picker Field
@@ -64,7 +64,7 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
       onChangeDate,
       onBlurDate,
       timeFormat,
-      dateIntervals,
+      timeIntervals,
       timeZone,
       showTimezoneSelect,
       minDate,
@@ -123,7 +123,7 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
 
       // Time Picker Field
       timeFormat,
-      dateIntervals,
+      timeIntervals,
       timeZone,
       showTimezoneSelect,
       minDate,

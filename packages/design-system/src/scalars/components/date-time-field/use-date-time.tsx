@@ -48,7 +48,7 @@ interface DateTimeFieldProps {
   onChangeTime?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlurTime?: (e: React.FocusEvent<HTMLInputElement>) => void;
   timeFormat?: string;
-  dateIntervals?: number;
+  timeIntervals?: number;
   timeZone?: string;
   showTimezoneSelect?: boolean;
   onChangeWraper?: (value: DateFieldValue, time: TimeFieldValue) => void;
@@ -152,7 +152,7 @@ export const useDateTime = ({
 
   // Time Picker Field
   timeFormat,
-  dateIntervals,
+  timeIntervals,
   timeZone,
   showTimezoneSelect = true,
   minDate,
@@ -181,7 +181,7 @@ export const useDateTime = ({
     const transformedTime = formatInputToDisplayValid(
       splitTime,
       is12HourFormat,
-      dateIntervals,
+      timeIntervals,
     );
 
     const { hours, minutes, period } = getHoursAndMinutes(transformedTime);
@@ -260,7 +260,7 @@ export const useDateTime = ({
     const datetimeFormatted = formatInputToDisplayValid(
       timeValue,
       is12HourFormat,
-      dateIntervals,
+      timeIntervals,
     );
 
     const validValue = convert12hTo24h(datetimeFormatted);
@@ -303,7 +303,7 @@ export const useDateTime = ({
     onChange: onChangeTime,
     onBlur: handleOnBlur,
     timeFormat,
-    dateIntervals,
+    timeIntervals,
     timeZone,
     showTimezoneSelect,
   });

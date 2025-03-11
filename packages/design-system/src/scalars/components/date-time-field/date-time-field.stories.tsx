@@ -152,7 +152,7 @@ const meta: Meta<typeof DateTimeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    dateIntervals: {
+    timeIntervals: {
       control: "number",
       description: "Date intervals",
       if: { arg: "showTimeSelect", truthy: true },
