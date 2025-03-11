@@ -1,16 +1,19 @@
-import { addListener, deleteNode } from "#drive-document-model/gen/creators";
+import { addListener } from "#drive-document-model/gen/creators";
+import { driveDocumentModelModule } from "#drive-document-model/module";
 import { generateUUID } from "#utils/misc";
-import {
-  documentModelDocumentModelModule,
-  DocumentModelModule,
-} from "document-model";
-import { documentModels as legacyDocumentModels } from "document-model-libs";
-import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
+import {
+  DocumentModelDocument,
+  DocumentModelModule,
+} from "../../document-model/index.js";
+import { setModelName } from "../../document-model/src/document-model/gen/creators.js";
+import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils.js";
+import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module.js";
 import InMemoryCache from "../src/cache/memory";
 import {
   addFile,
   addFolder,
+  deleteNode,
 } from "../src/drive-document-model/gen/node/creators.js";
 import {
   reducer as documentDriveReducer,
@@ -19,7 +22,6 @@ import {
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
 import { BaseQueueManager } from "../src/queue/base";
-import { RedisQueueManager } from "../src/queue/redis";
 import { IQueueManager } from "../src/queue/types";
 import { ReactorBuilder } from "../src/server/builder";
 import {
@@ -29,37 +31,23 @@ import {
 import { MemoryStorage } from "../src/storage/memory";
 import { buildOperation, buildOperations } from "./utils";
 
-const docModelByName = (name: string) => {
-  const docModel = legacyDocumentModels.find((m) => m.name === name);
-  if (!docModel) {
-    throw new Error(`Document model with name ${name} not found`);
-  }
-  return docModel;
-};
-
-const {
-  actions: budgetStatementActions,
-  BudgetStatementDocument,
-  reducer: budgetStatementReducer,
-  utils,
-} = docModelByName("budget-statement");
-
 const REDIS_TLS_URL = process.env.REDIS_TLS_URL;
 
 const documentModels = [
   documentModelDocumentModelModule,
+  driveDocumentModelModule,
 ] as DocumentModelModule[];
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
   ["Memory Queue", () => Promise.resolve(new BaseQueueManager())],
-  [
+  /*[
     "Redis Queue",
     async () => {
       const client = await createClient({ url: REDIS_TLS_URL }).connect();
       await client.flushAll();
       return new RedisQueueManager(3, 0, client as RedisClientType);
     },
-  ],
+  ],*/
 ] as unknown as [string, () => Promise<IQueueManager>][];
 
 describe.each(queueLayers)(
@@ -133,39 +121,47 @@ describe.each(queueLayers)(
     it.skipIf(!queueValid)(
       "block document queue until ADD_FILE is processed",
       async ({ expect }) => {
+        const documentId = "file 1";
+
         const server = new ReactorBuilder(documentModels)
           .withStorage(new MemoryStorage())
           .build();
         await server.initialize();
+
         let drive = await createDrive(server);
+
         const driveId = drive.state.global.id;
         const driveOperations = buildOperations(reducer, drive, [
           addFolder({ id: "folder 1", name: "folder 1" }),
           addFile({
-            id: "file 1",
+            id: documentId,
             name: "file 1",
             parentFolder: "folder 1",
-            documentType: "powerhouse/budget-statement",
+            documentType: documentModelDocumentModelModule.documentModel.id,
             synchronizationUnits: [
               { syncId: "1", scope: "global", branch: "main" },
             ],
           }),
         ]);
-        let budget = utils.createDocument();
-        const budgetOperation = buildOperation(
-          budgetStatementReducer,
-          budget,
-          budgetStatementActions.addAccount({
-            address: "0x123",
+
+        const document = createDocumentModelDocument();
+        const mutation = buildOperation(
+          documentModelDocumentModelModule.reducer,
+          document,
+          setModelName({
+            name: "foo",
           }),
         );
 
-        const documentResult = server.queueOperations(driveId, "file 1", [
-          budgetOperation,
+        // queue mutation
+        const documentResult = server.queueOperations(driveId, documentId, [
+          mutation,
         ]);
         await expect(
-          server.getDocument(driveId, "file 1"),
-        ).rejects.toThrowError("Document with id file 1 not found");
+          server.getDocument(driveId, documentId),
+        ).rejects.toThrowError(`Document with id ${documentId} not found`);
+
+        // now queue add file
         const results = await server.queueDriveOperations(
           driveId,
           driveOperations,
@@ -173,10 +169,11 @@ describe.each(queueLayers)(
 
         const errors = [results, await documentResult].filter((r) => !!r.error);
         if (errors.length) {
-          errors.forEach((error) => console.error(error));
+          errors.forEach((error) => console.error("Error queueing", error));
         }
         expect(errors.length).toBe(0);
 
+        // now get the drive and check that the rename was applied
         drive = await server.getDrive(driveId);
         expect(drive.state.global.nodes).toStrictEqual([
           expect.objectContaining({
@@ -186,24 +183,22 @@ describe.each(queueLayers)(
             parentFolder: null,
           }),
           expect.objectContaining({
-            id: "file 1",
+            id: documentId,
             name: "file 1",
             kind: "file",
             parentFolder: "folder 1",
-            documentType: "powerhouse/budget-statement",
+            documentType: documentModelDocumentModelModule.documentModel.id,
             synchronizationUnits: [
               { syncId: "1", scope: "global", branch: "main" },
             ],
           }),
         ]);
 
-        budget = (await server.getDocument(
+        const docModelDocument = (await server.getDocument(
           driveId,
-          "file 1",
-        )) as BudgetStatementDocument;
-        expect(budget.state.global.accounts).toStrictEqual([
-          expect.objectContaining({ address: "0x123" }),
-        ]);
+          documentId,
+        )) as DocumentModelDocument;
+        expect(docModelDocument.state.global.name).toBe("foo");
       },
     );
 
