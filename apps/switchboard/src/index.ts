@@ -29,11 +29,14 @@ const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 const main = async () => {
   try {
-    const packages = process.env.PH_PACKAGES?.split(",") || [];
+    const packages =
+      process.env.PH_PACKAGES && process.env.PH_PACKAGES !== ""
+        ? process.env.PH_PACKAGES.split(",")
+        : [];
     const pkgManager = new PackagesManager({
       packages,
     });
-    const { documentModels, subgraphs } = await pkgManager.loadDocumentModels();
+    const { documentModels, subgraphs } = await pkgManager.init();
     const redis = await initRedis();
     const prismaClient: PrismaClient = new PrismaClient();
     const connectionString = process.env.DATABASE_URL;

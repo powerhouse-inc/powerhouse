@@ -149,11 +149,9 @@ export class PackagesManager implements IPackagesManager {
     protected onError?: (e: unknown) => void,
   ) {
     this.eventEmitter.setMaxListeners(0);
-
-    void this.loadPackages(options.packages).catch(onError);
   }
 
-  public async loadDocumentModels() {
+  public async init() {
     return await this.loadPackages(this.options.packages);
   }
 

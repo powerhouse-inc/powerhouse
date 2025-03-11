@@ -13,8 +13,7 @@ ENV ADMIN_USERS="0x123,0x456"
 ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
 ENV REDIS_URL=redis://localhost:6379
 ENV REDIS_TLS_URL=rediss://localhost:6379
-ENV PH_PACKAGES=
-RUN npm install -g ph-cmd
+ENV PH_PACKAGES="@sky-ph/atlas"
 CMD pnpx prisma generate && pnpm start
 # RUN mkdir pruned && pnpm --filter "@powerhousedao/switchboard" deploy --prod pruned
 
