@@ -2,6 +2,7 @@ import { useDocumentDriveById } from '#hooks/useDocumentDriveById';
 import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
 import { useDocumentEditor } from '#hooks/useDocumentEditor';
 import { useEditorProps } from '#hooks/useEditorProps';
+import { useGetDriveDocuments } from '#hooks/useGetDriveDocuments';
 import { useSyncStatus } from '#hooks/useSyncStatus';
 import { useUiNodes } from '#hooks/useUiNodes';
 import { useFilteredDocumentModels } from '#store/document-model';
@@ -9,10 +10,7 @@ import { useDriveEditor } from '#store/external-packages';
 import { useAsyncReactor } from '#store/reactor';
 import { useDocumentDispatch } from '#utils/document-model';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import {
-    makeDriveDocumentStateHook,
-    makeDriveDocumentStatesHook,
-} from '@powerhousedao/reactor-browser/hooks/document-state';
+import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
 import {
     DriveContextProvider,
     type IDriveContext,
@@ -99,8 +97,8 @@ export function DriveEditorContainer() {
 
     const { addFile } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
-    const useDriveDocumentStates = makeDriveDocumentStatesHook(reactor);
     const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
+
     const driveContext: IDriveContext = useMemo(
         () => ({
             showSearchBar: false,
@@ -113,7 +111,7 @@ export function DriveEditorContainer() {
             showCreateDocumentModal,
             useSyncStatus,
             useDocumentEditorProps: useDocumentEditor,
-            useDriveDocumentStates,
+            useDriveDocumentStates: useGetDriveDocuments,
             useDriveDocumentState,
         }),
         [

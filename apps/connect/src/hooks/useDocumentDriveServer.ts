@@ -88,6 +88,18 @@ export function useDocumentDriveServer() {
         [reactor],
     );
 
+    const getDocumentsIds = useCallback(
+        async (driveId: string) => {
+            if (!reactor) {
+                throw new Error('Reactor is not loaded');
+            }
+
+            const ids = await reactor.getDocuments(driveId);
+            return ids;
+        },
+        [reactor],
+    );
+
     const _addDriveOperation = useCallback(
         async (driveId: string, action: DocumentDriveAction) => {
             if (!reactor) {
@@ -759,6 +771,7 @@ export function useDocumentDriveServer() {
             removeTrigger: handleRemoveTrigger,
             addTrigger: handleAddTrigger,
             registerNewPullResponderTrigger,
+            getDocumentsIds,
         }),
         [
             addDocument,
@@ -788,6 +801,7 @@ export function useDocumentDriveServer() {
             setDriveAvailableOffline,
             setDriveSharingType,
             handleUpdateFile,
+            getDocumentsIds,
         ],
     );
 }
