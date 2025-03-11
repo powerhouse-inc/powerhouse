@@ -10,7 +10,7 @@ import {
   setModelId,
   setModelName,
 } from "document-model";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vitest } from "vitest";
 
 import { undo } from "../../../document-model/src/document/actions/creators.js";
 import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
@@ -36,6 +36,8 @@ describe("processOperations", () => {
 
   let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
+    vitest.useRealTimers();
+
     server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
