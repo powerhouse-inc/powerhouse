@@ -38,5 +38,5 @@
         ],
         "experimentalDecorators": true
     },
-    "include": ["src"]
+    "include": ["src", "e2e-tests", "custom.d.ts"]
 }

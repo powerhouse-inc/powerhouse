@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => {
             globals: {
                 Buffer: false,
                 global: false,
-                process: true,
+                process: false,
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),

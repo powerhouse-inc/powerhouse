@@ -13,7 +13,7 @@ exports[`Modal Component > should match snapshot 1`] = `
   tabindex="-1"
 >
   <span
-    style="position: absolute; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    style="position: absolute; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; word-wrap: normal;"
   >
     <h2
       id="radix-:r1:"

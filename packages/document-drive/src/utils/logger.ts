@@ -59,7 +59,8 @@ export class ConsoleLogger implements ILogger {
 
   get #levelValue(): number {
     if (this.#levelString === "env") {
-      const envLevel = process.env.LOG_LEVEL;
+      const envLevel =
+        typeof process !== "undefined" ? process.env.LOG_LEVEL : undefined;
       if (!envLevel) {
         return LEVELS.debug;
       }

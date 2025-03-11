@@ -1,4 +1,4 @@
-import { PHDocument, createZip } from "document-model";
+import { type PHDocument, createZip } from "document-model";
 
 export const exportDocument = async (
   document: PHDocument,
