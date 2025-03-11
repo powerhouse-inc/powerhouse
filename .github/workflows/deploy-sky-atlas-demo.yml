@@ -1,4 +1,4 @@
-name: Deploy Sky Atlas (Staging)
+name: Deploy Sky Atlas (Demo Staging)
 
 on:
   workflow_dispatch:
