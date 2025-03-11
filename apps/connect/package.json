@@ -11,7 +11,8 @@
     "files": [
         "dist",
         "nginx.conf",
-        "nginx.sh"
+        "nginx.sh",
+        "scripts"
     ],
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",
@@ -43,7 +44,8 @@
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
         "cy:open": "cypress open",
-        "build:service-worker": "tsc --build ./tsconfig.sw.json"
+        "build:service-worker": "tsc --build ./tsconfig.sw.json",
+        "install:packages": "node ./scripts/install-packages.js"
     },
     "devDependencies": {
         "@electron-forge/cli": "^6.1.1",

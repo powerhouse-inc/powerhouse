@@ -10,8 +10,8 @@ import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
-import path from 'path';
-import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
+import path from 'node:path';
+import { defineConfig, HtmlTagDescriptor, loadEnv, PluginOption } from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -19,6 +19,7 @@ import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import clientConfig from './client.config.js';
 import pkg from './package.json' with { type: 'json' };
+
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
@@ -48,6 +49,9 @@ export default defineConfig(({ mode }) => {
         (process.env.SENTRY_RELEASE ?? env.SENTRY_RELEASE) || APP_VERSION;
     const uploadSentrySourcemaps = authToken && org && project;
 
+    const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
+    const phPackages = phPackagesStr?.split(',') || [];
+
     const plugins: PluginOption[] = [
         nodeResolve(),
         tsconfigPaths(),
@@ -61,7 +65,7 @@ export default defineConfig(({ mode }) => {
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
-        viteLoadExternalPackages(undefined, outDir),
+        viteLoadExternalPackages(phPackages, outDir),
         react({
             include: './src/**/*.tsx',
             babel: {

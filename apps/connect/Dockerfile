@@ -8,9 +8,12 @@ RUN apk add --no-cache python3 make g++ py3-setuptools && \
 RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || echo "Link already exists"
 RUN npm install --global pnpm@9
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --filter @powerhousedao/connect...
 ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
+ARG PH_PACKAGES=""
+ENV PH_PACKAGES=${PH_PACKAGES}
+RUN pnpm nx run @powerhousedao/connect:install:packages
 RUN pnpm nx run @powerhousedao/connect:build --base ${BASE_PATH}
 RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned
 
