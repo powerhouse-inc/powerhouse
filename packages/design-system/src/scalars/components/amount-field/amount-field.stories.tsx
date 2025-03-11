@@ -11,7 +11,6 @@ import {
   commonCryptoCurrencies,
   commonFiatCurrencies,
 } from "../currency-code-field";
-import { exampleUseAmountField } from "./utils";
 
 const mappedFiatCurrencies = commonFiatCurrencies.map((currency) => ({
   ...currency,
@@ -218,6 +217,7 @@ export const WithAmount: Story = {
   args: {
     units: mappedFiatCurrencies,
     placeholder: "Enter Amount",
+    placeholderSelect: "CUR",
     label: "Enter Amout ",
     type: "AmountFiat",
     value: {
@@ -257,6 +257,7 @@ export const WithToken: Story = {
     label: "Enter Amount and Select Currency",
     type: "AmountCurrency",
     placeholderSelect: "CUR",
+    units: [...mappedCryptoCurrencies, ...mappedFiatCurrencies],
     value: {
       amount: 123 as unknown as bigint,
       unit: "BTC",
@@ -307,7 +308,7 @@ export const WithValueUniversalAmountCurrency: Story = {
     },
   },
   args: {
-    units: mappedCryptoCurrencies,
+    units: [...mappedCryptoCurrencies, ...mappedFiatCurrencies],
     label: "Label",
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",

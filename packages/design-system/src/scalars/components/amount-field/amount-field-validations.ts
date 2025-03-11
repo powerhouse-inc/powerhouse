@@ -9,7 +9,7 @@ import {
 } from "./types";
 import { isValidNumber } from "../number-field/number-field-validations";
 import { ValidatorResult } from "@/scalars";
-import { isValidBigInt } from "./utils";
+import { isValidBigInt, isValidUnit } from "./utils";
 
 const isAmountCurrencyFiat = (
   type: AmountFieldPropsGeneric["type"],
@@ -46,7 +46,14 @@ const getAmount = (
 };
 
 export const validateAmount =
-  ({ type, required, minValue, maxValue, allowNegative }: AmountFieldProps) =>
+  ({
+    type,
+    required,
+    minValue,
+    maxValue,
+    allowNegative,
+    units,
+  }: AmountFieldProps) =>
   (value: unknown): ValidatorResult => {
     const amount = getAmount(value as AmountValue, type);
     if (value === "") return true;
@@ -61,6 +68,9 @@ export const validateAmount =
         return "This field is required";
       }
       return true;
+    }
+    if (!isValidUnit(type, value as AmountValue, units)) {
+      return "Select a valid currency";
     }
     if (!isValidNumber(amount) && type !== "AmountCurrency") {
       return "Value is not a valid number";
