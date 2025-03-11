@@ -24,6 +24,7 @@ import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal/index.js';
+import { useGetDriveDocuments } from '../hooks/useGetDriveDocuments.js';
 
 function DriveEditorError({ error }: FallbackProps) {
     return (

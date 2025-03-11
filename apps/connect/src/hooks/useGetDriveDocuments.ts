@@ -1,5 +1,5 @@
-import { GetDocumentOptions } from 'document-drive';
-import { PHDocument } from 'document-model';
+import { type GetDocumentOptions } from 'document-drive';
+import { type PHDocument } from 'document-model';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
