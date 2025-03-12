@@ -1,10 +1,14 @@
+import AtlasIcon from '#assets/icons/Atlas-Logomark.svg?react';
+import RefreshIcon from '#assets/icons/refresh.svg?react';
 import { useDocumentDriveServer } from '#hooks';
 import { useUnwrappedReactor } from '#store';
+import { Button } from '@powerhousedao/design-system';
 import { gql, request } from 'graphql-request';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const REACTOR_URL = 'http://localhost:4001/';
+const MIN_LOADING_TIME = 2000;
 
 async function forkAtlas(docId: string): Promise<{ ForkAtlas: string }> {
     const document = gql`
@@ -25,6 +29,7 @@ export function AtlasImport() {
     const { addRemoteDrive } = useDocumentDriveServer();
     const [driveId, setDriveId] = useState<string | undefined>(undefined);
     const [error, setError] = useState<unknown>(undefined);
+    const [loading, setLoading] = useState(true);
 
     async function forkAtlasDocument(documentId: string) {
         const result = await forkAtlas(documentId);
@@ -32,6 +37,12 @@ export function AtlasImport() {
         status.current = 'forked';
         setDriveId(driveId);
     }
+
+    const redirectToDrive = useCallback(() => {
+        if (driveId && !loading) {
+            navigate(`/d/${driveId}`, { replace: true });
+        }
+    }, [driveId, navigate, loading]);
 
     const addForkDrive = useCallback(
         async (driveId: string) => {
@@ -64,9 +75,12 @@ export function AtlasImport() {
                 });
                 status.current = 'done';
                 console.log('Added remote drive:', addedDrive);
-                navigate(`/d/${driveId}`, { replace: true });
+                setTimeout(() => {
+                    setLoading(false);
+                }, MIN_LOADING_TIME);
             } catch (error) {
                 status.current = 'error';
+                setLoading(false);
                 setError(error);
             }
         },
@@ -93,20 +107,38 @@ export function AtlasImport() {
     }, [driveId, reactor, status]);
 
     return (
-        <div className="p-10">
-            <h1 className="font-semibold mb-4">Atlas Import</h1>
-            {error ? (
-                <div>
-                    Error:{' '}
-                    {error instanceof Error
-                        ? error.message
-                        : JSON.stringify(error)}
+        <div className="bg-gray-50 size-full flex justify-center gap-x-4">
+            <div className="bg-white rounded-2xl w-full max-w-[850px] drop-shadow-sm p-6">
+                <h1 className="text-lg text-gray-900 font-medium">
+                    Welcome to the Atlas Explorer
+                </h1>
+                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-6">
+                    <div className="bg-slate-50 rounded-2xl min-h-80 flex flex-col justify-center items-center">
+                        <div>
+                            <AtlasIcon />
+                        </div>
+                        <div className="text-sm text-gray-500 mt-3">
+                            Forking Atlas scope...
+                        </div>
+
+                        <Button
+                            onClick={redirectToDrive}
+                            size="small"
+                            color="light"
+                            className="bg-white border border-gray-200 h-9 px-3 mt-4 text-gray-600"
+                        >
+                            {loading ? (
+                                <>
+                                    <RefreshIcon className="animate-spin" />
+                                    Loading
+                                </>
+                            ) : (
+                                'Continue'
+                            )}
+                        </Button>
+                    </div>
                 </div>
-            ) : !driveId ? (
-                <div>Forking {documentId}...</div>
-            ) : (
-                <div>Adding fork drive: {driveId}</div>
-            )}
+            </div>
         </div>
     );
 }
