@@ -12,6 +12,7 @@ import TransmitterFactory from "./listener/transmitter/factory.js";
 import SynchronizationManager from "./sync-manager.js";
 import {
   DefaultListenerManagerOptions,
+  IDocumentDriveServer,
   type DocumentDriveServerOptions,
   type IEventEmitter,
   type IListenerManager,
@@ -80,7 +81,7 @@ export class ReactorBuilder {
     return this;
   }
 
-  public build() {
+  public build(): IDocumentDriveServer {
     if (!this.documentModelModules.length) {
       throw new Error("Document models are required to build the server");
     }

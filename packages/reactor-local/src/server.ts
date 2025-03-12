@@ -11,12 +11,12 @@ import {
   driveDocumentModelModule,
   type DriveInput,
   type IDocumentDriveServer,
-  type InternalTransmitter,
   type IReceiver,
   type ListenerFilter,
   logger,
-  ReactorBuilder,
+  ReactorBuilder
 } from "document-drive";
+import { IInternalTransmitter } from "document-drive/server/listener/transmitter/internal";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import {
   documentModelDocumentModelModule,
@@ -89,7 +89,7 @@ export type LocalReactor = {
       block: boolean;
       filter: ListenerFilter;
     },
-  ) => Promise<InternalTransmitter>;
+  ) => Promise<IInternalTransmitter>;
 };
 
 const baseDocumentModelModules = [

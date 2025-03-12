@@ -409,6 +409,7 @@ export interface IBaseDocumentDriveServer {
     operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
+
   addDriveOperations(
     driveId: string,
     operations: Operation<DocumentDriveAction>[],
@@ -477,6 +478,10 @@ export interface IBaseDocumentDriveServer {
       filter: ListenerFilter;
     },
   ): Promise<IInternalTransmitter>;
+  addEphemeralListener(
+    driveId: string,
+    listener: Listener,
+  ): Promise<void>;
 
   /** Synchronization methods */
   getSynchronizationUnits(
