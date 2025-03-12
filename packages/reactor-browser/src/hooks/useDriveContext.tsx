@@ -103,7 +103,10 @@ export interface IDriveContext {
   useDriveDocumentStates: (props: {
     driveId: string;
     documentIds?: string[];
-  }) => Record<string, HookState>;
+  }) => [
+    Record<string, HookState>,
+    (_driveId: string, _documentIds?: string[]) => Promise<void>,
+  ];
 
   /**
    * Retrieves the state of a document in a drive
