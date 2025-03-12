@@ -155,7 +155,6 @@ export function viteConnectDevStudioPlugin(
       transformIndexHtml(html) {
         if (!enabled || html.includes("editors/style.css")) return;
         return [
-          { tag: "style", children: "p { color: red !important; }" },
           {
             tag: "link",
             attrs: {
