@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { join } from "node:path";
+import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type PluginOption, type ViteDevServer } from "vite";
 import {
@@ -153,14 +153,15 @@ export function viteConnectDevStudioPlugin(
         );
       },
       transformIndexHtml(html) {
-        if (html.includes("editors/style.css")) return;
+        if (!enabled || html.includes("editors/style.css")) return;
         return [
+          { tag: "style", children: "p { color: red !important; }" },
           {
             tag: "link",
             attrs: {
               type: "text/css",
               rel: "stylesheet",
-              href: "../../editors/style.css",
+              href: path.join(connectPath, "../../editors/style.css"),
             },
           },
         ];
