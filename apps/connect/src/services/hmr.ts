@@ -11,16 +11,12 @@ export async function getHMRModule(): Promise<ViteHotContext | undefined> {
         return import.meta.hot as ViteHotContext;
     }
 
-    if (process.env.NODE_ENV === 'production') {
-        return undefined;
-    }
-
     try {
         const module = await import(
             '@powerhousedao/builder-tools/connect-studio/hmr'
         );
         const hmr = module.hmr;
-        return hmr as ViteHotContext;
+        return hmr;
     } catch (error) {
         console.error(error);
         return undefined;

@@ -11,7 +11,12 @@ import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import path from 'node:path';
-import { defineConfig, HtmlTagDescriptor, loadEnv, PluginOption } from 'vite';
+import {
+    defineConfig,
+    HtmlTagDescriptor,
+    loadEnv,
+    type PluginOption,
+} from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -54,7 +59,6 @@ export default defineConfig(({ mode }) => {
 
     const plugins: PluginOption[] = [
         nodeResolve(),
-        tsconfigPaths(),
         tailwind(),
         nodePolyfills({
             include: ['events'],
@@ -66,6 +70,7 @@ export default defineConfig(({ mode }) => {
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
         viteLoadExternalPackages(phPackages, outDir),
+        tsconfigPaths(),
         react({
             include: './src/**/*.tsx',
             babel: {
@@ -118,7 +123,7 @@ export default defineConfig(({ mode }) => {
                 { name: 'react', provider: 'esm.sh' },
                 { name: 'react-dom', provider: 'esm.sh' },
                 '@powerhousedao/reactor-browser',
-            ]) as any as PluginOption,
+            ]),
         );
     }
 
