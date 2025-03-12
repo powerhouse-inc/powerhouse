@@ -77,6 +77,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
           options={hours}
           selectedValue={selectedHour}
           onSelect={setSelectedHour}
+          isCyclic={true}
         />
         <div className="flex items-center px-4 text-sm font-normal leading-[20px] text-gray-900">
           :
@@ -85,6 +86,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
           options={minutes}
           selectedValue={selectedMinute}
           onSelect={setSelectedMinute}
+          isCyclic={true}
         />
       </div>
       <div className="flex items-center justify-between pt-[25px]">
