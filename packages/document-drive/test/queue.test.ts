@@ -33,7 +33,7 @@ import { MemoryStorage } from "../src/storage/memory";
 import { generateUUID } from "../src/utils/misc";
 import { buildOperation, buildOperations } from "./utils";
 
-const REDIS_TLS_URL = "redis://localhost:6379";
+const REDIS_TLS_URL = process.env.REDIS_TLS_URL || "redis://localhost:6379";
 
 const documentModels = [
   documentModelDocumentModelModule,
