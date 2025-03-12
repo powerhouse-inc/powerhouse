@@ -1,3 +1,13 @@
+## 1.0.0-dev.223 (2025-03-12)
+
+### 🚀 Features
+
+- include addDocument in driveContext ([#1269](https://github.com/powerhouse-inc/powerhouse/pull/1269))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.0.0-dev.222 (2025-03-12)
 
 ### 🚀 Features

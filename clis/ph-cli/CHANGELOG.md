@@ -1,3 +1,28 @@
+## 0.37.1-dev.0 (2025-03-12)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.223
+
+## 0.37.0 (2025-03-12)
+
+### 🚀 Features
+
+- include addDocument in driveContext ([#1269](https://github.com/powerhouse-inc/powerhouse/pull/1269))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model to 2.24.0
+- Updated @powerhousedao/builder-tools to 0.5.0
+- Updated @powerhousedao/reactor-local to 1.24.0
+- Updated @powerhousedao/codegen to 0.42.0
+- Updated @powerhousedao/config to 1.21.0
+- Updated @powerhousedao/connect to 1.0.8
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 0.36.1-dev.0 (2025-03-12)
 
 ### 🧱 Updated Dependencies
