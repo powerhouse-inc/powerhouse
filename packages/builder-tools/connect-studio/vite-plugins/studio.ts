@@ -152,6 +152,19 @@ export function viteConnectDevStudioPlugin(
           localDocumentEditorsPath,
         );
       },
+      transformIndexHtml(html) {
+        if (html.includes("editors/style.css")) return;
+        return [
+          {
+            tag: "link",
+            attrs: {
+              type: "text/css",
+              rel: "stylesheet",
+              href: "../../editors/style.css",
+            },
+          },
+        ];
+      },
     },
   ];
 }
