@@ -1,10 +1,20 @@
 import React, { useMemo } from "react";
-import { ErrorHandling, FieldCommonProps } from "../types";
+import type { ErrorHandling, FieldCommonProps } from "../types";
 import { SelectFieldRaw, withFieldValidation } from "../fragments";
 import type { SelectOption } from "../enum-field/types";
 import type { Currency, CurrencyType } from "./types";
+
+type CurrencyCodeFieldBaseProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | keyof FieldCommonProps<string | string[]>
+  | keyof ErrorHandling
+  | "onChange"
+  | "onBlur"
+>;
+
 export interface CurrencyCodeFieldProps
-  extends FieldCommonProps<string | string[]>,
+  extends CurrencyCodeFieldBaseProps,
+    FieldCommonProps<string | string[]>,
     ErrorHandling {
   placeholder?: string;
   onChange?: (value: string | string[]) => void;
