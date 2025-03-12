@@ -1,6 +1,3 @@
-import { DocumentDriveState } from "#drive-document-model/gen/types";
-import { createDocument, createState } from "#drive-document-model/gen/utils";
-import { driveDocumentModelModule } from "#drive-document-model/module";
 import {
   createDocument as createDocumentModelDocument,
   createState as createDocumentModelState,
@@ -12,10 +9,11 @@ import {
 } from "document-model";
 import { beforeEach, describe, it, vi, vitest } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-
-import { addFile, updateNode } from "#drive-document-model/gen/creators";
-import { reducer } from "#drive-document-model/gen/reducer";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { addFile, updateNode } from "../src/drive-document-model/gen/creators";
+import { reducer } from "../src/drive-document-model/gen/reducer";
+import { DocumentDriveDocument, DocumentDriveState } from "../src/drive-document-model/gen/types";
+import { createDocument, createState } from "../src/drive-document-model/gen/utils";
+import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
@@ -27,6 +25,7 @@ import { DocumentModelNotFoundError } from "../src/server/error.js";
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
+vitest.useFakeTimers();
 
 const documentModels = [
   documentModelDocumentModelModule,
@@ -99,7 +98,6 @@ function mockAddDrive(url: string, drive: DocumentDriveDocument) {
 describe("Read mode methods", () => {
   beforeEach(() => {
     fetchMocker.resetMocks();
-    vitest.useFakeTimers();
   });
 
   it("should return read drive when drive ID is found in read drives", async ({

@@ -1,10 +1,10 @@
-import InMemoryCache from "#cache/memory";
-import { type ICache } from "#cache/types";
-import { BaseQueueManager } from "#queue/base";
-import { type IQueueManager } from "#queue/types";
-import { MemoryStorage } from "#storage/memory";
-import { type IDriveStorage } from "#storage/types";
 import { type DocumentModelModule } from "document-model";
+import InMemoryCache from "../cache/memory.js";
+import { type ICache } from "../cache/types.js";
+import { BaseQueueManager } from "../queue/base.js";
+import { type IQueueManager } from "../queue/types.js";
+import { MemoryStorage } from "../storage/memory.js";
+import { type IDriveStorage } from "../storage/types.js";
 import { DocumentDriveServer } from "./base-server.js";
 import { DefaultEventEmitter } from "./event-emitter.js";
 import { ListenerManager } from "./listener/listener-manager.js";

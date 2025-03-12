@@ -12,15 +12,15 @@ import {
 } from "document-model";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
-import { undo } from "../../../document-model/src/document/actions/creators.js";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
-import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
-import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
-import { generateAddNodeAction } from "../../src/drive-document-model/src/utils.js";
-import { ReactorBuilder } from "../../src/server/builder.js";
-import { OperationError } from "../../src/server/error.js";
-import { IOperationResult } from "../../src/server/types.js";
-import { BasicClient, buildOperation, buildOperations } from "../utils.js";
+import { undo } from "../../../document-model/src/document/actions/creators";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions";
+import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer";
+import { driveDocumentModelModule } from "../../src/drive-document-model/module";
+import { generateAddNodeAction } from "../../src/drive-document-model/src/utils";
+import { ReactorBuilder } from "../../src/server/builder";
+import { OperationError } from "../../src/server/error";
+import { IOperationResult } from "../../src/server/types";
+import { BasicClient, buildOperation, buildOperations } from "../utils";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {

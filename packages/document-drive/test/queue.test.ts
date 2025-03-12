@@ -1,27 +1,26 @@
-import { addListener } from "#drive-document-model/gen/creators";
-import { driveDocumentModelModule } from "#drive-document-model/module";
-import { generateUUID } from "#utils/misc";
 import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
 import {
   DocumentModelDocument,
   DocumentModelModule,
-} from "../../document-model/index.js";
-import { setModelName } from "../../document-model/src/document-model/gen/creators.js";
-import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils.js";
-import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module.js";
+} from "../../document-model/index";
+import { setModelName } from "../../document-model/src/document-model/gen/creators";
+import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils";
+import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
 import InMemoryCache from "../src/cache/memory";
+import { addListener } from "../src/drive-document-model/gen/creators";
 import {
   addFile,
   addFolder,
   deleteNode,
-} from "../src/drive-document-model/gen/node/creators.js";
+} from "../src/drive-document-model/gen/node/creators";
 import {
   reducer as documentDriveReducer,
   reducer,
-} from "../src/drive-document-model/gen/reducer.js";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+} from "../src/drive-document-model/gen/reducer";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
+import { driveDocumentModelModule } from "../src/drive-document-model/module";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils";
 import { BaseQueueManager } from "../src/queue/base";
 import { RedisQueueManager } from "../src/queue/redis";
 import { IQueueManager } from "../src/queue/types";
@@ -31,6 +30,7 @@ import {
   IOperationResult,
 } from "../src/server/types";
 import { MemoryStorage } from "../src/storage/memory";
+import { generateUUID } from "../src/utils/misc";
 import { buildOperation, buildOperations } from "./utils";
 
 const REDIS_TLS_URL = "redis://localhost:6379";
