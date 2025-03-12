@@ -118,7 +118,7 @@ export default defineConfig(({ mode }) => {
                 { name: 'react', provider: 'esm.sh' },
                 { name: 'react-dom', provider: 'esm.sh' },
                 '@powerhousedao/reactor-browser',
-            ]),
+            ]) as any as PluginOption,
         );
     }
 

@@ -297,35 +297,37 @@ async function addImportMapToHTML(
 export function generateImportMapPlugin(
   outputDir: string,
   dependencies: (string | { name: string; provider: Provider })[],
-): PluginOption {
+): PluginOption[] {
   let buildModules: (() => Promise<void>) | undefined = undefined;
   let importMap: Record<string, string> = {};
-  return {
-    name: "vite-plugin-importmap",
-    enforce: "post",
-    // generates import map according to the base url
-    // and collects build method for each dependency
-    async configResolved(config) {
-      const result = await generateImportMap(
-        outputDir,
-        dependencies,
-        config.base,
-      );
-      importMap = result.importMap;
-      buildModules = result.buildModules;
+  return [
+    {
+      name: "vite-plugin-importmap",
+      enforce: "post",
+      // generates import map according to the base url
+      // and collects build method for each dependency
+      async configResolved(config) {
+        const result = await generateImportMap(
+          outputDir,
+          dependencies,
+          config.base,
+        );
+        importMap = result.importMap;
+        buildModules = result.buildModules;
+      },
+      // builds modules when building the bundle
+      closeBundle() {
+        return buildModules?.();
+      },
+      // builds modules when starting the dev server
+      configureServer() {
+        return buildModules?.();
+      },
+      // adds importmap to the html
+      async transformIndexHtml(html) {
+        const newHtml = await addImportMapToHTML(importMap, html);
+        return newHtml || html;
+      },
     },
-    // builds modules when building the bundle
-    closeBundle() {
-      return buildModules?.();
-    },
-    // builds modules when starting the dev server
-    configureServer() {
-      return buildModules?.();
-    },
-    // adds importmap to the html
-    async transformIndexHtml(html) {
-      const newHtml = await addImportMapToHTML(importMap, html);
-      return newHtml || html;
-    },
-  };
+  ];
 }

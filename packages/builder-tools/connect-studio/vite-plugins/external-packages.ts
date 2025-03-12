@@ -49,9 +49,9 @@ export const viteLoadExternalPackages = (
   packages: string[] | undefined,
   targetDir: string,
   hmr = false,
-): PluginOption => {
+): PluginOption[] => {
   if (!packages?.length && !hmr) {
-    return viteIgnoreStaticImport([EXTERNAL_PACKAGES_IMPORT]);
+    return [viteIgnoreStaticImport([EXTERNAL_PACKAGES_IMPORT])];
   }
 
   const importScriptPath = generateImportScript(packages ?? [], targetDir);
