@@ -22,5 +22,11 @@
     }
   ],
   "include": ["**/*", "**/*.json"],
-  "exclude": ["node_modules", "dist", "storybook-static", "./tsconfig.json", "./package.json"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "storybook-static",
+    "./tsconfig.json",
+    "./package.json"
+  ]
 }

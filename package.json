@@ -46,7 +46,6 @@
     "@swc/core": "~1.11.1",
     "@swc/helpers": "~0.5.15",
     "@tailwindcss/cli": "^4.0.9",
-    "@tailwindcss/vite": "^4.0.9",
     "@types/node": "^22.13.5",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/browser": "^3.0.7",
