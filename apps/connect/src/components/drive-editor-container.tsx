@@ -23,8 +23,8 @@ import { driveDocumentModelModule } from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
-import { useModal } from './modal/index.js';
 import { useGetDriveDocuments } from '../hooks/useGetDriveDocuments.js';
+import { useModal } from './modal/index.js';
 
 function DriveEditorError({ error }: FallbackProps) {
     return (
@@ -99,7 +99,7 @@ export function DriveEditorContainer() {
         [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
     );
 
-    const { addFile } = useDocumentDriveServer();
+    const { addFile, addDocument } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
     const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
 
@@ -117,6 +117,7 @@ export function DriveEditorContainer() {
             useDocumentEditorProps: useDocumentEditor,
             useDriveDocumentStates: useGetDriveDocuments,
             useDriveDocumentState,
+            addDocument,
         }),
         [
             reactor,
@@ -125,6 +126,7 @@ export function DriveEditorContainer() {
             selectedNode,
             setSelectedNode,
             addFile,
+            addDocument,
             showCreateDocumentModal,
         ],
     );

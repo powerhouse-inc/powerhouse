@@ -1,4 +1,4 @@
-import { type Node, type SyncStatus } from "document-drive";
+import { type FileNode, type Node, type SyncStatus } from "document-drive";
 import {
   type Action,
   type ActionErrorCallback,
@@ -45,6 +45,23 @@ export interface IDriveContext {
     name?: string,
     parentFolder?: string,
   ) => Promise<void>;
+
+  /**
+   * Adds a new document to the drive
+   * @param driveId - ID of the drive to add the document to
+   * @param name - Name of the document
+   * @param documentType - Type of document to create
+   * @param parentFolder - Optional parent folder of the document
+   * @param document - Optional document content
+   * @returns Promise resolving to the newly created
+   */
+  addDocument: (
+    driveId: string,
+    name: string,
+    documentType: string,
+    parentFolder?: string,
+    document?: PHDocument,
+  ) => Promise<FileNode>;
 
   /**
    * Shows a modal for creating a new document
