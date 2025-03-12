@@ -1,3 +1,13 @@
+## 1.0.0-dev.224 (2025-03-12)
+
+### 🚀 Features
+
+- return fetch documents ([#1270](https://github.com/powerhouse-inc/powerhouse/pull/1270))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.0.0-dev.223 (2025-03-12)
 
 ### 🚀 Features

@@ -1,3 +1,28 @@
+## 0.38.1-dev.0 (2025-03-12)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.224
+
+## 0.38.0 (2025-03-12)
+
+### 🚀 Features
+
+- return fetch documents ([#1270](https://github.com/powerhouse-inc/powerhouse/pull/1270))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model to 2.25.0
+- Updated @powerhousedao/builder-tools to 0.6.0
+- Updated @powerhousedao/reactor-local to 1.25.0
+- Updated @powerhousedao/codegen to 0.43.0
+- Updated @powerhousedao/config to 1.22.0
+- Updated @powerhousedao/connect to 1.0.8
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 0.37.1-dev.0 (2025-03-12)
 
 ### 🧱 Updated Dependencies
