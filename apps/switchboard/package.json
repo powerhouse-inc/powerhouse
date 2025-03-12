@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.1.452-dev.0",
+  "version": "2.1.460",
   "main": "dist/src/index.js",
   "bin": {
     "switchboard": "dist/src/index.js"
@@ -21,20 +21,20 @@
   "description": "",
   "dependencies": {
     "@powerhousedao/analytics-engine-knex": "^0.4.0",
-    "@powerhousedao/config": "1.21.0",
-    "@powerhousedao/ph-cli": "^0.37.1-dev.0",
+    "@powerhousedao/config": "1.22.0",
+    "@powerhousedao/ph-cli": "^0.38.0",
     "@powerhousedao/reactor-api": "1.22.7",
-    "@powerhousedao/scalars": "1.28.0",
+    "@powerhousedao/scalars": "1.29.0",
     "@prisma/client": "^6.4.1",
     "@sky-ph/atlas": "^0.2.7",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "document-drive": "1.21.1",
-    "document-model": "2.24.0",
+    "document-model": "2.25.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "graphql": "^16.10.0",
-    "ph-cmd": "^0.38.0",
+    "ph-cmd": "^0.39.0",
     "prisma": "^6.4.1",
     "redis": "^4.7.0"
   },
