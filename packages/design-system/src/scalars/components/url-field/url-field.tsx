@@ -8,7 +8,7 @@ import {
   FormDescription,
   FormMessageList,
 } from "../fragments";
-import { ErrorHandling, FieldCommonProps } from "../types";
+import type { ErrorHandling, FieldCommonProps } from "../types";
 import { cn } from "@/scalars/lib";
 import { IconName } from "@/powerhouse";
 import { useURLWarnings } from "./useURLWarnings";
@@ -31,10 +31,7 @@ interface UrlFieldProps
   platformIcons?: Record<string, PlatformIcon>;
 }
 
-const UrlFieldRaw: React.FC<UrlFieldProps> = React.forwardRef<
-  HTMLInputElement,
-  UrlFieldProps
->(
+const UrlFieldRaw = React.forwardRef<HTMLInputElement, UrlFieldProps>(
   (
     {
       label,
