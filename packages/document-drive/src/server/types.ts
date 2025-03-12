@@ -478,10 +478,6 @@ export interface IBaseDocumentDriveServer {
       filter: ListenerFilter;
     },
   ): Promise<IInternalTransmitter>;
-  addEphemeralListener(
-    driveId: string,
-    listener: Listener,
-  ): Promise<void>;
 
   /** Synchronization methods */
   getSynchronizationUnits(

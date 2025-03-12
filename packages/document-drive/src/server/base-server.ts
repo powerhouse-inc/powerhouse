@@ -2139,28 +2139,6 @@ export class BaseDocumentDriveServer
     this.eventEmitter.emit("strandUpdate", strand);
     return result;
   }
-
-  /**
-   * Adds an ephemeral listener to the drive.
-   * 
-   * This listener is not persisted to the document and will be removed when the drive is deleted.
-   * 
-   * @param driveId - The ID of the drive to add the listener to.
-   * @param listener - The listener to add to the drive.
-   */
-  async addEphemeralListener(
-    driveId: string,
-    listener: Listener,
-  ): Promise<void> {
-    if (!listener.transmitter) {
-      throw new Error("Ephemeral listeners must have a transmitter");
-    }
-
-    // Register the listener with the listener manager but don't persist it to the document
-    await this.listenerManager.setListener(driveId, listener);
-    
-    logger.verbose(`Added ephemeral listener ${listener.listenerId} to drive ${driveId}`);
-  }
 }
 
 export type DocumentDriveServerConstructor =

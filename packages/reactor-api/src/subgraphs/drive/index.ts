@@ -299,17 +299,13 @@ export class DriveSubgraph extends Subgraph {
         
 
         // TODO: circular reference
-        listener.transmitter = new PullResponderTransmitter(
-          listener,
-          // todo: once we have DI, remove this and pass around
-          (this.reactor as any).getListenerManager());
+        // TODO: once we have DI, remove this and pass around
+        const listenerManager = (this.reactor as any).getListenerManager();
+        listener.transmitter = new PullResponderTransmitter(listener, listenerManager);
 
         // Use the new ephemeral listener method instead of queueDriveAction
         try {
-          await this.reactor.addEphemeralListener(
-            ctx.driveId,
-            listener,
-          );
+          await listenerManager.setListener(ctx.driveId, listener);
         } catch (error) {
           this.logger.error(`Failed to register ephemeral listener: ${error}`);
           throw new Error(`Listener couldn't be registered: ${error}`);
