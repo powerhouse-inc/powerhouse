@@ -57,6 +57,7 @@ interface DateTimeFieldProps
   timeFormat?: string;
   timeZone?: string;
   timeIntervals?: number;
+  includeContinent?: boolean;
 }
 
 export const DateTimeField = React.forwardRef<
@@ -84,6 +85,7 @@ export const DateTimeField = React.forwardRef<
       value,
       timeZone,
       timeIntervals,
+      includeContinent,
       ...props
     },
     ref,
@@ -130,6 +132,7 @@ export const DateTimeField = React.forwardRef<
             timeFormat={timeFormat}
             timeIntervals={timeIntervals}
             showTimezoneSelect={showTimezoneSelect}
+            includeContinent={includeContinent}
             ref={ref}
             {...props}
           />
