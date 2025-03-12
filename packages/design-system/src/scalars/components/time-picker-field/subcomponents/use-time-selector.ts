@@ -51,12 +51,12 @@ export const useTimeSelector = ({
       const selectedRect = selected.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
 
-      // Verificar si el elemento seleccionado está visible
+      // Check if the selected element is visible
       const isVisible =
         selectedRect.top >= containerRect.top &&
         selectedRect.bottom <= containerRect.bottom;
 
-      // Solo hacer scroll si el elemento no está visible o si se solicitó explícitamente centrar
+      // Only scroll if the element is not visible or if centering was explicitly requested
       if (!isVisible || shouldCenter) {
         const offset =
           selectedRect.top -
@@ -71,7 +71,7 @@ export const useTimeSelector = ({
       }
 
       initialRenderRef.current = false;
-      // Resetear shouldCenter después de centrar
+      // Reset shouldCenter after centering
       if (shouldCenter) setShouldCenter(false);
     }
   }, [selectedValue, shouldCenter, containerRef, selectedRef]);
