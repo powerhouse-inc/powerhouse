@@ -1,14 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 import { ActionContext, Operation } from "document-model";
 import { beforeEach, describe, it } from "vitest";
-import { addFile } from "../src/drive-document-model/gen/creators";
-import { reducer } from "../src/drive-document-model/gen/reducer";
-import { createDocument } from "../src/drive-document-model/gen/utils";
-import { BrowserStorage } from "../src/storage/browser";
-import { PrismaStorage } from "../src/storage/prisma";
-import { migrateLegacyOperationSignature } from "../src/utils/migrations";
-import { generateUUID } from "../src/utils/misc";
-import { buildOperation } from "./utils";
+import { addFile } from "../src/drive-document-model/gen/creators.js";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { createDocument } from "../src/drive-document-model/gen/utils.js";
+import { BrowserStorage } from "../src/storage/browser.js";
+import { PrismaStorage } from "../src/storage/prisma/prisma.js";
+import { migrateLegacyOperationSignature } from "../src/utils/migrations.js";
+import { generateUUID } from "../src/utils/misc.js";
+import { buildOperation } from "./utils.js";
 
 const prismaClient = new PrismaClient();
 
