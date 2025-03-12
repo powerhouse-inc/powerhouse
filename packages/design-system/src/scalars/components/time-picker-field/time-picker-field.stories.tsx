@@ -1,11 +1,11 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import { TimePickerField } from "./time-picker-field";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { TimePickerField } from "./time-picker-field.js";
 
 const meta: Meta<typeof TimePickerField> = {
   title: "Document Engineering/Fragments/Time Picker Field",

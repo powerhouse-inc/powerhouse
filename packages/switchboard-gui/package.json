@@ -1,11 +1,12 @@
 {
   "name": "@powerhousedao/switchboard-gui",
   "private": true,
-  "version": "0.14.0",
+  "version": "0.20.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "preview": "vite preview",
@@ -19,11 +20,12 @@
     "postcss": "^8",
     "preact": "^10.24.1",
     "preact-router": "^4.1.2",
-    "tailwindcss": "^3.4.16",
+    "tailwindcss": "^4.0.11",
     "zustand": "5.0.0-rc.2"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.3",
-    "vite": "^5.4.8"
+    "@tailwindcss/vite": "^4.0.9",
+    "vite": "^6.2.0"
   }
 }

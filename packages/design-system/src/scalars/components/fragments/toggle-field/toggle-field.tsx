@@ -1,10 +1,10 @@
+import { cn } from "#scalars";
 import React, { useId } from "react";
-import { Toggle } from "./toggle";
-import { cn } from "@/scalars/lib/utils";
-import { FormLabel } from "../form-label";
-import { FormMessageList } from "../form-message";
-import type { FieldCommonProps } from "../../types";
-import { withFieldValidation } from "../with-field-validation";
+import type { FieldCommonProps } from "../../types.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import { withFieldValidation } from "../with-field-validation/index.js";
+import { Toggle } from "./toggle.js";
 
 type ToggleFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,

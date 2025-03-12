@@ -2,17 +2,16 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/reducer.ts"
 force: true
 ---
-import { ImmutableStateReducer, utils } from "document-model/document";
-import { <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState, z } from './types';
-import { <%= h.changeCase.pascal(documentType) %>Action } from './actions';
+import { StateReducer, isDocumentAction, createReducer } from "document-model";
+import { <%= h.changeCase.pascal(documentType) %>Document, z } from './types';
 
 <% modules.forEach(m => { _%>
 import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../src/reducers/<%= h.changeCase.param(m.name) %>';
 <%_ }); %>
 
-const stateReducer: ImmutableStateReducer<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>LocalState> =
+const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>Document> =
     (state, action, dispatch) => {
-        if (utils.isBaseAction(action)) {
+        if (isDocumentAction(action)) {
             return state;
         }
 
@@ -32,4 +31,4 @@ const stateReducer: ImmutableStateReducer<<%= h.changeCase.pascal(documentType) 
         }
     }
 
-export const reducer = utils.createReducer<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>LocalState>(stateReducer);
+export const reducer = createReducer<<%= h.changeCase.pascal(documentType) %>Document>(stateReducer);

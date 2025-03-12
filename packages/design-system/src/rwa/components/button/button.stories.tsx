@@ -1,6 +1,6 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { RWAButton } from "./button";
+import { RWAButton } from "./button.js";
 
 const meta: Meta<typeof RWAButton> = {
   title: "RWA/Components/RWAButton",

@@ -27,9 +27,6 @@
     "lint:nx": {
       "dependsOn": ["^build"]
     },
-    "check-types": {
-      "dependsOn": ["^build", "generate"]
-    },
     "generate": {
       "dependsOn": ["^build"]
     },
@@ -41,21 +38,7 @@
     },
     "build": {
       "cache": true,
-      "dependsOn": ["^build", "generate"],
-      "inputs": [
-        "noMarkdown",
-        "^noMarkdown",
-        "noStories",
-        "^noStories",
-        "noLicenses",
-        "^noLicenses",
-        "noTests",
-        "^noTests"
-      ]
-    },
-    "build:studio": {
-      "cache": true,
-      "dependsOn": ["^build", "generate"],
+      "dependsOn": ["^build"],
       "inputs": [
         "noMarkdown",
         "^noMarkdown",
@@ -76,16 +59,17 @@
   "release": {
     "projects": ["packages/*", "clis/*", "apps/connect"],
     "projectsRelationship": "independent",
-    "tags": {
-      "apps/connect": "dev"
-    },
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
+        "skipLockFileUpdate": true,
+        "updateDependents": "auto",
+        "fallbackCurrentVersionResolver": "disk",
         "preserveLocalDependencyProtocols": true
       }
     },
     "changelog": {
+      "automaticFromRef": true,
       "projectChangelogs": {
         "createRelease": "github"
       }

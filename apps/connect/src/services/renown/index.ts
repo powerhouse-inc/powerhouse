@@ -1,12 +1,20 @@
+import { logger } from 'document-drive';
 import { EventEmitter } from 'events';
-import { logger } from '../logger';
-import type { IStorage } from '../storage';
-import { getEnsInfo } from '../viem';
-import { RENOWN_URL } from './constants';
-import { PowerhouseVerifiableCredential, RenownStorage, User } from './types';
-import { parsePkhDid } from './utils';
+import type { IStorage } from '../storage/index.js';
+import { getEnsInfo } from '../viem.js';
+import { RENOWN_URL } from './constants.js';
+import {
+    type PowerhouseVerifiableCredential,
+    type RenownStorage,
+    type User,
+} from './types.js';
+import { parsePkhDid } from './utils.js';
 
-export type { PowerhouseVerifiableCredential } from './types';
+export type {
+    PowerhouseVerifiableCredential,
+    Unsubscribe,
+    User,
+} from './types.js';
 
 export class Renown {
     #baseUrl: string;
@@ -123,3 +131,7 @@ export class Renown {
         }
     }
 }
+export * from './browser.js';
+export * from './constants.js';
+export * from './types.js';
+export * from './utils.js';

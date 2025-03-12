@@ -1,4 +1,4 @@
-import { useAllowList } from './useAllowList';
+import { useAllowList } from './useAllowList.js';
 
 export function useUserPermissions() {
     const allowList = useAllowList();

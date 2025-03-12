@@ -1,10 +1,6 @@
+import { getDefaultArgTypes, getValidationArgTypes, withForm } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ToggleField } from "./toggle-field";
-import { withForm } from "@/scalars/lib/decorators";
-import {
-  getDefaultArgTypes,
-  getValidationArgTypes,
-} from "@/scalars/lib/storybook-arg-types";
+import { ToggleField } from "./toggle-field.js";
 
 const meta: Meta<typeof ToggleField> = {
   title: "Document Engineering/Fragments/Toggle Field",

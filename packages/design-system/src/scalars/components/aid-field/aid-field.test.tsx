@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { Form } from "@/scalars/components/form";
-import { AIDField } from "./aid-field";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../lib/testing.js";
+import { Form } from "../form/index.js";
+import { AIDField } from "./aid-field.js";
 
 describe("AIDField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();

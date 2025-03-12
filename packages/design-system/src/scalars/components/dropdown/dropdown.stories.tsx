@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import DropdownExample from "./dropdown-example";
-import { StorybookControlCategory } from "@/scalars/lib/storybook-arg-types";
+import { StorybookControlCategory } from "../../lib/storybook-arg-types.js";
+import DropdownExample from "./dropdown-example.js";
+
 /**
  * The `Dropdown` component system provides a flexible way to create interactive menus.
  * It follows a strict parent-child component structure where:

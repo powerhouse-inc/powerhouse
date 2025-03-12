@@ -1,31 +1,55 @@
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { Subgraph } from "#subgraphs/base/index.js";
+import { Context, SubgraphArgs } from "#subgraphs/types.js";
 import {
-  generateUUID,
-  ListenerRevision,
-  PullResponderTransmitter,
-  StrandUpdateGraphQL,
-} from "document-drive";
+  InternalStrandUpdate,
+  processAcknowledge,
+  processGetStrands,
+  processPushUpdate,
+} from "#sync/utils.js";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { pascalCase } from "change-case";
 import {
-  actions,
-  DocumentDriveAction,
+  addListener,
+  childLogger,
   FileNode,
+  generateUUID,
   Listener,
   ListenerFilter,
+  ListenerRevision,
+  StrandUpdateGraphQL,
   TransmitterType,
-} from "document-model-libs/document-drive";
-import { Asset } from "./temp-hack-rwa-type-defs";
-import { BaseAction, Document, Operation } from "document-model/document";
-import {
-  DocumentModelInput,
-  DocumentModelState,
-} from "document-model/document-model";
+} from "document-drive";
+import { DocumentModelInput, Operation, PHDocument } from "document-model";
 import { gql } from "graphql-tag";
-import { Context } from "../types";
-import { Subgraph } from "../base";
+import { Asset } from "./temp-hack-rwa-type-defs.js";
+
+const driveKindTypeNames: Record<string, string> = {
+  file: "DocumentDrive_FileNode",
+  folder: "DocumentDrive_FolderNode",
+};
 
 export class DriveSubgraph extends Subgraph {
+  private logger = childLogger([
+    "DriveSubgraph",
+    Math.floor(Math.random() * 999).toString(),
+  ]);
+
+  constructor(args: SubgraphArgs) {
+    super(args);
+
+    this.logger.verbose(`constructor()`);
+  }
+
   name = "d/:drive";
   typeDefs = gql`
+    type DriveMeta {
+      preferredEditor: String
+    }
+
+    extend type DocumentDrive_DocumentDriveState {
+      meta: DriveMeta
+    }
+
     type Query {
       system: System
       drive: DocumentDrive_DocumentDriveState
@@ -181,7 +205,7 @@ export class DriveSubgraph extends Subgraph {
     },
     Document: {
       operations: async (
-        obj: Document,
+        obj: PHDocument,
         { first, skip }: { first: number; skip: number },
         ctx: Context,
       ) => {
@@ -192,26 +216,38 @@ export class DriveSubgraph extends Subgraph {
     },
     Query: {
       drive: async (_: unknown, args: unknown, ctx: Context) => {
+        this.logger.verbose(`drive()`, args);
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const drive = await this.reactor.getDrive(ctx.driveId);
-        return drive.state.global;
+        return {
+          meta: drive.meta,
+          ...drive.state.global,
+          nodes: drive.state.global.nodes.map((n) => ({
+            ...n,
+            __typename: driveKindTypeNames[n.kind] || "UnkownDriveNode",
+          })),
+        };
       },
       documents: async (_: unknown, args: unknown, ctx: Context) => {
+        this.logger.verbose(`documents(drive: ${ctx.driveId})`, args);
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const documents = await this.reactor.getDocuments(ctx.driveId);
         return documents;
       },
       document: async (_: unknown, { id }: { id: string }, ctx: Context) => {
+        this.logger.verbose(`document(drive: ${ctx.driveId}, id: ${id})`);
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const document = await this.reactor.getDocument(ctx.driveId, id);
 
-        const dms = this.reactor.getDocumentModels();
+        const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
-          ({ documentModel }: { documentModel: DocumentModelState }) =>
-            documentModel.id === document.documentType,
+          ({ documentModel }) => documentModel.id === document.documentType,
         );
         const globalState = document.state.global;
         if (!globalState) throw new Error("Document not found");
+        const typeName = pascalCase(
+          (dm?.documentModel.name || "").replaceAll("/", " "),
+        );
         const response = {
           ...document,
           id,
@@ -225,7 +261,7 @@ export class DriveSubgraph extends Subgraph {
                 : JSON.stringify(op.input),
           })),
           initialState: document.initialState.state.global,
-          __typename: dm?.documentModel.name,
+          __typename: typeName,
         };
         return response;
       },
@@ -237,6 +273,11 @@ export class DriveSubgraph extends Subgraph {
         { filter }: { filter: ListenerFilter },
         ctx: Context,
       ) => {
+        this.logger.verbose(
+          `registerPullResponderListener(drive: ${ctx.driveId})`,
+          filter,
+        );
+
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const uuid = generateUUID();
         const listener: Listener = {
@@ -259,7 +300,7 @@ export class DriveSubgraph extends Subgraph {
 
         const result = await this.reactor.queueDriveAction(
           ctx.driveId,
-          actions.addListener({ listener }),
+          addListener({ listener }),
         );
 
         if (result.status !== "SUCCESS" && result.error) {
@@ -272,58 +313,33 @@ export class DriveSubgraph extends Subgraph {
       },
       pushUpdates: async (
         _: unknown,
-        { strands }: { strands: StrandUpdateGraphQL[] },
+        { strands: strandsGql }: { strands: StrandUpdateGraphQL[] },
         ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const listenerRevisions: ListenerRevision[] = await Promise.all(
-          strands.map(async (s) => {
-            const operations =
-              s.operations.map((o) => ({
-                ...o,
-                input: JSON.parse(o.input) as DocumentModelInput,
-                skip: o.skip ?? 0,
-                scope: s.scope,
-                branch: "main",
-              })) ?? [];
+        this.logger.verbose(`pushUpdates(drive: ${ctx.driveId})`, strandsGql);
 
-            const result = await (s.documentId !== undefined
-              ? this.reactor.queueOperations(
-                  s.driveId,
-                  s.documentId,
-                  operations,
-                )
-              : this.reactor.queueDriveOperations(
-                  s.driveId,
-                  operations as Operation<DocumentDriveAction | BaseAction>[],
-                ));
+        // translate data types
+        const strands: InternalStrandUpdate[] = strandsGql.map((strandGql) => {
+          return {
+            operations: strandGql.operations.map((op) => ({
+              ...op,
+              input: JSON.parse(op.input) as DocumentModelInput,
+              skip: op.skip ?? 0,
+              scope: strandGql.scope,
+              branch: "main",
+            })) as Operation[],
+            documentId: strandGql.documentId,
+            driveId: strandGql.driveId,
+            scope: strandGql.scope,
+            branch: strandGql.branch,
+          };
+        });
 
-            const scopeOperations = result.document?.operations[s.scope] ?? [];
-            if (scopeOperations.length === 0) {
-              return {
-                revision: -1,
-                branch: s.branch,
-                documentId: s.documentId ?? "",
-                driveId: s.driveId,
-                scope: s.scope,
-                status: result.status,
-              };
-            }
-
-            const revision = scopeOperations.slice().pop()?.index ?? -1;
-            return {
-              revision,
-              branch: s.branch,
-              documentId: s.documentId ?? "",
-              driveId: s.driveId,
-              scope: s.scope,
-              status: result.status,
-              error: result.error?.message || undefined,
-            };
-          }),
+        // return a list of listener revisions
+        return await Promise.all(
+          strands.map((strand) => processPushUpdate(this.reactor, strand)),
         );
-
-        return listenerRevisions;
       },
       acknowledge: async (
         _: unknown,
@@ -333,8 +349,15 @@ export class DriveSubgraph extends Subgraph {
         }: { listenerId: string; revisions: ListenerRevision[] },
         ctx: Context,
       ) => {
+        this.logger.verbose(
+          `acknowledge(drive: ${ctx.driveId}, listenerId: ${listenerId})`,
+          revisions,
+        );
+
         if (!listenerId || !revisions) return false;
         if (!ctx.driveId) throw new Error("Drive ID is required");
+
+        // translate data types
         const validEntries = revisions
           .filter((r) => r !== null)
           .map((e) => ({
@@ -346,17 +369,13 @@ export class DriveSubgraph extends Subgraph {
             status: e.status,
           }));
 
-        const transmitter = (await this.reactor.getTransmitter(
+        // return a boolean indicating if the acknowledge was successful
+        return await processAcknowledge(
+          this.reactor,
           ctx.driveId,
-          listenerId,
-        )) as PullResponderTransmitter;
-        const result = await transmitter.processAcknowledge(
-          ctx.driveId ?? "1",
           listenerId,
           validEntries,
         );
-
-        return result;
       },
     },
     System: {},
@@ -369,27 +388,35 @@ export class DriveSubgraph extends Subgraph {
         }: { listenerId: string; since: string | undefined },
         ctx: Context,
       ) => {
+        this.logger.verbose(
+          `strands(drive: ${ctx.driveId}, listenerId: ${listenerId}, since:${since})`,
+        );
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const listener = (await this.reactor.getTransmitter(
+
+        // get the requested strand updates
+        const strands = await processGetStrands(
+          this.reactor,
           ctx.driveId,
           listenerId,
-        )) as PullResponderTransmitter;
-        const strands = await listener.getStrands({ since });
-        return strands.map((e) => ({
-          driveId: e.driveId,
-          documentId: e.documentId,
-          scope: e.scope,
-          branch: e.branch,
-          operations: e.operations.map((o) => ({
-            index: o.index,
-            skip: o.skip,
-            name: o.type,
-            input: JSON.stringify(o.input),
-            hash: o.hash,
-            timestamp: o.timestamp,
-            type: o.type,
-            context: o.context,
-            id: o.id,
+          since,
+        );
+
+        // translate data types
+        return strands.map((update) => ({
+          driveId: update.driveId,
+          documentId: update.documentId,
+          scope: update.scope,
+          branch: update.branch,
+          operations: update.operations.map((op) => ({
+            index: op.index,
+            skip: op.skip,
+            name: op.type,
+            input: JSON.stringify(op.input),
+            hash: op.hash,
+            timestamp: op.timestamp,
+            type: op.type,
+            context: op.context,
+            id: op.id,
           })),
         }));
       },

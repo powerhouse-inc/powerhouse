@@ -1,32 +1,24 @@
 import {
-  DocumentDriveDocument,
-  ListenerFilter,
-} from "document-model-libs/document-drive";
-import { Action, Document, DocumentModel } from "document-model/document";
-import { DocumentDriveServerMixin, RemoteDriveOptions } from "../server";
-import { DocumentModelNotFoundError } from "../server/error";
-import { DriveInfo } from "../utils/graphql";
+  type DocumentDriveDocument,
+  type ListenerFilter,
+} from "#drive-document-model/gen/types";
+import { type DocumentModelNotFoundError } from "#server/error";
 import {
-  ReadDocumentNotFoundError,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
-} from "./errors";
-
-// TODO: move these types to the document-model package
-export type InferDocumentState<D extends Document> =
-  D extends Document<infer S> ? S : never;
-
-export type InferDocumentOperation<D extends Document> =
-  D extends Document<unknown, infer A> ? A : never;
-
-export type InferDocumentLocalState<D extends Document> =
-  D extends Document<unknown, Action, infer L> ? L : never;
-
-export type InferDocumentGenerics<D extends Document> = {
-  state: InferDocumentState<D>;
-  action: InferDocumentOperation<D>;
-  logger: InferDocumentLocalState<D>;
-};
+  type DocumentDriveServerMixin,
+  type RemoteDriveOptions,
+} from "#server/types";
+import { type DriveInfo } from "#utils/graphql";
+import {
+  Action,
+  CustomAction,
+  type DocumentModelModule,
+  type PHDocument,
+} from "document-model";
+import {
+  type ReadDocumentNotFoundError,
+  type ReadDriveNotFoundError,
+  type ReadDriveSlugNotFoundError,
+} from "./errors.js";
 
 export type ReadModeDriveServerMixin =
   DocumentDriveServerMixin<IReadModeDriveServer>;
@@ -61,11 +53,6 @@ export type ReadDrive = DocumentDriveDocument & {
   readContext: ReadDriveContext;
 };
 
-export type IsDocument<D extends Document> =
-  (<G>() => G extends D ? 1 : 2) extends <G>() => G extends Document ? 1 : 2
-    ? true
-    : false;
-
 export interface IReadModeDriveService {
   addReadDrive(url: string, options?: ReadDriveOptions): Promise<void>;
 
@@ -83,20 +70,12 @@ export interface IReadModeDriveService {
 
   fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
 
-  fetchDocument<D extends Document>(
+  fetchDocument<TDocument extends PHDocument>(
     driveId: string,
     documentId: string,
-    documentType: DocumentModel<
-      InferDocumentState<D>,
-      InferDocumentOperation<D>,
-      InferDocumentLocalState<D>
-    >["documentModel"]["id"],
+    documentType: string,
   ): Promise<
-    | Document<
-        InferDocumentState<D>,
-        InferDocumentOperation<D>,
-        InferDocumentLocalState<D>
-      >
+    | TDocument
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError
@@ -105,4 +84,6 @@ export interface IReadModeDriveService {
   deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined>;
 }
 
-export type GetDocumentModel = (documentType: string) => DocumentModel;
+export type GetDocumentModelModule = <TDocument extends PHDocument>(
+  documentType: string,
+) => DocumentModelModule<TDocument>;

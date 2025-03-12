@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { getJwtExpirationPeriod, getJwtSecret } from "./getters";
+import { getJwtExpirationPeriod, getJwtSecret } from "./getters.js";
 
 dotenv.config();
 

@@ -1,17 +1,17 @@
+import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
-import type {
-  Action,
-  ActionSigner,
-  BaseAction,
-  Document,
-  Operation,
-  OperationSignatureContext,
-  OperationSigningHandler,
-  OperationVerificationHandler,
-  Reducer,
-  Signature,
-} from "../types";
-import { generateUUID, hash } from "./node";
+import {
+  type ActionFromDocument,
+  type ActionSigner,
+  type Operation,
+  type OperationFromDocument,
+  type OperationSignatureContext,
+  type OperationSigningHandler,
+  type OperationVerificationHandler,
+  type PHDocument,
+  type Reducer,
+  type Signature,
+} from "../types.js";
 
 export function generateId(method?: "UUIDv4"): string {
   if (method && method.toString() !== "UUIDv4") {
@@ -79,13 +79,13 @@ export async function buildOperationSignature(
   return [...params, `0x${ab2hex(signature)}`];
 }
 
-export async function buildSignedOperation<T, A extends Action, L>(
-  action: A | Operation<A>,
-  reducer: Reducer<T, A, L>,
-  document: Document<T, A, L>,
+export async function buildSignedOperation<TDocument extends PHDocument>(
+  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>,
+  reducer: Reducer<TDocument>,
+  document: TDocument,
   context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,
   signHandler: OperationSigningHandler,
-): Promise<Operation<A | BaseAction>> {
+) {
   const result = reducer(document, action, undefined, {
     reuseHash: true,
     reuseOperationResultingState: true,
@@ -115,14 +115,14 @@ export async function buildSignedOperation<T, A extends Action, L>(
         signatures: [...(context.signer.signatures ?? []), signature],
       },
     },
-  };
+  } as Operation;
 }
 
-export async function verifyOperationSignature<T, A extends Action, L>(
+export async function verifyOperationSignature(
   signature: Signature,
   signer: Omit<ActionSigner, "signatures">,
   verifyHandler: OperationVerificationHandler,
-): Promise<boolean> {
+) {
   const publicKey = signer.app.key;
   const params = signature.slice(0, 4) as [string, string, string, string];
   const signatureBytes = hex2ab(signature[4]);

@@ -3,7 +3,7 @@
 import {
   createContext,
   createRef,
-  RefObject,
+  type RefObject,
   useCallback,
   useContext,
   useEffect,
@@ -12,7 +12,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { type SidebarNode, type FlattenedNode, NodeStatus } from "../../types";
+import { type List } from "react-virtualized";
+import {
+  type FlattenedNode,
+  NodeStatus,
+  type SidebarNode,
+} from "../../types.js";
 import {
   filterStatuses,
   getMaxDepth,
@@ -20,14 +25,13 @@ import {
   getOpenLevels,
   isOpenLevel,
   nodesSearch,
-} from "../../utils";
-import { List } from "react-virtualized";
+} from "../../utils.js";
 import {
   initialSidebarState,
   SidebarActionType,
   sidebarReducer,
   type SidebarState,
-} from "./sidebar-reducer";
+} from "./sidebar-reducer.js";
 
 type SidebarContextType = {
   nodes: SidebarNode[];

@@ -1,7 +1,9 @@
-import { GroupTransactionFormInputs } from "@/rwa/types";
-import { calculateCashBalanceChange } from "@/rwa/utils";
-import { Control, useWatch } from "react-hook-form";
-import { FormattedNumber } from "../base";
+import {
+  calculateCashBalanceChange,
+  type GroupTransactionFormInputs,
+} from "#rwa";
+import { type Control, useWatch } from "react-hook-form";
+import { FormattedNumber } from "../base/index.js";
 
 export function CashBalanceChange(props: {
   readonly control: Control<GroupTransactionFormInputs>;

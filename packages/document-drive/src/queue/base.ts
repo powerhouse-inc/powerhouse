@@ -1,24 +1,22 @@
+import { type DeleteNodeAction } from "#drive-document-model/gen/actions";
+import { type AddFileInput } from "#drive-document-model/gen/types";
+import { logger } from "#utils/logger";
+import { generateUUID, runAsap } from "#utils/misc";
+import { type Action } from "document-model";
+import { createNanoEvents, type Unsubscribe } from "nanoevents";
 import {
-  AddFileInput,
-  DeleteNodeInput,
-} from "document-model-libs/document-drive";
-import { Action } from "document-model/document";
-import { Unsubscribe, createNanoEvents } from "nanoevents";
-import { generateUUID, runAsap } from "../utils";
-import { logger } from "../utils/logger";
-import {
-  IJob,
-  IJobQueue,
-  IQueue,
-  IQueueManager,
-  IServerDelegate,
-  Job,
-  JobId,
-  QueueEvents,
+  type IJob,
+  type IJobQueue,
+  type IQueue,
+  type IQueueManager,
+  type IServerDelegate,
   isOperationJob,
-} from "./types";
+  type Job,
+  type JobId,
+  type QueueEvents,
+} from "./types.js";
 
-export class MemoryQueue<T, R> implements IQueue<T, R> {
+export class MemoryQueue<T> implements IQueue<T> {
   private id: string;
   private blocked = false;
   private deleted = false;
@@ -153,7 +151,7 @@ export class BaseQueueManager implements IQueueManager {
 
     // if it has ADD_FILE operations then adds the job as
     // a dependency to the corresponding document queues
-    const actions = isOperationJob(job) ? job.operations : job.actions;
+    const actions = isOperationJob(job) ? job.operations : (job.actions ?? []);
     const addFileOps = actions.filter((j: Action) => j.type === "ADD_FILE");
     for (const addFileOp of addFileOps) {
       const input = addFileOp.input as AddFileInput;
@@ -164,9 +162,9 @@ export class BaseQueueManager implements IQueueManager {
     // remove document if operations contains delete_node
     const removeFileOps = actions.filter(
       (j: Action) => j.type === "DELETE_NODE",
-    );
+    ) as DeleteNodeAction[];
     for (const removeFileOp of removeFileOps) {
-      const input = removeFileOp.input as DeleteNodeInput;
+      const input = removeFileOp.input;
       const queue = this.getQueue(job.driveId, input.id);
       await queue.setDeleted(true);
     }
@@ -306,8 +304,8 @@ export class BaseQueueManager implements IQueueManager {
   ) {
     this.emitter.emit(event, ...args);
   }
-  on<K extends keyof QueueEvents>(
-    this: this,
+
+  public on<K extends keyof QueueEvents>(
     event: K,
     cb: QueueEvents[K],
   ): Unsubscribe {

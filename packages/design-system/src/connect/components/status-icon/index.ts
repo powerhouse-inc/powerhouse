@@ -1,1 +1,1 @@
-export * from "./sync-status-icon";
+export * from "./sync-status-icon.js";

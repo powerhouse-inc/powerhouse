@@ -1,10 +1,8 @@
-import { Icon } from "@/powerhouse";
-import { tableNames } from "@/rwa/constants";
-import { useEditorContext } from "@/rwa/context";
-import { TableColumn } from "@/rwa/types";
+import { Icon } from "#powerhouse";
+import { tableNames, useEditorContext, type TableColumn } from "#rwa";
 import { useCallback } from "react";
 import { Fragment } from "react/jsx-runtime";
-import { RWATableCell, RWATableRow, TableWithForm } from "../base";
+import { RWATableCell, RWATableRow, TableWithForm } from "../base/index.js";
 
 export function AccountsTable() {
   const { accounts, principalLenderAccountId } = useEditorContext();

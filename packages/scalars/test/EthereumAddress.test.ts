@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/EthereumAddress";
+import { scalar } from "../src/scalars/EthereumAddress.js";
 
 describe("EthereumAddress Scalar", () => {
   it("should serialize a valid Ethereum address", () => {

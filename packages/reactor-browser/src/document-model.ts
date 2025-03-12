@@ -1,10 +1,10 @@
-import * as DocumentModels from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+} from "document-model";
 
-export const baseDocumentModelsMap: Record<string, DocumentModel> = {
-  DocumentModel: DocumentModelLib as DocumentModel,
-  ...(DocumentModels as Record<string, DocumentModel>),
+export const baseDocumentModelsMap: Record<string, DocumentModelModule> = {
+  DocumentModel: documentModelDocumentModelModule as DocumentModelModule,
 };
 
 export const baseDocumentModels = Object.values(baseDocumentModelsMap);

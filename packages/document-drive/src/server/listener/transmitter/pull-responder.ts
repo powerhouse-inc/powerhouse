@@ -1,27 +1,30 @@
-import { ListenerFilter, Trigger } from "document-model-libs/document-drive";
-import { Operation, OperationScope } from "document-model/document";
-import { PULL_DRIVE_INTERVAL } from "../..";
-import { generateUUID } from "../../../utils";
-import { gql, requestGraphql } from "../../../utils/graphql";
-import { logger as defaultLogger } from "../../../utils/logger";
-import { OperationError } from "../../error";
 import {
-  GetStrandsOptions,
-  IBaseDocumentDriveServer,
-  IOperationResult,
-  Listener,
-  ListenerRevision,
-  ListenerRevisionWithError,
-  OperationUpdate,
-  RemoteDriveOptions,
-  StrandUpdate,
-} from "../../types";
-import { ListenerManager } from "../manager";
+  type GetStrandsOptions,
+  type IListenerManager,
+  type IOperationResult,
+  type Listener,
+  type ListenerRevision,
+  type ListenerRevisionWithError,
+  type OperationUpdate,
+  type RemoteDriveOptions,
+  type StrandUpdate,
+} from "#server/types";
+
+import { childLogger } from "#utils/logger";
+import { generateUUID } from "#utils/misc";
+import { PULL_DRIVE_INTERVAL } from "#server/constants";
+import { OperationError } from "#server/error";
+import { requestGraphql } from "#utils/graphql";
+import { gql } from "graphql-request";
 import {
-  ITransmitter,
-  PullResponderTrigger,
-  StrandUpdateSource,
-} from "./types";
+  type ITransmitter,
+  type PullResponderTrigger,
+  type StrandUpdateSource,
+} from "./types.js";
+import {
+  type ListenerFilter,
+  type Trigger,
+} from "#drive-document-model/gen/types";
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
@@ -45,22 +48,33 @@ export interface IPullResponderTransmitter extends ITransmitter {
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]>;
 }
 
-export class PullResponderTransmitter implements IPullResponderTransmitter {
-  private drive: IBaseDocumentDriveServer;
-  private listener: Listener;
-  private manager: ListenerManager;
+const MAX_REVISIONS_PER_ACK = 100;
 
-  constructor(
-    listener: Listener,
-    drive: IBaseDocumentDriveServer,
-    manager: ListenerManager,
-  ) {
+export class PullResponderTransmitter implements IPullResponderTransmitter {
+  private static staticLogger = childLogger([
+    "PullResponderTransmitter",
+    "static",
+  ]);
+
+  private logger = childLogger([
+    "PullResponderTransmitter",
+    Math.floor(Math.random() * 999).toString(),
+  ]);
+
+  private listener: Listener;
+  private manager: IListenerManager;
+
+  constructor(listener: Listener, manager: IListenerManager) {
     this.listener = listener;
-    this.drive = drive;
     this.manager = manager;
+    this.logger.verbose(`constructor(listener: ${listener.listenerId})`);
   }
 
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]> {
+    this.logger.verbose(
+      `getStrands(drive: ${this.listener.driveId}, listener: ${this.listener.listenerId})`,
+    );
+
     return this.manager.getStrands(
       this.listener.driveId,
       this.listener.listenerId,
@@ -78,6 +92,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     revisions: ListenerRevision[],
   ): Promise<boolean> {
+    this.logger.verbose(
+      `processAcknowledge(drive: ${driveId}, listener: ${listenerId})`,
+      revisions,
+    );
+
     const syncUnits = await this.manager.getListenerSyncUnitIds(
       driveId,
       listenerId,
@@ -92,7 +111,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           s.documentId == revision.documentId,
       );
       if (!syncUnit) {
-        defaultLogger.warn("Unknown sync unit was acknowledged", revision);
+        this.logger.warn("Unknown sync unit was acknowledged", revision);
         success = false;
         continue;
       }
@@ -113,6 +132,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     filter: ListenerFilter,
   ): Promise<Listener["listenerId"]> {
+    PullResponderTransmitter.staticLogger.verbose(
+      `registerPullResponder(url: ${url})`,
+      filter,
+    );
+
     // graphql request to switchboard
     const result = await requestGraphql<{
       registerPullResponderListener: {
@@ -148,6 +172,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     options?: GetStrandsOptions, // TODO add support for since
   ): Promise<StrandUpdate[]> {
+    this.staticLogger.verbose(
+      `pullStrands(url: ${url}, listener: ${listenerId})`,
+    );
+
     const result = await requestGraphql<PullStrandsGraphQL>(
       url,
       gql`
@@ -209,32 +237,59 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
   }
 
   static async acknowledgeStrands(
-    driveId: string,
     url: string,
     listenerId: string,
     revisions: ListenerRevision[],
-  ): Promise<boolean> {
-    const result = await requestGraphql<{ acknowledge: boolean }>(
-      url,
-      gql`
-        mutation acknowledge(
-          $listenerId: String!
-          $revisions: [ListenerRevisionInput]
-        ) {
-          acknowledge(listenerId: $listenerId, revisions: $revisions)
-        }
-      `,
-      { listenerId, revisions },
+  ): Promise<void> {
+    this.staticLogger.verbose(
+      `acknowledgeStrands(url: ${url}, listener: ${listenerId})`,
+      revisions,
     );
-    const error = result.errors?.at(0);
-    if (error) {
-      throw error;
+
+    // split revisions into chunks
+    const chunks = [];
+    for (let i = 0; i < revisions.length; i += MAX_REVISIONS_PER_ACK) {
+      chunks.push(revisions.slice(i, i + MAX_REVISIONS_PER_ACK));
     }
 
-    if (result.acknowledge === null) {
+    if (chunks.length > 1) {
+      this.staticLogger.verbose(
+        `Breaking strand acknowledgement into ${chunks.length} chunks...`,
+      );
+    }
+
+    // order does not matter, we can send out requests in parallel
+    const results = await Promise.allSettled(
+      chunks.map(async (chunk) => {
+        const result = await requestGraphql<{ acknowledge: boolean }>(
+          url,
+          gql`
+            mutation acknowledge(
+              $listenerId: String!
+              $revisions: [ListenerRevisionInput]
+            ) {
+              acknowledge(listenerId: $listenerId, revisions: $revisions)
+            }
+          `,
+          { listenerId, revisions: chunk },
+        );
+
+        const error = result.errors?.at(0);
+        if (error) {
+          throw error;
+        }
+
+        if (result.acknowledge === null || !result.acknowledge) {
+          throw new Error("Error acknowledging strands");
+        }
+      }),
+    );
+
+    // throw after we try all chunks
+    const errors = results.filter((result) => result.status === "rejected");
+    if (errors.length > 0) {
       throw new Error("Error acknowledging strands");
     }
-    return result.acknowledge;
   }
 
   private static async executePull(
@@ -248,6 +303,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
   ) {
+    this.staticLogger.verbose(
+      `executePull(driveId: ${driveId}), trigger:`,
+      trigger,
+    );
+
     try {
       const { url, listenerId } = trigger.data;
       const strands = await PullResponderTransmitter.pullStrands(
@@ -257,20 +317,26 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         // since ?
       );
 
+      this.staticLogger.verbose("Pulled strands...");
+
       // if there are no new strands then do nothing
       if (!strands.length) {
         onRevisions?.([]);
+
+        this.staticLogger.verbose("No new strands, skipping...");
         return;
       }
 
       const listenerRevisions: ListenerRevisionWithError[] = [];
 
       for (const strand of strands) {
-        const operations: Operation[] = strand.operations.map((op) => ({
+        const operations = strand.operations.map((op) => ({
           ...op,
           scope: strand.scope,
           branch: strand.branch,
         }));
+
+        this.staticLogger.verbose("Processing strand...");
 
         let error: Error | undefined = undefined;
         try {
@@ -301,20 +367,39 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         });
       }
 
+      this.staticLogger.verbose("Processed strands...");
+
       onRevisions?.(listenerRevisions);
 
-      await PullResponderTransmitter.acknowledgeStrands(
-        driveId,
-        url,
-        listenerId,
-        listenerRevisions.map((revision) => {
-          const { error, ...rest } = revision;
-          return rest;
-        }),
-      )
-        .then((result) => onAcknowledge?.(result))
-        .catch((error) => defaultLogger.error("ACK error", error));
+      this.staticLogger.verbose("Acknowledging strands...");
+
+      let success = false;
+      try {
+        await PullResponderTransmitter.acknowledgeStrands(
+          url,
+          listenerId,
+          listenerRevisions.map((revision) => {
+            const { error, ...rest } = revision;
+            return rest;
+          }),
+        );
+
+        success = true;
+      } catch (error) {
+        this.staticLogger.error("ACK error", error);
+      }
+
+      if (success) {
+        this.staticLogger.verbose("Acknowledged strands successfully.");
+      } else {
+        this.staticLogger.error("Failed to acknowledge strands");
+      }
+
+      // let this throw separately
+      onAcknowledge?.(success);
     } catch (error) {
+      this.staticLogger.error("Pull error", error);
+
       onError(error as Error);
     }
   }
@@ -330,6 +415,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
   ): CancelPullLoop {
+    this.staticLogger.verbose(
+      `setupPull(drive: ${driveId}), trigger:`,
+      trigger,
+    );
+
     const { interval } = trigger.data;
     let loopInterval = PULL_DRIVE_INTERVAL;
     if (interval) {
@@ -348,6 +438,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
     const executeLoop = async () => {
       while (!isCancelled) {
+        this.staticLogger.verbose("Execute loop...");
         await this.executePull(
           driveId,
           trigger,
@@ -357,12 +448,15 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           onAcknowledge,
         );
         await new Promise((resolve) => {
+          this.staticLogger.verbose(
+            `Scheduling next pull in ${loopInterval} ms`,
+          );
           timeout = setTimeout(resolve, loopInterval) as unknown as number;
         });
       }
     };
 
-    executeLoop().catch(defaultLogger.error);
+    executeLoop().catch(this.staticLogger.error);
 
     return () => {
       isCancelled = true;
@@ -377,6 +471,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     options: Pick<RemoteDriveOptions, "pullInterval" | "pullFilter">,
   ): Promise<PullResponderTrigger> {
+    this.staticLogger.verbose(
+      `createPullResponderTrigger(drive: ${driveId}, url: ${url})`,
+    );
+
     const { pullFilter, pullInterval } = options;
     const listenerId = await PullResponderTransmitter.registerPullResponder(
       driveId,

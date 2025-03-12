@@ -1,70 +1,32 @@
 {
   "name": "document-model",
-  "version": "2.18.0",
+  "version": "2.24.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
     "dist"
   ],
-  "types": "dist/node/index.d.ts",
-  "main": "dist/node/cjs/index.js",
-  "module": "dist/node/es/index.js",
-  "browser": "dist/browser/es/index.js",
   "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": "./dist/index.js",
+  "imports": {
+    "#*": "./dist/src/*",
+    "#utils/env": {
+      "node": "./dist/src/document/utils/node.js",
+      "default": "./dist/src/document/utils/browser.js"
+    }
+  },
   "scripts": {
-    "check-types": "tsc --build",
-    "postlint": "npm run check-types",
+    "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "build": "NODE_ENV=production npm run build:browser && npm run build:node",
-    "build:watch": "NODE_ENV=production npm run build:browser -- --watch && npm run build:node -- --watch",
-    "build:browser": "vite build --mode browser",
-    "build:node": "vite build --mode node",
+    "build": "npm run build:browser && npm run build:node",
+    "build:watch": "npm run build:browser -- --watch && npm run build:node -- --watch",
+    "build:browser": "tsc --build",
+    "build:node": "tsc --build",
     "test": "vitest run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
-  },
-  "exports": {
-    ".": {
-      "node": {
-        "types": "./dist/node/index.d.ts",
-        "require": "./dist/node/cjs/index.js",
-        "import": "./dist/node/es/index.js"
-      },
-      "types": "./dist/browser/index.d.ts",
-      "require": "./dist/browser/cjs/index.js",
-      "import": "./dist/browser/es/index.js"
-    },
-    "./document": {
-      "node": {
-        "types": "./dist/node/document.d.ts",
-        "require": "./dist/node/cjs/document.js",
-        "import": "./dist/node/es/document.js"
-      },
-      "types": "./dist/browser/document.d.ts",
-      "require": "./dist/browser/cjs/document.js",
-      "import": "./dist/browser/es/document.js"
-    },
-    "./document-model": {
-      "node": {
-        "types": "./dist/node/document-model.d.ts",
-        "require": "./dist/node/cjs/document-model.js",
-        "import": "./dist/node/es/document-model.js"
-      },
-      "types": "./dist/browser/document-model.d.ts",
-      "require": "./dist/browser/cjs/document-model.js",
-      "import": "./dist/browser/es/document-model.js"
-    },
-    "./utils": {
-      "node": {
-        "types": "./dist/node/utils.d.ts",
-        "import": "./dist/node/es/utils.js",
-        "require": "./dist/node/cjs/utils.js"
-      },
-      "types": "./dist/browser/utils.d.ts",
-      "import": "./dist/browser/es/utils.js",
-      "require": "./dist/browser/cjs/utils.js"
-    }
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",
@@ -84,6 +46,6 @@
     "mutative": "^1.0.5",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
-    "zod": "^3.22.4"
+    "zod": "^3.24.2"
   }
 }

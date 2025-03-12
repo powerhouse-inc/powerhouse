@@ -1,13 +1,14 @@
+import { type ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
 import { blue, green, red } from "colorette";
-import { Command } from "commander";
-import { ChildProcessWithoutNullStreams, fork } from "node:child_process";
+import { type Command } from "commander";
+import { type ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CommandActionType } from "../types.js";
-import { type ConnectOptions } from "./connect.js";
+import { type CommandActionType } from "../types.js";
+import { getConfig } from "../utils.js";
 import {
   DefaultSwitchboardOptions,
-  SwitchboardOptions,
+  type SwitchboardOptions,
 } from "./switchboard.js";
 
 const __dirname =
@@ -53,7 +54,7 @@ function spawnLocalSwitchboard(options?: SwitchboardOptions) {
 }
 
 async function spawnConnect(
-  options?: ConnectOptions,
+  options?: ConnectStudioOptions,
   localReactorUrl?: string,
 ) {
   const child = fork(
@@ -103,17 +104,10 @@ export const dev: CommandActionType<
   watch,
   switchboardPort = DefaultSwitchboardOptions.port,
   configFile,
-  httpsKeyFile,
-  httpsCertFile,
 }) => {
   try {
-    const https =
-      httpsKeyFile && httpsCertFile
-        ? {
-            keyPath: httpsKeyFile,
-            certPath: httpsCertFile,
-          }
-        : undefined;
+    const baseConfig = getConfig(configFile);
+    const https = baseConfig.reactor?.https;
     const { driveUrl } = await spawnLocalSwitchboard({
       generate,
       port: switchboardPort,

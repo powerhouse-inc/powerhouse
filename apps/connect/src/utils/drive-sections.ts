@@ -1,3 +1,4 @@
+import connectConfig from '#connect-config';
 import {
     CLOUD,
     debugNodeOptions,
@@ -10,10 +11,15 @@ import {
     FOLDER,
     LOCAL,
     PUBLIC,
-    SharingType,
+    type SharingType,
 } from '@powerhousedao/design-system';
-import connectConfig from 'connect-config';
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
+
+type AllNodeOptions =
+    | (typeof debugNodeOptions)[number]
+    | (typeof defaultDriveOptions)[number]
+    | (typeof defaultFileOptions)[number]
+    | (typeof defaultFolderOptions)[number];
 
 // Enables debug options for the drive
 const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
@@ -32,7 +38,7 @@ const getSectionConfig = (sharingType: SharingType) => {
 };
 
 export function getDriveNodeOptions(sharingType: SharingType) {
-    const options = [...defaultDriveOptions];
+    const options: AllNodeOptions[] = [...defaultDriveOptions];
 
     if (connectConfig.drives.sections[sharingType].allowDelete) {
         options.push(DELETE);
@@ -46,7 +52,7 @@ export function getDriveNodeOptions(sharingType: SharingType) {
 }
 
 export function getFileNodeOptions() {
-    const options = [...defaultFileOptions];
+    const options: AllNodeOptions[] = [...defaultFileOptions];
 
     if (connectDebug) {
         options.push(...debugNodeOptions);
@@ -56,7 +62,7 @@ export function getFileNodeOptions() {
 }
 
 export function getFolderNodeOptions() {
-    const options = [...defaultFolderOptions];
+    const options: AllNodeOptions[] = [...defaultFolderOptions];
 
     if (connectDebug) {
         options.push(...debugNodeOptions);

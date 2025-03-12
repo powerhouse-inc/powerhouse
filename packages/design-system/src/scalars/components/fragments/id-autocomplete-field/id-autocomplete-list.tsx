@@ -1,14 +1,15 @@
-import React, { useEffect } from "react";
+import { useCommandState } from "cmdk";
+import type React from "react";
+import { useEffect } from "react";
+import { cn } from "../../../lib/utils.js";
 import {
-  CommandList,
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from "@/scalars/components/fragments/command";
-import { useCommandState } from "cmdk";
-import { cn } from "@/scalars/lib/utils";
-import { IdAutocompleteListOption } from "./id-autocomplete-list-option";
-import type { IdAutocompleteProps, IdAutocompleteOption } from "./types";
+  CommandList,
+} from "../command/index.js";
+import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
+import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";
 
 interface IdAutocompleteListProps {
   variant: IdAutocompleteProps["variant"];

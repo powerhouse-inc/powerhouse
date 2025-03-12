@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { prepareOperations } from "../../src/utils/document-helpers";
-import { buildOperations } from "./utils";
+import { prepareOperations } from "../../../document-model/src/document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("prepareOperations", () => {
   it("should return all the operations when they are valid", () => {

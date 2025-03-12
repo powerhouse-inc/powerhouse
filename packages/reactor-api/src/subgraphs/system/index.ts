@@ -1,9 +1,8 @@
+import { Subgraph } from "#subgraphs/base/index.js";
 import { DriveInput } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import { Subgraph } from "../base";
-import { ADMIN_USERS } from "./env";
-import { SystemContext } from "./types";
+import { SystemContext } from "./types.js";
 
 export class SystemSubgraph extends Subgraph {
   name = "system";
@@ -17,6 +16,7 @@ export class SystemSubgraph extends Subgraph {
     type Mutation {
       addDrive(
         global: DocumentDriveStateInput!
+        preferredEditor: String
       ): DocumentDrive_DocumentDriveState
       deleteDrive(id: ID!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
@@ -40,7 +40,7 @@ export class SystemSubgraph extends Subgraph {
     Mutation: {
       addDrive: async (
         parent: unknown,
-        args: DriveInput,
+        args: DriveInput & { preferredEditor?: string },
         ctx: SystemContext,
       ) => {
         try {
@@ -48,7 +48,10 @@ export class SystemSubgraph extends Subgraph {
           if (!isAdmin) {
             throw new GraphQLError("Unauthorized");
           }
-          const drive = await this.reactor.addDrive(args);
+          const drive = await this.reactor.addDrive(
+            { global: args.global, local: args.local },
+            args.preferredEditor,
+          );
           return drive.state.global;
         } catch (e) {
           console.error(e);
@@ -62,10 +65,12 @@ export class SystemSubgraph extends Subgraph {
     await super.onSetup();
     this.subgraphManager.setAdditionalContextFields({
       isAdmin: (ctx: SystemContext) => {
+        const adminUsers =
+          process.env.ADMIN_USERS?.split(",").map((user) => user.trim()) ?? [];
         return (
-          ADMIN_USERS.length === 0 ||
+          adminUsers.length === 0 ||
           (ctx.session.address &&
-            ADMIN_USERS.includes(ctx.session.address.toLocaleLowerCase()))
+            adminUsers.includes(ctx.session.address.toLocaleLowerCase()))
         );
       },
     });

@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { IdAutocompleteField } from "./id-autocomplete-field";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../../lib/testing.js";
+import { IdAutocompleteField } from "./id-autocomplete-field.js";
 
 describe("IdAutocompleteField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();

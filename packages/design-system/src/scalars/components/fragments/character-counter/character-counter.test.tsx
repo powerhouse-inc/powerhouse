@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CharacterCounter } from "./character-counter";
+import { CharacterCounter } from "./character-counter.js";
 
 describe("CharacterCounter", () => {
   it("should match snapshot", () => {

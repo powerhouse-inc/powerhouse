@@ -1,12 +1,14 @@
-import InMemoryCache from 'document-drive/cache/memory';
-import { BaseQueueManager } from 'document-drive/queue/base';
 import {
-    DefaultRemoteDriveInput,
-    DocumentDriveServer,
-    DocumentDriveServerOptions,
-} from 'document-drive/server';
+    type BaseDocumentDriveServer,
+    BaseQueueManager,
+    type DefaultRemoteDriveInput,
+    type DocumentDriveServerOptions,
+    InMemoryCache,
+    type IReadModeDriveServer,
+    ReactorBuilder,
+} from 'document-drive';
 import { BrowserStorage } from 'document-drive/storage/browser';
-import { DocumentModel } from 'document-model/document';
+import { type DocumentModelModule } from 'document-model';
 
 const DEFAULT_DRIVES_URL =
     import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
@@ -44,7 +46,6 @@ export const getReactorDefaultDrivesConfig = (): Pick<
                     },
                 ],
                 triggers: [],
-                pullInterval: 3000,
             },
         }),
     );
@@ -64,14 +65,13 @@ export const getReactorDefaultDrivesConfig = (): Pick<
 };
 
 export function createBrowserDocumentDriveServer(
-    documentModels: DocumentModel[],
+    documentModels: DocumentModelModule[],
     routerBasename: string,
-) {
-    return new DocumentDriveServer(
-        documentModels,
-        new BrowserStorage(routerBasename),
-        new InMemoryCache(),
-        new BaseQueueManager(1, 10),
-        { ...getReactorDefaultDrivesConfig() },
-    );
+): BaseDocumentDriveServer & IReadModeDriveServer {
+    return new ReactorBuilder(documentModels)
+        .withStorage(new BrowserStorage(routerBasename))
+        .withCache(new InMemoryCache())
+        .withQueueManager(new BaseQueueManager(1, 10))
+        .withOptions({ ...getReactorDefaultDrivesConfig() })
+        .build();
 }

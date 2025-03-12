@@ -1,5 +1,5 @@
-import type { Operation } from "document-model/document";
-import type { ErrorStatus } from "./types";
+import type { Operation } from "document-model";
+import { type ErrorStatus } from "./types.js";
 
 export class DocumentModelNotFoundError extends Error {
   constructor(

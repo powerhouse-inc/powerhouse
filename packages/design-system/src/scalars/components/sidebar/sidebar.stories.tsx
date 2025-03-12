@@ -1,11 +1,10 @@
-/* eslint-disable react-hooks/rules-of-hooks */
+import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Sidebar } from "./sidebar";
-import { Icon } from "@/powerhouse";
-import { SidebarProvider } from "./subcomponents/sidebar-provider";
-import mockedTree from "./mocked_tree.json";
 import { useCallback, useState } from "react";
-import { SidebarNode } from "./types";
+import mockedTree from "./mocked_tree.json" with { type: "json" };
+import { Sidebar } from "./sidebar.js";
+import { SidebarProvider } from "./subcomponents/sidebar-provider/index.js";
+import { type SidebarNode } from "./types.js";
 
 /**
  * The `Sidebar` component can be used within a page layout to provide a sidebar navigation.

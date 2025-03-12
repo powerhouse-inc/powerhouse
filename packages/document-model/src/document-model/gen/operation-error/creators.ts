@@ -1,23 +1,22 @@
-import { createAction } from "../../../document/utils";
-
+import { createAction } from "../../../document/utils/base.js";
 import {
   AddOperationErrorInput,
-  SetOperationErrorCodeInput,
-  SetOperationErrorNameInput,
-  SetOperationErrorDescriptionInput,
-  SetOperationErrorTemplateInput,
   DeleteOperationErrorInput,
   ReorderOperationErrorsInput,
-} from "../types";
+  SetOperationErrorCodeInput,
+  SetOperationErrorDescriptionInput,
+  SetOperationErrorNameInput,
+  SetOperationErrorTemplateInput,
+} from "../schema/types.js";
 import {
   AddOperationErrorAction,
-  SetOperationErrorCodeAction,
-  SetOperationErrorNameAction,
-  SetOperationErrorDescriptionAction,
-  SetOperationErrorTemplateAction,
   DeleteOperationErrorAction,
   ReorderOperationErrorsAction,
-} from "./actions";
+  SetOperationErrorCodeAction,
+  SetOperationErrorDescriptionAction,
+  SetOperationErrorNameAction,
+  SetOperationErrorTemplateAction,
+} from "./actions.js";
 
 export const addOperationError = (input: AddOperationErrorInput) =>
   createAction<AddOperationErrorAction>("ADD_OPERATION_ERROR", { ...input });

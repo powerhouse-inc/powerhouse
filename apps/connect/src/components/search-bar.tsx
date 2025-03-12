@@ -1,6 +1,6 @@
 import {
     ConnectSearchBar,
-    ConnectSearchBarProps,
+    type ConnectSearchBarProps,
     Icon,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';

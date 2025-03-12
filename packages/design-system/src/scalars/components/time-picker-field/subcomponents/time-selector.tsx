@@ -1,7 +1,6 @@
 import * as React from "react";
-import { cn } from "@/scalars/lib/utils";
-import { Button } from "../../fragments/button";
-import { useEffect } from "react";
+import { cn } from "../../../lib/utils.js";
+import { Button } from "../../fragments/button/index.js";
 
 interface TimeSelectorProps {
   options: string[];
@@ -17,7 +16,7 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
   const selectedRef = React.useRef<HTMLButtonElement>(null);
 
   // Scroll to the selected value
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectedRef.current) {
       selectedRef.current.scrollIntoView({
         behavior: "smooth",

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.30.14",
+  "version": "0.37.1-dev.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -8,14 +8,14 @@
     "access": "public"
   },
   "bin": {
-    "ph-cli": "dist/cli.cjs"
+    "ph-cli": "dist/src/cli.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsx src/cli.ts",
+    "build": "tsc --build",
+    "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
@@ -24,27 +24,18 @@
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "@powerhousedao/analytics-engine-core": "^0.3.2",
-    "@powerhousedao/analytics-engine-graphql": "^0.2.2",
-    "@powerhousedao/analytics-engine-pg": "^0.4.0",
-    "document-drive": "workspace:*",
-    "graphql-tag": "^2.12.6",
-    "knex": "^3.1.0",
-    "luxon": "^3.5.0"
+    "concurrently": "^9.1.2",
+    "nodemon": "^3.1.9"
   },
   "dependencies": {
+    "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/connect": "1.0.0-dev.195",
-    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
-    "document-model-libs": "workspace:*",
-    "graphql": "^16.9.0",
-    "pm2": "^5.4.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "document-model": "workspace:*",
+    "pm2": "^5.4.3"
   }
 }

@@ -1,6 +1,6 @@
-import { mockNodeOptions, mockUiFolderNode } from "@/connect/utils/mocks";
-import { Meta, StoryObj } from "@storybook/react";
-import { FolderItem } from "./folder-item";
+import { mockUiFolderNode } from "#connect";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { FolderItem } from "./folder-item.js";
 
 const meta: Meta<typeof FolderItem> = {
   title: "Connect/Components/FolderItem",
@@ -13,10 +13,8 @@ type Story = StoryObj<typeof meta>;
 
 export const ReadMode: Story = {
   args: {
-    uiNode: mockUiFolderNode,
-    isRemoteDrive: true,
+    uiNode: { ...mockUiFolderNode, syncStatus: undefined },
     isAllowedToCreateDocuments: true,
-    nodeOptions: mockNodeOptions,
     onMoveNode: () => Promise.resolve(),
     onAddFile: () => Promise.resolve(),
     onCopyNode: () => Promise.resolve(),
@@ -41,6 +39,7 @@ export const NotAllowedToCreateDocuments: Story = {
   ...ReadMode,
   args: {
     ...ReadMode.args,
+    uiNode: mockUiFolderNode,
     isAllowedToCreateDocuments: false,
   },
 };

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import EnumFieldExample from "./enum-field-example";
+import EnumFieldExample from "./enum-field-example.js";
 
 const meta = {
   title: "Document Engineering/Docs/Examples/Enum Field Example",

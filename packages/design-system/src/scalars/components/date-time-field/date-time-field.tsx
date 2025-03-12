@@ -1,16 +1,16 @@
 import React from "react";
-import type { ErrorHandling, FieldCommonProps } from "../types";
-import type { DateFieldValue } from "../date-picker-field/types";
 import {
   DatePickerField,
   type DatePickerFieldProps,
-} from "../date-picker-field/date-picker-field";
+} from "../date-picker-field/date-picker-field.js";
+import type { DateFieldValue } from "../date-picker-field/types.js";
 import {
   TimePickerField,
   type TimePickerFieldProps,
-} from "../time-picker-field";
-import type { TimeFieldValue } from "../time-picker-field/type";
-import { DateTimeField as DateTimeRaw } from "./date-time";
+} from "../time-picker-field/index.js";
+import type { TimeFieldValue } from "../time-picker-field/type.js";
+import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import { DateTimeField as DateTimeRaw } from "./date-time.js";
 
 type CommonOmittedProps =
   | "name"

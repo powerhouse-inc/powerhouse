@@ -1,7 +1,7 @@
-import { FILE, NodeProps, UI_NODE, UiNode } from "@/connect";
-import { DragEvent, useCallback, useMemo, useState } from "react";
+import { FILE, type NodeProps, UI_NODE, type UiNode } from "#connect";
+import { type DragEvent, useCallback, useMemo, useState } from "react";
 
-type Props = NodeProps & {
+type Props = Pick<NodeProps, "onAddFile" | "onCopyNode" | "onMoveNode"> & {
   uiNode: UiNode | null;
 };
 export function useDrop(props: Props) {
@@ -29,7 +29,9 @@ export function useDrop(props: Props) {
       );
       if (droppedFiles.length) {
         for (const file of droppedFiles) {
-          await onAddFile(file, uiNode);
+          if (file) {
+            await onAddFile(file, uiNode);
+          }
         }
       } else {
         const altOrOptionKeyPressed = event.getModifierState("Alt");

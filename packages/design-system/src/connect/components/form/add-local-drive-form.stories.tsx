@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { AddLocalDriveForm } from "./add-local-drive-form";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { AddLocalDriveForm } from "./add-local-drive-form.js";
 
 const meta = {
   title: "Connect/Components/Create Local Drive Form",
@@ -16,6 +16,23 @@ const Template: Story = {
       console.log(data);
     },
     onCancel: () => {},
+    appOptions: [
+      {
+        id: "powerhouse/common",
+        name: "Generic Drive Explorer",
+        driveEditor: "GenericDriveExplorer",
+      },
+      {
+        id: "powerhouse/invoice/contributor",
+        name: "Contributor App",
+        driveEditor: "ContributorDrive",
+      },
+      {
+        id: "powerhouse/invoice/administrator",
+        name: "OH Administrator App",
+        driveEditor: "AdministratorDrive",
+      },
+    ],
   },
   decorators: [
     (Story) => (

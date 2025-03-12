@@ -1,7 +1,7 @@
 import {
-  ConfirmationModalProps,
+  type ConfirmationModalProps,
   ConnectConfirmationModal,
-} from "./confirmation-modal";
+} from "./confirmation-modal.js";
 
 export interface ConnectDeleteItemModalProps
   extends Omit<ConfirmationModalProps, "onContinue" | "continueLabel"> {

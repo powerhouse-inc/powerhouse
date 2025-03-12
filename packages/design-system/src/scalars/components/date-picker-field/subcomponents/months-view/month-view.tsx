@@ -1,6 +1,6 @@
-import { Button } from "../../../fragments/button/button";
-import { cn } from "@/scalars/lib/utils";
-import { MONTHS } from "../utils";
+import { cn } from "#scalars";
+import { Button } from "../../../fragments/button/button.js";
+import { MONTHS } from "../utils.js";
 
 interface MonthGridProps {
   actualMonth: string;

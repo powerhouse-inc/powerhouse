@@ -4,7 +4,7 @@ unless_exists: true
 ---
 import Editor from './editor';
 import { createDocumentStory } from 'document-model-libs/utils';
-<% if(!documentTypes.length){ %>import { baseReducer, utils } from 'document-model/document';<% } %>
+<% if(!documentTypes.length){ %>import { baseReducer, utils } from 'document-model';<% } %>
 <% documentTypes.forEach(type => { _%>
 import * as <%= documentTypesMap[type].name %>Module from "<%= documentTypesMap[type].importPath %>";
 %><% }); _%>

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ConnectConfirmationModal } from "./confirmation-modal";
+import { ConnectConfirmationModal } from "./confirmation-modal.js";
 
 const meta: Meta<typeof ConnectConfirmationModal> = {
   title: "Connect/Components/Modal/ConnectConfirmationModal",

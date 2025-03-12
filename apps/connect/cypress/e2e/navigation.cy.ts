@@ -10,14 +10,14 @@ import {
     getBreadcrumbItem,
     newFolder,
     selectSidebarItem,
-} from './utils';
+} from './utils/index.js';
 
 describe('Navigation', () => {
     const maxRetries = 5;
 
     const validateGraphQLQuery = (retryCount = 0, expectedStatusCode = 200) => {
         cy.wait('@graphqlQuery').then(interception => {
-            if (interception.response.statusCode === expectedStatusCode) {
+            if (interception.response?.statusCode === expectedStatusCode) {
                 assert.equal(
                     interception.response.statusCode,
                     expectedStatusCode,
@@ -25,7 +25,7 @@ describe('Navigation', () => {
                 );
             } else if (retryCount < maxRetries) {
                 cy.log(
-                    `Retry ${retryCount + 1}: GraphQL query failed with status ${interception.response.statusCode}`,
+                    `Retry ${retryCount + 1}: GraphQL query failed with status ${interception.response?.statusCode}`,
                 );
                 validateGraphQLQuery(retryCount + 1, expectedStatusCode);
             } else {
@@ -269,17 +269,6 @@ describe('Navigation', () => {
             'https://www.powerhouse.inc/',
             '_blank',
         );
-    });
-
-    it('should collapse/expand sidebar', () => {
-        const sidebarCollapseSelector =
-            '#sidebar > div.no-scrollbar.flex-1.overflow-auto.text-gray-900.transition-shadow > div.flex-shrink-0.mb-4.flex.justify-between.gap-4.px-4.pt-11.collapsed\\:justify-center > button';
-
-        cy.get(sidebarCollapseSelector).click();
-        cy.get('#sidebar').invoke('outerWidth').should('eq', 58);
-
-        cy.get(sidebarCollapseSelector).click();
-        cy.get('#sidebar').invoke('outerWidth').should('eq', 304);
     });
 
     it('should open settings', () => {

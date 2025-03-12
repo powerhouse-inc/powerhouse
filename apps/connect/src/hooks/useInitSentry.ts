@@ -1,5 +1,5 @@
+import config from '#connect-config';
 import * as Sentry from '@sentry/react';
-import config from 'connect-config';
 import React, { useEffect } from 'react';
 import {
     createRoutesFromChildren,
@@ -7,7 +7,7 @@ import {
     useLocation,
     useNavigationType,
 } from 'react-router-dom';
-import { useAcceptedCookies } from './useAcceptedCookies';
+import { useAcceptedCookies } from './useAcceptedCookies/index.js';
 
 export function useInitSenty() {
     const [acceptedCookies] = useAcceptedCookies();

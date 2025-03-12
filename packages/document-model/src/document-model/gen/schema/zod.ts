@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OperationScope } from "../../../document/types.js";
 import {
   AddChangeLogItemInput,
   AddModuleInput,
@@ -51,8 +52,7 @@ import {
   UpdateChangeLogItemInput,
   UpdateOperationExampleInput,
   UpdateStateExampleInput,
-} from ".";
-import { OperationScope } from "../../../document";
+} from "./types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;

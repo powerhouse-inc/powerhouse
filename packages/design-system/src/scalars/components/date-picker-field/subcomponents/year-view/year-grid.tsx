@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import YearButton from "./year-button";
+import YearButton from "./year-button.js";
 
 interface YearRange {
   from: number;

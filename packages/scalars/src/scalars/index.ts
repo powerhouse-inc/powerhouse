@@ -1,45 +1,45 @@
 // namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
-import * as AmountTokens from "./AmountTokens";
-import * as EthereumAddress from "./EthereumAddress";
-import * as AmountPercentage from "./AmountPercentage";
-import * as EmailAddress from "./EmailAddress";
-import * as DateScalar from "./Date";
-import * as DateTime from "./DateTime";
-import * as URLScalar from "./URL";
-import * as AmountMoney from "./AmountMoney";
-import * as OLabel from "./OLabel";
-import * as Currency from "./Currency";
-import * as PHID from "./PHID";
-import * as OID from "./OID";
+import * as AmountMoney from "./AmountMoney.js";
+import * as AmountPercentage from "./AmountPercentage.js";
+import * as AmountTokens from "./AmountTokens.js";
+import * as Currency from "./Currency.js";
+import * as DateScalar from "./Date.js";
+import * as DateTime from "./DateTime.js";
+import * as EmailAddress from "./EmailAddress.js";
+import * as EthereumAddress from "./EthereumAddress.js";
+import * as OID from "./OID.js";
+import * as OLabel from "./OLabel.js";
+import * as PHID from "./PHID.js";
+import * as URLScalar from "./URL.js";
 
 // export types -- DO NOT REMOVE OR EDIT THIS COMMENT
-export type { ScalarType as AmountTokensScalarType } from "./AmountTokens";
-export type { ScalarType as EthereumAddressScalarType } from "./EthereumAddress";
-export type { ScalarType as AmountPercentageScalarType } from "./AmountPercentage";
-export type { ScalarType as EmailAddressScalarType } from "./EmailAddress";
-export type { ScalarType as DateScalarType } from "./Date";
-export type { ScalarType as DateTimeScalarType } from "./DateTime";
-export type { ScalarType as URLScalarType } from "./URL";
-export type { ScalarType as AmountMoneyScalarType } from "./AmountMoney";
-export type { ScalarType as OLabelScalarType } from "./OLabel";
-export type { ScalarType as CurrencyScalarType } from "./Currency";
-export type { ScalarType as PHIDScalarType } from "./PHID";
-export type { ScalarType as OIDScalarType } from "./OID";
+export type { ScalarType as AmountMoneyScalarType } from "./AmountMoney.js";
+export type { ScalarType as AmountPercentageScalarType } from "./AmountPercentage.js";
+export type { ScalarType as AmountTokensScalarType } from "./AmountTokens.js";
+export type { ScalarType as CurrencyScalarType } from "./Currency.js";
+export type { ScalarType as DateScalarType } from "./Date.js";
+export type { ScalarType as DateTimeScalarType } from "./DateTime.js";
+export type { ScalarType as EmailAddressScalarType } from "./EmailAddress.js";
+export type { ScalarType as EthereumAddressScalarType } from "./EthereumAddress.js";
+export type { ScalarType as OIDScalarType } from "./OID.js";
+export type { ScalarType as OLabelScalarType } from "./OLabel.js";
+export type { ScalarType as PHIDScalarType } from "./PHID.js";
+export type { ScalarType as URLScalarType } from "./URL.js";
 
 export {
+  AmountMoney,
+  AmountPercentage,
   // export object -- DO NOT REMOVE OR EDIT THIS COMMENT
   AmountTokens,
-  EthereumAddress,
-  AmountPercentage,
-  EmailAddress,
+  Currency,
   DateScalar,
   DateTime,
-  URLScalar,
-  AmountMoney,
-  OLabel,
-  Currency,
-  PHID,
+  EmailAddress,
+  EthereumAddress,
   OID,
+  OLabel,
+  PHID,
+  URLScalar,
 };
 
 export const resolvers = {

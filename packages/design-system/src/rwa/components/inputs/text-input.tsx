@@ -1,4 +1,8 @@
-import { ComponentPropsWithRef, ForwardedRef, forwardRef } from "react";
+import {
+  type ComponentPropsWithRef,
+  type ForwardedRef,
+  forwardRef,
+} from "react";
 import { twMerge } from "tailwind-merge";
 
 type Props = Omit<ComponentPropsWithRef<"input">, "type"> & {

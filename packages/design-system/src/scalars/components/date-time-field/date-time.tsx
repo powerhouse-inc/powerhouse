@@ -1,18 +1,19 @@
-import React, { forwardRef } from "react";
-import { DateFieldValue } from "../date-picker-field/types";
-import { cn } from "@/scalars/lib";
+import { cn } from "#scalars";
+import type React from "react";
+import { forwardRef } from "react";
+import { type DateFieldValue } from "../date-picker-field/types.js";
 import {
+  FormDescription,
   FormGroup,
   FormLabel,
-  FormDescription,
   FormMessageList,
-  withFieldValidation,
-} from "../fragments";
-import { BasePickerField } from "./base-picker-field";
-import { FieldCommonProps } from "../types";
-import { useDateTime } from "./use-date-time";
-import DateTimePickerContent from "./date-time-picker-contet";
-import { dateTimeFieldValidations } from "./date-time-field-validations";
+} from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import { type FieldCommonProps } from "../types.js";
+import { BasePickerField } from "./base-picker-field.js";
+import { dateTimeFieldValidations } from "./date-time-field-validations.js";
+import DateTimePickerContent from "./date-time-picker-contet.js";
+import { useDateTime } from "./use-date-time.js";
 
 interface DateTimePickerProps extends FieldCommonProps<DateFieldValue> {
   name: string;
@@ -159,7 +160,7 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
           data-cast={`DateTimeString:${dateFormat}`}
           className={cn(
             // Add custom styles when the time is open
-            isCalendarView ? "pt-3 px-4 pb-6" : "pt-3 pr-4 pb-4 pl-4",
+            isCalendarView ? "px-4 pb-6 pt-3" : "pb-4 pl-4 pr-4 pt-3",
           )}
         >
           <DateTimePickerContent

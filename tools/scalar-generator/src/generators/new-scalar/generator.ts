@@ -1,6 +1,6 @@
 import { formatFiles, generateFiles, Tree } from "@nx/devkit";
-import * as path from "path";
-import { NewScalarGeneratorSchema } from "./schema";
+import { NewScalarGeneratorSchema } from "./schema.js";
+import { join } from "path";
 
 const namespaceImport =
   "// namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT";
@@ -25,14 +25,14 @@ export async function newScalarGenerator(
 ) {
   const projectRoot = `packages/scalars`;
 
-  generateFiles(tree, path.join(__dirname, "files"), projectRoot, options);
+  generateFiles(tree, join(__dirname, "files"), projectRoot, options);
 
   const filePath = `packages/scalars/src/scalars/index.ts`;
   const contents = tree.read(filePath)?.toString() || "";
 
   let newContents = contents.replace(
     namespaceImport,
-    `${namespaceImport}\nimport * as ${options.name} from './${options.name}';`,
+    `${namespaceImport}\nimport * as ${options.name} from './${options.name}.js';`,
   );
 
   newContents = newContents.replace(
@@ -52,7 +52,7 @@ export async function newScalarGenerator(
 
   newContents = newContents.replace(
     exportScalarType,
-    `${exportScalarType}\nexport type { ScalarType as ${options.name}ScalarType } from './${options.name}';`,
+    `${exportScalarType}\nexport type { ScalarType as ${options.name}ScalarType } from './${options.name}.js';`,
   );
 
   newContents = newContents.replace(

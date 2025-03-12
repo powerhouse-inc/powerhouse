@@ -1,33 +1,26 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { type Prisma, type PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "document-model-libs/document-drive";
 import type {
-  Action,
   AttachmentInput,
-  BaseAction,
-  Document,
+  BaseStateFromDocument,
   DocumentHeader,
-  DocumentOperations,
-  ExtendedState,
+  ExtendedStateFromDocument,
   FileRegistry,
   Operation,
+  OperationFromDocument,
   OperationScope,
-  State,
-} from "document-model/document";
-import { IBackOffOptions, backOff } from "exponential-backoff";
-import { ConflictOperationError, DriveNotFoundError } from "../server/error";
-import type { SynchronizationUnitQuery } from "../server/types";
-import { logger } from "../utils/logger";
+  OperationsFromDocument,
+  PHDocument,
+} from "document-model";
+import { type IBackOffOptions, backOff } from "exponential-backoff";
 import {
-  DocumentDriveStorage,
-  DocumentStorage,
-  IDriveStorage,
-  IStorageDelegate,
-} from "./types";
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
+} from "../drive-document-model/gen/types.js";
+import { ConflictOperationError, DriveNotFoundError } from "../server/error.js";
+import { type SynchronizationUnitQuery } from "../server/types.js";
+import { logger } from "../utils/logger.js";
+import { type IDriveStorage, type IStorageDelegate } from "./types.js";
 
 type Transaction =
   | Omit<
@@ -41,7 +34,7 @@ function storageToOperation(
     attachments?: AttachmentInput[];
   },
 ): Operation {
-  const operation: Operation = {
+  const operation = {
     id: op.opId || undefined,
     skip: op.skip,
     hash: op.hash,
@@ -54,7 +47,7 @@ function storageToOperation(
       ? op.resultingState.toString()
       : undefined,
     attachments: op.attachments,
-  };
+  } as Operation;
   if (op.context) {
     operation.context = op.context as Prisma.JsonObject;
   }
@@ -110,9 +103,9 @@ export class PrismaStorage implements IDriveStorage {
     this.delegate = delegate;
   }
 
-  async createDrive(id: string, drive: DocumentDriveStorage): Promise<void> {
+  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
     // drive for all drive documents
-    await this.createDocument("drives", id, drive as DocumentStorage);
+    await this.createDocument("drives", id, drive);
     await this.db.drive.upsert({
       where: {
         slug: drive.initialState.state.global.slug ?? id,
@@ -128,7 +121,7 @@ export class PrismaStorage implements IDriveStorage {
   }
   async addDriveOperations(
     id: string,
-    operations: Operation[],
+    operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);
@@ -136,22 +129,22 @@ export class PrismaStorage implements IDriveStorage {
 
   async addDriveOperationsWithTransaction(
     drive: string,
-    callback: (document: DocumentDriveStorage) => Promise<{
-      operations: Operation<DocumentDriveAction | BaseAction>[];
+    callback: (document: DocumentDriveDocument) => Promise<{
+      operations: Operation[];
       header: DocumentHeader;
     }>,
   ) {
     return this.addDocumentOperationsWithTransaction(
       "drives",
       drive,
-      (document) => callback(document as DocumentDriveStorage),
+      (document) => callback(document as DocumentDriveDocument),
     );
   }
 
   async createDocument(
     drive: string,
     id: string,
-    document: DocumentStorage,
+    document: PHDocument,
   ): Promise<void> {
     await this.db.document.upsert({
       where: {
@@ -196,7 +189,7 @@ export class PrismaStorage implements IDriveStorage {
           skip: op.skip,
           context: op.context,
           resultingState: op.resultingState
-            ? Buffer.from(JSON.stringify(op.resultingState))
+            ? Buffer.from(op.resultingState)
             : undefined,
         })),
       });
@@ -273,24 +266,24 @@ export class PrismaStorage implements IDriveStorage {
     }
   }
 
-  async addDocumentOperationsWithTransaction(
+  async addDocumentOperationsWithTransaction<TDocument extends PHDocument>(
     drive: string,
     id: string,
-    callback: (document: DocumentStorage) => Promise<{
-      operations: Operation[];
+    callback: (document: TDocument) => Promise<{
+      operations: OperationFromDocument<TDocument>[];
       header: DocumentHeader;
-      newState?: State<any, any> | undefined;
+      newState?: BaseStateFromDocument<TDocument> | undefined;
     }>,
   ) {
     let result: {
-      operations: Operation[];
+      operations: OperationFromDocument<TDocument>[];
       header: DocumentHeader;
-      newState?: State<any, any> | undefined;
+      newState?: BaseStateFromDocument<TDocument> | undefined;
     } | null = null;
 
     await this.db.$transaction(
       async (tx) => {
-        const document = await this.getDocument(drive, id, tx);
+        const document = await this.getDocument<TDocument>(drive, id, tx);
         if (!document) {
           throw new Error(`Document with id ${id} not found`);
         }
@@ -347,7 +340,11 @@ export class PrismaStorage implements IDriveStorage {
     return count > 0;
   }
 
-  async getDocument(driveId: string, id: string, tx?: Transaction) {
+  async getDocument<TDocument extends PHDocument>(
+    driveId: string,
+    id: string,
+    tx?: Transaction,
+  ): Promise<TDocument> {
     const prisma = tx ?? this.db;
     const result = await prisma.document.findUnique({
       where: {
@@ -438,9 +435,7 @@ export class PrismaStorage implements IDriveStorage {
     // TODO add attachments from cached operations
     const fileRegistry: FileRegistry = {};
 
-    const operationsByScope = queryOperations.reduce<
-      DocumentOperations<Action>
-    >((acc, operation) => {
+    const operationsByScope = queryOperations.reduce((acc, operation) => {
       const scope = operation.scope as OperationScope;
       if (!acc[scope]) {
         acc[scope] = [];
@@ -454,18 +449,16 @@ export class PrismaStorage implements IDriveStorage {
       });
       acc[scope].push(result);
       return acc;
-    }, cachedOperations);
+    }, cachedOperations) as OperationsFromDocument<TDocument>;
 
     const dbDoc = result;
-    const doc: Document = {
+    const doc = {
       created: dbDoc.created.toISOString(),
       name: dbDoc.name ? dbDoc.name : "",
       documentType: dbDoc.documentType,
-      initialState: JSON.parse(dbDoc.initialState) as ExtendedState<
-        DocumentDriveState,
-        DocumentDriveLocalState
-      >,
-      // @ts-expect-error TODO: fix as this should not be undefined
+      initialState: JSON.parse(
+        dbDoc.initialState,
+      ) as ExtendedStateFromDocument<TDocument>,
       state: undefined,
       lastModified: new Date(dbDoc.lastModified).toISOString(),
       operations: operationsByScope,
@@ -473,7 +466,7 @@ export class PrismaStorage implements IDriveStorage {
       revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
       attachments: {},
     };
-    return doc;
+    return doc as unknown as TDocument;
   }
 
   async deleteDocument(drive: string, id: string) {
@@ -507,7 +500,7 @@ export class PrismaStorage implements IDriveStorage {
   async getDrive(id: string) {
     try {
       const doc = await this.getDocument("drives", id);
-      return doc as DocumentDriveStorage;
+      return doc as DocumentDriveDocument;
     } catch (e) {
       logger.error(e);
       throw new DriveNotFoundError(id);
@@ -553,7 +546,7 @@ export class PrismaStorage implements IDriveStorage {
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown> {
+  ): Promise<string | undefined> {
     const operation = await this.db.operation.findUnique({
       where: {
         unique_operation: {
@@ -573,7 +566,7 @@ export class PrismaStorage implements IDriveStorage {
     index: number,
     scope: string,
     branch: string,
-  ): Promise<unknown> {
+  ): Promise<string | undefined> {
     return this.getOperationResultingState(
       "drives",
       drive,

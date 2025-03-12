@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { skipHeaderOperations } from "../../src/document/utils/document-helpers";
+import { skipHeaderOperations } from "../../src/document/utils/document-helpers.js";
 
 describe("skipHeaderOperations", () => {
   const scenarios = [

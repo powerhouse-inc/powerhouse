@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { EditorActionButtons } from "./editor-action-buttons";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { EditorActionButtons } from "./editor-action-buttons.js";
 
 const meta: Meta = {
   title: "Connect/Components/Editor Action Buttons",

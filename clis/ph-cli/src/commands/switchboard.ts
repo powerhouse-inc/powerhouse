@@ -1,21 +1,22 @@
-import { Command } from "commander";
+import { generateFromFile } from "@powerhousedao/codegen";
+import {
+  getConfig,
+  type PowerhouseConfig,
+} from "@powerhousedao/config/powerhouse";
 import {
   DefaultStartServerOptions,
+  type LocalReactor,
   startServer,
-  StartServerOptions,
-  LocalReactor,
+  type StartServerOptions,
 } from "@powerhousedao/reactor-local";
-import { generateFromFile } from "@powerhousedao/codegen";
-import { CommandActionType } from "../types.js";
-import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type Command } from "commander";
+import { type CommandActionType } from "../types.js";
 
 export type SwitchboardOptions = StartServerOptions & {
   configFile?: string;
   generate?: boolean;
   watch?: boolean;
   dbPath?: string;
-  httpsKeyFile?: string;
-  httpsCertFile?: string;
 };
 
 export const DefaultSwitchboardOptions = {
@@ -27,19 +28,16 @@ async function startLocalSwitchboard(switchboardOptions: SwitchboardOptions) {
   const baseConfig = getConfig(switchboardOptions.configFile);
   const options = {
     ...DefaultSwitchboardOptions,
-    packages: baseConfig.packages,
     ...switchboardOptions,
   };
 
-  const https =
-    switchboardOptions.httpsKeyFile && switchboardOptions.httpsCertFile
-      ? {
-          keyPath: switchboardOptions.httpsKeyFile,
-          certPath: switchboardOptions.httpsCertFile,
-        }
-      : undefined;
+  const { https } = baseConfig.reactor ?? { https: false };
 
-  const reactor = await startServer({ ...options, https });
+  const reactor = await startServer({
+    ...options,
+    https,
+    logLevel: baseConfig.logLevel,
+  });
 
   if (options.generate) {
     await addGenerateTransmitter(reactor, baseConfig);
@@ -92,11 +90,13 @@ export const switchboard: CommandActionType<
 export function reactorCommand(program: Command) {
   program
     .command("switchboard")
+    .alias("reactor")
     .description("Starts local switchboard")
     .option("--port <PORT>", "port to host the api", "4001")
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
+      "./powerhouse.config.json",
     )
     .option("--generate", "generate code when document model is updated")
     .option("--db-path <DB_PATH>", "path to the database")
@@ -105,6 +105,10 @@ export function reactorCommand(program: Command) {
     .option(
       "-w, --watch",
       "if the reactor should watch for local changes to document models and processors",
+    )
+    .option(
+      "--packages <packages...>",
+      "list of packages to be loaded, if defined then packages on config file are ignored",
     )
     .action(async (...args: [SwitchboardOptions]) => {
       await switchboard(...args);

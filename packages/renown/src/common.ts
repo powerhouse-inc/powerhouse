@@ -5,9 +5,9 @@ import {
   RenownEvents,
   RenownStorage,
   User,
-} from "./types";
-import { DEFAULT_RENOWN_URL } from "./constants";
-import { parsePkhDid } from "./utils";
+} from "./types.js";
+import { DEFAULT_RENOWN_URL } from "./constants.js";
+import { parsePkhDid } from "./utils.js";
 
 export class Renown implements IRenown {
   #baseUrl: string;

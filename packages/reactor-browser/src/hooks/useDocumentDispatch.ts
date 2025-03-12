@@ -1,38 +1,33 @@
 import type {
-  Action,
   ActionErrorCallback,
-  BaseAction,
-  Document,
-  Operation,
+  ActionFromDocument,
+  OperationFromDocument,
+  PHDocument,
   Reducer,
-} from "document-model/document";
+} from "document-model";
 import { useEffect, useState } from "react";
 
-export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
-  operation: Operation,
+export type DocumentDispatchCallback<TDocument extends PHDocument> = (
+  operation: OperationFromDocument<TDocument>,
   state: {
-    prevState: Document<State, A, LocalState>;
-    newState: Document<State, A, LocalState>;
+    prevState: TDocument;
+    newState: TDocument;
   },
 ) => void;
 
-export type DocumentDispatch<State, A extends Action, LocalState> = (
-  action: A | BaseAction,
-  callback?: DocumentDispatchCallback<State, A, LocalState>,
+export type DocumentDispatch<TDocument extends PHDocument> = (
+  action: ActionFromDocument<TDocument>,
+  callback?: DocumentDispatchCallback<TDocument>,
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
 type OnErrorHandler = (error: unknown) => void;
 
-export function useDocumentDispatch<State, A extends Action, LocalState>(
-  documentReducer: Reducer<State, A, LocalState> | undefined,
-  initialState: Document<State, A, LocalState> | undefined,
+export function useDocumentDispatch<TDocument extends PHDocument>(
+  documentReducer: Reducer<TDocument> | undefined,
+  initialState: TDocument | undefined,
   onError: OnErrorHandler = console.error,
-): readonly [
-  Document<State, A, LocalState> | undefined,
-  DocumentDispatch<State, A, LocalState>,
-  unknown,
-] {
+): readonly [TDocument | undefined, DocumentDispatch<TDocument>, unknown] {
   const [state, setState] = useState(initialState);
   const [error, setError] = useState<unknown>();
 
@@ -45,7 +40,7 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
     setState(initialState);
   }, [initialState]);
 
-  const dispatch: DocumentDispatch<State, A, LocalState> = (
+  const dispatch: DocumentDispatch<TDocument> = (
     action,
     callback,
     onErrorCallback?: ActionErrorCallback,

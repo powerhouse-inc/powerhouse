@@ -1,13 +1,13 @@
 import {
   CLOUD,
-  DebugNodeOption,
+  type DebugNodeOption,
   LOCAL,
-  NodeOption,
-  NormalNodeOption,
-  OptionMetadata,
+  type NodeOption,
+  type NormalNodeOption,
+  type OptionMetadata,
   PUBLIC,
-} from "@/connect";
-import { Icon } from "@/powerhouse";
+} from "#connect";
+import { Icon } from "#powerhouse";
 
 export const NEW = "NEW";
 export const DUPLICATE = "DUPLICATE";
@@ -19,19 +19,11 @@ export const REMOVE_TRIGGER = "REMOVE_TRIGGER";
 export const ADD_TRIGGER = "ADD_TRIGGER";
 export const ADD_INVALID_TRIGGER = "ADD_INVALID_TRIGGER";
 
-export const defaultDriveOptions: NodeOption[] = [
-  NEW_FOLDER,
-  RENAME,
-  SETTINGS,
-] as const;
+export const defaultDriveOptions = [NEW_FOLDER, RENAME, SETTINGS] as const;
 
-export const defaultFileOptions: NodeOption[] = [
-  RENAME,
-  DELETE,
-  DUPLICATE,
-] as const;
+export const defaultFileOptions = [RENAME, DELETE, DUPLICATE] as const;
 
-export const defaultFolderOptions: NodeOption[] = [
+export const defaultFolderOptions = [
   NEW_FOLDER,
   RENAME,
   DELETE,

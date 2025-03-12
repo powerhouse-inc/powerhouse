@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/operations.ts"
 force: true
 ---
-import { SignalDispatch } from 'document-model/document';
+import { SignalDispatch } from 'document-model';
 import {
 <% actions.forEach(action => { _%>
     <%= h.changeCase.pascal(action.name) %>Action,

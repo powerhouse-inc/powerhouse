@@ -2,18 +2,25 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
-    "emitDeclarationOnly": true,
     "jsx": "react-jsx",
     "outDir": "./dist",
     "types": ["vitest/globals"],
     "resolveJsonModule": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "test/**/*.ts",
-    "*.ts",
+    "**/*",
     "package.json"
+  ],
+  "references": [
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../config"
+    }
   ]
 }

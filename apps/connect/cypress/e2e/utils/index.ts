@@ -26,7 +26,7 @@ export const clearIndexDB = async () => {
     const databases = await indexedDB.databases();
 
     for (const db of databases) {
-        indexedDB.deleteDatabase(db.name);
+        indexedDB.deleteDatabase(db.name!);
     }
 };
 

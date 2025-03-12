@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { nextSkipNumber } from "../../src/document/utils/document-helpers";
-import { buildOperations } from "./utils";
+import { nextSkipNumber } from "../../src/document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("nextSkipNumber", () => {
   const scenarios = [

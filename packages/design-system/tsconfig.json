@@ -2,22 +2,31 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
-    "emitDeclarationOnly": true,
     "outDir": "./dist",
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
     "resolveJsonModule": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.json",
-    "scripts/**/*.ts",
-    "*.ts",
-    "package.json"
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../scalars"
+    },
+    {
+      "path": "../config"
+    },
+    {
+      "path": "../reactor-browser"
+    }
+  ],
+  "include": ["**/*", "**/*.json"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "storybook-static",
+    "./tsconfig.json",
+    "./package.json"
   ]
 }

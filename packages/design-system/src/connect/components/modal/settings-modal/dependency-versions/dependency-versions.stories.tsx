@@ -1,6 +1,6 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { DependencyVersions } from "./dependency-versions";
-import mockPackageJson from "./mock-package-json.json";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { DependencyVersions } from "./dependency-versions.js";
+import mockPackageJson from "./mock-package-json.json" with { type: "json" };
 
 const meta = {
   title: "Connect/Components/Dependency Versions",
@@ -21,5 +21,19 @@ export const Default: Story = {
   ],
   args: {
     packageJson: mockPackageJson,
+  },
+};
+
+export const WithPhCliVersion: Story = {
+  decorators: [
+    (Story) => (
+      <div className="w-[320px]">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    packageJson: mockPackageJson,
+    phCliVersion: "1.0.0",
   },
 };

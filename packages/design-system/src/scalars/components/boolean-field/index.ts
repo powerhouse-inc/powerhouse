@@ -1,1 +1,1 @@
-export * from "./boolean-field";
+export * from "./boolean-field.js";

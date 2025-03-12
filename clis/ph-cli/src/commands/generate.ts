@@ -5,11 +5,10 @@ import {
   generateImportScript,
   generateProcessor,
   generateSubgraph,
-  promptDirectories,
 } from "@powerhousedao/codegen";
-import { Command } from "commander";
-import { CommandActionType } from "../types.js";
 import { getConfig } from "@powerhousedao/config/powerhouse";
+import { type Command } from "commander";
+import { type CommandActionType } from "../types.js";
 
 export const generate: CommandActionType<
   [
@@ -27,6 +26,7 @@ export const generate: CommandActionType<
       processorType?: "analytics" | "operational";
       subgraph?: string;
       importScript?: string;
+      file?: string;
     },
   ]
 > = async (filePath, options) => {
@@ -59,11 +59,6 @@ export const generate: CommandActionType<
     importScriptName: options.importScript,
   };
 
-  if (config.interactive) {
-    const result = await promptDirectories(config);
-    Object.assign(config, result);
-  }
-
   if (command.editor) {
     if (!command.editorName) {
       throw new Error("Editor name is required (--editor or -e)");
@@ -73,11 +68,7 @@ export const generate: CommandActionType<
       command.documentTypes?.split(/[|,;]/g) ?? [],
       config,
     );
-
-    return;
-  }
-
-  if (command.processor && options.processor) {
+  } else if (command.processor && options.processor) {
     const processorType =
       options.processorType === "operational" ? "operational" : "analytics";
     await generateProcessor(
@@ -86,25 +77,15 @@ export const generate: CommandActionType<
       options.documentTypes?.split(",") ?? [],
       config,
     );
-    return;
-  }
-
-  if (command.subgraph && command.subgraphName) {
-    await generateSubgraph(command.subgraphName, config);
-    return;
-  }
-
-  if (command.importScript && command.importScriptName) {
+  } else if (command.subgraph && command.subgraphName) {
+    await generateSubgraph(command.subgraphName, options.file || null, config);
+  } else if (command.importScript && command.importScriptName) {
     await generateImportScript(command.importScriptName, config);
-    return;
-  }
-
-  if (filePath) {
+  } else if (filePath) {
     await generateFromFile(filePath, config);
-    return;
+  } else {
+    await generateCode(config);
   }
-
-  await generateCode(config);
 };
 
 export function generateCommand(program: Command) {
@@ -115,6 +96,7 @@ export function generateCommand(program: Command) {
     .option("-i, --interactive", "Run the command in interactive mode")
     .option("--editors <type>", "Path to the editors directory")
     .option("-e, --editor <type>", "Editor Name")
+    .option("--file <path>", "File path to document model")
     .option("--processors <type>", "Path to the processors directory")
     .option("-p, --processor <type>", "Processor Name")
     .option("--processor-type <type>", "Processor Type")

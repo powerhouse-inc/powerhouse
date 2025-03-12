@@ -1,14 +1,17 @@
-import { FILE, TUiNodesContext } from '@powerhousedao/design-system';
-import { Document, Operation } from 'document-model/document';
-import { atom, useAtom } from 'jotai';
+import { type IReadModeContext } from '#context';
+import { documentToHash, type TDocumentDriveServer } from '#hooks';
+import { type TUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import { logger } from 'document-drive';
+import {
+    hashDocumentStateForScope,
+    type Operation,
+    type PHDocument,
+} from 'document-model';
+import { atom, useAtom, useSetAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
-import { IReadModeContext } from 'src/context/read-mode';
-import { documentToHash } from 'src/hooks/useDocumentDrives';
-import { TDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { logger } from 'src/services/logger';
 
 function debounceOperations(
-    callback: (operations: Operation[]) => Promise<Document | undefined>,
+    callback: (operations: Operation[]) => Promise<PHDocument | undefined>,
     timeout = 50,
 ) {
     let timer: number;
@@ -39,7 +42,7 @@ function debounceOperations(
         } else {
             operations.push(operation);
         }
-        return new Promise<Document | undefined>((resolve, reject) => {
+        return new Promise<PHDocument | undefined>((resolve, reject) => {
             timer = setTimeout(() => {
                 callback(operations).then(resolve).catch(reject);
             }, timeout) as unknown as number;
@@ -47,26 +50,46 @@ function debounceOperations(
     };
 }
 
-type FileNodeDocument =
+export type FileNodeDocument =
     | {
           driveId: string;
           documentId: string;
           documentType: string;
-          document: Document | undefined;
+          name: string;
+          document: PHDocument | undefined;
           status: 'LOADING' | 'ERROR';
       }
     | {
           driveId: string;
           documentId: string;
           documentType: string;
-          document: Document;
+          name: string;
+          document: PHDocument;
           status: 'LOADED';
       }
     | undefined;
 
-const documentCacheAtom = atom(new Map<string, Document>());
+const documentCacheAtom = atom(new Map<string, PHDocument>());
 
 const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
+
+export function isSameDocument(
+    prev: PHDocument | undefined,
+    next: PHDocument | undefined,
+) {
+    if (prev === next) {
+        return true;
+    }
+    if (!prev || !next) {
+        return false;
+    }
+    if (hashDocumentStateForScope(prev) === hashDocumentStateForScope(next)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 const fileNodeDocumentAtom = atom(
     get => get(singletonFileNodeDocumentAtom),
     (get, set, newValue: FileNodeDocument) => {
@@ -110,18 +133,19 @@ const fileNodeDocumentAtom = atom(
 );
 
 const selectedDocumentAtom = atom(
-    get => get(fileNodeDocumentAtom)?.document,
-    (get, set, document: Document | undefined) => {
+    null,
+    (get, set, document: PHDocument | undefined) => {
         const fileNodeDocument = get(fileNodeDocumentAtom);
         if (!fileNodeDocument) {
             throw new Error('fileNodeDocument is undefined');
         } else if (!document) {
             set(fileNodeDocumentAtom, undefined);
-        } else {
+        } else if (!isSameDocument(document, fileNodeDocument.document)) {
             set(fileNodeDocumentAtom, { ...fileNodeDocument, document });
         }
     },
 );
+const useSetSelectedDocument = () => useSetAtom(selectedDocumentAtom);
 
 export function useFileNodeDocument(
     props: TUiNodesContext & TDocumentDriveServer & IReadModeContext,
@@ -141,13 +165,12 @@ export function useFileNodeDocument(
         selectedDriveNode?.syncStatus === undefined;
     const driveId = selectedNode?.driveId;
     const documentId = selectedNode?.id;
+    const name = selectedNode?.name;
     const kind = selectedNode?.kind;
     const documentType =
         kind === 'FILE' ? selectedNode?.documentType : undefined;
 
-    const [selectedDocument, setSelectedDocument] =
-        useAtom(selectedDocumentAtom);
-
+    const setSelectedDocument = useSetSelectedDocument();
     const fetchDocument = useCallback(
         async (driveId: string, id: string, documentType: string) => {
             const document = await (isReadMode
@@ -174,12 +197,14 @@ export function useFileNodeDocument(
         if (
             driveId !== fileNodeDocument?.driveId ||
             documentId !== fileNodeDocument.documentId ||
-            documentType !== fileNodeDocument.documentType
+            documentType !== fileNodeDocument.documentType ||
+            name !== fileNodeDocument.name
         ) {
             const changed = setFileNodeDocument({
                 driveId,
                 documentId,
                 documentType,
+                name: name || '',
                 document: undefined,
                 status: 'LOADING',
             });
@@ -195,6 +220,7 @@ export function useFileNodeDocument(
                                       documentId,
                                       documentType,
                                       document,
+                                      name: name || '',
                                       status: 'LOADED',
                                   }
                                 : {
@@ -202,6 +228,7 @@ export function useFileNodeDocument(
                                       documentId,
                                       documentType,
                                       document,
+                                      name: name || '',
                                       status: 'ERROR',
                                   },
                         ),
@@ -212,6 +239,7 @@ export function useFileNodeDocument(
                             driveId,
                             documentId,
                             documentType,
+                            name: name || '',
                             document: undefined,
                             status: 'ERROR',
                         });
@@ -222,6 +250,7 @@ export function useFileNodeDocument(
         selectedNode,
         documentId,
         documentType,
+        name,
         driveId,
         fetchDocument,
         fileNodeDocument,
@@ -264,24 +293,40 @@ export function useFileNodeDocument(
     ]);
 
     const addOperationToSelectedDocument = useMemo(() => {
-        if (driveId && documentId && kind === FILE) {
+        if (driveId && documentId && kind === 'FILE') {
             return debounceOperations(operations =>
                 addOperations(driveId, documentId, operations),
             );
         }
     }, [addOperations, driveId, documentId, kind]);
 
+    const addOperationToSelectedDrive = useCallback(
+        (operation: Operation) => {
+            if (!selectedDriveNode?.id) {
+                throw new Error('No drive node selected');
+            }
+            return debounceOperations(operations =>
+                addOperations(selectedDriveNode.id, undefined, operations),
+            )(operation);
+        },
+        [addOperations, selectedDriveNode?.id],
+    );
+
     const isSelectedDocument =
-        kind === FILE &&
+        kind === 'FILE' &&
         fileNodeDocument?.driveId === driveId &&
         fileNodeDocument?.documentId === documentId;
+    const selectedDocument = isSelectedDocument
+        ? fileNodeDocument?.document
+        : undefined;
 
     return useMemo(
         () => ({
             fileNodeDocument,
-            selectedDocument: isSelectedDocument ? selectedDocument : undefined,
+            selectedDocument,
             setSelectedDocument,
             addOperationToSelectedDocument,
+            addOperationToSelectedDrive,
         }),
         [
             fileNodeDocument,
@@ -289,6 +334,7 @@ export function useFileNodeDocument(
             selectedDocument,
             setSelectedDocument,
             addOperationToSelectedDocument,
+            addOperationToSelectedDrive,
         ],
     );
 }

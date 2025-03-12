@@ -1,10 +1,10 @@
-import { TimePickerFieldProps } from "./time-picker-field";
+import { TimePickerFieldProps } from "./time-picker-field.js";
 import {
+  convert24hTo12h,
+  getTime,
   isFormatTimeAllowed,
   TIME_PATTERNS,
-  getTime,
-  convert24hTo12h,
-} from "./utils";
+} from "./utils.js";
 
 export const validateTimePicker =
   ({ timeFormat }: TimePickerFieldProps) =>

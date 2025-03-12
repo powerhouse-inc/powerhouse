@@ -4,7 +4,7 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
 <div
   aria-describedby="radix-:r2:"
   aria-labelledby="radix-:r1:"
-  class="bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in rounded-3xl"
+  class="data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in bg-white rounded-3xl"
   data-state="open"
   data-testid="upgrade-drive-modal"
   id="radix-:r0:"
@@ -13,7 +13,7 @@ exports[`UpgradeDriveModal Component > should match snapshot 1`] = `
   tabindex="-1"
 >
   <span
-    style="position: absolute; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; word-wrap: normal;"
+    style="position: absolute; border: 0px; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; word-wrap: normal;"
   >
     <h2
       id="radix-:r1:"

@@ -1,10 +1,11 @@
 import {
+  type ConnectStudioOptions,
   startConnectStudio,
-  ConnectStudioOptions,
-} from "@powerhousedao/connect";
+} from "@powerhousedao/builder-tools/connect-studio";
 import { getConfig } from "@powerhousedao/config/powerhouse";
-import { Command } from "commander";
-
+import { type Command } from "commander";
+import packageJson from "../../package.json" with { type: "json" };
+const version = packageJson.version;
 export type ConnectOptions = ConnectStudioOptions;
 
 export async function startConnect(connectOptions: ConnectOptions) {
@@ -33,16 +34,18 @@ export function connectCommand(program: Command) {
       "-ld, --local-documents <localDocuments>",
       "Link local documents path",
     )
-    .action(async (...args: [ConnectOptions]) => {
+    .action(async (...args: [ConnectStudioOptions]) => {
       const connectOptions = args.at(0) || {};
-      const { documentModelsDir, editorsDir, packages, studio } = getConfig();
-
+      const { documentModelsDir, editorsDir, packages, studio, logLevel } =
+        getConfig();
       await startConnectStudio({
         port: studio?.port?.toString() || undefined,
         packages,
+        phCliVersion: typeof version === "string" ? version : undefined,
         localDocuments: documentModelsDir || undefined,
         localEditors: editorsDir || undefined,
         open: studio?.openBrowser,
+        logLevel: logLevel,
         ...connectOptions,
       });
     });
@@ -50,7 +53,9 @@ export function connectCommand(program: Command) {
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg ? (JSON.parse(optionsArg) as ConnectOptions) : {};
+  const options = optionsArg
+    ? (JSON.parse(optionsArg) as ConnectStudioOptions)
+    : {};
   startConnect(options).catch((e: unknown) => {
     throw e;
   });

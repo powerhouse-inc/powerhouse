@@ -1,11 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import { actions, reducer, utils } from "document-model-libs/document-drive";
-import { ActionContext, Operation } from "document-model/document";
+import { ActionContext, Operation } from "document-model";
 import { beforeEach, describe, it } from "vitest";
-import { generateUUID } from "../src";
+import { addFile } from "../src/drive-document-model/gen/creators";
+import { reducer } from "../src/drive-document-model/gen/reducer";
+import { createDocument } from "../src/drive-document-model/gen/utils";
 import { BrowserStorage } from "../src/storage/browser";
 import { PrismaStorage } from "../src/storage/prisma";
 import { migrateLegacyOperationSignature } from "../src/utils/migrations";
+import { generateUUID } from "../src/utils/misc";
 import { buildOperation } from "./utils";
 
 const prismaClient = new PrismaClient();
@@ -83,7 +85,7 @@ describe.each(storageLayers)(
 
     it("should migrate operation without context", async ({ expect }) => {
       const storage = buildStorage();
-      const drive = utils.createDocument({
+      const drive = createDocument({
         state: {
           global: {
             icon: null,
@@ -104,7 +106,7 @@ describe.each(storageLayers)(
       const driveOperation = buildOperation(
         reducer,
         drive,
-        actions.addFile({
+        addFile({
           id: "1.1",
           name: "Test",
           documentType: "powerhouse/budget-statement",
@@ -133,7 +135,7 @@ describe.each(storageLayers)(
       expect,
     }) => {
       const storage = buildStorage();
-      const drive = utils.createDocument({
+      const drive = createDocument({
         state: {
           global: {
             icon: null,
@@ -154,7 +156,7 @@ describe.each(storageLayers)(
       const driveOperation = buildOperation(
         reducer,
         drive,
-        actions.addFile({
+        addFile({
           id: "1.1",
           name: "Test",
           documentType: "powerhouse/budget-statement",
@@ -209,7 +211,7 @@ describe.each(storageLayers)(
 
     it("should migrate operation with a signature", async ({ expect }) => {
       const storage = buildStorage();
-      const drive = utils.createDocument({
+      const drive = createDocument({
         state: {
           global: {
             icon: null,
@@ -230,7 +232,7 @@ describe.each(storageLayers)(
       const driveOperation = buildOperation(
         reducer,
         drive,
-        actions.addFile({
+        addFile({
           id: "1.1",
           name: "Test",
           documentType: "powerhouse/budget-statement",

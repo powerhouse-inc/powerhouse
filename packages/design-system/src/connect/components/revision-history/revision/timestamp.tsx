@@ -1,4 +1,4 @@
-import { Tooltip } from "@/connect";
+import { Tooltip } from "#connect";
 import { format } from "date-fns";
 
 export type TimestampProps = {
@@ -9,7 +9,9 @@ export function Timestamp(props: TimestampProps) {
   const { timestamp } = props;
 
   const timestampNumber =
-    typeof timestamp === "string" ? parseInt(timestamp) : timestamp;
+    typeof timestamp === "string" && !timestamp.includes("-")
+      ? parseInt(timestamp)
+      : timestamp;
 
   const date = new Date(timestampNumber);
   const shortDate = format(date, "HH:mm 'UTC'");

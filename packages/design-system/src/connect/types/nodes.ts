@@ -1,12 +1,12 @@
 import {
-  DRIVE,
-  FILE,
-  FOLDER,
-  SharingType,
-  SyncStatus,
-  TDocumentType,
-} from "@/connect";
-import { Maybe, Scalars, SynchronizationUnit } from "document-model/document";
+  type DRIVE,
+  type FILE,
+  type FOLDER,
+  type SharingType,
+  type SyncStatus,
+  type TDocumentType,
+} from "#connect";
+import { type Maybe, type SynchronizationUnitInput } from "document-model";
 
 export type UiFileNode = {
   kind: typeof FILE;
@@ -17,7 +17,7 @@ export type UiFileNode = {
   parentFolder: string;
   driveId: string;
   syncStatus: SyncStatus | undefined;
-  synchronizationUnits: SynchronizationUnit[];
+  synchronizationUnits: SynchronizationUnitInput[];
   sharingType: SharingType;
 };
 
@@ -51,17 +51,17 @@ export type UiDriveNode = {
 export type UiNode = UiDriveNode | UiFileNode | UiFolderNode;
 
 export type FileNode = {
-  documentType: Scalars["String"]["output"];
-  id: Scalars["String"]["output"];
-  kind: Scalars["String"]["output"];
-  name: Scalars["String"]["output"];
-  parentFolder: Maybe<Scalars["String"]["output"]>;
-  synchronizationUnits: SynchronizationUnit[];
+  documentType: string;
+  id: string;
+  kind: string;
+  name: string;
+  parentFolder: Maybe<string>;
+  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type FolderNode = {
-  id: Scalars["String"]["output"];
-  kind: Scalars["String"]["output"];
-  name: Scalars["String"]["output"];
-  parentFolder: Maybe<Scalars["String"]["output"]>;
+  id: string;
+  kind: string;
+  name: string;
+  parentFolder: Maybe<string>;
 };
