@@ -51,7 +51,7 @@ interface DateTimeFieldProps {
   timeIntervals?: number;
   timeZone?: string;
   showTimezoneSelect?: boolean;
-  onChangeWraper?: (value: DateFieldValue, time: TimeFieldValue) => void;
+  includeContinent?: boolean;
 }
 
 export const formatToISODateTimeWithOffset = (
@@ -149,14 +149,15 @@ export const useDateTime = ({
   disablePastDates,
   dateFormat,
   weekStart,
+  minDate,
+  maxDate,
 
   // Time Picker Field
   timeFormat,
   timeIntervals,
   timeZone,
   showTimezoneSelect = true,
-  minDate,
-  maxDate,
+  includeContinent,
 }: DateTimeFieldProps) => {
   const internalFormat = getDateFormat(dateFormat ?? "");
   const [isOpen, setIsOpen] = React.useState(false);
@@ -306,6 +307,7 @@ export const useDateTime = ({
     timeIntervals,
     timeZone,
     showTimezoneSelect,
+    includeContinent,
   });
 
   const handleInputChangeField = (e: React.ChangeEvent<HTMLInputElement>) => {

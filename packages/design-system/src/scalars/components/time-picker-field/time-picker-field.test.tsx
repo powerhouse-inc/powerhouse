@@ -133,11 +133,64 @@ describe("TimePickerField", () => {
     expect(popoverContent).toBeVisible();
 
     const select = await screen.findByRole("combobox");
-
     expect(select).toBeDisabled();
-    const expectedTimezone = screen.getByText((content) => {
-      return content.includes("America/New York") && content.includes("(");
+
+    // Use a more flexible approach to find the timezone text
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("New York") && content.includes("(");
     });
-    expect(expectedTimezone).toBeInTheDocument();
+    expect(timezoneText).toBeInTheDocument();
+  });
+
+  it("should display continent when includeContinent prop is true", async () => {
+    const user = userEvent.setup();
+    const timeZoneValue = "America/New_York";
+
+    renderWithForm(
+      <TimePickerField
+        name="test-time"
+        label="Test Label"
+        timeZone={timeZoneValue}
+        includeContinent
+      />,
+    );
+
+    const clockButton = screen.getByRole("button");
+    await user.click(clockButton);
+
+    const popoverContent = await screen.findByRole("dialog");
+    expect(popoverContent).toBeVisible();
+
+    // Verify that the timezone includes the continent (America)
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("America") && content.includes("New York");
+    });
+    expect(timezoneText).toBeInTheDocument();
+  });
+
+  it("should not display continent when includeContinent prop is false", async () => {
+    const user = userEvent.setup();
+    const timeZoneValue = "America/New_York";
+
+    renderWithForm(
+      <TimePickerField
+        name="test-time"
+        label="Test Label"
+        timeZone={timeZoneValue}
+        includeContinent={false}
+      />,
+    );
+
+    const clockButton = screen.getByRole("button");
+    await user.click(clockButton);
+
+    const popoverContent = await screen.findByRole("dialog");
+    expect(popoverContent).toBeVisible();
+
+    // Verify that the timezone excludes the continent (America)
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("New York") && !content.includes("America");
+    });
+    expect(timezoneText).toBeInTheDocument();
   });
 });

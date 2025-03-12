@@ -32,6 +32,7 @@ interface TimePickerFieldProps {
   timeIntervals?: number;
   timeZone?: string;
   showTimezoneSelect?: boolean;
+  includeContinent?: boolean;
 }
 
 export const useTimePickerField = ({
@@ -43,6 +44,7 @@ export const useTimePickerField = ({
   timeIntervals = 1,
   timeZone,
   showTimezoneSelect = true,
+  includeContinent = false,
 }: TimePickerFieldProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const is12HourFormat = timeFormat.includes("a");
@@ -194,8 +196,8 @@ export const useTimePickerField = ({
   };
 
   const options = useMemo(() => {
-    return getOptions();
-  }, []);
+    return getOptions(includeContinent);
+  }, [includeContinent]);
 
   // if timeZone, then the options of select will be that timeZone and the offset
   const isDisableSelect = timeZone || !showTimezoneSelect ? true : false;
@@ -203,12 +205,19 @@ export const useTimePickerField = ({
     timeZone || !showTimezoneSelect
       ? [
           options.find((opt) => opt.value === (timeZone || systemTimezone)) || {
-            label: `(${getOffsetToDisplay(timeZone || systemTimezone)}) ${(timeZone || systemTimezone).replace(/_/g, " ")}`,
+            label: `(${getOffsetToDisplay(timeZone || systemTimezone)}) ${
+              includeContinent
+                ? (timeZone || systemTimezone).replace(/_/g, " ")
+                : (timeZone || systemTimezone)
+                    .split("/")
+                    .pop()
+                    ?.replace(/_/g, " ")
+            }`,
             value: timeZone || systemTimezone,
           },
         ]
       : options;
-
+  console.log("timeZonesOptions", timeZonesOptions);
   return {
     selectedHour,
     selectedMinute,
