@@ -37,7 +37,7 @@ const meta: Meta<typeof TimePickerField> = {
       },
       defaultValue: { summary: false },
     },
-    dateIntervals: {
+    timeIntervals: {
       control: {
         description: "The interval between each time option",
         type: "number",

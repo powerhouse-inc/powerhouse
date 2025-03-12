@@ -1,5 +1,5 @@
 import { Currency } from "../currency-code-field";
-import { AmountFieldPropsGeneric } from "./types";
+import { AmountFieldPropsGeneric, AmountValue } from "./types";
 export const DEFAULT_FIAT_CURRENCIES: Currency[] = [
   { ticker: "USD", crypto: false, label: "USD", symbol: "$" },
   { ticker: "EUR", crypto: false, label: "EUR", symbol: "€" },
@@ -91,27 +91,6 @@ export const displayValueAmount = (
   return value;
 };
 
-export const exampleUseAmountField = [
-  {
-    ticker: "lbs",
-    crypto: false,
-    label: "Lbs",
-    symbol: "lbs",
-  },
-  {
-    ticker: "kg",
-    crypto: false,
-    label: "Kg",
-    symbol: "kg",
-  },
-  {
-    ticker: "ptc",
-    crypto: false,
-    label: "Ptc",
-    symbol: "ptc",
-  },
-];
-
 export const handleEventOnChange = <T>(value: T) => {
   const nativeEvent = new Event("change", { bubbles: true, cancelable: true });
 
@@ -138,4 +117,26 @@ export const handleEventOnBlur = <T>(value: T) => {
 
 export const createAmountValue = (inputValue: string) => {
   return inputValue === "" ? undefined : inputValue;
+};
+
+export const isValidUnit = (
+  type: AmountFieldPropsGeneric["type"],
+  value: AmountValue,
+  units?: Currency[],
+) => {
+  if (!units) return true;
+  if (type === "Amount" && typeof value === "object" && "unit" in value) {
+    return units.some((u) => u.ticker === value.unit);
+  }
+  if (type === "AmountCurrency" && typeof value === "object") {
+    console.log("ebtre");
+    return units.some((u) => u.ticker === value.unit);
+  }
+  if (type === "AmountCrypto" && typeof value === "object") {
+    return units.some((u) => u.ticker === value.unit);
+  }
+  if (type === "AmountFiat" && typeof value === "object") {
+    return units.some((u) => u.ticker === value.unit);
+  }
+  return true;
 };

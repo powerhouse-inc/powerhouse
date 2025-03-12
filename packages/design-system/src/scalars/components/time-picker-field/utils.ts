@@ -331,7 +331,7 @@ export const convert12hTo24h = (input: string) => {
  *   - Short format (e.g., "1430", "0800")
  * @param is12HourFormat - If true, outputs in 12-hour format with AM/PM
  *                        If false, outputs in 24-hour format
- * @param dateIntervals - Optional interval in minutes to round the time to
+ * @param timeIntervals - Optional interval in minutes to round the time to
  *                       (e.g., 15 would round to nearest quarter hour)
  * @returns Formatted time string
  *   - 12-hour format: "hh:mm AM/PM" (e.g., "02:30 PM")
@@ -340,12 +340,12 @@ export const convert12hTo24h = (input: string) => {
 export const formatInputToDisplayValid = (
   input: string,
   is12HourFormat: boolean,
-  dateIntervals?: number,
+  timeIntervals?: number,
 ) => {
   const { hour, minute, period } = transformInputTime(
     input,
     is12HourFormat,
-    dateIntervals,
+    timeIntervals,
   );
   if (!hour && !minute) return "";
 

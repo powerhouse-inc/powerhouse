@@ -56,7 +56,7 @@ interface DateTimeFieldProps
   showTimezoneSelect?: boolean;
   timeFormat?: string;
   timeZone?: string;
-  dateIntervals?: number;
+  timeIntervals?: number;
 }
 
 export const DateTimeField = React.forwardRef<
@@ -83,7 +83,7 @@ export const DateTimeField = React.forwardRef<
       showTimezoneSelect,
       value,
       timeZone,
-      dateIntervals,
+      timeIntervals,
       ...props
     },
     ref,
@@ -128,6 +128,8 @@ export const DateTimeField = React.forwardRef<
             onBlur={onBlur}
             timeZone={timeZone}
             timeFormat={timeFormat}
+            timeIntervals={timeIntervals}
+            showTimezoneSelect={showTimezoneSelect}
             ref={ref}
             {...props}
           />
@@ -160,7 +162,7 @@ export const DateTimeField = React.forwardRef<
             timeFormat={timeFormat}
             showTimezoneSelect={showTimezoneSelect}
             timeZone={timeZone}
-            dateIntervals={dateIntervals}
+            timeIntervals={timeIntervals}
             ref={ref}
             {...props}
           />
