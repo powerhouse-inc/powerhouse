@@ -76,5 +76,5 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
         return removeListener;
     }, [onStrandUpdate, driveId]);
 
-    return documents;
+    return [documents, fetchDocuments] as const;
 }
