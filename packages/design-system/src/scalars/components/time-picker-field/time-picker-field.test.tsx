@@ -74,11 +74,13 @@ describe("TimePickerField", () => {
     // Now check for the minute values
     const minutes = ["00", "15", "30", "45"];
     for (const minute of minutes) {
-      const minuteElement = await screen.findByText(minute);
-      expect(minuteElement).toBeInTheDocument();
+      // Use findAllByText instead of findByText since there are multiple elements with the same text
+      const minuteElements = await screen.findAllByText(minute);
+      expect(minuteElements.length).toBeGreaterThan(0);
+      expect(minuteElements[0]).toBeInTheDocument();
     }
 
-    // // Verify that intermediate values are not present
+    // Verify that intermediate values are not present
     ["13", "20", "25", "35", "40", "50", "55"].forEach((minute) => {
       expect(screen.queryByText(minute)).not.toBeInTheDocument();
     });
@@ -105,10 +107,11 @@ describe("TimePickerField", () => {
     // Now check for the minute values
     const minutes = ["00", "30"];
     for (const minute of minutes) {
-      const minuteElement = await screen.findByText(minute);
-      expect(minuteElement).toBeInTheDocument();
+      const minuteElements = await screen.findAllByText(minute);
+      expect(minuteElements.length).toBeGreaterThan(0);
+      expect(minuteElements[0]).toBeInTheDocument();
     }
-    // // Verify that other values are not present
+    // Verify that other values are not present
     ["15", "45"].forEach((minute) => {
       expect(screen.queryByText(minute)).not.toBeInTheDocument();
     });
