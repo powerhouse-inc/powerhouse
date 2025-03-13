@@ -6,6 +6,7 @@ import {
   type PHDocument,
 } from "document-model";
 import { createContext, type PropsWithChildren, useContext } from "react";
+import { type User } from "../renown/types.js";
 import type { UiNode } from "../uiNodes/types.js";
 import { type HookState } from "./document-state.js";
 
@@ -88,6 +89,7 @@ export interface IDriveContext {
     documentId: string;
     documentType: string;
     documentModelModule: DocumentModelModule<PHDocument>;
+    user?: User;
   }) => {
     dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
     document: PHDocument | undefined;
@@ -103,7 +105,7 @@ export interface IDriveContext {
   useDriveDocumentStates: (props: {
     driveId: string;
     documentIds?: string[];
-  }) => [
+  }) => readonly [
     Record<string, HookState>,
     (_driveId: string, _documentIds?: string[]) => Promise<void>,
   ];
