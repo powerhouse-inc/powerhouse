@@ -77,7 +77,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
         <div
           className={cn(
             "hidden",
-            "mx-auto mt-[15px]  h-[148px] justify-center overflow-hidden"
+            "mx-auto mt-[15px]  h-[148px] justify-center overflow-hidden",
           )}
         />
         <TimeSelector
