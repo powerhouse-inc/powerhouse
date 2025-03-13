@@ -8,10 +8,9 @@ import {
   SubgraphManager,
   getDbClient,
 } from "@powerhousedao/reactor-api";
-import { PrismaClient } from "@prisma/client";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
-import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaStorageFactory } from "document-drive/storage/prisma/prisma-storage-factory";
 import {
   type DocumentModelModule,
   documentModelDocumentModelModule,
@@ -38,16 +37,19 @@ const main = async () => {
     });
     const { documentModels, subgraphs } = await pkgManager.init();
     const redis = await initRedis();
-    const prismaClient: PrismaClient = new PrismaClient();
     const connectionString = process.env.DATABASE_URL;
+    if(!connectionString) {
+      throw new Error("Please set env var DATABASE_URL");
+    }
     const dbUrl =
-      connectionString?.includes("amazonaws") &&
-      !connectionString.includes("sslmode=no-verify")
-        ? connectionString + "?sslmode=no-verify"
-        : connectionString;
+    connectionString?.includes("amazonaws") &&
+    !connectionString.includes("sslmode=no-verify")
+      ? connectionString + "?sslmode=no-verify"
+      : connectionString;
+    const storageFactory = new PrismaStorageFactory(dbUrl);
+    const storage = await storageFactory.create();
     const knex = getDbClient(dbUrl);
     const redisCache = new RedisCache(redis);
-    const storage = new PrismaStorage(prismaClient);
     const driveServer = new ReactorBuilder([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
