@@ -1,18 +1,19 @@
-import {
-  type ConnectStudioOptions,
-  startConnectStudio,
-} from "@powerhousedao/builder-tools/connect-studio";
-import { getConfig } from "@powerhousedao/config/powerhouse";
 import { type Command } from "commander";
-import packageJson from "../../package.json" with { type: "json" };
-const version = packageJson.version;
-export type ConnectOptions = ConnectStudioOptions;
+import { type ConnectOptions } from "../services/connect.js";
+import { type CommandActionType } from "../types.js";
 
-export async function startConnect(connectOptions: ConnectOptions) {
-  const { documentModelsDir, editorsDir } = getConfig();
-  const options = { documentModelsDir, editorsDir, ...connectOptions };
-  return await startConnectStudio(options);
+async function startConnect(options: ConnectOptions) {
+  const Connect = await import("../services/connect.js");
+  const { startConnect } = Connect;
+  return startConnect(options);
 }
+
+export const connect: CommandActionType<
+  [ConnectOptions],
+  Promise<void>
+> = async (options) => {
+  return startConnect(options);
+};
 
 export function connectCommand(program: Command) {
   program
@@ -34,27 +35,15 @@ export function connectCommand(program: Command) {
       "-ld, --local-documents <localDocuments>",
       "Link local documents path",
     )
-    .action(async (...args: [ConnectStudioOptions]) => {
-      const connectOptions = args.at(0) || {};
-      const { documentModelsDir, editorsDir, packages, studio, logLevel } =
-        getConfig();
-      await startConnectStudio({
-        port: studio?.port?.toString() || undefined,
-        packages,
-        phCliVersion: typeof version === "string" ? version : undefined,
-        localDocuments: documentModelsDir || undefined,
-        localEditors: editorsDir || undefined,
-        open: studio?.openBrowser,
-        logLevel: logLevel,
-        ...connectOptions,
-      });
+    .action(async (...args: [ConnectOptions]) => {
+      await connect(...args);
     });
 }
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
   const options = optionsArg
-    ? (JSON.parse(optionsArg) as ConnectStudioOptions)
+    ? (JSON.parse(optionsArg) as ConnectOptions)
     : {};
   startConnect(options).catch((e: unknown) => {
     throw e;
