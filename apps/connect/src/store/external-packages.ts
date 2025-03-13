@@ -5,7 +5,9 @@ import { atomWithLazy } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
 
 const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
-const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES === 'true';
+const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES
+    ? LOAD_EXTERNAL_PACKAGES === 'true'
+    : true;
 
 export type ExternalPackage = DocumentModelLib & { id: string };
 
