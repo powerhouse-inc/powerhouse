@@ -188,7 +188,7 @@ export const withFieldValidation = <
               // `internalValue` is the value of the field that is controlled by the form
               // it is used to trigger the validation on change, so we need to add it to the dependencies
               // otherwise the validation will not be triggered on change
-              [internalValue, showErrorOnChange, showErrorOnBlur],
+              [internalValue, showErrorOnChange, showErrorOnBlur, submitCount],
             );
 
             // extract ref from rest
