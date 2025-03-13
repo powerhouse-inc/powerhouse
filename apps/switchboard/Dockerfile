@@ -26,6 +26,9 @@ RUN npm install --global pnpm@9 husky
 COPY . .
 ARG PH_PACKAGES
 ENV PH_PACKAGES=${PH_PACKAGES}
+ARG NX_SOCKET_DIR="/tmp/nx"
+ENV NX_SOCKET_DIR=${NX_SOCKET_DIR}
+ENV NX_DAEMON=false
 RUN pnpm install --filter @powerhousedao/switchboard... 
 RUN pnpm nx run @powerhousedao/switchboard:build
 RUN pnpm --filter "@powerhousedao/switchboard" deploy --prod pruned
