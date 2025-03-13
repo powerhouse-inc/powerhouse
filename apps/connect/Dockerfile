@@ -12,10 +12,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile --filter @powerhousedao/connect...
 ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
-ARG PH_PACKAGES=""
-ENV PH_PACKAGES=${PH_PACKAGES}
 ENV NX_DAEMON=false
-RUN pnpm nx run @powerhousedao/connect:install:packages
 RUN pnpm nx run @powerhousedao/connect:build --base ${BASE_PATH}
 RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned
 
