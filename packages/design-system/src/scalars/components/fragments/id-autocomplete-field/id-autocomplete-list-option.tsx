@@ -81,7 +81,6 @@ export type IdAutocompleteListOptionProps = {
   isFetchSelectedOptionSync?: boolean;
   className?: string;
   placeholderIcon?: IconName | React.ReactElement;
-  renderPathAsLink?: boolean;
 } & IdAutocompleteOption;
 
 export const IdAutocompleteListOption: React.FC<
@@ -90,7 +89,7 @@ export const IdAutocompleteListOption: React.FC<
   variant = "withValue",
   icon,
   title = "Title not available",
-  path = "Path not available",
+  path = { text: "Path not available" },
   value,
   description = "Description not available",
   asPlaceholder,
@@ -100,7 +99,6 @@ export const IdAutocompleteListOption: React.FC<
   isFetchSelectedOptionSync,
   className,
   placeholderIcon = "PowerhouseLogoSmall",
-  renderPathAsLink = false,
 }) => {
   const renderWithValue = () => (
     <div className={cn("flex w-full items-center")}>
@@ -135,16 +133,16 @@ export const IdAutocompleteListOption: React.FC<
           >
             {title}
           </span>
-          {renderPathAsLink ? (
+          {!showValue && path.url ? (
             <a
-              href={path.startsWith("https://") ? path : `https://${path}`}
+              href={path.url}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                "truncate text-xs leading-5 text-blue-500 hover:underline dark:text-blue-600",
+                "truncate text-xs leading-5 text-gray-500 hover:underline dark:text-gray-600",
               )}
             >
-              {path}
+              {path.text}
             </a>
           ) : (
             <span
@@ -155,7 +153,7 @@ export const IdAutocompleteListOption: React.FC<
                   : "text-gray-500 dark:text-gray-600",
               )}
             >
-              {path}
+              {path.text}
             </span>
           )}
         </div>
