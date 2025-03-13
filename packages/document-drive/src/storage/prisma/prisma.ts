@@ -16,11 +16,11 @@ import { type IBackOffOptions, backOff } from "exponential-backoff";
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
-} from "../drive-document-model/gen/types.js";
-import { ConflictOperationError, DriveNotFoundError } from "../server/error.js";
-import { type SynchronizationUnitQuery } from "../server/types.js";
-import { logger } from "../utils/logger.js";
-import { type IDriveStorage, type IStorageDelegate } from "./types.js";
+} from "../../drive-document-model/gen/types.js";
+import { ConflictOperationError, DriveNotFoundError } from "../../server/error.js";
+import { type SynchronizationUnitQuery } from "../../server/types.js";
+import { logger } from "../../utils/logger.js";
+import { type IDriveStorage, type IStorageDelegate } from "../types.js";
 
 type Transaction =
   | Omit<

@@ -191,6 +191,11 @@ export class BaseDocumentDriveServer
     this.initializePromise = this._initialize();
   }
 
+  // workaround for testing the ephemeral listeners -- we don't have DI in place yet
+  getListenerManager() {
+    return this.listenerManager;
+  }
+
   initialize() {
     return this.initializePromise;
   }

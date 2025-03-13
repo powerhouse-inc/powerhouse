@@ -409,6 +409,7 @@ export interface IBaseDocumentDriveServer {
     operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
+
   addDriveOperations(
     driveId: string,
     operations: Operation<DocumentDriveAction>[],

@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.24.0",
+  "version": "1.25.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -31,12 +31,12 @@
     "clean:node_modules": "rimraf node_modules",
     "migrate": "prisma generate && prisma db push",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/",
+    "prebuild:tsc": "prisma generate --no-hints",
     "prebuild": "prisma generate --no-hints"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
-    "@prisma/client": "^5.18.0",
-    "exponential-backoff": "^3.1.1",
+    "@prisma/client": "5.17.0",
     "localforage": "^1.10.0",
     "redis": "^4.6.15",
     "sequelize": "^6.37.3",
@@ -54,7 +54,7 @@
     "json-stringify-deterministic": "^1.0.12",
     "localforage": "^1.10.0",
     "nanoevents": "^9.0.0",
-    "prisma": "^5.18.0",
+    "prisma": "5.17.0",
     "sanitize-filename": "^1.6.3",
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",

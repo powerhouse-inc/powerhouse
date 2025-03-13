@@ -100,7 +100,7 @@ const DriveContextDecorator: Decorator<
         selectNode: setSelectedNode,
         useSyncStatus: () => "SUCCESS",
         useDriveDocumentState: () => undefined,
-        useDriveDocumentStates: () => ({}),
+        useDriveDocumentStates: () => [{}, () => Promise.resolve()],
         addFile() {
           throw new Error("addFile not implemented");
         },
