@@ -1,9 +1,8 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import { Button } from "#powerhouse";
-import { Decorator } from "@storybook/react";
-import { Args, DecoratorFunction } from "@storybook/types";
+import { type Decorator } from "@storybook/react";
+import { type Args, type DecoratorFunction } from "@storybook/types";
 import { useCallback, useId, useRef, useState } from "react";
-import { UseFormReturn } from "react-hook-form";
+import { type UseFormReturn } from "react-hook-form";
 import { Checkbox, Form } from "../components/index.js";
 
 function _isValidRegex(pattern: unknown): boolean {
@@ -31,7 +30,7 @@ export const withForm: Decorator = (Story, context) => {
   const isDocs = viewMode === "docs";
 
   // Ensure we're properly accessing the parameters
-  const formParameters = (parameters as StoryFormParameters)?.form;
+  const formParameters = (parameters as StoryFormParameters).form;
   const resetBehavior = formParameters?.resetBehavior ?? "reset";
 
   const onReset = useCallback(() => {
