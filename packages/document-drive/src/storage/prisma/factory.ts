@@ -1,4 +1,4 @@
-import { PrismaStorage } from "#storage/prisma/prisma";
+import { PrismaStorage } from "#storage/prisma/index";
 import Prisma from "@prisma/client";
 const PrismaClient = Prisma.PrismaClient;
 
@@ -15,7 +15,7 @@ export class PrismaStorageFactory {
     });
   }
 
-  async create() {
+  build() {
     return new PrismaStorage(this.prisma);
   }
 }
