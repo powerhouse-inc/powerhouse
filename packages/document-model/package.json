@@ -20,10 +20,8 @@
     "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "build": "npm run build:browser && npm run build:node",
-    "build:watch": "npm run build:browser -- --watch && npm run build:node -- --watch",
-    "build:browser": "tsc --build",
-    "build:node": "tsc --build",
+    "build": "tsc --build",
+    "build:watch": "tsc --build --watch",
     "test": "vitest run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
