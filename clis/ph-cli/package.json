@@ -36,6 +36,7 @@
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "document-model": "workspace:*",
+    "document-drive": "workspace:*",
     "pm2": "^5.4.3"
   }
 }

@@ -95,7 +95,7 @@ export class ListenerManager implements IListenerManager {
       syncUnits: new Map(),
     });
 
-    this.triggerUpdate(true, { type: "local" });
+    await this.triggerUpdate(true, { type: "local" });
   }
 
   async removeListener(driveId: string, listenerId: string) {

@@ -1,10 +1,8 @@
 import { type ICache } from "#cache/types";
-import { type RemoveListenerAction } from "#drive-document-model/gen/actions";
 import {
-  addListener,
   removeListener,
   removeTrigger,
-  setSharingType,
+  setSharingType
 } from "#drive-document-model/gen/creators";
 import { createDocument } from "#drive-document-model/gen/utils";
 import {
@@ -26,12 +24,10 @@ import { logger } from "#utils/logger";
 import { generateUUID, isDocumentDrive, runAsapAsync } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
-  type AddListenerInput,
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type DocumentDriveState,
-  type ListenerFilter,
-  type Trigger,
+  type Trigger
 } from "document-drive";
 import {
   type Action,
@@ -62,16 +58,11 @@ import {
   type SynchronizationUnitNotFoundError,
 } from "./error.js";
 import {
-  type IReceiver,
-  InternalTransmitter,
-} from "./listener/transmitter/internal.js";
-import {
   type CancelPullLoop,
   PullResponderTransmitter,
 } from "./listener/transmitter/pull-responder.js";
 import {
-  type ITransmitter,
-  type StrandUpdateSource,
+  type StrandUpdateSource
 } from "./listener/transmitter/types.js";
 import {
   type AddOperationOptions,
@@ -89,8 +80,6 @@ import {
   type IListenerManager,
   type IOperationResult,
   type ISynchronizationManager,
-  type ITransmitterFactory,
-  type Listener,
   type ListenerState,
   type Mixin,
   type OperationUpdate,
@@ -101,7 +90,7 @@ import {
   type SyncStatus,
   type SyncUnitStatusObject,
   type SynchronizationUnit,
-  type SynchronizationUnitQuery,
+  type SynchronizationUnitQuery
 } from "./types.js";
 import { filterOperationsByRevision, isAtRevision } from "./utils.js";
 
@@ -115,10 +104,7 @@ export class BaseDocumentDriveServer
   private queueManager: IQueueManager;
   private eventEmitter: IEventEmitter;
   protected options: Required<DocumentDriveServerOptions>;
-
-  // waiting to move to external dependencies
   private listenerManager: IListenerManager;
-  private transmitterFactory: ITransmitterFactory;
   private synchronizationManager: ISynchronizationManager;
 
   // internal dependencies
@@ -139,7 +125,6 @@ export class BaseDocumentDriveServer
     eventEmitter: IEventEmitter,
     synchronizationManager: ISynchronizationManager,
     listenerManager: IListenerManager,
-    transmitterFactory: ITransmitterFactory,
 
     options?: DocumentDriveServerOptions,
   ) {
@@ -150,7 +135,6 @@ export class BaseDocumentDriveServer
     this.eventEmitter = eventEmitter;
     this.synchronizationManager = synchronizationManager;
     this.listenerManager = listenerManager;
-    this.transmitterFactory = transmitterFactory;
 
     this.options = {
       ...options,
@@ -167,6 +151,7 @@ export class BaseDocumentDriveServer
           : options.taskQueueMethod,
     };
 
+    // todo: move to external dependencies
     this.defaultDrivesManager = new DefaultDrivesManager(
       this,
       this.defaultDrivesManagerDelegate,
@@ -192,7 +177,8 @@ export class BaseDocumentDriveServer
   }
 
   // workaround for testing the ephemeral listeners -- we don't have DI in place yet
-  getListenerManager() {
+  // todo: remove this once we have DI
+  get listeners():IListenerManager {
     return this.listenerManager;
   }
 
@@ -471,38 +457,6 @@ export class BaseDocumentDriveServer
     if (this.shouldSyncRemoteDrive(drive)) {
       await this.startSyncRemoteDrive(driveId);
     }
-
-    for (const zodListener of drive.state.local.listeners) {
-      const transmitter = this.transmitterFactory.instance(
-        zodListener.callInfo?.transmitterType ?? "",
-        {
-          driveId,
-          listenerId: zodListener.listenerId,
-          block: zodListener.block,
-          filter: zodListener.filter,
-          system: zodListener.system,
-          label: zodListener.label ?? "",
-          callInfo: zodListener.callInfo ?? undefined,
-        },
-        this,
-      );
-
-      await this.listenerManager.setListener(driveId, {
-        block: zodListener.block,
-        driveId: drive.state.global.id,
-        filter: {
-          branch: zodListener.filter.branch ?? [],
-          documentId: zodListener.filter.documentId ?? [],
-          documentType: zodListener.filter.documentType,
-          scope: zodListener.filter.scope ?? [],
-        },
-        listenerId: zodListener.listenerId,
-        callInfo: zodListener.callInfo ?? undefined,
-        system: zodListener.system,
-        label: zodListener.label ?? "",
-        transmitter,
-      });
-    }
   }
 
   // Delegate synchronization methods to synchronizationManager
@@ -650,21 +604,6 @@ export class BaseDocumentDriveServer
       },
       meta?.preferredEditor,
     );
-  }
-
-  public async registerPullResponderTrigger(
-    driveId: string,
-    url: string,
-    options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
-  ) {
-    const pullTrigger =
-      await PullResponderTransmitter.createPullResponderTrigger(
-        driveId,
-        url,
-        options,
-      );
-
-    return pullTrigger;
   }
 
   async deleteDrive(driveId: string) {
@@ -1735,56 +1674,6 @@ export class BaseDocumentDriveServer
 
       this.cache.setDocument("drives", driveId, document).catch(logger.error);
 
-      for (const operation of operationsApplied) {
-        switch (operation.type) {
-          case "ADD_LISTENER": {
-            const zodListener = operation.input.listener;
-
-            // create the transmitter
-            const transmitter = this.transmitterFactory.instance(
-              zodListener.callInfo?.transmitterType ?? "",
-              {
-                driveId,
-                listenerId: zodListener.listenerId,
-                block: zodListener.block,
-                filter: zodListener.filter,
-                system: zodListener.system,
-                label: zodListener.label ?? "",
-                callInfo: zodListener.callInfo ?? undefined,
-              },
-              this,
-            );
-            // create the listener
-            const listener = {
-              ...zodListener,
-              driveId: driveId,
-              label: zodListener.label ?? "",
-              system: zodListener.system ?? false,
-              filter: {
-                branch: zodListener.filter.branch ?? [],
-                documentId: zodListener.filter.documentId ?? [],
-                documentType: zodListener.filter.documentType ?? [],
-                scope: zodListener.filter.scope ?? [],
-              },
-              callInfo: {
-                data: zodListener.callInfo?.data ?? "",
-                name: zodListener.callInfo?.name ?? "PullResponder",
-                transmitterType:
-                  zodListener.callInfo?.transmitterType ?? "PullResponder",
-              },
-              transmitter,
-            };
-
-            await this.addListener(driveId, listener);
-            break;
-          }
-          case "REMOVE_LISTENER": {
-            await this.removeListener(driveId, operation);
-            break;
-          }
-        }
-      }
-
       // update listener cache
       const lastOperation = operationsApplied
         .filter((op) => op.scope === "global")
@@ -1971,77 +1860,6 @@ export class BaseDocumentDriveServer
     }
 
     await this.addDriveAction(driveId, setSharingType({ type: "LOCAL" }));
-  }
-
-  async addListener(driveId: string, listener: Listener) {
-    await this.listenerManager.setListener(driveId, listener);
-  }
-
-  async addInternalListener(
-    driveId: string,
-    receiver: IReceiver,
-    options: {
-      listenerId: string;
-      label: string;
-      block: boolean;
-      filter: ListenerFilter;
-    },
-  ) {
-    const listener: AddListenerInput["listener"] = {
-      callInfo: {
-        data: "",
-        name: "Interal",
-        transmitterType: "Internal",
-      },
-      system: true,
-      ...options,
-    };
-    await this.addDriveAction(driveId, addListener({ listener }));
-    const transmitter = await this.getTransmitter(driveId, options.listenerId);
-    if (!transmitter) {
-      logger.error("Internal listener not found");
-      throw new Error("Internal listener not found");
-    }
-    if (!(transmitter instanceof InternalTransmitter)) {
-      logger.error("Listener is not an internal transmitter");
-      throw new Error("Listener is not an internal transmitter");
-    }
-
-    transmitter.setReceiver(receiver);
-    return transmitter;
-  }
-
-  private async removeListener(
-    driveId: string,
-    operation: Operation<RemoveListenerAction>,
-  ) {
-    const { listenerId } = operation.input;
-    await this.listenerManager.removeListener(driveId, listenerId);
-  }
-
-  async getTransmitter(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ITransmitter | undefined> {
-    const listener = this.listenerManager.getListenerState(driveId, listenerId);
-    return listener.listener.transmitter;
-  }
-
-  getListener(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ListenerState | undefined> {
-    let listenerState;
-    try {
-      listenerState = this.listenerManager.getListenerState(
-        driveId,
-        listenerId,
-      );
-    } catch {
-      return Promise.resolve(undefined);
-    }
-
-    return Promise.resolve(listenerState);
   }
 
   getSyncStatus(

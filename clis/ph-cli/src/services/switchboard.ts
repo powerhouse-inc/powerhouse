@@ -9,6 +9,10 @@ import {
   startServer,
   type StartServerOptions,
 } from "@powerhousedao/reactor-local";
+import { IReceiver } from "document-drive";
+import { InternalTransmitter, InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import { Listener } from "document-drive/server/types";
+import { DocumentModelDocument } from "document-model";
 
 export type SwitchboardOptions = StartServerOptions & {
   configFile?: string;
@@ -49,33 +53,47 @@ async function addGenerateTransmitter(
   reactor: LocalReactor,
   config: PowerhouseConfig,
 ) {
-  return reactor.addListener(
-    "powerhouse",
-    {
-      onStrands: async function (strands) {
-        const documentPaths = new Set<string>();
-        for (const strand of strands) {
-          documentPaths.add(
-            reactor.getDocumentPath(strand.driveId, strand.documentId),
-          );
-        }
-        for (const path of documentPaths) {
-          await generateFromFile(path, config);
-        }
-        return Promise.resolve();
-      },
-      onDisconnect: () => Promise.resolve(),
+  const receiver: IReceiver = {
+    onStrands: async function (strands: InternalTransmitterUpdate<DocumentModelDocument>[]) {
+      const documentPaths = new Set<string>();
+      for (const strand of strands) {
+        documentPaths.add(
+          reactor.getDocumentPath(strand.driveId, strand.documentId),
+        );
+      }
+      for (const path of documentPaths) {
+        await generateFromFile(path, config);
+      }
+      return Promise.resolve();
     },
-    {
-      filter: {
-        documentType: ["powerhouse/document-model"],
-        scope: ["global"],
-        branch: ["*"],
-        documentId: ["*"],
-      },
-      block: false,
-      listenerId: "reactor-local-document-model-generator",
-      label: "reactor-local-document-model-generator",
+    onDisconnect: () => Promise.resolve(),
+  };
+
+  const listenerManager = reactor.server.listeners;
+
+  // todo: simplify
+  const listener: Listener = {
+    driveId: "powerhouse",
+    listenerId: "reactor-local-document-model-generator",
+    label: "reactor-local-document-model-generator",
+    filter: {
+      documentType: ["powerhouse/document-model"],
+      scope: ["global"],
+      branch: ["*"],
+      documentId: ["*"],
     },
-  );
+    block: false,
+    system: false,
+    callInfo: {
+      data: "",
+      name: "reactor-local-document-model-generator",
+      transmitterType: "Internal",
+    },
+  };
+
+  const transmitter = new InternalTransmitter(listener, reactor.server, receiver);
+
+  listener.transmitter = transmitter;
+
+  await listenerManager.setListener(listener.driveId, listener);
 }
