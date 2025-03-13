@@ -1,3 +1,31 @@
+## 0.38.2-dev.0 (2025-03-13)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.225
+
+## 0.38.1 (2025-03-13)
+
+### 🩹 Fixes
+
+- updated sky atlas demo deployment action ([066f97ff](https://github.com/powerhouse-inc/powerhouse/commit/066f97ff))
+- **document-drive:** do not export prisma factory on index ([a32ef36a](https://github.com/powerhouse-inc/powerhouse/commit/a32ef36a))
+- **ph-cli:** lazy import each command action ([b18c1217](https://github.com/powerhouse-inc/powerhouse/commit/b18c1217))
+
+### 🧱 Updated Dependencies
+
+- Updated document-model to 2.25.1
+- Updated @powerhousedao/builder-tools to 0.6.1
+- Updated @powerhousedao/reactor-local to 1.25.1
+- Updated @powerhousedao/codegen to 0.43.1
+- Updated @powerhousedao/config to 1.22.1
+- Updated @powerhousedao/connect to 1.0.9
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 0.38.1-dev.0 (2025-03-12)
 
 ### 🧱 Updated Dependencies
