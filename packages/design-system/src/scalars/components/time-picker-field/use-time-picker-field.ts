@@ -217,7 +217,6 @@ export const useTimePickerField = ({
           },
         ]
       : options;
-  console.log("timeZonesOptions", timeZonesOptions);
   return {
     selectedHour,
     selectedMinute,
