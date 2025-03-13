@@ -1,3 +1,16 @@
+## 1.29.1 (2025-03-13)
+
+### 🩹 Fixes
+
+- updated sky atlas demo deployment action ([066f97ff](https://github.com/powerhouse-inc/powerhouse/commit/066f97ff))
+- **document-drive:** do not export prisma factory on index ([a32ef36a](https://github.com/powerhouse-inc/powerhouse/commit/a32ef36a))
+- **ph-cli:** lazy import each command action ([b18c1217](https://github.com/powerhouse-inc/powerhouse/commit/b18c1217))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 1.29.0 (2025-03-12)
 
 ### 🚀 Features
