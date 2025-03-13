@@ -6,6 +6,7 @@ import { SelectBaseProps } from "../../enum-field/types";
 import TimePeriodSelector from "./time-period-selector";
 import TimeSelector from "./time-selector";
 import { SelectFieldProps, SelectFieldRaw } from "../../fragments/select-field";
+import { cn } from "@/scalars/lib/utils";
 interface TimePickerContentProps {
   onSave?: (time: string) => void;
   onCancel?: () => void;
@@ -73,6 +74,12 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
             "linear-gradient(to bottom, transparent 0%, black 30%, black 70%, transparent 100%)",
         }}
       >
+        <div
+          className={cn(
+            "hidden",
+            "mx-auto mt-[15px]  h-[148px] justify-center overflow-hidden"
+          )}
+        />
         <TimeSelector
           options={hours}
           selectedValue={selectedHour}
