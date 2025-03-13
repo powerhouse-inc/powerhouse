@@ -30,6 +30,7 @@ jobs:
           docker_options: >-
             --build-arg NX_SOCKET_DIR=${{ vars.NX_SOCKET_DIR }}
             --build-arg BASE_PATH=/develop/powerhouse/connect
+            --build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}
             --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
             --build-arg PH_CONNECT_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
             --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
