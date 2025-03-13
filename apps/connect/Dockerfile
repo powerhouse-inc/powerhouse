@@ -10,9 +10,12 @@ ENV NX_SOCKET_DIR=${NX_SOCKET_DIR}
 RUN npm install --global pnpm@9
 COPY . .
 RUN pnpm install --frozen-lockfile --filter @powerhousedao/connect...
+ENV NX_DAEMON=false
 ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
-ENV NX_DAEMON=false
+ARG PH_PACKAGES=""
+ENV PH_PACKAGES=${PH_PACKAGES}
+RUN if [ -n "${PH_PACKAGES}" ]; then pnpm install --filter @powerhousedao/connect ${PH_PACKAGES//,/ }; fi
 RUN pnpm nx run @powerhousedao/connect:build --base ${BASE_PATH}
 RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned
 
