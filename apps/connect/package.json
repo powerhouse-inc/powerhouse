@@ -79,7 +79,6 @@
         "@vitejs/plugin-react": "^4.2.1",
         "asar": "^3.2.0",
         "autoprefixer": "^10.4.14",
-        "cypress": "^13.11.0",
         "did-key-creator": "^1.2.0",
         "document-drive": "workspace:*",
         "document-model": "workspace:*",
