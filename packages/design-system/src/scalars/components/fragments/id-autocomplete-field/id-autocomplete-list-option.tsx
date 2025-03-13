@@ -81,6 +81,7 @@ export type IdAutocompleteListOptionProps = {
   isFetchSelectedOptionSync?: boolean;
   className?: string;
   placeholderIcon?: IconName | React.ReactElement;
+  renderPathAsLink?: boolean;
 } & IdAutocompleteOption;
 
 export const IdAutocompleteListOption: React.FC<
@@ -99,6 +100,7 @@ export const IdAutocompleteListOption: React.FC<
   isFetchSelectedOptionSync,
   className,
   placeholderIcon = "PowerhouseLogoSmall",
+  renderPathAsLink = false,
 }) => {
   const renderWithValue = () => (
     <div className={cn("flex w-full items-center")}>
@@ -133,16 +135,29 @@ export const IdAutocompleteListOption: React.FC<
           >
             {title}
           </span>
-          <span
-            className={cn(
-              "truncate text-xs leading-5",
-              asPlaceholder
-                ? "text-gray-400 dark:text-gray-700"
-                : "text-gray-500 dark:text-gray-600",
-            )}
-          >
-            {path}
-          </span>
+          {renderPathAsLink ? (
+            <a
+              href={path.startsWith("https://") ? path : `https://${path}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "truncate text-xs leading-5 text-blue-500 hover:underline dark:text-blue-600",
+              )}
+            >
+              {path}
+            </a>
+          ) : (
+            <span
+              className={cn(
+                "truncate text-xs leading-5",
+                asPlaceholder
+                  ? "text-gray-400 dark:text-gray-700"
+                  : "text-gray-500 dark:text-gray-600",
+              )}
+            >
+              {path}
+            </span>
+          )}
         </div>
         {asPlaceholder === false && handleFetchSelectedOption && (
           <ReloadButton

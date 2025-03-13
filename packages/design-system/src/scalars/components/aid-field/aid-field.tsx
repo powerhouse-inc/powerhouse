@@ -90,6 +90,9 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
           }
           description={option.description}
           placeholderIcon="Person"
+          renderPathAsLink={
+            !displayProps?.asPlaceholder && !displayProps?.showValue
+          }
           {...displayProps}
         />
       ),
