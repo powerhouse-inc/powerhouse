@@ -115,10 +115,10 @@ export interface IDriveContext {
    * @type TDocument - Type of the document to retrieve state for if known
    * @returns State of the document
    */
-  useDriveDocumentState: <TDocument extends PHDocument = PHDocument>(props: {
+  useDriveDocumentState: (props: {
     driveId: string;
     documentId: string;
-  }) => TDocument["state"] | undefined;
+  }) => PHDocument["state"] | undefined;
 }
 
 const DriveContext = createContext<IDriveContext | undefined>(undefined);

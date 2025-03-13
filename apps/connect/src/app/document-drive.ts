@@ -11,7 +11,7 @@ import {
 } from 'document-drive';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import {
-    type Action,
+    type DocumentAction,
     type DocumentModelModule,
     type Operation,
 } from 'document-model';
@@ -118,7 +118,7 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | Action>[],
+            operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) => documentDrive.addDriveOperations(drive, operations, { forceSync }),
     );
@@ -128,7 +128,7 @@ export default (
         (
             _e,
             drive: string,
-            operation: Operation<DocumentDriveAction | Action>,
+            operation: Operation<DocumentDriveAction | DocumentAction>,
             forceSync?: boolean,
         ) =>
             documentDrive.queueDriveOperations(drive, [operation], {
@@ -141,7 +141,7 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | Action>[],
+            operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
             documentDrive.queueDriveOperations(drive, operations, {
