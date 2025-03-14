@@ -18,7 +18,10 @@ import type {
   FieldCommonProps,
   ErrorHandling,
 } from "@/scalars/components/types";
-import type { SelectProps } from "@/scalars/components/enum-field/types";
+import type {
+  SelectProps,
+  SelectOption,
+} from "@/scalars/components/enum-field/types";
 import { useSelectField } from "./use-select-field";
 import { SelectedContent } from "./selected-content";
 import { Content } from "./content";
@@ -32,8 +35,10 @@ type SelectFieldBaseProps = Omit<
 
 export type SelectFieldProps = SelectFieldBaseProps &
   FieldCommonProps<string | string[]> &
-  ErrorHandling &
-  SelectProps;
+  ErrorHandling & {
+    options?: SelectOption[];
+    favoriteOptions?: SelectOption[];
+  } & Omit<SelectProps, "options" | "favoriteOptions">;
 
 export const SelectFieldRaw = React.forwardRef<
   HTMLButtonElement,
@@ -43,6 +48,7 @@ export const SelectFieldRaw = React.forwardRef<
     {
       // core functionality props
       options = [],
+      favoriteOptions = [],
       defaultValue,
       value,
       onChange,
@@ -166,7 +172,7 @@ export const SelectFieldRaw = React.forwardRef<
             >
               <SelectedContent
                 selectedValues={selectedValues}
-                options={options}
+                options={[...favoriteOptions, ...options]}
                 multiple={multiple}
                 searchable={searchable}
                 placeholder={placeholder}
@@ -191,6 +197,7 @@ export const SelectFieldRaw = React.forwardRef<
               }
             >
               <Content
+                favoriteOptions={favoriteOptions as SelectOption[]}
                 searchable={searchable}
                 commandListRef={commandListRef}
                 multiple={multiple}

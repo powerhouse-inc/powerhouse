@@ -11,6 +11,7 @@ import { useCommandState } from "cmdk";
 import { cn } from "@/scalars/lib/utils";
 import { SelectProps } from "@/scalars/components/enum-field/types";
 import { Icon, type IconName } from "@/powerhouse/components/icon";
+import { CommandItemList } from "./subcomponents/CommandItemList";
 
 interface ContentProps {
   searchable?: boolean;
@@ -20,6 +21,7 @@ interface ContentProps {
   selectionIcon: "auto" | "checkmark";
   selectionIconPosition: "left" | "right";
   options: SelectProps["options"];
+  favoriteOptions?: SelectProps["options"];
   toggleAll: () => void;
   toggleOption: (value: string) => void;
 }
@@ -58,6 +60,7 @@ export const Content: React.FC<ContentProps> = ({
   options = [],
   toggleAll,
   toggleOption,
+  favoriteOptions = [],
 }) => {
   const enabledOptions = options.filter((opt) => !opt.disabled);
   const hasAnyIcon = options.some((opt) => opt.icon);
@@ -156,6 +159,18 @@ export const Content: React.FC<ContentProps> = ({
         <CommandGroup
           className={multiple && cmdkSearch === "" ? "pt-0" : undefined}
         >
+          <CommandItemList
+            options={favoriteOptions}
+            selectedValues={selectedValues}
+            selectionIcon={selectionIcon}
+            selectionIconPosition={selectionIconPosition}
+            hasAnyIcon={hasAnyIcon}
+            toggleOption={toggleOption}
+          />
+
+          {favoriteOptions.length > 0 && (
+            <div className="my-1 border-b border-gray-300 dark:border-gray-600" />
+          )}
           {options.map((opt) => {
             const isSelected = selectedValues.includes(opt.value);
 
