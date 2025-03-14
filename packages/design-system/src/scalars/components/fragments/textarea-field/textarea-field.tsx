@@ -11,7 +11,9 @@ import { FormDescription } from "../form-description/index.js";
 import { FormGroup } from "../form-group/index.js";
 import { FormLabel } from "../form-label/index.js";
 import { FormMessageList } from "../form-message/index.js";
-import ValueTransformer, { type TransformerType } from "../value-transformer/index.js";
+import ValueTransformer, {
+  type TransformerType,
+} from "../value-transformer/index.js";
 import { withFieldValidation } from "../with-field-validation/index.js";
 
 type TextareaFieldBaseProps = Omit<
