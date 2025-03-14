@@ -1,4 +1,8 @@
 // namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
+import * as Amount from "./Amount.js";
+import * as AmountCrypto from "./AmountCrypto.js";
+import * as AmountCurrency from "./AmountCurrency.js";
+import * as AmountFiat from "./AmountFiat.js";
 import * as AmountMoney from "./AmountMoney.js";
 import * as AmountPercentage from "./AmountPercentage.js";
 import * as AmountTokens from "./AmountTokens.js";
@@ -13,6 +17,10 @@ import * as PHID from "./PHID.js";
 import * as URLScalar from "./URL.js";
 
 // export types -- DO NOT REMOVE OR EDIT THIS COMMENT
+export type { ScalarType as AmountScalarType } from "./Amount.js";
+export type { ScalarType as AmountCryptoScalarType } from "./AmountCrypto.js";
+export type { ScalarType as AmountCurrencyScalarType } from "./AmountCurrency.js";
+export type { ScalarType as AmountFiatScalarType } from "./AmountFiat.js";
 export type { ScalarType as AmountMoneyScalarType } from "./AmountMoney.js";
 export type { ScalarType as AmountPercentageScalarType } from "./AmountPercentage.js";
 export type { ScalarType as AmountTokensScalarType } from "./AmountTokens.js";
@@ -27,6 +35,10 @@ export type { ScalarType as PHIDScalarType } from "./PHID.js";
 export type { ScalarType as URLScalarType } from "./URL.js";
 
 export {
+  Amount,
+  AmountCrypto,
+  AmountCurrency,
+  AmountFiat,
   AmountMoney,
   AmountPercentage,
   // export object -- DO NOT REMOVE OR EDIT THIS COMMENT
@@ -39,7 +51,7 @@ export {
   OID,
   OLabel,
   PHID,
-  URLScalar,
+  URLScalar
 };
 
 export const resolvers = {
@@ -56,6 +68,10 @@ export const resolvers = {
   Currency: Currency.scalar,
   PHID: PHID.scalar,
   OID: OID.scalar,
+  AmountFiat: AmountFiat.scalar,
+  AmountCurrency: AmountCurrency.scalar,
+  AmountCrypto: AmountCrypto.scalar,
+  Amount: Amount.scalar,
 };
 
 export const typeDefs = [
@@ -72,6 +88,10 @@ export const typeDefs = [
   Currency.typedef,
   PHID.typedef,
   OID.typedef,
+  AmountFiat.typedef,
+  AmountCurrency.typedef,
+  AmountCrypto.typedef,
+  Amount.typedef,
 ];
 
 export const generatorTypeDefs = {
@@ -88,6 +108,10 @@ export const generatorTypeDefs = {
   [Currency.config.name]: Currency.type,
   [PHID.config.name]: PHID.type,
   [OID.config.name]: OID.type,
+  [AmountFiat.config.name]: AmountFiat.type,
+  [AmountCurrency.config.name]: AmountCurrency.type,
+  [AmountCrypto.config.name]: AmountCrypto.type,
+  [Amount.config.name]: Amount.type,
 };
 
 export const validationSchema = {
@@ -104,4 +128,8 @@ export const validationSchema = {
   [Currency.config.name]: Currency.stringSchema,
   [PHID.config.name]: PHID.stringSchema,
   [OID.config.name]: OID.stringSchema,
+  [AmountFiat.config.name]: AmountFiat.stringSchema,
+  [AmountCurrency.config.name]: AmountCurrency.stringSchema,
+  [AmountCrypto.config.name]: AmountCrypto.stringSchema,
+  [Amount.config.name]: Amount.stringSchema,
 };
