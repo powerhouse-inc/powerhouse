@@ -98,6 +98,7 @@ export default defineConfig(({ mode }) => {
                     APP_VERSION,
                     REQUIRES_HARD_REFRESH,
                     SENTRY_RELEASE: release,
+                    LOAD_EXTERNAL_PACKAGES: phPackages.length > 0,
                 };
             },
         }),

@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.224",
+    "version": "1.0.0-dev.225",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "type": "module",
@@ -38,14 +38,14 @@
         "lint:fix": "eslint --fix .",
         "lint:nx": "eslint --quiet --fix .",
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
+        "dev": "vite -c vite.renderer.config.mts",
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
         "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
         "cy:open": "cypress open",
-        "build:service-worker": "tsc --build ./tsconfig.sw.json",
-        "install:packages": "node ./scripts/install-packages.js"
+        "build:service-worker": "tsc --build ./tsconfig.sw.json"
     },
     "devDependencies": {
         "@electron-forge/cli": "^6.1.1",
@@ -78,8 +78,6 @@
         "@vitejs/plugin-basic-ssl": "^1.2.0",
         "@vitejs/plugin-react": "^4.2.1",
         "asar": "^3.2.0",
-        "autoprefixer": "^10.4.14",
-        "cypress": "^13.11.0",
         "did-key-creator": "^1.2.0",
         "document-drive": "workspace:*",
         "document-model": "workspace:*",
@@ -98,7 +96,6 @@
         "lz-string": "^1.5.0",
         "playwright": "^1.41.2",
         "playwright-core": "^1.41.2",
-        "postcss": "^8.4.33",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-error-boundary": "^4.0.11",

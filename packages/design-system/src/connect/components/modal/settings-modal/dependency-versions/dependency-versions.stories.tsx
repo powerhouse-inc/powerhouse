@@ -1,6 +1,6 @@
 import { type Meta, type StoryObj } from "@storybook/react";
 import { DependencyVersions } from "./dependency-versions.js";
-import mockPackageJson from "./mock-package-json.json" with { type: "json" };
+import mockPackageJson from "./mock-package-json.json";
 
 const meta = {
   title: "Connect/Components/Dependency Versions",

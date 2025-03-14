@@ -11,8 +11,8 @@ export const readManifest = () => {
 };
 
 import { getConfig } from "@powerhousedao/config/powerhouse";
-import { type DocumentModelModule } from "document-model";
 import { type Subgraph } from "@powerhousedao/reactor-api";
+import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import { existsSync, readFileSync, type StatWatcher, watchFile } from "node:fs";
 import { createRequire } from "node:module";
@@ -28,7 +28,7 @@ interface IPackagesManager {
 
 type IPackagesManagerOptions = { packages: string[] };
 
-export async function loadDependency(packageName: string, subPath = "") {
+export async function loadDependency(packageName: string, subPath: string) {
   const packagePath = require.resolve(packageName, {
     paths: [process.cwd()],
   });
@@ -45,20 +45,20 @@ export async function loadDependency(packageName: string, subPath = "") {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const exportsMap = packageJson.exports?.[subPath || "."];
+  // const exportsMap = packageJson.exports?.[subPath || "."];
 
-  if (!exportsMap) {
-    throw new Error(`No exports found for ${packageName}/${subPath}`);
-  }
+  // if (!exportsMap) {
+  //   throw new Error(`No exports found for ${packageName}/${subPath}`);
+  // }
 
   // use the "import" field explicitly
-  const esmPath = join(
-    packageRootPath,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-    exportsMap.import || exportsMap.default || exportsMap,
-  );
+  // const esmPath = join(
+  //   packageRootPath,
+  //   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+  //   exportsMap.import || exportsMap.default || exportsMap,
+  // );
 
-  const module = (await import(esmPath)) as unknown;
+  const module = (await import(`${packageName}/${subPath}`)) as unknown;
   return module;
 }
 
@@ -67,7 +67,7 @@ async function loadPackagesDocumentModels(packages: string[]) {
   for (const pkg of packages) {
     try {
       console.log("> Loading package:", pkg);
-      const pkgModule = (await loadDependency(pkg, "./document-models")) as {
+      const pkgModule = (await loadDependency(pkg, "document-models")) as {
         [key: string]: DocumentModelModule;
       };
       if (pkgModule) {
@@ -88,7 +88,7 @@ async function loadPackagesSubgraphs(packages: string[]) {
   for (const pkg of packages) {
     const pkgModule = (await loadDependency(
       pkg,
-      "./subgraphs",
+      "subgraphs",
     )) as (typeof Subgraph)[];
     if (pkgModule) {
       console.log(`  ➜  Loaded Subgraphs from: ${pkg}`);

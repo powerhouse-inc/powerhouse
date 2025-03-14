@@ -1,4 +1,8 @@
 import type { StorybookConfig } from "@storybook/react-vite";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const srcPath = fileURLToPath(new URL("../src", import.meta.url));
 
 const config: StorybookConfig = {
   stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|mjs|ts|tsx|)"],
@@ -9,7 +13,7 @@ const config: StorybookConfig = {
     "@storybook/addon-themes",
     "storybook-addon-pseudo-states",
     "@storybook/addon-docs",
-    "@chromatic-com/storybook"
+    "@chromatic-com/storybook",
   ],
   framework: {
     name: "@storybook/react-vite",
@@ -20,14 +24,29 @@ const config: StorybookConfig = {
     reactDocgen: false,
   },
   docs: {
-    autodocs: 'tag',
-    defaultName: '_Readme'
+    autodocs: "tag",
+    defaultName: "_Readme",
   },
   viteFinal: async (config) => {
-    const { mergeConfig } = await import('vite');
+    const { mergeConfig } = await import("vite");
     const { default: tailwindcss } = await import("@tailwindcss/vite");
     return mergeConfig(config, {
       plugins: [tailwindcss()],
+      build: {
+        rollupOptions: {
+          external: ["node:crypto"],
+        },
+      },
+      resolve: {
+        alias: {
+          "#assets": path.join(srcPath, "assets"),
+          "#connect": path.join(srcPath, "connect"),
+          "#powerhouse": path.join(srcPath, "powerhouse"),
+          "#scalars": path.join(srcPath, "scalars"),
+          "#rwa": path.join(srcPath, "rwa"),
+          "#services": path.join(srcPath, "services"),
+        },
+      },
     });
   },
 };

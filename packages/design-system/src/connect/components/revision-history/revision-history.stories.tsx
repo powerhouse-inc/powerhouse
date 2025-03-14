@@ -1,9 +1,9 @@
 import { type Meta, type StoryObj } from "@storybook/react";
 import { type Operation } from "document-model";
 import { globalOperations, localOperations } from "./mocks.js";
-import nsOperations from "./ns-operations.json" with { type: "json" };
+import nsOperations from "./ns-operations.json";
 import { RevisionHistory } from "./revision-history.js";
-import skipOperations from "./skip-operations.json" with { type: "json" };
+import skipOperations from "./skip-operations.json";
 
 const meta = {
   title: "Connect/Components/Revision History/Revision History",

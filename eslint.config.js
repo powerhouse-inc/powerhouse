@@ -40,13 +40,14 @@ export default tseslint.config(
       "packages/document-drive/**/*.bench.ts",
       "packages/reactor-api/**/*.test.ts",
       "packages/reactor-api/**/*.bench.ts",
+      "apps/connect/cypress/**/*.ts",
       "**/.vite/",
       "**/out/",
       "**/forge.config.js",
       "**/vite.config.ts.timestamp-*.mjs",
       "apps/connect/src/vite-env.d.ts",
       "**/*.config.*",
-      "clis/ph-cli/.ph/"
+      "clis/ph-cli/.ph/",
     ],
   },
   {
@@ -59,9 +60,7 @@ export default tseslint.config(
       },
       parserOptions: {
         projectService: {
-          allowDefaultProject: [
-            "vitest.workspace.ts",
-          ]
+          allowDefaultProject: ["vitest.workspace.ts"],
         },
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {

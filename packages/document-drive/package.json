@@ -1,11 +1,12 @@
 {
   "name": "document-drive",
-  "version": "1.25.0",
+  "version": "1.26.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
+    "./storage/prisma": "./dist/src/storage/prisma/index.js",
     "./*": "./dist/src/*.js"
   },
   "imports": {

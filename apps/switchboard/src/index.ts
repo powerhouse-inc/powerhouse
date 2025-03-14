@@ -8,10 +8,9 @@ import {
   SubgraphManager,
   getDbClient,
 } from "@powerhousedao/reactor-api";
-import { PrismaClient } from "@prisma/client";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
-import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
   type DocumentModelModule,
   documentModelDocumentModelModule,
@@ -38,17 +37,24 @@ const main = async () => {
     });
     const { documentModels, subgraphs } = await pkgManager.init();
     const redis = await initRedis();
-    const prismaClient: PrismaClient = new PrismaClient();
     const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("Please set env var DATABASE_URL");
+    }
     const dbUrl =
-      connectionString?.includes("amazonaws") &&
+      connectionString.includes("amazonaws") &&
       !connectionString.includes("sslmode=no-verify")
         ? connectionString + "?sslmode=no-verify"
         : connectionString;
+
+    const storageFactory = new PrismaStorageFactory(dbUrl);
+    const storage = storageFactory.build();
+
     const knex = getDbClient(dbUrl);
+
     const redisCache = new RedisCache(redis);
-    const storage = new PrismaStorage(prismaClient);
-    const driveServer = new ReactorBuilder([
+
+    const reactor = new ReactorBuilder([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
       ...documentModels,
@@ -58,7 +64,7 @@ const main = async () => {
       .build();
 
     // init drive server
-    await driveServer.initialize();
+    await reactor.initialize();
     const analyticsStore = new KnexAnalyticsStore({
       executor: new KnexQueryExecutor(),
       knex,
@@ -66,7 +72,7 @@ const main = async () => {
     const subgraphManager = new SubgraphManager(
       process.env.BASE_PATH || "/",
       app,
-      driveServer,
+      reactor,
       knex,
       // @ts-expect-error todo update analytics store to use IAnalyticsStore
       analyticsStore,

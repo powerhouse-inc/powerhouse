@@ -1,10 +1,9 @@
 import {
-    type BaseDocumentDriveServer,
     BaseQueueManager,
     type DefaultRemoteDriveInput,
     type DocumentDriveServerOptions,
+    type IDocumentDriveServer,
     InMemoryCache,
-    type IReadModeDriveServer,
     ReactorBuilder,
 } from 'document-drive';
 import { BrowserStorage } from 'document-drive/storage/browser';
@@ -67,7 +66,7 @@ export const getReactorDefaultDrivesConfig = (): Pick<
 export function createBrowserDocumentDriveServer(
     documentModels: DocumentModelModule[],
     routerBasename: string,
-): BaseDocumentDriveServer & IReadModeDriveServer {
+): IDocumentDriveServer {
     return new ReactorBuilder(documentModels)
         .withStorage(new BrowserStorage(routerBasename))
         .withCache(new InMemoryCache())
