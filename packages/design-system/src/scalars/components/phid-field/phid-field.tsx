@@ -83,10 +83,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
           title={option.title}
           path={option.path}
           value={
-            displayProps?.asPlaceholder &&
-            option.value === "value not available"
-              ? "phd not available"
-              : option.value
+            displayProps?.asPlaceholder ? "phd not available" : option.value
           }
           description={option.description}
           {...displayProps}

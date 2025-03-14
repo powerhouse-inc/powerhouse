@@ -58,6 +58,16 @@ const meta: Meta<typeof TimePickerField> = {
         },
       },
     },
+    includeContinent: {
+      control: {
+        type: "boolean",
+        description: "Show continent name in the timezone select",
+        defaultValue: false,
+      },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
 
   args: {

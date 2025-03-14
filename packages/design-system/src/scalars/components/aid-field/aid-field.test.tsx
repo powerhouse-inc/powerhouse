@@ -23,14 +23,20 @@ describe("AIDField Component", () => {
     {
       icon: "Person",
       title: "Agent A",
-      path: "agents/agent-a",
+      path: {
+        text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+        url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+      },
       value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e8a",
       description: "Agent A description",
     },
     {
       icon: "Person",
       title: "Agent B",
-      path: "agents/agent-b",
+      path: {
+        text: "renown.id/0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
+        url: "https://www.renown.id/0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
+      },
       value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
       description: "Agent B description",
     },
@@ -302,7 +308,7 @@ describe("AIDField Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText(mockedOptions[0].title)).toBeInTheDocument();
-      expect(screen.getByText(mockedOptions[0].path)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].path.text)).toBeInTheDocument();
       expect(
         screen.getByText(mockedOptions[0].description),
       ).toBeInTheDocument();

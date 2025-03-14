@@ -27,6 +27,7 @@ interface DateTimePickerProps extends FieldCommonProps<DateFieldValue> {
   timeIntervals?: number;
   timeZone?: string;
   showTimezoneSelect?: boolean;
+  includeContinent?: boolean;
   // Date Picker Field
   disablePastDates?: boolean;
   disableFutureDates?: boolean;
@@ -61,14 +62,16 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
       dateFormat,
       weekStart,
       autoClose,
+      minDate,
+      maxDate,
       onChangeDate,
       onBlurDate,
       timeFormat,
+      // Time Picker Field
       timeIntervals,
       timeZone,
       showTimezoneSelect,
-      minDate,
-      maxDate,
+      includeContinent,
       ...props
     },
     ref,
@@ -120,14 +123,15 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
       weekStart,
       onChangeDate,
       onBlurDate,
+      minDate,
+      maxDate,
 
       // Time Picker Field
       timeFormat,
       timeIntervals,
       timeZone,
       showTimezoneSelect,
-      minDate,
-      maxDate,
+      includeContinent,
     });
     return (
       <FormGroup>
@@ -159,7 +163,7 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
           data-cast={`DateTimeString:${dateFormat}`}
           className={cn(
             // Add custom styles when the time is open
-            isCalendarView ? "pt-3 px-4 pb-6" : "pt-3 pr-4 pb-4 pl-4",
+            isCalendarView ? "px-4 pb-6 pt-3" : "px-4 pb-4 pt-3",
           )}
         >
           <DateTimePickerContent

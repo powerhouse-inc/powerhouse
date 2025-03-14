@@ -66,14 +66,14 @@ const meta: Meta<typeof PHIDField> = {
         "Must return a Promise that resolves to an array of objects or an array of objects with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: string\n\n" +
+        "path?: { text: string; url?: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n",
       table: {
         type: {
           summary:
-            "(userInput: string, context?: { allowUris?: boolean, " +
-            "allowedScopes?: string[] }) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
+            "(userInput: string, context?: { allowUris?: boolean; " +
+            "allowedScopes?: string[]; }) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -88,7 +88,7 @@ const meta: Meta<typeof PHIDField> = {
         "Must return a Promise that resolves to an object or an object with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: string\n\n" +
+        "path?: { text: string; url?: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n" +
         "or undefined if the option is not found",
