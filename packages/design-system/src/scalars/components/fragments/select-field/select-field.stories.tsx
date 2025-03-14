@@ -89,6 +89,23 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
+    contentAlign: {
+      control: "select",
+      description: "Alignment of the dropdown",
+      options: ["start", "end", "center"],
+      table: {
+        defaultValue: { summary: "start" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    contentClassName: {
+      control: "text",
+      description: "Custom class name for the dropdown content",
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     ...getValidationArgTypes(),
   },
   args: {

@@ -2,17 +2,18 @@
 
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
-import { useEffect, useRef } from "react";
 import { AutoSizer, List } from "react-virtualized";
 import { SidebarItem } from "./sidebar-item.js";
-import { useSidebar } from "./sidebar-provider.js";
+import { useSidebar } from "./sidebar-provider/index.js";
 
 interface SidebarContentAreaProps {
   allowPinning?: boolean;
+  allowCollapsingInactiveNodes?: boolean;
 }
 
 export const SidebarContentArea = ({
   allowPinning,
+  allowCollapsingInactiveNodes,
 }: SidebarContentAreaProps) => {
   const {
     flattenedNodes,
@@ -23,27 +24,10 @@ export const SidebarContentArea = ({
     activeSearchIndex,
     pinnedNodePath,
     activeNodeId,
+    virtualListRef,
     onActiveNodeChange,
   } = useSidebar();
-  const listRef = useRef<List>(null);
   const hasPinnedItems = allowPinning && pinnedNodePath.length > 0;
-
-  // scroll into view when navigating between search results
-  useEffect(() => {
-    if (
-      searchResults.length > 0 &&
-      activeSearchIndex >= 0 &&
-      activeSearchIndex < searchResults.length
-    ) {
-      const { id } = searchResults[activeSearchIndex];
-      // scroll into view
-      for (let i = 0; i < flattenedNodes.length; i++) {
-        if (flattenedNodes[i].id === id) {
-          listRef.current?.scrollToRow(i);
-        }
-      }
-    }
-  }, [activeSearchIndex, flattenedNodes, searchResults]);
 
   const renderNode = ({
     index,
@@ -69,6 +53,7 @@ export const SidebarContentArea = ({
         isActive={activeNodeId === node.id}
         onChange={onActiveNodeChange}
         style={style}
+        allowCollapsingInactiveNodes={allowCollapsingInactiveNodes}
       />
     );
   };
@@ -90,7 +75,7 @@ export const SidebarContentArea = ({
           <AutoSizer>
             {({ width, height }) => (
               <List
-                ref={listRef}
+                ref={virtualListRef}
                 className="p-2"
                 width={width}
                 height={height}

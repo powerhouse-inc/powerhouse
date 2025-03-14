@@ -1,38 +1,13 @@
-import type { IconName } from "#powerhouse";
+import type { IdAutocompleteProps } from "../fragments/id-autocomplete-field/types.js";
 
-export interface PHIDBaseProps {
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  allowedScopes?: string[];
-  allowUris?: boolean;
-  allowDataObjectReference?: boolean;
-  maxLength?: number;
-  isOpenByDefault?: boolean;
-  initialOptions?: PHIDItem[];
-}
-
-export type PHIDProps = PHIDBaseProps &
+export type PHIDProps = Omit<IdAutocompleteProps, "renderOption"> &
   (
     | {
-        autoComplete: false;
-        variant?: never;
-        fetchOptionsCallback?: never;
-        fetchSelectedOptionCallback?: never;
+        allowUris: true;
+        allowedScopes?: string[];
       }
     | {
-        autoComplete?: true;
-        variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
-        fetchOptionsCallback: (phidFragment: string) => Promise<PHIDItem[]>;
-        fetchSelectedOptionCallback?: (
-          phid: string,
-        ) => Promise<PHIDItem | undefined>;
+        allowUris?: false;
+        allowedScopes?: never;
       }
   );
-
-export interface PHIDItem {
-  icon?: IconName | React.ReactElement;
-  title?: string;
-  path?: string;
-  phid: string;
-  description?: string;
-}

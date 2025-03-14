@@ -1,17 +1,18 @@
 /* eslint-disable react/jsx-max-depth */
 import { type IconName } from "#powerhouse";
-import { cn, sharedValueTransformers } from "#scalars";
 import React, { useCallback, useId, useMemo } from "react";
+import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
+import { cn } from "../../lib/utils.js";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
   Input,
-  withFieldValidation,
 } from "../fragments/index.js";
 import ValueTransformer from "../fragments/value-transformer/index.js";
-import { type ErrorHandling, type FieldCommonProps } from "../types.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { ErrorHandling, FieldCommonProps } from "../types.js";
 import UrlFavicon from "./url-favicon.js";
 import { useURLWarnings } from "./useURLWarnings.js";
 
@@ -30,10 +31,7 @@ interface UrlFieldProps
   platformIcons?: Record<string, PlatformIcon>;
 }
 
-const UrlFieldRaw: React.FC<UrlFieldProps> = React.forwardRef<
-  HTMLInputElement,
-  UrlFieldProps
->(
+const UrlFieldRaw = React.forwardRef<HTMLInputElement, UrlFieldProps>(
   (
     {
       label,

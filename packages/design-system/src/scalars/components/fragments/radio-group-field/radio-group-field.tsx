@@ -2,19 +2,29 @@ import {
   cn,
   FormLabel,
   FormMessageList,
-  withFieldValidation,
   type ErrorHandling,
   type FieldCommonProps,
   type RadioGroupProps,
 } from "#scalars";
 import React, { useId } from "react";
-import { Radio } from "./radio.js";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 import { RadioGroup } from "./radio-group.js";
+import { Radio } from "./radio.js";
 
-export interface RadioGroupFieldProps
-  extends FieldCommonProps<string>,
-    ErrorHandling,
-    RadioGroupProps {}
+type RadioGroupFieldBaseProps = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  | keyof FieldCommonProps<string>
+  | keyof ErrorHandling
+  | keyof RadioGroupProps
+  | "dir"
+> & {
+  dir?: "ltr" | "rtl";
+};
+
+export type RadioGroupFieldProps = RadioGroupFieldBaseProps &
+  FieldCommonProps<string> &
+  ErrorHandling &
+  RadioGroupProps;
 
 const RadioGroupFieldRaw = React.forwardRef<
   HTMLDivElement,
@@ -99,10 +109,7 @@ const RadioGroupFieldRaw = React.forwardRef<
   },
 );
 
-export const RadioGroupField = withFieldValidation<RadioGroupFieldProps>(
-  RadioGroupFieldRaw,
-) as React.ForwardRefExoticComponent<
-  RadioGroupFieldProps & React.RefAttributes<HTMLDivElement>
->;
+export const RadioGroupField =
+  withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);
 
 RadioGroupField.displayName = "RadioGroupField";

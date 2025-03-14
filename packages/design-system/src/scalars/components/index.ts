@@ -1,8 +1,11 @@
+export * from "./aid-field/index.js";
 export * from "./amount-field/index.js";
 export * from "./boolean-field/index.js";
 export * from "./country-code-field/index.js";
 export * from "./currency-code-field/index.js";
 export * from "./date-picker-field/index.js";
+export * from "./date-time-field/index.js";
+export * from "./dropdown/index.js";
 export * from "./enum-field/index.js";
 export * from "./form/index.js";
 export * from "./fragments/index.js";
@@ -10,8 +13,9 @@ export * from "./id-field/index.js";
 export * from "./number-field/index.js";
 export * from "./phid-field/index.js";
 export * from "./sidebar/index.js";
-export * from "./sidebar/subcomponents/sidebar-provider.js";
+export * from "./sidebar/subcomponents/sidebar-provider/index.js";
 export * from "./string-field/index.js";
 export * from "./time-picker-field/index.js";
 export * from "./types.js";
 export * from "./url-field/index.js";
+

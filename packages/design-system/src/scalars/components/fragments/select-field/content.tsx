@@ -1,18 +1,16 @@
 /* eslint-disable react/jsx-max-depth */
 import { Icon, type IconName } from "#powerhouse";
+import { type SelectProps } from "#scalars";
+import { useCommandState } from "cmdk";
+import { useEffect } from "react";
+import { cn } from "../../../lib/utils.js";
 import {
-  cn,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-  type SelectProps,
-} from "#scalars";
-import { useCommandState } from "cmdk";
-
-import { useEffect } from "react";
-
+} from "../command/command.js";
 interface ContentProps {
   searchable?: boolean;
   commandListRef: React.RefObject<HTMLDivElement>;
@@ -74,6 +72,16 @@ export const Content: React.FC<ContentProps> = ({
       {searchable && (
         <CommandInput
           placeholder="Search..."
+          onKeyDown={(e) => {
+            const isOptionsRelatedKey = [
+              "ArrowUp",
+              "ArrowDown",
+              "Enter",
+            ].includes(e.key);
+            if (!(isOptionsRelatedKey && enabledOptions.length > 0)) {
+              e.stopPropagation();
+            }
+          }}
           wrapperClassName="rounded-t"
           className="text-gray-900 dark:text-gray-50"
         />

@@ -1,7 +1,9 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import { Icon } from "#powerhouse";
-import { cn } from "../../lib/utils.js";
+import { cn } from "#scalars";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
+import { type Matcher } from "react-day-picker";
 import { Calendar } from "../date-picker-field/subcomponents/calendar/calendar.js";
+import { type WeekStartDayNumber } from "../date-picker-field/types.js";
 import { type SelectBaseProps } from "../enum-field/types.js";
 import { type SelectFieldProps } from "../fragments/index.js";
 import TimePickerContent from "../time-picker-field/subcomponents/time-picker-content.js";
@@ -10,6 +12,14 @@ interface DateTimePickerContentProps {
   className?: string;
   activeTab: "date" | "time";
   onChangeTabs: (value: string) => void;
+
+  // Date Picker Field
+  date?: Date;
+  handleDateSelect?: (date: Date) => void;
+  disabledDates: Matcher | Matcher[] | undefined;
+  weekStartDay: WeekStartDayNumber;
+  handleDayClick: () => void;
+
   // Date Time Field
   selectedHour: string;
   selectedMinute: string;
@@ -22,27 +32,43 @@ interface DateTimePickerContentProps {
   timeZonesOptions: SelectBaseProps["options"];
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
   is12HourFormat: boolean;
-  isDisableSelect: boolean;
+  isDisableSelect?: boolean;
+  selectedTimeZone?: string;
+  setSelectedTimeZone?: (timeZone: string | string[]) => void;
+  timeZone?: string;
+  onSave: () => void;
+  onCancel: () => void;
 }
 
 const DateTimePickerContent = ({
   className,
   activeTab,
   onChangeTabs,
+  // Date Picker Field
+  date,
+  handleDateSelect,
+  disabledDates,
+  weekStartDay,
+  handleDayClick,
 
-  // Date Time Field
+  // Time Picker Field
   selectedHour,
   selectedMinute,
   selectedPeriod,
   setSelectedHour,
   setSelectedMinute,
   setSelectedPeriod,
+  onSave,
+  onCancel,
   hours,
   minutes,
   timeZonesOptions,
   selectProps,
   is12HourFormat,
   isDisableSelect,
+  selectedTimeZone,
+  setSelectedTimeZone,
+  timeZone,
 }: DateTimePickerContentProps) => {
   return (
     <div className={cn("mx-auto w-full max-w-md", className)}>
@@ -79,11 +105,12 @@ const DateTimePickerContent = ({
         <TabsContent value="date">
           <Calendar
             mode="single"
-            selected={undefined}
-            weekStartsOn={0}
-            onSelect={() => {}}
-            disabled={[]}
-            onDayClick={() => {}}
+            required
+            selected={date}
+            weekStartsOn={weekStartDay}
+            onSelect={handleDateSelect}
+            disabled={disabledDates}
+            onDayClick={handleDayClick}
             className={cn(
               "w-full",
               "p-0",
@@ -142,9 +169,7 @@ const DateTimePickerContent = ({
             )}
           />
         </TabsContent>
-
         <TabsContent value="time">
-          {/* WIP:Add the rest of props */}
           <TimePickerContent
             selectedHour={selectedHour}
             selectedMinute={selectedMinute}
@@ -154,15 +179,15 @@ const DateTimePickerContent = ({
             setSelectedPeriod={setSelectedPeriod}
             hours={hours}
             minutes={minutes}
-            onSave={() => {}}
-            onCancel={() => {}}
+            onSave={onSave}
+            onCancel={onCancel}
             timeZonesOptions={timeZonesOptions}
-            selectProps={selectProps}
             is12HourFormat={is12HourFormat}
             isDisableSelect={isDisableSelect}
-            selectedTimeZone={""}
-            setSelectedTimeZone={() => {}}
-            timeZone={""}
+            selectedTimeZone={selectedTimeZone}
+            setSelectedTimeZone={setSelectedTimeZone}
+            timeZone={timeZone}
+            selectProps={selectProps}
           />
         </TabsContent>
       </Tabs>

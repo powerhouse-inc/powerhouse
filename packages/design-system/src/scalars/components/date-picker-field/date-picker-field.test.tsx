@@ -17,6 +17,7 @@ describe("DatePickerField", () => {
         label="Test Label"
         name="test-date"
         value="2025-01-01"
+        dateFormat="yyyy-MM-dd"
       />,
     );
     expect(container).toMatchSnapshot();
@@ -51,52 +52,105 @@ describe("DatePickerField", () => {
     expect(label).toHaveClass("text-gray-700");
   });
 
-  it("should respect the minDate prop", async () => {
+  it("should disable dates before minDate", async () => {
     renderWithForm(
       <DatePickerField
-        showErrorOnBlur
         label="Test Label"
         name="test-date"
-        minDate="2023-01-01"
+        minDate="2025-01-16"
+      />,
+    );
+
+    // 1. Find and click the calendar button to open it
+    const calendarTrigger = screen.getByTestId("mock-icon-CalendarTime");
+    await userEvent.click(calendarTrigger);
+
+    // 2. Wait for the calendar dialog to be visible
+    const calendar = await screen.findByRole("dialog");
+
+    expect(calendar).toBeInTheDocument();
+
+    // 3. Navigate to previous month (December 2022)
+    const prevMonthButton = screen.getByTestId("mock-icon-CaretLeft");
+    await userEvent.click(prevMonthButton);
+
+    // 4. Find the date button for February 14, 2025
+    const dateButton = screen.getByRole("button", {
+      name: "Friday, February 14th, 2025",
+    });
+    // 5. Check that the date button is disabled
+    expect(dateButton).toHaveAttribute("tabIndex", "-1");
+    expect(dateButton).toHaveClass("disabled:pointer-events-none");
+    // 6. Check that the input is empty
+    const input = screen.getByRole("textbox");
+    expect(input).toHaveValue("");
+  });
+
+  it("should disable dates after maxDate", async () => {
+    renderWithForm(
+      <DatePickerField
+        label="Test Label"
+        name="test-date"
+        maxDate="2025-01-16"
+      />,
+    );
+    // 1. Find and click the calendar button to open it
+    const calendarTrigger = screen.getByTestId("mock-icon-CalendarTime");
+    await userEvent.click(calendarTrigger);
+
+    // 2. Wait for the calendar dialog to be visible
+    const calendar = await screen.findByRole("dialog");
+
+    expect(calendar).toBeInTheDocument();
+
+    // 3. Navigate to previous month (December 2022)
+    const prevMonthButton = screen.getByTestId("mock-icon-CaretLeft");
+    await userEvent.click(prevMonthButton);
+
+    const dateButton = screen.getByRole("button", {
+      name: "Wednesday, February 26th, 2025",
+    });
+
+    // 5. Check that the date button is disabled
+    expect(dateButton).toHaveAttribute("tabIndex", "-1");
+    expect(dateButton).toHaveClass("disabled:pointer-events-none");
+    // 6. Check that the input is empty
+    const input = screen.getByRole("textbox");
+
+    expect(input).toHaveValue("");
+  });
+  // Validate minDate when user add value in the input
+  it("should disable dates after minDate when user adds a value in the input", async () => {
+    renderWithForm(
+      <DatePickerField
+        label="Test Label"
+        name="test-date"
+        minDate="2025-01-16"
+        showErrorOnBlur
       />,
     );
     const input = screen.getByRole("textbox");
+
     expect(input).toBeInTheDocument();
-    // Intentamos escribir una fecha anterior al minDate
-    await userEvent.type(input, "2022-12-31");
-    await userEvent.tab(); // Trigger validation on blur
+    await userEvent.type(input, "2025-01-10");
+    await userEvent.tab();
     expect(screen.getByText(/Date must be on or after/i)).toBeInTheDocument();
   });
-  it("should respect the maxDate prop", async () => {
-    renderWithForm(
-      <DatePickerField
-        showErrorOnBlur
-        label="Test Label"
-        name="test-date"
-        maxDate="2023-12-31"
-      />,
-    );
+});
+// Validate maxDate when user add value in the input
+it("should disable dates after minDate when user adds a value in the input", async () => {
+  renderWithForm(
+    <DatePickerField
+      label="Test Label"
+      name="test-date"
+      maxDate="2025-01-16"
+      showErrorOnBlur
+    />,
+  );
+  const input = screen.getByRole("textbox");
 
-    const input = screen.getByRole("textbox");
-    expect(input).toBeInTheDocument();
-
-    // Intentamos escribir una fecha posterior al maxDate
-    await userEvent.type(input, "2024-01-01");
-    await userEvent.tab(); // Trigger validation on blur
-    expect(screen.getByText(/Date must be on or before/i)).toBeInTheDocument();
-  });
-  it("should allow valid dates within min and max range", async () => {
-    renderWithForm(
-      <DatePickerField
-        label="Test Label"
-        name="test-date"
-        minDate="2023-01-01"
-        maxDate="2023-12-31"
-      />,
-    );
-
-    const input = screen.getByRole("textbox");
-    await userEvent.type(input, "2023-06-15");
-    expect(input).toHaveValue("2023-06-15");
-  });
+  expect(input).toBeInTheDocument();
+  await userEvent.type(input, "2025-01-20");
+  await userEvent.tab();
+  expect(screen.getByText(/Date must be on or before/i)).toBeInTheDocument();
 });

@@ -9,12 +9,14 @@ export enum NodeStatus {
   UNCHANGED = "UNCHANGED", // default
 }
 
+export type SidebarIcon = IconName | React.ReactElement;
+
 export type SidebarNode = {
   title: string;
   id: string;
   children?: SidebarNode[];
-  icon?: IconName;
-  expandedIcon?: IconName;
+  icon?: SidebarIcon;
+  expandedIcon?: SidebarIcon;
   status?: NodeStatus;
 };
 

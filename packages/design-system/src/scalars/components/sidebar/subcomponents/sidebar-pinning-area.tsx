@@ -1,7 +1,7 @@
 "use client";
 
 import { SidebarItem } from "./sidebar-item.js";
-import { useSidebar } from "./sidebar-provider.js";
+import { useSidebar } from "./sidebar-provider/index.js";
 
 export const SidebarPinningArea = () => {
   const { pinnedNodePath, togglePin, activeNodeId, onActiveNodeChange } =

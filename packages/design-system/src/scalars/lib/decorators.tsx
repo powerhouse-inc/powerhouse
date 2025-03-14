@@ -1,13 +1,9 @@
-/* eslint-disable react-hooks/rules-of-hooks */
-import { type Decorator } from "@storybook/react";
-import { Checkbox, Form } from "../components/index.js";
 import { Button } from "#powerhouse";
-import { useState, useId } from "react";
-import { useCallback } from "react";
-import { useRef } from "react";
-import { type UseFormReturn } from "react-hook-form";
-import React from "react";
+import { type Decorator } from "@storybook/react";
 import { type Args, type DecoratorFunction } from "@storybook/types";
+import { useCallback, useId, useRef, useState } from "react";
+import { type UseFormReturn } from "react-hook-form";
+import { Checkbox, Form } from "../components/index.js";
 
 function _isValidRegex(pattern: unknown): boolean {
   try {
@@ -21,15 +17,35 @@ function _isValidRegex(pattern: unknown): boolean {
 interface StoryFormParameters {
   form?: {
     defaultValues?: Record<string, any>;
+    resetBehavior?: "unmount" | "reset";
   };
 }
 
 export const withForm: Decorator = (Story, context) => {
   const formRef = useRef<UseFormReturn>(null);
   const [showFormButtons, setShowFormButtons] = useState<boolean>(false);
+  const [resetKey, setResetKey] = useState(0);
   const checkboxId = useId();
   const { viewMode, parameters } = context;
   const isDocs = viewMode === "docs";
+
+  // Ensure we're properly accessing the parameters
+  const formParameters = (parameters as StoryFormParameters).form;
+  const resetBehavior = formParameters?.resetBehavior ?? "reset";
+
+  const onReset = useCallback(() => {
+    if (resetBehavior === "unmount") {
+      setResetKey((prev) => prev + 1);
+    } else {
+      const defaultValues = Object.fromEntries(
+        Object.keys(formRef.current?.control._fields ?? {}).map((fieldName) => [
+          fieldName,
+          formParameters?.defaultValues?.[fieldName] ?? "",
+        ]),
+      );
+      formRef.current?.reset(defaultValues);
+    }
+  }, [formParameters, resetBehavior]);
 
   const onSubmit = useCallback((data: any) => {
     // Allow to show bigInt values in the alert
@@ -45,21 +61,6 @@ export const withForm: Decorator = (Story, context) => {
       alert(serializedData);
     }, 300);
   }, []);
-
-  const onReset = useCallback(() => {
-    // reset only works if the form has default values to reset to
-    // so as this is a generic decorator, we need to build the default values
-    // from the control fields. This is not how the reset is going to be used
-    // in the real world, but it's good enough for the storybook
-    const defaultValues = Object.fromEntries(
-      Object.keys(formRef.current?.control._fields ?? {}).map((fieldName) => [
-        fieldName,
-        (parameters as StoryFormParameters).form?.defaultValues?.[fieldName] ??
-          "",
-      ]),
-    );
-    formRef.current?.reset(defaultValues);
-  }, [parameters]);
 
   const onShowFormButtonsChange = useCallback((checked: boolean) => {
     setShowFormButtons(checked);
@@ -81,7 +82,7 @@ export const withForm: Decorator = (Story, context) => {
 
   return (
     <div>
-      <Form ref={formRef} onSubmit={onSubmit}>
+      <Form ref={formRef} onSubmit={onSubmit} key={resetKey}>
         <Story args={overrideArgs} />
 
         {showFormButtons || isDocs ? (

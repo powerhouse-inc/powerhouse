@@ -2,15 +2,17 @@
 
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
-import { differenceInCalendarDays, format } from "date-fns";
+import { format } from "date-fns";
 import * as React from "react";
 import { DayPicker, useDayPicker, type DayPickerProps } from "react-day-picker";
-import { Button, buttonVariants } from "../../../fragments/button/button.js";
-import { type DatePickerView } from "../../types.js";
+import { buttonVariants } from "../../../fragments/button/button.js";
+import type { DatePickerView } from "../../types.js";
 import CalendarDateHeader from "../calendar-date-header/calendar-date-header.js";
 import NavCalendar from "../calendar-nav/calendar-nav.js";
 import CaptionLabel from "../caption-label/caption-label.js";
+import { MonthGrid } from "../months-view/month-view.js";
 import { MONTHS } from "../utils.js";
+import { YearGrid } from "../year-view/year-grid.js";
 
 export type CalendarProps = DayPickerProps & {
   /**
@@ -247,64 +249,18 @@ const Calendar = ({
             return (
               <div className="mt-[18px] flex flex-col gap-2">
                 <CalendarDateHeader navView={navView} setNavView={setNavView} />
-
-                <div
-                  className={cn(
-                    "grid grid-cols-3 gap-x-[14px] gap-y-[15px]",
-                    className,
-                  )}
-                  {...props}
-                >
-                  {Array.from(
-                    { length: displayYears.to - displayYears.from + 1 },
-                    (_, i) => {
-                      const isBefore =
-                        differenceInCalendarDays(
-                          new Date(displayYears.from + i, 11, 31),
-                          startMonth!,
-                        ) < 0;
-
-                      const isAfter =
-                        differenceInCalendarDays(
-                          new Date(displayYears.from + i, 0, 0),
-                          endMonth!,
-                        ) > 0;
-
-                      const isDisabled = isBefore || isAfter;
-                      return (
-                        <Button
-                          key={i}
-                          className={cn(
-                            "h-[28px] w-[68px] rounded-[4px] text-[12px] leading-[18px] text-gray-900",
-                            displayYears.from + i ===
-                              new Date().getFullYear() &&
-                              "text-accent-foreground bg-gray-100 font-medium",
-
-                            // hover
-                            "hover:bg-gray-100",
-                            displayYears.from + i ===
-                              months[0].date.getFullYear() &&
-                              "bg-gray-900 text-white hover:bg-gray-900",
-                          )}
-                          variant="ghost"
-                          onClick={() => {
-                            goToMonth(
-                              new Date(
-                                displayYears.from + i,
-                                MONTHS.indexOf(actualMonth),
-                              ),
-                            );
-                          }}
-                          disabled={
-                            navView === "years" ? isDisabled : undefined
-                          }
-                        >
-                          {displayYears.from + i}
-                        </Button>
-                      );
-                    },
-                  )}
-                </div>
+                <YearGrid
+                  displayYears={displayYears}
+                  startMonth={startMonth}
+                  endMonth={endMonth}
+                  actualMonth={actualMonth}
+                  months={months}
+                  currentYear={new Date().getFullYear()}
+                  onYearSelect={(year) => {
+                    goToMonth(new Date(year, MONTHS.indexOf(actualMonth)));
+                    setNavView("months");
+                  }}
+                />
               </div>
             );
           }
@@ -312,33 +268,14 @@ const Calendar = ({
             return (
               <div className="mt-[15px] flex flex-col gap-3">
                 <CalendarDateHeader navView={navView} setNavView={setNavView} />
-
-                <div className="grid grid-cols-3 gap-x-[14px] gap-y-[15px]">
-                  {MONTHS.flat().map((month) => (
-                    <Button
-                      key={month}
-                      variant="ghost"
-                      className={cn(
-                        "w-full px-[2px] py-[5px] text-[12px] leading-[18px] text-gray-900",
-
-                        month === actualMonth &&
-                          "bg-gray-900 hover:bg-gray-900",
-
-                        // hover
-                        "hover:bg-gray-100",
-                        month === actualMonth &&
-                          "bg-gray-900 text-white hover:bg-gray-900",
-                      )}
-                      onClick={() => {
-                        goToMonth(
-                          new Date(parseInt(actualYear), MONTHS.indexOf(month)),
-                        );
-                      }}
-                    >
-                      {month}
-                    </Button>
-                  ))}
-                </div>
+                <MonthGrid
+                  actualMonth={actualMonth}
+                  actualYear={actualYear}
+                  onMonthSelect={(year, monthIndex) => {
+                    goToMonth(new Date(year, monthIndex));
+                    setNavView("days");
+                  }}
+                />
               </div>
             );
           }

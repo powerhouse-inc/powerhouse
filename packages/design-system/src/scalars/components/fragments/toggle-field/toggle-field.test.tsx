@@ -1,6 +1,6 @@
-import { renderWithForm } from "#scalars";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
+import { renderWithForm } from "../../../lib/testing.js";
 import { ToggleField } from "./toggle-field.js";
 
 describe("ToggleField Component", () => {

@@ -1,15 +1,15 @@
 import { forwardRef } from "react";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
-import { type ErrorHandling, type FieldCommonProps } from "../types.js";
-import { type DateFieldValue } from "./types.js";
+import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import type { DateFieldValue } from "./types.js";
 
 import { cn } from "#scalars";
 import { BasePickerField } from "../date-time-field/base-picker-field.js";
-import { type InputProps } from "../fragments/index.js";
 import { FormDescription } from "../fragments/form-description/index.js";
 import { FormGroup } from "../fragments/form-group/index.js";
 import { FormLabel } from "../fragments/form-label/index.js";
 import { FormMessageList } from "../fragments/form-message/index.js";
+import { InputProps } from "../fragments/index.js";
 import { validateDatePicker } from "./date-picker-validations.js";
 import { Calendar } from "./subcomponents/calendar/calendar.js";
 import { useDatePickerField } from "./use-date-picker-field.js";
@@ -40,7 +40,7 @@ export interface DatePickerFieldProps
   autoClose?: boolean;
 }
 
-export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
+const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
   (
     {
       label,
@@ -62,6 +62,8 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       dateFormat,
       weekStart,
       autoClose = false,
+      minDate,
+      maxDate,
       ...props
     },
     ref,
@@ -87,6 +89,8 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
       dateFormat,
       weekStart,
       autoClose,
+      minDate,
+      maxDate,
     });
 
     return (
@@ -117,10 +121,10 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
           onInputChange={handleInputChange}
           inputProps={inputProps}
           handleBlur={handleBlur}
-          data-cast="DateString"
+          data-cast={`DateString:${dateFormat}`}
           className={cn(
             // custom styles
-            "pb-6 pl-4 pr-4 pt-3",
+            "px-4 pb-6 pt-3",
           )}
         >
           <Calendar
@@ -148,7 +152,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
             )}
             monthGridClassName={cn("w-full", "px-[5.5px]")}
             dayClassName={cn(
-              "w-[34px] cursor-pointer text-[12px] hover:rounded-[4px] hover:bg-gray-200 text-gray-900",
+              "w-[34px] cursor-pointer text-[12px] text-gray-900 hover:rounded-[4px] hover:bg-gray-200",
               // dark
               "dark:text-gray-50 hover:dark:bg-gray-900",
               "disabled:text-gray-300",
@@ -156,14 +160,14 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
             buttonPreviousClassName={cn(
               "border border-gray-200",
               // hover
-              "hover:bg-gray-100  hover:border-gray-300 hover:text-gray-900 dark:hover:bg-gray-900",
+              "hover:border-gray-300  hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900",
               // dark
               "dark:border-gray-900 dark:text-gray-300",
             )}
             buttonNextClassName={cn(
               "border border-gray-200 ",
               // hover
-              "hover:bg-gray-100  hover:border-gray-300 hover:text-gray-900 dark:hover:bg-gray-900",
+              "hover:border-gray-300  hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900",
               // dark
               "dark:border-gray-900 dark:text-gray-300",
             )}
@@ -184,7 +188,7 @@ export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
             dayButtonClassName={cn("text-[12px] font-medium")}
             weekClassName={cn("w-full")}
             disabledClassName={cn(
-              "!text-gray-300 !cursor-not-allowed hover:!bg-transparent [&>button]:hover:!bg-transparent",
+              "!cursor-not-allowed !text-gray-300 hover:!bg-transparent [&>button]:hover:!bg-transparent",
             )}
             {...props}
           />

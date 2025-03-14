@@ -6,6 +6,7 @@ import {
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
 import { DateTimeField } from "./date-time-field.js";
+import { FORMAT_MAPPING } from "./utils.js";
 
 const meta: Meta<typeof DateTimeField> = {
   title: "Document Engineering/Simple Components/Date Time Field",
@@ -37,16 +38,18 @@ const meta: Meta<typeof DateTimeField> = {
     },
     minDate: {
       control: "date",
-      description: "Minimum date",
+      description: "Minimum selectable date in the date picker",
       table: {
+        type: { summary: "date" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "showDateSelect", truthy: true },
     },
     maxDate: {
       control: "date",
-      description: "Maximum date",
+      description: "Maximum selectable date in the date picker",
       table: {
+        type: { summary: "date" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "showDateSelect", truthy: true },
@@ -73,13 +76,7 @@ const meta: Meta<typeof DateTimeField> = {
       control: {
         type: "select",
       },
-      options: [
-        "yyyy-MM-dd",
-        "dd/MM/yyyy",
-        "MM/dd/yyyy",
-        "dd-MMM-yyyy",
-        "MMM-dd-yyyy",
-      ],
+      options: Object.keys(FORMAT_MAPPING),
       table: {
         defaultValue: { summary: "yyyy-MM-dd" },
         type: {
@@ -147,6 +144,33 @@ const meta: Meta<typeof DateTimeField> = {
       if: { arg: "showTimeSelect", truthy: true },
       defaultValue: { summary: false },
     },
+    timeZone: {
+      control: "text",
+      description: "Timezone",
+      if: { arg: "showTimeSelect", truthy: true },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    timeIntervals: {
+      control: "number",
+      description: "Date intervals",
+      if: { arg: "showTimeSelect", truthy: true },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    includeContinent: {
+      control: {
+        type: "boolean",
+        description: "Show continent name in the timezone select",
+        defaultValue: false,
+      },
+      if: { arg: "showTimeSelect", truthy: true },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
 
   args: {
@@ -154,6 +178,9 @@ const meta: Meta<typeof DateTimeField> = {
   },
   parameters: {
     layout: "centered",
+    form: {
+      resetBehavior: "unmount",
+    },
     docs: {
       description: {
         component:
@@ -189,7 +216,7 @@ export const TimePicker: Story = {
 export const DateTimePicker: Story = {
   args: {
     label: "Date Time Picker Field",
-    description: "This is a date time picker ield",
+    description: "This is a date time picker field",
     showDateSelect: true,
     showTimeSelect: true,
     placeholder: "2025/01/27 12:00",

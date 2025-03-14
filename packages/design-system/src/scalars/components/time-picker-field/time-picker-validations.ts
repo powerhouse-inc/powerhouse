@@ -1,5 +1,10 @@
-import { type TimePickerFieldProps } from "./time-picker-field.js";
-import { isFormatTimeAllowed, TIME_PATTERNS } from "./utils.js";
+import { TimePickerFieldProps } from "./time-picker-field.js";
+import {
+  convert24hTo12h,
+  getTime,
+  isFormatTimeAllowed,
+  TIME_PATTERNS,
+} from "./utils.js";
 
 export const validateTimePicker =
   ({ timeFormat }: TimePickerFieldProps) =>
@@ -10,10 +15,11 @@ export const validateTimePicker =
     if (value === undefined) {
       return true;
     }
-
+    // Validate the format of the value
+    const time = getTime((value as string).trim());
     if (!timeFormat) {
-      const is24HourValid = TIME_PATTERNS.HOURS_24.test(value as string);
-      const is12HourValid = TIME_PATTERNS.HOURS_12.test(value as string);
+      const is24HourValid = TIME_PATTERNS.HOURS_24.test(time);
+      const is12HourValid = TIME_PATTERNS.HOURS_12.test(time);
       if (!is24HourValid && !is12HourValid) {
         return "Invalid time. Please enter time a valid format";
       }
@@ -23,11 +29,11 @@ export const validateTimePicker =
     }
     // Validar formato 24-hour (HH:mm)
     if (timeFormat === "HH:mm") {
-      if (!TIME_PATTERNS.HOURS_24.test(value as string)) {
+      if (!TIME_PATTERNS.HOURS_24.test(time)) {
         return "Please enter a valid time in 24-hour format";
       }
       // Additional validation for real hours/minutes
-      const [hours, minutes] = (value as string).split(":").map(Number);
+      const [hours, minutes] = time.split(":").map(Number);
       if (hours > 23 || hours < 0 || minutes > 59 || minutes < 0) {
         return "Please enter a valid time in 24-hour format";
       }
@@ -35,14 +41,13 @@ export const validateTimePicker =
 
     // Validar formato 12-hour (hh:mm a)
     if (timeFormat === "hh:mm a") {
-      if (!TIME_PATTERNS.HOURS_12.test(value as string)) {
-        return "Please enter a valid time in 12-hour";
-      }
+      const parse12HorsFormat = convert24hTo12h(time);
+
       // Additional validation for real hours/minutes
-      const [timePart] = (value as string).split(" ");
+      const [timePart] = parse12HorsFormat.split(" ");
       const [hours, minutes] = timePart.split(":").map(Number);
       if (hours > 12 || hours < 1 || minutes > 59 || minutes < 0) {
-        return "Please enter a valid time in 12-hour";
+        return "Please enter a valid time in 12-hour format";
       }
     }
     return true;

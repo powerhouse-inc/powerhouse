@@ -1,32 +1,37 @@
-import { type TokenIcons } from "./amount-field.js";
+import type { Currency } from "../currency-code-field/types.js";
+import type { AmountFieldPropsGeneric, AmountValue } from "./types.js";
+export const DEFAULT_FIAT_CURRENCIES: Currency[] = [
+  { ticker: "USD", crypto: false, label: "USD", symbol: "$" },
+  { ticker: "EUR", crypto: false, label: "EUR", symbol: "€" },
+  { ticker: "GBP", crypto: false, label: "GBP", symbol: "£" },
+];
 
-export const getOptions = (items: string[] = []) => {
-  return items.map((item) => ({
-    value: item,
-    label: item,
-  }));
+export const DEFAULT_CRYPTO_CURRENCIES: Currency[] = [
+  { ticker: "DAI", crypto: true, label: "DAI", symbol: "DAI" },
+  { ticker: "ETH", crypto: true, label: "ETH", symbol: "ETH" },
+  { ticker: "MKR", crypto: true, label: "MKR", symbol: "MKR" },
+  { ticker: "SKY", crypto: true, label: "SKY", symbol: "SKY" },
+  { ticker: "USDC", crypto: true, label: "USDC", symbol: "USDC" },
+  { ticker: "USDS", crypto: true, label: "USDS", symbol: "USDS" },
+];
+
+export const DEFAULT_ALL_CURRENCIES: Currency[] = [
+  ...DEFAULT_FIAT_CURRENCIES,
+  ...DEFAULT_CRYPTO_CURRENCIES,
+];
+export const getDefaultUnits = (type: AmountFieldPropsGeneric["type"]) => {
+  switch (type) {
+    case "AmountFiat":
+      return DEFAULT_FIAT_CURRENCIES;
+    case "AmountCrypto":
+      return DEFAULT_CRYPTO_CURRENCIES;
+    case "AmountCurrency":
+      return DEFAULT_ALL_CURRENCIES;
+    default:
+      return [];
+  }
 };
 
-export const getCountryCurrencies = (allowedCurrencies: string[] = []) => {
-  return getOptions(allowedCurrencies);
-};
-
-export const getTokens = (
-  allowedTokens: string[] = [],
-  tokenIcons?: TokenIcons,
-) => {
-  const options = allowedTokens.map((token) => {
-    const iconFn = tokenIcons?.[token];
-
-    return {
-      value: token,
-      label: token,
-      icon: iconFn,
-    };
-  });
-
-  return options;
-};
 export const isValidBigInt = (value: string | undefined): boolean => {
   if (!value) {
     return false;
@@ -84,4 +89,54 @@ export const displayValueAmount = (
     return trailingZeros ? formattedValue : parseFloat(formattedValue);
   }
   return value;
+};
+
+export const handleEventOnChange = <T>(value: T) => {
+  const nativeEvent = new Event("change", { bubbles: true, cancelable: true });
+
+  Object.defineProperty(nativeEvent, "target", {
+    value: { value },
+
+    writable: false,
+  });
+
+  return nativeEvent as unknown as React.ChangeEvent<HTMLInputElement>;
+};
+
+export const handleEventOnBlur = <T>(value: T) => {
+  const nativeEvent = new Event("blur", { bubbles: true, cancelable: true });
+
+  Object.defineProperty(nativeEvent, "target", {
+    value: { value },
+
+    writable: false,
+  });
+
+  return nativeEvent as unknown as React.FocusEvent<HTMLInputElement>;
+};
+
+export const createAmountValue = (inputValue: string) => {
+  return inputValue === "" ? undefined : inputValue;
+};
+
+export const isValidUnit = (
+  type: AmountFieldPropsGeneric["type"],
+  value: AmountValue,
+  units?: Currency[],
+) => {
+  if (!units) return true;
+  if (type === "Amount" && typeof value === "object" && "unit" in value) {
+    return units.some((u) => u.ticker === value.unit);
+  }
+  if (type === "AmountCurrency" && typeof value === "object") {
+    console.log("ebtre");
+    return units.some((u) => u.ticker === value.unit);
+  }
+  if (type === "AmountCrypto" && typeof value === "object") {
+    return units.some((u) => u.ticker === value.unit);
+  }
+  if (type === "AmountFiat" && typeof value === "object") {
+    return units.some((u) => u.ticker === value.unit);
+  }
+  return true;
 };

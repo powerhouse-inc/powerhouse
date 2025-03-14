@@ -1,6 +1,4 @@
-import { type IconName } from "#powerhouse";
-import { cn } from "#scalars";
-
+import { cn, type NumberFieldProps, NumberFieldRaw } from "#scalars";
 import { forwardRef, useId } from "react";
 import {
   FormDescription,
@@ -8,44 +6,41 @@ import {
   FormLabel,
   FormMessageList,
   type SelectFieldProps,
-  SelectFieldRaw,
-  withFieldValidation,
 } from "../fragments/index.js";
-import {
-  type NumberFieldProps,
-  NumberFieldRaw,
-} from "../number-field/index.js";
-import { type InputNumberProps } from "../number-field/types.js";
-import { validateAmount } from "./amount-field-validations.js";
-import { type AmountFieldPropsGeneric, type AmountValue } from "./types.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { InputNumberProps } from "../number-field/types.js";
+import type { AmountFieldPropsGeneric, AmountValue } from "./types.js";
 import { useAmountField } from "./use-amount-field.js";
 
-export interface TokenIcons {
-  [key: string]: IconName | (() => React.JSX.Element);
-}
+import { CurrencyCodeFieldRaw } from "../currency-code-field/currency-code-field.js";
+import type { Currency } from "../currency-code-field/types.js";
+import { validateAmount } from "./amount-field-validations.js";
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
   Omit<InputNumberProps, "onChange" | "onBlur" | "precision"> & {
     className?: string;
     name: string;
     numberProps?: Omit<NumberFieldProps, "name">;
-    selectProps?: Omit<SelectFieldProps, "placeholder" | "selectionIcon">;
-    allowedCurrencies?: string[];
-    allowedTokens?: string[];
+    selectProps?: Omit<
+      SelectFieldProps,
+      "placeholder" | "selectionIcon" | "onBlur"
+    >;
     defaultValue?: AmountValue;
     value?: AmountValue;
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
     currencyPosition?: "left" | "right";
-    tokenIcons?: TokenIcons;
+    symbolPosition?: "left" | "right";
     allowNegative?: boolean;
     // handle precision
     viewPrecision?: number;
     precision?: number;
     placeholderSelect?: string;
+    units?: Currency[];
+    includeCurrencySymbols?: boolean;
   };
 
-export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
+const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
   (
     {
       label,
@@ -63,19 +58,19 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
       description,
       defaultValue,
       type,
-      allowedCurrencies = [],
-      allowedTokens = [],
       numberProps,
       selectProps,
       step = 1,
       currencyPosition = "right",
-      tokenIcons,
       name,
       trailingZeros,
       viewPrecision,
       precision,
       placeholder,
       placeholderSelect,
+      units,
+      includeCurrencySymbols,
+      symbolPosition,
     },
     ref,
   ) => {
@@ -92,20 +87,18 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
       handleBlur,
       isBigInt,
       handleIsInputFocused,
-      isAmount,
+      isAmountWithoutUnit,
       inputFocused,
     } = useAmountField({
       value,
       defaultValue,
       type,
-      allowedCurrencies,
-      allowedTokens,
       onChange,
       onBlur,
-      tokenIcons,
       precision,
       viewPrecision,
       trailingZeros,
+      units,
     });
 
     return (
@@ -129,27 +122,30 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
           />
           <div className={cn("relative flex items-center")}>
             {isShowSelect && currencyPosition === "left" && (
-              <SelectFieldRaw
-                selectionIcon="checkmark"
-                value={valueSelect}
-                placeholder={placeholderSelect}
-                required={required}
-                options={options}
+              <CurrencyCodeFieldRaw
+                contentAlign="start"
+                contentClassName="min-w-[160px]"
                 disabled={disabled}
+                currencies={options}
                 onChange={handleOnChangeSelect}
+                placeholder={placeholderSelect}
+                includeCurrencySymbols={includeCurrencySymbols}
+                symbolPosition={symbolPosition}
+                searchable={false}
                 className={cn(
                   "rounded-l-md rounded-r-none border border-gray-300",
                   "border-r-[0.5px]",
                   // focus state
                   "focus:border-r-none focus:z-10 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                   "focus:outline-none",
+
                   selectProps?.className,
                 )}
                 {...(selectProps ?? { name: "" })}
               />
             )}
             <NumberFieldRaw
-              name=""
+              name={""}
               step={step}
               required={required}
               disabled={disabled}
@@ -173,7 +169,7 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                 isPercent && "rounded-md pr-7",
                 // focus state
                 "focus:border-r-0",
-                isAmount && "rounded-md",
+                isAmountWithoutUnit && "rounded-md",
                 className,
               )}
               onBlur={handleBlur}
@@ -191,27 +187,29 @@ export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               </span>
             )}
           </div>
+
           {isShowSelect && currencyPosition === "right" && (
-            <div>
-              <SelectFieldRaw
-                selectionIcon="checkmark"
-                value={valueSelect}
-                required={required}
-                disabled={disabled}
-                placeholder={placeholderSelect}
-                onChange={handleOnChangeSelect}
-                options={options}
-                className={cn(
-                  "rounded-l-none rounded-r-md border border-gray-300",
-                  "border-l-[0.5px]",
-                  // focus state
-                  "focus:border-l-none focus:z-10 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
-                  "focus:outline-none",
-                  selectProps?.className,
-                )}
-                {...(selectProps ?? { name: "" })}
-              />
-            </div>
+            <CurrencyCodeFieldRaw
+              contentAlign="end"
+              contentClassName="min-w-[160px]"
+              disabled={disabled}
+              includeCurrencySymbols={includeCurrencySymbols}
+              currencies={options}
+              value={valueSelect}
+              onChange={handleOnChangeSelect}
+              name=""
+              placeholder={placeholderSelect}
+              symbolPosition={symbolPosition}
+              searchable={false}
+              className={cn(
+                "rounded-l-none rounded-r-md border border-gray-300",
+                "border-l-[0.5px]",
+                // focus state
+                "focus:border-l-none focus:z-10 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
+                "focus:outline-none",
+                selectProps?.className,
+              )}
+            />
           )}
         </div>
         {description && <FormDescription>{description}</FormDescription>}

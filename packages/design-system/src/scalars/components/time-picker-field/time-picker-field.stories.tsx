@@ -37,7 +37,7 @@ const meta: Meta<typeof TimePickerField> = {
       },
       defaultValue: { summary: false },
     },
-    dateIntervals: {
+    timeIntervals: {
       control: {
         description: "The interval between each time option",
         type: "number",
@@ -56,6 +56,16 @@ const meta: Meta<typeof TimePickerField> = {
         table: {
           category: StorybookControlCategory.COMPONENT_SPECIFIC,
         },
+      },
+    },
+    includeContinent: {
+      control: {
+        type: "boolean",
+        description: "Show continent name in the timezone select",
+        defaultValue: false,
+      },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
   },

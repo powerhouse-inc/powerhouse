@@ -1,10 +1,21 @@
 import React, { useMemo } from "react";
-import { type ErrorHandling, type FieldCommonProps } from "../types.js";
-import { SelectFieldRaw, withFieldValidation } from "../fragments/index.js";
 import type { SelectOption } from "../enum-field/types.js";
+import { SelectFieldRaw } from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { ErrorHandling, FieldCommonProps } from "../types.js";
 import type { Currency, CurrencyType } from "./types.js";
+
+type CurrencyCodeFieldBaseProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | keyof FieldCommonProps<string | string[]>
+  | keyof ErrorHandling
+  | "onChange"
+  | "onBlur"
+>;
+
 export interface CurrencyCodeFieldProps
-  extends FieldCommonProps<string | string[]>,
+  extends CurrencyCodeFieldBaseProps,
+    FieldCommonProps<string | string[]>,
     ErrorHandling {
   placeholder?: string;
   onChange?: (value: string | string[]) => void;
@@ -13,9 +24,13 @@ export interface CurrencyCodeFieldProps
   includeCurrencySymbols?: boolean;
   allowedTypes?: CurrencyType | "Both";
   favoriteCurrencies?: string[];
+  symbolPosition?: "left" | "right";
+  searchable?: boolean;
+  contentClassName?: string;
+  contentAlign?: "start" | "end" | "center";
 }
 
-const CurrencyCodeFieldRaw = React.forwardRef<
+export const CurrencyCodeFieldRaw = React.forwardRef<
   HTMLButtonElement,
   CurrencyCodeFieldProps
 >(
@@ -24,6 +39,10 @@ const CurrencyCodeFieldRaw = React.forwardRef<
       placeholder,
       currencies,
       includeCurrencySymbols = true,
+      symbolPosition = "right",
+      searchable = false,
+      contentClassName,
+      contentAlign = "start",
       // TODO: implement following props
       // allowedTypes = "Both",
       // favoriteCurrencies,
@@ -36,7 +55,10 @@ const CurrencyCodeFieldRaw = React.forwardRef<
         currencies?.map((currency) => {
           let label = currency.label ?? currency.ticker;
           if (includeCurrencySymbols && currency.symbol) {
-            label = `${label} (${currency.symbol})`;
+            label =
+              symbolPosition === "right"
+                ? `${label} (${currency.symbol})`
+                : `(${currency.symbol}) ${label}`;
           }
           return {
             label,
@@ -44,16 +66,18 @@ const CurrencyCodeFieldRaw = React.forwardRef<
           };
         }) ?? []
       );
-    }, [currencies, includeCurrencySymbols]);
+    }, [currencies, includeCurrencySymbols, symbolPosition]);
 
     return (
       <SelectFieldRaw
         ref={ref}
         options={options}
         selectionIcon="checkmark"
-        searchable
+        searchable={searchable}
         multiple={false}
         placeholder={placeholder}
+        contentAlign={contentAlign}
+        contentClassName={contentClassName}
         {...props}
       />
     );

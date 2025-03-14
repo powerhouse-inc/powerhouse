@@ -1,18 +1,24 @@
-import { type TokenIcons } from "./amount-field.js";
-
-export type Amount = number | undefined;
+import { Currency } from "../currency-code-field/types.js";
+export type Amount = {
+  amount: number;
+  unit?: CurrencyTicker;
+};
 export type AmountPercentage = number | undefined;
-export interface AmountCurrencyFiat {
+export type CurrencyTicker = Currency["ticker"];
+
+export interface AmountFiat {
   amount?: number;
-  currency: string;
+  unit: CurrencyTicker;
 }
-export interface AmountCurrencyCrypto {
+
+export interface AmountCrypto {
   amount?: bigint;
-  currency: string;
+  unit: CurrencyTicker;
 }
-export interface AmountCurrencyUniversal {
-  amount?: number | bigint; // Accept high-precision values
-  currency: string;
+
+export interface AmountCurrency {
+  amount?: number | bigint;
+  unit: CurrencyTicker;
 }
 
 export type AmountFieldPropsGeneric =
@@ -20,52 +26,31 @@ export type AmountFieldPropsGeneric =
       type: "Amount";
       value?: Amount;
       trailingZeros?: boolean;
-      allowedCurrencies?: never;
-      currencySymbol?: never;
-      allowedTokens?: never;
-      tokenIcons?: never;
     }
   | {
-      type: "AmountCurrencyFiat";
-      value?: AmountCurrencyFiat;
+      type: "AmountFiat";
+      value?: AmountFiat;
       trailingZeros?: boolean;
-      allowedCurrencies: string[];
-      // Disable currencySymbol for AmountCurrencyFiat
-      currencySymbol?: never;
-      allowedTokens?: never;
-      tokenIcons?: never;
     }
   | {
       type: "AmountPercentage";
       value?: AmountPercentage;
       trailingZeros?: boolean;
-      allowedCurrencies?: never;
-      currencySymbol?: never;
-      allowedTokens?: never;
-      tokenIcons?: never;
     }
   | {
-      type: "AmountCurrencyCrypto";
-      value?: AmountCurrencyCrypto;
+      type: "AmountCrypto";
+      value?: AmountCrypto;
       trailingZeros?: never;
-      allowedTokens?: string[];
-      tokenIcons?: TokenIcons;
-      allowedCurrencies?: never;
-      currencySymbol?: never;
     }
   | {
-      type: "AmountCurrencyUniversal";
-      value?: AmountCurrencyUniversal;
+      type: "AmountCurrency";
+      value?: AmountCurrency;
       trailingZeros?: boolean;
-      allowedCurrencies?: string[];
-      currencySymbol?: string;
-      allowedTokens?: string[];
-      tokenIcons?: TokenIcons;
     };
 
 export type AmountValue =
   | Amount
   | AmountPercentage
-  | AmountCurrencyFiat
-  | AmountCurrencyCrypto
-  | AmountCurrencyUniversal;
+  | AmountFiat
+  | AmountCrypto
+  | AmountCurrency;

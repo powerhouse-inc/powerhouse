@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "#scalars";
-import { useSidebar } from "./sidebar-provider.js";
+import { useSidebar } from "./sidebar-provider/index.js";
 
 interface SidebarHeaderProps {
   sidebarTitle?: string;

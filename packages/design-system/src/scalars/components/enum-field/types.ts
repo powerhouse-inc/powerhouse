@@ -23,6 +23,8 @@ export interface SelectBaseProps {
   multiple?: boolean;
   searchable?: boolean;
   onChange?: (value: string | string[]) => void;
+  contentClassName?: string;
+  contentAlign?: "start" | "end" | "center";
 }
 
 export type SelectProps =
@@ -34,14 +36,3 @@ export type SelectProps =
       selectionIcon: "checkmark";
       selectionIconPosition?: "left" | "right";
     });
-
-export type EnumProps =
-  | ({
-      variant?: "auto";
-    } & (RadioGroupProps | SelectProps))
-  | ({
-      variant: "RadioGroup";
-    } & RadioGroupProps)
-  | ({
-      variant: "Select";
-    } & SelectProps);

@@ -1,5 +1,6 @@
-import { Icon, type IconName } from "#powerhouse";
 import {
+  commonCryptoCurrencies,
+  commonFiatCurrencies,
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
@@ -8,6 +9,14 @@ import {
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
 import { AmountField } from "./amount-field.js";
+const mappedFiatCurrencies = commonFiatCurrencies.map((currency) => ({
+  ...currency,
+  label: currency.ticker,
+}));
+const mappedCryptoCurrencies = commonCryptoCurrencies.map((currency) => ({
+  ...currency,
+  label: currency.ticker,
+}));
 
 const meta = {
   title: "Document Engineering/Simple Components/Amount Field",
@@ -19,41 +28,35 @@ const meta = {
       defaultValues: {
         "amount-field": {
           amount: undefined,
-          currency: "",
+          unit: "",
         },
       },
     },
   },
   tags: ["autodocs"],
   argTypes: {
-    allowedCurrencies: {
+    units: {
       control: "object",
-      description:
-        "Array of strings — List of accepted fiat currency codes (e.g., ['USD', 'EUR', 'GBP']).",
+      description: "Array of Currency objects",
       table: {
-        type: { summary: "string[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-      if: {
-        arg: "type",
-        neq: ["Amount", "AmountPercentage"],
-      },
-    },
-    allowedTokens: {
-      control: "object",
-      description:
-        "Array of strings — List of accepted cryptocurrency codes (e.g., ['BTC', 'ETH', 'USDT']).",
-      table: {
-        type: { summary: "string[]" },
+        type: { summary: "Currency[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    tokenIcons: {
-      control: "object",
-      description:
-        "Mapping of token identifiers to icon references (e.g., { 'BTC': 'icon-btc', 'ETH': 'icon-eth' }).",
+    includeCurrencySymbols: {
+      control: "boolean",
+      description: " Whether to display currency symbols alongside codes",
       table: {
-        type: { summary: "object" },
+        defaultValue: { summary: "true" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    symbolPosition: {
+      control: "select",
+      description: "Position of the currency symbol",
+      options: ["left", "right"],
+      table: {
+        type: { summary: "string" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -154,10 +157,10 @@ const meta = {
       control: "select",
       options: [
         "Amount",
-        "AmountCurrencyFiat",
+        "AmountFiat",
         "AmountPercentage",
-        "AmountCurrencyCrypto",
-        "AmountCurrencyUniversal",
+        "AmountCrypto",
+        "AmountCurrency",
       ],
       description: "The type of amount field.",
       table: {
@@ -172,23 +175,19 @@ const meta = {
   },
 } satisfies Meta<typeof AmountField>;
 
-const IconComponent = (name: IconName) => {
-  return () => <Icon name={name} size={16} />;
-};
-
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
     placeholder: "0",
+    units: mappedFiatCurrencies,
     label: "Enter Amount and Select Currency",
     placeholderSelect: "CUR",
-    type: "AmountCurrencyFiat",
-    allowedCurrencies: ["USD", "EUR"],
+    type: "Amount",
     value: {
-      amount: undefined,
-      currency: "",
+      amount: 234,
+      unit: "EUR",
     },
   },
 };
@@ -197,11 +196,9 @@ export const WithValue: Story = {
   args: {
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
-    label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyFiat",
-    allowedCurrencies: ["USD", "EUR"],
+    label: "Enter Amount",
+    type: "Amount",
     value: {
-      currency: "USD",
       amount: 100,
     },
   },
@@ -215,37 +212,39 @@ export const WithAmount: Story = {
     },
   },
   args: {
+    units: mappedFiatCurrencies,
     placeholder: "Enter Amount",
+    placeholderSelect: "CUR",
     label: "Enter Amout ",
-    type: "Amount",
-    value: 345,
+    type: "AmountFiat",
+    value: {
+      amount: 345,
+      unit: "EUR",
+    },
   },
 };
 export const CurrencyIcon: Story = {
   args: {
+    units: mappedCryptoCurrencies,
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyCrypto",
+    type: "AmountCrypto",
     placeholderSelect: "CUR",
-    allowedTokens: ["BTC", "ETH"],
-    tokenIcons: {
-      BTC: IconComponent("Briefcase"),
-      ETH: IconComponent("Briefcase"),
-    },
     value: {
       amount: 3454564564 as unknown as bigint,
-      currency: "BTC",
+      unit: "BTC",
     },
   },
 };
 
 export const WithToken: Story = {
   parameters: {
+    units: mappedCryptoCurrencies,
     form: {
       defaultValues: {
         "amount-field": {
           amount: "",
-          currency: "",
+          unit: "",
         },
       },
     },
@@ -253,12 +252,12 @@ export const WithToken: Story = {
   args: {
     placeholder: "Enter Amount",
     label: "Enter Amount and Select Currency",
-    type: "AmountCurrencyCrypto",
+    type: "AmountCurrency",
     placeholderSelect: "CUR",
-    allowedTokens: ["BTC", "ETH", "USDT"],
+    units: [...mappedCryptoCurrencies, ...mappedFiatCurrencies],
     value: {
       amount: 123 as unknown as bigint,
-      currency: "BTC",
+      unit: "BTC",
     },
   },
 };
@@ -272,6 +271,7 @@ export const WithValuePercent: Story = {
     },
   },
   args: {
+    units: mappedCryptoCurrencies,
     label: "Enter Percentage ",
     placeholder: "Enter Amount",
     type: "AmountPercentage",
@@ -280,15 +280,15 @@ export const WithValuePercent: Story = {
 };
 export const Disable: Story = {
   args: {
+    units: mappedCryptoCurrencies,
     label: "Enter Amount ",
     placeholder: "Enter Amount",
-    type: "AmountCurrencyFiat",
+    type: "AmountFiat",
     placeholderSelect: "CUR",
-    allowedCurrencies: ["USD", "EUR"],
     disabled: true,
     value: {
       amount: 9,
-      currency: "USD",
+      unit: "ETH",
     },
   },
 };
@@ -299,20 +299,20 @@ export const WithValueUniversalAmountCurrency: Story = {
       defaultValues: {
         "amount-field": {
           amount: 123,
-          currency: "USD",
+          unit: "BTC",
         },
       },
     },
   },
   args: {
+    units: [...mappedCryptoCurrencies, ...mappedFiatCurrencies],
     label: "Label",
     placeholder: "Enter Amount",
     placeholderSelect: "CUR",
-    type: "AmountCurrencyUniversal",
-    allowedCurrencies: ["USD", "EUR"],
+    type: "AmountCurrency",
     value: {
       amount: 123,
-      currency: "USD",
+      unit: "BTC",
     },
   },
 };

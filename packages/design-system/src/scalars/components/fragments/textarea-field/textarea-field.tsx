@@ -1,20 +1,18 @@
-import {
-  CharacterCounter,
-  cn,
-  FormDescription,
-  FormGroup,
-  FormLabel,
-  FormMessageList,
-  sharedValueTransformers,
-  withFieldValidation,
-  type ErrorHandling,
-  type FieldCommonProps,
-  type TextProps,
-  type TransformerType,
-} from "#scalars";
+import { cn, sharedValueTransformers } from "#scalars";
 import React, { useEffect, useId, useMemo, useRef } from "react";
 import { useResizeObserver } from "usehooks-ts";
-import ValueTransformer from "../value-transformer/index.js";
+import type {
+  ErrorHandling,
+  FieldCommonProps,
+  TextProps,
+} from "../../types.js";
+import { CharacterCounter } from "../character-counter/index.js";
+import { FormDescription } from "../form-description/index.js";
+import { FormGroup } from "../form-group/index.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import ValueTransformer, { type TransformerType } from "../value-transformer/index.js";
+import { withFieldValidation } from "../with-field-validation/index.js";
 
 type TextareaFieldBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -213,10 +211,7 @@ const TextareaFieldRaw = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   },
 );
 
-export const TextareaField = withFieldValidation<TextareaProps>(
-  TextareaFieldRaw,
-) as React.ForwardRefExoticComponent<
-  TextareaProps & React.RefAttributes<HTMLTextAreaElement>
->;
+export const TextareaField =
+  withFieldValidation<TextareaProps>(TextareaFieldRaw);
 
 TextareaField.displayName = "TextareaField";

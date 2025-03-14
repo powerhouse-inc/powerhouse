@@ -1,9 +1,9 @@
 import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import mockedTree from "./mocked_tree.json";
 import { Sidebar } from "./sidebar.js";
-import { SidebarProvider } from "./subcomponents/sidebar-provider.js";
+import { SidebarProvider } from "./subcomponents/sidebar-provider/index.js";
 import { type SidebarNode } from "./types.js";
 
 /**
@@ -27,8 +27,8 @@ import { type SidebarNode } from "./types.js";
  *   id: string;
  *   title: string;
  *   children: SidebarNode[];
- *   icon?: IconName;
- *   expandedIcon?: IconName;
+ *   icon?: IconName | ReactElement;
+ *   expandedIcon?: IconName | ReactElement;
  *   status?: NodeStatus;
  * };
  * enum NodeStatus {
@@ -43,6 +43,39 @@ import { type SidebarNode } from "./types.js";
  *
  * The `icon` and `expandedIcon` properties are optional and can be used to display an icon in the sidebar item.
  * This icons must be one of the [available icons](?path=/docs/powerhouse-iconography--readme)
+ *
+ * ## Sidebar Events
+ *
+ * The `Sidebar` component emits the following custom events:
+ *
+ * - `sidebar:change`: it is triggered when the sidebar item is clicked.
+ *  - Data: `{ node: SidebarNode }`
+ * - `sidebar:resize:start`: it is triggered when the sidebar resize starts at the moment the user clicks down in the resizing handle.
+ *  - Data: `{ isSidebarOpen: boolean }`
+ * - `sidebar:resize:active`: it is triggered when the sidebar is being resized while the user is dragging the resizing handle.
+ * It could be triggered multiple times while the user is dragging the resizing handle.
+ *  - Data: `{ isSidebarOpen: boolean, sidebarWidth: number }`
+ * - `sidebar:resize`: it is triggered when the sidebar resize stops at the moment the user releases the resizing handle.
+ *  - Data: `{ isSidebarOpen: boolean, sidebarWidth: number }`
+ * - `sidebar:resize:toggle`: it is triggered when the sidebar is toggled (collapsed or expanded).
+ *  - Data: `{ isSidebarOpen: boolean }`
+ *
+ * ### Example of listening to the events
+ * ```
+ * useEffect(() => {
+ *   const onResize = (event: Event) => {
+ *     console.log("sidebar:resize", event);
+ *   };
+ *
+ *   // you can add the listener directly to the document or add a
+ *   // `className`, get the sidebar element and add the listener to it.
+ *   document.addEventListener("sidebar:resize", onResize);
+ *
+ *   return () => {
+ *     document.removeEventListener("sidebar:resize", onResize);
+ *   };
+ * }, []);
+ * ```
  */
 const meta: Meta<typeof Sidebar> = {
   title: "Document Engineering/Complex Components/Sidebar",
@@ -143,12 +176,11 @@ const meta: Meta<typeof Sidebar> = {
       control: "number",
       description: "The maximum width of the sidebar.",
     },
-    onWidthChange: {
-      control: "object",
-      description:
-        "A callback function that is called when the width of the sidebar changes.",
+    allowCollapsingInactiveNodes: {
+      control: "boolean",
+      description: "Whether to allow collapsing inactive nodes on click.",
       table: {
-        readonly: true,
+        defaultValue: { summary: "false" },
       },
     },
   },
@@ -162,9 +194,6 @@ const meta: Meta<typeof Sidebar> = {
     enableMacros: 4,
     onActiveNodeChange: (node) => {
       console.log("onActiveNodeChange", node);
-    },
-    onWidthChange: (width) => {
-      console.log("onWidthChange", width);
     },
   },
 };
@@ -184,15 +213,20 @@ export const WithinLayoutAndContent: Story = {
     showStatusFilter: true,
   },
   render: (args) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [activeNode, setActiveNode] = useState<string>(
       "4281ab93-ef4f-4974-988d-7dad149a693d",
     );
+
+    const onActiveNodeChange = useCallback((node: SidebarNode) => {
+      setActiveNode(node.id);
+    }, []);
+
     return (
       <main className="flex h-svh w-full">
         <Sidebar
+          className="sidebar"
           {...args}
-          onActiveNodeChange={(node) => setActiveNode(node.id)}
+          onActiveNodeChange={onActiveNodeChange}
           activeNodeId={activeNode}
           extraFooterContent={
             <div className="flex flex-col gap-1">

@@ -1,26 +1,12 @@
-/* eslint-disable react/jsx-max-depth */
-/* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
 import type { ErrorHandling, FieldCommonProps } from "#scalars";
-import {
-  cn,
-  Command,
-  FormDescription,
-  FormGroup,
-  FormLabel,
-  FormMessageList,
-  Input,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  withFieldValidation,
-} from "#scalars";
-import React, { useId } from "react";
-import { PHIDInputContainer } from "./phid-input-container.js";
-import { PHIDList } from "./phid-list.js";
-import { PHIDListItem } from "./phid-list-item.js";
+import React, { useCallback, useId, useMemo } from "react";
+import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
+import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
+import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
+import type { IdAutocompleteOption } from "../fragments/id-autocomplete-field/types.js";
+import { withFieldValidation } from "../fragments/with-field-validation/index.js";
 import type { PHIDProps } from "./types.js";
-import { usePHIDField } from "./use-phid-field.js";
 
 type PHIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -54,11 +40,10 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       onBlur,
       onClick,
       onMouseDown,
-      allowedScopes, // used in field validation
-      allowUris, // used in field validation
-      autoComplete = true,
-      allowDataObjectReference = false, // allways false for now
-      variant = "withId",
+      allowUris,
+      allowedScopes,
+      autoComplete: autoCompleteProp,
+      variant = "withValue",
       maxLength,
       fetchOptionsCallback,
       fetchSelectedOptionCallback,
@@ -70,154 +55,96 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
   ) => {
     const prefix = useId();
     const id = idProp ?? `${prefix}-phid`;
+    const autoComplete = autoCompleteProp ?? true;
 
-    const hasWarning = Array.isArray(warnings) && warnings.length > 0;
-    const hasError = Array.isArray(errors) && errors.length > 0;
+    const contextValue = useMemo(
+      () => ({ allowUris, allowedScopes }),
+      [allowUris, allowedScopes],
+    );
 
-    const {
-      selectedValue,
-      selectedOption,
-      isPopoverOpen,
-      commandListRef,
-      options,
-      isLoading,
-      isLoadingSelectedOption,
-      haveFetchError,
-      commandValue,
-      toggleOption,
-      handleOpenChange,
-      onTriggerBlur,
-      handleChange,
-      handleCommandValue,
-      handleFetchSelectedOption,
-      handlePaste,
-    } = usePHIDField({
-      autoComplete,
-      defaultValue,
-      value,
-      isOpenByDefault,
-      initialOptions,
-      onChange,
-      onBlur,
-      fetchOptions: fetchOptionsCallback,
-      fetchSelectedOption: fetchSelectedOptionCallback,
-    });
-
-    const asCard =
-      variant === "withIdAndTitle" || variant === "withIdTitleAndDescription";
+    const renderOption = useCallback(
+      (
+        option: IdAutocompleteOption,
+        displayProps?: {
+          asPlaceholder?: boolean;
+          showValue?: boolean;
+          isLoadingSelectedOption?: boolean;
+          handleFetchSelectedOption?: (value: string) => void;
+          isFetchSelectedOptionSync?: boolean;
+          className?: string;
+        },
+      ) => (
+        <IdAutocompleteListOption
+          variant={variant}
+          icon={option.icon}
+          title={option.title}
+          path={option.path}
+          value={
+            displayProps?.asPlaceholder ? "phd not available" : option.value
+          }
+          description={option.description}
+          {...displayProps}
+        />
+      ),
+      [variant],
+    );
 
     return (
-      <FormGroup>
-        {!!label && (
-          <FormLabel
-            htmlFor={id}
-            disabled={disabled}
-            hasError={hasError}
-            required={required}
-            onClick={(e) => {
-              e.preventDefault();
-              (e.target as HTMLLabelElement).control?.focus();
-            }}
-          >
-            {label}
-          </FormLabel>
-        )}
+      <IdAutocompleteContext.Provider value={contextValue}>
         {autoComplete && fetchOptionsCallback ? (
-          <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
-            <Command
-              shouldFilter={false}
-              value={commandValue}
-              onValueChange={handleCommandValue}
-              className={cn("dark:bg-charcoal-900 bg-gray-100")}
-            >
-              <PopoverAnchor asChild={true}>
-                <PHIDInputContainer
-                  id={id}
-                  name={name}
-                  value={selectedValue}
-                  className={className}
-                  isLoading={isLoading}
-                  haveFetchError={haveFetchError}
-                  disabled={disabled}
-                  onChange={handleChange}
-                  onBlur={onTriggerBlur}
-                  onClick={onClick}
-                  selectedOption={selectedOption}
-                  handleOpenChange={handleOpenChange}
-                  onMouseDown={onMouseDown}
-                  placeholder={placeholder}
-                  hasError={hasError}
-                  label={label}
-                  required={required}
-                  isPopoverOpen={isPopoverOpen}
-                  maxLength={maxLength}
-                  handlePaste={handlePaste}
-                  {...props}
-                  ref={ref}
-                />
-              </PopoverAnchor>
-              {asCard && (
-                <PHIDListItem
-                  variant={variant}
-                  icon={selectedOption?.icon}
-                  title={selectedOption?.title}
-                  path={selectedOption?.path}
-                  phid={selectedOption?.phid ?? ""}
-                  description={selectedOption?.description}
-                  asPlaceholder={selectedOption === undefined}
-                  showPHID={false}
-                  isLoadingSelectedOption={isLoadingSelectedOption}
-                  handleFetchSelectedOption={
-                    fetchSelectedOptionCallback
-                      ? handleFetchSelectedOption
-                      : undefined
-                  }
-                  className={cn("rounded-t-none pt-2")}
-                />
-              )}
-              <PopoverContent
-                align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-                onInteractOutside={(e) => {
-                  if (e.target instanceof Element && e.target.id === id) {
-                    e.preventDefault();
-                  }
-                }}
-              >
-                <PHIDList
-                  variant={variant}
-                  commandListRef={commandListRef}
-                  selectedValue={selectedValue}
-                  options={options}
-                  toggleOption={toggleOption}
-                />
-              </PopoverContent>
-            </Command>
-          </Popover>
-        ) : (
-          <Input
+          <IdAutocompleteFieldRaw
             id={id}
             name={name}
-            value={selectedValue}
             className={className}
+            label={label}
+            description={description}
+            value={value}
+            defaultValue={defaultValue}
             disabled={disabled}
-            onChange={handleChange}
+            placeholder={placeholder}
+            required={required}
+            errors={errors}
+            warnings={warnings}
+            onChange={onChange}
             onBlur={onBlur}
             onClick={onClick}
             onMouseDown={onMouseDown}
+            autoComplete={true}
+            variant={variant}
+            maxLength={maxLength}
+            fetchOptionsCallback={fetchOptionsCallback}
+            fetchSelectedOptionCallback={fetchSelectedOptionCallback}
+            isOpenByDefault={isOpenByDefault}
+            initialOptions={initialOptions}
+            renderOption={renderOption}
+            {...props}
+            ref={ref}
+          />
+        ) : (
+          <IdAutocompleteFieldRaw
+            id={id}
+            name={name}
+            className={className}
+            label={label}
+            description={description}
+            value={value}
+            defaultValue={defaultValue}
+            disabled={disabled}
             placeholder={placeholder}
-            aria-invalid={hasError}
-            aria-label={!label ? "PHID field" : undefined}
-            aria-required={required}
+            required={required}
+            errors={errors}
+            warnings={warnings}
+            onChange={onChange}
+            onBlur={onBlur}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            autoComplete={false}
             maxLength={maxLength}
             {...props}
             ref={ref}
           />
         )}
-        {!!description && <FormDescription>{description}</FormDescription>}
-        {hasWarning && <FormMessageList messages={warnings} type="warning" />}
-        {hasError && <FormMessageList messages={errors} type="error" />}
-      </FormGroup>
+      </IdAutocompleteContext.Provider>
     );
   },
 );
@@ -247,8 +174,8 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         }
 
         // If it's not a URL and URIs are not allowed, return error
-        if (allowUris === false) {
-          return "Please use a URL format: phd://<domain>/<documentID>";
+        if (!allowUris) {
+          return "Invalid format. Please use URL format: phd://<domain>/<documentID>";
         }
 
         // URI patterns
@@ -266,19 +193,14 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
           new RegExp(format).test(value),
         );
         if (!isValidURIFormat) {
-          return "Invalid format. Please use either: URL format: phd://<domain>/<documentID> or URI format: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
+          return "Invalid format. Please use either URL format: phd://<domain>/<documentID> or URI format: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
         }
 
-        // Validate scope if present
-        const scopeMatch =
-          /.*:.*::([^:]+)$/.exec(value) || /.*:.*:.*:([^:]+)$/.exec(value);
-        if (
-          scopeMatch &&
-          Array.isArray(allowedScopes) &&
-          allowedScopes.length > 0
-        ) {
-          const scope = scopeMatch[1];
-          if (!allowedScopes.includes(scope)) {
+        // Validate scope
+        if (Array.isArray(allowedScopes)) {
+          const scopeMatch =
+            /.*:.*::([^:]+)$/.exec(value) || /.*:.*:.*:([^:]+)$/.exec(value);
+          if (scopeMatch && !allowedScopes.includes(scopeMatch[1])) {
             return `Invalid scope. Allowed scopes are: ${allowedScopes.join(", ")}`;
           }
         }

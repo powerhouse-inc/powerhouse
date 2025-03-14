@@ -1,6 +1,6 @@
-import { cn } from "#scalars";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
 import * as React from "react";
+import { cn } from "../../../lib/utils.js";
 
 interface ToggleProps {
   disabled?: boolean;

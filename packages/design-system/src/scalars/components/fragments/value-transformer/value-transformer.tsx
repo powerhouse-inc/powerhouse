@@ -1,6 +1,6 @@
-import { deepEqual } from "#scalars";
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
+import { deepEqual } from "../../../lib/deep-equal.js";
 
 export type ValueTransformer = (value?: any) => any;
 

@@ -54,13 +54,13 @@ describe("TimePickerField", () => {
     expect(label).toHaveClass("text-gray-700");
   });
 
-  it("should handle dateIntervals prop correctly with 15-minute intervals", async () => {
+  it("should handle timeIntervals prop correctly with 15-minute intervals", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <TimePickerField
         name="test-time"
         label="Test Label"
-        dateIntervals={15}
+        timeIntervals={15}
       />,
     );
     // Open the time picker using the button instead of the input
@@ -74,23 +74,25 @@ describe("TimePickerField", () => {
     // Now check for the minute values
     const minutes = ["00", "15", "30", "45"];
     for (const minute of minutes) {
-      const minuteElement = await screen.findByText(minute);
-      expect(minuteElement).toBeInTheDocument();
+      // Use findAllByText instead of findByText since there are multiple elements with the same text
+      const minuteElements = await screen.findAllByText(minute);
+      expect(minuteElements.length).toBeGreaterThan(0);
+      expect(minuteElements[0]).toBeInTheDocument();
     }
 
-    // // Verify that intermediate values are not present
+    // Verify that intermediate values are not present
     ["13", "20", "25", "35", "40", "50", "55"].forEach((minute) => {
       expect(screen.queryByText(minute)).not.toBeInTheDocument();
     });
   });
 
-  it("should handle dateIntervals prop correctly with 30-minute intervals", async () => {
+  it("should handle timeIntervals prop correctly with 30-minute intervals", async () => {
     const user = userEvent.setup();
     renderWithForm(
       <TimePickerField
         name="test-time"
         label="Test Label"
-        dateIntervals={30}
+        timeIntervals={30}
       />,
     );
 
@@ -105,10 +107,11 @@ describe("TimePickerField", () => {
     // Now check for the minute values
     const minutes = ["00", "30"];
     for (const minute of minutes) {
-      const minuteElement = await screen.findByText(minute);
-      expect(minuteElement).toBeInTheDocument();
+      const minuteElements = await screen.findAllByText(minute);
+      expect(minuteElements.length).toBeGreaterThan(0);
+      expect(minuteElements[0]).toBeInTheDocument();
     }
-    // // Verify that other values are not present
+    // Verify that other values are not present
     ["15", "45"].forEach((minute) => {
       expect(screen.queryByText(minute)).not.toBeInTheDocument();
     });
@@ -116,16 +119,13 @@ describe("TimePickerField", () => {
 
   it("should set timezone value and disable select when timeZone prop is provided", async () => {
     const user = userEvent.setup();
-    const timeZoneValue = {
-      value: "America/New_York",
-      label: "America/New_York",
-    };
+    const timeZoneValue = "America/New_York";
 
     renderWithForm(
       <TimePickerField
         name="test-time"
         label="Test Label"
-        timeZone={timeZoneValue.value}
+        timeZone={timeZoneValue}
       />,
     );
 
@@ -136,11 +136,64 @@ describe("TimePickerField", () => {
     expect(popoverContent).toBeVisible();
 
     const select = await screen.findByRole("combobox");
-
     expect(select).toBeDisabled();
 
-    expect(screen.getByText(timeZoneValue.label)).toBeInTheDocument();
-    await user.click(select);
-    expect(screen.getByText(timeZoneValue.label)).toBeInTheDocument();
+    // Use a more flexible approach to find the timezone text
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("New York") && content.includes("(");
+    });
+    expect(timezoneText).toBeInTheDocument();
+  });
+
+  it("should display continent when includeContinent prop is true", async () => {
+    const user = userEvent.setup();
+    const timeZoneValue = "America/New_York";
+
+    renderWithForm(
+      <TimePickerField
+        name="test-time"
+        label="Test Label"
+        timeZone={timeZoneValue}
+        includeContinent
+      />,
+    );
+
+    const clockButton = screen.getByRole("button");
+    await user.click(clockButton);
+
+    const popoverContent = await screen.findByRole("dialog");
+    expect(popoverContent).toBeVisible();
+
+    // Verify that the timezone includes the continent (America)
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("America") && content.includes("New York");
+    });
+    expect(timezoneText).toBeInTheDocument();
+  });
+
+  it("should not display continent when includeContinent prop is false", async () => {
+    const user = userEvent.setup();
+    const timeZoneValue = "America/New_York";
+
+    renderWithForm(
+      <TimePickerField
+        name="test-time"
+        label="Test Label"
+        timeZone={timeZoneValue}
+        includeContinent={false}
+      />,
+    );
+
+    const clockButton = screen.getByRole("button");
+    await user.click(clockButton);
+
+    const popoverContent = await screen.findByRole("dialog");
+    expect(popoverContent).toBeVisible();
+
+    // Verify that the timezone excludes the continent (America)
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("New York") && !content.includes("America");
+    });
+    expect(timezoneText).toBeInTheDocument();
   });
 });

@@ -1,11 +1,14 @@
+/* eslint-disable react/jsx-no-bind */
 import { Icon } from "#powerhouse";
-import { cn, Input, Tooltip, TooltipProvider } from "#scalars";
+import { cn } from "#scalars";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
-import type { PHIDItem } from "./types.js";
+import { Input } from "../input/input.js";
+import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
+import type { IdAutocompleteOption } from "./types.js";
 
-interface PHIDInputContainerProps {
+interface IdAutocompleteInputContainerProps {
   id: string;
   name: string;
   value: string;
@@ -16,8 +19,10 @@ interface PHIDInputContainerProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onClick?: (e: React.MouseEvent<HTMLInputElement>) => void;
-  selectedOption?: PHIDItem;
+  selectedOption?: IdAutocompleteOption;
+  optionsLength: number;
   handleOpenChange?: (open: boolean) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLInputElement>) => void;
   placeholder?: string;
   hasError: boolean;
@@ -29,9 +34,9 @@ interface PHIDInputContainerProps {
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
 }
 
-export const PHIDInputContainer = React.forwardRef<
+export const IdAutocompleteInputContainer = React.forwardRef<
   HTMLInputElement,
-  PHIDInputContainerProps
+  IdAutocompleteInputContainerProps
 >(
   (
     {
@@ -46,7 +51,9 @@ export const PHIDInputContainer = React.forwardRef<
       onBlur,
       onClick,
       selectedOption,
+      optionsLength,
       handleOpenChange,
+      onKeyDown,
       onMouseDown,
       placeholder,
       hasError,
@@ -85,6 +92,25 @@ export const PHIDInputContainer = React.forwardRef<
               }
               onClick?.(e);
             }}
+            onKeyDown={(e) => {
+              onKeyDown?.(e);
+              const isOptionsRelatedKey = [
+                "ArrowUp",
+                "ArrowDown",
+                "Enter",
+              ].includes(e.key);
+
+              if (e.key === "Enter" && isPopoverOpen && optionsLength === 0) {
+                handleOpenChange?.(false);
+                e.preventDefault();
+                return;
+              }
+              if (
+                !(isOptionsRelatedKey && isPopoverOpen && optionsLength > 0)
+              ) {
+                e.stopPropagation();
+              }
+            }}
             onMouseDown={(e) => {
               const input = e.target as HTMLInputElement;
               if (!input.contains(document.activeElement)) {
@@ -101,7 +127,7 @@ export const PHIDInputContainer = React.forwardRef<
             }}
             placeholder={placeholder}
             aria-invalid={hasError}
-            aria-label={!label ? "PHID field" : undefined}
+            aria-label={!label ? "Id Autocomplete field" : undefined}
             aria-required={required}
             aria-expanded={isPopoverOpen}
             maxLength={maxLength}
@@ -139,13 +165,13 @@ export const PHIDInputContainer = React.forwardRef<
                   type="button"
                   onClick={() => {
                     navigator.clipboard
-                      .writeText(selectedOption.phid)
+                      .writeText(selectedOption.value)
                       .then(() => {
                         setHasCopied(true);
                         setTimeout(() => setHasCopied(false), 2000);
                       })
                       .catch((error) => {
-                        console.error("Failed to copy PHID: ", error);
+                        console.error("Failed to copy value: ", error);
                       });
                   }}
                   className={cn(

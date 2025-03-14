@@ -1,17 +1,19 @@
-import { cn, sharedValueTransformers, type TransformerType } from "#scalars";
+import { cn, FormMessageList } from "#scalars";
 import { forwardRef, useId, useMemo } from "react";
-import {
-  type ErrorHandling,
-  type FieldCommonProps,
-  type TextProps,
+import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
+import type {
+  ErrorHandling,
+  FieldCommonProps,
+  TextProps,
 } from "../../types.js";
 import { CharacterCounter } from "../character-counter/index.js";
 import { FormDescription } from "../form-description/index.js";
-import { FormGroup } from "../form-group/index.js";
-import { FormLabel } from "../form-label/index.js";
-import { FormMessageList } from "../form-message/index.js";
-import { Input } from "../input/index.js";
-import ValueTransformer from "../value-transformer/index.js";
+import { FormGroup } from "../form-group/form-group.js";
+import { FormLabel } from "../form-label/form-label.js";
+import { Input } from "../input/input.js";
+import ValueTransformer, {
+  type TransformerType,
+} from "../value-transformer/value-transformer.js";
 import { withFieldValidation } from "../with-field-validation/index.js";
 
 export interface TextFieldProps
@@ -109,3 +111,5 @@ const TextFieldRaw = forwardRef<HTMLInputElement, TextFieldProps>(
 );
 
 export const TextField = withFieldValidation<TextFieldProps>(TextFieldRaw);
+
+TextField.displayName = "TextField";

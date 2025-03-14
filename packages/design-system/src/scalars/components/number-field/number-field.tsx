@@ -8,7 +8,7 @@ import { FormMessageList } from "../fragments/form-message/index.js";
 import { Input } from "../fragments/input/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
 import { validateNumericType } from "./number-field-validations.js";
-import { type InputNumberProps } from "./types.js";
+import type { InputNumberProps } from "./types.js";
 import { useNumberField } from "./use-number-field.js";
 import { regex } from "./utils.js";
 

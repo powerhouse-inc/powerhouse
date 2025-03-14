@@ -6,6 +6,7 @@ import {
   withTimestampsAsISOStrings,
 } from "#scalars";
 import type { Meta, StoryObj } from "@storybook/react";
+import { FORMAT_MAPPING } from "../date-time-field/utils.js";
 import { DatePickerField } from "./date-picker-field.js";
 
 const meta: Meta<typeof DatePickerField> = {
@@ -13,6 +14,9 @@ const meta: Meta<typeof DatePickerField> = {
   component: DatePickerField,
   parameters: {
     layout: "centered",
+    form: {
+      resetBehavior: "unmount",
+    },
   },
   decorators: [withForm, withTimestampsAsISOStrings],
   tags: ["autodocs"],
@@ -58,13 +62,7 @@ const meta: Meta<typeof DatePickerField> = {
       control: {
         type: "select",
       },
-      options: [
-        "yyyy-MM-dd",
-        "dd/MM/yyyy",
-        "MM/dd/yyyy",
-        "dd-MMM-yyyy",
-        "MMM-dd-yyyy",
-      ],
+      options: Object.keys(FORMAT_MAPPING),
       table: {
         defaultValue: { summary: "yyyy-MM-dd" },
         type: {

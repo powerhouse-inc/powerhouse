@@ -1,7 +1,8 @@
-import { renderWithForm } from "#scalars";
 import { act, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import React from "react";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../../lib/testing.js";
 import { Form } from "../../form/index.js";
 import { type ValidatorHandler } from "../../types.js";
 import { FormGroup } from "../form-group/index.js";
@@ -12,47 +13,47 @@ import { type TextFieldProps } from "../text-field/index.js";
 import { withFieldValidation } from "./with-field-validation.js";
 
 // Test component that will be wrapped
-
-const TextFieldTesting = ({
-  label,
-  value,
-  defaultValue,
-  onChange,
-  errors,
-  pattern,
-  ...props
-}: Omit<TextFieldProps, "autoComplete">) => {
-  return (
-    <FormGroup>
-      {label && (
-        <FormLabel
-          htmlFor="test"
-          required={props.required}
-          disabled={props.disabled}
-          hasError={!!errors?.length}
-        >
-          {label}
-        </FormLabel>
-      )}
-      <Input
-        id="test"
-        data-testid="test-input"
-        value={value}
-        defaultValue={defaultValue}
-        onChange={onChange}
-        pattern={pattern?.toString()}
-        {...props}
-      />
-      {errors && (
-        <FormMessageList
-          data-testid="error-message"
-          messages={errors}
-          type="error"
+const TextFieldTesting = React.forwardRef<
+  HTMLInputElement,
+  Omit<TextFieldProps, "autoComplete">
+>(
+  (
+    { label, value, defaultValue, onChange, errors, pattern, ...props },
+    ref,
+  ) => {
+    return (
+      <FormGroup>
+        {label && (
+          <FormLabel
+            htmlFor="test"
+            required={props.required}
+            disabled={props.disabled}
+            hasError={!!errors?.length}
+          >
+            {label}
+          </FormLabel>
+        )}
+        <Input
+          id="test"
+          data-testid="test-input"
+          value={value}
+          defaultValue={defaultValue}
+          onChange={onChange}
+          pattern={pattern?.toString()}
+          ref={ref}
+          {...props}
         />
-      )}
-    </FormGroup>
-  );
-};
+        {errors && (
+          <FormMessageList
+            data-testid="error-message"
+            messages={errors}
+            type="error"
+          />
+        )}
+      </FormGroup>
+    );
+  },
+);
 
 const WrappedComponent = withFieldValidation<TextFieldProps>(TextFieldTesting);
 
@@ -241,5 +242,22 @@ describe("withFieldValidation", () => {
     await userEvent.type(input, "123");
 
     expect(screen.queryByTestId("error-message")).toBeNull();
+  });
+
+  it("should forward refs to the wrapped component", () => {
+    const inputRef = React.createRef<HTMLInputElement>();
+
+    renderWithForm(<WrappedComponent name="test" ref={inputRef} />);
+
+    const input = screen.getByTestId("test-input");
+
+    // initially, the input should not have focus
+    expect(input).not.toHaveFocus();
+
+    // directly focus the input using the ref
+    inputRef.current?.focus();
+
+    // the input should now have focus
+    expect(input).toHaveFocus();
   });
 });
