@@ -1,7 +1,7 @@
 import React from "react";
-import { DateFieldProps } from "../date-field/date-field.js";
+import { type DateFieldProps } from "../date-field/date-field.js";
 import type { DateFieldValue } from "../date-field/types.js";
-import { TimeFieldProps } from "../time-field/time-field.js";
+import { type TimeFieldProps } from "../time-field/time-field.js";
 import type { TimeFieldValue } from "../time-field/type.js";
 import type { ErrorHandling, FieldCommonProps } from "../types.js";
 import { DateTimeField as DateTimeRaw } from "./date-time.js";

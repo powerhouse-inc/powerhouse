@@ -2,10 +2,7 @@ import { format } from "date-fns";
 import React, { useState } from "react";
 import type { DateFieldValue } from "../date-field/types.js";
 import { useDatePickerField } from "../date-field/use-date-field.js";
-import {
-  getDateFromValue,
-  getTimeFromValue,
-} from "../date-field/utils.js";
+import { getDateFromValue, getTimeFromValue } from "../date-field/utils.js";
 import type { TimeFieldValue, TimePeriod } from "../time-field/type.js";
 import {
   convertTimeFrom24To12Hours,

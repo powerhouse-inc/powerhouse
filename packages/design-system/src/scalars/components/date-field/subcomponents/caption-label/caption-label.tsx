@@ -52,7 +52,7 @@ const CaptionLabel: React.FC<CaptionLabelProps> = ({
       </Button>
       {navView === "days" ? (
         <Icon
-          className="size-[18px] text-gray-600 cursor-pointer"
+          className="size-[18px] cursor-pointer text-gray-600"
           name="TriangleDown"
           onClick={() => setNavView("years")}
         />

@@ -1,4 +1,4 @@
-import { TimeFieldProps } from "./time-field.js";
+import { type TimeFieldProps } from "./time-field.js";
 import {
   convert24hTo12h,
   getTime,
