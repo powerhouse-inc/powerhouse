@@ -1,6 +1,5 @@
-import { Button } from "@/powerhouse/components/button";
-import { Form } from "@/scalars/components";
-import { EnumField } from "@/scalars/components";
+import { Button } from "#powerhouse";
+import { EnumField, Form } from "#scalars";
 
 const EnumFieldExample = () => {
   const onSubmit = async (data: any) => {

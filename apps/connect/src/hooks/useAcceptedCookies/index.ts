@@ -1,1 +1,1 @@
-export * from './useAcceptedCookies';
+export * from './useAcceptedCookies.js';

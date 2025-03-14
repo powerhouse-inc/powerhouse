@@ -1,6 +1,5 @@
-import { GroupTransactionFormInputs } from "@/rwa/types";
-import { formatDateForDisplay } from "@/rwa/utils";
-import { Control, useWatch } from "react-hook-form";
+import { formatDateForDisplay, type GroupTransactionFormInputs } from "#rwa";
+import { type Control, useWatch } from "react-hook-form";
 
 export function EntryTimeLabel({
   control,

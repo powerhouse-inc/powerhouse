@@ -1,5 +1,4 @@
-import { DivProps } from "@/powerhouse";
-import React from "react";
+import { type DivProps } from "#powerhouse";
 
 export interface SettingsRowProps extends Omit<DivProps, "title"> {
   readonly title?: React.ReactNode;

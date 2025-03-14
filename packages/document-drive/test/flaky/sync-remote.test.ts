@@ -1,14 +1,8 @@
-import { actions, reducer } from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import {
-  actions as DocumentModelActions,
-  DocumentModelDocument,
-  module as DocumentModelLib,
-} from "document-model/document-model";
+import { DocumentModelDocument, DocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { DocumentDriveServer } from "../../src/server";
-import { MemoryStorage } from "../../src/storage/memory";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { ReactorBuilder } from "../../src/server/base.js";
+import { MemoryStorage } from "../../src/storage/memory.js";
 
 const SWITCHBOARD_URL = process.env.SWITCHBOARD_URL ?? "http://localhost:3000/";
 
@@ -25,7 +19,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   const storageLayer = new MemoryStorage();
 
@@ -42,7 +36,9 @@ describe("Document Drive Server with remote switchboard instance", async () => {
   itAvailable(
     "should push to remote switchboard if remoteDriveUrl is set",
     async ({ expect }) => {
-      const server = new DocumentDriveServer(documentModels, storageLayer);
+      const server = new ReactorBuilder(documentModels)
+        .withStorage(storageLayer)
+        .build();
       await server.initialize();
       await server.addDrive({
         global: {
@@ -117,7 +113,9 @@ describe("Document Drive Server with remote switchboard instance", async () => {
     expect,
   }) => {
     // Connect document drive server
-    const server = new DocumentDriveServer(documentModels, storageLayer);
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(storageLayer)
+      .build();
     await server.initialize();
     try {
       await server.addRemoteDrive(buildSwitchboardUrl("d/1"), {

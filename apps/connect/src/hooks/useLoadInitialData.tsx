@@ -1,23 +1,23 @@
+import { ReloadConnectToast } from '#components';
+import { useReadModeContext } from '#context';
+import { useUiNodes } from '#hooks';
+import { useAsyncReactor } from '#store';
 import {
     CONFLICT,
     ERROR,
     LOCAL,
     SUCCESS,
     toast,
-    UiDriveNode,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
-import { DocumentDriveDocument } from 'document-model-libs/document-drive';
-import { TFunction } from 'i18next';
+import { type DocumentDriveDocument } from 'document-drive';
+import { type TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReloadConnectToast } from 'src/components/toast/reload-connect-toast';
-import { useReadModeContext } from 'src/context/read-mode';
-import { useUiNodes } from 'src/hooks/useUiNodes';
-import { useUnwrappedReactor } from 'src/store/reactor';
-import { useClientErrorHandler } from './useClientErrorHandler';
-import { useConnectConfig } from './useConnectConfig';
-import { useDocumentDrives } from './useDocumentDrives';
-import { isLatestVersion } from './utils';
+import { useClientErrorHandler } from './useClientErrorHandler.js';
+import { useConnectConfig } from './useConnectConfig.js';
+import { useDocumentDrives } from './useDocumentDrives.js';
+import { isLatestVersion } from './utils.js';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
@@ -33,7 +33,7 @@ export const useLoadInitialData = () => {
     const [, , serverSubscribeUpdates] = useDocumentDrives();
     const { readDrives } = useReadModeContext();
     const clientErrorHandler = useClientErrorHandler();
-    const reactor = useUnwrappedReactor();
+    const reactor = useAsyncReactor();
     const [connectConfig] = useConnectConfig();
 
     async function checkLatestVersion() {
@@ -45,7 +45,8 @@ export const useLoadInitialData = () => {
 
         if (
             import.meta.env.MODE === 'development' ||
-            connectConfig.studioMode
+            connectConfig.studioMode ||
+            !connectConfig.warnOutdatedApp
         ) {
             console.warn(
                 `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,

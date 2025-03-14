@@ -1,1 +1,1 @@
-export * from "./id-autocomplete-field";
+export * from "./id-autocomplete-field.js";

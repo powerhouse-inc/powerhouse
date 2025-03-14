@@ -1,9 +1,9 @@
-import { Icon } from "@/powerhouse";
-import { ComponentPropsWithoutRef, ReactNode } from "react";
+import { Icon } from "#powerhouse";
+import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 import Select, {
-  ClearIndicatorProps,
-  DropdownIndicatorProps,
-  MenuListProps,
+  type ClearIndicatorProps,
+  type DropdownIndicatorProps,
+  type MenuListProps,
   components,
 } from "react-select";
 
@@ -75,7 +75,7 @@ export function Combobox(props: Props) {
             label: "indicatorContainer",
             display: "flex",
             transition: "color 150ms",
-            color: "var(--gray-900)",
+            color: "var(color-gray-900)",
             padding: 8,
             boxSizing: "border-box",
           };
@@ -83,20 +83,20 @@ export function Combobox(props: Props) {
         clearIndicator: (baseStyles) => {
           return {
             ...baseStyles,
-            color: "var(--gray-900)",
+            color: "var(color-gray-900)",
           };
         },
         container: (baseStyles) => {
           return {
             ...baseStyles,
-            borderColor: "var(--gray-200)",
+            borderColor: "var(color-gray-200)",
             fontSize: 12,
           };
         },
         placeholder: (baseStyles) => {
           return {
             ...baseStyles,
-            color: invalid ? "var(--red-800)" : "var(--gray-500)",
+            color: invalid ? "var(color-red-800)" : "var(color-gray-500)",
           };
         },
         control: () => {
@@ -111,8 +111,10 @@ export function Combobox(props: Props) {
             outline: "0 !important",
             position: "relative",
             transition: "all 100ms",
-            backgroundColor: "var(--white)",
-            borderColor: invalid ? "var(--red-900)" : "var(--gray-200)",
+            backgroundColor: "var(--color-white)",
+            borderColor: invalid
+              ? "var(--color-red-900)"
+              : "var(--color-gray-200)",
             borderStyle: "solid",
             borderWidth: 1,
             borderRadius: "6px",
@@ -123,11 +125,11 @@ export function Combobox(props: Props) {
           return {
             ...baseStyles,
             backgroundColor: state.isSelected
-              ? "var(--slate-50)"
-              : "var(--white)",
-            color: "var(--gray-800)",
+              ? "var(--color-slate-50)"
+              : "var(--color-white)",
+            color: "var(--color-gray-800)",
             ":hover": {
-              backgroundColor: "var(--slate-50)",
+              backgroundColor: "var(--color-slate-50)",
             },
           };
         },
@@ -141,23 +143,23 @@ export function Combobox(props: Props) {
         ...theme,
         colors: {
           ...theme.colors,
-          primary: "var(--slate-100)",
-          primary25: "var(--slate-50)",
-          primary50: "var(--slate-100)",
-          primary75: "var(--slate-100)",
-          danger: "var(--red-900)",
-          dangerLight: "var(--red-100)",
-          neutral0: "var(--white)",
-          neutral5: "var(--gray-50)",
-          neutral10: "var(--gray-100)",
-          neutral20: "var(--gray-200)",
-          neutral30: "var(--gray-300)",
-          neutral40: "var(--gray-400)",
-          neutral50: "var(--gray-500)",
-          neutral60: "var(--gray-600)",
-          neutral70: "var(--gray-700)",
-          neutral80: "var(--gray-800)",
-          neutral90: "var(--gray-900)",
+          primary: "var(--color-slate-100)",
+          primary25: "var(--color-slate-50)",
+          primary50: "var(--color-slate-100)",
+          primary75: "var(--color-slate-100)",
+          danger: "var(--color-red-900)",
+          dangerLight: "var(--color-red-100)",
+          neutral0: "var(--color-white)",
+          neutral5: "var(--color-gray-50)",
+          neutral10: "var(--color-gray-100)",
+          neutral20: "var(--color-gray-200)",
+          neutral30: "var(--color-gray-300)",
+          neutral40: "var(--color-gray-400)",
+          neutral50: "var(--color-gray-500)",
+          neutral60: "var(--color-gray-600)",
+          neutral70: "var(--color-gray-700)",
+          neutral80: "var(--color-gray-800)",
+          neutral90: "var(--color-gray-900)",
         },
       })}
     />

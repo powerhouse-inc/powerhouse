@@ -1,11 +1,11 @@
 import { memo } from "react";
-import { Revision as RevisionProps } from "../types";
-import { Address } from "./address";
-import { Errors } from "./errors";
-import { Operation } from "./operation";
-import { RevisionNumber } from "./revision-number";
-import { Signature } from "./signature";
-import { Timestamp } from "./timestamp";
+import { type Revision as RevisionProps } from "../types.js";
+import { Address } from "./address.js";
+import { Errors } from "./errors.js";
+import { Operation } from "./operation.js";
+import { RevisionNumber } from "./revision-number.js";
+import { Signature } from "./signature.js";
+import { Timestamp } from "./timestamp.js";
 
 export function _Revision(props: RevisionProps) {
   return (

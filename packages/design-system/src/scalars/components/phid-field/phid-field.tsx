@@ -1,15 +1,12 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useCallback, useMemo } from "react";
-import { IdAutocompleteFieldRaw } from "@/scalars/components/fragments/id-autocomplete-field";
-import { IdAutocompleteListOption } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-list-option";
-import { IdAutocompleteContext } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-context";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import type {
-  FieldCommonProps,
-  ErrorHandling,
-} from "@/scalars/components/types";
-import type { PHIDProps } from "./types";
-import type { IdAutocompleteOption } from "@/scalars/components/fragments/id-autocomplete-field/types";
+import type { ErrorHandling, FieldCommonProps } from "#scalars";
+import React, { useCallback, useId, useMemo } from "react";
+import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
+import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
+import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
+import type { IdAutocompleteOption } from "../fragments/id-autocomplete-field/types.js";
+import { withFieldValidation } from "../fragments/with-field-validation/index.js";
+import type { PHIDProps } from "./types.js";
 
 type PHIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,

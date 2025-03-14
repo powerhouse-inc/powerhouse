@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { IBaseDocumentDriveServer } from "document-drive";
-import { actions } from "document-model/document-model";
+import { actions } from "document-model";
 import {
   addDocument,
   addFolder,

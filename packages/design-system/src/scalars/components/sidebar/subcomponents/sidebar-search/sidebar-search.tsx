@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useSidebar } from "../sidebar-provider";
-import { Input } from "../../../fragments";
-import { cn } from "@/scalars/lib";
-import Tabler from "@/assets/icon-components/Tabler";
-import CrossCircle from "@/assets/icon-components/CrossCircle";
-import Search from "@/assets/icon-components/Search";
-import { SearchResultCounter } from "./search-result-counter";
-import { SearchNavigationArrow } from "./search-navigation-arrow";
+import CrossCircle from "../../../../../powerhouse/components/icon-components/CrossCircle.js";
+import Search from "../../../../../powerhouse/components/icon-components/Search.js";
+import Tabler from "../../../../../powerhouse/components/icon-components/Tabler.js";
+import { cn } from "../../../../lib/utils.js";
+import { Input } from "../../../fragments/index.js";
+import { useSidebar } from "../sidebar-provider/index.js";
+import { SearchNavigationArrow } from "./search-navigation-arrow.js";
+import { SearchResultCounter } from "./search-result-counter.js";
 
 interface SidebarSearchProps {
   showStatusFilter: boolean;

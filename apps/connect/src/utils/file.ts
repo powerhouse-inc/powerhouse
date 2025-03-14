@@ -1,9 +1,14 @@
-import type { Document, DocumentModel } from 'document-model/document';
-import { utils } from 'document-model/document';
-import { logger } from 'src/services/logger';
+import { logger } from 'document-drive';
+import {
+    baseLoadFromInput,
+    baseSaveToFileHandle,
+    createZip,
+    type DocumentModelModule,
+    type PHDocument,
+} from 'document-model';
 
-const downloadFile = async (document: Document) => {
-    const zip = await utils.createZip(document);
+const downloadFile = async (document: PHDocument) => {
+    const zip = createZip(document);
     zip.generateAsync({ type: 'blob' })
         .then(blob => {
             const link = window.document.createElement('a');
@@ -20,17 +25,19 @@ const downloadFile = async (document: Document) => {
 };
 
 export async function exportFile(
-    document: Document,
-    getDocumentModel: (documentType: string) => DocumentModel | undefined,
+    document: PHDocument,
+    getDocumentModelModule: (
+        documentType: string,
+    ) => DocumentModelModule | undefined,
 ) {
-    const documentModel = getDocumentModel(document.documentType);
-    if (!documentModel) {
+    const documentModelModule = getDocumentModelModule(document.documentType);
+    if (!documentModelModule) {
         throw new Error(
             `Document model not supported: ${document.documentType}`,
         );
     }
 
-    const extension = documentModel.utils.fileExtension;
+    const extension = documentModelModule.documentModel.extension;
 
     // Fallback for browsers that don't support showSaveFilePicker
     if (!window.showSaveFilePicker) {
@@ -45,7 +52,7 @@ export async function exportFile(
             }zip`,
         });
 
-        await documentModel.utils.saveToFileHandle(document, fileHandle);
+        await baseSaveToFileHandle(document, fileHandle);
         const path = (await fileHandle.getFile()).path;
         if (typeof window !== 'undefined') {
             window.electronAPI?.fileSaved(document, path);
@@ -61,18 +68,22 @@ export async function exportFile(
 
 export async function loadFile(
     path: string | File,
-    getDocumentModel: (documentType: string) => DocumentModel | undefined,
+    getDocumentModelModule: (
+        documentType: string,
+    ) => DocumentModelModule | undefined,
 ) {
-    const baseDocument = await utils.loadFromInput(
+    const baseDocument = await baseLoadFromInput(
         path,
-        (state: Document) => state,
+        (state: PHDocument) => state,
         { checkHashes: true },
     );
-    const documentModel = getDocumentModel(baseDocument.documentType);
-    if (!documentModel) {
+    const documentModelModule = getDocumentModelModule(
+        baseDocument.documentType,
+    );
+    if (!documentModelModule) {
         throw new Error(
             `Document "${baseDocument.documentType}" is not supported`,
         );
     }
-    return documentModel.utils.loadFromInput(path);
+    return documentModelModule.utils.loadFromInput(path);
 }

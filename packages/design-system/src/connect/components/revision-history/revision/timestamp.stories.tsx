@@ -1,6 +1,6 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { Timestamp } from "./timestamp";
-import { TooltipProvider } from "@/connect";
+import { TooltipProvider } from "#connect";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { Timestamp } from "./timestamp.js";
 
 const meta = {
   title: "Connect/Components/Revision History/Revision/Timestamp",

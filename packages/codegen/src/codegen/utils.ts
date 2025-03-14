@@ -1,10 +1,10 @@
 import {
-  DocumentModelDocument,
-  DocumentModelState,
-  utils,
-} from "document-model/document-model";
+  documentModelLoadFromFile,
+  type DocumentModelDocument,
+  type DocumentModelState,
+} from "document-model";
 import fs from "node:fs";
-import * as prettier from "prettier";
+import { format } from "prettier";
 
 export async function loadDocumentModel(
   path: string,
@@ -14,7 +14,7 @@ export async function loadDocumentModel(
     if (!path) {
       throw new Error("Document model file not specified");
     } else if (path.endsWith(".zip")) {
-      const file = await utils.loadFromFile(path);
+      const file = await documentModelLoadFromFile(path);
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");
@@ -41,7 +41,7 @@ export async function formatWithPrettierBeforeWrite(
   outputFile: string,
   content: string,
 ) {
-  const modifiedContent = await prettier.format(content, {
+  const modifiedContent = await format(content, {
     parser: "typescript",
   });
   return modifiedContent;

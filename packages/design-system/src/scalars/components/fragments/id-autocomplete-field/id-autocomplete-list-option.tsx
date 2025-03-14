@@ -1,7 +1,7 @@
+import { Icon, type IconName } from "#powerhouse";
 import React from "react";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
-import { cn } from "@/scalars/lib/utils";
-import type { IdAutocompleteProps, IdAutocompleteOption } from "./types";
+import { cn } from "../../../lib/utils.js";
+import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";
 
 const IconRenderer: React.FC<{
   customIcon?: IconName | React.ReactElement;

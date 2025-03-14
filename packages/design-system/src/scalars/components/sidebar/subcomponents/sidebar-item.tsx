@@ -1,15 +1,15 @@
 /* eslint-disable react/jsx-max-depth */
-import { SidebarNode, FlattenedNode, NodeStatus } from "../types";
+import { Icon } from "#powerhouse";
 import { cloneElement, forwardRef, useCallback, useMemo, useRef } from "react";
-import { cn } from "@/scalars/lib";
-import { Tooltip, TooltipProvider } from "../../fragments";
-import { Icon } from "@/powerhouse";
-import { StatusIcon } from "./status-icon";
-import { useEllipsis } from "@/scalars/hooks/useEllipsis";
-import CaretDown from "@/assets/icon-components/CaretDown";
-import PinFilled from "@/assets/icon-components/PinFilled";
-import Pin from "@/assets/icon-components/Pin";
-import { isEmpty } from "@/scalars/lib/is-empty";
+import CaretDown from "../../../../powerhouse/components/icon-components/CaretDown.js";
+import Pin from "../../../../powerhouse/components/icon-components/Pin.js";
+import PinFilled from "../../../../powerhouse/components/icon-components/PinFilled.js";
+import { useEllipsis } from "../../../hooks/useEllipsis.js";
+import { isEmpty } from "../../../lib/is-empty.js";
+import { cn } from "../../../lib/utils.js";
+import { Tooltip, TooltipProvider } from "../../fragments/index.js";
+import { type FlattenedNode, NodeStatus, type SidebarNode } from "../types.js";
+import { StatusIcon } from "./status-icon.js";
 
 interface SidebarItemProps {
   node: FlattenedNode;
@@ -122,7 +122,6 @@ export const SidebarItem = ({
           <div
             tabIndex={0}
             id={`sidebar-item-${node.id}`}
-            // eslint-disable-next-line tailwindcss/no-custom-classname
             className={cn(
               "group/sidebar-item dark:hover:bg-charcoal-900 relative flex w-full cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-400",
               hasStatus && "pr-6",

@@ -1,9 +1,9 @@
 import * as React from "react";
 import { useRef } from "react";
-import { Button } from "../../fragments/button";
-import { useTimeSelector } from "./use-time-selector";
-import { cn } from "@/scalars/lib/utils";
-import { TimeSelectorProps } from "../type";
+import { cn } from "../../../lib/utils.js";
+import { Button } from "../../fragments/button/index.js";
+import { type TimeSelectorProps } from "../type.js";
+import { useTimeSelector } from "./use-time-selector.js";
 
 const TimeSelector: React.FC<TimeSelectorProps> = ({
   options,
@@ -27,7 +27,7 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
     <div className="relative w-[43px] overflow-hidden">
       <div
         ref={containerRef}
-        className="absolute inset-0 flex flex-col items-center overflow-y-auto scrollbar-hide gap-1 no-scrollbar"
+        className="scrollbar-hide no-scrollbar absolute inset-0 flex flex-col items-center gap-1 overflow-y-auto"
       >
         {isCyclic && <div className="h-[60px]" />}
         {displayOptions.map((option, index) => {
@@ -43,10 +43,10 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
               key={`${option}-${index}`}
               onClick={() => handleExplicitSelection(option)}
               className={cn(
-                "h-[37px] text-[12px] leading-[20px] flex cursor-pointer items-center justify-center",
+                "flex h-[37px] cursor-pointer items-center justify-center text-[12px] leading-[20px]",
                 selectedValue === option
-                  ? "rounded-[6px] bg-white border border-gray-300 text-gray-900 font-normal px-3 py-2"
-                  : "text-gray-900 w-[16px] h-[20px] font-normal",
+                  ? "rounded-[6px] border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900"
+                  : "h-[20px] w-[16px] font-normal text-gray-900",
               )}
             >
               {option}

@@ -1,48 +1,51 @@
-import { Action } from "../../../document";
+import { BaseAction } from "../../../document/types.js";
 import {
   AddOperationInput,
-  SetOperationNameInput,
-  SetOperationSchemaInput,
-  SetOperationDescriptionInput,
-  SetOperationTemplateInput,
-  SetOperationReducerInput,
-  MoveOperationInput,
   DeleteOperationInput,
+  MoveOperationInput,
   ReorderModuleOperationsInput,
+  SetOperationDescriptionInput,
+  SetOperationNameInput,
+  SetOperationReducerInput,
+  SetOperationSchemaInput,
   SetOperationScopeInput,
-} from "../types";
+  SetOperationTemplateInput,
+} from "../schema/types.js";
 
-export type AddOperationAction = Action<"ADD_OPERATION", AddOperationInput>;
-export type SetOperationNameAction = Action<
+export type AddOperationAction = BaseAction<"ADD_OPERATION", AddOperationInput>;
+export type SetOperationNameAction = BaseAction<
   "SET_OPERATION_NAME",
   SetOperationNameInput
 >;
-export type SetOperationScopeAction = Action<
+export type SetOperationScopeAction = BaseAction<
   "SET_OPERATION_SCOPE",
   SetOperationScopeInput
 >;
-export type SetOperationSchemaAction = Action<
+export type SetOperationSchemaAction = BaseAction<
   "SET_OPERATION_SCHEMA",
   SetOperationSchemaInput
 >;
-export type SetOperationDescriptionAction = Action<
+export type SetOperationDescriptionAction = BaseAction<
   "SET_OPERATION_DESCRIPTION",
   SetOperationDescriptionInput
 >;
-export type SetOperationTemplateAction = Action<
+export type SetOperationTemplateAction = BaseAction<
   "SET_OPERATION_TEMPLATE",
   SetOperationTemplateInput
 >;
-export type SetOperationReducerAction = Action<
+export type SetOperationReducerAction = BaseAction<
   "SET_OPERATION_REDUCER",
   SetOperationReducerInput
 >;
-export type MoveOperationAction = Action<"MOVE_OPERATION", MoveOperationInput>;
-export type DeleteOperationAction = Action<
+export type MoveOperationAction = BaseAction<
+  "MOVE_OPERATION",
+  MoveOperationInput
+>;
+export type DeleteOperationAction = BaseAction<
   "DELETE_OPERATION",
   DeleteOperationInput
 >;
-export type ReorderModuleOperationsAction = Action<
+export type ReorderModuleOperationsAction = BaseAction<
   "REORDER_MODULE_OPERATIONS",
   ReorderModuleOperationsInput
 >;

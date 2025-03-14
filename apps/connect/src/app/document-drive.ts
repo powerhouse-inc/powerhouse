@@ -1,32 +1,34 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import InMemoryCache from 'document-drive/cache/memory';
-import { BaseQueueManager } from 'document-drive/queue/base';
+import { getReactorDefaultDrivesConfig } from '#utils';
 import {
-    DocumentDriveServer,
-    DriveInput,
-    RemoteDriveOptions,
-} from 'document-drive/server';
+    BaseQueueManager,
+    type DocumentDriveAction,
+    type DriveInput,
+    type IDocumentDriveServer,
+    InMemoryCache,
+    logger,
+    ReactorBuilder,
+    type RemoteDriveOptions,
+} from 'document-drive';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
-import { DocumentDriveAction } from 'document-model-libs/document-drive';
-import { BaseAction, DocumentModel, Operation } from 'document-model/document';
-import { IpcMain, webContents } from 'electron';
+import {
+    type DocumentAction,
+    type DocumentModelModule,
+    type Operation,
+} from 'document-model';
+import { type IpcMain, webContents } from 'electron';
 import { join } from 'path';
-import { logger } from 'src/services/logger';
-import { getReactorDefaultDrivesConfig } from 'src/utils/reactor';
 
 export default (
-    documentModels: DocumentModel[],
+    documentModels: DocumentModelModule[],
     path: string,
     ipcMain: IpcMain,
 ) => {
-    const documentDrive = new DocumentDriveServer(
-        documentModels,
-        new FilesystemStorage(join(path, 'Document Drives')),
-        new InMemoryCache(),
-        new BaseQueueManager(1, 10),
-        { ...getReactorDefaultDrivesConfig() },
-    );
+    const documentDrive = new ReactorBuilder(documentModels)
+        .withStorage(new FilesystemStorage(join(path, 'Document Drives')))
+        .withCache(new InMemoryCache())
+        .withQueueManager(new BaseQueueManager(1, 10))
+        .withOptions({ ...getReactorDefaultDrivesConfig() })
+        .build();
 
     const promise = documentDrive
         .initialize()
@@ -64,7 +66,7 @@ export default (
             id: string,
             operation: Operation,
             forceSync?: boolean,
-        ) => documentDrive.addOperation(drive, id, operation),
+        ) => documentDrive.addOperation(drive, id, operation, { forceSync }),
     );
 
     ipcMain.handle(
@@ -75,7 +77,7 @@ export default (
             id: string,
             operations: Operation[],
             forceSync?: boolean,
-        ) => documentDrive.addOperations(drive, id, operations, forceSync),
+        ) => documentDrive.addOperations(drive, id, operations, { forceSync }),
     );
 
     ipcMain.handle(
@@ -86,7 +88,7 @@ export default (
             id: string,
             operation: Operation,
             forceSync?: boolean,
-        ) => documentDrive.queueOperation(drive, id, operation, forceSync),
+        ) => documentDrive.queueOperation(drive, id, operation, { forceSync }),
     );
 
     ipcMain.handle(
@@ -97,7 +99,8 @@ export default (
             id: string,
             operations: Operation[],
             forceSync?: boolean,
-        ) => documentDrive.queueOperations(drive, id, operations, forceSync),
+        ) =>
+            documentDrive.queueOperations(drive, id, operations, { forceSync }),
     );
 
     ipcMain.handle(
@@ -105,9 +108,9 @@ export default (
         (
             _e,
             drive: string,
-            operation: Operation<DocumentDriveAction | BaseAction>,
+            operation: Operation<DocumentDriveAction>,
             forceSync?: boolean,
-        ) => documentDrive.addDriveOperation(drive, operation),
+        ) => documentDrive.addDriveOperation(drive, operation, { forceSync }),
     );
 
     ipcMain.handle(
@@ -115,9 +118,9 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | BaseAction>[],
+            operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
-        ) => documentDrive.addDriveOperations(drive, operations, forceSync),
+        ) => documentDrive.addDriveOperations(drive, operations, { forceSync }),
     );
 
     ipcMain.handle(
@@ -125,9 +128,12 @@ export default (
         (
             _e,
             drive: string,
-            operation: Operation<DocumentDriveAction | BaseAction>,
+            operation: Operation<DocumentDriveAction | DocumentAction>,
             forceSync?: boolean,
-        ) => documentDrive.queueDriveOperations(drive, [operation], forceSync),
+        ) =>
+            documentDrive.queueDriveOperations(drive, [operation], {
+                forceSync,
+            }),
     );
 
     ipcMain.handle(
@@ -135,9 +141,12 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | BaseAction>[],
+            operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
-        ) => documentDrive.queueDriveOperations(drive, operations, forceSync),
+        ) =>
+            documentDrive.queueDriveOperations(drive, operations, {
+                forceSync,
+            }),
     );
 
     ipcMain.handle('documentDrive:clearStorage', () =>
@@ -158,7 +167,7 @@ export default (
         ) => documentDrive.registerPullResponderTrigger(drive, url, options),
     );
 
-    function bindEvents(drive: DocumentDriveServer) {
+    function bindEvents(drive: IDocumentDriveServer) {
         drive.on('strandUpdate', update => {
             webContents
                 .getAllWebContents()

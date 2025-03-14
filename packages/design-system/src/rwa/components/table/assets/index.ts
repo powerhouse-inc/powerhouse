@@ -1,1 +1,1 @@
-export * from "./assets-table";
+export * from "./assets-table.js";

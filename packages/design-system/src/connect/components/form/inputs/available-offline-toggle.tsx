@@ -1,5 +1,9 @@
-import { Toggle } from "@/connect";
-import { ComponentPropsWithRef, ForwardedRef, forwardRef } from "react";
+import { Toggle } from "#connect";
+import {
+  type ComponentPropsWithRef,
+  type ForwardedRef,
+  forwardRef,
+} from "react";
 
 type AvailableOfflineToggleProps = Omit<
   ComponentPropsWithRef<typeof Toggle>,
@@ -12,12 +16,15 @@ export const AvailableOfflineToggle = forwardRef(
     ref: ForwardedRef<HTMLInputElement>,
   ) {
     return (
-      <div className="flex items-center rounded-xl bg-gray-100 p-3 text-slate-200">
+      <div className="flex items-center rounded-md border border-gray-200 bg-gray-50 p-3 text-gray-900">
         <div className="flex-1">
-          <label className="font-semibold" htmlFor="availableOffline">
+          <label
+            className="font-medium text-gray-900"
+            htmlFor="availableOffline"
+          >
             Make available offline
           </label>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-600">
             Check this options if you keep a local backup
             <br />
             available at all times.

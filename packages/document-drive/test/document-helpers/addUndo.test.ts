@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-
 import {
   addUndo,
   checkOperationsIntegrity,
-} from "../../src/utils/document-helpers";
-import { buildOperations } from "./utils";
+} from "../../../document-model/src/document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("addUndo", () => {
   const noopScenarios = [

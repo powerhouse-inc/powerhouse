@@ -9,8 +9,8 @@ import {
   generateSynchronizationUnits
 } from "document-model-libs/document-drive";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import { DocumentModel } from "document-model";
+import { module as DocumentModelLib } from "document-model";
 import * as LocalDocumentModels from "../../document-models";
 
 export const addFolder = (

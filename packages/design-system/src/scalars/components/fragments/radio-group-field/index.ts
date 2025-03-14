@@ -1,2 +1,2 @@
-export * from "./radio-group";
-export * from "./radio-group-field";
+export * from "./radio-group.js";
+export * from "./radio-group-field.js";

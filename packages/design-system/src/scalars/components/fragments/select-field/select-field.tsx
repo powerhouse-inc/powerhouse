@@ -1,27 +1,23 @@
 /* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useCallback } from "react";
-import { Command } from "@/scalars/components/fragments/command";
-import { Button } from "@/scalars/components/fragments/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/scalars/components/fragments/popover";
-import { FormGroup } from "@/scalars/components/fragments/form-group";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { cn } from "@/scalars/lib/utils";
-import type {
-  FieldCommonProps,
-  ErrorHandling,
-} from "@/scalars/components/types";
-import type { SelectProps } from "@/scalars/components/enum-field/types";
-import { useSelectField } from "./use-select-field";
-import { SelectedContent } from "./selected-content";
-import { Content } from "./content";
+  cn,
+  FormDescription,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
+  type ErrorHandling,
+  type FieldCommonProps,
+  type SelectProps,
+} from "#scalars";
+import React, { useCallback, useId } from "react";
+import { Button } from "../button/button.js";
+import { Command } from "../command/command.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../popover/popover.js";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
+import { Content } from "./content.js";
+import { SelectedContent } from "./selected-content.js";
+import { useSelectField } from "./use-select-field.js";
 
 type SelectFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,

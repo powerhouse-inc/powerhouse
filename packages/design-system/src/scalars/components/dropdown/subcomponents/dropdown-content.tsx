@@ -1,6 +1,6 @@
-import React from "react";
-import { cn } from "@/scalars/lib/utils";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import React from "react";
+import { cn } from "../../../lib/utils.js";
 
 export const DropdownContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,

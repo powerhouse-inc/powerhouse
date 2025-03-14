@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { TextField } from "./text-field";
-import { useState } from "react";
-import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
-} from "@/scalars/lib/storybook-arg-types";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
+import { TextField } from "./text-field.js";
 
 const meta = {
   title: "Document Engineering/Fragments/TextField",

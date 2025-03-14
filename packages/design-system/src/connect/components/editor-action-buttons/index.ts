@@ -1,1 +1,1 @@
-export * from "./editor-action-buttons";
+export * from "./editor-action-buttons.js";

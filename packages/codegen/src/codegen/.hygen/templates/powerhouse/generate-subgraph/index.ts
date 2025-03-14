@@ -1,6 +1,7 @@
 export type Args = {
   name: string;
   rootDir: string;
+  loadFromFile: string;
 };
 
 export default {
@@ -8,6 +9,7 @@ export default {
     return {
       rootDir: args.rootDir,
       name: args.name,
+      loadFromFile: args.loadFromFile,
     };
   },
 };

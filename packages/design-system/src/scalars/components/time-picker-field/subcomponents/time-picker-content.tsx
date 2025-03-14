@@ -1,11 +1,14 @@
-import * as React from "react";
+import type * as React from "react";
 
-import { Button } from "../../fragments/button";
-import { TimePeriod } from "../type";
-import { SelectBaseProps } from "../../enum-field/types";
-import TimePeriodSelector from "./time-period-selector";
-import TimeSelector from "./time-selector";
-import { SelectFieldProps, SelectFieldRaw } from "../../fragments/select-field";
+import { Button } from "../../fragments/button/index.js";
+import { type TimePeriod } from "../type.js";
+import { type SelectBaseProps } from "../../enum-field/types.js";
+import TimePeriodSelector from "./time-period-selector.js";
+import TimeSelector from "./time-selector.js";
+import {
+  type SelectFieldProps,
+  SelectFieldRaw,
+} from "../../fragments/select-field/index.js";
 interface TimePickerContentProps {
   onSave?: (time: string) => void;
   onCancel?: () => void;

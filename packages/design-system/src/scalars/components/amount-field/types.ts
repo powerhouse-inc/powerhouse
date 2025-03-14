@@ -1,5 +1,4 @@
-import { Currency } from "../currency-code-field";
-// export type Amount = number | undefined;
+import { Currency } from "../currency-code-field/types.js";
 export type Amount = {
   amount: number;
   unit?: CurrencyTicker;

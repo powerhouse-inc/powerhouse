@@ -1,7 +1,7 @@
-import { Renown } from "./common";
-import { NodeEventEmitter } from "./event/event.node";
-import { NodeStorage } from "./storage/storage.node";
-import { RenownEvents, RenownStorageMap } from "./types";
+import { Renown } from "./common.js";
+import { NodeEventEmitter } from "./event/event.node.js";
+import { NodeStorage } from "./storage/storage.node.js";
+import { RenownEvents, RenownStorageMap } from "./types.js";
 
 export function initRenown(
   connectId: string,

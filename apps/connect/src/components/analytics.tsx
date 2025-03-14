@@ -1,6 +1,5 @@
+import { useAcceptedCookies, useConnectConfig } from '#hooks';
 import { useEffect } from 'react';
-import { useAcceptedCookies } from 'src/hooks/useAcceptedCookies';
-import { useConnectConfig } from 'src/hooks/useConnectConfig';
 
 declare global {
     interface Window {

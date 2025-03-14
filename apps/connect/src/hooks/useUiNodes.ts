@@ -1,38 +1,37 @@
+import { useModal } from '#components';
+import { useReadModeContext } from '#context';
 import {
-    AddLocalDriveInput,
-    AddRemoteDriveInput,
+    useApps,
+    useFileNodeDocument,
+    useFilteredDocumentModels,
+    useGetDocumentModelModule,
+} from '#store';
+import { getNodeOptions, makeNodeSlugFromNodeName } from '#utils';
+import {
+    type AddLocalDriveInput,
+    type AddRemoteDriveInput,
     CLOUD,
     DRIVE,
     FILE,
     FOLDER,
     LOCAL,
     PUBLIC,
-    SharingType,
+    type SharingType,
     SUCCESS,
     toast,
-    UiDriveNode,
-    UiFileNode,
-    UiFolderNode,
-    UiNode,
-    useUiNodesContext,
+    type UiDriveNode,
+    type UiFileNode,
+    type UiFolderNode,
+    type UiNode,
 } from '@powerhousedao/design-system';
-import { ReadDrive } from 'document-drive';
-import { DocumentDriveDocument } from 'document-model-libs/document-drive';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useModal } from 'src/components/modal';
-import { useReadModeContext } from 'src/context/read-mode';
-import { useFileNodeDocument } from 'src/store/document-drive';
-import {
-    useFilteredDocumentModels,
-    useGetDocumentModel,
-} from 'src/store/document-model';
-import { getNodeOptions } from 'src/utils/drive-sections';
-import { makeNodeSlugFromNodeName } from 'src/utils/slug';
-import { useDocumentDriveById } from './useDocumentDriveById';
-import { useDocumentDriveServer } from './useDocumentDriveServer';
-import { useOpenSwitchboardLink } from './useOpenSwitchboardLink';
-import { useUserPermissions } from './useUserPermissions';
+import { useDocumentDriveById } from './useDocumentDriveById.js';
+import { useDocumentDriveServer } from './useDocumentDriveServer.js';
+import { useOpenSwitchboardLink } from './useOpenSwitchboardLink.js';
+import { useUserPermissions } from './useUserPermissions.js';
 
 export function useUiNodes() {
     const { showModal } = useModal();
@@ -70,12 +69,14 @@ export function useUiNodes() {
     const userPermissions = useUserPermissions();
     const nodeOptions = getNodeOptions();
     const documentModels = useFilteredDocumentModels();
-    const getDocumentModel = useGetDocumentModel();
+    const getDocumentModelModule = useGetDocumentModelModule();
     const fileNodeDocument = useFileNodeDocument({
         ...uiNodesContext,
         ...documentDriveServer,
         ...readModeContext,
     });
+
+    const apps = useApps();
 
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument | ReadDrive) => {
@@ -320,20 +321,24 @@ export function useUiNodes() {
     const onAddLocalDrive = useCallback(
         async (data: AddLocalDriveInput) => {
             try {
-                const newDrive = await addDrive({
-                    global: {
-                        name: data.name,
-                        id: undefined,
-                        icon: null,
-                        slug: null,
+                const app = apps.find(a => a.id === data.appId);
+                const newDrive = await addDrive(
+                    {
+                        global: {
+                            name: data.name,
+                            id: undefined,
+                            icon: null,
+                            slug: null,
+                        },
+                        local: {
+                            availableOffline: data.availableOffline,
+                            sharingType: data.sharingType.toLowerCase(),
+                            listeners: [],
+                            triggers: [],
+                        },
                     },
-                    local: {
-                        availableOffline: data.availableOffline,
-                        sharingType: data.sharingType.toLowerCase(),
-                        listeners: [],
-                        triggers: [],
-                    },
-                });
+                    app?.driveEditor,
+                );
 
                 toast(t('notifications.addDriveSuccess'), {
                     type: 'connect-success',
@@ -375,7 +380,6 @@ export function useUiNodes() {
                         },
                     ],
                     triggers: [],
-                    pullInterval: 3000,
                 });
 
                 toast(t('notifications.addDriveSuccess'), {
@@ -393,18 +397,11 @@ export function useUiNodes() {
     );
 
     const showAddDriveModal = useCallback(
-        (groupSharingType: SharingType) => {
-            if (groupSharingType === LOCAL) {
-                showModal('addLocalDrive', {
-                    onAddLocalDrive,
-                });
-            } else {
-                showModal('addRemoteDrive', {
-                    onAddRemoteDrive,
-                    groupSharingType,
-                });
-            }
-        },
+        () =>
+            showModal('addDriveModal', {
+                onAddLocalDrive,
+                onAddRemoteDrive,
+            }),
         [onAddLocalDrive, onAddRemoteDrive, showModal],
     );
 
@@ -552,7 +549,7 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
-            getDocumentModel,
+            getDocumentModelModule,
         }),
         [
             documentDriveServer,
@@ -579,7 +576,7 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
-            getDocumentModel,
+            getDocumentModelModule,
         ],
     );
 }

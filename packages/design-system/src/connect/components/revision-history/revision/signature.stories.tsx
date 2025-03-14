@@ -1,6 +1,6 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { Signature } from "./signature";
-import { TooltipProvider } from "@/connect";
+import { TooltipProvider } from "#connect";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { Signature } from "./signature.js";
 
 const meta = {
   title: "Connect/Components/Revision History/Revision/Signature",

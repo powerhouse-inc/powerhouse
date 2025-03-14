@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import SubmitChangesOnly, { DOCS_CODE } from "./submit-changes-only";
+import SubmitChangesOnly, { DOCS_CODE } from "./submit-changes-only.js";
 
 const meta = {
   title: "Document Engineering/Docs/Examples/Submit Changes Only",

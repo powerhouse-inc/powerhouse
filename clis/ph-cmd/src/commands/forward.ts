@@ -1,12 +1,11 @@
 import {
-  getProjectInfo,
-  getPackageManagerFromLockfile,
   forwardPHCommand,
+  getPackageManagerFromLockfile,
+  getProjectInfo,
 } from "../utils.js";
 
 type ForwardPHCommandOptions = {
   debug?: boolean;
-  isPackageScript?: boolean;
 };
 
 type FSError = {
@@ -34,23 +33,17 @@ export const forwardCommand = (
     console.log(">>> packageManager:", packageManager);
     console.log(">>> projectPath:", projectInfo.path);
     console.log(">>> args:", args);
-    console.log(">>> isPackageScript:", options.isPackageScript ?? false);
   }
 
   try {
-    forwardPHCommand(
-      packageManager,
-      projectInfo.path,
-      args,
-      options.isPackageScript ?? false,
-      options.debug,
-    );
+    forwardPHCommand(packageManager, projectInfo.path, args, options.debug);
   } catch (error) {
     console.error("❌ Failed to forward command");
     if ((error as FSError).code === "ENOENT") {
       console.error("Have you run `ph setup-globals` or `ph init`?");
     }
-
-    throw error;
+    if (options.debug) {
+      throw error;
+    }
   }
 };

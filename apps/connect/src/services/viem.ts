@@ -1,11 +1,17 @@
-import { createPublicClient, http, PublicClient } from 'viem';
+import { createPublicClient, http, type PublicClient } from 'viem';
 import { getEnsAvatar, getEnsName } from 'viem/actions';
 import * as chains from 'viem/chains';
 
 export type Chain = chains.Chain;
 
 export function getChain(id: number): Chain | undefined {
-    return Object.values(chains).find(x => x.id === id);
+    return Object.values(chains).find(
+        x =>
+            typeof x === 'object' &&
+            x !== null &&
+            'id' in x &&
+            (x as Chain).id === id,
+    ) as Chain | undefined;
 }
 
 let client: PublicClient = createPublicClient({

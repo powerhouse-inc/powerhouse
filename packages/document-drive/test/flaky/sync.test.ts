@@ -1,20 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  DocumentDriveAction,
-  Trigger,
-  actions,
-  reducer,
-} from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel, Operation } from "document-model/document";
-import {
-  actions as DocumentModelActions,
   DocumentModelDocument,
-  module as DocumentModelLib,
-} from "document-model/document-model";
-import stringify from "json-stringify-deterministic";
-import { HttpResponse, graphql, http } from "msw";
+  DocumentModelModule,
+  Operation,
+} from "document-model";
+import { graphql } from "graphql";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { stringify } from "querystring";
 import {
   afterAll,
   afterEach,
@@ -24,22 +17,26 @@ import {
   it,
   vi,
 } from "vitest";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { Trigger } from "../../src/drive-document-model/gen/types.js";
+import { DocumentDriveServer } from "../../src/server/base.js";
+import { ConflictOperationError } from "../../src/server/error.js";
+import { StrandUpdateGraphQL } from "../../src/server/listener/transmitter/pull-responder.js";
 import {
-  DocumentDriveServer,
   ListenerRevision,
-  StrandUpdateGraphQL,
+  ReactorBuilder,
   SyncStatus,
   UpdateStatus,
-} from "../src/server";
-import { ConflictOperationError } from "../src/server/error";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaStorage } from "../src/storage/prisma";
+} from "../../../../src/server/types.js";
+import { MemoryStorage } from "../../../src/storage/memory.js";
+import { PrismaStorage } from "../../../src/storage/prisma.js";
 
 describe("Document Drive Server with %s", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+  ] as DocumentModelModule[];
 
   const prismaClient = new PrismaClient();
   const storageLayer = new MemoryStorage();
@@ -166,7 +163,9 @@ describe("Document Drive Server with %s", () => {
   afterAll(() => mswServer.close());
 
   it("should add pull trigger from remote drive", async ({ expect }) => {
-    const server = new DocumentDriveServer(documentModels, storageLayer);
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(storageLayer)
+      .build();
     await server.initialize();
     await server.addRemoteDrive("http://switchboard.powerhouse.xyz/1", {
       availableOffline: true,
@@ -231,7 +230,9 @@ describe("Document Drive Server with %s", () => {
       }),
     );
 
-    const server = new DocumentDriveServer(documentModels, storageLayer);
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(storageLayer)
+      .build();
     await server.initialize();
     await server.addDrive({
       global: { id: "1", name: "name", icon: "icon", slug: "slug" },
@@ -422,7 +423,9 @@ describe("Document Drive Server with %s", () => {
       });
     });
 
-    const server = new DocumentDriveServer(documentModels, storageLayer);
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(storageLayer)
+      .build();
     await server.initialize();
 
     const statusEvents: SyncStatus[] = [];
@@ -511,7 +514,9 @@ describe("Document Drive Server with %s", () => {
   it("should detect conflict when adding operation with existing index", async ({
     expect,
   }) => {
-    const server = new DocumentDriveServer(documentModels);
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(storageLayer)
+      .build();
 
     await server.initialize();
     await server.addRemoteDrive("http://switchboard.powerhouse.xyz/1", {
@@ -604,7 +609,9 @@ describe("Document Drive Server with %s", () => {
       }),
     );
 
-    const server = new DocumentDriveServer(documentModels);
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(storageLayer)
+      .build();
     const statusEvents: SyncStatus[] = [];
     server.on("syncStatus", (driveId, status) => {
       statusEvents.push(status);
@@ -699,7 +706,9 @@ describe("Document Drive Server with %s", () => {
       }),
     );
 
-    const server = new DocumentDriveServer(documentModels);
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(storageLayer)
+      .build();
     await server.initialize();
     await server.addRemoteDrive("http://switchboard.powerhouse.xyz/1", {
       availableOffline: true,
@@ -773,10 +782,9 @@ describe("Document Drive Server with %s", () => {
   it("should not store operation with repeated index", async ({ expect }) => {
     vi.useRealTimers();
     const prismaClient = new PrismaClient();
-    const server = new DocumentDriveServer(
-      documentModels,
-      new PrismaStorage(prismaClient),
-    );
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(new PrismaStorage(prismaClient))
+      .build();
 
     await server.initialize();
     await server.addDrive({

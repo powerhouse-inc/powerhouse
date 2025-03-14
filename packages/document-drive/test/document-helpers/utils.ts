@@ -1,4 +1,4 @@
-import { Operation } from "document-model/document";
+import { type Operation } from "document-model";
 
 export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;

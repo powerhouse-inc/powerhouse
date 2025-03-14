@@ -1,1 +1,1 @@
-export * from "./form-label";
+export * from "./form-label.js";

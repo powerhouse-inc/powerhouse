@@ -1,19 +1,18 @@
 "use client";
 
-import { cn } from "@/scalars/lib/utils";
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
 import { format } from "date-fns";
 import * as React from "react";
 import { DayPicker, useDayPicker, type DayPickerProps } from "react-day-picker";
-import { buttonVariants } from "../../../fragments/button/button";
-
-import { Icon } from "@/powerhouse";
-import { MONTHS } from "../utils";
-import { DatePickerView } from "../../types";
-import CaptionLabel from "../caption-label/caption-label";
-import NavCalendar from "../calendar-nav/calendar-nav";
-import CalendarDateHeader from "../calendar-date-header/calendar-date-header";
-import { YearGrid } from "../year-view/year-grid";
-import { MonthGrid } from "../months-view/month-view";
+import { buttonVariants } from "../../../fragments/button/button.js";
+import type { DatePickerView } from "../../types.js";
+import CalendarDateHeader from "../calendar-date-header/calendar-date-header.js";
+import NavCalendar from "../calendar-nav/calendar-nav.js";
+import CaptionLabel from "../caption-label/caption-label.js";
+import { MonthGrid } from "../months-view/month-view.js";
+import { MONTHS } from "../utils.js";
+import { YearGrid } from "../year-view/year-grid.js";
 
 export type CalendarProps = DayPickerProps & {
   /**

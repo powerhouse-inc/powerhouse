@@ -1,4 +1,4 @@
-import { mergeClassNameProps } from "@/powerhouse";
+import { mergeClassNameProps } from "#powerhouse";
 
 export const Footer: React.FC<React.HTMLAttributes<HTMLElement>> = ({
   children,

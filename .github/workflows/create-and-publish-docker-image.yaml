@@ -1,10 +1,7 @@
 name: Create and publish a Docker image
 
 on:
-  push:
-    branches: ['main']
-    paths:
-      - "apps/connect/**"
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io

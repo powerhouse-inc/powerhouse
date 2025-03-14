@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { TimeFieldValue, TimePeriod } from "./type";
+import { createBlurEvent, getOffset } from "../date-time-field/utils.js";
+import { TimeFieldValue, TimePeriod } from "./type.js";
 import {
   cleanTime,
-  getOffsetToDisplay,
   convert12hTo24h,
   createChangeEvent,
   formatInputToDisplayValid,
@@ -11,11 +11,11 @@ import {
   getHoursAndMinutes,
   getInputValue,
   getMinutes,
+  getOffsetToDisplay,
   getOptions,
   getTimezone,
   isValidTimeInput,
-} from "./utils";
-import { createBlurEvent, getOffset } from "../date-time-field/utils";
+} from "./utils.js";
 
 export const convertTimeFrom24To12Hours = (time: string) => {
   if (time === "") return "";

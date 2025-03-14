@@ -1,2 +1,2 @@
-export * from "./use-drag";
-export * from "./use-drop";
+export * from "./use-drag.js";
+export * from "./use-drop.js";

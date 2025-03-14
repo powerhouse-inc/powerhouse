@@ -3,8 +3,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/powerhouse";
-import { ReactNode } from "react";
+} from "#powerhouse";
+import { type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type ConnectDropdownMenuItem<TItemId extends string> = {

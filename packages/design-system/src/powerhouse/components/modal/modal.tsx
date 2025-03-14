@@ -7,7 +7,7 @@ import {
   Title,
 } from "@radix-ui/react-dialog";
 import { Root as VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { ComponentPropsWithoutRef } from "react";
+import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 type Props = {
@@ -34,7 +34,7 @@ export function Modal(props: Props) {
         <Overlay
           {...overlayProps}
           className={twMerge(
-            "fixed inset-0 grid place-items-center overflow-y-auto bg-slate-900/50 data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in",
+            "data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in fixed inset-0 grid place-items-center overflow-y-auto bg-slate-900/50",
             overlayProps?.className,
           )}
         >
@@ -42,7 +42,7 @@ export function Modal(props: Props) {
             {...delegated}
             {...contentProps}
             className={twMerge(
-              "bg-white data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in",
+              "data-[state=closed]:animate-zoom-out data-[state=open]:animate-zoom-in bg-white",
               contentProps?.className,
             )}
           >

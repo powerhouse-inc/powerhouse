@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { garbageCollect } from "../../src/document/utils/document-helpers";
-import { buildOperation, buildOperations } from "./utils";
-import { Operation } from "../../src/document";
+import {
+  garbageCollect,
+  type OperationIndex,
+} from "../../src/document/utils/document-helpers.js";
+import { buildOperation, buildOperations } from "./utils.js";
 
 describe("garbageCollect", () => {
   it("should return the same list of operations if there is no issues or removals", () => {
@@ -125,7 +127,7 @@ describe("garbageCollect", () => {
     const op5_x = buildOperation({ index: 4, skip: 1 });
     const op6_v = buildOperation({ index: 4, skip: 2 });
 
-    const equivalentSets: Operation[][] = [
+    const equivalentSets: OperationIndex[][] = [
       [op0_x, op1_v, op2_x, op3_x, op4_x, op5_x, op6_v],
       [op1_v, op2_x, op3_x, op4_x, op5_x, op6_v],
       [op0_x, op1_v, op3_x, op4_x, op5_x, op6_v],

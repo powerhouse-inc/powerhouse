@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/OID";
+import { scalar } from "../src/scalars/OID.js";
 
 describe("OID Scalar", () => {
   it("should serialize a valid OID address", () => {

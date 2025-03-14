@@ -1,7 +1,7 @@
+import { Icon, type IconName } from "#powerhouse";
+import { type SelectProps } from "#scalars";
 import React from "react";
-import { cn } from "@/scalars/lib/utils";
-import { SelectProps } from "@/scalars/components/enum-field/types";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
+import { cn } from "../../../lib/utils.js";
 
 interface SelectedContentProps {
   selectedValues: string[];

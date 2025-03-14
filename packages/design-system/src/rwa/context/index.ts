@@ -1,1 +1,1 @@
-export * from "./editor-context";
+export * from "./editor-context.js";

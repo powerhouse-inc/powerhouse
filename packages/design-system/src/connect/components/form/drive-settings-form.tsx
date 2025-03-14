@@ -7,14 +7,14 @@ import {
   Label,
   LocationInfo,
   PUBLIC,
-  SharingType,
+  type SharingType,
   SharingTypeFormInput,
   SWITCHBOARD,
-  UiDriveNode,
-} from "@/connect";
-import { Button, Icon } from "@/powerhouse";
+  type UiDriveNode,
+} from "#connect";
+import { Button, Icon } from "#powerhouse";
 import { useState } from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { type SubmitHandler, useForm } from "react-hook-form";
 
 type Inputs = {
   name: string;

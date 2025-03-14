@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/Currency";
+import { scalar } from "../src/scalars/Currency.js";
 
 describe("Currency Scalar", () => {
   it("should serialize a valid Currency", () => {

@@ -1,21 +1,18 @@
-import React, { useId, useEffect, useMemo, useRef } from "react";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { FormGroup } from "@/scalars/components/fragments/form-group";
-import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { CharacterCounter } from "@/scalars/components/fragments/character-counter";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { cn } from "@/scalars/lib/utils";
-import type {
-  FieldCommonProps,
-  ErrorHandling,
-  TextProps,
-} from "@/scalars/components/types";
-import ValueTransformer, {
-  type TransformerType,
-} from "@/scalars/components/fragments/value-transformer";
-import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
+import { cn, sharedValueTransformers } from "#scalars";
+import React, { useEffect, useId, useMemo, useRef } from "react";
 import { useResizeObserver } from "usehooks-ts";
+import type {
+  ErrorHandling,
+  FieldCommonProps,
+  TextProps,
+} from "../../types.js";
+import { CharacterCounter } from "../character-counter/index.js";
+import { FormDescription } from "../form-description/index.js";
+import { FormGroup } from "../form-group/index.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import ValueTransformer, { type TransformerType } from "../value-transformer/index.js";
+import { withFieldValidation } from "../with-field-validation/index.js";
 
 type TextareaFieldBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
