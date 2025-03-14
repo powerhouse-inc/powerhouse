@@ -1,5 +1,8 @@
 import { format, isValid, parse } from "date-fns";
-import { ALLOWED_FORMATS, dateFormatRegexes } from "../date-time-field/utils.js";
+import {
+  ALLOWED_FORMATS,
+  dateFormatRegexes,
+} from "../date-time-field/utils.js";
 import type { DateFieldValue } from "./types.js";
 
 export const splitIso8601DateTime = (isoString: string) => {

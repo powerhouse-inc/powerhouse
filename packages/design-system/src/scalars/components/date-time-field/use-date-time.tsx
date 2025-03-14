@@ -1,16 +1,13 @@
 import { format } from "date-fns";
 import React, { useState } from "react";
-import type { DateFieldValue } from "../date-picker-field/types.js";
-import { useDatePickerField } from "../date-picker-field/use-date-picker-field.js";
-import {
-  getDateFromValue,
-  getTimeFromValue,
-} from "../date-picker-field/utils.js";
-import type { TimeFieldValue, TimePeriod } from "../time-picker-field/type.js";
+import type { DateFieldValue } from "../date-field/types.js";
+import { useDatePickerField } from "../date-field/use-date-field.js";
+import { getDateFromValue, getTimeFromValue } from "../date-field/utils.js";
+import type { TimeFieldValue, TimePeriod } from "../time-field/type.js";
 import {
   convertTimeFrom24To12Hours,
   useTimePickerField,
-} from "../time-picker-field/use-time-picker-field.js";
+} from "../time-field/use-time-field.js";
 import {
   cleanTime,
   convert12hTo24h,
@@ -20,7 +17,7 @@ import {
   getHoursAndMinutes,
   getInputValue,
   isValidTimeInput,
-} from "../time-picker-field/utils.js";
+} from "../time-field/utils.js";
 import {
   createBlurEvent,
   getDateFormat,

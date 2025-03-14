@@ -6,4 +6,3 @@ export { DropdownItem } from "./subcomponents/dropdown-item.js";
 export { DropdownLabel } from "./subcomponents/dropdown-label.js";
 export { DropdownShortcut } from "./subcomponents/dropdown-shortcut.js";
 export { DropdownTrigger } from "./subcomponents/dropdown-trigger.js";
-

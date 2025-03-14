@@ -13,12 +13,12 @@ import { withFieldValidation } from "../fragments/with-field-validation/with-fie
 import type { InputNumberProps } from "../number-field/types.js";
 import { type ErrorHandling, type FieldCommonProps } from "../types.js";
 import TimePickerContent from "./subcomponents/time-picker-content.js";
-import { validateTimePicker } from "./time-picker-validations.js";
+import { validateTimePicker } from "./time-validations.js";
 import { type TimeFieldValue } from "./type.js";
-import { useTimePickerField } from "./use-time-picker-field.js";
+import { useTimePickerField } from "./use-time-field.js";
 import { handleKeyDown } from "./utils.js";
 
-export interface TimePickerFieldProps
+export interface TimeFieldProps
   extends FieldCommonProps<TimeFieldValue>,
     InputNumberProps,
     ErrorHandling {
@@ -37,7 +37,7 @@ export interface TimePickerFieldProps
   includeContinent?: boolean;
 }
 
-const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
+const TimeRaw = forwardRef<HTMLInputElement, TimeFieldProps>(
   (
     {
       label,
@@ -155,12 +155,9 @@ const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
   },
 );
 
-export const TimePickerField = withFieldValidation<TimePickerFieldProps>(
-  TimePickerRaw,
-  {
-    validations: {
-      _timePickerType: validateTimePicker,
-    },
+export const TimeField = withFieldValidation<TimeFieldProps>(TimeRaw, {
+  validations: {
+    _timePickerType: validateTimePicker,
   },
-);
-TimePickerField.displayName = "TimePickerField";
+});
+TimeField.displayName = "TimePField";

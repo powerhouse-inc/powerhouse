@@ -4,7 +4,7 @@ import type { FieldCommonProps } from "../../types.js";
 import { FormLabel } from "../form-label/index.js";
 import { FormMessageList } from "../form-message/index.js";
 import { withFieldValidation } from "../with-field-validation/index.js";
-import { Checkbox, CheckboxValue } from "./checkbox.js";
+import { Checkbox, type CheckboxValue } from "./checkbox.js";
 
 type CheckboxFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
