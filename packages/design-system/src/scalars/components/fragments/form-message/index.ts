@@ -1,3 +1,3 @@
-export * from "./form-message";
-export * from "./form-server-error-message";
-export * from "./message-list";
+export * from "./form-message.js";
+export * from "./form-server-error-message.js";
+export * from "./message-list.js";

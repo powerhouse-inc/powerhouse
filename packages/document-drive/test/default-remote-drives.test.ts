@@ -1,16 +1,18 @@
-import { DocumentDriveDocument } from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel as BaseDocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
+import { driveDocumentModelModule } from "../src/drive-document-model/module";
+import { ReactorBuilder } from "../src/server/builder";
 import {
   DefaultRemoteDriveInput,
-  DocumentDriveServer,
   DocumentDriveServerOptions,
-  generateUUID,
-} from "../src";
+} from "../src/server/types";
 import { MemoryStorage } from "../src/storage/memory";
 import { DriveInfo } from "../src/utils/graphql";
+import { generateUUID } from "../src/utils/misc";
 
 type DriveInput = {
   url: string;
@@ -23,7 +25,7 @@ const drive1: DriveInput = {
 
 const drive2: DriveInput = {
   url: "https://test.com/d/drive2",
-  id: "drive2",
+  id: "drive2", 
 };
 
 const drive3: DriveInput = {
@@ -98,7 +100,6 @@ const getDefaultRemoteDriveInput = (
       },
     ],
     triggers: [],
-    pullInterval: 3000,
   },
 });
 
@@ -145,9 +146,9 @@ vi.mock(import("graphql-request"), async () => {
 });
 
 const documentModels = [
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
-] as BaseDocumentModel[];
+  driveDocumentModelModule,
+  documentModelDocumentModelModule,
+] as DocumentModelModule[];
 
 describe("default remote drives", () => {
   const documentDriveServerOptions: DocumentDriveServerOptions = {
@@ -161,13 +162,9 @@ describe("default remote drives", () => {
   });
 
   it("should add a remote default remote drives added in the config object", async () => {
-    const server = new DocumentDriveServer(
-      documentModels,
-      undefined,
-      undefined,
-      undefined,
-      documentDriveServerOptions,
-    );
+    const server = new ReactorBuilder(documentModels)
+      .withOptions(documentDriveServerOptions)
+      .build();
 
     await server.initialize();
 
@@ -178,14 +175,9 @@ describe("default remote drives", () => {
   });
 
   it("should start defaultRemoteDrives with pending state", () => {
-    const server = new DocumentDriveServer(
-      documentModels,
-      undefined,
-      undefined,
-      undefined,
-      documentDriveServerOptions,
-    );
-
+    const server = new ReactorBuilder(documentModels)
+      .withOptions(documentDriveServerOptions)
+      .build();
     const defaultRemoteDriveConfig = server
       .getDefaultRemoteDrives()
       .get(drive1.url);
@@ -197,13 +189,9 @@ describe("default remote drives", () => {
   });
 
   it("should emit messages when a remote drive is added", async () => {
-    const server = new DocumentDriveServer(
-      documentModels,
-      undefined,
-      undefined,
-      undefined,
-      documentDriveServerOptions,
-    );
+    const server = new ReactorBuilder(documentModels)
+      .withOptions(documentDriveServerOptions)
+      .build();
 
     const mockCallback = vi.fn();
 
@@ -220,23 +208,17 @@ describe("default remote drives", () => {
 
   it("should not add an existing remote drive", async () => {
     const storage = new MemoryStorage();
-    const server1 = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      documentDriveServerOptions,
-    );
+    const server1 = new ReactorBuilder(documentModels)
+      .withOptions(documentDriveServerOptions)
+      .withStorage(storage)
+      .build();
 
     await server1.initialize();
 
-    const server2 = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      documentDriveServerOptions,
-    );
+    const server2 = new ReactorBuilder(documentModels)
+      .withOptions(documentDriveServerOptions)
+      .withStorage(storage)
+      .build();
 
     const mockCallback = vi.fn();
 
@@ -291,13 +273,10 @@ describe("remove old drives", () => {
   const generatePopulatedStorage = async () => {
     const storage = new MemoryStorage();
 
-    const server1 = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      documentDriveServerOptions,
-    );
+    const server1 = new ReactorBuilder(documentModels)
+      .withOptions(documentDriveServerOptions)
+      .withStorage(storage)
+      .build();
 
     await server1.initialize();
     return storage;
@@ -305,19 +284,17 @@ describe("remove old drives", () => {
 
   it("should preserve all old drives when 'preserve-all' strategy is used", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "preserve-all",
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     await server.initialize();
 
@@ -328,20 +305,17 @@ describe("remove old drives", () => {
 
   it("should preserve only remote drives specified when 'preserve-by-id' strategy is used", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "preserve-by-id",
             ids: [drive1.id, drive2.id],
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     await server.initialize();
 
@@ -352,20 +326,18 @@ describe("remove old drives", () => {
 
   it("should preserve only remote drives specified when 'preserve-by-url' strategy is used", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "preserve-by-url",
             urls: [drive1.url, drive2.url],
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     await server.initialize();
 
@@ -376,19 +348,16 @@ describe("remove old drives", () => {
 
   it("should remove all remote drives when 'remove-all' strategy is used", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "remove-all",
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     await server.initialize();
 
@@ -398,20 +367,17 @@ describe("remove old drives", () => {
 
   it("should remove only remote drives specified when 'remove-by-id' strategy is used", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "remove-by-id",
             ids: [drive1.id, drive2.id],
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     await server.initialize();
 
@@ -423,20 +389,17 @@ describe("remove old drives", () => {
 
   it("should remove only remote drives specified when 'remove-by-url' strategy is used", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "remove-by-url",
             urls: [drive1.url, drive2.url],
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     await server.initialize();
 
@@ -447,20 +410,17 @@ describe("remove old drives", () => {
 
   it("should detach remote drives by id", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "detach-by-id",
             ids: [drive1.id, drive2.id],
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     let docDrive1 = await server.getDrive(drive1.id);
     let docDrive2 = await server.getDrive(drive2.id);
@@ -483,20 +443,17 @@ describe("remove old drives", () => {
 
   it("should detach remote drives by url", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "detach-by-url",
             urls: [drive1.url, drive2.url],
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     let docDrive1 = await server.getDrive(drive1.id);
     let docDrive2 = await server.getDrive(drive2.id);
@@ -519,20 +476,17 @@ describe("remove old drives", () => {
 
   it("should preserve only remote drives specified when 'preserve-by-id-and-detach' strategy is used", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "preserve-by-id-and-detach",
             ids: [drive1.id, drive2.id],
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     let docDrive3 = await server.getDrive(drive3.id);
     let docDrive4 = await server.getDrive(drive4.id);
@@ -555,20 +509,17 @@ describe("remove old drives", () => {
 
   it("should preserve only remote drives specified when 'preserve-by-url-and-detach' strategy is used", async () => {
     const storage = await generatePopulatedStorage();
-    const server = new DocumentDriveServer(
-      documentModels,
-      storage,
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withOptions({
         defaultDrives: {
           removeOldRemoteDrives: {
             strategy: "preserve-by-url-and-detach",
             urls: [drive1.url, drive2.url],
           },
         },
-      },
-    );
+      })
+      .withStorage(storage)
+      .build();
 
     let docDrive3 = await server.getDrive(drive3.id);
     let docDrive4 = await server.getDrive(drive4.id);

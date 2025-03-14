@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { isNotSafeValue } from "../amount-field/utils";
-import { NumericType } from "./types";
-import { getDisplayValue } from "./utils";
+import { isNotSafeValue } from "../amount-field/utils.js";
+import { type NumericType } from "./types.js";
+import { getDisplayValue } from "./utils.js";
 
 interface UseNumberFieldProps {
   value?: number | bigint;

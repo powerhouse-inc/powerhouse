@@ -1,17 +1,14 @@
-import connectConfig from 'connect-config';
-import { type IDocumentDriveServer } from 'document-drive';
-import { utils } from 'document-model/document';
+import connectConfig from '#connect-config';
+import { createBrowserDocumentDriveServer } from '#utils';
+import { type IDocumentDriveServer, logger } from 'document-drive';
+import { hashKey } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
-import { unwrap } from 'jotai/utils';
-import { logger } from 'src/services/logger';
+import { atomWithLazy, unwrap } from 'jotai/utils';
 import {
-    baseDocumentModels,
     documentModelsAtom,
     subscribeDocumentModels,
-    useDocumentModelsAsync,
-} from 'src/store/document-model';
-import { createBrowserDocumentDriveServer } from 'src/utils/reactor';
-import { atomStore } from '.';
+} from './document-model.js';
+import { atomStore } from './index.js';
 
 async function initReactor(reactor: IDocumentDriveServer) {
     const errors = await reactor.initialize();
@@ -25,7 +22,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
         reactor
             .addDrive({
                 global: {
-                    id: utils.hashKey(),
+                    id: hashKey(),
                     name: 'My Local Drive',
                     icon: null,
                     slug: 'my-local-drive',
@@ -41,44 +38,64 @@ async function initReactor(reactor: IDocumentDriveServer) {
     }
 }
 
-const reactor = (async () => {
+async function createReactor() {
+    // waits for document models to be loaded
+    const documentModels = await atomStore.get(documentModelsAtom);
     const server =
-        (window.electronAPI
-            ?.documentDrive as unknown as IDocumentDriveServer) ??
+        (window.electronAPI?.documentDrive as unknown as
+            | IDocumentDriveServer
+            | undefined) ??
         createBrowserDocumentDriveServer(
-            baseDocumentModels,
+            documentModels,
             connectConfig.routerBasename,
         );
     await initReactor(server);
     return server;
-})();
+}
 
-const reactorAtom = atom<Promise<IDocumentDriveServer>>(reactor);
+const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(createReactor);
 const unwrappedReactor = unwrap(reactorAtom);
 
 // blocks rendering until reactor is initialized.
-export const useReactor = () => useAtomValue(reactorAtom);
+export const useReactor = (): IDocumentDriveServer | undefined =>
+    useAtomValue(reactorAtom);
 
 // will return undefined until reactor is initialized. Does not block rendering.
-export const useUnwrappedReactor = () => useAtomValue(unwrappedReactor);
+export const useUnwrappedReactor = (): IDocumentDriveServer | undefined =>
+    useAtomValue(unwrappedReactor);
 
-// returns promise that will resolve when reactor is initialized.
-export const useReactorAsync = () => {
-    return reactor;
+// will return undefined until reactor is initialized. Does not block rendering or trigger the reactor to be initialized.
+export const useAsyncReactor = (): IDocumentDriveServer | undefined =>
+    useAtomValue(reactorAsyncAtom);
+
+const reactorAsyncAtom = atom<IDocumentDriveServer | undefined>(undefined);
+reactorAsyncAtom.onMount = setAtom => {
+    const baseOnMount = reactorAtom.onMount;
+    reactorAtom.onMount = setReactorAtom => {
+        setReactorAtom(reactorPromise => {
+            reactorPromise
+                .then(reactor => setAtom(reactor))
+                .catch(console.error);
+            return reactorPromise;
+        });
+        return baseOnMount?.(setReactorAtom);
+    };
 };
 
-// updates reactor document models when they change.
-subscribeDocumentModels(async documentModels => {
-    const reactor = await atomStore.get(reactorAtom);
-    reactor.setDocumentModels(documentModels);
-});
+// updates the reactor when the available document models change
+let documentModelsSubscripion: (() => void) | undefined;
+reactorAtom.onMount = setAtom => {
+    if (documentModelsSubscripion) return;
+    setAtom(async prevReactor => {
+        const reactor = await prevReactor;
 
-async function updateDocumentModels() {
-    // wait for local document models to be loaded
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    await useDocumentModelsAsync();
-    // update reactor document models
-    const documentModels = await atomStore.get(documentModelsAtom);
-    (await reactor).setDocumentModels(documentModels);
-}
-updateDocumentModels().catch(console.error);
+        if (!documentModelsSubscripion) {
+            documentModelsSubscripion = subscribeDocumentModels(
+                documentModels => {
+                    reactor.setDocumentModelModules(documentModels);
+                },
+            );
+        }
+        return reactor;
+    });
+};

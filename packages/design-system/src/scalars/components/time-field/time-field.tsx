@@ -1,22 +1,22 @@
+import { cn } from "#scalars";
 import { forwardRef } from "react";
+import { BasePickerField } from "../date-time-field/base-picker-field.js";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
-  InputProps,
-  SelectFieldProps,
-  withFieldValidation,
-} from "../fragments";
-import type { ErrorHandling, FieldCommonProps } from "../types";
-import type { TimeFieldValue } from "./type";
-import { BasePickerField } from "../date-time-field/base-picker-field";
-import TimePickerContent from "./subcomponents/time-picker-content";
-import { useTimePickerField } from "./use-time-field";
-import type { InputNumberProps } from "../number-field/types";
-import { validateTimePicker } from "./time-validations";
-import { cn } from "@/scalars/lib";
-import { handleKeyDown } from "./utils";
+  type InputProps,
+  type SelectFieldProps,
+} from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { InputNumberProps } from "../number-field/types.js";
+import { type ErrorHandling, type FieldCommonProps } from "../types.js";
+import TimePickerContent from "./subcomponents/time-picker-content.js";
+import { validateTimePicker } from "./time-validations.js";
+import { type TimeFieldValue } from "./type.js";
+import { useTimePickerField } from "./use-time-field.js";
+import { handleKeyDown } from "./utils.js";
 
 export interface TimeFieldProps
   extends FieldCommonProps<TimeFieldValue>,
@@ -125,7 +125,7 @@ const TimeRaw = forwardRef<HTMLInputElement, TimeFieldProps>(
             ...inputProps,
             onKeyDown: handleKeyDown,
           }}
-          className={cn("pt-3 pr-4 pb-4 pl-4")}
+          className={cn("pb-4 pl-4 pr-4 pt-3")}
         >
           <TimePickerContent
             selectedHour={selectedHour}

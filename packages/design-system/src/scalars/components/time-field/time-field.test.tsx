@@ -1,8 +1,8 @@
+import { renderWithForm } from "#scalars";
 import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { TimeField } from "./time-field";
-import { renderWithForm } from "@/scalars/lib/testing";
-vi.mock("@/powerhouse/components/icon/icon", () => ({
+import { userEvent } from "@testing-library/user-event";
+import { TimeField } from "./time-field.js";
+vi.mock("#powerhouse", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (
     <div data-testid={`mock-icon-${name}`} className={className}>
       Mock Icon: {name}

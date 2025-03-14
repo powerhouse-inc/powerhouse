@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import FormWithResetButton from "./reset-button";
+import FormWithResetButton from "./reset-button.js";
 
 const meta = {
   title: "Document Engineering/Docs/Examples/Reset Button",

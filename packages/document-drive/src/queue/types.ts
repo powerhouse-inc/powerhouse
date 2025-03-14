@@ -1,6 +1,6 @@
-import { Action, Operation } from "document-model/document";
+import type { Action, Operation } from "document-model";
 import type { Unsubscribe } from "nanoevents";
-import { AddOperationOptions, IOperationResult } from "../server";
+import { type AddOperationOptions, type IOperationResult } from "#server/types";
 
 export interface BaseJob {
   driveId: string;
@@ -36,25 +36,25 @@ export interface IServerDelegate {
 }
 
 export interface IQueueManager {
-  addJob(job: Job): Promise<JobId>;
-  getQueue(driveId: string, document?: string): IQueue<Job, IOperationResult>;
-  removeQueue(driveId: string, documentId?: string): void;
-  getQueueByIndex(index: number): IQueue<Job, IOperationResult> | null;
-  getQueues(): string[];
-  init(
+  addJob: (job: Job) => Promise<JobId>;
+  getQueue: (driveId: string, documentId?: string) => IQueue<Job>;
+  removeQueue: (driveId: string, documentId?: string) => void;
+  getQueueByIndex: (index: number) => IQueue<Job> | null;
+  getQueues: () => string[];
+  init: (
     delegate: IServerDelegate,
     onError: (error: Error) => void,
-  ): Promise<void>;
-  on<K extends keyof QueueEvents>(
+  ) => Promise<void>;
+  on: <K extends keyof QueueEvents>(
     this: this,
     event: K,
     cb: QueueEvents[K],
-  ): Unsubscribe;
+  ) => Unsubscribe;
 }
 
 export type IJob<T> = { jobId: JobId } & T;
 
-export interface IQueue<T, R> {
+export interface IQueue<T> {
   addJob(data: IJob<T>): Promise<void>;
   getNextJob(): Promise<IJob<T> | undefined>;
   amountOfJobs(): Promise<number>;
@@ -64,11 +64,11 @@ export interface IQueue<T, R> {
   isDeleted(): Promise<boolean>;
   setDeleted(deleted: boolean): Promise<void>;
   getJobs(): Promise<IJob<T>[]>;
-  addDependencies(job: IJob<Job>): Promise<void>;
-  removeDependencies(job: IJob<Job>): Promise<void>;
+  addDependencies: (job: IJob<Job>) => Promise<void>;
+  removeDependencies: (job: IJob<Job>) => Promise<void>;
 }
 
-export type IJobQueue = IQueue<Job, IOperationResult>;
+export type IJobQueue = IQueue<Job>;
 
 export function isOperationJob(job: Job): job is OperationJob {
   return "operations" in job;

@@ -1,13 +1,21 @@
 import { atom, createStore } from 'jotai';
-import { atomWithStorage } from 'src/store/utils';
-import { themeAtom } from './theme';
+import { themeAtom } from './theme.js';
 
 export type Store = ReturnType<typeof createStore>;
 
 export const atomStore: Store = createStore();
 
-export const sidebarCollapsedAtom = atomWithStorage('sidebar-collapsed', false);
 export const sidebarDisableHoverStyles = atom(false);
 
-export * from './theme';
-export default { sidebarCollapsedAtom, themeAtom };
+export const atoms = {
+    themeAtom,
+};
+
+export * from './document-drive.js';
+export * from './document-model.js';
+export * from './editor.js';
+export * from './external-packages.js';
+export * from './reactor.js';
+export * from './theme.js';
+export * from './user.js';
+export * from './utils.js';

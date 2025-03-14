@@ -1,10 +1,10 @@
 import {
     DRIVE,
     FILE,
-    UiDriveNode,
-    UiNode,
-    useUiNodesContext,
+    type UiDriveNode,
+    type UiNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
@@ -43,7 +43,7 @@ function getSelectedNodeFromPathname(
     nodeNamesFromPathname: string | undefined,
 ) {
     if (!driveIdFromPathname) {
-        return driveNodes[0];
+        return null;
     }
 
     const driveId = decodeURIComponent(driveIdFromPathname);
@@ -54,7 +54,7 @@ function getSelectedNodeFromPathname(
             node?.name === driveId,
     );
 
-    if (!driveNode) return driveNodes[0];
+    if (!driveNode) return null;
     if (!nodeNamesFromPathname) return driveNode;
 
     const nodeNames = nodeNamesFromPathname

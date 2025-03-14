@@ -1,32 +1,36 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-  actions,
-  reducer,
-} from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { BaseAction, DocumentModel, Operation } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+  Operation,
+} from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveServer } from "../src";
+import { DocumentDriveAction } from "../src/drive-document-model/gen/actions.js";
+import {
+  addFolder,
+  setAvailableOffline,
+} from "../src/drive-document-model/gen/creators.js";
+import { reducer as documentDriveReducer } from "../src/drive-document-model/gen/reducer.js";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import { ReactorBuilder } from "../src/server/builder.js";
 
 function buildOperation(
   document: DocumentDriveDocument,
-  action: DocumentDriveAction | BaseAction,
+  action: DocumentDriveAction,
   index?: number,
-): Operation<DocumentDriveAction | BaseAction> {
-  const newDocument = reducer(document, action);
+): Operation<DocumentDriveAction> {
+  const newDocument = documentDriveReducer(document, action);
   const operation = newDocument.operations[action.scope].slice().pop()!;
   return { ...operation, index: index ?? operation.index };
 }
 
 function buildOperations(
   document: DocumentDriveDocument,
-  actions: Array<DocumentDriveAction | BaseAction>,
-): Operation<DocumentDriveAction | BaseAction>[] {
-  const operations: Operation<DocumentDriveAction | BaseAction>[] = [];
+  actions: Array<DocumentDriveAction>,
+): Operation<DocumentDriveAction>[] {
+  const operations: Operation<DocumentDriveAction>[] = [];
   for (const action of actions) {
-    document = reducer(document, action);
+    document = documentDriveReducer(document, action);
     const operation = document.operations[action.scope].slice().pop()!;
     operations.push(operation);
   }
@@ -35,14 +39,14 @@ function buildOperations(
 
 describe("Drive operations", () => {
   const documentModels = [
-    DocumentModelLib,
-    ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+  ] as DocumentModelModule[];
 
-  let server = new DocumentDriveServer(documentModels);
+  let server = new ReactorBuilder(documentModels).build();
 
   beforeEach(async () => {
-    server = new DocumentDriveServer(documentModels);
+    server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
 
@@ -59,7 +63,7 @@ describe("Drive operations", () => {
     const drive = await server.getDrive("1");
     const result = await server.addDriveOperation(
       "1",
-      buildOperation(drive, actions.addFolder({ id: "1", name: "test" })),
+      buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
     expect(result.status).toBe("SUCCESS");
   });
@@ -78,12 +82,12 @@ describe("Drive operations", () => {
     const drive = await server.getDrive("1");
     await server.addDriveOperation(
       "1",
-      buildOperation(drive, actions.addFolder({ id: "1", name: "test" })),
+      buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
 
     const result = await server.addDriveOperation(
       "1",
-      buildOperation(drive, actions.addFolder({ id: "1", name: "test" }), 1),
+      buildOperation(drive, addFolder({ id: "1", name: "test" }), 1),
     );
     expect(result.status).toBe("SUCCESS");
     expect(result.operations.find((op) => op.error)?.error).toBe(
@@ -104,12 +108,12 @@ describe("Drive operations", () => {
     const drive = await server.getDrive("1");
     await server.addDriveOperation(
       "1",
-      buildOperation(drive, actions.addFolder({ id: "1", name: "test" })),
+      buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
 
     const result = await server.addDriveOperation(
       "1",
-      buildOperation(drive, actions.addFolder({ id: "2", name: "test 2" }), 2),
+      buildOperation(drive, addFolder({ id: "2", name: "test 2" }), 2),
     );
     expect(result.status).toBe("ERROR");
     expect(result.error?.message).toBe(
@@ -130,11 +134,11 @@ describe("Drive operations", () => {
     let drive = await server.getDrive("1");
     const result = await server.addDriveOperations("1", [
       ...buildOperations(drive, [
-        actions.addFolder({ id: "1", name: "test 1" }),
-        actions.addFolder({ id: "2", name: "test 2" }),
-        actions.addFolder({ id: "3", name: "test 3" }),
+        addFolder({ id: "1", name: "test 1" }),
+        addFolder({ id: "2", name: "test 2" }),
+        addFolder({ id: "3", name: "test 3" }),
       ]),
-      buildOperation(drive, actions.addFolder({ id: "4", name: "test 4" }), 4),
+      buildOperation(drive, addFolder({ id: "4", name: "test 4" }), 4),
     ]);
 
     expect(result.status).toBe("ERROR");
@@ -165,9 +169,9 @@ describe("Drive operations", () => {
     const result = await server.addDriveOperations(
       "1",
       buildOperations(drive, [
-        actions.addFolder({ id: "1", name: "test 1" }),
-        actions.addFolder({ id: "2", name: "test 2" }),
-        actions.setAvailableOffline({ availableOffline: true }),
+        addFolder({ id: "1", name: "test 1" }),
+        addFolder({ id: "2", name: "test 2" }),
+        setAvailableOffline({ availableOffline: true }),
       ]),
     );
 

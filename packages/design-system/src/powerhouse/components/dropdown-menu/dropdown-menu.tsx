@@ -1,15 +1,16 @@
 import {
   Content,
-  DropdownMenuContentProps,
+  type DropdownMenuContentProps,
+  type DropdownMenuProps,
   Item,
   Label,
   Portal,
   Root,
   Trigger,
 } from "@radix-ui/react-dropdown-menu";
-import { ForwardedRef, forwardRef } from "react";
+import { type ForwardedRef, forwardRef } from "react";
 
-export const DropdownMenu = Root;
+export const DropdownMenu: React.FC<DropdownMenuProps> = Root;
 export const DropdownMenuTrigger = Trigger;
 
 export const DropdownMenuContent = forwardRef(function DropdownMenuContent(

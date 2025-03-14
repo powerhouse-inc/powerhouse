@@ -1,2 +1,2 @@
-export * from "./sidebar";
-export type * from "./types";
+export * from "./sidebar.js";
+export type * from "./types.js";

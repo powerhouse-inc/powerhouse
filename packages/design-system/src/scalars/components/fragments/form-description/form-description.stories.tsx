@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { FormDescription } from "./form-description";
+import { FormDescription } from "./form-description.js";
 
 const meta = {
   title: "Document Engineering/Fragments/FormDescription",

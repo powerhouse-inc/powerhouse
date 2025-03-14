@@ -1,6 +1,6 @@
-import { StoryObj } from "@storybook/react";
+import { type StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { Toggle } from "./toggle";
+import { Toggle } from "./toggle.js";
 
 const meta = {
   title: "Connect/Components/Toggle",

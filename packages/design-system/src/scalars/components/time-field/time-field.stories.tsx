@@ -1,11 +1,11 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import { TimeField } from "./time-field";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { TimeField } from "./time-field.js";
 
 const meta: Meta<typeof TimeField> = {
   title: "Document Engineering/Simple Components/Time Field",

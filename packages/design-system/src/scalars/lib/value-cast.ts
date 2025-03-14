@@ -1,11 +1,11 @@
-import { parse, format } from "date-fns";
-import { AmountValue } from "../components/amount-field/types";
-import { getDateFromValue } from "../components/date-field/utils";
+import { format, parse } from "date-fns";
+import { type AmountValue } from "../components/amount-field/types.js";
+import { getDateFromValue } from "../components/date-field/utils.js";
 import {
   getDateFormat,
   normalizeMonthFormat,
   parseInputString,
-} from "../components/date-time-field/utils";
+} from "../components/date-time-field/utils.js";
 
 export type ValueCast =
   | "BigInt"

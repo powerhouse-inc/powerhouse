@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
-import { AIDField } from "./aid-field";
-import { mockedOptions, fetchOptions, fetchSelectedOption } from "./mocks";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { AIDField } from "./aid-field.js";
+import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
 
 const meta: Meta<typeof AIDField> = {
   title: "Document Engineering/Simple Components/AID Field",
@@ -57,13 +57,13 @@ const meta: Meta<typeof AIDField> = {
         "Must return a Promise that resolves to an array of objects or an array of objects with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: string\n\n" +
+        "path?: { text: string; url?: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n",
       table: {
         type: {
           summary:
-            "(userInput: string, context?: { supportedNetworks?: Network[] }) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
+            "(userInput: string; context?: { supportedNetworks?: Network[] }) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -78,7 +78,7 @@ const meta: Meta<typeof AIDField> = {
         "Must return a Promise that resolves to an object or an object with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: string\n\n" +
+        "path?: { text: string; url?: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n" +
         "or undefined if the option is not found",

@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { SelectField } from "./select-field";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../../lib/testing.js";
+import { SelectField } from "./select-field.js";
 
 describe("SelectField Component", () => {
   const defaultOptions = [

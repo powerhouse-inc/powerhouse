@@ -1,4 +1,4 @@
-import { atomWithStorage } from 'src/store/utils';
+import { atomWithStorage } from '#store';
 
 export const ACCEPTED_COOKIES_KEY_STORAGE = 'acceptedCookies';
 

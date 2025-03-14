@@ -1,7 +1,6 @@
+import { sortOperations } from "document-model";
 import { describe, expect, it } from "vitest";
-
-import { sortOperations } from "../../src/utils/document-helpers";
-import { buildOperations } from "./utils";
+import { buildOperations } from "./utils.js";
 
 describe("sortOperations", () => {
   const scenarios = [

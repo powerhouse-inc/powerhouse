@@ -1,54 +1,59 @@
 import {
-  ADD_INVALID_TRIGGER,
-  ADD_TRIGGER,
   ConnectDropdownMenu,
+  defaultFolderOptions,
   DELETE,
-  DropdownMenuHandlers,
   DUPLICATE,
-  FOLDER,
   NodeInput,
-  NodeOption,
+  type NodeOption,
   nodeOptionsMap,
-  NodeProps,
   READ,
-  REMOVE_TRIGGER,
   RENAME,
   SyncStatusIcon,
-  TUiNodesContext,
-  UiFolderNode,
+  type UiFolderNode,
+  type UiNode,
   useDrag,
   useDrop,
   WRITE,
-} from "@/connect";
-import { Icon } from "@/powerhouse";
+} from "#connect";
+import { Icon } from "#powerhouse";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
-export type FolderItemProps = TUiNodesContext &
-  NodeProps & {
-    readonly uiNode: UiFolderNode;
-    readonly className?: string;
-  };
+export type FolderItemProps = {
+  readonly uiNode: UiFolderNode;
+  readonly className?: string;
+  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
+  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  onSelectNode: (uiNode: UiFolderNode) => void;
+  onRenameNode: (name: string, uiNode: UiFolderNode) => void;
+  onDuplicateNode: (uiNode: UiFolderNode) => void;
+  onDeleteNode: (uiNode: UiFolderNode) => void;
+  isAllowedToCreateDocuments: boolean;
+};
 
 export function FolderItem(props: FolderItemProps) {
   const {
     uiNode,
     isAllowedToCreateDocuments,
-    nodeOptions,
-    isRemoteDrive,
     className,
-    setSelectedNode,
     onRenameNode,
     onDuplicateNode,
     onDeleteNode,
-    onAddTrigger,
-    onRemoveTrigger,
-    onAddInvalidTrigger,
+    onSelectNode,
+    onAddFile,
+    onCopyNode,
+    onMoveNode,
   } = props;
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const { dragProps } = useDrag(props);
-  const { isDropTarget, dropProps } = useDrop(props);
+  const { isDropTarget, dropProps } = useDrop({
+    uiNode,
+    onAddFile,
+    onCopyNode,
+    onMoveNode,
+  });
 
   const isReadMode = mode === READ;
 
@@ -61,26 +66,25 @@ export function FolderItem(props: FolderItemProps) {
   }
 
   function onClick() {
-    setSelectedNode(uiNode);
+    onSelectNode(uiNode);
   }
 
-  const dropdownMenuHandlers: DropdownMenuHandlers = {
+  const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
     [DUPLICATE]: () => onDuplicateNode(uiNode),
     [RENAME]: () => setMode(WRITE),
     [DELETE]: () => onDeleteNode(uiNode),
-    [ADD_TRIGGER]: () => onAddTrigger(uiNode.driveId),
-    [REMOVE_TRIGGER]: () => onRemoveTrigger(uiNode.driveId),
-    [ADD_INVALID_TRIGGER]: () => onAddInvalidTrigger(uiNode.driveId),
   } as const;
-
-  const nodeOptionsForKind = nodeOptions[uiNode.sharingType][FOLDER];
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
     .map(([id, option]) => ({
       ...option,
       id: id as NodeOption,
     }))
-    .filter((option) => nodeOptionsForKind.includes(option.id));
+    .filter((option) =>
+      defaultFolderOptions.includes(
+        option.id as (typeof defaultFolderOptions)[number],
+      ),
+    );
 
   function onDropdownMenuOptionClick(itemId: NodeOption) {
     const handler = dropdownMenuHandlers[itemId];
@@ -119,7 +123,7 @@ export function FolderItem(props: FolderItemProps) {
           <div className="p-1">
             <div className="relative">
               <Icon name="FolderClose" size={24} />
-              {isReadMode && isRemoteDrive && uiNode.syncStatus ? (
+              {isReadMode && uiNode.syncStatus ? (
                 <div className="absolute bottom-[-3px] right-[-2px] size-3 rounded-full bg-white">
                   <div className="absolute left-[-2px] top-[-2px]">
                     <SyncStatusIcon

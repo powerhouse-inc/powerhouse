@@ -17,7 +17,7 @@ exports[`ToggleField Component > should match snapshot 1`] = `
           aria-checked="true"
           aria-labelledby=":r1:-label"
           aria-required="false"
-          class="focus-visible:ring-ring focus-visible:ring-offset-background peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]"
+          class="focus-visible:ring-ring focus-visible:ring-offset-background peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]"
           data-state="checked"
           id=":r1:"
           role="switch"

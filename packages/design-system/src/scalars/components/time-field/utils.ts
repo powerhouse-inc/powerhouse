@@ -1,5 +1,5 @@
-import { getOffset } from "../date-time-field/utils";
-import { TimePeriod } from "./type";
+import { getOffset } from "../date-time-field/utils.js";
+import { type TimePeriod } from "./type.js";
 
 export const createChangeEvent = (
   value: string,

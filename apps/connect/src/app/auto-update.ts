@@ -9,7 +9,7 @@ export function enableAutoUpdates(
     console.log('Looking for updates:', url);
 
     autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
-        const dialogOpts = {
+        const dialogOpts: Electron.MessageBoxOptions = {
             type: 'info',
             buttons: ['Restart', 'Later'],
             title: 'Application Update',

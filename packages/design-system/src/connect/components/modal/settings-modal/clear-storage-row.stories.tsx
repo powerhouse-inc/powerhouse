@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ClearStorageSettingsRow } from "./clear-storage-row";
+import { ClearStorageSettingsRow } from "./clear-storage-row.js";
 
 const meta: Meta<typeof ClearStorageSettingsRow> = {
   title: "Connect/Components/Modal/SettingsModal/ClearStorageSettingsRow",

@@ -1,15 +1,15 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { type Operation, type OperationScope } from "document-model";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Revision } from "../revision";
-import { Skip } from "../skip";
-import { Operation, Scope } from "../types";
-import { makeRows } from "../utils";
-import { Day } from "./day";
+import { Revision } from "../revision/index.js";
+import { Skip } from "../skip/index.js";
+import { makeRows } from "../utils.js";
+import { Day } from "./day.js";
 
 export type TimelineProps = {
   readonly localOperations: Operation[];
   readonly globalOperations: Operation[];
-  readonly scope: Scope;
+  readonly scope: OperationScope;
 };
 
 export function Timeline(props: TimelineProps) {
@@ -64,8 +64,7 @@ export function Timeline(props: TimelineProps) {
 
   return (
     <div
-      className="border-l border-slate-100
-            "
+      className="border-l border-slate-100"
       ref={parentRef}
       style={{
         height: `${rowVirtualizer.getTotalSize()}px`,

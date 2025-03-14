@@ -1,12 +1,12 @@
-import { AssetsTable, TabContent } from "@/rwa";
+import { AssetsTable, RwaTabContent } from "#rwa";
 
 export function PortfolioTab() {
   return (
-    <TabContent
+    <RwaTabContent
       description="Details on the distribution of assets among different financial institutions or investment vehicles."
       label="Portfolio"
     >
       <AssetsTable />
-    </TabContent>
+    </RwaTabContent>
   );
 }

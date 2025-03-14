@@ -1,6 +1,6 @@
-import { cn } from "@/scalars/lib/utils";
+import { cn } from "#scalars";
 import { differenceInCalendarDays } from "date-fns";
-import { Button } from "../../../fragments/button/button";
+import { Button } from "../../../fragments/button/button.js";
 
 interface YearButtonProps {
   year: number;

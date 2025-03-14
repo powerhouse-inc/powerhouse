@@ -1,6 +1,7 @@
-import { Icon } from "@/powerhouse";
-import { TableItemType, TableName, useEditorContext } from "@/rwa";
-import React, { ComponentPropsWithoutRef, useCallback } from "react";
+import { Icon } from "#powerhouse";
+import { type TableItemType, type TableName, useEditorContext } from "#rwa";
+
+import { type ComponentPropsWithoutRef, useCallback } from "react";
 import { twMerge } from "tailwind-merge";
 
 export const RWATableCell: React.FC<ComponentPropsWithoutRef<"td">> = (

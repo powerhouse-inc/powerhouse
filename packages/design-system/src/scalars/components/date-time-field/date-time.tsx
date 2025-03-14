@@ -1,18 +1,19 @@
-import React, { forwardRef } from "react";
-import { DateFieldValue } from "../date-field/types";
-import { cn } from "@/scalars/lib";
+import { cn } from "#scalars";
+import type React from "react";
+import { forwardRef } from "react";
+import { type DateFieldValue } from "../date-field/types.js";
 import {
+  FormDescription,
   FormGroup,
   FormLabel,
-  FormDescription,
   FormMessageList,
-  withFieldValidation,
-} from "../fragments";
-import { BasePickerField } from "./base-picker-field";
-import { FieldCommonProps } from "../types";
-import { useDateTime } from "./use-date-time";
-import DateTimePickerContent from "./date-time-contet";
-import { dateTimeFieldValidations } from "./date-time-field-validations";
+} from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import { type FieldCommonProps } from "../types.js";
+import { BasePickerField } from "./base-picker-field.js";
+import DateTimePickerContent from "./date-time-contet.js";
+import { dateTimeFieldValidations } from "./date-time-field-validations.js";
+import { useDateTime } from "./use-date-time.js";
 
 interface DateTimePickerProps extends FieldCommonProps<DateFieldValue> {
   name: string;

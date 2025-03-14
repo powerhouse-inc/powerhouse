@@ -1,17 +1,19 @@
-import {
-  startConnectStudio,
-  ConnectStudioOptions,
-} from "@powerhousedao/connect";
-import { getConfig } from "@powerhousedao/config/powerhouse";
-import { Command } from "commander";
+import { type Command } from "commander";
+import { type ConnectOptions } from "../services/connect.js";
+import { type CommandActionType } from "../types.js";
 
-export type ConnectOptions = ConnectStudioOptions;
-
-export async function startConnect(connectOptions: ConnectOptions) {
-  const { documentModelsDir, editorsDir } = getConfig();
-  const options = { documentModelsDir, editorsDir, ...connectOptions };
-  return await startConnectStudio(options);
+async function startConnect(options: ConnectOptions) {
+  const Connect = await import("../services/connect.js");
+  const { startConnect } = Connect;
+  return startConnect(options);
 }
+
+export const connect: CommandActionType<
+  [ConnectOptions],
+  Promise<void>
+> = async (options) => {
+  return startConnect(options);
+};
 
 export function connectCommand(program: Command) {
   program
@@ -34,23 +36,15 @@ export function connectCommand(program: Command) {
       "Link local documents path",
     )
     .action(async (...args: [ConnectOptions]) => {
-      const connectOptions = args.at(0) || {};
-      const { documentModelsDir, editorsDir, packages, studio } = getConfig();
-
-      await startConnectStudio({
-        port: studio?.port?.toString() || undefined,
-        packages,
-        localDocuments: documentModelsDir || undefined,
-        localEditors: editorsDir || undefined,
-        open: studio?.openBrowser,
-        ...connectOptions,
-      });
+      await connect(...args);
     });
 }
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg ? (JSON.parse(optionsArg) as ConnectOptions) : {};
+  const options = optionsArg
+    ? (JSON.parse(optionsArg) as ConnectOptions)
+    : {};
   startConnect(options).catch((e: unknown) => {
     throw e;
   });

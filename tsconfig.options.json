@@ -4,19 +4,16 @@
     "composite": true,
     "declaration": true,
     "declarationMap": true,
-    "noEmitOnError": true,
     "incremental": true,
     "skipLibCheck": true,
     // required configs for esm interoperability
     "strict": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    // we should definitely enable this, but it's a breaking change
-    // "isolatedModules": true,
+    "isolatedModules": true,
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "forceConsistentCasingInFileNames": true
   }
 }

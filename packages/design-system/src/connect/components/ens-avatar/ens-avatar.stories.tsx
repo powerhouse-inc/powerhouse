@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { ENSAvatar } from "./ens-avatar";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { ENSAvatar } from "./ens-avatar.js";
 
 const meta = {
   title: "Connect/Components/ENSAvatar",

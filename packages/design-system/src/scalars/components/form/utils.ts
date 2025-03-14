@@ -29,8 +29,8 @@ export const defaultOnError = (
     }
     if (Array.isArray(path)) {
       // maybe we can reconciliate this error with a form field
-      if (path.length === 1 && fieldNames.includes(path[0])) {
-        formErrorPath = path[0];
+      if (path.length === 1 && fieldNames.includes(path[0] as string)) {
+        formErrorPath = path[0] as string;
       }
     }
   }

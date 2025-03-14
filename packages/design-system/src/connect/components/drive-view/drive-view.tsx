@@ -1,20 +1,21 @@
 import {
   ConnectTreeView,
-  NodeProps,
-  SharingType,
-  TUiNodesContext,
-  UiDriveNode,
-} from "@/connect";
-import { Icon } from "@/powerhouse";
-import { ReactNode } from "react";
+  type NodeProps,
+  type SharingType,
+  type UiDriveNode,
+} from "#connect";
+import { Icon } from "#powerhouse";
+import type { TUiNodesContext } from "@powerhousedao/reactor-browser";
+import { type ReactNode } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 export type DriveViewProps = TUiNodesContext &
   NodeProps & {
     readonly label: ReactNode;
+    readonly className?: string;
     readonly groupSharingType: SharingType;
     readonly disableAddDrives: boolean;
-    readonly className?: string;
+
     readonly showAddDriveModal: (groupSharingType: SharingType) => void;
     readonly showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
   };
@@ -23,16 +24,15 @@ export function DriveView(props: DriveViewProps) {
   const {
     driveNodes,
     selectedDriveNode,
-    label,
     groupSharingType,
-    className,
     disableAddDrives,
+    label,
+    className,
     isAllowedToCreateDocuments,
     showAddDriveModal,
   } = props;
   const hasDriveNodes = driveNodes.length > 0;
-  const isContainerHighlighted =
-    selectedDriveNode?.sharingType === groupSharingType;
+  const isContainerHighlighted = true;
 
   function onShowAddDriveModal() {
     showAddDriveModal(groupSharingType);

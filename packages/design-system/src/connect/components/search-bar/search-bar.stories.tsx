@@ -1,6 +1,6 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ConnectSearchBar, ConnectSearchBarProps } from "./search-bar";
+import { ConnectSearchBar, type ConnectSearchBarProps } from "./search-bar.js";
 
 const filterItems: ConnectSearchBarProps["filterItems"] = [
   {

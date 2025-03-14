@@ -1,16 +1,13 @@
 {
   "name": "@powerhousedao/config",
-  "version": "1.15.0",
+  "version": "1.22.1",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "module": "./dist/src/index.js",
   "exports": {
-    ".": "./dist/index.js",
-    "./powerhouse": "./dist/powerhouse.js",
-    "./tailwind": "./dist/tailwind.js"
+    "./powerhouse": "./dist/src/powerhouse.js"
   },
   "publishConfig": {
     "access": "public"
@@ -21,7 +18,8 @@
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsc --build",
+    "build:tsc": "tsc --build",
     "clean": "rimraf dist/",
     "clean:node_modules": "rimraf node_modules"
   },

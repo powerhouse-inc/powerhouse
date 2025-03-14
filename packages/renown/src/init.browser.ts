@@ -1,7 +1,7 @@
-import { Renown } from "./common";
-import { RenownEvents, RenownStorageMap } from "./types";
-import { BrowserEventEmitter } from "./event/event.browser";
-import { BrowserStorage } from "./storage/storage.browser";
+import { Renown } from "./common.js";
+import { RenownEvents, RenownStorageMap } from "./types.js";
+import { BrowserEventEmitter } from "./event/event.browser.js";
+import { BrowserStorage } from "./storage/storage.browser.js";
 
 export function initRenown(
   connectId: string,

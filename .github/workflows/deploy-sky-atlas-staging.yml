@@ -12,7 +12,8 @@ jobs:
       # Check-out your repository.
       - name: Checkout
         uses: actions/checkout@v2
-
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Build, Push and Release API to Heroku. # Your custom step name
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
@@ -22,22 +23,3 @@ jobs:
           dockerfile_directory: ./
           dockerfile_name: apps/switchboard/Dockerfile
           process_type: web
-      # - name: Build, Push and Release Frontend to Heroku. # Your custom step name
-      #   uses: gonuit/heroku-docker-deploy@v1.3.3
-      #   with:
-      #     email: ${{ secrets.HEROKU_EMAIL }}
-      #     heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-      #     heroku_app_name: ${{ secrets.HEROKU_FRONTEND_NAME }}
-      #     dockerfile_directory: ./frontend
-      #     dockerfile_name: Dockerfile
-      #     process_type: web
-      #     docker_options: "--build-arg NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST=${{ secrets.NEXT_PUBLIC_SWITCHBOARD_GRAPHQL_HOST }} --build-arg BASE_PATH=/staging/makerdao/switchboard"
-      # - name: Build, Push and Release NGINX to Heroku. # Your custom step name
-      #   uses: gonuit/heroku-docker-deploy@v1.3.3
-      #   with:
-      #     email: ${{ secrets.HEROKU_EMAIL }}
-      #     heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-      #     heroku_app_name: ${{ secrets.HEROKU_NGINX_NAME }}
-      #     dockerfile_directory: ./nginx
-      #     dockerfile_name: Dockerfile
-      #     process_type: web

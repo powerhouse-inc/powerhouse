@@ -1,39 +1,43 @@
-import { IDocumentDriveServer } from 'document-drive';
+import { type Unsubscribe } from '#services';
+import { childLogger, type IDocumentDriveServer } from 'document-drive';
 import type {
-    Action,
     ActionErrorCallback,
-    BaseAction,
-    Document,
+    ActionFromDocument,
     Operation,
+    OperationFromDocument,
     OperationScope,
+    PHDocument,
     Reducer,
-} from 'document-model/document';
+} from 'document-model';
 import { useEffect, useState } from 'react';
-import { logger } from 'src/services/logger';
-import { Unsubscribe } from 'src/services/renown/types';
+
+const logger = childLogger([
+    'utils/document-model',
+    Math.floor(Math.random() * 999).toString(),
+]);
 
 export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
-    (import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE as string) || '50',
+    import.meta.env.FILE_UPLOAD_OPERATIONS_CHUNK_SIZE || '50',
 );
 
-export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
-    operation: Operation,
+export type DocumentDispatchCallback<TDocument extends PHDocument> = (
+    operation: OperationFromDocument<TDocument>,
     state: {
-        prevState: Document<State, A, LocalState>;
-        newState: Document<State, A, LocalState>;
+        prevState: TDocument;
+        newState: TDocument;
     },
 ) => void;
 
-export type DocumentDispatch<State, A extends Action, LocalState> = (
-    action: A | BaseAction,
-    callback?: DocumentDispatchCallback<State, A, LocalState>,
+export type DocumentDispatch<TDocument extends PHDocument> = (
+    action: ActionFromDocument<TDocument>,
+    callback?: DocumentDispatchCallback<TDocument>,
     onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-export function wrapReducer<State, A extends Action, LocalState>(
-    reducer: Reducer<State, A, LocalState> | undefined,
+export function wrapReducer<TDocument extends PHDocument>(
+    reducer: Reducer<TDocument> | undefined,
     onError?: (error: unknown) => void,
-): Reducer<State, A, LocalState> {
+): Reducer<TDocument> {
     return (state, action) => {
         if (!reducer) return state;
         try {
@@ -47,15 +51,11 @@ export function wrapReducer<State, A extends Action, LocalState>(
 
 type OnErrorHandler = (error: unknown) => void;
 
-export function useDocumentDispatch<State, A extends Action, LocalState>(
-    documentReducer: Reducer<State, A, LocalState> | undefined,
-    initialState: Document<State, A, LocalState> | undefined,
+export function useDocumentDispatch<TDocument extends PHDocument>(
+    documentReducer: Reducer<TDocument> | undefined,
+    initialState: TDocument | undefined,
     onError: OnErrorHandler = logger.error,
-): readonly [
-    Document<State, A, LocalState> | undefined,
-    DocumentDispatch<State, A, LocalState>,
-    unknown,
-] {
+): readonly [TDocument | undefined, DocumentDispatch<TDocument>, unknown] {
     const [state, setState] = useState(initialState);
     const [error, setError] = useState<unknown>();
 
@@ -66,9 +66,10 @@ export function useDocumentDispatch<State, A extends Action, LocalState>(
 
     useEffect(() => {
         setState(initialState);
+        setError(undefined);
     }, [initialState]);
 
-    const dispatch: DocumentDispatch<State, A, LocalState> = (
+    const dispatch: DocumentDispatch<TDocument> = (
         action,
         callback,
         onErrorCallback?: ActionErrorCallback,
@@ -117,15 +118,27 @@ async function waitForUpdate(
     let unsubscribe: Unsubscribe | undefined;
     const promise = new Promise<void>(resolve => {
         unsubscribe = reactor.on('strandUpdate', update => {
+            logger.verbose(`reactor.on(strandUpdate)`, update);
             const sameScope =
                 update.documentId === documentId && update.scope == scope;
+
             if (!sameScope) {
+                logger.verbose(
+                    `reactor.on(strandUpdate) Ignoring wrong scope: ${update.documentId}:${update.scope} <> ${documentId}:${scope}`,
+                );
                 return;
             }
 
             const lastUpdateIndex = update.operations.at(-1)?.index;
             if (lastUpdateIndex && lastUpdateIndex >= lastIndex) {
+                logger.verbose(
+                    `reactor.on(strandUpdate) Resolving ${update.documentId}:${update.scope} rev ${lastUpdateIndex} >= ${lastIndex}`,
+                );
                 resolve();
+            } else {
+                logger.verbose(
+                    `reactor.on(strandUpdate) Not resolving ${update.documentId}:${update.scope} rev ${lastUpdateIndex} < ${lastIndex}`,
+                );
             }
         });
     });
@@ -153,19 +166,27 @@ async function waitForUpdate(
 export async function uploadDocumentOperations(
     drive: string,
     documentId: string,
-    document: Document,
+    document: PHDocument,
     reactor: IDocumentDriveServer,
     pushOperations: (
         driveId: string,
         id: string,
         operations: Operation[],
-    ) => Promise<Document | undefined>,
+    ) => Promise<PHDocument | undefined>,
     options?: { waitForSync?: boolean; operationsLimit?: number },
 ) {
     const operationsLimit =
         options?.operationsLimit || FILE_UPLOAD_OPERATIONS_CHUNK_SIZE;
+
+    logger.verbose(
+        `uploadDocumentOperations(drive: ${drive}, documentId:${documentId}, ops: ${Object.keys(document.operations).join(',')}, limit:${operationsLimit})`,
+    );
+
     for (const operations of Object.values(document.operations)) {
         for (let i = 0; i < operations.length; i += operationsLimit) {
+            logger.verbose(
+                `uploadDocumentOperations:for(i:${i}, ops:${operations.length}, limit:${operationsLimit}): START`,
+            );
             const chunk = operations.slice(i, i + operationsLimit);
             const operation = chunk.at(-1);
             if (!operation) {
@@ -173,18 +194,31 @@ export async function uploadDocumentOperations(
             }
             const { scope } = operation;
 
+            /*
+            TODO: check why the waitForUpdate promise does not resolve after the first iteration
+            if (options?.waitForSync) {
+                void pushOperations(drive, documentId, chunk);
+                await waitForUpdate(
+                    10000,
+                    documentId,
+                    scope,
+                    operation.index,
+                    reactor,
+                );
+            } else {
+                await pushOperations(drive, documentId, chunk);
+            }
+            */
+
             await pushOperations(drive, documentId, chunk);
 
-            if (!options?.waitForSync) {
-                continue;
-            }
-            await waitForUpdate(
-                10000,
-                documentId,
-                scope,
-                operation.index,
-                reactor,
+            logger.verbose(
+                `uploadDocumentOperations:for:waitForUpdate(${documentId}:${scope} rev ${operation.index}): NEXT`,
             );
         }
     }
+
+    logger.verbose(
+        `uploadDocumentOperations:for:waitForUpdate(${documentId}): END`,
+    );
 }

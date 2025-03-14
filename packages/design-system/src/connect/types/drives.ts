@@ -1,4 +1,9 @@
-import { driveLocations, FileNode, FolderNode, sharingTypes } from "@/connect";
+import {
+  type driveLocations,
+  type FileNode,
+  type FolderNode,
+  type sharingTypes,
+} from "#connect";
 
 export type SharingTypes = typeof sharingTypes;
 export type SharingType = SharingTypes[number];

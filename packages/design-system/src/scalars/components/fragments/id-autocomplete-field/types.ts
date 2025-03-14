@@ -1,4 +1,4 @@
-import type { IconName } from "@/powerhouse/components/icon";
+import type { IconName } from "#powerhouse";
 
 export interface IdAutocompleteBaseProps {
   onChange?: (value: string) => void;
@@ -52,7 +52,10 @@ export type IdAutocompleteProps = IdAutocompleteBaseProps &
 export interface IdAutocompleteOption {
   icon?: IconName | React.ReactElement;
   title?: string;
-  path?: string;
+  path?: {
+    text: string;
+    url?: string;
+  };
   value: string;
   description?: string;
 }

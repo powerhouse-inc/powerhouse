@@ -1,14 +1,13 @@
-import { IDocumentDriveServer } from "document-drive";
-import { DocumentDriveDocument } from "document-model-libs/document-drive";
+import { DocumentDriveDocument, IDocumentDriveServer } from "document-drive";
 
+import { IAnalyticsStore } from "#processors/analytics-processor.js";
+import { isProcessorClass, ProcessorClass } from "#processors/processor.js";
 import {
   Db,
   IProcessor,
   IProcessorManager,
   ProcessorSetupArgs,
-} from "../types";
-import { IAnalyticsStore } from "./analytics-processor";
-import { isProcessorClass, ProcessorClass } from "./processor";
+} from "#types.js";
 
 export class ProcessorManager implements IProcessorManager {
   private reactor: IDocumentDriveServer;

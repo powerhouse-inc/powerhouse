@@ -1,16 +1,16 @@
 "use client";
 
-import { cn } from "@/scalars/lib";
-import { Icon } from "@/powerhouse";
-import { SidebarContentArea } from "./subcomponents/sidebar-content-area";
-import { SidebarHeader } from "./subcomponents/sidebar-header";
-import { SidebarNode } from "./types";
-import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area";
-import { SidebarSearch } from "./subcomponents/sidebar-search";
-import { useSidebar } from "./subcomponents/sidebar-provider";
-import { useSidebarResize } from "./use-sidebar-resize";
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
 import { useCallback, useEffect } from "react";
-import { triggerEvent } from "./utils";
+import { SidebarContentArea } from "./subcomponents/sidebar-content-area.js";
+import { SidebarHeader } from "./subcomponents/sidebar-header.js";
+import { SidebarPinningArea } from "./subcomponents/sidebar-pinning-area.js";
+import { useSidebar } from "./subcomponents/sidebar-provider/index.js";
+import { SidebarSearch } from "./subcomponents/sidebar-search/index.js";
+import { type SidebarNode } from "./types.js";
+import { useSidebarResize } from "./use-sidebar-resize.js";
+import { triggerEvent } from "./utils.js";
 
 export interface SidebarProps {
   /**
@@ -144,7 +144,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
     // openLevel is intentionally omitted from dependencies
     // to prevent infinite loop as it may change on each render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultLevel]);
 
   const handleActiveNodeChange = useCallback(

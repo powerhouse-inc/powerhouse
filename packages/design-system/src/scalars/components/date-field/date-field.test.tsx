@@ -1,9 +1,9 @@
-import { renderWithForm } from "@/scalars/lib/testing";
+import { renderWithForm } from "#scalars";
 import { screen } from "@testing-library/react";
-import { DateField } from "./date-field";
-import userEvent from "@testing-library/user-event";
+import { userEvent } from "@testing-library/user-event";
+import { DateField } from "./date-field.js";
 
-vi.mock("@/powerhouse/components/icon/icon", () => ({
+vi.mock("#powerhouse", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (
     <div data-testid={`mock-icon-${name}`} className={className}>
       Mock Icon: {name}

@@ -1,82 +1,76 @@
 {
   "name": "document-drive",
-  "version": "1.16.3",
+  "version": "1.26.0",
   "license": "AGPL-3.0-only",
   "type": "module",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./server": "./src/server/index.ts",
-    "./storage": "./src/storage/index.ts",
-    "./storage/browser": "./src/storage/browser.ts",
-    "./storage/filesystem": "./src/storage/filesystem.ts",
-    "./storage/memory": "./src/storage/memory.ts",
-    "./storage/prisma": "./src/storage/prisma.ts",
-    "./cache/redis": "./src/cache/redis.ts",
-    "./cache/memory": "./src/cache/memory.ts",
-    "./queue/redis": "./src/queue/redis.ts",
-    "./queue/base": "./src/queue/base.ts",
-    "./utils": "./src/utils/index.ts",
-    "./utils/graphql": "./src/utils/graphql.ts",
-    "./utils/migrations": "./src/utils/migrations.ts",
-    "./logger": "./src/utils/logger.ts"
+    ".": "./dist/index.js",
+    "./storage/prisma": "./dist/src/storage/prisma/index.js",
+    "./*": "./dist/src/*.js"
+  },
+  "imports": {
+    "#*": "./dist/src/*.js"
   },
   "files": [
-    "./src"
+    "./dist"
   ],
+  "sideEffects": false,
   "scripts": {
-    "check-types": "tsc --build",
-    "postlint": "npm run check-types",
+    "build:tsc": "tsc --build",
+    "build:tsc:watch": "tsc --build --watch",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
+    "build": "tsc --build",
+    "postbuild": "npm run copy-prisma",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
-    "test:watch": "vitest watch",
+    "test:flaky": "vitest run --coverage test/flaky",
+    "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
+    "bench": "vitest bench",
     "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
-  },
-  "peerDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
-    "change-case": "^5.4.4",
-    "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
-    "graphql": "^16.9.0",
-    "graphql-request": "^6.1.0",
-    "json-stringify-deterministic": "^1.0.12",
-    "nanoevents": "^9.0.0",
-    "prisma": "^5.18.0",
-    "sanitize-filename": "^1.6.3"
+    "clean:node_modules": "rimraf node_modules",
+    "migrate": "prisma generate && prisma db push",
+    "copy-prisma": "copyfiles prisma/schema.prisma dist/",
+    "prebuild:tsc": "prisma generate --no-hints",
+    "prebuild": "prisma generate --no-hints"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
-    "@prisma/client": "^5.18.0",
-    "exponential-backoff": "^3.1.1",
+    "@prisma/client": "5.17.0",
     "localforage": "^1.10.0",
     "redis": "^4.6.15",
     "sequelize": "^6.37.3",
     "sqlite3": "^5.1.7"
   },
-  "devDependencies": {
+  "dependencies": {
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
-    "@types/node": "^20.14.11",
-    "@types/uuid": "^9.0.8",
     "change-case": "^5.4.4",
     "document-model": "workspace:*",
-    "document-model-libs": "workspace:*",
     "exponential-backoff": "^3.1.1",
-    "fake-indexeddb": "^5.0.2",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
     "localforage": "^1.10.0",
-    "msw": "^2.3.1",
     "nanoevents": "^9.0.0",
-    "prisma": "^5.18.0",
+    "prisma": "5.17.0",
     "sanitize-filename": "^1.6.3",
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
-    "vitest-fetch-mock": "^0.3.0",
+    "uuid": "^11.0.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "@types/uuid": "^9.0.8",
+    "copyfiles": "^2.4.1",
+    "fake-indexeddb": "^5.0.2",
+    "msw": "^2.3.1",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.7",
+    "vitest-fetch-mock": "^0.4.5",
     "webdriverio": "^9.0.9"
   }
 }

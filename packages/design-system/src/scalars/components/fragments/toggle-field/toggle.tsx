@@ -1,6 +1,6 @@
-import * as React from "react";
 import * as SwitchPrimitives from "@radix-ui/react-switch";
-import { cn } from "@/scalars/lib/utils";
+import * as React from "react";
+import { cn } from "../../../lib/utils.js";
 
 interface ToggleProps {
   disabled?: boolean;
@@ -31,7 +31,7 @@ const Toggle = React.forwardRef<
       disabled={disabled}
       onCheckedChange={onChange}
       className={cn(
-        "focus-visible:ring-ring focus-visible:ring-offset-background peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]",
+        "focus-visible:ring-ring focus-visible:ring-offset-background peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]",
         disabled &&
           "cursor-not-allowed data-[state=checked]:bg-[#C5C7C7] data-[state=unchecked]:bg-[#EFEFEF] dark:data-[state=checked]:bg-[#404446] dark:data-[state=unchecked]:bg-[#343839]",
         className,

@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai';
-import { atomWithStorageCallback } from './utils';
+import { atomWithStorageCallback } from './utils.js';
 
 const THEMES = ['light', 'dark'] as const;
 
@@ -18,5 +18,5 @@ export const themeAtom = atomWithStorageCallback<Theme>(
 export const useTheme = () => useAtomValue(themeAtom);
 
 export function isTheme(theme: string): theme is Theme {
-    return THEMES.includes(theme);
+    return THEMES.includes(theme as Theme);
 }

@@ -1,17 +1,17 @@
+import { format } from "date-fns";
+import { type DateFieldProps } from "../date-field/date-field.js";
+import { type DateFieldValue } from "../date-field/types.js";
 import {
   formatDateToValidCalendarDateFormat,
   getDateFromValue,
   splitIso8601DateTime,
-} from "../date-field/utils";
-import { DateFieldProps } from "../date-field/date-field";
+} from "../date-field/utils.js";
 import {
   getDateFormat,
   isDateFormatAllowed,
   isValidTime,
   normalizeMonthFormat,
-} from "./utils";
-import { DateFieldValue } from "../date-field/types";
-import { format } from "date-fns";
+} from "./utils.js";
 
 export const dateTimeFieldValidations =
   ({ dateFormat, minDate, maxDate }: DateFieldProps) =>

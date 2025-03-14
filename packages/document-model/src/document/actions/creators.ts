@@ -1,13 +1,24 @@
-import { ExtendedState, OperationScope, z } from "../types";
-import { createAction } from "../utils/base";
 import {
-  LoadStateAction,
-  PruneAction,
-  RedoAction,
-  SetNameAction,
-  UndoAction,
-  NOOPAction,
-} from "./types";
+  LoadStateActionInputSchema,
+  PruneActionInputSchema,
+  RedoActionInputSchema,
+  SetNameActionInputSchema,
+  UndoActionInputSchema,
+} from "../schema/zod.js";
+import {
+  type DefaultAction,
+  type ExtendedState,
+  type OperationScope,
+} from "../types.js";
+import { createAction } from "../utils/base.js";
+import {
+  type LoadStateAction,
+  type NOOPAction,
+  type PruneAction,
+  type RedoAction,
+  type SetNameAction,
+  type UndoAction,
+} from "./types.js";
 
 /**
  * Changes the name of the document.
@@ -20,7 +31,7 @@ export const setName = (name: string) =>
     "SET_NAME",
     name,
     undefined,
-    z.SetNameActionInputSchema,
+    SetNameActionInputSchema,
     undefined,
   );
 
@@ -35,7 +46,7 @@ export const undo = (skip = 1, scope: OperationScope = "global") =>
     "UNDO",
     skip,
     undefined,
-    z.UndoActionInputSchema,
+    UndoActionInputSchema,
     scope,
   );
 
@@ -50,7 +61,7 @@ export const redo = (count = 1, scope: OperationScope = "global") =>
     "REDO",
     count,
     undefined,
-    z.RedoActionInputSchema,
+    RedoActionInputSchema,
     scope,
   );
 
@@ -74,7 +85,7 @@ export const prune = (
     "PRUNE",
     { start, end },
     undefined,
-    z.PruneActionInputSchema,
+    PruneActionInputSchema,
     scope,
   );
 
@@ -96,8 +107,18 @@ export const loadState = <S, T>(
     "LOAD_STATE",
     { state, operations },
     undefined,
-    z.LoadStateActionInputSchema,
+    LoadStateActionInputSchema,
   );
 
 export const noop = (scope: OperationScope = "global") =>
-  createAction<NOOPAction>("NOOP", {}, undefined, undefined, scope);
+  createAction<NOOPAction>("NOOP", undefined, undefined, undefined, scope);
+
+export const actions = {
+  setName,
+  undo,
+  redo,
+  prune,
+  loadState,
+  noop,
+} as unknown as Record<string, (input: any) => DefaultAction>;
+// TODO improve base actions type

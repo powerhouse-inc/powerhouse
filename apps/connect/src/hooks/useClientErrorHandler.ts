@@ -1,13 +1,13 @@
 import { LOCAL } from '@powerhousedao/design-system';
-import { PullResponderTrigger } from 'document-drive';
 import {
-    PullResponderTriggerData,
-    Trigger,
-} from 'document-model-libs/document-drive';
+    logger,
+    type PullResponderTrigger,
+    type PullResponderTriggerData,
+    type Trigger,
+} from 'document-drive';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { logger } from 'src/services/logger';
-import { useDocumentDriveServer } from './useDocumentDriveServer';
-import { useSwitchboard } from './useSwitchboard';
+import { useDocumentDriveServer } from './useDocumentDriveServer.js';
+import { useSwitchboard } from './useSwitchboard.js';
 
 export type ClientErrorHandler = {
     strandsErrorHandler: (

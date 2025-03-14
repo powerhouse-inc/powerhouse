@@ -1,11 +1,9 @@
 import {
-  EditorUndoRedoButtons,
-  EditorUndoRedoButtonsProps,
-} from "@/connect/components/editor-undo-redo-buttons";
-import {
   EditorActionButtons,
-  EditorActionButtonsProps,
-} from "@/connect/components/editor-action-buttons";
+  EditorUndoRedoButtons,
+  type EditorActionButtonsProps,
+  type EditorUndoRedoButtonsProps,
+} from "#connect";
 import { twMerge } from "tailwind-merge";
 
 export type DocumentToolbarProps = {

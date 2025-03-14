@@ -1,9 +1,8 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext"
+    "outDir": "./dist"
   },
-  "include": ["src/**/*", "*.config.ts"]
+  "include": ["**/*"],
+  "references": [{ "path": "../../packages/codegen" }]
 }

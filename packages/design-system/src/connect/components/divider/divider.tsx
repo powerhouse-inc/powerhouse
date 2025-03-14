@@ -1,4 +1,4 @@
-import { DivProps } from "@/powerhouse";
+import { type DivProps } from "#powerhouse";
 import { twMerge } from "tailwind-merge";
 
 export function Divider(props: DivProps) {
