@@ -38,14 +38,14 @@
         "lint:fix": "eslint --fix .",
         "lint:nx": "eslint --quiet --fix .",
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
+        "dev": "vite -c vite.renderer.config.mts",
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
-        "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts --debug",
+        "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
         "cy:open": "cypress open",
-        "build:service-worker": "tsc --build ./tsconfig.sw.json",
-        "install:packages": "node ./scripts/install-packages.js"
+        "build:service-worker": "tsc --build ./tsconfig.sw.json"
     },
     "devDependencies": {
         "@electron-forge/cli": "^6.1.1",

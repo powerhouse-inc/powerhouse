@@ -24,7 +24,7 @@ const hasChanges = () => {
     return output.trim().length > 0;
   } catch (error) {
     console.error("Error checking git status:", error);
-    return true;
+    return false;
   }
 };
 

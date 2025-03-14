@@ -7,7 +7,7 @@ import {
 import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import React from "react";
-import mockPackageJson from "../../../utils/mocks/mock-package-json.json" with { type: "json" };
+import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
 import { About } from "./about.js";
 import { DangerZone } from "./danger-zone.js";
 import { DefaultEditor } from "./default-editor.js";

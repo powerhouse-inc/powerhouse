@@ -1,11 +1,23 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
-import react from '@vitejs/plugin-react'
+
+const srcPath = fileURLToPath(new URL("./dist/src", import.meta.url));
 
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'happy-dom',
-    setupFiles: ['./setupTests.js']
+    environment: "happy-dom",
+    setupFiles: ["./setupTests.js"],
   },
-  plugins: [react()],
+  resolve: {
+    alias: {
+      "#assets": path.join(srcPath, "assets"),
+      "#connect": path.join(srcPath, "connect"),
+      "#powerhouse": path.join(srcPath, "powerhouse"),
+      "#scalars": path.join(srcPath, "scalars"),
+      "#rwa": path.join(srcPath, "rwa"),
+      "#services": path.join(srcPath, "services"),
+    },
+  },
 });

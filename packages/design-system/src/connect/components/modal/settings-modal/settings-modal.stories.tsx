@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ClearStorageSettingsRow } from "./clear-storage-row.js";
 import { DependencyVersions } from "./dependency-versions/index.js";
-import mockPackageJson from "./dependency-versions/mock-package-json.json" with { type: "json" };
+import mockPackageJson from "./dependency-versions/mock-package-json.json";
 import { DocumentSelectSettingsRow } from "./document-select-row.js";
 import { SettingsModalOld } from "./settings-modal.js";
 

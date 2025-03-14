@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { Sidebar } from "./sidebar.js";
 import { Icon } from "#powerhouse";
-import { SidebarProvider } from "./subcomponents/sidebar-provider.js";
-import mockedTree from "./mocked_tree.json" with { type: "json" };
+import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import mockedTree from "./mocked_tree.json";
+import { Sidebar } from "./sidebar.js";
+import { SidebarProvider } from "./subcomponents/sidebar-provider.js";
 import { type SidebarNode } from "./types.js";
 
 /**
