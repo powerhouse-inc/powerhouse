@@ -25,6 +25,10 @@ jobs:
     environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
+      - name: Checkout
+        uses: actions/checkout@v2
       - uses: dorny/paths-filter@v3
         id: changes
         with:
@@ -32,12 +36,6 @@ jobs:
             src:
               - 'apps/connect/**'
               - 'packages/**'
-      - name: Set up heroku
-        if: steps.changes.outputs.src == 'true'
-        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
-      - name: Checkout
-        if: steps.changes.outputs.src == 'true'
-        uses: actions/checkout@v2
       - name: Build, Push and Release APP to Heroku. # Your custom step name
         if: steps.changes.outputs.src == 'true'
         uses: gonuit/heroku-docker-deploy@v1.3.3
@@ -61,18 +59,16 @@ jobs:
     environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
             src:
               - 'apps/switchboard/**' 
-      - name: Checkout
-        if: steps.changes.outputs.src == 'true'
-        uses: actions/checkout@v2
-      - name: Set up heroku
-        if: steps.changes.outputs.src == 'true'
-        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Build, Push and Release API to Heroku. # Your custom step name
         if: steps.changes.outputs.src == 'true'
         uses: gonuit/heroku-docker-deploy@v1.3.3
