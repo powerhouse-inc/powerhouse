@@ -80,10 +80,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
           title={option.title}
           path={option.path}
           value={
-            displayProps?.asPlaceholder &&
-            option.value === "value not available"
-              ? "did not available"
-              : option.value
+            displayProps?.asPlaceholder ? "did not available" : option.value
           }
           description={option.description}
           placeholderIcon="Person"

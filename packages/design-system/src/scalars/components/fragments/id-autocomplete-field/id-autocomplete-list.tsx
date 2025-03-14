@@ -41,7 +41,9 @@ export const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
   const defaultOption: IdAutocompleteOption = {
     value: "value not available",
     title: "Title not available",
-    path: "Path not available",
+    path: {
+      text: "Path not available",
+    },
     description: "Description not available",
   };
 

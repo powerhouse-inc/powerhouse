@@ -74,11 +74,13 @@ describe("TimePickerField", () => {
     // Now check for the minute values
     const minutes = ["00", "15", "30", "45"];
     for (const minute of minutes) {
-      const minuteElement = await screen.findByText(minute);
-      expect(minuteElement).toBeInTheDocument();
+      // Use findAllByText instead of findByText since there are multiple elements with the same text
+      const minuteElements = await screen.findAllByText(minute);
+      expect(minuteElements.length).toBeGreaterThan(0);
+      expect(minuteElements[0]).toBeInTheDocument();
     }
 
-    // // Verify that intermediate values are not present
+    // Verify that intermediate values are not present
     ["13", "20", "25", "35", "40", "50", "55"].forEach((minute) => {
       expect(screen.queryByText(minute)).not.toBeInTheDocument();
     });
@@ -105,10 +107,11 @@ describe("TimePickerField", () => {
     // Now check for the minute values
     const minutes = ["00", "30"];
     for (const minute of minutes) {
-      const minuteElement = await screen.findByText(minute);
-      expect(minuteElement).toBeInTheDocument();
+      const minuteElements = await screen.findAllByText(minute);
+      expect(minuteElements.length).toBeGreaterThan(0);
+      expect(minuteElements[0]).toBeInTheDocument();
     }
-    // // Verify that other values are not present
+    // Verify that other values are not present
     ["15", "45"].forEach((minute) => {
       expect(screen.queryByText(minute)).not.toBeInTheDocument();
     });
@@ -133,11 +136,64 @@ describe("TimePickerField", () => {
     expect(popoverContent).toBeVisible();
 
     const select = await screen.findByRole("combobox");
-
     expect(select).toBeDisabled();
-    const expectedTimezone = screen.getByText((content) => {
-      return content.includes("America/New York") && content.includes("(");
+
+    // Use a more flexible approach to find the timezone text
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("New York") && content.includes("(");
     });
-    expect(expectedTimezone).toBeInTheDocument();
+    expect(timezoneText).toBeInTheDocument();
+  });
+
+  it("should display continent when includeContinent prop is true", async () => {
+    const user = userEvent.setup();
+    const timeZoneValue = "America/New_York";
+
+    renderWithForm(
+      <TimePickerField
+        name="test-time"
+        label="Test Label"
+        timeZone={timeZoneValue}
+        includeContinent
+      />,
+    );
+
+    const clockButton = screen.getByRole("button");
+    await user.click(clockButton);
+
+    const popoverContent = await screen.findByRole("dialog");
+    expect(popoverContent).toBeVisible();
+
+    // Verify that the timezone includes the continent (America)
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("America") && content.includes("New York");
+    });
+    expect(timezoneText).toBeInTheDocument();
+  });
+
+  it("should not display continent when includeContinent prop is false", async () => {
+    const user = userEvent.setup();
+    const timeZoneValue = "America/New_York";
+
+    renderWithForm(
+      <TimePickerField
+        name="test-time"
+        label="Test Label"
+        timeZone={timeZoneValue}
+        includeContinent={false}
+      />,
+    );
+
+    const clockButton = screen.getByRole("button");
+    await user.click(clockButton);
+
+    const popoverContent = await screen.findByRole("dialog");
+    expect(popoverContent).toBeVisible();
+
+    // Verify that the timezone excludes the continent (America)
+    const timezoneText = screen.getByText((content) => {
+      return content.includes("New York") && !content.includes("America");
+    });
+    expect(timezoneText).toBeInTheDocument();
   });
 });

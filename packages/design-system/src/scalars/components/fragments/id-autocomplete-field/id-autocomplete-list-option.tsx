@@ -89,7 +89,7 @@ export const IdAutocompleteListOption: React.FC<
   variant = "withValue",
   icon,
   title = "Title not available",
-  path = "Path not available",
+  path = { text: "Path not available" },
   value,
   description = "Description not available",
   asPlaceholder,
@@ -133,16 +133,29 @@ export const IdAutocompleteListOption: React.FC<
           >
             {title}
           </span>
-          <span
-            className={cn(
-              "truncate text-xs leading-5",
-              asPlaceholder
-                ? "text-gray-400 dark:text-gray-700"
-                : "text-gray-500 dark:text-gray-600",
-            )}
-          >
-            {path}
-          </span>
+          {!showValue && path.url ? (
+            <a
+              href={path.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "truncate text-xs leading-5 text-gray-500 hover:underline dark:text-gray-600",
+              )}
+            >
+              {path.text}
+            </a>
+          ) : (
+            <span
+              className={cn(
+                "truncate text-xs leading-5",
+                asPlaceholder
+                  ? "text-gray-400 dark:text-gray-700"
+                  : "text-gray-500 dark:text-gray-600",
+              )}
+            >
+              {path.text}
+            </span>
+          )}
         </div>
         {asPlaceholder === false && handleFetchSelectedOption && (
           <ReloadButton

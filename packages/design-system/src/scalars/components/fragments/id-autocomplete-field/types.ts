@@ -52,7 +52,10 @@ export type IdAutocompleteProps = IdAutocompleteBaseProps &
 export interface IdAutocompleteOption {
   icon?: IconName | React.ReactElement;
   title?: string;
-  path?: string;
+  path?: {
+    text: string;
+    url?: string;
+  };
   value: string;
   description?: string;
 }

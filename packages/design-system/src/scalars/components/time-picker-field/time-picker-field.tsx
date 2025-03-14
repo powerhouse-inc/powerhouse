@@ -34,6 +34,7 @@ export interface TimePickerFieldProps
   timeIntervals?: number;
   showTimezoneSelect?: boolean;
   timeZone?: string;
+  includeContinent?: boolean;
 }
 
 const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
@@ -58,6 +59,7 @@ const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       showTimezoneSelect,
       timeIntervals,
       timeZone,
+      includeContinent,
     },
     ref,
   ) => {
@@ -91,6 +93,7 @@ const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       timeIntervals,
       timeZone,
       showTimezoneSelect,
+      includeContinent,
     });
 
     return (

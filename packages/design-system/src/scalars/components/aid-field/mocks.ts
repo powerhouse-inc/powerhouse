@@ -5,175 +5,250 @@ export const mockedOptions: IdAutocompleteOption[] = [
   {
     icon: "Person",
     title: "Agent A",
-    path: "agents/agent-a",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e8a",
     description: "Agent A description",
   },
   {
     icon: "Person",
     title: "Agent B",
-    path: "agents/agent-b",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
     description: "Agent B description",
   },
   {
     icon: "Person",
     title: "Agent C",
-    path: "agents/agent-c",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+    },
     value: "did:ethr:0x89:0xb9c5714089478a327f09197987f16f9e5d936e8a",
     description: "Agent C description",
   },
   {
     icon: "Person",
     title: "Lucas Martinez",
-    path: "agents/lucas-martinez",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8b",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8b",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e8b",
     description: "UX Designer",
   },
   {
     icon: "Person",
     title: "Oliver Brown",
-    path: "agents/oliver-brown",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8c",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8c",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936e8c",
     description: "DevOps Engineer",
   },
   {
     icon: "Person",
     title: "Isabella Garcia",
-    path: "agents/isabella-garcia",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8d",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8d",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e8d",
     description: "Frontend Developer",
   },
   {
     icon: "Person",
     title: "William Taylor",
-    path: "agents/william-taylor",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8e",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8e",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e8e",
     description: "Backend Developer",
   },
   {
     icon: "Person",
     title: "Ava Johnson",
-    path: "agents/ava-johnson",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8f",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8f",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936e8f",
     description: "Quality Assurance Engineer",
   },
   {
     icon: "Person",
     title: "Noah Anderson",
-    path: "agents/noah-anderson",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9a",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9a",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e9a",
     description: "Systems Architect",
   },
   {
     icon: "Person",
     title: "Mia Patel",
-    path: "agents/mia-patel",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9b",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9b",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936e9b",
     description: "Security Analyst",
   },
   {
     icon: "Person",
     title: "Ethan Wright",
-    path: "agents/ethan-wright",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9c",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9c",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e9c",
     description: "Cloud Engineer",
   },
   {
     icon: "Person",
     title: "Charlotte Lee",
-    path: "agents/charlotte-lee",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9d",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9d",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e9d",
     description: "Project Manager",
   },
   {
     icon: "Person",
     title: "Alexander Kim",
-    path: "agents/alexander-kim",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9e",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9e",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936e9e",
     description: "Machine Learning Engineer",
   },
   {
     icon: "Person",
     title: "Sofia Rodriguez",
-    path: "agents/sofia-rodriguez",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9f",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e9f",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e9f",
     description: "Full Stack Developer",
   },
   {
     icon: "Person",
     title: "Daniel Smith",
-    path: "agents/daniel-smith",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936eaa",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936eaa",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936eaa",
     description: "Mobile Developer",
   },
   {
     icon: "Person",
     title: "Victoria White",
-    path: "agents/victoria-white",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936eab",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936eab",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936eab",
     description: "Business Analyst",
   },
   {
     icon: "Person",
     title: "Henry Davis",
-    path: "agents/henry-davis",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936eac",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936eac",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936eac",
     description: "Technical Lead",
   },
   {
     icon: "Person",
     title: "Zoe Miller",
-    path: "agents/zoe-miller",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936ead",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936ead",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936ead",
     description: "UI Designer",
   },
   {
     icon: "Person",
     title: "Benjamin Clark",
-    path: "agents/benjamin-clark",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936eae",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936eae",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936eae",
     description: "Infrastructure Engineer",
   },
   {
     icon: "Person",
     title: "Lily Zhang",
-    path: "agents/lily-zhang",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936eaf",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936eaf",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936eaf",
     description: "Software Developer",
   },
   {
     icon: "Person",
     title: "Sebastian Moore",
-    path: "agents/sebastian-moore",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936eba",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936eba",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936eba",
     description: "Database Administrator",
   },
   {
     icon: "Person",
     title: "Aria Thomas",
-    path: "agents/aria-thomas",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936ebb",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936ebb",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936ebb",
     description: "Product Designer",
   },
   {
     icon: "Person",
     title: "Jack Wilson",
-    path: "agents/jack-wilson",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936ebc",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936ebc",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936ebc",
     description: "Solutions Architect",
   },
   {
     icon: "Person",
     title: "Luna Harris",
-    path: "agents/luna-harris",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936ebd",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936ebd",
+    },
     value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936ebd",
     description: "Network Engineer",
   },
   {
     icon: "Person",
     title: "Owen Martinez",
-    path: "agents/owen-martinez",
+    path: {
+      text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936ebe",
+      url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936ebe",
+    },
     value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936ebe",
     description: "Security Engineer",
   },
@@ -199,7 +274,7 @@ const filterOptions = (
 
     return (
       opt.title?.toLowerCase().includes(normalizedInput) ||
-      opt.path?.toLowerCase().includes(normalizedInput) ||
+      opt.path?.text.toLowerCase().includes(normalizedInput) ||
       opt.value.toLowerCase().includes(normalizedInput) ||
       opt.description?.toLowerCase().includes(normalizedInput)
     );

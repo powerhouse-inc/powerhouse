@@ -193,21 +193,44 @@ export const getOffsetToDisplay = (timeZone?: string) => {
 };
 
 /**
- * Get a list of all available timezone options formatted for display
- * @returns An array of timezone options with formatted labels
+ * Gets a list of all available timezone options formatted for display
+ * @param includeContinent - Optional boolean to control whether continent names are included in labels
+ *                          true: "America/New York", false: "New York" (defaults to false)
+ * @returns {Array<{value: string, label: string}>} An array of timezone options
+ *
  * @example
- * // Returns array of objects like:
+ * // With includeContinent = true
+ * getOptions(true)
+ * // Returns:
  * [
  *   { value: "America/New_York", label: "(UTC-04:00) America/New York" },
- *   { value: "Europe/London", label: "(UTC+01:00) Europe/London" },
- *   { value: "Asia/Tokyo", label: "(UTC+09:00) Asia/Tokyo" }
+ *   { value: "Europe/London", label: "(UTC+01:00) Europe/London" }
  * ]
+ *
+ * // With includeContinent = false
+ * getOptions(false)
+ * // Returns:
+ * [
+ *   { value: "America/New_York", label: "(UTC-04:00) New York" },
+ *   { value: "Europe/London", label: "(UTC+01:00) London" }
+ * ]
+ *
+ * @description
+ * This function:
+ * 1. Gets all supported timezone identifiers from the system
+ * 2. Formats each timezone with its UTC offset
+ * 3. Optionally includes or excludes the continent name in the label
+ * 4. Returns an array of objects with value (timezone identifier) and label (formatted display string)
  */
-export const getOptions = () => {
+export const getOptions = (includeContinent = false) => {
   const timeZones = Intl.supportedValuesOf("timeZone");
   return timeZones.map((timeZone) => {
     const offset = getOffsetToDisplay(timeZone);
-    const label = `(${offset}) ${timeZone.replace(/_/g, " ")}`;
+    const label = `(${offset}) ${
+      includeContinent
+        ? timeZone.replace(/_/g, " ")
+        : timeZone.split("/").pop()?.replace(/_/g, " ")
+    }`;
     return { value: timeZone, label };
   });
 };
