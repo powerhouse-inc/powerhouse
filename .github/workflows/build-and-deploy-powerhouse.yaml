@@ -43,7 +43,7 @@ jobs:
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME_CONNECT }}
+          heroku_app_name: ${{ vars.HEROKU_APP_NAME_CONNECT }}
           dockerfile_directory: ./
           dockerfile_name: apps/connect/Dockerfile
           docker_options: >-
@@ -76,7 +76,7 @@ jobs:
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_SWITCHBOARD }}
+          heroku_app_name: ${{ vars.HEROKU_APP_NAME_SWITCHBOARD }}
           dockerfile_directory: .
           dockerfile_name: apps/switchboard/Dockerfile
           process_type: web

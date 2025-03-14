@@ -26,8 +26,10 @@
   "exclude": [
     "node_modules",
     "dist",
+    "**/docs",
     "**/*.stories.tsx",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "**/*.test.tsx.snap"
   ]
 }

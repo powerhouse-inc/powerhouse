@@ -782,6 +782,12 @@ importers:
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../reactor-browser
+      '@tailwindcss/cli':
+        specifier: ^4.0.9
+        version: 4.0.13
+      '@tailwindcss/vite':
+        specifier: ^4.0.9
+        version: 4.0.13(vite@6.2.1(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(tsx@4.19.3)(yaml@2.7.0))
       '@types/node':
         specifier: ^22.10.9
         version: 22.13.10
@@ -826,7 +832,10 @@ importers:
         version: 4.19.3
       uuid:
         specifier: ^11.0.5
-        version: 11.0.5
+        version: 11.1.0
+      vite:
+        specifier: ^6.2.0
+        version: 6.2.1(@types/node@22.13.10)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(tsx@4.19.3)(yaml@2.7.0)
       zod:
         specifier: ^3.24.1
         version: 3.24.2
@@ -10664,7 +10673,6 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
-    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -15813,7 +15821,7 @@ snapshots:
       '@babel/generator': 7.26.9
       '@babel/parser': 7.26.9
       '@babel/template': 7.26.9
-      '@babel/types': 7.26.9
+      '@babel/types': 7.26.10
       debug: 4.4.0(supports-color@5.5.0)
       globals: 11.12.0
     transitivePeerDependencies:
@@ -18288,7 +18296,7 @@ snapshots:
       '@noble/hashes': 1.7.1
       '@scure/base': 1.2.4
       '@types/debug': 4.1.12
-      debug: 4.4.0
+      debug: 4.4.0(supports-color@5.5.0)
       pony-cause: 2.1.11
       semver: 7.7.0
       uuid: 9.0.1
@@ -18302,7 +18310,7 @@ snapshots:
       '@noble/hashes': 1.7.1
       '@scure/base': 1.2.4
       '@types/debug': 4.1.12
-      debug: 4.4.0
+      debug: 4.4.0(supports-color@5.5.0)
       pony-cause: 2.1.11
       semver: 7.7.0
       uuid: 9.0.1
@@ -24614,10 +24622,6 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
-  debug@4.4.0:
-    dependencies:
-      ms: 2.1.3
-
   debug@4.4.0(supports-color@5.5.0):
     dependencies:
       ms: 2.1.3
@@ -26759,7 +26763,7 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.0
+      debug: 4.4.0(supports-color@5.5.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -26785,7 +26789,7 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.4.0
+      debug: 4.4.0(supports-color@5.5.0)
     transitivePeerDependencies:
       - supports-color
 

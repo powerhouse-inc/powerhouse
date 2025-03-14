@@ -1,5 +1,6 @@
-import { withThemeByDataAttribute } from "@storybook/addon-themes";
+import { withThemeByClassName } from "@storybook/addon-themes";
 import type { Preview, ReactRenderer } from "@storybook/react";
+import "../dist/style.css";
 
 const preview: Preview = {
   parameters: {
@@ -29,13 +30,12 @@ const preview: Preview = {
     },
   },
   decorators: [
-    withThemeByDataAttribute<ReactRenderer>({
+    withThemeByClassName<ReactRenderer>({
       themes: {
         light: "light",
         dark: "dark",
       },
       defaultTheme: "light",
-      attributeName: "data-mode",
     }),
   ],
 };

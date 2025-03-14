@@ -1,7 +1,7 @@
 import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useCallback, useState } from "react";
-import mockedTree from "./mocked_tree.json" with { type: "json" };
+import mockedTree from "./mocked_tree.json";
 import { Sidebar } from "./sidebar.js";
 import { SidebarProvider } from "./subcomponents/sidebar-provider/index.js";
 import { type SidebarNode } from "./types.js";
