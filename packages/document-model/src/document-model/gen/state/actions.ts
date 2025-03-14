@@ -1,34 +1,34 @@
-import { Action } from "../../../document";
+import { BaseAction } from "../../../document/types.js";
 import {
-  SetStateSchemaInput,
-  SetInitialStateInput,
   AddStateExampleInput,
-  UpdateStateExampleInput,
   DeleteStateExampleInput,
   ReorderStateExamplesInput,
-} from "../types";
+  SetInitialStateInput,
+  SetStateSchemaInput,
+  UpdateStateExampleInput,
+} from "../schema/types.js";
 
-export type SetStateSchemaAction = Action<
+export type SetStateSchemaAction = BaseAction<
   "SET_STATE_SCHEMA",
   SetStateSchemaInput
 >;
-export type SetInitialStateAction = Action<
+export type SetInitialStateAction = BaseAction<
   "SET_INITIAL_STATE",
   SetInitialStateInput
 >;
-export type AddStateExampleAction = Action<
+export type AddStateExampleAction = BaseAction<
   "ADD_STATE_EXAMPLE",
   AddStateExampleInput
 >;
-export type UpdateStateExampleAction = Action<
+export type UpdateStateExampleAction = BaseAction<
   "UPDATE_STATE_EXAMPLE",
   UpdateStateExampleInput
 >;
-export type DeleteStateExampleAction = Action<
+export type DeleteStateExampleAction = BaseAction<
   "DELETE_STATE_EXAMPLE",
   DeleteStateExampleInput
 >;
-export type ReorderStateExamplesAction = Action<
+export type ReorderStateExamplesAction = BaseAction<
   "REORDER_STATE_EXAMPLES",
   ReorderStateExamplesInput
 >;

@@ -1,5 +1,5 @@
-import { tableNames, TableWithForm } from "@/rwa";
-import { AccountsTable } from "../table/accounts";
+import { tableNames, TableWithForm } from "#rwa";
+import { AccountsTable } from "../table/accounts/index.js";
 
 export function OtherTab() {
   return (

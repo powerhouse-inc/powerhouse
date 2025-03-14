@@ -1,11 +1,11 @@
-import { BaseDocumentDriveServer } from "document-drive";
+import { type BaseDocumentDriveServer } from "document-drive";
 import { parse } from "graphql";
 
 export const getDocumentModelTypeDefs = (
   documentDriveServer: BaseDocumentDriveServer,
   typeDefs: string,
 ) => {
-  const documentModels = documentDriveServer.getDocumentModels();
+  const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
   documentModels.forEach(({ documentModel }) => {
     dmSchema += `

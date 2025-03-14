@@ -1,24 +1,26 @@
 import {
   DRIVE,
   FOLDER,
+  mockDriveNodes,
   SUCCESS,
-  UiFolderNode,
+  type UiFolderNode,
+} from "#connect";
+import {
   UiNodesContextProvider,
   useUiNodesContext,
-} from "@/connect";
-import { Meta, StoryObj } from "@storybook/react";
+} from "@powerhousedao/reactor-browser";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { useEffect } from "react";
-import { Breadcrumbs } from ".";
-import { mockDriveNodes } from "@/connect/utils/mocks/ui-drive-node";
+import { Breadcrumbs } from "./index.js";
 
 const meta: Meta<typeof Breadcrumbs> = {
   title: "Connect/Components/Breadcrumbs",
   component: Breadcrumbs,
   decorators: [
-    (Story) => {
+    (Story, { args }) => {
       return (
         <UiNodesContextProvider>
-          <Story />
+          <Story {...args} />
         </UiNodesContextProvider>
       );
     },
@@ -27,14 +29,15 @@ const meta: Meta<typeof Breadcrumbs> = {
 
 export default meta;
 
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<typeof Breadcrumbs>;
 
 export const Default: Story = {
   args: {
-    isAllowedToCreateDocuments: true,
+    createEnabled: true,
   },
   render: function Wrapper(args) {
     const {
+      getNodeById,
       setDriveNodes,
       setSelectedNode,
       selectedNode,
@@ -82,13 +85,19 @@ export const Default: Story = {
       return Promise.resolve();
     }
 
+    const onCreateProp = args.createEnabled
+      ? {
+          onCreate: onAddAndSelectNewFolder,
+        }
+      : {};
+
     return (
       <div className="bg-white p-10">
         <Breadcrumbs
           {...args}
-          onAddAndSelectNewFolder={onAddAndSelectNewFolder}
-          selectedNodePath={selectedNodePath}
-          setSelectedNode={setSelectedNode}
+          breadcrumbs={selectedNodePath}
+          onBreadcrumbSelected={(b) => setSelectedNode(getNodeById(b.id))}
+          {...onCreateProp}
         />
       </div>
     );
@@ -99,6 +108,6 @@ export const NotAllowedToCreateDocuments: Story = {
   ...Default,
   args: {
     ...Default.args,
-    isAllowedToCreateDocuments: false,
+    createEnabled: false,
   },
 };

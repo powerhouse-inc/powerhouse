@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
-import type { ErrorHandling, FieldCommonProps } from "../types";
-import { SelectFieldRaw, withFieldValidation } from "../fragments";
-import type { SelectOption } from "../enum-field/types";
-import type { Currency, CurrencyType } from "./types";
+import type { SelectOption } from "../enum-field/types.js";
+import { SelectFieldRaw } from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import type { Currency, CurrencyType } from "./types.js";
 
 type CurrencyCodeFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -53,8 +54,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
     const options: SelectOption[] = useMemo(() => {
       const favoriteTickers = new Set(favoriteCurrencies);
 
-      return (
-        currencies
+      return currencies
           ?.map((currency) => {
             if (favoriteTickers.has(currency.ticker)) {
               return null;
@@ -72,8 +72,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
               value: currency.ticker,
             };
           })
-          .filter(Boolean) ?? []
-      );
+          .filter(Boolean) as SelectOption[] ?? [];
     }, [
       currencies,
       includeCurrencySymbols,

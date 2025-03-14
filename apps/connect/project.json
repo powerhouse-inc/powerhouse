@@ -1,9 +1,10 @@
 {
-    "targets": {
-      "nx-release-publish": {
-        "options": {
-          "tag": "dev"
+    "release": {
+        "version": {
+            "generatorOptions": {
+                "specifier": "prerelease",
+                "preid": "dev"
+            }
         }
-      }
     }
-  }
+}

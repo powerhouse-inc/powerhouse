@@ -1,14 +1,12 @@
-import { cn } from "../../lib/utils";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@radix-ui/react-tabs";
-import { Icon } from "@/index";
-import { Calendar } from "../date-picker-field/subcomponents/calendar/calendar";
-
-import { WeekStartDayNumber } from "../date-picker-field/types";
-
-import { SelectBaseProps } from "../enum-field/types";
-import { SelectFieldProps } from "../fragments";
-import { Matcher } from "react-day-picker";
-import TimePickerContent from "../time-picker-field/subcomponents/time-picker-content";
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
+import { type Matcher } from "react-day-picker";
+import { Calendar } from "../date-picker-field/subcomponents/calendar/calendar.js";
+import { type WeekStartDayNumber } from "../date-picker-field/types.js";
+import { type SelectBaseProps } from "../enum-field/types.js";
+import { type SelectFieldProps } from "../fragments/index.js";
+import TimePickerContent from "../time-picker-field/subcomponents/time-picker-content.js";
 
 interface DateTimePickerContentProps {
   className?: string;
@@ -73,18 +71,18 @@ const DateTimePickerContent = ({
   timeZone,
 }: DateTimePickerContentProps) => {
   return (
-    <div className={cn("w-full max-w-md mx-auto", className)}>
+    <div className={cn("mx-auto w-full max-w-md", className)}>
       <Tabs value={activeTab} onValueChange={onChangeTabs} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-8 bg-white mb-4">
+        <TabsList className="mb-4 grid h-8 w-full grid-cols-2 bg-white">
           <TabsTrigger
             value="date"
             className={cn(
               "relative transition-all duration-200",
-              "flex items-center justify-center h-full",
+              "flex h-full items-center justify-center",
               "border-b-2",
               activeTab === "date"
-                ? "border-gray-900 text-gray-900 font-medium"
-                : "border-gray-100 text-gray-300 hover:text-gray-300 hover:border-gray-100",
+                ? "border-gray-900 font-medium text-gray-900"
+                : "border-gray-100 text-gray-300 hover:border-gray-100 hover:text-gray-300",
             )}
           >
             <Icon name="CalendarTime" className="h-6 w-6" />
@@ -93,11 +91,11 @@ const DateTimePickerContent = ({
             value="time"
             className={cn(
               "relative transition-all duration-200",
-              "flex items-center justify-center h-full",
+              "flex h-full items-center justify-center",
               "border-b-2",
               activeTab === "time"
-                ? "border-gray-900 text-gray-900 font-medium"
-                : "border-transparent text-gray-300 hover:text-gray-300 hover:border-gray-100",
+                ? "border-gray-900 font-medium text-gray-900"
+                : "border-transparent text-gray-300 hover:border-gray-100 hover:text-gray-300",
             )}
           >
             <Icon name="Clock" className="h-6 w-6" />

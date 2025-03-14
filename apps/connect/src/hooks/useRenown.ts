@@ -1,6 +1,6 @@
+import { type IRenown, type User } from '#services';
 import { atom, useAtom } from 'jotai';
-import { IRenown, User } from 'src/services/renown/types';
-import { useConnectCrypto } from './useConnectCrypto';
+import { useConnectCrypto } from './useConnectCrypto.js';
 
 const renownAtom = atom<Promise<IRenown | undefined> | undefined>(
     window.renown ? Promise.resolve(window.renown) : undefined,
@@ -17,9 +17,7 @@ export function useRenown() {
         if (!did) {
             return;
         }
-        const { initRenownBrowser } = await import(
-            'src/services/renown/browser'
-        );
+        const { initRenownBrowser } = await import('#services');
         const renownBrowser = initRenownBrowser(did);
         const renown: IRenown = {
             user: function (): Promise<User | undefined> {

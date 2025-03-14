@@ -1,8 +1,9 @@
-import { Button, Icon, Modal } from "@/powerhouse";
-import React, { ComponentPropsWithoutRef } from "react";
+import { Button, Icon, Modal } from "#powerhouse";
+import { type ComponentPropsWithoutRef } from "react";
+
 import { twMerge } from "tailwind-merge";
 
-export type SettingsModalProps = ComponentPropsWithoutRef<typeof Modal> & {
+export type SettingsModalOldProps = ComponentPropsWithoutRef<typeof Modal> & {
   readonly title: React.ReactNode;
   readonly body: React.ReactNode;
   readonly cancelLabel: string;
@@ -10,7 +11,7 @@ export type SettingsModalProps = ComponentPropsWithoutRef<typeof Modal> & {
   readonly onSave: () => void;
 };
 
-export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
+export const SettingsModalOld: React.FC<SettingsModalOldProps> = (props) => {
   const {
     body,
     title,

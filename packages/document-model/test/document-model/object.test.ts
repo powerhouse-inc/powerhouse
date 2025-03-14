@@ -1,10 +1,9 @@
-import { DocumentModel } from "../../src/document-model";
-import { hashKey } from "../../src/document/utils";
+import { DocumentModelClass } from "../../src/document-model/gen/object.js";
+import { hashKey } from "../../src/document/utils/base.js";
 
 describe("DocumentModel Class", () => {
   it("should create an empty document", () => {
-    const model = new DocumentModel();
-
+    const model = new DocumentModelClass();
     expect(model.name).toBe("");
     expect(model.documentType).toBe("powerhouse/document-model");
     expect(model.revision).toBe(0);
@@ -25,7 +24,7 @@ describe("DocumentModel Class", () => {
   });
 
   it("should apply basic operations", () => {
-    const model = new DocumentModel();
+    const model = new DocumentModelClass();
 
     model
       .setModelId({ id: "<id>" })
@@ -46,7 +45,7 @@ describe("DocumentModel Class", () => {
   });
 
   it("should apply module operations to the latest specification", () => {
-    const model = new DocumentModel();
+    const model = new DocumentModelClass();
 
     model
       .addModule({ id: hashKey(), name: "state" })
@@ -99,7 +98,7 @@ describe("DocumentModel Class", () => {
   });
 
   it("should apply operations operations to the latest spec", () => {
-    const model = new DocumentModel();
+    const model = new DocumentModelClass();
 
     model
       .addModule({ id: hashKey(), name: "header" })

@@ -1,16 +1,16 @@
 "use client";
 
-import * as React from "react";
 import {
   Content,
   Portal,
   Provider,
   Root,
+  type TooltipContentProps,
+  type TooltipProps as TooltipPrimitiveProps,
   Trigger,
-  TooltipProps as TooltipPrimitiveProps,
-  TooltipContentProps,
 } from "@radix-ui/react-tooltip";
-import { cn } from "@/scalars/lib/utils";
+import * as React from "react";
+import { cn } from "../../../lib/utils.js";
 
 interface TooltipProps
   extends TooltipPrimitiveProps,
@@ -36,13 +36,13 @@ const TooltipContent = React.forwardRef<
         // Padding & Shadow
         "px-3 py-1.5 shadow-md",
         // Animations
-        "animate-in fade-in-0 zoom-in-95",
-        "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+        "data-[state=open]:animate-fade-in data-[state=open]:animate-zoom-in",
+        "data-[state=closed]:animate-fade-out data-[state=closed]:animate-zoom-out",
         // Slide animations based on position
-        "data-[side=bottom]:slide-in-from-top-2",
-        "data-[side=left]:slide-in-from-right-2",
-        "data-[side=right]:slide-in-from-left-2",
-        "data-[side=top]:slide-in-from-bottom-2",
+        "data-[side=bottom]:animate-slide-in-from-top",
+        "data-[side=left]:animate-slide-in-from-right",
+        "data-[side=right]:animate-slide-in-from-left",
+        "data-[side=top]:animate-slide-in-from-bottom",
         className,
       )}
     >
@@ -84,9 +84,10 @@ const Tooltip: React.FC<TooltipProps> = ({
 
 export {
   Tooltip,
-  TooltipProps,
-  Root as TooltipRoot,
-  Trigger as TooltipTrigger,
   TooltipContent,
   Provider as TooltipProvider,
+  Root as TooltipRoot,
+  Trigger as TooltipTrigger,
+  type TooltipProps
 };
+

@@ -1,4 +1,4 @@
-import { Button, mergeClassNameProps } from "@/powerhouse";
+import { Button, mergeClassNameProps } from "#powerhouse";
 import { useState } from "react";
 
 export type CookieInput = {

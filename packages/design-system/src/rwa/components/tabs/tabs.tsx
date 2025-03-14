@@ -1,10 +1,10 @@
-import { EditorActionButtons } from "@/connect";
+import { EditorActionButtons } from "#connect";
 import {
   OtherTab,
   PortfolioTab,
   TransactionsTab,
   useEditorContext,
-} from "@/rwa";
+} from "#rwa";
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
 import { useCallback } from "react";
 
@@ -29,7 +29,7 @@ export function RWATabs() {
         <List className="flex gap-x-2 rounded-xl bg-slate-50 p-1 text-sm font-semibold text-gray-600 outline-none">
           {tabs.map((tab) => (
             <Trigger
-              className="data-[state='active']:tab-shadow data-disabled:cursor-not-allowed data-disabled:text-gray-400 h-7 w-32 rounded-lg  transition duration-300 data-[state='active']:bg-gray-50 data-[state='active']:text-gray-900"
+              className="data-[state='active']:tab-shadow data-disabled:cursor-not-allowed data-disabled:text-gray-400 h-7 w-32 rounded-lg transition duration-300 data-[state='active']:bg-gray-50 data-[state='active']:text-gray-900"
               key={tab}
               value={tab}
             >

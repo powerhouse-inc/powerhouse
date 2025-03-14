@@ -1,8 +1,8 @@
-import connectConfig from 'connect-config';
-import { ServiceWorkerMessage } from 'src/service-worker';
+import connectConfig from '../connect.config.js';
+import { type ServiceWorkerMessage } from '../service-worker.js';
 
 const VERSION_CHECK_INTERVAL =
-    parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL as string) ||
+    parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL) ||
     60 * 60 * 1000; // 1 hour;
 
 const basePath = connectConfig.routerBasename;
@@ -126,5 +126,4 @@ class ServiceWorkerManager {
     }
 }
 
-const serviceWorkerManager = new ServiceWorkerManager();
-export default serviceWorkerManager;
+export const serviceWorkerManager = new ServiceWorkerManager();

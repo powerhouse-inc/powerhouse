@@ -1,16 +1,16 @@
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import {
   AnalyticsQueryEngine,
   IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
 import {
   AnalyticsModel,
-  typedefs,
   AnalyticsResolvers,
+  typedefs,
 } from "@powerhousedao/analytics-engine-graphql";
-import gql from "graphql-tag";
+import { gql } from "graphql-tag";
 import { Subgraph } from "../base/index.js";
 import { Context, SubgraphArgs } from "../index.js";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 
 export class AnalyticsSubgraph extends Subgraph {
   analyticsStore: IAnalyticsStore;

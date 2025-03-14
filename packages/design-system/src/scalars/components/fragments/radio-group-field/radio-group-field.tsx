@@ -1,15 +1,15 @@
+import {
+  cn,
+  FormLabel,
+  FormMessageList,
+  type ErrorHandling,
+  type FieldCommonProps,
+  type RadioGroupProps,
+} from "#scalars";
 import React, { useId } from "react";
-import { cn } from "@/scalars/lib/utils";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import type {
-  FieldCommonProps,
-  ErrorHandling,
-} from "@/scalars/components/types";
-import type { RadioGroupProps } from "@/scalars/components/enum-field/types";
-import { Radio } from "./radio";
-import { RadioGroup } from "./radio-group";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
+import { RadioGroup } from "./radio-group.js";
+import { Radio } from "./radio.js";
 
 type RadioGroupFieldBaseProps = Omit<
   React.HTMLAttributes<HTMLDivElement>,

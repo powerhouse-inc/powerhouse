@@ -1,21 +1,20 @@
-import React, { useId, forwardRef } from "react";
-import { NumberFieldProps, NumberFieldRaw } from "../number-field";
+import { cn, type NumberFieldProps, NumberFieldRaw } from "#scalars";
+import { forwardRef, useId } from "react";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
-  SelectFieldProps,
-  withFieldValidation,
-} from "../fragments";
-import { useAmountField } from "./use-amount-field";
-import { cn } from "@/scalars/lib";
-import type { InputNumberProps } from "../number-field/types";
-import type { AmountValue, AmountFieldPropsGeneric } from "./types";
+  type SelectFieldProps,
+} from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { InputNumberProps } from "../number-field/types.js";
+import type { AmountFieldPropsGeneric, AmountValue } from "./types.js";
+import { useAmountField } from "./use-amount-field.js";
 
-import { validateAmount } from "./amount-field-validations";
-import type { Currency } from "../currency-code-field/types";
-import { CurrencyCodeFieldRaw } from "../currency-code-field/currency-code-field";
+import { CurrencyCodeFieldRaw } from "../currency-code-field/currency-code-field.js";
+import type { Currency } from "../currency-code-field/types.js";
+import { validateAmount } from "./amount-field-validations.js";
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
   Omit<InputNumberProps, "onChange" | "onBlur" | "precision"> & {
@@ -137,7 +136,7 @@ const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                   "rounded-l-md rounded-r-none border border-gray-300",
                   "border-r-[0.5px]",
                   // focus state
-                  "focus:border-r-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
+                  "focus:border-r-none focus:z-10 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                   "focus:outline-none",
 
                   selectProps?.className,
@@ -146,7 +145,7 @@ const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               />
             )}
             <NumberFieldRaw
-              name=""
+              name={""}
               step={step}
               required={required}
               disabled={disabled}
@@ -206,7 +205,7 @@ const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                 "rounded-l-none rounded-r-md border border-gray-300",
                 "border-l-[0.5px]",
                 // focus state
-                "focus:border-l-none focus:ring-1 focus:ring-gray-900  focus:ring-offset-0 focus:z-10",
+                "focus:border-l-none focus:z-10 focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                 "focus:outline-none",
                 selectProps?.className,
               )}

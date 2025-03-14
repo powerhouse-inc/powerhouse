@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { Radio } from "./radio";
-import { RadioGroup } from "./radio-group";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { RadioGroup } from "./radio-group.js";
+import { Radio } from "./radio.js";
 
 describe("RadioGroup Component", () => {
   it("should match snapshot", () => {
@@ -124,7 +124,6 @@ describe("RadioGroup Component", () => {
   it("should apply custom className", () => {
     render(
       // Custom className for testing purposes
-      // eslint-disable-next-line tailwindcss/no-custom-classname
       <RadioGroup name="radio-group" className="custom-class">
         <Radio label="Option 1" value="1" />
       </RadioGroup>,

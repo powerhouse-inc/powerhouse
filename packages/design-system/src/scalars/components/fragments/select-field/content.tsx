@@ -1,18 +1,17 @@
 /* eslint-disable react/jsx-max-depth */
+import { Icon, type IconName } from "#powerhouse";
+import { type SelectProps } from "#scalars";
+import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
+import { cn } from "../../../lib/utils.js";
 import {
-  CommandInput,
-  CommandList,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
-} from "@/scalars/components/fragments/command";
-import { useCommandState } from "cmdk";
-import { cn } from "@/scalars/lib/utils";
-import { SelectProps } from "@/scalars/components/enum-field/types";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
-import { CommandItemList } from "./subcomponents/CommandItemList";
-
+  CommandList,
+} from "../command/command.js";
+import { CommandItemList } from "./subcomponents/CommandItemList.js";
 interface ContentProps {
   searchable?: boolean;
   commandListRef: React.RefObject<HTMLDivElement>;

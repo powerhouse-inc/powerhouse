@@ -1,7 +1,7 @@
-import { Icon, SidebarFooter, SidebarFooterProps } from "@/powerhouse";
+import { Icon, SidebarFooter, type SidebarFooterProps } from "#powerhouse";
 import { twMerge } from "tailwind-merge";
-import { SidebarLogin } from "./sidebar-login";
-import { SidebarUser } from "./sidebar-user";
+import { SidebarLogin } from "./sidebar-login.js";
+import { SidebarUser } from "./sidebar-user.js";
 
 export interface ConnectSidebarFooterProps extends SidebarFooterProps {
   address: `0x${string}` | undefined;
@@ -20,11 +20,11 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     <SidebarFooter
       {...props}
       className={twMerge(
-        "bg-gray-50 p-4 collapsed:px-1 expanding:px-1",
+        "flex flex-col gap-2 border-t border-gray-300 px-2 py-4",
         className,
       )}
     >
-      <div className="collapsed:bg-transparent collapsing:bg-transparent expanding:bg-transparent">
+      <div className="">
         {address ? (
           <SidebarUser address={address} />
         ) : (
@@ -32,11 +32,11 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         )}
       </div>
       <button
-        className="mt-3 flex w-full cursor-pointer gap-3 outline-none collapsed:px-3 expanding:px-3"
+        className="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
         onClick={onClickSettings}
       >
         <Icon className="text-gray-600" name="Settings" />
-        <span className="text-sm font-semibold leading-6 text-gray-800 collapsed:hidden expanding:hidden">
+        <span className="hidden text-sm font-semibold leading-6 text-gray-800">
           Settings
         </span>
       </button>

@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 import type {
-  FieldCommonProps,
   ErrorHandling,
+  FieldCommonProps,
   ValidatorHandler,
-} from "../../types";
+} from "../../types.js";
 
 interface PossibleProps extends FieldCommonProps<unknown>, ErrorHandling {
   pattern?: RegExp;
@@ -73,7 +73,6 @@ export const withFieldValidation = <
         // we should trigger a re-validation after the form is submitted, the errors are shown
         // and the required prop is changed. Other deps can not be added, otherwise a revalidation
         // will be triggered unnecessarily
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [props.required]);
 
       useEffect(() => {
@@ -92,7 +91,6 @@ export const withFieldValidation = <
         setInitialized(true);
         // initialized can not be in the dependencies because it would cause
         // a change of the value on initial render
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [name, value]);
 
       if (value !== undefined && !onChangeProp) {
@@ -121,7 +119,7 @@ export const withFieldValidation = <
             // ignore eslint that flags an error here:
             // React Hook "useCallback" cannot be called inside a callback.
             // React Hooks must be called in a React function component or a custom React Hook function.
-            // eslint-disable-next-line react-hooks/rules-of-hooks
+
             const onBlurCallback = useCallback(
               (event: React.FocusEvent<HTMLInputElement>) => {
                 if (showErrorOnBlur) {
@@ -141,7 +139,7 @@ export const withFieldValidation = <
             // ignore eslint that flags an error here:
             // React Hook "useCallback" cannot be called inside a callback.
             // React Hooks must be called in a React function component or a custom React Hook function.
-            // eslint-disable-next-line react-hooks/rules-of-hooks
+
             const onChangeCallback = useCallback(
               (event: React.ChangeEvent<HTMLInputElement>) => {
                 // update value state

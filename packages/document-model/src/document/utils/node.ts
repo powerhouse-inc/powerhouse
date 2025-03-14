@@ -1,10 +1,15 @@
-import crypto, { RandomUUIDOptions } from "node:crypto";
+import {
+  type BinaryLike,
+  type RandomUUIDOptions,
+  createHash,
+  randomUUID,
+} from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
 
 export function generateUUID(options?: RandomUUIDOptions) {
-  return crypto.randomUUID(options);
+  return randomUUID(options);
 }
 
 export function writeFile(
@@ -61,6 +66,6 @@ export const getFile = async (file: string) => {
   return readFile(file);
 };
 
-export const hash = (data: crypto.BinaryLike, algorithm = "sha1") => {
-  return crypto.createHash(algorithm).update(data).digest("base64");
+export const hash = (data: BinaryLike, algorithm = "sha1") => {
+  return createHash(algorithm).update(data).digest("base64");
 };

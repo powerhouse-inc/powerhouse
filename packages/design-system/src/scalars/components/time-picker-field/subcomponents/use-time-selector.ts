@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { TimeSelectorProps } from "../type";
+import { type TimeSelectorProps } from "../type.js";
 import {
   BOTTOM_THRESHOLD_OFFSET,
   CENTERING_TIMEOUT_MS,
   SCROLL_TIMEOUT_MS,
   TOP_THRESHOLD_OFFSET,
-} from "./time-selector.constants";
+} from "./time-selector.constants.js";
 
 interface UseTimeSelectorProps extends TimeSelectorProps {
   containerRef: React.RefObject<HTMLDivElement>;

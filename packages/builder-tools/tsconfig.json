@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "jsx": "react-jsx",
+    "types": ["vite/client", "react", "@storybook/types"]
+  },
+  "references": [
+    {
+      "path": "../config"
+    },
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../scalars"
+    },
+    {
+      "path": "../design-system"
+    }
+  ],
+  "include": ["**/*"]
+}

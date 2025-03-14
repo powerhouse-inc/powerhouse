@@ -1,4 +1,4 @@
-import type { IdAutocompleteProps } from "@/scalars/components/fragments/id-autocomplete-field/types";
+import type { IdAutocompleteProps } from "../fragments/id-autocomplete-field/types.js";
 
 export interface Network {
   chainId: string;

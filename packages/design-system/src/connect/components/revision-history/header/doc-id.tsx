@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { useCopyToClipboard } from "usehooks-ts";
 
 type Props = {

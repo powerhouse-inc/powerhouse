@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/types.ts"
 force: true
 ---
-import type { Document, ExtendedState } from 'document-model/document';
+import type { PHDocument, ExtendedState } from 'document-model';
 import type { <%= h.changeCase.pascal(documentType) %>State } from './schema/types';
 <% if(hasLocalSchema) { -%>
 import type { <%= h.changeCase.pascal(documentType) %>LocalState } from './schema/types';
@@ -15,5 +15,5 @@ export type * from './schema/types';
 type <%= h.changeCase.pascal(documentType) %>LocalState = Record<PropertyKey, never>;
 <%} -%>
 export type Extended<%= h.changeCase.pascal(documentType) %>State = ExtendedState<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState>;
-export type <%= h.changeCase.pascal(documentType) %>Document = Document<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>LocalState>;
+export type <%= h.changeCase.pascal(documentType) %>Document = PHDocument<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState, <%= h.changeCase.pascal(documentType) %>Action>;
 export { <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState, <%= h.changeCase.pascal(documentType) %>Action };

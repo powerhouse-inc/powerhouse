@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/AmountTokens";
+import { scalar } from "../src/scalars/AmountTokens.js";
 
 describe("AmountTokens Scalar", () => {
   it("should serialize a valid AmountTokens", () => {

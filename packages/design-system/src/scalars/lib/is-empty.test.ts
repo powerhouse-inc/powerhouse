@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isEmpty } from "./is-empty";
+import { isEmpty } from "./is-empty.js";
 
 describe("isEmpty", () => {
   // Null/undefined cases

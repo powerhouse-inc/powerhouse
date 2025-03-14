@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import * as Sentry from '@sentry/browser';
+import { type PHDocument } from 'document-model';
 import {
     BrowserWindow,
     Menu,
@@ -13,23 +14,23 @@ import isDev from 'electron-is-dev';
 import type ElectronStore from 'electron-store';
 import fs from 'node:fs';
 import path, { basename } from 'path';
-import { addDeeplink } from './app/deeplink';
-import initDocumentDrive from './app/document-drive';
-import store from './app/store';
-import { ConnectCrypto } from './services/crypto';
+import { addDeeplink } from './app/deeplink.js';
+import initDocumentDrive from './app/document-drive.js';
+import store from './app/store.js';
+import { ConnectCrypto } from './services/crypto/index.js';
 import {
     ElectronKeyStorage,
-    KeyStorageElectronStore,
-} from './services/crypto/electron';
-import { initRenownElectron } from './services/renown/electron';
-import { Theme, isTheme } from './store/';
-import { baseDocumentModels } from './store/document-model';
+    type KeyStorageElectronStore,
+} from './services/crypto/electron.js';
+import { initRenownElectron } from './services/renown/electron.js';
+import { type Theme, isTheme } from './store/index.js';
+import { baseDocumentModels } from './store/document-model.js';
 const isMac = process.platform === 'darwin';
 
 async function initApp() {
     // if on mac sets app icon
     if (isMac) {
-        const appIcon = nativeImage.createFromPath('src/assets/icon.png');
+        const appIcon = nativeImage.createFromPath('#assets/icon.png');
         app.dock.setIcon(appIcon);
     }
 
@@ -54,13 +55,11 @@ async function initApp() {
         });
 
         ipcMain.handle('renown:login', (_e, did: string) => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             Sentry.setUser({ id: did });
             return renown.login(did);
         });
 
         ipcMain.handle('renown:logout', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             Sentry.setUser(null);
             return renown.logout();
         });
@@ -172,7 +171,7 @@ function handleFileSave(path?: string) {
     }
 }
 
-ipcMain.handle('fileSaved', (e, document: Document, path?: string) =>
+ipcMain.handle('fileSaved', (e, document: PHDocument, path?: string) =>
     handleFileSave(path),
 );
 

@@ -1,7 +1,8 @@
-import { Icon } from "@/powerhouse";
-import { SortDirection, TableBaseProps } from "@/rwa";
-import { Order } from "natural-orderby";
-import React, { forwardRef, useState } from "react";
+import { Icon } from "#powerhouse";
+import { type SortDirection, type TableBaseProps } from "#rwa";
+import { type Order } from "natural-orderby";
+
+import { forwardRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 /**

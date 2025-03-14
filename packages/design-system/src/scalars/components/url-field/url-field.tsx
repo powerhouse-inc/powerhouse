@@ -1,20 +1,20 @@
 /* eslint-disable react/jsx-max-depth */
+import { type IconName } from "#powerhouse";
 import React, { useCallback, useId, useMemo } from "react";
+import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
+import { cn } from "../../lib/utils.js";
 import {
-  Input,
-  FormGroup,
-  withFieldValidation,
-  FormLabel,
   FormDescription,
+  FormGroup,
+  FormLabel,
   FormMessageList,
-} from "../fragments";
-import type { ErrorHandling, FieldCommonProps } from "../types";
-import { cn } from "@/scalars/lib";
-import { IconName } from "@/powerhouse";
-import { useURLWarnings } from "./useURLWarnings";
-import UrlFavicon from "./url-favicon";
-import ValueTransformer from "../fragments/value-transformer";
-import { sharedValueTransformers } from "@/scalars/lib/shared-value-transformers";
+  Input,
+} from "../fragments/index.js";
+import ValueTransformer from "../fragments/value-transformer/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import UrlFavicon from "./url-favicon.js";
+import { useURLWarnings } from "./useURLWarnings.js";
 
 export type PlatformIcon = IconName | React.ReactElement;
 

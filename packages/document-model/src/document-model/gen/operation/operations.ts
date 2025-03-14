@@ -1,16 +1,16 @@
 import {
-  AddOperationAction,
-  SetOperationNameAction,
-  SetOperationSchemaAction,
-  SetOperationDescriptionAction,
-  SetOperationTemplateAction,
-  SetOperationReducerAction,
-  MoveOperationAction,
-  DeleteOperationAction,
-  ReorderModuleOperationsAction,
-  SetOperationScopeAction,
-} from "./actions";
-import { DocumentModelState } from "../types";
+    AddOperationAction,
+    SetOperationNameAction,
+    SetOperationSchemaAction,
+    SetOperationDescriptionAction,
+    SetOperationTemplateAction,
+    SetOperationReducerAction,
+    MoveOperationAction,
+    DeleteOperationAction,
+    ReorderModuleOperationsAction,
+    SetOperationScopeAction,
+} from "./actions.js";
+import { DocumentModelState } from "../types.js";
 
 export interface DocumentModelOperationOperations {
   addOperationOperation: (

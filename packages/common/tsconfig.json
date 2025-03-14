@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vitest/globals",
+      "@types/wicg-file-system-access",
+      "@storybook/types"
+    ],
+    "outDir": "./dist",
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "resolveJsonModule": true
+  },
+  "include": ["**/*", "./package.json"],
+  "exclude": ["dist", "node_modules", "storybook-static"],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../design-system"
+    },
+    {
+      "path": "../builder-tools"
+    },
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../reactor-browser"
+    }
+  ]
+}

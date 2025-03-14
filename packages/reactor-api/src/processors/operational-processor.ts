@@ -1,11 +1,7 @@
-import { Document, OperationScope } from "document-model/document";
-import { Db, ProcessorOptions, ProcessorSetupArgs } from "src/types";
-import { Processor } from "./processor";
+import { Db, ProcessorOptions, ProcessorSetupArgs } from "#types.js";
+import { Processor } from "./processor.js";
 
-export abstract class OperationalProcessor<
-  D extends Document = Document,
-  S extends OperationScope = OperationScope,
-> extends Processor<D, S> {
+export abstract class OperationalProcessor extends Processor {
   protected operationalStore: Db;
 
   constructor(args: ProcessorSetupArgs, options?: ProcessorOptions) {

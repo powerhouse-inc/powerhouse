@@ -1,14 +1,14 @@
 import {
-  debugNodeOptions,
-  DRIVE,
-  FILE,
-  FOLDER,
-  nodeOptions,
-  normalNodeOptions,
-  SharingType,
-  UiNode,
-} from "@/connect";
-import { ReactNode } from "react";
+  type debugNodeOptions,
+  type DRIVE,
+  type FILE,
+  type FOLDER,
+  type nodeOptions,
+  type normalNodeOptions,
+  type SharingType,
+  type UiNode,
+} from "#connect";
+import { type ReactNode } from "react";
 
 export type OptionMetadata = {
   label: ReactNode;

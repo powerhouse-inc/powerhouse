@@ -1,5 +1,5 @@
-import ImgPowerhouse from "@/assets/powerhouse-rounded.png";
-import { CSSProperties } from "react";
+import ImgPowerhouse from "#assets/powerhouse-rounded.png";
+import { type CSSProperties } from "react";
 import { useEnsAvatar, useEnsName } from "wagmi";
 
 type Props = {
@@ -22,7 +22,7 @@ export function ENSAvatar(props: Props) {
   if (isLoading)
     return (
       <div
-        className="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
+        className="fade-out flex-none animate-pulse rounded-full bg-gray-400"
         style={style}
       />
     );

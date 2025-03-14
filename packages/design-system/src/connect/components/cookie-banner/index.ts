@@ -1,1 +1,1 @@
-export * from "./cookie-banner";
+export * from "./cookie-banner.js";

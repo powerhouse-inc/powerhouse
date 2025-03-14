@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { IdAutocompleteField } from "./id-autocomplete-field";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../../lib/testing.js";
+import { IdAutocompleteField } from "./id-autocomplete-field.js";
 
 describe("IdAutocompleteField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -22,14 +22,18 @@ describe("IdAutocompleteField Component", () => {
     {
       icon: "PowerhouseLogoSmall",
       title: "Document A",
-      path: "projects/finance/document-a",
+      path: {
+        text: "projects/finance/document-a",
+      },
       value: "document-a",
       description: "Financial report for Q1 2024",
     },
     {
       icon: "PowerhouseLogoSmall",
       title: "Document B",
-      path: "projects/legal/document-b",
+      path: {
+        text: "projects/legal/document-b",
+      },
       value: "document-b",
       description: "Legal compliance documentation",
     },
@@ -258,7 +262,7 @@ describe("IdAutocompleteField Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText(mockedOptions[0].title)).toBeInTheDocument();
-      expect(screen.getByText(mockedOptions[0].path)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].path.text)).toBeInTheDocument();
       expect(
         screen.getByText(mockedOptions[0].description),
       ).toBeInTheDocument();

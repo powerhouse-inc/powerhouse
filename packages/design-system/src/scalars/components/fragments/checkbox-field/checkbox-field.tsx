@@ -1,10 +1,10 @@
+import { cn } from "#scalars";
 import React, { useId } from "react";
-import { FormLabel } from "../form-label";
-import { Checkbox, CheckboxValue } from "./checkbox";
-import { cn } from "@/scalars/lib/utils";
-import { FormMessageList } from "../form-message";
-import type { FieldCommonProps } from "../../types";
-import { withFieldValidation } from "../with-field-validation";
+import type { FieldCommonProps } from "../../types.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import { withFieldValidation } from "../with-field-validation/index.js";
+import { Checkbox, CheckboxValue } from "./checkbox.js";
 
 type CheckboxFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,

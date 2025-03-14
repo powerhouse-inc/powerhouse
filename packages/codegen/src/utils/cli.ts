@@ -1,7 +1,3 @@
-import {
-  DEFAULT_CONFIG,
-  PowerhouseConfig,
-} from "@powerhousedao/config/powerhouse";
 import arg from "arg";
 import enquirer from "enquirer";
 

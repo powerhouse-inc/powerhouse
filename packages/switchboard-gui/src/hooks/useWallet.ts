@@ -1,5 +1,5 @@
-import { Eip1193Provider } from "ethers";
-import { JsonRpcSigner } from "ethers";
+import { type Eip1193Provider } from "ethers";
+import { type JsonRpcSigner } from "ethers";
 import { BrowserProvider } from "ethers";
 import { create } from "zustand";
 

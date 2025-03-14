@@ -1,4 +1,4 @@
-import { mergeClassNameProps } from "@/powerhouse";
+import { mergeClassNameProps } from "#powerhouse";
 
 export type FilterItemType = {
   id: string;

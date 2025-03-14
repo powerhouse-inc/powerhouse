@@ -1,8 +1,8 @@
+import { Icon, IconName } from "#powerhouse";
+import { cn } from "#scalars";
 import React from "react";
-import { CommandItem } from "@/scalars/components/fragments/command";
-import { cn } from "@/scalars/lib/utils";
-import { Icon, IconName } from "@/powerhouse/components/icon";
-import { SelectProps } from "@/scalars/components/enum-field/types";
+import { SelectProps } from "../../../enum-field/types.js";
+import { CommandItem } from "../../command/command.js";
 
 interface FavoriteOptionsProps {
   options: SelectProps["options"];

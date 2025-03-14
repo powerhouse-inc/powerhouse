@@ -1,4 +1,8 @@
-import { ComponentPropsWithRef, ForwardedRef, forwardRef } from "react";
+import {
+  type ComponentPropsWithRef,
+  type ForwardedRef,
+  forwardRef,
+} from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 type InputProps = ComponentPropsWithRef<"input">;
@@ -33,7 +37,7 @@ export const FormInput = forwardRef(function FormInput(
     <div>
       <div
         className={twMerge(
-          "mb-1 flex gap-2 rounded-xl border border-transparent bg-gray-100 p-3 text-gray-800 placeholder:text-gray-500",
+          "mb-1 flex gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-black placeholder:text-gray-50",
           isError && "border-red-900",
           containerClassName,
         )}

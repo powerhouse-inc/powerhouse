@@ -1,81 +1,67 @@
 import {
-  ADD_INVALID_TRIGGER,
-  ADD_TRIGGER,
   ConnectDropdownMenu,
+  defaultFileOptions,
   DELETE,
-  DropdownMenuHandlers,
   DUPLICATE,
-  FILE,
   getDocumentIconSrc,
   NodeInput,
-  NodeOption,
+  type NodeOption,
   nodeOptionsMap,
-  NodeProps,
   READ,
-  REMOVE_TRIGGER,
   RENAME,
-  TUiNodesContext,
-  UiFileNode,
+  type UiFileNode,
   useDrag,
   WRITE,
-} from "@/connect";
-import { Icon } from "@/powerhouse";
+} from "#connect";
+import { Icon } from "#powerhouse";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { SyncStatusIcon } from "../status-icon";
+import { SyncStatusIcon } from "../status-icon/index.js";
 
-export type FileItemProps = TUiNodesContext &
-  NodeProps & {
-    readonly uiNode: UiFileNode;
-    readonly customDocumentIconSrc?: string;
-    readonly className?: string;
-  };
+export type FileItemProps = {
+  uiNode: UiFileNode;
+  customDocumentIconSrc?: string;
+  className?: string;
+  onSelectNode: (uiNode: UiFileNode) => void;
+  onRenameNode: (name: string, uiNode: UiFileNode) => void;
+  onDuplicateNode: (uiNode: UiFileNode) => void;
+  onDeleteNode: (uiNode: UiFileNode) => void;
+  isAllowedToCreateDocuments: boolean;
+};
 
 export function FileItem(props: FileItemProps) {
   const {
     uiNode,
-    selectedNodePath,
-    nodeOptions,
-    isAllowedToCreateDocuments,
-    isRemoteDrive,
-    customDocumentIconSrc,
     className,
-    setSelectedNode,
+    customDocumentIconSrc,
+    onSelectNode,
     onRenameNode,
     onDuplicateNode,
     onDeleteNode,
-    onAddTrigger,
-    onRemoveTrigger,
-    onAddInvalidTrigger,
+    isAllowedToCreateDocuments,
   } = props;
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag(props);
+  const { dragProps } = useDrag({ uiNode });
 
   const isReadMode = mode === READ;
 
-  const containerStyles = twMerge(
-    "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800",
-    className,
-  );
-
-  const dropdownMenuHandlers: DropdownMenuHandlers = {
+  const dropdownMenuHandlers = {
     [DUPLICATE]: () => onDuplicateNode(uiNode),
     [RENAME]: () => setMode(WRITE),
     [DELETE]: () => onDeleteNode(uiNode),
-    [ADD_TRIGGER]: () => onAddTrigger(uiNode.driveId),
-    [REMOVE_TRIGGER]: () => onRemoveTrigger(uiNode.driveId),
-    [ADD_INVALID_TRIGGER]: () => onAddInvalidTrigger(uiNode.driveId),
   } as const;
-
-  const nodeOptionsForKind = nodeOptions[uiNode.sharingType][FILE];
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
     .map(([id, option]) => ({
       ...option,
       id: id as NodeOption,
     }))
-    .filter((option) => nodeOptionsForKind.includes(option.id));
+    .filter((option) =>
+      defaultFileOptions.includes(
+        option.id as (typeof defaultFileOptions)[number],
+      ),
+    );
 
   function onSubmit(name: string) {
     onRenameNode(name, uiNode);
@@ -87,16 +73,17 @@ export function FileItem(props: FileItemProps) {
   }
 
   function onClick() {
-    setSelectedNode(uiNode);
+    onSelectNode(uiNode);
   }
 
   function onDropdownMenuOptionClick(itemId: NodeOption) {
-    const handler = dropdownMenuHandlers[itemId];
+    const handler =
+      dropdownMenuHandlers[itemId as keyof typeof dropdownMenuHandlers];
     if (!handler) {
       console.error(`No handler found for dropdown menu item: ${itemId}`);
       return;
     }
-    handler(uiNode);
+    handler();
     setIsDropdownMenuOpen(false);
   }
 
@@ -114,7 +101,7 @@ export function FileItem(props: FileItemProps) {
         src={iconSrc}
         width={32}
       />
-      {isReadMode && isRemoteDrive && uiNode.syncStatus ? (
+      {isReadMode && uiNode.syncStatus && (
         <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
           <div className="absolute left-[-2px] top-[-2px]">
             <SyncStatusIcon
@@ -123,15 +110,14 @@ export function FileItem(props: FileItemProps) {
             />
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 
-  // if this selected node is a file then hide it from the node path
-  const nodePath =
-    selectedNodePath.at(-1)?.kind === "FILE"
-      ? selectedNodePath.slice(0, -1)
-      : selectedNodePath;
+  const containerStyles = twMerge(
+    "group flex h-12 cursor-pointer select-none items-center rounded-lg bg-gray-200 px-2 text-gray-600 hover:text-gray-800",
+    className,
+  );
 
   const content = isReadMode ? (
     <div className="flex w-52 items-center justify-between">
@@ -140,9 +126,7 @@ export function FileItem(props: FileItemProps) {
           {uiNode.name}
         </div>
         <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800">
-          {"documentType" in uiNode
-            ? uiNode.documentType
-            : nodePath.map((node) => node.name).join(" / ")}
+          {uiNode.documentType}
         </div>
       </div>
       {isAllowedToCreateDocuments ? (

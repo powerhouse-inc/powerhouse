@@ -1,6 +1,6 @@
-import { FieldCommonProps } from "../types";
+import { type FieldCommonProps } from "../types.js";
 
-import { ErrorHandling } from "../types";
+import { type ErrorHandling } from "../types.js";
 type NumberProps = {
   numericType?: NumericType | undefined;
   minValue?: number;

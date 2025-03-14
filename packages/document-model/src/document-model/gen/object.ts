@@ -1,27 +1,32 @@
-import { DocumentModelLocalState, DocumentModelState } from "./types";
-import { ExtendedState, PartialState, SignalDispatch } from "../../document";
-import { applyMixins, BaseDocument } from "../../document/object";
-import { DocumentModelAction } from "./actions";
-import { reducer } from "./reducer";
-import utils from "./utils";
-import DocumentModel_Header from "./header/object";
-import DocumentModel_Versioning from "./versioning/object";
-import DocumentModel_Module from "./module/object";
-import DocumentModel_OperationError from "./operation-error/object";
-import DocumentModel_OperationExample from "./operation-example/object";
-import DocumentModel_Operation from "./operation/object";
-import DocumentModel_State from "./state/object";
+import { ExtendedStateFromDocument } from "#document/types.js";
+import { applyMixins, SignalDispatch } from "document-model";
+import { BaseDocumentClass } from "../../document/object.js";
+import { DocumentModelAction } from "./actions.js";
+import { fileExtension } from "./constants.js";
+import DocumentModel_Header from "./header/object.js";
+import DocumentModel_Module from "./module/object.js";
+import DocumentModel_OperationError from "./operation-error/object.js";
+import DocumentModel_OperationExample from "./operation-example/object.js";
+import DocumentModel_Operation from "./operation/object.js";
+import { reducer } from "./reducer.js";
+import DocumentModel_State from "./state/object.js";
+import {
+  DocumentModelDocument,
+  DocumentModelLocalState,
+  DocumentModelState,
+} from "./types.js";
+import { createDocument } from "./utils.js";
+import DocumentModel_Versioning from "./versioning/object.js";
 
-export * from "./header/object";
-export * from "./versioning/object";
-export * from "./module/object";
-export * from "./operation-error/object";
-export * from "./operation-example/object";
-export * from "./operation/object";
-export * from "./state/object";
+export * from "./header/object.js";
+export * from "./module/object.js";
+export * from "./operation-error/object.js";
+export * from "./operation-example/object.js";
+export * from "./operation/object.js";
+export * from "./state/object.js";
+export * from "./versioning/object.js";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-interface DocumentModel
+interface DocumentModelClass
   extends DocumentModel_Header,
     DocumentModel_Versioning,
     DocumentModel_Module,
@@ -30,28 +35,22 @@ interface DocumentModel
     DocumentModel_Operation,
     DocumentModel_State {}
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class DocumentModel extends BaseDocument<
+class DocumentModelClass extends BaseDocumentClass<
   DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
+  DocumentModelLocalState,
+  DocumentModelAction
 > {
-  static fileExtension = "phdm";
+  static fileExtension = fileExtension;
 
   constructor(
-    initialState?: Partial<
-      ExtendedState<
-        PartialState<DocumentModelState>,
-        PartialState<DocumentModelLocalState>
-      >
-    >,
+    initialState?: Partial<ExtendedStateFromDocument<DocumentModelDocument>>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 
   public saveToFile(path: string, name?: string) {
-    return super.saveToFile(path, DocumentModel.fileExtension, name);
+    return super.saveToFile(path, DocumentModelClass.fileExtension, name);
   }
 
   public loadFromFile(path: string) {
@@ -65,7 +64,7 @@ class DocumentModel extends BaseDocument<
   }
 }
 
-applyMixins(DocumentModel, [
+applyMixins(DocumentModelClass, [
   DocumentModel_Header,
   DocumentModel_Versioning,
   DocumentModel_Module,
@@ -75,4 +74,4 @@ applyMixins(DocumentModel, [
   DocumentModel_State,
 ]);
 
-export { DocumentModel };
+export { DocumentModelClass };

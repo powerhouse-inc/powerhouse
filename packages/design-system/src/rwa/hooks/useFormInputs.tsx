@@ -1,35 +1,35 @@
 import {
-  Account,
+  type Account,
   allGroupTransactionTypes,
   assetGroupTransactions,
   feesTransactions,
   FeeTransactionsTable,
   formatDateForDisplay,
-  FormInputsByTableName,
+  type FormInputsByTableName,
   groupTransactionTypeLabels,
   handleTableDatum,
   makeFixedIncomeOptionLabel,
-  Operation,
+  type Operation,
   RWANumberInput,
   RWATableSelect,
   RWATableTextInput,
-  TableItemType,
-  TableName,
+  type TableItemType,
+  type TableName,
   tableNames,
   TransactionReference,
   UnitPrice,
   useEditorContext,
   useModal,
-} from "@/rwa";
-import { ReactElement, ReactNode, useCallback, useMemo } from "react";
+} from "#rwa";
+import { type ReactElement, type ReactNode, useCallback, useMemo } from "react";
 import {
-  Control,
-  FormState,
-  UseFormRegister,
-  UseFormWatch,
+  type Control,
+  type FormState,
+  type UseFormRegister,
+  type UseFormWatch,
 } from "react-hook-form";
-import { CashBalanceChange } from "../components/table/transactions/cash-balance-change";
-import { EntryTimeLabel } from "../components/inputs/entry-time-label";
+import { EntryTimeLabel } from "../components/inputs/entry-time-label.js";
+import { CashBalanceChange } from "../components/table/transactions/cash-balance-change.js";
 
 type Input = {
   label: string;
@@ -83,7 +83,10 @@ export function useFormInputs(props: Props): {
         const { errors } = formState;
 
         const control = _control as Control<Payload>;
-        const derivedInputsToDisplay =
+        const derivedInputsToDisplay: {
+          label: string;
+          Input: () => React.JSX.Element;
+        }[] =
           operation !== "create" && !!tableItem
             ? [
                 {
@@ -251,9 +254,14 @@ export function useFormInputs(props: Props): {
         const { errors } = _formState as FormState<Payload>;
         const control = _control as Control<Payload>;
         const type = watch("type");
-        const isFeesTransaction = !!type && feesTransactions.includes(type);
+        const isFeesTransaction =
+          !!type &&
+          feesTransactions.includes(type as (typeof feesTransactions)[number]);
         const isAssetTransaction =
-          !!type && assetGroupTransactions.includes(type);
+          !!type &&
+          assetGroupTransactions.includes(
+            type as (typeof assetGroupTransactions)[number],
+          );
         const canHaveTransactionFees = !isFeesTransaction;
         const transactionTypeOptions = allGroupTransactionTypes.map((type) => ({
           label: groupTransactionTypeLabels[type],
@@ -408,7 +416,7 @@ export function useFormInputs(props: Props): {
               />
             ),
           },
-        ].filter(Boolean);
+        ].filter(Boolean) as Input[];
 
         const additionalInputs = (
           <>

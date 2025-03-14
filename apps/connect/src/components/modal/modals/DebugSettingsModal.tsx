@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+import { useConnectConfig, useDocumentDriveServer } from '#hooks';
+import { serviceWorkerManager } from '#utils';
 import {
     Button,
     Combobox,
@@ -7,9 +9,6 @@ import {
     Modal,
 } from '@powerhousedao/design-system';
 import { useEffect, useState } from 'react';
-import { useConnectConfig } from 'src/hooks/useConnectConfig';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import serviceWorkerManager from 'src/utils/registerServiceWorker';
 import { v4 as uuid } from 'uuid';
 export interface DebugSettingsModalProps {
     open: boolean;
@@ -315,6 +314,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                             size="small"
                             disabled={appVersion === ''}
                             onClick={() => {
+                                // @ts-expect-error todo add send message method to service worker manager class
                                 serviceWorkerManager.sendMessage({
                                     type: 'SET_APP_VERSION',
                                     version: appVersion,
