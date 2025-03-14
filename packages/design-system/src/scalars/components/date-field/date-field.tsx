@@ -10,11 +10,11 @@ import { FormMessageList } from "../fragments/form-message";
 import { FormDescription } from "../fragments/form-description";
 import { Calendar } from "./subcomponents/calendar/calendar";
 import { cn } from "@/scalars/lib/utils";
-import { useDatePickerField } from "./use-date-picker-field";
+import { useDatePickerField } from "./use-date-field";
 import { InputProps } from "../fragments";
-import { validateDatePicker } from "./date-picker-validations";
+import { validateDatePicker } from "./date-validations";
 
-export interface DatePickerFieldProps
+export interface DateFieldProps
   extends FieldCommonProps<DateFieldValue>,
     ErrorHandling {
   label?: string;
@@ -40,7 +40,7 @@ export interface DatePickerFieldProps
   autoClose?: boolean;
 }
 
-const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
+const DateRaw = forwardRef<HTMLInputElement, DateFieldProps>(
   (
     {
       label,
@@ -201,13 +201,10 @@ const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
   },
 );
 
-export const DatePickerField = withFieldValidation<DatePickerFieldProps>(
-  DatePickerRaw,
-  {
-    validations: {
-      _datePickerType: validateDatePicker,
-    },
+export const DateField = withFieldValidation<DateFieldProps>(DateRaw, {
+  validations: {
+    _datePickerType: validateDatePicker,
   },
-);
+});
 
-DatePickerField.displayName = "DatePickerField";
+DateField.displayName = "DateField";

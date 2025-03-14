@@ -6,7 +6,7 @@ import {
   formatUTCDateToISOStringWithOutTime,
   getDateFromValue,
 } from "./utils";
-import { createChangeEvent } from "../time-picker-field/utils";
+import { createChangeEvent } from "../time-field/utils";
 import {
   getDateFormat,
   normalizeMonthFormat,

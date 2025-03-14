@@ -2,19 +2,19 @@ import {
   formatDateToValidCalendarDateFormat,
   getDateFromValue,
   splitIso8601DateTime,
-} from "../date-picker-field/utils";
-import { DatePickerFieldProps } from "../date-picker-field/date-picker-field";
+} from "../date-field/utils";
+import { DateFieldProps } from "../date-field/date-field";
 import {
   getDateFormat,
   isDateFormatAllowed,
   isValidTime,
   normalizeMonthFormat,
 } from "./utils";
-import { DateFieldValue } from "../date-picker-field/types";
+import { DateFieldValue } from "../date-field/types";
 import { format } from "date-fns";
 
 export const dateTimeFieldValidations =
-  ({ dateFormat, minDate, maxDate }: DatePickerFieldProps) =>
+  ({ dateFormat, minDate, maxDate }: DateFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;

@@ -193,26 +193,6 @@ const meta: Meta<typeof DateTimeField> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const DatePicker: Story = {
-  args: {
-    label: "Date Picker Field",
-    description: "This is a date picker field",
-    showDateSelect: true,
-    showTimeSelect: false,
-    placeholder: "2025/01/27",
-  },
-};
-
-export const TimePicker: Story = {
-  args: {
-    label: "Time Picker Field",
-    description: "This is a time picker field",
-    placeholder: "12:00 AM",
-    showDateSelect: false,
-    showTimeSelect: true,
-  },
-};
-
 export const DateTimePicker: Story = {
   args: {
     label: "Date Time Picker Field",

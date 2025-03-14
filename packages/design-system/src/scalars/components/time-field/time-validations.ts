@@ -1,4 +1,4 @@
-import { TimePickerFieldProps } from "./time-picker-field";
+import { TimeFieldProps } from "./time-field";
 import {
   isFormatTimeAllowed,
   TIME_PATTERNS,
@@ -7,7 +7,7 @@ import {
 } from "./utils";
 
 export const validateTimePicker =
-  ({ timeFormat }: TimePickerFieldProps) =>
+  ({ timeFormat }: TimeFieldProps) =>
   (value: unknown) => {
     if (value === "") {
       return true;

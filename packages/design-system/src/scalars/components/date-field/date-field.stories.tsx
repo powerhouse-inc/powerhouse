@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withTimestampsAsISOStrings, withForm } from "@/scalars/lib/decorators";
-import { DatePickerField } from "./date-picker-field";
+import { DateField } from "./date-field";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
@@ -8,9 +8,9 @@ import {
 } from "@/scalars/lib/storybook-arg-types";
 import { FORMAT_MAPPING } from "../date-time-field/utils";
 
-const meta: Meta<typeof DatePickerField> = {
-  title: "Document Engineering/Fragments/Date Picker Field",
-  component: DatePickerField,
+const meta: Meta<typeof DateField> = {
+  title: "Document Engineering/Simple Components/Date Field",
+  component: DateField,
   parameters: {
     layout: "centered",
     form: {

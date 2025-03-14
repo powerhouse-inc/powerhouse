@@ -1,14 +1,14 @@
 import { cn } from "../../lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@radix-ui/react-tabs";
 import { Icon } from "@/index";
-import { Calendar } from "../date-picker-field/subcomponents/calendar/calendar";
+import { Calendar } from "../date-field/subcomponents/calendar/calendar";
 
-import { WeekStartDayNumber } from "../date-picker-field/types";
+import { WeekStartDayNumber } from "../date-field/types";
 
 import { SelectBaseProps } from "../enum-field/types";
 import { SelectFieldProps } from "../fragments";
 import { Matcher } from "react-day-picker";
-import TimePickerContent from "../time-picker-field/subcomponents/time-picker-content";
+import TimePickerContent from "../time-field/subcomponents/time-picker-content";
 
 interface DateTimePickerContentProps {
   className?: string;
