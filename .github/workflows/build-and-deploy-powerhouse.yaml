@@ -13,6 +13,7 @@ on:
           - "production"
           - "sky-atlas-demo"
 
+
 env:
   HUSKY: 0
 
@@ -42,7 +43,7 @@ jobs:
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME_CONNECT }}
           dockerfile_directory: ./
           dockerfile_name: apps/connect/Dockerfile
           docker_options: >-
@@ -75,7 +76,7 @@ jobs:
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: "sky-atlas-demo-switchboard"
+          heroku_app_name: ${{ secrets.HEROKU_APP_SWITCHBOARD }}
           dockerfile_directory: .
           dockerfile_name: apps/switchboard/Dockerfile
           process_type: web
