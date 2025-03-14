@@ -2,7 +2,8 @@
 import { Icon, type IconName } from "#powerhouse";
 import { type SelectProps } from "#scalars";
 import { useCommandState } from "cmdk";
-import React, { useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 import { cn } from "../../../lib/utils.js";
 import {
   CommandEmpty,

@@ -11,7 +11,7 @@ import {
   type SelectProps,
 } from "#scalars";
 import React, { useCallback, useId } from "react";
-import { SelectOption } from "../../enum-field/types.js";
+import { type SelectOption } from "../../enum-field/types.js";
 import { Button } from "../button/button.js";
 import { Command } from "../command/command.js";
 import { Popover, PopoverContent, PopoverTrigger } from "../popover/popover.js";
@@ -191,7 +191,7 @@ export const SelectFieldRaw = React.forwardRef<
               }
             >
               <Content
-                favoriteOptions={favoriteOptions as SelectOption[]}
+                favoriteOptions={favoriteOptions}
                 searchable={searchable}
                 commandListRef={commandListRef}
                 multiple={multiple}
