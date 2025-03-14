@@ -51,7 +51,7 @@ interface DateTimeFieldProps {
   timeIntervals?: number;
   timeZone?: string;
   showTimezoneSelect?: boolean;
-  onChangeWraper?: (value: DateFieldValue, time: TimeFieldValue) => void;
+  includeContinent?: boolean;
 }
 
 export const formatToISODateTimeWithOffset = (
@@ -149,14 +149,15 @@ export const useDateTime = ({
   disablePastDates,
   dateFormat,
   weekStart,
+  minDate,
+  maxDate,
 
   // Time Picker Field
   timeFormat,
   timeIntervals,
   timeZone,
   showTimezoneSelect = true,
-  minDate,
-  maxDate,
+  includeContinent,
 }: DateTimeFieldProps) => {
   const internalFormat = getDateFormat(dateFormat ?? "");
   const [isOpen, setIsOpen] = React.useState(false);
@@ -257,6 +258,24 @@ export const useDateTime = ({
       return;
     }
 
+    //  If the time is valid, and is 12 hour format, do nothing not transform the time
+    if (
+      is12HourFormat &&
+      isValidTimeInput(timeValue) &&
+      (inputValue.includes("AM") || inputValue.includes("PM"))
+    ) {
+      return;
+    }
+
+    // if is 24 hour format, and the time is valid, and the time is not AM or PM, do nothing
+    if (
+      !is12HourFormat &&
+      isValidTimeInput(timeValue) &&
+      !inputValue.includes("AM") &&
+      !inputValue.includes("PM")
+    ) {
+      return;
+    }
     const datetimeFormatted = formatInputToDisplayValid(
       timeValue,
       is12HourFormat,
@@ -306,6 +325,7 @@ export const useDateTime = ({
     timeIntervals,
     timeZone,
     showTimezoneSelect,
+    includeContinent,
   });
 
   const handleInputChangeField = (e: React.ChangeEvent<HTMLInputElement>) => {

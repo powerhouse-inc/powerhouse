@@ -10,12 +10,11 @@ import {
 } from "../fragments";
 import { useAmountField } from "./use-amount-field";
 import { cn } from "@/scalars/lib";
-import { InputNumberProps } from "../number-field/types";
-import { AmountValue } from "./types";
-import { AmountFieldPropsGeneric } from "./types";
+import type { InputNumberProps } from "../number-field/types";
+import type { AmountValue, AmountFieldPropsGeneric } from "./types";
 
 import { validateAmount } from "./amount-field-validations";
-import { Currency } from "../currency-code-field/types";
+import type { Currency } from "../currency-code-field/types";
 import { CurrencyCodeFieldRaw } from "../currency-code-field/currency-code-field";
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
@@ -42,7 +41,7 @@ export type AmountFieldProps = AmountFieldPropsGeneric &
     includeCurrencySymbols?: boolean;
   };
 
-export const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
+const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
   (
     {
       label,

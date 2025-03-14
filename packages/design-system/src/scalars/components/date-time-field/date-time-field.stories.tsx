@@ -160,6 +160,17 @@ const meta: Meta<typeof DateTimeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    includeContinent: {
+      control: {
+        type: "boolean",
+        description: "Show continent name in the timezone select",
+        defaultValue: false,
+      },
+      if: { arg: "showTimeSelect", truthy: true },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
 
   args: {

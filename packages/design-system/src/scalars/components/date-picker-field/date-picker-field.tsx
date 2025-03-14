@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
-import { ErrorHandling, FieldCommonProps } from "../types";
-import { DateFieldValue } from "./types";
+import type { ErrorHandling, FieldCommonProps } from "../types";
+import type { DateFieldValue } from "./types";
 import { withFieldValidation } from "../fragments/with-field-validation";
 
 import { BasePickerField } from "../date-time-field/base-picker-field";
@@ -40,7 +40,7 @@ export interface DatePickerFieldProps
   autoClose?: boolean;
 }
 
-export const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
+const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
   (
     {
       label,
