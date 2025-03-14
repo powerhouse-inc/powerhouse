@@ -1,16 +1,16 @@
 import {
-  BaseTransaction,
+  type BaseTransaction,
   FEES_PAYMENT,
-  GroupTransaction,
+  type GroupTransaction,
   allGroupTransactionTypes,
   calculateCashBalanceChange,
   isAssetGroupTransactionType,
-} from "@/rwa";
+} from "#rwa";
 import {
   mockAccounts,
   mockFixedIncomes,
   mockPrincipalLenderAccountId,
-} from "./assets";
+} from "./assets.js";
 
 export const mockFixedIncomeTransaction: BaseTransaction = {
   id: "fixed-income-transaction-1",

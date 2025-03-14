@@ -1,6 +1,6 @@
 import React from "react";
 import { render, fireEvent, screen } from "@testing-library/react";
-import { Toggle } from "./toggle";
+import { Toggle } from "./toggle.js";
 import { vi } from "vitest";
 
 describe("Toggle Component", () => {

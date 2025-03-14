@@ -1,27 +1,27 @@
 import {
   Action,
   DocumentModelDocument,
-  DocumentModelLib,
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+  documentModelReducer,
   garbageCollect,
   Operation,
   setModelExtension,
   setModelId,
   setModelName,
 } from "document-model";
-import { beforeEach, describe, expect, it } from "vitest";
-import { IOperationResult, ReactorBuilder } from "../../src";
+import { beforeEach, describe, expect, it, vitest } from "vitest";
+
+import { undo } from "../../../document-model/src/document/actions/creators";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions";
+import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer";
+import { driveDocumentModelModule } from "../../src/drive-document-model/module";
+import { generateAddNodeAction } from "../../src/drive-document-model/src/utils";
+import { ReactorBuilder } from "../../src/server/builder";
 import { OperationError } from "../../src/server/error";
-import { garbageCollect } from "../../src/utils/document-helpers";
+import { IOperationResult } from "../../src/server/types";
 import { BasicClient, buildOperation, buildOperations } from "../utils";
 
-import { undo } from "../../../document-model/src/document/actions/creators.js";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
-import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { generateAddNodeAction } from "../../src/drive-document-model/src/utils.js";
-import { DocumentDriveServer } from "../../src/server/base.js";
-import { OperationError } from "../../src/server/error.js";
-import { IOperationResult } from "../../src/server/types.js";
-import { BasicClient, buildOperation, buildOperations } from "../utils.js";
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
     const { timestamp, ...operation } = op;
@@ -30,12 +30,14 @@ const mapExpectedOperations = (operations: Operation[]) =>
 
 describe("processOperations", () => {
   const documentModels = [
-    DocumentModelLib,
-    ...Object.values(DocumentModelsLibs),
-  ] as DocumentModelLib<any, any>[];
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+  ] as DocumentModelModule[];
 
   let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {
+    vitest.useRealTimers();
+
     server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
@@ -57,7 +59,7 @@ describe("processOperations", () => {
     await server.addDriveOperation(
       driveId,
       buildOperation(
-        reducer,
+        documentDriveReducer,
         drive,
         generateAddNodeAction(
           drive.state.global,
@@ -80,7 +82,7 @@ describe("processOperations", () => {
       await server.addOperations(
         driveId,
         documentId,
-        buildOperations(reducer, document, initialOperations),
+        buildOperations(documentModelReducer, document, initialOperations),
       );
 
       document = (await server.getDocument(
@@ -110,7 +112,7 @@ describe("processOperations", () => {
   it("should apply a single new operation", async () => {
     const document = await buildFile();
 
-    const operations = buildOperations(reducer, document, [
+    const operations = buildOperations(documentModelReducer, document, [
       setModelName({ name: "test" }),
     ]);
 
@@ -135,7 +137,7 @@ describe("processOperations", () => {
       setModelId({ id: "test" }),
     ]);
 
-    const operations = buildOperations(reducer, document, [
+    const operations = buildOperations(documentModelReducer, document, [
       setModelName({ name: "test2" }),
       setModelId({ id: "test2" }),
       setModelExtension({
@@ -168,7 +170,9 @@ describe("processOperations", () => {
       setModelId({ id: "test" }),
     ]);
 
-    const operations = buildOperations(reducer, document, [undo()]);
+    const operations = buildOperations(documentModelReducer, document, [
+      undo(),
+    ]);
 
     const result = await server._processOperations(
       driveId,
@@ -206,7 +210,9 @@ describe("processOperations", () => {
       undo(),
     ]);
 
-    const operations = buildOperations(reducer, document, [undo()]);
+    const operations = buildOperations(documentModelReducer, document, [
+      undo(),
+    ]);
 
     const result = await server._processOperations(
       driveId,
@@ -240,7 +246,12 @@ describe("processOperations", () => {
     ]);
 
     const operations = [
-      buildOperation(reducer, document, setModelName({ name: "test2" }), 4),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test2" }),
+        4,
+      ),
     ];
 
     const result = await server._processOperations(
@@ -271,10 +282,30 @@ describe("processOperations", () => {
     ]);
 
     const operations = [
-      buildOperation(reducer, document, setModelName({ name: "test3" }), 3),
-      buildOperation(reducer, document, setModelName({ name: "test4" }), 4),
-      buildOperation(reducer, document, setModelName({ name: "test6" }), 6),
-      buildOperation(reducer, document, setModelName({ name: "test7" }), 7),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test3" }),
+        3,
+      ),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test4" }),
+        4,
+      ),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test6" }),
+        6,
+      ),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test7" }),
+        7,
+      ),
     ];
 
     const result = await server._processOperations(
@@ -305,7 +336,12 @@ describe("processOperations", () => {
     ]);
 
     const operations = [
-      buildOperation(reducer, document, setModelName({ name: "test2" }), 2),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test2" }),
+        2,
+      ),
     ];
 
     const result = await server._processOperations(
@@ -333,9 +369,24 @@ describe("processOperations", () => {
     ]);
 
     const operations = [
-      buildOperation(reducer, document, setModelName({ name: "test3" }), 3),
-      buildOperation(reducer, document, setModelName({ name: "test4" }), 3),
-      buildOperation(reducer, document, setModelName({ name: "test5" }), 4),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test3" }),
+        3,
+      ),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test4" }),
+        3,
+      ),
+      buildOperation(
+        documentModelReducer,
+        document,
+        setModelName({ name: "test5" }),
+        4,
+      ),
     ];
 
     const result = await server._processOperations(
@@ -359,7 +410,7 @@ describe("processOperations", () => {
     let document = await buildFile();
 
     const operation = buildOperation(
-      reducer,
+      documentModelReducer,
       document,
       setModelName({ name: "test" }),
     );
@@ -411,7 +462,7 @@ describe("processOperations", () => {
     let document = await buildFile();
 
     const operation0 = buildOperation(
-      reducer,
+      documentModelReducer,
       document,
       setModelName({ name: "1" }),
       0,
@@ -431,7 +482,7 @@ describe("processOperations", () => {
     )) as DocumentModelDocument;
 
     const operation1 = buildOperation(
-      reducer,
+      documentModelReducer,
       document,
       setModelName({ name: "2" }),
       0,
@@ -451,7 +502,7 @@ describe("processOperations", () => {
     )) as DocumentModelDocument;
 
     const operation2 = buildOperation(
-      reducer,
+      documentModelReducer,
       document,
       setModelId({ id: "3" }),
       0,
@@ -471,7 +522,7 @@ describe("processOperations", () => {
     )) as DocumentModelDocument;
 
     const operation3 = buildOperation(
-      reducer,
+      documentModelReducer,
       document,
       setModelId({ id: "4" }),
       0,
@@ -533,7 +584,7 @@ describe("processOperations", () => {
       driveId,
       documentId,
       initialDocument,
-      reducer,
+      documentModelReducer,
     );
 
     const client2 = new BasicClient(
@@ -541,7 +592,7 @@ describe("processOperations", () => {
       driveId,
       documentId,
       initialDocument,
-      reducer,
+      documentModelReducer,
     );
 
     client1.dispatchDocumentAction(setModelName({ name: "1" }));
@@ -609,7 +660,7 @@ describe("processOperations", () => {
       driveId,
       documentId,
       initialDocument,
-      reducer,
+      documentModelReducer,
     );
 
     const client2 = new BasicClient(
@@ -617,7 +668,7 @@ describe("processOperations", () => {
       driveId,
       documentId,
       initialDocument,
-      reducer,
+      documentModelReducer,
     );
 
     client1.dispatchDocumentAction(setModelName({ name: "1" }));

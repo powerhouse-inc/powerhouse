@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { CurrencyCodeField } from "./currency-code-field";
-import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { CurrencyCodeField } from "./currency-code-field.js";
+import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults.js";
 
 const meta: Meta<typeof CurrencyCodeField> = {
   title: "Document Engineering/Simple Components/Currency Code Field",
@@ -54,7 +54,29 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    symbolPosition: {
+      control: "select",
+      description: "Position of the currency symbol",
+      options: ["left", "right"],
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: {
+        arg: "includeCurrencySymbols",
+        eq: true,
+      },
+    },
+    searchable: {
+      control: "boolean",
+      description: "Whether the dropdown is searchable",
+      table: {
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
+
   args: {
     name: "currency-code-field",
     placeholder: "Select a currency",

@@ -1,13 +1,12 @@
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { useUiNodes } from '#hooks/useUiNodes';
+import { useDocumentDriveServer, useUiNodes } from '#hooks';
 import {
     DangerZone as BaseDangerZone,
-    UiDriveNode,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useModal } from '../../modal';
+import { useModal } from '../../modal.js';
 
 export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
     onRefresh,

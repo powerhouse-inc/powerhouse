@@ -1,22 +1,22 @@
+import { cn } from "#scalars";
 import { forwardRef } from "react";
+import { BasePickerField } from "../date-time-field/base-picker-field.js";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
-  InputProps,
-  SelectFieldProps,
-  withFieldValidation,
-} from "../fragments";
-import { ErrorHandling, FieldCommonProps } from "../types";
-import { TimeFieldValue } from "./type";
-import { BasePickerField } from "../date-time-field/base-picker-field";
-import TimePickerContent from "./subcomponents/time-picker-content";
-import { useTimePickerField } from "./use-time-picker-field";
-import { InputNumberProps } from "../number-field/types";
-import { validateTimePicker } from "./time-picker-validations";
-import { cn } from "@/scalars/lib";
-import { handleKeyDown } from "./utils";
+  type InputProps,
+  type SelectFieldProps,
+} from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { InputNumberProps } from "../number-field/types.js";
+import { type ErrorHandling, type FieldCommonProps } from "../types.js";
+import TimePickerContent from "./subcomponents/time-picker-content.js";
+import { validateTimePicker } from "./time-picker-validations.js";
+import { type TimeFieldValue } from "./type.js";
+import { useTimePickerField } from "./use-time-picker-field.js";
+import { handleKeyDown } from "./utils.js";
 
 export interface TimePickerFieldProps
   extends FieldCommonProps<TimeFieldValue>,
@@ -31,12 +31,13 @@ export interface TimePickerFieldProps
   inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
   timeFormat?: string;
-  dateIntervals?: number;
+  timeIntervals?: number;
   showTimezoneSelect?: boolean;
   timeZone?: string;
+  includeContinent?: boolean;
 }
 
-export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
+const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
   (
     {
       label,
@@ -56,8 +57,9 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       selectProps,
       timeFormat = "hh:mm a",
       showTimezoneSelect,
-      dateIntervals,
+      timeIntervals,
       timeZone,
+      includeContinent,
     },
     ref,
   ) => {
@@ -88,9 +90,10 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
       onChange,
       onBlur,
       timeFormat,
-      dateIntervals,
+      timeIntervals,
       timeZone,
       showTimezoneSelect,
+      includeContinent,
     });
 
     return (
@@ -122,7 +125,7 @@ export const TimePickerRaw = forwardRef<HTMLInputElement, TimePickerFieldProps>(
             ...inputProps,
             onKeyDown: handleKeyDown,
           }}
-          className={cn("pt-3 pr-4 pb-4 pl-4")}
+          className={cn("pb-4 pl-4 pr-4 pt-3")}
         >
           <TimePickerContent
             selectedHour={selectedHour}

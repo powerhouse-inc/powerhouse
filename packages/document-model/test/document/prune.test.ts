@@ -9,7 +9,7 @@ import {
 } from "../../src/document/actions/creators.js";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
 import {
-  CountDocument,
+  type CountDocument,
   countReducer,
   increment,
   mapOperations,

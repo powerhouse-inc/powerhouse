@@ -1,9 +1,9 @@
 import { useMemo, useCallback } from "react";
 import type { IDocumentDriveServer } from "document-drive";
-import { DocumentDriveDocument } from "document-drive";
+import { type DocumentDriveDocument } from "document-drive";
 import { atom, useAtom } from "jotai";
 import { atomFamily } from "jotai/utils";
-import { Trigger } from "document-drive";
+import { type Trigger } from "document-drive";
 
 import { documentToHash } from "../utils/index.js";
 

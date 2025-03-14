@@ -1,8 +1,8 @@
-import { Command } from "commander";
+import { type Command } from "commander";
 import fs from "fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CommandActionType } from "../types.js";
+import { type CommandActionType } from "../types.js";
 import { findNodeProjectRoot } from "../utils.js";
 
 export function getVersion(debug: boolean) {

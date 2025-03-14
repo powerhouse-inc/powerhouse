@@ -1,22 +1,30 @@
-import { useDocumentDriveById } from '#hooks/useDocumentDriveById';
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { useEditorProps } from '#hooks/useEditorProps';
-import { useSyncStatus } from '#hooks/useSyncStatus';
-import { useUiNodes } from '#hooks/useUiNodes';
-import { useFilteredDocumentModels } from '#store/document-model';
-import { useDriveEditor } from '#store/external-packages';
-import { useDocumentDispatch } from '#utils/document-model';
+import {
+    useDocumentDriveById,
+    useDocumentDriveServer,
+    useDocumentEditor,
+    useEditorProps,
+    useSyncStatus,
+    useUiNodes,
+} from '#hooks';
+import {
+    useAsyncReactor,
+    useDriveEditor,
+    useFilteredDocumentModels,
+} from '#store';
+import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
+import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
 import {
     DriveContextProvider,
     type IDriveContext,
 } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { driveDocumentModelModule } from 'document-drive';
-import { DocumentModelModule, Operation } from 'document-model';
-import { useCallback, useEffect, useMemo } from 'react';
-import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
-import { useModal } from './modal';
+import { type DocumentModelModule, type Operation } from 'document-model';
+import { useCallback, useMemo } from 'react';
+import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
+import { useGetDriveDocuments } from '../hooks/useGetDriveDocuments.js';
+import { useModal } from './modal/index.js';
 
 function DriveEditorError({ error }: FallbackProps) {
     return (
@@ -58,6 +66,7 @@ export function DriveEditorContainer() {
         driveDocumentModelModule.reducer,
         documentDrive,
     );
+    const reactor = useAsyncReactor();
 
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
@@ -90,37 +99,39 @@ export function DriveEditorContainer() {
         [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
     );
 
-    const { addFile } = useDocumentDriveServer();
+    const { addFile, addDocument } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
+    const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
+
     const driveContext: IDriveContext = useMemo(
         () => ({
             showSearchBar: false,
             isAllowedToCreateDocuments: editorProps.isAllowedToCreateDocuments,
             documentModels: documentModels ?? [],
-            selectedNode: selectedNode,
+            selectedDriveNode,
+            selectedNode,
             selectNode: setSelectedNode,
             addFile,
             showCreateDocumentModal,
-            useSyncStatus: useSyncStatus,
+            useSyncStatus,
+            useDocumentEditorProps: useDocumentEditor,
+            useDriveDocumentStates: useGetDriveDocuments,
+            useDriveDocumentState,
+            addDocument,
         }),
         [
+            reactor,
             editorProps.isAllowedToCreateDocuments,
             documentModels,
             selectedNode,
             setSelectedNode,
             addFile,
+            addDocument,
             showCreateDocumentModal,
         ],
     );
 
     const driveEditor = useDriveEditor(document?.meta?.preferredEditor);
-
-    useEffect(() => {
-        console.debug(
-            `App Drive Editor for ${selectedDriveNode?.name}:`,
-            driveEditor,
-        );
-    }, [driveEditor?.config.id, selectedDriveNode]);
 
     if (!document) {
         return null;

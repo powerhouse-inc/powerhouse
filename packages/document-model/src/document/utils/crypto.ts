@@ -1,16 +1,16 @@
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
-  ActionFromDocument,
-  ActionSigner,
-  Operation,
-  OperationFromDocument,
-  OperationSignatureContext,
-  OperationSigningHandler,
-  OperationVerificationHandler,
-  PHDocument,
-  Reducer,
-  Signature,
+  type ActionFromDocument,
+  type ActionSigner,
+  type Operation,
+  type OperationFromDocument,
+  type OperationSignatureContext,
+  type OperationSigningHandler,
+  type OperationVerificationHandler,
+  type PHDocument,
+  type Reducer,
+  type Signature,
 } from "../types.js";
 
 export function generateId(method?: "UUIDv4"): string {

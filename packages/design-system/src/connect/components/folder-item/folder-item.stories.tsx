@@ -1,6 +1,6 @@
-import { mockUiFolderNode } from "@/connect/utils/mocks";
-import { Meta, StoryObj } from "@storybook/react";
-import { FolderItem } from "./folder-item";
+import { mockUiFolderNode } from "#connect";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { FolderItem } from "./folder-item.js";
 
 const meta: Meta<typeof FolderItem> = {
   title: "Connect/Components/FolderItem",

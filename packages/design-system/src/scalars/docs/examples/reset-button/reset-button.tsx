@@ -1,5 +1,5 @@
-import { Button } from "@/powerhouse/components/button";
-import { Form, NumberField, StringField } from "../../../components";
+import { Button } from "#powerhouse";
+import { Form, NumberField, StringField } from "../../../components/index.js";
 
 const FormWithResetButton = () => {
   return (

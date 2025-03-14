@@ -1,4 +1,4 @@
-import { Tooltip } from "@/connect";
+import { Tooltip } from "#connect";
 import { format } from "date-fns";
 
 export type TimestampProps = {

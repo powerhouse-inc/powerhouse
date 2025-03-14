@@ -1,5 +1,9 @@
 import React, { useCallback, useContext, useMemo, useState } from 'react';
-import { ModalPropsMapping, ModalType, modals } from './modals';
+import {
+    type ModalPropsMapping,
+    type ModalType,
+    modals,
+} from './modals/index.js';
 
 type MapModalProps<T> = {
     [K in keyof T]: Omit<T[K], 'open' | 'onClose'> & { onClose?: () => void };

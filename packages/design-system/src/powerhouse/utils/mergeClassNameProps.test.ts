@@ -1,4 +1,4 @@
-import { mergeClassNameProps } from "./mergeClassNameProps";
+import { mergeClassNameProps } from "./mergeClassNameProps.js";
 import { it } from "vitest";
 describe("Utils", () => {
   describe("mergeClassNameProps", () => {

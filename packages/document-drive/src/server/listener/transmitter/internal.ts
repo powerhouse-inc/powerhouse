@@ -1,9 +1,9 @@
 import {
-  GlobalStateFromDocument,
-  LocalStateFromDocument,
-  OperationFromDocument,
-  OperationScope,
-  PHDocument,
+  type GlobalStateFromDocument,
+  type LocalStateFromDocument,
+  type OperationFromDocument,
+  type OperationScope,
+  type PHDocument,
 } from "document-model";
 
 import {
@@ -11,14 +11,14 @@ import {
   DocumentDriveState,
 } from "#drive-document-model/gen/types";
 import {
-  GetDocumentOptions,
-  IBaseDocumentDriveServer,
-  Listener,
-  ListenerRevision,
-  StrandUpdate,
+  type GetDocumentOptions,
+  type IBaseDocumentDriveServer,
+  type Listener,
+  type ListenerRevision,
+  type StrandUpdate,
 } from "#server/types";
 import { logger } from "#utils/logger";
-import { ITransmitter, StrandUpdateSource } from "./types.js";
+import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 export interface IReceiver {
   onStrands: <TDocument extends PHDocument>(

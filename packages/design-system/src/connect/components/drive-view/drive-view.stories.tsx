@@ -3,14 +3,14 @@ import {
   mockLocalDrive,
   mockNodeOptions,
   mockPublicDrive,
-} from "@/connect/utils/mocks";
+} from "#connect";
 import {
   UiNodesContextProvider,
   useUiNodesContext,
 } from "@powerhousedao/reactor-browser";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect } from "react";
-import { DriveView } from "./drive-view";
+import { DriveView } from "./drive-view.js";
 
 const meta: Meta<typeof DriveView> = {
   title: "Connect/Components/DriveView",

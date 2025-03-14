@@ -1,4 +1,3 @@
-import React from "react";
 import { twMerge } from "tailwind-merge";
 
 export type FormMessageType = "error" | "info" | "warning";

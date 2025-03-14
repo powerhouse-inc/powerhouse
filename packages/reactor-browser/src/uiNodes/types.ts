@@ -1,11 +1,11 @@
-import { Maybe, SynchronizationUnitInput } from "document-model";
+import { type Maybe, type SynchronizationUnitInput } from "document-model";
 import {
-  DRIVE,
-  driveLocations,
-  FILE,
-  FOLDER,
-  sharingTypes,
-  syncStatuses,
+  type DRIVE,
+  type driveLocations,
+  type FILE,
+  type FOLDER,
+  type sharingTypes,
+  type syncStatuses,
 } from "./constants.js";
 
 export type SharingTypes = typeof sharingTypes;

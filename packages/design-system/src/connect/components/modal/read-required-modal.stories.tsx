@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ReadRequiredModal } from "./read-required-modal";
+import { ReadRequiredModal } from "./read-required-modal.js";
 
 const meta: Meta<typeof ReadRequiredModal> = {
   title: "Connect/Components/Modal/ReadRequiredModal",

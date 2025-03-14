@@ -1,2 +1,2 @@
-export * from "./toggle";
-export * from "./toggle-field";
+export * from "./toggle.js";
+export * from "./toggle-field.js";

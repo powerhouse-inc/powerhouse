@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { CreateDocumentModal } from "./create-document-modal";
+import { CreateDocumentModal } from "./create-document-modal.js";
 
 const meta: Meta<typeof CreateDocumentModal> = {
   title: "Connect/Components/Modal/Create Document Modal",

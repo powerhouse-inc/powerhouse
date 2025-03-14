@@ -1,13 +1,12 @@
 import {
-  DRIVE,
-  FILE,
-  FOLDER,
-  SharingType,
-  SyncStatus,
-  TDocumentType,
-} from "@/connect";
-import { Maybe, SynchronizationUnitInput } from "document-model";
-import { Scalars } from "zod";
+  type DRIVE,
+  type FILE,
+  type FOLDER,
+  type SharingType,
+  type SyncStatus,
+  type TDocumentType,
+} from "#connect";
+import { type Maybe, type SynchronizationUnitInput } from "document-model";
 
 export type UiFileNode = {
   kind: typeof FILE;

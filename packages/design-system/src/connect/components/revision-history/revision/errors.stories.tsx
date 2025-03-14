@@ -1,6 +1,6 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { TooltipProvider } from "@/connect";
-import { Errors } from "./errors";
+import { TooltipProvider } from "#connect";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { Errors } from "./errors.js";
 
 const meta = {
   title: "Connect/Components/Revision History/Revision/Errors",

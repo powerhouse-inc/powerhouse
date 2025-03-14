@@ -1,4 +1,4 @@
-import IconCross from '@/assets/icons/cross.svg?react';
+import IconCross from '#assets/icons/cross.svg?react';
 import { NavLink } from 'react-router-dom';
 
 const Settings = () => {

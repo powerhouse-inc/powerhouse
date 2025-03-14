@@ -1,15 +1,15 @@
-import { DocumentModelHeaderAction } from "#document-model/gen/actions.js";
-import { DocumentModelState } from "#document-model/gen/types.js";
+import { type DocumentModelHeaderAction } from "#document-model/gen/actions.js";
+import { type DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
-import { DocumentAction } from "./actions/types.js";
+import { type DocumentAction } from "./actions/types.js";
 import type {
   CreateChildDocumentInput,
   Signal,
   SignalDispatch,
   SynchronizationUnitInput,
 } from "./signal.js";
-import { FileInput } from "./utils/file.js";
+import { type FileInput } from "./utils/file.js";
 export type { NOOPAction } from "./schema/types.js";
 export type {
   CreateChildDocumentInput,
@@ -81,7 +81,7 @@ export type Action<
   TType extends string = string,
   TInput = unknown,
   TScope extends OperationScope = OperationScope,
-> = DefaultAction | BaseAction<TType, TInput, TScope>;
+> = BaseAction<TType, TInput, TScope>;
 
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */
@@ -219,7 +219,7 @@ export type PartialState<TGlobalOrLocalState> =
   | TGlobalOrLocalState
   | Partial<TGlobalOrLocalState>;
 
-export type CreateState<TDocument extends BaseDocument<any, any, any>> = (
+export type CreateState<TDocument extends PHDocument> = (
   state?: Partial<
     BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
@@ -340,6 +340,7 @@ export type PHDocument<
 export type AttachmentRef = string; // TODO `attachment://${string}`;
 
 export type DocumentModelUtils<TDocument extends PHDocument> = {
+  fileExtension: string;
   createState: CreateState<TDocument>;
   createExtendedState: CreateExtendedState<TDocument>;
   createDocument: CreateDocument<TDocument>;
@@ -433,6 +434,11 @@ export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
 
 export type ValidationError = { message: string; details: object };
 
+type ExtractPHDocumentGenerics<T> =
+  T extends BaseDocument<infer State, infer LocalState, infer Action>
+    ? { state: State; localState: LocalState; action: Action }
+    : never;
+
 export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   reducer: Reducer<TDocument>;
   actions: Record<
@@ -442,11 +448,6 @@ export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   utils: DocumentModelUtils<TDocument>;
   documentModel: DocumentModelState;
 };
-
-type ExtractPHDocumentGenerics<T> =
-  T extends BaseDocument<infer State, infer LocalState, infer Action>
-    ? { state: State; localState: LocalState; action: Action }
-    : never;
 
 export type GlobalStateFromDocument<
   TDocument extends BaseDocument<any, any, any>,

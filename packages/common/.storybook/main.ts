@@ -1,5 +1,4 @@
 import type { StorybookConfig } from "@storybook/react-vite";
-
 const config: StorybookConfig = {
   stories: [`../editors/**/*.stories.tsx`],
   addons: [
@@ -15,18 +14,12 @@ const config: StorybookConfig = {
   docs: {
     autodocs: "tag",
   },
-  typescript: {
-    reactDocgen: false,
-  },
-  core: {
-    builder: {
-      name: "@storybook/builder-vite",
-      options: {
-        rollupOptions: {
-          external: [/@codemirror\/.*/, "thememirror", "cm6-graphql"],
-        },
-      },
-    },
+  viteFinal: async (config) => {
+    const { mergeConfig } = await import("vite");
+    const { default: tailwindcss } = await import("@tailwindcss/vite");
+    return mergeConfig(config, {
+      plugins: [tailwindcss()],
+    });
   },
 };
 export default config;

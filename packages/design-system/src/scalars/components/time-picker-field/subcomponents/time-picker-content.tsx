@@ -1,11 +1,14 @@
-import * as React from "react";
+import type * as React from "react";
 
-import { Button } from "../../fragments/button";
-import { TimePeriod } from "../type";
-import { SelectBaseProps } from "../../enum-field/types";
-import TimePeriodSelector from "./time-period-selector";
-import TimeSelector from "./time-selector";
-import { SelectFieldProps, SelectFieldRaw } from "../../fragments/select-field";
+import { Button } from "../../fragments/button/index.js";
+import { type TimePeriod } from "../type.js";
+import { type SelectBaseProps } from "../../enum-field/types.js";
+import TimePeriodSelector from "./time-period-selector.js";
+import TimeSelector from "./time-selector.js";
+import {
+  type SelectFieldProps,
+  SelectFieldRaw,
+} from "../../fragments/select-field/index.js";
 interface TimePickerContentProps {
   onSave?: (time: string) => void;
   onCancel?: () => void;
@@ -77,6 +80,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
           options={hours}
           selectedValue={selectedHour}
           onSelect={setSelectedHour}
+          isCyclic={true}
         />
         <div className="flex items-center px-4 text-sm font-normal leading-[20px] text-gray-900">
           :
@@ -85,6 +89,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
           options={minutes}
           selectedValue={selectedMinute}
           onSelect={setSelectedMinute}
+          isCyclic={true}
         />
       </div>
       <div className="flex items-center justify-between pt-[25px]">

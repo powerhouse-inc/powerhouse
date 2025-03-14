@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { FormMessage } from "./form-message";
+import { FormMessage } from "./form-message.js";
 
 describe("FormMessage", () => {
   it("should match snapshot", () => {

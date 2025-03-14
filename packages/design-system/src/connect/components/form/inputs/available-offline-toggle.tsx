@@ -1,5 +1,9 @@
-import { Toggle } from "@/connect";
-import { ComponentPropsWithRef, ForwardedRef, forwardRef } from "react";
+import { Toggle } from "#connect";
+import {
+  type ComponentPropsWithRef,
+  type ForwardedRef,
+  forwardRef,
+} from "react";
 
 type AvailableOfflineToggleProps = Omit<
   ComponentPropsWithRef<typeof Toggle>,

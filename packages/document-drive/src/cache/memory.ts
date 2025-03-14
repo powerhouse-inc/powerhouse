@@ -1,5 +1,5 @@
-import { Action, PHDocument } from "document-model";
-import { ICache } from "./types.js";
+import { Action, type PHDocument } from "document-model";
+import { type ICache } from "./types.js";
 
 class InMemoryCache implements ICache {
   private cache = new Map<string, Map<string, PHDocument>>();

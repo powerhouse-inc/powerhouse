@@ -1,17 +1,16 @@
-import { useLogin } from '#hooks/useLogin';
-import { useUiNodes } from '#hooks/useUiNodes';
+import { useLogin, useUiNodes } from '#hooks';
 import {
     ConnectSidebar,
     Icon,
     SidebarAddDriveItem,
     SidebarItem,
-    UiDriveNode,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
-import { useModal } from './modal';
+import { useModal } from './modal/index.js';
 
 export default function Sidebar() {
     const { showModal } = useModal();

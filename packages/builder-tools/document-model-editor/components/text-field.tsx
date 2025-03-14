@@ -18,7 +18,7 @@ import {
   FormMessage,
   Form,
 } from "./form.js";
-import { TextareaHandle, Textarea } from "./text-area.js";
+import { type TextareaHandle, Textarea } from "./text-area.js";
 
 type TextFieldProps = {
   name: string;

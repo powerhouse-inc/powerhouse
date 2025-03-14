@@ -1,11 +1,11 @@
-import { WagmiContext } from "@/connect/context/WagmiContext";
+import { WagmiContext } from "#connect";
 import {
   render,
   screen,
   waitForElementToBeRemoved,
 } from "@testing-library/react";
 import { it } from "vitest";
-import { ConnectSidebar } from ".";
+import { ConnectSidebar } from "./index.js";
 
 describe("Connect Sidebar Component", () => {
   it("should match snapshot", async () => {

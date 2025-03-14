@@ -1,6 +1,6 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
   addFolder,
   copyNode,
   deleteNode,
@@ -12,13 +12,13 @@ import {
   updateNode,
 } from "document-drive";
 import {
-  EditorDispatch,
-  PHDocument,
+  type EditorDispatch,
+  type PHDocument,
   generateId as _generateId,
 } from "document-model";
 import { useMemo } from "react";
-import { UiNode } from "../uiNodes/types.js";
-import { IDriveContext } from "./useDriveContext.js";
+import { type UiNode } from "../uiNodes/types.js";
+import { type IDriveContext } from "./useDriveContext.js";
 
 const generateId = () => _generateId().toString();
 

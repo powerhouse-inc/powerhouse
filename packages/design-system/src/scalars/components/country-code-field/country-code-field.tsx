@@ -1,16 +1,25 @@
+import {
+  SelectFieldRaw,
+  type ErrorHandling,
+  type FieldCommonProps,
+} from "#scalars";
 import React from "react";
-import { SelectFieldRaw } from "@/scalars/components/fragments/select-field";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import countries from "world-countries";
 import { CircleFlag } from "react-circle-flags";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { CountryCodeProps } from "./types";
+import countries, { type Countries } from "world-countries";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { CountryCodeProps } from "./types.js";
 
-export type CountryCodeFieldProps = FieldCommonProps<string> &
+type CountryCodeFieldBaseProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  keyof FieldCommonProps<string> | keyof ErrorHandling | keyof CountryCodeProps
+>;
+
+export type CountryCodeFieldProps = CountryCodeFieldBaseProps &
+  FieldCommonProps<string> &
   ErrorHandling &
   CountryCodeProps;
 
-const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
+const CountryCodeFieldRaw = React.forwardRef<
   HTMLButtonElement,
   CountryCodeFieldProps
 >(
@@ -28,7 +37,7 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
     },
     ref,
   ) => {
-    const defaultOptions = countries
+    const defaultOptions = (countries as unknown as Countries)
       .filter(
         (country) =>
           (includeDependentAreas ? true : country.independent) &&
@@ -89,7 +98,7 @@ export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
             return true;
           }
 
-          const validCountries = countries
+          const validCountries = (countries as unknown as Countries)
             .filter(
               (country) =>
                 (includeDependentAreas ? true : country.independent) &&

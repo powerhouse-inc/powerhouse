@@ -1,5 +1,5 @@
 import { createDocumentStory } from "#editor-utils/storybook";
-import { Meta } from "@storybook/react";
+import { type Meta } from "@storybook/react";
 import {
   documentModelCreateExtendedState,
   documentModelReducer,

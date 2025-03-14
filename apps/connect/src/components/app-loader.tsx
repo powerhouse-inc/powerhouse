@@ -1,8 +1,7 @@
+import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
 import { lazy, Suspense } from 'react';
 import '../i18n';
 import '../index.css';
-import { DocumentEditorDebugTools } from '../utils/document-editor-debug-tools';
-import serviceWorkerManager from '../utils/registerServiceWorker';
 
 if (import.meta.env.MODE === 'development') {
     window.documentEditorDebugTools = new DocumentEditorDebugTools();
@@ -10,7 +9,7 @@ if (import.meta.env.MODE === 'development') {
     serviceWorkerManager.registerServiceWorker(false);
 }
 
-const App = lazy(() => import('./app'));
+const App = lazy(() => import('./app.js'));
 
 const AppLoader = (
     <Suspense>

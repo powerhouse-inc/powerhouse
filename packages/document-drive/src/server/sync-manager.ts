@@ -1,38 +1,40 @@
-import { ICache } from "#cache/types";
+import { type ICache } from "#cache/types";
 import {
-  DocumentDriveDocument,
-  FileNode,
+  type DocumentDriveDocument,
+  type FileNode,
 } from "#drive-document-model/gen/types";
 import { isFileNode } from "#drive-document-model/src/utils";
-import { IDriveStorage } from "#storage/types";
-import { logger } from "#utils/logger";
+import { type IDriveStorage } from "#storage/types";
+import { childLogger } from "#utils/logger";
 import { isBefore, isDocumentDrive } from "#utils/misc";
 import {
-  DocumentModelModule,
-  OperationScope,
-  PHDocument,
+  type DocumentModelModule,
+  type OperationScope,
+  type PHDocument,
   garbageCollectDocumentOperations,
   replayDocument,
 } from "document-model";
 import { SynchronizationUnitNotFoundError } from "./error.js";
 import {
-  GetStrandsOptions,
-  IEventEmitter,
-  ISynchronizationManager,
-  OperationUpdate,
-  SyncStatus,
-  SyncUnitStatusObject,
-  SynchronizationUnit,
-  SynchronizationUnitQuery,
+  type GetStrandsOptions,
+  type IEventEmitter,
+  type ISynchronizationManager,
+  type OperationUpdate,
+  type SyncStatus,
+  type SyncUnitStatusObject,
+  type SynchronizationUnit,
+  type SynchronizationUnitQuery,
 } from "./types.js";
 
 export default class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new Map<string, SyncUnitStatusObject>();
 
+  private logger = childLogger(["SynchronizationManager"]);
+
   constructor(
     private readonly storage: IDriveStorage,
     private readonly cache: ICache,
-    private readonly documentModelModules: DocumentModelModule[],
+    private documentModelModules: DocumentModelModule[],
     private readonly eventEmitter?: IEventEmitter,
   ) {}
 
@@ -277,7 +279,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
         return cachedDocument;
       }
     } catch (e) {
-      logger.error("Error getting drive from cache", e);
+      this.logger.error("Error getting drive from cache", e);
     }
     const driveStorage = await this.storage.getDrive(driveId);
     const result = this._buildDocument(driveStorage);
@@ -297,7 +299,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
         return cachedDocument;
       }
     } catch (e) {
-      logger.error("Error getting document from cache", e);
+      this.logger.error("Error getting document from cache", e);
     }
     const documentStorage = await this.storage.getDocument(driveId, documentId);
     return this._buildDocument(documentStorage);
@@ -324,6 +326,10 @@ export default class SynchronizationManager implements ISynchronizationManager {
         reuseOperationResultingState: true,
       },
     );
+  }
+
+  setDocumentModelModules(modules: DocumentModelModule[]) {
+    this.documentModelModules = modules;
   }
 
   private getDocumentModelModule(documentType: string) {

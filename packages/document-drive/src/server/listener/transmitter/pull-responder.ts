@@ -1,32 +1,31 @@
 import {
-  GetStrandsOptions,
-  IListenerManager,
-  IOperationResult,
-  Listener,
-  ListenerRevision,
-  ListenerRevisionWithError,
-  OperationUpdate,
-  RemoteDriveOptions,
-  StrandUpdate,
+  type GetStrandsOptions,
+  type IListenerManager,
+  type IOperationResult,
+  type Listener,
+  type ListenerRevision,
+  type ListenerRevisionWithError,
+  type OperationUpdate,
+  type RemoteDriveOptions,
+  type StrandUpdate,
 } from "#server/types";
-import {
-  childLogger,
-  generateUUID,
-  ListenerFilter,
-  Trigger,
-} from "document-drive";
 
+import { childLogger } from "#utils/logger";
+import { generateUUID } from "#utils/misc";
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
 import { gql } from "graphql-request";
 import {
-  ITransmitter,
-  PullResponderTrigger,
-  StrandUpdateSource,
+  type ITransmitter,
+  type PullResponderTrigger,
+  type StrandUpdateSource,
 } from "./types.js";
+import {
+  type ListenerFilter,
+  type Trigger,
+} from "#drive-document-model/gen/types";
 
-const ENABLE_SYNC_DEBUG = false;
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
 };
@@ -48,6 +47,8 @@ export type StrandUpdateGraphQL = Omit<StrandUpdate, "operations"> & {
 export interface IPullResponderTransmitter extends ITransmitter {
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]>;
 }
+
+const MAX_REVISIONS_PER_ACK = 100;
 
 export class PullResponderTransmitter implements IPullResponderTransmitter {
   private static staticLogger = childLogger([
@@ -236,37 +237,59 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
   }
 
   static async acknowledgeStrands(
-    driveId: string,
     url: string,
     listenerId: string,
     revisions: ListenerRevision[],
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.staticLogger.verbose(
       `acknowledgeStrands(url: ${url}, listener: ${listenerId})`,
       revisions,
     );
 
-    const result = await requestGraphql<{ acknowledge: boolean }>(
-      url,
-      gql`
-        mutation acknowledge(
-          $listenerId: String!
-          $revisions: [ListenerRevisionInput]
-        ) {
-          acknowledge(listenerId: $listenerId, revisions: $revisions)
-        }
-      `,
-      { listenerId, revisions },
-    );
-    const error = result.errors?.at(0);
-    if (error) {
-      throw error;
+    // split revisions into chunks
+    const chunks = [];
+    for (let i = 0; i < revisions.length; i += MAX_REVISIONS_PER_ACK) {
+      chunks.push(revisions.slice(i, i + MAX_REVISIONS_PER_ACK));
     }
 
-    if (result.acknowledge === null) {
+    if (chunks.length > 1) {
+      this.staticLogger.verbose(
+        `Breaking strand acknowledgement into ${chunks.length} chunks...`,
+      );
+    }
+
+    // order does not matter, we can send out requests in parallel
+    const results = await Promise.allSettled(
+      chunks.map(async (chunk) => {
+        const result = await requestGraphql<{ acknowledge: boolean }>(
+          url,
+          gql`
+            mutation acknowledge(
+              $listenerId: String!
+              $revisions: [ListenerRevisionInput]
+            ) {
+              acknowledge(listenerId: $listenerId, revisions: $revisions)
+            }
+          `,
+          { listenerId, revisions: chunk },
+        );
+
+        const error = result.errors?.at(0);
+        if (error) {
+          throw error;
+        }
+
+        if (result.acknowledge === null || !result.acknowledge) {
+          throw new Error("Error acknowledging strands");
+        }
+      }),
+    );
+
+    // throw after we try all chunks
+    const errors = results.filter((result) => result.status === "rejected");
+    if (errors.length > 0) {
       throw new Error("Error acknowledging strands");
     }
-    return result.acknowledge;
   }
 
   private static async executePull(
@@ -294,9 +317,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         // since ?
       );
 
+      this.staticLogger.verbose("Pulled strands...");
+
       // if there are no new strands then do nothing
       if (!strands.length) {
         onRevisions?.([]);
+
+        this.staticLogger.verbose("No new strands, skipping...");
         return;
       }
 
@@ -308,6 +335,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           scope: strand.scope,
           branch: strand.branch,
         }));
+
+        this.staticLogger.verbose("Processing strand...");
 
         let error: Error | undefined = undefined;
         try {
@@ -338,20 +367,39 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         });
       }
 
+      this.staticLogger.verbose("Processed strands...");
+
       onRevisions?.(listenerRevisions);
 
-      await PullResponderTransmitter.acknowledgeStrands(
-        driveId,
-        url,
-        listenerId,
-        listenerRevisions.map((revision) => {
-          const { error, ...rest } = revision;
-          return rest;
-        }),
-      )
-        .then((result) => onAcknowledge?.(result))
-        .catch((error) => this.staticLogger.error("ACK error", error));
+      this.staticLogger.verbose("Acknowledging strands...");
+
+      let success = false;
+      try {
+        await PullResponderTransmitter.acknowledgeStrands(
+          url,
+          listenerId,
+          listenerRevisions.map((revision) => {
+            const { error, ...rest } = revision;
+            return rest;
+          }),
+        );
+
+        success = true;
+      } catch (error) {
+        this.staticLogger.error("ACK error", error);
+      }
+
+      if (success) {
+        this.staticLogger.verbose("Acknowledged strands successfully.");
+      } else {
+        this.staticLogger.error("Failed to acknowledge strands");
+      }
+
+      // let this throw separately
+      onAcknowledge?.(success);
     } catch (error) {
+      this.staticLogger.error("Pull error", error);
+
       onError(error as Error);
     }
   }

@@ -1,1 +1,1 @@
-export * from './useDefaultDocumentModelEditor';
+export * from './useDefaultDocumentModelEditor.js';

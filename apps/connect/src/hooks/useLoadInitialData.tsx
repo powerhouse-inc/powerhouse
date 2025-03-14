@@ -1,23 +1,23 @@
-import { ReloadConnectToast } from '#components/toast/reload-connect-toast';
-import { useReadModeContext } from '#context/read-mode';
-import { useUiNodes } from '#hooks/useUiNodes';
-import { useAsyncReactor } from '#store/reactor';
+import { ReloadConnectToast } from '#components';
+import { useReadModeContext } from '#context';
+import { useUiNodes } from '#hooks';
+import { useAsyncReactor } from '#store';
 import {
     CONFLICT,
     ERROR,
     LOCAL,
     SUCCESS,
     toast,
-    UiDriveNode,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
-import { DocumentDriveDocument } from 'document-drive';
-import { TFunction } from 'i18next';
+import { type DocumentDriveDocument } from 'document-drive';
+import { type TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useClientErrorHandler } from './useClientErrorHandler';
-import { useConnectConfig } from './useConnectConfig';
-import { useDocumentDrives } from './useDocumentDrives';
-import { isLatestVersion } from './utils';
+import { useClientErrorHandler } from './useClientErrorHandler.js';
+import { useConnectConfig } from './useConnectConfig.js';
+import { useDocumentDrives } from './useDocumentDrives.js';
+import { isLatestVersion } from './utils.js';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
@@ -45,7 +45,8 @@ export const useLoadInitialData = () => {
 
         if (
             import.meta.env.MODE === 'development' ||
-            connectConfig.studioMode
+            connectConfig.studioMode ||
+            !connectConfig.warnOutdatedApp
         ) {
             console.warn(
                 `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,

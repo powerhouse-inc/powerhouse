@@ -1,4 +1,4 @@
-import { GroupTransactionsTable, RwaTabContent } from "@/rwa";
+import { GroupTransactionsTable, RwaTabContent } from "#rwa";
 
 export function TransactionsTab() {
   return (

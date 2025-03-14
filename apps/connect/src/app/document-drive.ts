@@ -1,17 +1,21 @@
-import { getReactorDefaultDrivesConfig } from '#utils/reactor';
+import { getReactorDefaultDrivesConfig } from '#utils';
 import {
     BaseQueueManager,
-    DocumentDriveAction,
-    DriveInput,
-    IDocumentDriveServer,
+    type DocumentDriveAction,
+    type DriveInput,
+    type IDocumentDriveServer,
     InMemoryCache,
     logger,
     ReactorBuilder,
-    RemoteDriveOptions,
+    type RemoteDriveOptions,
 } from 'document-drive';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
-import { Action, DocumentModelModule, Operation } from 'document-model';
-import { IpcMain, webContents } from 'electron';
+import {
+    type DocumentAction,
+    type DocumentModelModule,
+    type Operation,
+} from 'document-model';
+import { type IpcMain, webContents } from 'electron';
 import { join } from 'path';
 
 export default (
@@ -114,7 +118,7 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | Action>[],
+            operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) => documentDrive.addDriveOperations(drive, operations, { forceSync }),
     );
@@ -124,7 +128,7 @@ export default (
         (
             _e,
             drive: string,
-            operation: Operation<DocumentDriveAction | Action>,
+            operation: Operation<DocumentDriveAction | DocumentAction>,
             forceSync?: boolean,
         ) =>
             documentDrive.queueDriveOperations(drive, [operation], {
@@ -137,7 +141,7 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | Action>[],
+            operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
             documentDrive.queueDriveOperations(drive, operations, {

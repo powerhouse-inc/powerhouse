@@ -1,25 +1,25 @@
 import * as customScalars from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
-import { Author, DocumentModelDocument } from "document-model";
+import { type Author, type DocumentModelDocument } from "document-model";
 import {
   buildASTSchema,
   extendSchema,
   getNullableType,
   GraphQLScalarType,
-  GraphQLSchema,
-  GraphQLType,
-  InputObjectTypeDefinitionNode,
+  type GraphQLSchema,
+  type GraphQLType,
+  type InputObjectTypeDefinitionNode,
   isEnumType,
   isListType,
   isObjectType,
   isScalarType,
   Kind,
-  ObjectTypeDefinitionNode,
+  type ObjectTypeDefinitionNode,
   parse,
   print,
   visit,
 } from "graphql";
-import { Scope } from "../types/documents.js";
+import { type Scope } from "../types/documents.js";
 
 export function makeStateObject(modelName: string, scope: Scope) {
   const name = makeStateObjectName(modelName, scope);

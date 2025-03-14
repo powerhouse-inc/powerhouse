@@ -1,4 +1,4 @@
-import { Currency } from "./types";
+import { type Currency } from "./types.js";
 
 export const commonFiatCurrencies: Currency[] = [
   {

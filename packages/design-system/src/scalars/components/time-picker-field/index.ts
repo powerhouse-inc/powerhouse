@@ -1,1 +1,1 @@
-export * from "./time-picker-field";
+export * from "./time-picker-field.js";

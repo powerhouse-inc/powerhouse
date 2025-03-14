@@ -1,0 +1,64 @@
+import { format } from "date-fns";
+import { type DatePickerFieldProps } from "../date-picker-field/date-picker-field.js";
+import { type DateFieldValue } from "../date-picker-field/types.js";
+import {
+  formatDateToValidCalendarDateFormat,
+  getDateFromValue,
+  splitIso8601DateTime,
+} from "../date-picker-field/utils.js";
+import {
+  getDateFormat,
+  isDateFormatAllowed,
+  isValidTime,
+  normalizeMonthFormat,
+} from "./utils.js";
+
+export const dateTimeFieldValidations =
+  ({ dateFormat, minDate, maxDate }: DatePickerFieldProps) =>
+  (value: unknown) => {
+    if (value === "" || value === undefined) {
+      return true;
+    }
+
+    // 1. Validate that it has date and time separated by space
+    const { date, time } = splitIso8601DateTime(value as string);
+
+    if (!date || !time) {
+      return "Invalid format. Use DATE and TIME separated by a space.";
+    }
+
+    const internalFormat = getDateFormat(dateFormat ?? "");
+    const stringDate = normalizeMonthFormat(
+      getDateFromValue(value as DateFieldValue),
+    );
+
+    const isValid = isDateFormatAllowed(stringDate, internalFormat);
+
+    if (!isValid) {
+      return "Invalid date format.";
+    }
+
+    if (!isValidTime(time)) {
+      return "Invalid time format. Use HH:mm.";
+    }
+    const isoDate = formatDateToValidCalendarDateFormat(stringDate);
+    const validDate = new Date(isoDate);
+
+    if (minDate) {
+      const minDateValue = new Date(minDate);
+      if (validDate < minDateValue) {
+        const formattedMinDate = format(minDateValue, "dd/MM/yyyy");
+        return `Date must be on or after ${formattedMinDate}.`;
+      }
+    }
+
+    if (maxDate) {
+      const maxDateValue = new Date(maxDate);
+      if (validDate > maxDateValue) {
+        const formattedMaxDate = format(maxDateValue, "dd/MM/yyyy");
+        return `Date must be on or before ${formattedMaxDate}.`;
+      }
+    }
+
+    return true;
+  };

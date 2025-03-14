@@ -1,6 +1,6 @@
-import { cn } from "@/scalars/lib/utils";
-import { TimePeriod } from "../type";
-import { Button } from "../../fragments/button";
+import { cn } from "#scalars";
+import { Button } from "../../fragments/button/index.js";
+import { type TimePeriod } from "../type.js";
 
 interface TimePeriodSelectorProps {
   selectedPeriod?: TimePeriod;
@@ -18,10 +18,10 @@ const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
         key={period}
         onClick={() => setSelectedPeriod(period as TimePeriod)}
         className={cn(
-          "h-[20px] w-[16px] text-[12px] leading-[28px] transition-colors font-normal",
+          "h-[20px] w-[16px] text-[12px] font-normal leading-[28px] transition-colors",
           selectedPeriod === period
-            ? "text-gray-900 font-normal"
-            : "text-gray-300 font-normal",
+            ? "font-normal text-gray-900"
+            : "font-normal text-gray-300",
         )}
       >
         {period}

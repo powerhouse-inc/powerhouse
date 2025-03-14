@@ -3,7 +3,7 @@
  */
 
 import {
-  RefObject,
+  type RefObject,
   useCallback,
   useLayoutEffect,
   useRef,

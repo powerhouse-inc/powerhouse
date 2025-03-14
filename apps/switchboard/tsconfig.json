@@ -2,22 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "resolveJsonModule": true,
-    "lib": ["es2022"]
+    "lib": ["ESNext"],
   },
-  "include": ["./src/**/*.ts", "*.ts", "*.json"],
-  "references": [
-    {
-      "path": "../../packages/scalars"
-    },
-    {
-      "path": "../../packages/switchboard-gui"
-    },
-    {
-      "path": "../../packages/document-drive"
-    },
-    {
-      "path": "../../packages/document-model"
-    }
-  ]
+  "include": ["**/*"]
 }

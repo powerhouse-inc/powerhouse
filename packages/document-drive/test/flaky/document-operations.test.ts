@@ -1,18 +1,25 @@
+import { driveDocumentModelModule } from "#drive-document-model/module";
+import { generateAddNodeAction } from "#drive-document-model/src/utils";
 import {
   BaseAction,
   DocumentModelAction,
   DocumentModelDocument,
+  documentModelDocumentModelModule,
   DocumentModelModule,
+  Operation,
+  setModelName,
+  setStateSchema
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
 import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { ReactorBuilder } from "../../src/server/base.js";
+import { ReactorBuilder } from "../../src/server/builder.js";
 import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document operations", () => {
   const documentModels = [
-    DocumentModelLib,
-    ...Object.values(DocumentModelsLibs),
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
   ] as DocumentModelModule[];
 
   let server = new ReactorBuilder(documentModels).build();
@@ -32,22 +39,21 @@ describe("Document operations", () => {
       },
     });
     const drive = await server.getDrive("1");
-    await server.addDriveOperation(
-      "1",
-      buildOperation(
-        DocumentDrive.reducer,
-        drive,
-        DocumentDrive.utils.generateAddNodeAction(
-          drive.state.global,
-          {
-            id: "1",
-            name: "test",
-            documentType: "powerhouse/document-model",
-          },
-          ["global", "local"],
-        ),
+    const operation = buildOperation(
+      driveDocumentModelModule.reducer,
+      drive,
+      generateAddNodeAction(
+        drive.state.global,
+        {
+          id: "1",
+          name: "test",
+          documentType: documentModelDocumentModelModule.documentModel.id,
+        },
+        ["global", "local"],
       ),
-    );
+    ) as Operation<DocumentDriveAction>;
+
+    await server.addDriveOperation("1", operation);
 
     return server.getDocument("1", "1") as Promise<DocumentModelDocument>;
   }
@@ -60,9 +66,9 @@ describe("Document operations", () => {
         "1",
         "1",
         buildOperation(
-          reducer,
+          documentModelDocumentModelModule.reducer,
           document,
-          actions.setModelName({ name: "test" }),
+          setModelName({ name: "test" }),
         ),
       );
       expect(result.status).toBe("SUCCESS");
@@ -74,17 +80,16 @@ describe("Document operations", () => {
     it("should reject invalid operation", async () => {
       const document = await buildFile();
 
-      const result = await server.addOperation("1", "1", {
-        ...buildOperation(
-          reducer,
+      const result = await server.addOperation("1", "1", 
+        buildOperation(
+          documentModelDocumentModelModule.reducer,
           document,
-          actions.setStateSchema({
+          setStateSchema({
             schema: "test",
             scope: "global",
           }),
         ),
-        input: { schema: "test", scope: "invalid" },
-      });
+      );
       expect(result.status).toBe("ERROR");
       expect(result.error?.message).toBe("Invalid scope: invalid");
     });

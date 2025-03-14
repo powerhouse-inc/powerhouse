@@ -1,15 +1,15 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
 import { DriveNotFoundError } from "#server/error";
-import { SynchronizationUnitQuery } from "#server/types";
+import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
-  DocumentHeader,
-  Operation,
-  OperationScope,
-  PHDocument,
+  type DocumentHeader,
+  type Operation,
+  type OperationScope,
+  type PHDocument,
 } from "document-model";
 import type { Dirent } from "fs";
 import {
@@ -23,7 +23,7 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import sanitize from "sanitize-filename";
-import { IDriveStorage } from "./types.js";
+import { type IDriveStorage } from "./types.js";
 
 type FSError = {
   errno: number;

@@ -1,11 +1,11 @@
-import { castDraft, create, Draft } from "mutative";
-import { PruneActionInput } from "../schema/types.js";
+import { castDraft, create, type Draft } from "mutative";
+import { type PruneActionInput } from "../schema/types.js";
 import {
-  ActionFromDocument,
-  BaseState,
-  OperationFromDocument,
-  PHDocument,
-  StateReducer,
+  type ActionFromDocument,
+  type BaseState,
+  type OperationFromDocument,
+  type PHDocument,
+  type StateReducer,
 } from "../types.js";
 import { hashDocumentStateForScope, replayOperations } from "../utils/base.js";
 import { nextSkipNumber, sortOperations } from "../utils/document-helpers.js";

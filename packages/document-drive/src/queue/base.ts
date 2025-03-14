@@ -1,19 +1,19 @@
-import { DeleteNodeAction } from "#drive-document-model/gen/actions";
-import { AddFileInput } from "#drive-document-model/gen/types";
+import { type DeleteNodeAction } from "#drive-document-model/gen/actions";
+import { type AddFileInput } from "#drive-document-model/gen/types";
 import { logger } from "#utils/logger";
 import { generateUUID, runAsap } from "#utils/misc";
-import { Action } from "document-model";
-import { createNanoEvents, Unsubscribe } from "nanoevents";
+import { type Action } from "document-model";
+import { createNanoEvents, type Unsubscribe } from "nanoevents";
 import {
-  IJob,
-  IJobQueue,
-  IQueue,
-  IQueueManager,
-  IServerDelegate,
+  type IJob,
+  type IJobQueue,
+  type IQueue,
+  type IQueueManager,
+  type IServerDelegate,
   isOperationJob,
-  Job,
-  JobId,
-  QueueEvents,
+  type Job,
+  type JobId,
+  type QueueEvents,
 } from "./types.js";
 
 export class MemoryQueue<T> implements IQueue<T> {

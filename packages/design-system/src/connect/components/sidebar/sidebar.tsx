@@ -1,12 +1,12 @@
-import { Sidebar, SidebarPanel, SidebarProps } from "@/powerhouse";
+import { Sidebar, SidebarPanel, type SidebarProps } from "#powerhouse";
 import {
   ConnectSidebarFooter,
-  ConnectSidebarFooterProps,
-} from "./sidebar-footer";
+  type ConnectSidebarFooterProps,
+} from "./sidebar-footer.js";
 import {
   ConnectSidebarHeader,
-  ConnectSidebarHeaderProps,
-} from "./sidebar-header";
+  type ConnectSidebarHeaderProps,
+} from "./sidebar-header.js";
 
 export interface ConnectSidebarProps
   extends Omit<SidebarProps, "maxWidth" | "minWidth">,

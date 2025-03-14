@@ -1,15 +1,19 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { SynchronizationUnitQuery } from "#server/types";
+import { type SynchronizationUnitQuery } from "#server/types";
 import type {
   DocumentHeader,
   Operation,
   OperationFromDocument,
   PHDocument,
 } from "document-model";
-import { IDriveStorage, IStorage, IStorageDelegate } from "./types.js";
+import {
+  type IDriveStorage,
+  type IStorage,
+  type IStorageDelegate,
+} from "./types.js";
 
 abstract class BaseStorage implements IStorage {
   abstract checkDocumentExists(drive: string, id: string): Promise<boolean>;

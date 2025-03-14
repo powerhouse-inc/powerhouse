@@ -1,12 +1,11 @@
-import connectLogo from "@/assets/connect.png";
-import { UiDriveNode, UiNode } from "@/connect";
-import { SharingType } from "@/connect/types";
+import connectLogo from "#assets/connect.png";
+import { type SharingType, type UiDriveNode, type UiNode } from "#connect";
 import { useUiNodesContext } from "@powerhousedao/reactor-browser";
 import { useEffect } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ComponentPropsWithoutRef } from "react";
-import { ConnectSidebar } from "..";
-import { SidebarItem } from "./sidebar-item";
+import { type ComponentPropsWithoutRef } from "react";
+import { ConnectSidebar } from "../index.js";
+import { SidebarItem } from "./sidebar-item.js";
 
 type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
   driveNodes?: UiDriveNode[];

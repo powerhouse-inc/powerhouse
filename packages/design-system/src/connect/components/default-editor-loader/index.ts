@@ -1,1 +1,1 @@
-export * from "./default-editor-loader";
+export * from "./default-editor-loader.js";

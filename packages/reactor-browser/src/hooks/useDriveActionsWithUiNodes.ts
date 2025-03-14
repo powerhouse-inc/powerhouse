@@ -1,16 +1,16 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-  FileNode,
-  FolderNode,
-  Node,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
+  type FileNode,
+  type FolderNode,
+  type Node,
 } from "document-drive";
-import { EditorDispatch } from "document-model";
+import { type EditorDispatch } from "document-model";
 import { useMemo } from "react";
 import { FILE } from "../uiNodes/constants.js";
 import type { UiFileNode, UiNode } from "../uiNodes/types.js";
-import { IDriveActions, useDriveActions } from "./useDriveActions.js";
-import { IDriveContext, useDriveContext } from "./useDriveContext.js";
+import { type IDriveActions, useDriveActions } from "./useDriveActions.js";
+import { type IDriveContext, useDriveContext } from "./useDriveContext.js";
 import { useUiNodesContext } from "./useUiNodesContext.js";
 
 function toNode(uiNode: UiNode): Node {

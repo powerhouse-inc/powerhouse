@@ -26,14 +26,17 @@ import { Form } from "@powerhousedao/design-system/scalars"
 </Form>
 `}/>
 
-You can access to the [React Hook Form data](https://react-hook-form.com/docs/useform) inside the form or even use the hooks that React Hook Form exposes
+You can access to the [React Hook Form data](https://react-hook-form.com/docs/useform) inside the form or even use the hooks that React Hook Form exposes.
+Additionally, the `Form` component exposes a `triggerSubmit` method that can be used to trigger the form submission programmatically and a `formId` prop that can be used to access the form in the DOM.
 
 <Source language="tsx" code={`
 import { Form } from "@powerhousedao/design-system/scalars"
 
 <Form onSubmit={/* your submit function */}>
- {({ formState: { isSubmitting } }) => (
+ {({ formState: { isSubmitting }, triggerSubmit }) => (
     {/* your fields */}
+
+    <Element onChange={() => triggerSubmit()} />
 
     <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Submitting" : "Submit"}

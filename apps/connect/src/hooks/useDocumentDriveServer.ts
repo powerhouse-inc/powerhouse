@@ -1,25 +1,30 @@
-import { useGetDocumentModelModule } from '#store/document-model';
-import { useUnwrappedReactor } from '#store/reactor';
-import { useUser } from '#store/user';
-import { uploadDocumentOperations } from '#utils/document-model';
-import { loadFile } from '#utils/file';
-import { addActionContext, signOperation } from '#utils/signature';
+import {
+    useGetDocumentModelModule,
+    useUnwrappedReactor,
+    useUser,
+} from '#store';
+import {
+    addActionContext,
+    loadFile,
+    signOperation,
+    uploadDocumentOperations,
+} from '#utils';
 import {
     ERROR,
     FILE,
     LOCAL,
-    SharingType,
-    UiNode,
+    type SharingType,
+    type UiNode,
 } from '@powerhousedao/design-system';
 import {
-    DocumentDriveAction,
-    DocumentDriveDocument,
-    DriveInput,
-    RemoteDriveOptions,
-    StrandUpdate,
-    SyncStatus,
+    type DocumentDriveAction,
+    type DocumentDriveDocument,
+    type DriveInput,
+    type RemoteDriveOptions,
+    type StrandUpdate,
+    type SyncStatus,
     SynchronizationUnitNotFoundError,
-    Trigger,
+    type Trigger,
     addFolder,
     addTrigger,
     childLogger,
@@ -40,11 +45,11 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { Operation, PHDocument, hashKey } from 'document-model';
+import { type Operation, type PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
-import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
-import { useDocumentDrives } from './useDocumentDrives';
-import { useUserPermissions } from './useUserPermissions';
+import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
+import { useDocumentDrives } from './useDocumentDrives.js';
+import { useUserPermissions } from './useUserPermissions.js';
 
 // TODO this should be added to the document model
 export interface SortOptions {
@@ -84,6 +89,18 @@ export function useDocumentDriveServer() {
                 );
             }
             return document;
+        },
+        [reactor],
+    );
+
+    const getDocumentsIds = useCallback(
+        async (driveId: string) => {
+            if (!reactor) {
+                throw new Error('Reactor is not loaded');
+            }
+
+            const ids = await reactor.getDocuments(driveId);
+            return ids;
         },
         [reactor],
     );
@@ -759,6 +776,7 @@ export function useDocumentDriveServer() {
             removeTrigger: handleRemoveTrigger,
             addTrigger: handleAddTrigger,
             registerNewPullResponderTrigger,
+            getDocumentsIds,
         }),
         [
             addDocument,
@@ -788,6 +806,7 @@ export function useDocumentDriveServer() {
             setDriveAvailableOffline,
             setDriveSharingType,
             handleUpdateFile,
+            getDocumentsIds,
         ],
     );
 }

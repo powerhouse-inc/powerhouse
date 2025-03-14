@@ -13,12 +13,12 @@ Mutations: <%= h.changeCase.pascal(documentType) %>
 """
 type Mutation {
 
-    <%- h.changeCase.pascal(documentType) %>_createDocument(name:String): String
+    <%- h.changeCase.pascal(documentType) %>_createDocument(driveId:String, name:String): String
 
 <% modules.forEach(module => { _%>
 <% module.operations.forEach(op => { _%>
     <%- h.changeCase.pascal(documentType) + '_' + h.changeCase.camel(op.name) 
-    %>(docId: PHID, input: <%- 
+    %>(driveId:String, docId:PHID, input:<%- 
         h.changeCase.pascal(documentType) + '_' + h.changeCase.pascal(op.name) %>Input): Int
 <%_ })}); %>}
 <% modules.forEach(module => { _%>
