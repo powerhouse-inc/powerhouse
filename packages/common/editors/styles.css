@@ -1,2 +1,2 @@
-@import 'tailwindcss';
-@import "../../design-system/style.css";
+@import "tailwindcss";
+@import "../../design-system/dist/style.css";
