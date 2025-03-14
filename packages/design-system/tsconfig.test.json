@@ -31,6 +31,7 @@
     ".storybook",
     "vitest.config.ts",
     "src/**/*.json",
+    "**/docs",
     "**/*.stories.tsx",
     "**/*.test.ts",
     "**/*.test.tsx"
