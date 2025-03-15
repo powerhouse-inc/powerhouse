@@ -1,53 +1,85 @@
-import * as SwitchPrimitives from "@radix-ui/react-switch";
-import * as React from "react";
-import { cn } from "../../../lib/utils.js";
+import { cn } from "#scalars";
+import React, { useId } from "react";
+import { InputBaseProps } from "../../types.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import { ToggleBase } from "./toggle-base.js";
 
-interface ToggleProps {
-  disabled?: boolean;
-  checked?: boolean;
-  required?: boolean;
+type ToggleBaseProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  keyof InputBaseProps<boolean> | "onChange"
+>;
+
+interface ToggleProps
+  extends ToggleBaseProps,
+  InputBaseProps<boolean> {
   onChange?: (checked: boolean) => void;
 }
 
-const Toggle = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & ToggleProps
->(
+const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
   (
     {
-      className,
+      id: idProp,
+      name,
+      label,
       disabled = false,
-      checked = true,
+      value,
+      onChange,
+      errors = [],
+      warnings = [],
       required = false,
-      onChange = () => {},
+      className,
+      defaultValue,
+      description,
       ...props
     },
     ref,
-  ) => (
-    <SwitchPrimitives.Root
-      required={required}
-      checked={checked}
-      role="switch"
-      disabled={disabled}
-      onCheckedChange={onChange}
-      className={cn(
-        "focus-visible:ring-ring focus-visible:ring-offset-background peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]",
-        disabled &&
-          "cursor-not-allowed data-[state=checked]:bg-[#C5C7C7] data-[state=unchecked]:bg-[#EFEFEF] dark:data-[state=checked]:bg-[#404446] dark:data-[state=unchecked]:bg-[#343839]",
-        className,
-      )}
-      {...props}
-      ref={ref}
-    >
-      <SwitchPrimitives.Thumb
-        className={cn(
-          "peer pointer-events-none block size-3.5 rounded-full bg-[#FCFCFC] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0",
-          disabled &&
-            "bg-[#FCFCFC] disabled:cursor-not-allowed dark:bg-[#6C7275]",
+  ) => {
+    const generatedId = useId();
+    const id = idProp ?? generatedId;
+
+    return (
+      <div
+        className={cn("flex flex-col gap-1", className)}
+        data-testid="custom-class"
+      >
+        <div className="flex items-center">
+          <ToggleBase
+            aria-labelledby={`${id}-label`}
+            required={required}
+            disabled={disabled}
+            name={name}
+            id={id}
+            checked={value ?? defaultValue}
+            onCheckedChange={onChange}
+            ref={ref}
+            {...props}
+          />
+          {label && (
+            <FormLabel
+              htmlFor={id}
+              className="ml-2"
+              disabled={disabled}
+              required={required}
+              description={description}
+              inline
+              id={`${id}-label`}
+            >
+              {label}
+            </FormLabel>
+          )}
+        </div>
+        {warnings.length !== 0 && (
+          <FormMessageList messages={warnings} type="warning" />
         )}
-      />
-    </SwitchPrimitives.Root>
-  ),
+        {errors.length !== 0 && (
+          <FormMessageList messages={errors} type="error" />
+        )}
+      </div>
+    );
+  },
 );
 
-export { Toggle };
+Toggle.displayName = "Toggle";
+
+export { Toggle, type ToggleProps };
