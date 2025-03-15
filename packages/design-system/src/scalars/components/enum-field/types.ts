@@ -19,6 +19,7 @@ export interface SelectOption {
 
 export interface SelectBaseProps {
   options?: SelectOption[];
+  favoriteOptions?: SelectOption[];
   placeholder?: string;
   multiple?: boolean;
   searchable?: boolean;

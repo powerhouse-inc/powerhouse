@@ -92,6 +92,13 @@ export const Default: Story = {
     currencies: commonCryptoCurrencies,
   },
 };
+export const FavoriteCurrencies: Story = {
+  args: {
+    label: "Currency",
+    currencies: commonCryptoCurrencies,
+    favoriteCurrencies: ["BTC", "ETH"],
+  },
+};
 
 export const Disabled: Story = {
   args: {
