@@ -2,8 +2,8 @@ import { cn, sharedValueTransformers } from "#scalars";
 import React, { useEffect, useId, useMemo, useRef } from "react";
 import { useResizeObserver } from "usehooks-ts";
 import type {
-  ErrorHandling,
-  FieldCommonProps,
+  FieldErrorHandling,
+  InputBaseProps,
   TextProps,
 } from "../../types.js";
 import { CharacterCounter } from "../character-counter/index.js";
@@ -16,13 +16,13 @@ import { withFieldValidation } from "../with-field-validation/index.js";
 
 type TextareaFieldBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
-  keyof FieldCommonProps<string> | keyof ErrorHandling | keyof TextProps
+  keyof InputBaseProps<string> | keyof FieldErrorHandling | keyof TextProps
 >;
 
 export interface TextareaProps
   extends TextareaFieldBaseProps,
-    FieldCommonProps<string>,
-    ErrorHandling,
+    InputBaseProps<string>,
+    FieldErrorHandling,
     TextProps {
   autoExpand?: boolean;
   multiline?: boolean;

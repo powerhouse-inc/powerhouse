@@ -12,15 +12,15 @@ import {
 } from "../fragments/index.js";
 import ValueTransformer from "../fragments/value-transformer/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
-import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import UrlFavicon from "./url-favicon.js";
 import { useURLWarnings } from "./useURLWarnings.js";
 
 export type PlatformIcon = IconName | React.ReactElement;
 
 interface UrlFieldProps
-  extends FieldCommonProps<string>,
-    ErrorHandling,
+  extends InputBaseProps<string>,
+    FieldErrorHandling,
     Omit<
       React.InputHTMLAttributes<HTMLInputElement>,
       "pattern" | "value" | "defaultValue" | "name" | "maxLength"

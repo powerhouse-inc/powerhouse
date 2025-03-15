@@ -6,11 +6,10 @@ import {
   FormGroup,
   FormLabel,
   FormMessageList,
-  type ErrorHandling,
-  type FieldCommonProps,
   type SelectProps,
 } from "#scalars";
 import React, { useCallback, useId } from "react";
+import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Button } from "../button/button.js";
 import { Command } from "../command/command.js";
 import { Popover, PopoverContent, PopoverTrigger } from "../popover/popover.js";
@@ -21,14 +20,14 @@ import { useSelectField } from "./use-select-field.js";
 
 type SelectFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
-  | keyof FieldCommonProps<string | string[]>
-  | keyof ErrorHandling
+  | keyof InputBaseProps<string | string[]>
+  | keyof FieldErrorHandling
   | keyof SelectProps
 >;
 
 export type SelectFieldProps = SelectFieldBaseProps &
-  FieldCommonProps<string | string[]> &
-  ErrorHandling &
+  InputBaseProps<string | string[]> &
+  FieldErrorHandling &
   SelectProps;
 
 export const SelectFieldRaw = React.forwardRef<

@@ -2,7 +2,7 @@
 import { getDefaultArgTypes, getValidationArgTypes, withForm } from "#scalars";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { CheckboxField } from "./checkbox.js";
+import { CheckboxField } from "./checkbox-field.js";
 
 const meta: Meta<typeof CheckboxField> = {
   component: CheckboxField,

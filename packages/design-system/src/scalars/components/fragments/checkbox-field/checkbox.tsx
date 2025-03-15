@@ -12,8 +12,8 @@ type CheckboxBaseProps = Omit<
 
 export interface CheckboxProps
   extends CheckboxBaseProps,
-  InputBaseProps<CheckboxValue> {
-  onChange?: (checked: CheckboxValue) => void;
+    InputBaseProps<CheckboxValue> {
+  onChange?: ((checked: CheckboxValue) => void) | ((checked: boolean) => void);
 }
 
 const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(

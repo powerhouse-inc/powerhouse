@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
-import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import type { DateFieldValue } from "./types.js";
 
 import { cn } from "#scalars";
@@ -15,8 +15,8 @@ import { Calendar } from "./subcomponents/calendar/calendar.js";
 import { useDatePickerField } from "./use-date-picker-field.js";
 
 export interface DatePickerFieldProps
-  extends FieldCommonProps<DateFieldValue>,
-    ErrorHandling {
+  extends InputBaseProps<DateFieldValue>,
+    FieldErrorHandling {
   label?: string;
   id?: string;
   name: string;

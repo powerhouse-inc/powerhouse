@@ -2,8 +2,8 @@ import { cn, FormMessageList } from "#scalars";
 import { forwardRef, useId, useMemo } from "react";
 import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
 import type {
-  ErrorHandling,
-  FieldCommonProps,
+  FieldErrorHandling,
+  InputBaseProps,
   TextProps,
 } from "../../types.js";
 import { CharacterCounter } from "../character-counter/index.js";
@@ -18,9 +18,9 @@ import { withFieldValidation } from "../with-field-validation/index.js";
 
 export interface TextFieldProps
   extends Omit<
-    FieldCommonProps<string> &
+    InputBaseProps<string> &
       Omit<React.InputHTMLAttributes<HTMLInputElement>, "pattern"> &
-      ErrorHandling &
+      FieldErrorHandling &
       TextProps,
     "value" | "autoComplete"
   > {
