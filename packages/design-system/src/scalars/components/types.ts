@@ -27,16 +27,3 @@ export interface FieldErrorHandling {
   showErrorOnChange?: boolean;
   validators?: ValidatorHandler[] | ValidatorHandler;
 }
-
-// TODO: move this to text-field
-export interface TextProps {
-  minLength?: number;
-  maxLength?: number;
-  pattern?: RegExp;
-  placeholder?: string;
-  trim?: boolean;
-  uppercase?: boolean;
-  lowercase?: boolean;
-  autoComplete?: boolean;
-  spellCheck?: boolean;
-}
