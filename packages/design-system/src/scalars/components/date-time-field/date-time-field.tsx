@@ -1,14 +1,8 @@
 import React from "react";
-import {
-  DatePickerField,
-  type DatePickerFieldProps,
-} from "../date-picker-field/date-picker-field.js";
-import type { DateFieldValue } from "../date-picker-field/types.js";
-import {
-  TimePickerField,
-  type TimePickerFieldProps,
-} from "../time-picker-field/index.js";
-import type { TimeFieldValue } from "../time-picker-field/type.js";
+import { type DateFieldProps } from "../date-field/date-field.js";
+import type { DateFieldValue } from "../date-field/types.js";
+import { type TimeFieldProps } from "../time-field/time-field.js";
+import type { TimeFieldValue } from "../time-field/type.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import { DateTimeField as DateTimeRaw } from "./date-time.js";
 
@@ -22,13 +16,13 @@ type CommonOmittedProps =
   | "placeholder";
 
 interface DateTimeFieldPropsDate
-  extends Omit<DatePickerFieldProps, CommonOmittedProps> {
+  extends Omit<DateFieldProps, CommonOmittedProps> {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
 }
 
 interface DateTimeFieldPropsTime
-  extends Omit<TimePickerFieldProps, CommonOmittedProps> {
+  extends Omit<TimeFieldProps, CommonOmittedProps> {
   value?: TimeFieldValue;
   defaultValue?: TimeFieldValue;
 }
@@ -66,8 +60,6 @@ export const DateTimeField = React.forwardRef<
 >(
   (
     {
-      showDateSelect = true,
-      showTimeSelect = true,
       name,
       label,
       dateFormat = "yyyy-MM-dd",
@@ -90,87 +82,29 @@ export const DateTimeField = React.forwardRef<
     },
     ref,
   ) => {
-    if (!showDateSelect && !showTimeSelect) {
-      return (
-        <DatePickerField
-          name={name}
-          label={label}
-          onBlur={onBlur}
-          onChange={onChange}
-          placeholder={placeholder}
-          dateFormat={dateFormat}
-          minDate={minDate}
-          maxDate={maxDate}
-          weekStart={weekStart}
-          disablePastDates={disablePastDates}
-          disableFutureDates={disableFutureDates}
-          autoClose={autoClose}
-          ref={ref}
-          {...props}
-        />
-      );
-    }
-
     return (
-      <div>
-        {showDateSelect && showTimeSelect && (
-          <DateTimeRaw
-            name={name}
-            value={value}
-            placeholder={placeholder}
-            label={label}
-            weekStart={weekStart}
-            autoClose={autoClose}
-            disableFutureDates={disableFutureDates}
-            disablePastDates={disablePastDates}
-            minDate={minDate}
-            maxDate={maxDate}
-            dateFormat={dateFormat}
-            onChange={onChange}
-            onBlur={onBlur}
-            timeZone={timeZone}
-            timeFormat={timeFormat}
-            timeIntervals={timeIntervals}
-            showTimezoneSelect={showTimezoneSelect}
-            includeContinent={includeContinent}
-            ref={ref}
-            {...props}
-          />
-        )}
-        {showDateSelect && !showTimeSelect && (
-          <DatePickerField
-            name={name}
-            label={label}
-            onBlur={onBlur}
-            onChange={onChange}
-            placeholder={placeholder}
-            dateFormat={dateFormat}
-            minDate={minDate}
-            maxDate={maxDate}
-            weekStart={weekStart}
-            disablePastDates={disablePastDates}
-            disableFutureDates={disableFutureDates}
-            autoClose={autoClose}
-            ref={ref}
-            {...props}
-          />
-        )}
-        {!showDateSelect && showTimeSelect && (
-          <TimePickerField
-            name={name}
-            label={label}
-            onBlur={onBlur}
-            onChange={onChange}
-            placeholder={placeholder}
-            timeFormat={timeFormat}
-            showTimezoneSelect={showTimezoneSelect}
-            timeZone={timeZone}
-            timeIntervals={timeIntervals}
-            ref={ref}
-            {...props}
-          />
-        )}
-      </div>
+      <DateTimeRaw
+        name={name}
+        value={value}
+        placeholder={placeholder}
+        label={label}
+        weekStart={weekStart}
+        autoClose={autoClose}
+        disableFutureDates={disableFutureDates}
+        disablePastDates={disablePastDates}
+        minDate={minDate}
+        maxDate={maxDate}
+        dateFormat={dateFormat}
+        onChange={onChange}
+        onBlur={onBlur}
+        timeZone={timeZone}
+        timeFormat={timeFormat}
+        timeIntervals={timeIntervals}
+        showTimezoneSelect={showTimezoneSelect}
+        includeContinent={includeContinent}
+        ref={ref}
+        {...props}
+      />
     );
   },
 );

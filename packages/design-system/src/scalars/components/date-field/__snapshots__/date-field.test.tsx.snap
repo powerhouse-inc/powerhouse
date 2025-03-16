@@ -18,13 +18,13 @@ exports[`DatePickerField > should match the snapshot 1`] = `
         class="flex flex-col space-y-2"
       >
         <div
-          class="flex w-[275px] rounded-md text-sm focus-within:ring-ring dark:ring-charcoal-300 ring-gray-900 focus-within:ring-1 focus-within:ring-offset-0 dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white focus:[&_.input-field]:bg-transparent dark:focus-within:hover:bg-charcoal-900 focus-within:hover:cursor-default focus-within:hover:bg-white"
+          class="flex w-[275px] rounded-md text-sm focus-within:ring-ring focus-within:ring-1 focus-within:ring-offset-0 ring-gray-900 dark:ring-charcoal-300 dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white focus:[&_.input-field]:bg-transparent focus-within:hover:bg-white dark:focus-within:hover:bg-charcoal-900 focus-within:hover:cursor-default"
         >
           <button
             aria-controls="radix-:r1:"
             aria-expanded="false"
             aria-haspopup="dialog"
-            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-l-md border-none pl-3 pr-2 focus:text-selected-foreground focus:bg-none button-ghost"
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-l-md border-none pl-3 pr-2 focus:bg-none focus:text-selected-foreground button-ghost"
             data-state="closed"
             type="button"
           >

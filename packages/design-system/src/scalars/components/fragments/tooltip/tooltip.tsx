@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 "use client";
 
 import {
@@ -90,4 +91,5 @@ export {
   Trigger as TooltipTrigger,
   type TooltipProps
 };
+
 

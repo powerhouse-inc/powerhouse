@@ -1,20 +1,19 @@
-import { forwardRef } from "react";
-import { withFieldValidation } from "../fragments/with-field-validation/index.js";
-import type { FieldErrorHandling, InputBaseProps } from "../types.js";
-import type { DateFieldValue } from "./types.js";
-
 import { cn } from "#scalars";
+import { forwardRef } from "react";
 import { BasePickerField } from "../date-time-field/base-picker-field.js";
 import { FormDescription } from "../fragments/form-description/index.js";
 import { FormGroup } from "../fragments/form-group/index.js";
 import { FormLabel } from "../fragments/form-label/index.js";
 import { FormMessageList } from "../fragments/form-message/index.js";
-import { InputProps } from "../fragments/index.js";
-import { validateDatePicker } from "./date-picker-validations.js";
+import { type InputProps } from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/index.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
+import { validateDatePicker } from "./date-validations.js";
 import { Calendar } from "./subcomponents/calendar/calendar.js";
-import { useDatePickerField } from "./use-date-picker-field.js";
+import type { DateFieldValue } from "./types.js";
+import { useDatePickerField } from "./use-date-field.js";
 
-export interface DatePickerFieldProps
+export interface DateFieldProps
   extends InputBaseProps<DateFieldValue>,
     FieldErrorHandling {
   label?: string;
@@ -40,7 +39,7 @@ export interface DatePickerFieldProps
   autoClose?: boolean;
 }
 
-const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
+const DateRaw = forwardRef<HTMLInputElement, DateFieldProps>(
   (
     {
       label,
@@ -201,13 +200,10 @@ const DatePickerRaw = forwardRef<HTMLInputElement, DatePickerFieldProps>(
   },
 );
 
-export const DatePickerField = withFieldValidation<DatePickerFieldProps>(
-  DatePickerRaw,
-  {
-    validations: {
-      _datePickerType: validateDatePicker,
-    },
+export const DateField = withFieldValidation<DateFieldProps>(DateRaw, {
+  validations: {
+    _datePickerType: validateDatePicker,
   },
-);
+});
 
-DatePickerField.displayName = "DatePickerField";
+DateField.displayName = "DateField";
