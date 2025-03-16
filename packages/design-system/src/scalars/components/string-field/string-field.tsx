@@ -4,13 +4,13 @@ import {
   type TextFieldProps,
 } from "../fragments/text-field/index.js";
 import {
-  Textarea,
-  type TextareaProps,
+  TextareaField,
+  type TextareaFieldProps,
 } from "../fragments/textarea-field/index.js";
 
 export interface StringFieldProps
-  extends Omit<TextFieldProps, keyof TextareaProps>,
-    TextareaProps {}
+  extends Omit<TextFieldProps, keyof TextareaFieldProps>,
+    TextareaFieldProps {}
 
 export const StringField = React.forwardRef<
   HTMLInputElement | HTMLTextAreaElement,
@@ -19,10 +19,10 @@ export const StringField = React.forwardRef<
   if (autoExpand || multiline) {
     // only textarea supports autoExpand and multiline
     return (
-      <Textarea
+      <TextareaField
         autoExpand={autoExpand}
         multiline={multiline}
-        {...(props as TextareaProps)}
+        {...(props as TextareaFieldProps)}
         ref={ref as React.ForwardedRef<HTMLTextAreaElement>}
       />
     );
