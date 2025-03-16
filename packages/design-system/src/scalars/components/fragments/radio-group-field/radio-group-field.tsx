@@ -1,9 +1,4 @@
-import {
-  cn,
-  FormLabel,
-  FormMessageList,
-  type RadioGroupProps,
-} from "#scalars";
+import { cn, FormLabel, FormMessageList, type RadioGroupProps } from "#scalars";
 import React, { useId } from "react";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { withFieldValidation } from "../with-field-validation/with-field-validation.js";

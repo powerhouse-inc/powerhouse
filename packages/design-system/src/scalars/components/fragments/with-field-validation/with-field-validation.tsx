@@ -3,7 +3,7 @@ import { Controller, useFormContext, useFormState } from "react-hook-form";
 import type {
   FieldErrorHandling,
   InputBaseProps,
-  ValidatorHandler
+  ValidatorHandler,
 } from "../../types.js";
 
 interface PossibleProps extends InputBaseProps<unknown>, FieldErrorHandling {

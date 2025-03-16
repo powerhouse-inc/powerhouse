@@ -132,9 +132,9 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
       } else {
         // if setValue is not available, then we're not inside a form context
         // so we need to update the value using onChange if available
-        (children.props as React.HTMLAttributes<HTMLInputElement>).onChange?.(
-          { target: { value: transformedValue } } as React.ChangeEvent<HTMLInputElement>,
-        );
+        (children.props as React.HTMLAttributes<HTMLInputElement>).onChange?.({
+          target: { value: transformedValue },
+        } as React.ChangeEvent<HTMLInputElement>);
       }
     }
   }, [transformers]);

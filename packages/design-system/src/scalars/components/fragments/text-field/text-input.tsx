@@ -1,16 +1,14 @@
 import { cn, FormMessageList } from "#scalars";
 import { forwardRef, useId, useMemo } from "react";
 import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
-import type {
-    InputBaseProps
-} from "../../types.js";
+import type { InputBaseProps } from "../../types.js";
 import { CharacterCounter } from "../character-counter/index.js";
 import { FormDescription } from "../form-description/index.js";
 import { FormGroup } from "../form-group/form-group.js";
 import { FormLabel } from "../form-label/form-label.js";
 import { Input } from "../input/input.js";
 import ValueTransformer, {
-    type TransformerType,
+  type TransformerType,
 } from "../value-transformer/value-transformer.js";
 import type { CommonTextProps } from "./types.js";
 

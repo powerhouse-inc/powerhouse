@@ -1,16 +1,16 @@
 import { cn, sharedValueTransformers } from "#scalars";
 import React, { useEffect, useId, useMemo, useRef } from "react";
 import { useResizeObserver } from "usehooks-ts";
-import type {
-  InputBaseProps
-} from "../../types.js";
+import type { InputBaseProps } from "../../types.js";
 import { CharacterCounter } from "../character-counter/index.js";
 import { FormDescription } from "../form-description/index.js";
 import { FormGroup } from "../form-group/index.js";
 import { FormLabel } from "../form-label/index.js";
 import { FormMessageList } from "../form-message/index.js";
 import type { CommonTextProps } from "../text-field/types.js";
-import ValueTransformer, { type TransformerType } from "../value-transformer/index.js";
+import ValueTransformer, {
+  type TransformerType,
+} from "../value-transformer/index.js";
 
 type TextareaBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -48,7 +48,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     {
       autoComplete,
       autoExpand,
-      multiline=true,
+      multiline = true,
       className,
       defaultValue,
       description,

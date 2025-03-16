@@ -25,7 +25,11 @@ describe("Toggle Component", () => {
     it("should not call onChange when disabled", () => {
       const handleChange = vi.fn();
       render(
-        <ToggleBase {...defaultProps} disabled={true} onChange={handleChange} />,
+        <ToggleBase
+          {...defaultProps}
+          disabled={true}
+          onChange={handleChange}
+        />,
       );
 
       const toggle = screen.getByRole("switch");
@@ -37,7 +41,11 @@ describe("Toggle Component", () => {
     it("should toggle between checked and unchecked states", () => {
       const handleChange = vi.fn();
       const { rerender } = render(
-        <ToggleBase {...defaultProps} checked={false} onChange={handleChange} />,
+        <ToggleBase
+          {...defaultProps}
+          checked={false}
+          onChange={handleChange}
+        />,
       );
 
       const toggle = screen.getByRole("switch");

@@ -1,6 +1,6 @@
 import { cn } from "#scalars";
 import React, { useId } from "react";
-import { InputBaseProps } from "../../types.js";
+import { type InputBaseProps } from "../../types.js";
 import { FormLabel } from "../form-label/index.js";
 import { FormMessageList } from "../form-message/index.js";
 import { ToggleBase } from "./toggle-base.js";
@@ -10,9 +10,7 @@ type ToggleBaseProps = Omit<
   keyof InputBaseProps<boolean> | "onChange"
 >;
 
-interface ToggleProps
-  extends ToggleBaseProps,
-  InputBaseProps<boolean> {
+interface ToggleProps extends ToggleBaseProps, InputBaseProps<boolean> {
   onChange?: (checked: boolean) => void;
 }
 

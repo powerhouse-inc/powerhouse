@@ -1,6 +1,4 @@
-import {
-  SelectFieldRaw,
-} from "#scalars";
+import { SelectFieldRaw } from "#scalars";
 import React from "react";
 import { CircleFlag } from "react-circle-flags";
 import countries, { type Countries } from "world-countries";
@@ -10,7 +8,9 @@ import type { CountryCodeProps } from "./types.js";
 
 type CountryCodeFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
-  keyof InputBaseProps<string> | keyof FieldErrorHandling | keyof CountryCodeProps
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
+  | keyof CountryCodeProps
 >;
 
 export type CountryCodeFieldProps = CountryCodeFieldBaseProps &
