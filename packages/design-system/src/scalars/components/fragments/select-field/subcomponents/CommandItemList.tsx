@@ -108,7 +108,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
             {renderIcon(opt.icon)}
             <span
               className={cn(
-                "flex-1 truncate text-[14px] font-medium leading-4",
+                "flex-1 truncate text-[14px] font-normal leading-4",
                 "text-gray-700 dark:text-gray-500",
                 opt.disabled && "text-gray-600 dark:text-gray-600",
               )}

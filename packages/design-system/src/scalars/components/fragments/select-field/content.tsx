@@ -1,5 +1,5 @@
 /* eslint-disable react/jsx-max-depth */
-import { Icon, type IconName } from "#powerhouse";
+import { Icon } from "#powerhouse";
 import { type SelectProps } from "#scalars";
 import { useCommandState } from "cmdk";
 import type React from "react";
@@ -25,30 +25,6 @@ interface ContentProps {
   toggleAll: () => void;
   toggleOption: (value: string) => void;
 }
-
-const renderIcon = (
-  IconComponent:
-    | IconName
-    | React.ComponentType<{ className?: string }>
-    | undefined,
-) => {
-  if (typeof IconComponent === "string") {
-    return (
-      <Icon
-        name={IconComponent}
-        size={16}
-        className={cn("text-gray-700 dark:text-gray-400")}
-      />
-    );
-  }
-  return (
-    IconComponent && (
-      <IconComponent
-        className={cn("size-4", "text-gray-700 dark:text-gray-400")}
-      />
-    )
-  );
-};
 
 export const Content: React.FC<ContentProps> = ({
   searchable,
@@ -135,7 +111,7 @@ export const Content: React.FC<ContentProps> = ({
                         )}
                     </div>
                   )}
-                <span className="text-[14px] font-normal leading-4 text-gray-900 dark:text-gray-50">
+                <span className="text-[14px] font-semibold leading-4 text-gray-900 dark:text-gray-50">
                   {selectedValues.length === enabledOptions.length
                     ? "Deselect All"
                     : "Select All"}
