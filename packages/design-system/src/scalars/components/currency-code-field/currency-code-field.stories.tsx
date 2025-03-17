@@ -1,10 +1,10 @@
+import type { Meta, StoryObj } from "@storybook/react";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-  withForm,
-} from "#scalars";
-import type { Meta, StoryObj } from "@storybook/react";
+} from "../../lib/storybook-arg-types.js";
 import { CurrencyCodeField } from "./currency-code-field.js";
 import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults.js";
 

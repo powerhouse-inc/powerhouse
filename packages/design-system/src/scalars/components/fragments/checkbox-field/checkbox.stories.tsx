@@ -1,7 +1,10 @@
-/* eslint-disable react-hooks/rules-of-hooks */
-import { getDefaultArgTypes, getValidationArgTypes, withForm } from "#scalars";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { withForm } from "../../../lib/decorators.js";
+import {
+  getDefaultArgTypes,
+  getValidationArgTypes,
+} from "../../../lib/storybook-arg-types.js";
 import { CheckboxField } from "./checkbox-field.js";
 
 const meta: Meta<typeof CheckboxField> = {
