@@ -1,3 +1,13 @@
+## 1.0.0-dev.227 (2025-03-17)
+
+### 🩹 Fixes
+
+- **connect:** update connect for trigger compatibility ([3d7d01d8](https://github.com/powerhouse-inc/powerhouse/commit/3d7d01d8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 1.0.0-dev.226 (2025-03-17)
 
 ### 🚀 Features
