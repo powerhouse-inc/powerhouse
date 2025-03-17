@@ -16,10 +16,10 @@ describe("AmountCurrency Scalar", () => {
       expect(() => scalar.serialize(123)).toThrow();
     });
 
-    it("should throw an error if currency is not valid", () => {
+    it("should support any string currency", () => {
       expect(() =>
-        scalar.serialize({ ...validAmount, unit: "INVALID" }),
-      ).toThrow();
+        scalar.serialize({ ...validAmount, unit: "BTC" }),
+      ).not.toThrow();
     });
 
     it("should throw an error if amount is not a number", () => {
@@ -40,7 +40,7 @@ describe("AmountCurrency Scalar", () => {
       expect(scalar.parseValue(validAmount)).toEqual(validAmount);
     });
 
-    it("should parse valid amounts for all supported currencies", () => {
+    it("should parse valid amounts for all currencies", () => {
       const currencies = [
         "USD",
         "EUR",
@@ -60,10 +60,10 @@ describe("AmountCurrency Scalar", () => {
       });
     });
 
-    it("should throw an error if currency is not supported", () => {
+    it("should support any string currency", () => {
       expect(() =>
         scalar.parseValue({ ...validAmount, unit: "INVALID" }),
-      ).toThrow();
+      ).not.toThrow();
     });
 
     it("should throw an error if amount is not a number", () => {
@@ -82,7 +82,7 @@ describe("AmountCurrency Scalar", () => {
             {
               kind: Kind.OBJECT_FIELD,
               name: { kind: Kind.NAME, value: "unit" },
-              value: { kind: Kind.ENUM, value: "USD" },
+              value: { kind: Kind.STRING, value: "USD" },
             },
             {
               kind: Kind.OBJECT_FIELD,
@@ -126,14 +126,14 @@ describe("AmountCurrency Scalar", () => {
             {
               kind: Kind.OBJECT_FIELD,
               name: { kind: Kind.NAME, value: "unit" },
-              value: { kind: Kind.ENUM, value: "USD" },
+              value: { kind: Kind.STRING, value: "USD" },
             },
           ],
         }),
       ).toThrow();
     });
 
-    it("should throw an error if currency is not a valid enum", () => {
+    it("should throw an error if currency is not a valid string", () => {
       expect(() =>
         scalar.parseLiteral({
           kind: Kind.OBJECT,

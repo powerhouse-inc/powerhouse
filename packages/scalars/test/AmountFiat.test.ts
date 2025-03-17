@@ -16,10 +16,10 @@ describe("AmountFiat Scalar", () => {
       expect(() => scalar.serialize(123)).toThrow();
     });
 
-    it("should throw an error if currency is not valid", () => {
+    it("should support any currency", () => {
       expect(() =>
         scalar.serialize({ ...validAmount, unit: "INVALID" }),
-      ).toThrow();
+      ).not.toThrow();
     });
 
     it("should throw an error if amount is not a number", () => {
@@ -41,7 +41,7 @@ describe("AmountFiat Scalar", () => {
     });
 
     it("should parse valid amounts for all supported currencies", () => {
-      const currencies = ["USD", "EUR", "GBP"];
+      const currencies = ["USD", "EUR", "GBP", "INVALID"];
       currencies.forEach((currency) => {
         expect(scalar.parseValue({ unit: currency, value: 1.5 })).toEqual({
           unit: currency,
@@ -50,10 +50,10 @@ describe("AmountFiat Scalar", () => {
       });
     });
 
-    it("should throw an error if currency is not supported", () => {
+    it("should support any currency", () => {
       expect(() =>
         scalar.parseValue({ ...validAmount, unit: "INVALID" }),
-      ).toThrow();
+      ).not.toThrow();
     });
 
     it("should throw an error if amount is not a number", () => {
@@ -72,7 +72,7 @@ describe("AmountFiat Scalar", () => {
             {
               kind: Kind.OBJECT_FIELD,
               name: { kind: Kind.NAME, value: "unit" },
-              value: { kind: Kind.ENUM, value: "USD" },
+              value: { kind: Kind.STRING, value: "USD" },
             },
             {
               kind: Kind.OBJECT_FIELD,
@@ -116,14 +116,14 @@ describe("AmountFiat Scalar", () => {
             {
               kind: Kind.OBJECT_FIELD,
               name: { kind: Kind.NAME, value: "unit" },
-              value: { kind: Kind.ENUM, value: "USD" },
+              value: { kind: Kind.STRING, value: "USD" },
             },
           ],
         }),
       ).toThrow();
     });
 
-    it("should throw an error if currency is not a valid enum", () => {
+    it("should throw an error if currency is not a valid string", () => {
       expect(() =>
         scalar.parseLiteral({
           kind: Kind.OBJECT,
@@ -151,7 +151,7 @@ describe("AmountFiat Scalar", () => {
             {
               kind: Kind.OBJECT_FIELD,
               name: { kind: Kind.NAME, value: "unit" },
-              value: { kind: Kind.ENUM, value: "USD" },
+              value: { kind: Kind.STRING, value: "USD" },
             },
             {
               kind: Kind.OBJECT_FIELD,
