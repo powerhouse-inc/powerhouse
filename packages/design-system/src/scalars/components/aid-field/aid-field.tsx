@@ -9,8 +9,7 @@ import type {
   FieldCommonProps,
   ErrorHandling,
 } from "@/scalars/components/types";
-import type { AIDProps } from "./types";
-import type { IdAutocompleteOption } from "@/scalars/components/fragments/id-autocomplete-field/types";
+import type { AIDProps, AIDOption } from "./types";
 
 type AIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -67,7 +66,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
 
     const renderOption = useCallback(
       (
-        option: IdAutocompleteOption,
+        option: AIDOption,
         displayProps?: {
           asPlaceholder?: boolean;
           showValue?: boolean;
@@ -86,6 +85,11 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
             displayProps?.asPlaceholder ? "did not available" : option.value
           }
           description={option.description}
+          agentType={
+            displayProps?.asPlaceholder
+              ? "Agent type not available"
+              : option.agentType
+          }
           placeholderIcon="Person"
           {...displayProps}
         />
