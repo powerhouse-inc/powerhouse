@@ -1,3 +1,14 @@
+## 1.4.1 (2025-03-17)
+
+### 🩹 Fixes
+
+- **migrations:** public npm access ([46e44ea1](https://github.com/powerhouse-inc/powerhouse/commit/46e44ea1))
+- **reactor-api:** add ethers as peer dependency ([069767f8](https://github.com/powerhouse-inc/powerhouse/commit/069767f8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.4.0 (2025-03-17)
 
 ### 🚀 Features
