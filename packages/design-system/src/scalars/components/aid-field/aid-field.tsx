@@ -4,10 +4,9 @@ import { isAddress } from "viem";
 import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
 import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
 import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
-import type { IdAutocompleteOption } from "../fragments/id-autocomplete-field/types.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
 import type { ErrorHandling, FieldCommonProps } from "../types.js";
-import type { AIDProps } from "./types.js";
+import type { AIDOption, AIDProps } from "./types.js";
 
 type AIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -64,7 +63,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
 
     const renderOption = useCallback(
       (
-        option: IdAutocompleteOption,
+        option: AIDOption,
         displayProps?: {
           asPlaceholder?: boolean;
           showValue?: boolean;
@@ -83,6 +82,11 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
             displayProps?.asPlaceholder ? "did not available" : option.value
           }
           description={option.description}
+          agentType={
+            displayProps?.asPlaceholder
+              ? "Agent type not available"
+              : option.agentType
+          }
           placeholderIcon="Person"
           {...displayProps}
         />

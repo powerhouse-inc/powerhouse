@@ -1,6 +1,6 @@
 import type { IconName } from "#powerhouse";
 
-export interface IdAutocompleteBaseProps {
+interface IdAutocompleteBaseProps {
   onChange?: (value: string) => void;
   placeholder?: string;
   maxLength?: number;
@@ -49,7 +49,7 @@ export type IdAutocompleteProps = IdAutocompleteBaseProps &
       }
   );
 
-export interface IdAutocompleteOption {
+interface IdAutocompleteBaseOption {
   icon?: IconName | React.ReactElement;
   title?: string;
   path?: {
@@ -59,3 +59,7 @@ export interface IdAutocompleteOption {
   value: string;
   description?: string;
 }
+
+export type IdAutocompleteOption<
+  T extends Record<string, unknown> = Record<never, unknown>,
+> = IdAutocompleteBaseOption & T;

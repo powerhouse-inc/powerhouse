@@ -177,11 +177,8 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
                 (renderOption ? (
                   renderOption(
                     {
-                      icon: selectedOption?.icon,
-                      title: selectedOption?.title,
-                      path: selectedOption?.path,
+                      ...selectedOption,
                       value: selectedOption?.value ?? "",
-                      description: selectedOption?.description,
                     },
                     {
                       asPlaceholder: selectedOption === undefined,
