@@ -5,10 +5,8 @@ import {
   Kind,
 } from "graphql";
 import { z } from "zod";
-import { type SupportedCrypto } from "./AmountCrypto.js";
-import { type SupportedFiat } from "./AmountFiat.js";
 
-export type SupportedCurrency = SupportedFiat | SupportedCrypto;
+export type SupportedCurrency = string;
 
 export type AmountCurrency = {
   unit: SupportedCurrency;
@@ -20,28 +18,17 @@ export type ScalarType = {
   output: AmountCurrency;
 };
 
-export const type =
-  "{ unit: 'DAI' | 'ETH' | 'MKR' | 'SKY' | 'USDC' | 'USDS' | 'USD' | 'EUR' | 'GBP', value: number }";
+export const type = "{ unit: string, value: number }";
 
 export const typedef = "scalar Amount_Currency";
 
 export const schema = z.object({
-  unit: z.enum([
-    "DAI",
-    "ETH",
-    "MKR",
-    "SKY",
-    "USDC",
-    "USDS",
-    "USD",
-    "EUR",
-    "GBP",
-  ] as const satisfies readonly SupportedCurrency[]),
+  unit: z.string(),
   value: z.number().finite(),
 });
 
 export const stringSchema =
-  "z.object({ unit: z.enum(['DAI', 'ETH', 'MKR', 'SKY', 'USDC', 'USDS', 'USD', 'EUR', 'GBP']), value: z.number().finite() })";
+  "z.object({ unit: z.string(), value: z.number().finite() })";
 
 const amountCurrencyValidation = (value: unknown): AmountCurrency => {
   if (typeof value !== "object" || !value) {
@@ -70,8 +57,8 @@ export const config: GraphQLScalarTypeConfig<AmountCurrency, AmountCurrency> = {
     const unitField = ast.fields.find((f) => f.name.value === "unit");
     const valueField = ast.fields.find((f) => f.name.value === "value");
 
-    if (!unitField || unitField.value.kind !== Kind.ENUM) {
-      throw new GraphQLError("unit must be a valid enum value", {
+    if (!unitField || unitField.value.kind !== Kind.STRING) {
+      throw new GraphQLError("unit must be a valid string value", {
         nodes: ast,
       });
     }
@@ -83,7 +70,7 @@ export const config: GraphQLScalarTypeConfig<AmountCurrency, AmountCurrency> = {
     }
 
     const value = {
-      unit: unitField.value.value as SupportedCurrency,
+      unit: unitField.value.value,
       value: parseFloat(valueField.value.value),
     };
 

@@ -6,7 +6,7 @@ import {
 } from "graphql";
 import { z } from "zod";
 
-export type SupportedFiat = "USD" | "EUR" | "GBP";
+export type SupportedFiat = string;
 
 export type AmountFiat = {
   unit: SupportedFiat;
@@ -18,21 +18,17 @@ export type ScalarType = {
   output: AmountFiat;
 };
 
-export const type = "{ unit: 'USD' | 'EUR' | 'GBP', value: number }";
+export const type = "{ unit: string, value: number }";
 
 export const typedef = "scalar Amount_Fiat";
 
 export const schema = z.object({
-  unit: z.enum([
-    "USD",
-    "EUR",
-    "GBP",
-  ] as const satisfies readonly SupportedFiat[]),
+  unit: z.string(),
   value: z.number().finite(),
 });
 
 export const stringSchema =
-  "z.object({ unit: z.enum(['USD', 'EUR', 'GBP']), value: z.number().finite() })";
+  "z.object({ unit: z.string(), value: z.number().finite() })";
 
 const amountFiatValidation = (value: unknown): AmountFiat => {
   if (typeof value !== "object" || !value) {
@@ -61,8 +57,8 @@ export const config: GraphQLScalarTypeConfig<AmountFiat, AmountFiat> = {
     const unitField = ast.fields.find((f) => f.name.value === "unit");
     const valueField = ast.fields.find((f) => f.name.value === "value");
 
-    if (!unitField || unitField.value.kind !== Kind.ENUM) {
-      throw new GraphQLError("unit must be a valid enum value", {
+    if (!unitField || unitField.value.kind !== Kind.STRING) {
+      throw new GraphQLError("unit must be a valid string value", {
         nodes: ast,
       });
     }
@@ -74,7 +70,7 @@ export const config: GraphQLScalarTypeConfig<AmountFiat, AmountFiat> = {
     }
 
     const value = {
-      unit: unitField.value.value as SupportedFiat,
+      unit: unitField.value.value,
       value: parseFloat(valueField.value.value),
     };
 

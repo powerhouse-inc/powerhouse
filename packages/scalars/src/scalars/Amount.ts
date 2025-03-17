@@ -3,11 +3,12 @@ import {
   GraphQLScalarType,
   type GraphQLScalarTypeConfig,
   Kind,
+  type StringValueNode,
 } from "graphql";
 import { z } from "zod";
 
 export type Amount = {
-  unit: string;
+  unit?: string;
   value: number;
 };
 
@@ -16,17 +17,17 @@ export type ScalarType = {
   output: Amount;
 };
 
-export const type = "{ unit: string, value: number }";
+export const type = "{ unit?: string, value?: number }";
 
 export const typedef = "scalar Amount";
 
 export const schema = z.object({
-  unit: z.string(),
+  unit: z.string().optional(),
   value: z.number().finite(),
 });
 
 export const stringSchema =
-  "z.object({ unit: z.string(), value: z.number().finite() })";
+  "z.object({ unit: z.string().optional(), value: z.number().finite() })";
 
 const amountValidation = (value: unknown): Amount => {
   if (typeof value !== "object" || !value) {
@@ -53,7 +54,7 @@ export const config: GraphQLScalarTypeConfig<Amount, Amount> = {
     const unitField = ast.fields.find((f) => f.name.value === "unit");
     const valueField = ast.fields.find((f) => f.name.value === "value");
 
-    if (!unitField || unitField.value.kind !== Kind.STRING) {
+    if (unitField && unitField.value.kind !== Kind.STRING) {
       throw new GraphQLError("unit must be a valid string value", {
         nodes: ast,
       });
@@ -66,7 +67,7 @@ export const config: GraphQLScalarTypeConfig<Amount, Amount> = {
     }
 
     const value = {
-      unit: unitField.value.value,
+      unit: (unitField?.value as StringValueNode | undefined)?.value,
       value: parseFloat(valueField.value.value),
     };
 

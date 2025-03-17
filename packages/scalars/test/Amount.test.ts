@@ -33,6 +33,10 @@ describe("Amount Scalar", () => {
         scalar.serialize({ ...validAmount, value: Infinity }),
       ).toThrow();
     });
+
+    it("should not throw an error if unit is missing", () => {
+      expect(() => scalar.serialize({ value: 1.5 })).not.toThrow();
+    });
   });
 
   describe("value parsing", () => {
@@ -60,6 +64,10 @@ describe("Amount Scalar", () => {
       expect(() =>
         scalar.parseValue({ ...validAmount, value: "1.5" }),
       ).toThrow();
+    });
+
+    it("should not throw an error if unit is missing", () => {
+      expect(() => scalar.parseValue({ value: 1.5 })).not.toThrow();
     });
   });
 
@@ -93,7 +101,7 @@ describe("Amount Scalar", () => {
       ).toThrow();
     });
 
-    it("should throw an error if currency field is missing", () => {
+    it("should not throw an error if currency field is missing", () => {
       expect(() =>
         scalar.parseLiteral({
           kind: Kind.OBJECT,
@@ -105,7 +113,7 @@ describe("Amount Scalar", () => {
             },
           ],
         }),
-      ).toThrow();
+      ).not.toThrow();
     });
 
     it("should throw an error if amount field is missing", () => {

@@ -6,7 +6,7 @@ import {
 } from "graphql";
 import { z } from "zod";
 
-export type SupportedCrypto = "DAI" | "ETH" | "MKR" | "SKY" | "USDC" | "USDS";
+export type SupportedCrypto = string;
 
 export type AmountCrypto = {
   unit: SupportedCrypto;
@@ -18,25 +18,17 @@ export type ScalarType = {
   output: AmountCrypto;
 };
 
-export const type =
-  "{ unit: 'DAI' | 'ETH' | 'MKR' | 'SKY' | 'USDC' | 'USDS', value: number }";
+export const type = "{ unit: string, value: number }";
 
 export const typedef = "scalar Amount_Crypto";
 
 export const schema = z.object({
-  unit: z.enum([
-    "DAI",
-    "ETH",
-    "MKR",
-    "SKY",
-    "USDC",
-    "USDS",
-  ] as const satisfies readonly SupportedCrypto[]),
+  unit: z.string(),
   value: z.number().finite(),
 });
 
 export const stringSchema =
-  "z.object({ unit: z.enum(['DAI', 'ETH', 'MKR', 'SKY', 'USDC', 'USDS']), value: z.number().finite() })";
+  "z.object({ unit: z.string(), value: z.number().finite() })";
 
 const amountCryptoValidation = (value: unknown): AmountCrypto => {
   if (typeof value !== "object" || !value) {
@@ -65,8 +57,8 @@ export const config: GraphQLScalarTypeConfig<AmountCrypto, AmountCrypto> = {
     const unitField = ast.fields.find((f) => f.name.value === "unit");
     const valueField = ast.fields.find((f) => f.name.value === "value");
 
-    if (!unitField || unitField.value.kind !== Kind.ENUM) {
-      throw new GraphQLError("unit must be a valid enum value", {
+    if (!unitField || unitField.value.kind !== Kind.STRING) {
+      throw new GraphQLError("unit must be a valid string value", {
         nodes: ast,
       });
     }
@@ -78,7 +70,7 @@ export const config: GraphQLScalarTypeConfig<AmountCrypto, AmountCrypto> = {
     }
 
     const value = {
-      unit: unitField.value.value as SupportedCrypto,
+      unit: unitField.value.value,
       value: parseFloat(valueField.value.value),
     };
 

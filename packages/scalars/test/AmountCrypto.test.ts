@@ -16,10 +16,10 @@ describe("AmountCrypto Scalar", () => {
       expect(() => scalar.serialize(123)).toThrow();
     });
 
-    it("should throw an error if currency is not valid", () => {
+    it("should support any string as currency", () => {
       expect(() =>
         scalar.serialize({ ...validAmount, unit: "INVALID" }),
-      ).toThrow();
+      ).not.toThrow();
     });
 
     it("should throw an error if amount is not a number", () => {
@@ -41,7 +41,15 @@ describe("AmountCrypto Scalar", () => {
     });
 
     it("should parse valid amounts for all supported currencies", () => {
-      const currencies = ["DAI", "ETH", "MKR", "SKY", "USDC", "USDS"];
+      const currencies = [
+        "DAI",
+        "ETH",
+        "MKR",
+        "SKY",
+        "USDC",
+        "USDS",
+        "INVALID",
+      ];
       currencies.forEach((currency) => {
         expect(scalar.parseValue({ unit: currency, value: 1.5 })).toEqual({
           unit: currency,
@@ -50,10 +58,10 @@ describe("AmountCrypto Scalar", () => {
       });
     });
 
-    it("should throw an error if currency is not supported", () => {
+    it("should support any string as currency", () => {
       expect(() =>
-        scalar.parseValue({ ...validAmount, unit: "BTC" }),
-      ).toThrow();
+        scalar.parseValue({ ...validAmount, unit: "INVALID" }),
+      ).not.toThrow();
     });
 
     it("should throw an error if amount is not a number", () => {
@@ -72,7 +80,7 @@ describe("AmountCrypto Scalar", () => {
             {
               kind: Kind.OBJECT_FIELD,
               name: { kind: Kind.NAME, value: "unit" },
-              value: { kind: Kind.ENUM, value: "ETH" },
+              value: { kind: Kind.STRING, value: "ETH" },
             },
             {
               kind: Kind.OBJECT_FIELD,
@@ -116,14 +124,14 @@ describe("AmountCrypto Scalar", () => {
             {
               kind: Kind.OBJECT_FIELD,
               name: { kind: Kind.NAME, value: "unit" },
-              value: { kind: Kind.ENUM, value: "ETH" },
+              value: { kind: Kind.STRING, value: "ETH" },
             },
           ],
         }),
       ).toThrow();
     });
 
-    it("should throw an error if currency is not a valid enum", () => {
+    it("should throw an error if currency is not a valid string", () => {
       expect(() =>
         scalar.parseLiteral({
           kind: Kind.OBJECT,
@@ -151,7 +159,7 @@ describe("AmountCrypto Scalar", () => {
             {
               kind: Kind.OBJECT_FIELD,
               name: { kind: Kind.NAME, value: "unit" },
-              value: { kind: Kind.ENUM, value: "ETH" },
+              value: { kind: Kind.STRING, value: "ETH" },
             },
             {
               kind: Kind.OBJECT_FIELD,
