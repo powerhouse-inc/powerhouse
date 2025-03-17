@@ -1,3 +1,13 @@
+## 1.0.0-dev.228 (2025-03-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** add ethers as peer dependency ([069767f8](https://github.com/powerhouse-inc/powerhouse/commit/069767f8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.227 (2025-03-17)
 
 ### 🩹 Fixes

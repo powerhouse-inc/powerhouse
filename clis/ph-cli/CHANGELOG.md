@@ -1,3 +1,23 @@
+## 0.39.3-dev.0 (2025-03-17)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.228
+
+## 0.39.2 (2025-03-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** add ethers as peer dependency ([069767f8](https://github.com/powerhouse-inc/powerhouse/commit/069767f8))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-local to 1.26.1
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 0.39.2-dev.0 (2025-03-17)
 
 ### 🧱 Updated Dependencies
