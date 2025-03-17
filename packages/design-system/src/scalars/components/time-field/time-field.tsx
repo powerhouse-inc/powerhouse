@@ -11,7 +11,7 @@ import {
 } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import type { InputNumberProps } from "../number-field/types.js";
-import { type ErrorHandling, type FieldCommonProps } from "../types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import TimePickerContent from "./subcomponents/time-picker-content.js";
 import { validateTimePicker } from "./time-validations.js";
 import { type TimeFieldValue } from "./type.js";
@@ -19,9 +19,9 @@ import { useTimePickerField } from "./use-time-field.js";
 import { handleKeyDown } from "./utils.js";
 
 export interface TimeFieldProps
-  extends FieldCommonProps<TimeFieldValue>,
+  extends InputBaseProps<TimeFieldValue>,
     InputNumberProps,
-    ErrorHandling {
+    FieldErrorHandling {
   label?: string;
   id?: string;
   name: string;

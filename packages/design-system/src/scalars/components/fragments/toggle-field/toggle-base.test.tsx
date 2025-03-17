@@ -1,7 +1,6 @@
-import React from "react";
-import { render, fireEvent, screen } from "@testing-library/react";
-import { Toggle } from "./toggle.js";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
+import { ToggleBase } from "./toggle-base.js";
 
 describe("Toggle Component", () => {
   const defaultProps = {
@@ -14,7 +13,7 @@ describe("Toggle Component", () => {
   describe("Testing the interactive behavior of the Toggle component", () => {
     it("should call onChange with correct value when clicked", () => {
       const handleChange = vi.fn();
-      render(<Toggle {...defaultProps} onChange={handleChange} />);
+      render(<ToggleBase {...defaultProps} onChange={handleChange} />);
 
       const toggle = screen.getByRole("switch");
       fireEvent.click(toggle);
@@ -26,7 +25,11 @@ describe("Toggle Component", () => {
     it("should not call onChange when disabled", () => {
       const handleChange = vi.fn();
       render(
-        <Toggle {...defaultProps} disabled={true} onChange={handleChange} />,
+        <ToggleBase
+          {...defaultProps}
+          disabled={true}
+          onChange={handleChange}
+        />,
       );
 
       const toggle = screen.getByRole("switch");
@@ -38,7 +41,11 @@ describe("Toggle Component", () => {
     it("should toggle between checked and unchecked states", () => {
       const handleChange = vi.fn();
       const { rerender } = render(
-        <Toggle {...defaultProps} checked={false} onChange={handleChange} />,
+        <ToggleBase
+          {...defaultProps}
+          checked={false}
+          onChange={handleChange}
+        />,
       );
 
       const toggle = screen.getByRole("switch");
@@ -47,7 +54,7 @@ describe("Toggle Component", () => {
 
       fireEvent.click(toggle);
       rerender(
-        <Toggle {...defaultProps} checked={true} onChange={handleChange} />,
+        <ToggleBase {...defaultProps} checked={true} onChange={handleChange} />,
       );
 
       expect(toggle).toHaveAttribute("data-state", "checked");
@@ -56,19 +63,19 @@ describe("Toggle Component", () => {
 
   describe("Testing rendering characteristics of the Toggle component", () => {
     it("should render with correct initial checked state", () => {
-      render(<Toggle {...defaultProps} checked={true} />);
+      render(<ToggleBase {...defaultProps} checked={true} />);
       const toggle = screen.getByRole("switch");
       expect(toggle).toHaveAttribute("data-state", "checked");
     });
 
     it("should render as unchecked when checked prop is false", () => {
-      render(<Toggle {...defaultProps} checked={false} />);
+      render(<ToggleBase {...defaultProps} checked={false} />);
       const toggle = screen.getByRole("switch");
       expect(toggle).toHaveAttribute("data-state", "unchecked");
     });
 
     it("should apply disabled styles when disabled", () => {
-      render(<Toggle {...defaultProps} disabled={true} checked={true} />);
+      render(<ToggleBase {...defaultProps} disabled={true} checked={true} />);
       const toggle = screen.getByRole("switch");
 
       expect(toggle).toHaveClass("cursor-not-allowed");
@@ -76,7 +83,7 @@ describe("Toggle Component", () => {
     });
 
     it("should mark as required when disabled prop is true", () => {
-      render(<Toggle {...defaultProps} disabled={true} />);
+      render(<ToggleBase {...defaultProps} disabled={true} />);
       const toggle = screen.getByRole("switch");
 
       expect(toggle).toHaveAttribute("disabled");
@@ -84,7 +91,7 @@ describe("Toggle Component", () => {
 
     it("should apply custom className when provided", () => {
       const customClass = "custom-class";
-      render(<Toggle {...defaultProps} className={customClass} />);
+      render(<ToggleBase {...defaultProps} className={customClass} />);
       const toggle = screen.getByRole("switch");
 
       expect(toggle).toHaveClass(customClass);

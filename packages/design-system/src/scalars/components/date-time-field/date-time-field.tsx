@@ -3,7 +3,7 @@ import { type DateFieldProps } from "../date-field/date-field.js";
 import type { DateFieldValue } from "../date-field/types.js";
 import { type TimeFieldProps } from "../time-field/time-field.js";
 import type { TimeFieldValue } from "../time-field/type.js";
-import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import { DateTimeField as DateTimeRaw } from "./date-time.js";
 
 type CommonOmittedProps =
@@ -28,8 +28,8 @@ interface DateTimeFieldPropsTime
 }
 
 interface DateTimeFieldProps
-  extends Omit<FieldCommonProps<any>, "value" | "defaultValue">,
-    ErrorHandling {
+  extends Omit<InputBaseProps<any>, "value" | "defaultValue">,
+    FieldErrorHandling {
   showDateSelect?: boolean;
   showTimeSelect?: boolean;
   name: string;

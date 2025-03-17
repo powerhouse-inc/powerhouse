@@ -1,16 +1,11 @@
 import React from "react";
-import {
-  CheckboxField,
-  type CheckboxFieldProps,
-} from "../fragments/checkbox-field/index.js";
-import {
-  ToggleField,
-  type ToggleFieldProps,
-} from "../fragments/toggle-field/index.js";
-
+import type { CheckboxProps } from "../fragments/checkbox-field/checkbox.js";
+import { CheckboxField } from "../fragments/checkbox-field/index.js";
+import { ToggleField } from "../fragments/toggle-field/index.js";
+import type { ToggleProps } from "../fragments/toggle-field/toggle.js";
 export interface BooleanFieldProps
-  extends Omit<CheckboxFieldProps, "defaultValue" | "onChange" | "value">,
-    Omit<ToggleFieldProps, "onChange" | "value"> {
+  extends Omit<CheckboxProps, "defaultValue" | "onChange" | "value">,
+    Omit<ToggleProps, "onChange" | "value"> {
   isToggle?: boolean;
   onChange?: (value: boolean) => void;
   value?: boolean;

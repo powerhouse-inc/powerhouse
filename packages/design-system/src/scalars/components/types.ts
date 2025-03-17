@@ -7,14 +7,10 @@ export type ValidatorHandler = (
   formState: Record<string, any>,
 ) => ValidatorResult | Promise<ValidatorResult>;
 
-export interface FormFieldProps {
+export interface InputBaseProps<T> {
   id?: string;
-  name: string;
+  name?: string;
   label?: React.ReactNode;
-  autoFocus?: boolean;
-}
-
-export interface FieldCommonProps<T> extends FormFieldProps {
   description?: string;
   value?: T;
   defaultValue?: T;
@@ -23,22 +19,11 @@ export interface FieldCommonProps<T> extends FormFieldProps {
   errors?: ErrorMessage[];
   warnings?: ErrorMessage[];
   className?: string;
+  autoFocus?: boolean; // is it required??
 }
 
-export interface ErrorHandling {
+export interface FieldErrorHandling {
   showErrorOnBlur?: boolean;
   showErrorOnChange?: boolean;
   validators?: ValidatorHandler[] | ValidatorHandler;
-}
-
-export interface TextProps {
-  minLength?: number;
-  maxLength?: number;
-  pattern?: RegExp;
-  placeholder?: string;
-  trim?: boolean;
-  uppercase?: boolean;
-  lowercase?: boolean;
-  autoComplete?: boolean;
-  spellCheck?: boolean;
 }

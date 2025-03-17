@@ -5,20 +5,20 @@ import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-aut
 import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
 import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
-import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import type { AIDOption, AIDProps } from "./types.js";
 
 type AIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
-  | keyof FieldCommonProps<string>
-  | keyof ErrorHandling
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
   | keyof AIDProps
   | "pattern"
 >;
 
 export type AIDFieldProps = AIDFieldBaseProps &
-  FieldCommonProps<string> &
-  ErrorHandling &
+  InputBaseProps<string> &
+  FieldErrorHandling &
   AIDProps;
 
 const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(

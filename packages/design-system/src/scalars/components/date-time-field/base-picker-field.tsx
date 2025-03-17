@@ -1,18 +1,18 @@
 import { Icon, type IconName } from "#powerhouse";
 import { cn } from "#scalars";
 import React, { type PropsWithChildren } from "react";
-import { Input, type InputProps } from "../fragments/index.js";
 import { Button } from "../fragments/button/button.js";
+import { Input, type InputProps } from "../fragments/index.js";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "../fragments/popover/popover.js";
-import { type ErrorHandling, type FieldCommonProps } from "../types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 
 export interface BasePickerFieldProps
-  extends FieldCommonProps<string>,
-    ErrorHandling {
+  extends InputBaseProps<string>,
+    FieldErrorHandling {
   id?: string;
   name: string;
   disabled?: boolean;

@@ -9,13 +9,13 @@ import {
   FormMessageList,
 } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
-import { type FieldCommonProps } from "../types.js";
+import { type InputBaseProps } from "../types.js";
 import { BasePickerField } from "./base-picker-field.js";
 import DateTimePickerContent from "./date-time-contet.js";
 import { dateTimeFieldValidations } from "./date-time-field-validations.js";
 import { useDateTime } from "./use-date-time.js";
 
-interface DateTimePickerProps extends FieldCommonProps<DateFieldValue> {
+interface DateTimePickerProps extends InputBaseProps<DateFieldValue> {
   name: string;
   id?: string;
   label?: string;

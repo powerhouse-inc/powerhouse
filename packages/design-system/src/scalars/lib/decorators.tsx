@@ -111,8 +111,8 @@ export const withForm: Decorator = (Story, context) => {
           <div className="flex items-center gap-2">
             <Checkbox
               id={checkboxId}
-              checked={showFormButtons}
-              onCheckedChange={onShowFormButtonsChange}
+              value={showFormButtons}
+              onChange={onShowFormButtonsChange}
             />
             <label
               className="cursor-pointer dark:text-gray-400"
