@@ -20,6 +20,8 @@ import {
     type DocumentDriveAction,
     type DocumentDriveDocument,
     type DriveInput,
+    PullResponderTransmitter,
+    PullResponderTrigger,
     type RemoteDriveOptions,
     type StrandUpdate,
     type SyncStatus,
@@ -34,6 +36,7 @@ import {
     documentDriveReducer,
     generateAddNodeAction,
     generateNodesCopy,
+    generateUUID,
     isDocumentDrive,
     isFileNode,
     isFolderNode,
@@ -45,6 +48,7 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
+import { Listener } from 'document-drive/server/types';
 import { type Operation, type PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
@@ -711,18 +715,56 @@ export function useDocumentDriveServer() {
             driveId: string,
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
-        ) => {
+        ): Promise<PullResponderTrigger> => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
-            const pullResponderTrigger =
-                await reactor.registerPullResponderTrigger(
-                    driveId,
-                    url,
-                    options,
-                );
 
-            return pullResponderTrigger;
+            const uuid = generateUUID();
+            const listener: Listener = {
+                driveId,
+                listenerId: uuid,
+                block: false,
+                filter: {
+                    branch: options.pullFilter?.branch ?? [],
+                    documentId: options.pullFilter?.documentId ?? [],
+                    documentType: options.pullFilter?.documentType ?? [],
+                    scope: options.pullFilter?.scope ?? [],
+                },
+                system: false,
+                label: `Pullresponder #${uuid}`,
+                callInfo: {
+                    data: '',
+                    name: 'PullResponder',
+                    transmitterType: 'PullResponder',
+                },
+            };
+
+            // TODO: circular reference
+            // TODO: once we have DI, remove this and pass around
+            const listenerManager = reactor.listeners;
+            listener.transmitter = new PullResponderTransmitter(
+                listener,
+                listenerManager,
+            );
+
+            // set the listener on the manager directly (bypassing operations)
+            try {
+                await listenerManager.setListener(driveId, listener);
+            } catch (error) {
+                throw new Error(`Listener couldn't be registered: ${error}`);
+            }
+
+            // for backwards compatibility: return everything but the transmitter
+            return {
+                data: {
+                    interval: `${options.pullInterval}` || '1000',
+                    listenerId: uuid,
+                    url,
+                },
+                id: uuid,
+                type: 'PullResponder',
+            };
         },
         [reactor],
     );
