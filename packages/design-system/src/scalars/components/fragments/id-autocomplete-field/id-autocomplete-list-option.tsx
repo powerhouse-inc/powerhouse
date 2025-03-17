@@ -81,7 +81,7 @@ export type IdAutocompleteListOptionProps = {
   isFetchSelectedOptionSync?: boolean;
   className?: string;
   placeholderIcon?: IconName | React.ReactElement;
-} & IdAutocompleteOption;
+} & IdAutocompleteOption<Record<string, unknown>>;
 
 export const IdAutocompleteListOption: React.FC<
   IdAutocompleteListOptionProps
@@ -99,6 +99,7 @@ export const IdAutocompleteListOption: React.FC<
   isFetchSelectedOptionSync,
   className,
   placeholderIcon = "PowerhouseLogoSmall",
+  ...extraProps
 }) => {
   const renderWithValue = () => (
     <div className={cn("flex w-full items-center")}>
@@ -194,6 +195,22 @@ export const IdAutocompleteListOption: React.FC<
           </p>
         </div>
       )}
+      {showDescription &&
+        "agentType" in extraProps &&
+        typeof extraProps.agentType === "string" && (
+          <div className={cn("flex max-w-full items-center justify-end")}>
+            <span
+              className={cn(
+                "truncate text-xs leading-5",
+                asPlaceholder
+                  ? "text-gray-400 dark:text-gray-700"
+                  : "text-gray-500 dark:text-gray-600",
+              )}
+            >
+              {extraProps.agentType}
+            </span>
+          </div>
+        )}
     </div>
   );
 
