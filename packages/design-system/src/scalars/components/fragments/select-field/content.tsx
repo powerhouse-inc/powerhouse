@@ -135,7 +135,7 @@ export const Content: React.FC<ContentProps> = ({
                         )}
                     </div>
                   )}
-                <span className="text-[14px] font-semibold leading-4 text-gray-900 dark:text-gray-50">
+                <span className="text-[14px] font-normal leading-4 text-gray-900 dark:text-gray-50">
                   {selectedValues.length === enabledOptions.length
                     ? "Deselect All"
                     : "Select All"}
