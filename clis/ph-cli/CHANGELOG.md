@@ -1,3 +1,40 @@
+## 0.39.1-dev.0 (2025-03-17)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.226
+
+## 0.39.0 (2025-03-17)
+
+### 🚀 Features
+
+- ignore .cursor ([ae05844d](https://github.com/powerhouse-inc/powerhouse/commit/ae05844d))
+- **scalars:** add the icons and install menu dropdown ([95ee538d](https://github.com/powerhouse-inc/powerhouse/commit/95ee538d))
+- **scalars:** validate DID format in AID field ([b6865b6f](https://github.com/powerhouse-inc/powerhouse/commit/b6865b6f))
+
+### 🩹 Fixes
+
+- increase max header length in commit lint ([90a28de7](https://github.com/powerhouse-inc/powerhouse/commit/90a28de7))
+- regenerate pnpm-lock file ([d208e710](https://github.com/powerhouse-inc/powerhouse/commit/d208e710))
+- **scalars:** improve showErrorOnBlur behavior & callback functions mocks ([283d9731](https://github.com/powerhouse-inc/powerhouse/commit/283d9731))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.27.0
+- Updated document-model to 2.26.0
+- Updated @powerhousedao/builder-tools to 0.7.0
+- Updated @powerhousedao/reactor-local to 1.26.0
+- Updated @powerhousedao/codegen to 0.44.0
+- Updated @powerhousedao/config to 1.23.0
+- Updated @powerhousedao/connect to 1.0.9
+
+### ❤️ Thank You
+
+- alejandrocabriales
+- Benjamin Jordan
+- nestor
+- Yasiel Cabrera
+
 ## 0.38.2-dev.0 (2025-03-13)
 
 ### 🧱 Updated Dependencies
