@@ -59,11 +59,12 @@ const meta: Meta<typeof AIDField> = {
         "title?: string\n\n" +
         "path?: { text: string; url?: string; }\n\n" +
         "value: string\n\n" +
-        "description?: string\n\n",
+        "description?: string\n\n" +
+        "agentType?: string\n\n",
       table: {
         type: {
           summary:
-            "(userInput: string; context?: { supportedNetworks?: Network[] }) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
+            "(userInput: string; context?: { supportedNetworks?: Network[]; }) => Promise<AIDOption[]> | AIDOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -81,11 +82,12 @@ const meta: Meta<typeof AIDField> = {
         "path?: { text: string; url?: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n" +
+        "agentType?: string\n\n" +
         "or undefined if the option is not found",
       table: {
         type: {
           summary:
-            "(value: string) => Promise<IdAutocompleteOption | undefined> | IdAutocompleteOption | undefined",
+            "(value: string) => Promise<AIDOption | undefined> | AIDOption | undefined",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
