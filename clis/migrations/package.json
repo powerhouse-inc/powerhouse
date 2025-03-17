@@ -4,5 +4,6 @@
   "description": "Code migrations for the monorepo",
   "author": "",
   "license": "ISC",
-  "type": "module"
+  "type": "module",
+  "access": "public"
 }
