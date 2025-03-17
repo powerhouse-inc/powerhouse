@@ -2,28 +2,21 @@
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId, useRef } from "react";
-import { Command } from "@/scalars/components/fragments/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverAnchor,
-} from "@/scalars/components/fragments/popover";
-import { FormGroup } from "@/scalars/components/fragments/form-group";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { Input } from "@/scalars/components/fragments/input";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { cn } from "@/scalars/lib/utils";
-import type {
-  FieldCommonProps,
-  ErrorHandling,
-} from "@/scalars/components/types";
-import type { IdAutocompleteProps } from "./types";
-import { useIdAutocompleteField } from "./use-id-autocomplete-field";
-import { IdAutocompleteInputContainer } from "./id-autocomplete-input-container";
-import { IdAutocompleteList } from "./id-autocomplete-list";
-import { IdAutocompleteListOption } from "./id-autocomplete-list-option";
+import { cn } from "../../../lib/utils.js";
+import type { ErrorHandling, FieldCommonProps } from "../../types.js";
+import { Command } from "../command/command.js";
+import { FormDescription } from "../form-description/form-description.js";
+import { FormGroup } from "../form-group/form-group.js";
+import { FormLabel } from "../form-label/form-label.js";
+import { FormMessageList } from "../form-message/index.js";
+import { Input } from "../input/input.js";
+import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
+import { IdAutocompleteInputContainer } from "./id-autocomplete-input-container.js";
+import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
+import { IdAutocompleteList } from "./id-autocomplete-list.js";
+import type { IdAutocompleteProps } from "./types.js";
+import { useIdAutocompleteField } from "./use-id-autocomplete-field.js";
 
 type IdAutocompleteFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,

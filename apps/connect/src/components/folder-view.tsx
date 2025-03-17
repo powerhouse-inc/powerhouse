@@ -1,3 +1,5 @@
+import { type TUiNodes } from '#hooks';
+import { sortUiNodesByName } from '#utils';
 import {
     FILE,
     FOLDER,
@@ -5,11 +7,9 @@ import {
     useDrop,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
-import { TUiNodes } from 'src/hooks/useUiNodes';
-import { sortUiNodesByName } from 'src/utils';
 import { twMerge } from 'tailwind-merge';
-import { ContentSection } from './content';
-import FileContentView from './file-content-view';
+import { ContentSection } from './content/index.js';
+import FileContentView from './file-content-view.js';
 
 export function FolderView(props: TUiNodes) {
     const { t } = useTranslation();
@@ -47,6 +47,10 @@ export function FolderView(props: TUiNodes) {
                             {...props}
                             key={folderNode.id}
                             uiNode={folderNode}
+                            onSelectNode={props.setSelectedNode}
+                            isAllowedToCreateDocuments={
+                                props.isAllowedToCreateDocuments ?? false
+                            }
                         />
                     ))
                 ) : (

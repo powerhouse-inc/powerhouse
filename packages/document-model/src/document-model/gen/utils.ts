@@ -1,79 +1,67 @@
-import { DocumentModelUtils, utils as base } from "../../document";
 import {
-  DocumentModelAction,
-  DocumentModelLocalState,
-  DocumentModelState,
-} from "./types";
-import { reducer } from "./reducer";
+  CreateDocument,
+  CreateExtendedState,
+  CreateState,
+  LoadFromFile,
+  LoadFromInput,
+  SaveToFile,
+  SaveToFileHandle,
+} from "#document/types.js";
+import {
+  baseCreateDocument,
+  baseCreateExtendedState,
+} from "#document/utils/base.js";
+import {
+  baseLoadFromFile,
+  baseLoadFromInput,
+  baseSaveToFile,
+  baseSaveToFileHandle,
+} from "#document/utils/file.js";
+import {
+  documentModelState,
+  documentType,
+  fileExtension,
+  initialLocalState,
+} from "./constants.js";
+import { reducer } from "./reducer.js";
+import { DocumentModelDocument } from "./types.js";
 
-export const initialGlobalState: DocumentModelState = {
-  id: "",
-  name: "",
-  extension: "",
-  description: "",
-  author: {
-    name: "",
-    website: "",
-  },
-  specifications: [
-    {
-      version: 1,
-      changeLog: [],
-      state: {
-        global: {
-          schema: "",
-          initialValue: "",
-          examples: [],
-        },
-        local: {
-          schema: "",
-          initialValue: "",
-          examples: [],
-        },
-      },
-      modules: [],
-    },
-  ],
+export { fileExtension } from "./constants.js";
+
+export const createState: CreateState<DocumentModelDocument> = (state) => {
+  return {
+    global: { ...documentModelState, ...state?.global },
+    local: { ...initialLocalState, ...state?.local },
+  };
 };
 
-export const initialLocalState: DocumentModelLocalState = {};
-
-const utils: DocumentModelUtils<
-  DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
-> = {
-  fileExtension: "phdm",
-  createState(state) {
-    return {
-      global: { ...initialGlobalState, ...state?.global },
-      local: { ...initialLocalState, ...state?.local },
-    };
-  },
-  createExtendedState(extendedState) {
-    return base.createExtendedState(
-      { ...extendedState, documentType: "powerhouse/document-model" },
-      utils.createState,
-    );
-  },
-  createDocument(state) {
-    return base.createDocument(
-      utils.createExtendedState(state),
-      utils.createState,
-    );
-  },
-  saveToFile(document, path, name) {
-    return base.saveToFile(document, path, "phdm", name);
-  },
-  saveToFileHandle(document, input) {
-    return base.saveToFileHandle(document, input);
-  },
-  loadFromFile(path) {
-    return base.loadFromFile(path, reducer);
-  },
-  loadFromInput(input) {
-    return base.loadFromInput(input, reducer);
-  },
+export const createExtendedState: CreateExtendedState<DocumentModelDocument> = (
+  extendedState,
+) => {
+  return baseCreateExtendedState(
+    { ...extendedState, documentType },
+    createState,
+  );
 };
 
-export default utils;
+export const createDocument: CreateDocument<DocumentModelDocument> = (
+  state,
+) => {
+  return baseCreateDocument(createExtendedState(state), createState);
+};
+
+export const saveToFile: SaveToFile = (document, path, name) => {
+  return baseSaveToFile(document, path, fileExtension, name);
+};
+
+export const saveToFileHandle: SaveToFileHandle = (document, input) => {
+  return baseSaveToFileHandle(document, input);
+};
+
+export const loadFromFile: LoadFromFile<DocumentModelDocument> = (path) => {
+  return baseLoadFromFile(path, reducer);
+};
+
+export const loadFromInput: LoadFromInput<DocumentModelDocument> = (input) => {
+  return baseLoadFromInput(input, reducer);
+};

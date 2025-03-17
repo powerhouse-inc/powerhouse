@@ -1,4 +1,4 @@
-import { ZodIssue } from "zod";
+import { type ZodIssue } from "zod";
 
 export class InvalidActionInputError extends Error {
   public data: unknown;

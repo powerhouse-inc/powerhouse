@@ -1,20 +1,20 @@
+import { useDocumentDriveServer } from '#hooks';
+import { makeNodeSlugFromNodeName } from '#utils';
 import {
     CreateDocumentModal as ConnectCreateDocumentModal,
     FILE,
-    TDocumentType,
-    UiDriveNode,
-    UiFolderNode,
-    UiNode,
+    type TDocumentType,
+    type UiDriveNode,
+    type UiFolderNode,
+    type UiNode,
 } from '@powerhousedao/design-system';
-import { DocumentModel } from 'document-model/document';
-import { useDocumentDriveServer } from 'src/hooks/useDocumentDriveServer';
-import { makeNodeSlugFromNodeName } from 'src/utils/slug';
+import { type DocumentModelModule } from 'document-model';
 
 export interface CreateDocumentModalProps {
     open: boolean;
     selectedParentNode: UiDriveNode | UiFolderNode | null;
     setSelectedNode: (uiNode: UiNode | null) => void;
-    documentModel: DocumentModel;
+    documentModel: DocumentModelModule;
     onClose: () => void;
 }
 
@@ -64,7 +64,7 @@ export const CreateDocumentModal: React.FC<
         <ConnectCreateDocumentModal
             open={open}
             onContinue={onCreateDocument}
-            onOpenChange={status => {
+            onOpenChange={(status: boolean) => {
                 if (!status) return onClose();
             }}
         />

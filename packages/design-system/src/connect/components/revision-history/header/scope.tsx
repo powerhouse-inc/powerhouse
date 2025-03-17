@@ -1,9 +1,9 @@
-import { Select } from "../../select";
-import { Scope as TScope } from "../types";
+import { type OperationScope } from "document-model";
+import { Select } from "../../select/index.js";
 
 type Props = {
-  readonly value: TScope;
-  readonly onChange: (value: TScope) => void;
+  readonly value: OperationScope;
+  readonly onChange: (value: OperationScope) => void;
 };
 export function Scope(props: Props) {
   const { value, onChange } = props;

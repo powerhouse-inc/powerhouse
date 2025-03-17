@@ -5,12 +5,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "./dropdown-menu";
+} from "./dropdown-menu.js";
 
-const meta = {
+const meta: Meta<typeof DropdownMenu> = {
   title: "Powerhouse/Components/DropdownMenu",
   component: DropdownMenu,
-} satisfies Meta<typeof DropdownMenu>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;

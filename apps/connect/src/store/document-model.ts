@@ -1,44 +1,40 @@
-import { ExtendedEditor } from 'document-model-libs';
-import * as DocumentModels from 'document-model-libs/document-models';
-import { Action, DocumentModel } from 'document-model/document';
-import { module as DocumentModelLib } from 'document-model/document-model';
+import { useFeatureFlag } from '#hooks';
+import { driveDocumentModelModule } from 'document-drive';
+import {
+    documentModelDocumentModelModule,
+    type DocumentModelLib,
+    type DocumentModelModule,
+    type PHDocument,
+} from 'document-model';
 import { atom, useAtomValue } from 'jotai';
-import { unwrap } from 'jotai/utils';
-import { useFeatureFlag } from 'src/hooks/useFeatureFlags';
-import { atomStore } from '.';
+import { observe } from 'jotai-effect';
+import { atomWithLazy, unwrap } from 'jotai/utils';
+import { externalPackagesAtom } from './external-packages.js';
+import { atomStore } from './index.js';
 
 export const LOCAL_DOCUMENT_MODELS = import.meta.env.LOCAL_DOCUMENT_MODELS;
-const LOAD_EXTERNAL_PROJECTS = import.meta.env.LOAD_EXTERNAL_PROJECTS;
 
-export type ExternalProjectModule = {
-    documentModels?: DocumentModel[];
-    editors?: ExtendedEditor[];
-};
+export const baseDocumentModels = [
+    driveDocumentModelModule,
+    documentModelDocumentModelModule,
+] as DocumentModelModule[];
 
-export async function loadPackages(): Promise<ExternalProjectModule[]> {
-    if (!LOAD_EXTERNAL_PROJECTS || LOAD_EXTERNAL_PROJECTS !== 'true') {
-        return [];
+// removes document models with the same id, keeping the one that appears later
+function getUniqueDocumentModels(
+    ...documentModels: DocumentModelModule[]
+): DocumentModelModule[] {
+    const uniqueModels = new Map<string, DocumentModelModule>();
+
+    for (const model of documentModels) {
+        uniqueModels.set(model.documentModel.id, model);
     }
 
-    try {
-        const module = (await import('EXTERNAL_PROJECTS')) as unknown as {
-            default: ExternalProjectModule[];
-        };
-
-        return module.default;
-    } catch (e) {
-        console.error('Error loading external projects', e);
-        return [];
-    }
+    return Array.from(uniqueModels.values());
 }
 
-function getDocumentModelsFromModules(modules: ExternalProjectModule[]) {
+function getDocumentModelsFromModules(modules: DocumentModelLib[]) {
     return modules
-        .filter(module => !!module.documentModels)
-        .map(
-            module =>
-                (module as Required<ExternalProjectModule>).documentModels,
-        )
+        .map(module => module.documentModels)
         .reduce((acc, val) => acc.concat(val), []);
 }
 
@@ -49,7 +45,7 @@ async function loadDynamicModels() {
     try {
         const localModules = (await import(
             'LOCAL_DOCUMENT_MODELS'
-        )) as unknown as Record<string, DocumentModel>;
+        )) as unknown as Record<string, DocumentModelModule>;
         console.log('Loaded local document models:', localModules);
         return Object.values(localModules);
     } catch (e) {
@@ -58,84 +54,71 @@ async function loadDynamicModels() {
     }
 }
 
-export const baseDocumentModelsMap: Record<string, DocumentModel> = {
-    DocumentModel: DocumentModelLib as DocumentModel,
-    ...(DocumentModels as Record<string, DocumentModel>),
-};
-
-export const baseDocumentModels = Object.values(baseDocumentModelsMap);
-
-const dynamicDocumentModels = loadDynamicModels();
-
-export const packagesDocumentModels = loadPackages();
-
-const dynamicDocumentModelsAtom = atom<Promise<DocumentModel[]>>(
-    dynamicDocumentModels,
-);
-
-const packagesDocumentModelsAtom = atom<Promise<ExternalProjectModule[]>>(
-    packagesDocumentModels,
-);
+const dynamicDocumentModelsAtom = atomWithLazy(loadDynamicModels);
 
 export const documentModelsAtom = atom(async get => {
     const dynamicDocumentModels = await get(dynamicDocumentModelsAtom);
-    const pkgDocumentModels = await get(packagesDocumentModelsAtom);
+    const externalModules = (await get(
+        externalPackagesAtom,
+    )) as DocumentModelLib[];
+    const externalDocumentModels =
+        getDocumentModelsFromModules(externalModules);
 
-    const newDocumentModelIds = dynamicDocumentModels.map(
-        dm => dm.documentModel.id,
-    );
-    return [
-        ...baseDocumentModels.filter(
-            dm => !newDocumentModelIds.includes(dm.documentModel.id),
-        ),
+    const result = getUniqueDocumentModels(
+        ...baseDocumentModels,
+        ...externalDocumentModels,
         ...dynamicDocumentModels,
-        ...getDocumentModelsFromModules(pkgDocumentModels),
-    ];
+    );
+    return result;
 });
 
 // blocks rendering until document models are loaded.
 export const useDocumentModels = () => useAtomValue(documentModelsAtom);
 
 const unrappedDocumentModelsAtom = unwrap(documentModelsAtom);
+
 // will return undefined until document models are initialized. Does not block rendering.
-export const useUnwrappedDocumentModels = () =>
+export const useUnwrappedDocumentModelModules = () =>
     useAtomValue(unrappedDocumentModelsAtom);
 
-export const useDocumentModelsAsync = () => dynamicDocumentModels;
-
 export const subscribeDocumentModels = function (
-    listener: (documentModels: DocumentModel[]) => void,
+    listener: (documentModels: DocumentModelModule[]) => void,
 ) {
-    return atomStore.sub(documentModelsAtom, () => {
-        atomStore
-            .get(documentModelsAtom)
-            .then(listener)
-            .catch(e => {
-                throw e;
-            });
-    });
+    // activate the effect on the default store
+    const unobserve = observe(get => {
+        const documentModels = get(documentModelsAtom);
+        documentModels.then(listener).catch(e => {
+            throw e;
+        });
+    }, atomStore);
+
+    // Clean up the effect
+    return () => unobserve();
 };
 
-function getDocumentModel<S = unknown, A extends Action = Action>(
+function getDocumentModelModule<TDocument extends PHDocument>(
     documentType: string,
-    documentModels: DocumentModel[] | undefined,
+    documentModels: DocumentModelModule[] | undefined,
 ) {
     return documentModels?.find(d => d.documentModel.id === documentType) as
-        | DocumentModel<S, A>
+        | DocumentModelModule<TDocument>
         | undefined;
 }
 
-export function useDocumentModel<S = unknown, A extends Action = Action>(
+export function useDocumentModelModule<TDocument extends PHDocument>(
     documentType: string,
 ) {
-    const documentModels = useUnwrappedDocumentModels();
-    return getDocumentModel<S, A>(documentType, documentModels);
+    const documentModelModules = useUnwrappedDocumentModelModules();
+    return getDocumentModelModule<TDocument>(
+        documentType,
+        documentModelModules,
+    );
 }
 
-export const useGetDocumentModel = () => {
-    const documentModels = useUnwrappedDocumentModels();
+export const useGetDocumentModelModule = <TDocument extends PHDocument>() => {
+    const documentModelModules = useUnwrappedDocumentModelModules();
     return (documentType: string) =>
-        getDocumentModel(documentType, documentModels);
+        getDocumentModelModule<TDocument>(documentType, documentModelModules);
 };
 
 /**
@@ -147,7 +130,7 @@ export const useGetDocumentModel = () => {
  * @returns {Array<DocumentModel>} The filtered document models.
  */
 export const useFilteredDocumentModels = () => {
-    const documentModels = useUnwrappedDocumentModels();
+    const documentModels = useUnwrappedDocumentModelModules();
     const { config } = useFeatureFlag();
     const { enabledEditors, disabledEditors } = config.editors;
 

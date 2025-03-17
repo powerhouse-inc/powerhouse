@@ -1,4 +1,4 @@
-import type { IconName } from "@/powerhouse/components/icon";
+import type { IconName } from "#powerhouse";
 
 interface IdAutocompleteBaseProps {
   onChange?: (value: string) => void;

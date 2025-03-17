@@ -1,4 +1,4 @@
-import type { IdAutocompleteOption } from "@/scalars/components/fragments/id-autocomplete-field/types";
+import type { IdAutocompleteOption } from "../fragments/id-autocomplete-field/types.js";
 
 export const mockedOptions: IdAutocompleteOption[] = [
   {

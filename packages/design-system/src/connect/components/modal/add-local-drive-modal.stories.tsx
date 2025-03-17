@@ -1,6 +1,6 @@
 import { useArgs } from "@storybook/preview-api";
-import { Meta, StoryObj } from "@storybook/react";
-import { AddLocalDriveModal } from "./add-local-drive-modal";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { AddLocalDriveModal } from "./add-local-drive-modal.js";
 
 const meta = {
   title: "Connect/Components/Create Drive Modal",
@@ -16,6 +16,23 @@ export const Default: Story = {
     open: true,
     onSubmit() {},
     onOpenChange() {},
+    appOptions: [
+      {
+        id: "powerhouse/common",
+        name: "Generic Drive Explorer",
+        driveEditor: "GenericDriveExplorer",
+      },
+      {
+        id: "powerhouse/invoice/contributor",
+        name: "Contributor App",
+        driveEditor: "ContributorDrive",
+      },
+      {
+        id: "powerhouse/invoice/administrator",
+        name: "OH Administrator App",
+        driveEditor: "AdministratorDrive",
+      },
+    ],
   },
   render: function Wrapper(args) {
     const [, setArgs] = useArgs<typeof args>();

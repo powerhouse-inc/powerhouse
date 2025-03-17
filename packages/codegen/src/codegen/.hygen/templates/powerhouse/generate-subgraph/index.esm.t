@@ -2,11 +2,25 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
-import { Subgraph, Db } from "@powerhousedao/reactor-api";
+import { Subgraph } from "@powerhousedao/reactor-api";
+<% if (loadFromFile) { %>
+import schema from "./schema.graphql";
+import { getResolvers } from "./resolvers";
+<% } else { %>
 import { gql } from "graphql-tag";
+<% } %>
 
 export class <%= pascalName %>Subgraph extends Subgraph {
   name = "<%= h.changeCase.param(name) %>";
+<% if (loadFromFile) { %>
+  typeDefs = schema;
+  resolvers = getResolvers(this);
+  additionalContextFields = {};
+  async onSetup() {}
+  async onDisconnect() {}
+  
+<% } else { %>
+
   resolvers = {
     Query: {
       example: {
@@ -39,4 +53,5 @@ export class <%= pascalName %>Subgraph extends Subgraph {
   }
 
   async onDisconnect() {}
+<% } %>
 }

@@ -2,19 +2,13 @@ import {
   IDocumentDriveServer,
   InternalTransmitterUpdate,
 } from "document-drive";
-import { Document, OperationScope } from "document-model/document";
-import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "../types";
+import { PHDocument } from "document-model";
+import { IProcessor, ProcessorOptions, ProcessorSetupArgs } from "../types.js";
 
-export type ProcessorUpdate<
-  D extends Document = Document,
-  S extends OperationScope = OperationScope,
-> = InternalTransmitterUpdate<D, S>;
+export type ProcessorUpdate<TDocument extends PHDocument> =
+  InternalTransmitterUpdate<TDocument>;
 
-export abstract class Processor<
-  D extends Document = Document,
-  S extends OperationScope = OperationScope,
-> implements IProcessor<D, S>
-{
+export abstract class Processor implements IProcessor {
   protected reactor: IDocumentDriveServer;
   protected processorOptions: ProcessorOptions = {
     listenerId: "processor",
@@ -40,7 +34,9 @@ export abstract class Processor<
     this.reactor = args.reactor;
   }
 
-  abstract onStrands(strands: ProcessorUpdate<D, S>[]): Promise<void>;
+  abstract onStrands<TDocument extends PHDocument>(
+    strands: ProcessorUpdate<TDocument>[],
+  ): Promise<void>;
 
   abstract onDisconnect(): Promise<void>;
 
@@ -50,8 +46,9 @@ export abstract class Processor<
 }
 
 export class BaseProcessor extends Processor {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async onStrands(strands: ProcessorUpdate[]): Promise<void> {}
+  async onStrands<TDocument extends PHDocument>(
+    strands: ProcessorUpdate<TDocument>[],
+  ): Promise<void> {}
   async onDisconnect(): Promise<void> {}
 }
 

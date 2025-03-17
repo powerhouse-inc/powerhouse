@@ -1,9 +1,9 @@
 import {
   calculateUnitPrice,
   FormattedNumber,
-  GroupTransactionFormInputs,
-} from "@/rwa";
-import { Control, useWatch } from "react-hook-form";
+  type GroupTransactionFormInputs,
+} from "#rwa";
+import { type Control, useWatch } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
 export function UnitPrice(props: {

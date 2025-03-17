@@ -1,102 +1,31 @@
-import { Command } from "commander";
-import {
-  DefaultStartServerOptions,
-  startServer,
-  StartServerOptions,
-  LocalReactor,
-} from "@powerhousedao/reactor-local";
-import { generateFromFile } from "@powerhousedao/codegen";
-import { CommandActionType } from "../types.js";
-import { getConfig, PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type LocalReactor } from "@powerhousedao/reactor-local";
+import { type Command } from "commander";
+import { type SwitchboardOptions } from "../services/switchboard.js";
+import { type CommandActionType } from "../types.js";
 
-export type SwitchboardOptions = StartServerOptions & {
-  configFile?: string;
-  generate?: boolean;
-  watch?: boolean;
-  dbPath?: string;
-  httpsKeyFile?: string;
-  httpsCertFile?: string;
-};
-
-export const DefaultSwitchboardOptions = {
-  ...DefaultStartServerOptions,
-  dev: true,
-};
-
-async function startLocalSwitchboard(switchboardOptions: SwitchboardOptions) {
-  const baseConfig = getConfig(switchboardOptions.configFile);
-  const options = {
-    ...DefaultSwitchboardOptions,
-    packages: baseConfig.packages,
-    ...switchboardOptions,
-  };
-
-  const https =
-    switchboardOptions.httpsKeyFile && switchboardOptions.httpsCertFile
-      ? {
-          keyPath: switchboardOptions.httpsKeyFile,
-          certPath: switchboardOptions.httpsCertFile,
-        }
-      : undefined;
-
-  const reactor = await startServer({ ...options, https });
-
-  if (options.generate) {
-    await addGenerateTransmitter(reactor, baseConfig);
-  }
-  return reactor;
-}
-
-async function addGenerateTransmitter(
-  reactor: LocalReactor,
-  config: PowerhouseConfig,
-) {
-  return reactor.addListener(
-    "powerhouse",
-    {
-      onStrands: async function (strands) {
-        const documentPaths = new Set<string>();
-        for (const strand of strands) {
-          documentPaths.add(
-            reactor.getDocumentPath(strand.driveId, strand.documentId),
-          );
-        }
-        for (const path of documentPaths) {
-          await generateFromFile(path, config);
-        }
-        return Promise.resolve();
-      },
-      onDisconnect: () => Promise.resolve(),
-    },
-    {
-      filter: {
-        documentType: ["powerhouse/document-model"],
-        scope: ["global"],
-        branch: ["*"],
-        documentId: ["*"],
-      },
-      block: false,
-      listenerId: "reactor-local-document-model-generator",
-      label: "reactor-local-document-model-generator",
-    },
-  );
+async function startLocalSwitchboard(options: SwitchboardOptions) {
+  const Switchboard = await import("../services/switchboard.js");
+  const { startLocalSwitchboard } = Switchboard;
+  return startLocalSwitchboard(options);
 }
 
 export const switchboard: CommandActionType<
   [SwitchboardOptions],
   Promise<LocalReactor>
-> = (options) => {
+> = async (options) => {
   return startLocalSwitchboard(options);
 };
 
 export function reactorCommand(program: Command) {
   program
     .command("switchboard")
+    .alias("reactor")
     .description("Starts local switchboard")
     .option("--port <PORT>", "port to host the api", "4001")
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
+      "./powerhouse.config.json",
     )
     .option("--generate", "generate code when document model is updated")
     .option("--db-path <DB_PATH>", "path to the database")
@@ -105,6 +34,10 @@ export function reactorCommand(program: Command) {
     .option(
       "-w, --watch",
       "if the reactor should watch for local changes to document models and processors",
+    )
+    .option(
+      "--packages <packages...>",
+      "list of packages to be loaded, if defined then packages on config file are ignored",
     )
     .action(async (...args: [SwitchboardOptions]) => {
       await switchboard(...args);

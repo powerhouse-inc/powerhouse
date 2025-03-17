@@ -1,4 +1,4 @@
-import type { NodeStatus, SidebarNode } from "./types";
+import type { NodeStatus, SidebarNode } from "./types.js";
 
 /**
  * Search for nodes that match a search term

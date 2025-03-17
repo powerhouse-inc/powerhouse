@@ -1,26 +1,20 @@
-import {
-    ToastContainer,
-    UiNodesContextProvider,
-    WagmiContext,
-} from '@powerhousedao/design-system';
+import { CookieBanner, ModalManager } from '#components';
+import { ReadModeContextProvider, RootProvider } from '#context';
+import { atoms, atomStore } from '#store';
+import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
+import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Provider, useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
-import { CookieBanner } from 'src/components/cookie-banner';
-import { ModalManager } from 'src/components/modal';
-import { ReadModeContextProvider } from 'src/context/read-mode';
-import { RootProvider } from 'src/context/root-provider';
-import atoms, { atomStore } from 'src/store';
-import Analytics from './analytics';
+import Analytics from './analytics.js';
 
 const Router = React.lazy(async () => {
-    const createRouterComponent = await import('./router');
+    const createRouterComponent = await import('./router.js');
     const router = await createRouterComponent.default();
     return { default: router };
 });
 
 const Preloader = () => {
     for (const atom of Object.values(atoms)) {
-        // eslint-disable-next-line react-hooks/rules-of-hooks
         useAtomValue(atom);
     }
     return null;

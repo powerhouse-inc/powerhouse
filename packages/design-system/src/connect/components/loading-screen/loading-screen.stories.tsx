@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { LoadingScreen } from "./loading-screen";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { LoadingScreen } from "./loading-screen.js";
 
 const meta: Meta = {
   title: "Connect/Components/LoadingScreen",

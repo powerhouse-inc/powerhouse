@@ -1,15 +1,21 @@
-import IconConnect from '@/assets/icons/connect.svg?react';
-import IconLogo from '@/assets/icons/logo.svg?react';
+import IconConnect from '#assets/icons/connect.svg?react';
+import IconLogo from '#assets/icons/logo.svg?react';
+import {
+    isElectron,
+    isMac,
+    useLoadInitialData,
+    useLogin,
+    useNodeNavigation,
+} from '#hooks';
+import { logger } from 'document-drive';
 import { Suspense, useEffect } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
-import { useLoadInitialData } from 'src/hooks/useLoadInitialData';
-import { useLogin } from 'src/hooks/useLogin';
-import { isElectron, isMac } from 'src/hooks/utils';
-import { logger } from 'src/services/logger';
-import Sidebar from './sidebar';
+import Sidebar from './sidebar.js';
 
 export default function Root() {
     useLoadInitialData();
+    useNodeNavigation();
+
     const navigate = useNavigate();
     const { login } = useLogin();
 

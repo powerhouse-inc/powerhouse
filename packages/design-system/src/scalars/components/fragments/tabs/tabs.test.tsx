@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
+import { userEvent } from "@testing-library/user-event";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs.js";
 
 describe("Tabs Components", () => {
   it("should  Tabs match snapshot", () => {

@@ -1,23 +1,15 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM"],
-    "emitDeclarationOnly": true,
-    "outDir": "./dist",
-    "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "resolveJsonModule": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "composite": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.json",
-    "scripts/**/*.ts",
-    "*.ts",
-    "package.json"
+  "files": [],
+  "references": [
+    {
+      "path": "tsconfig.lib.json"
+    },
+    {
+      "path": "tsconfig.test.json"
+    }
   ]
 }

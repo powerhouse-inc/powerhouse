@@ -1,9 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { Form, renderWithForm } from "#scalars";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { UrlField } from "./url-field";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { Form } from "@/scalars";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
+import { UrlField } from "./url-field.js";
 
 describe("UrlField", () => {
   it("should match snapshot", () => {

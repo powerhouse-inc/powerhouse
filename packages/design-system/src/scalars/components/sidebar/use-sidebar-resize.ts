@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { triggerEvent } from "./utils";
+import { triggerEvent } from "./utils.js";
 
 /**
  * Configuration options for the sidebar resize functionality

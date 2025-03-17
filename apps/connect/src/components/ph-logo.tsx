@@ -1,5 +1,5 @@
-import LogoMain from '@/assets/icons/BBP-logo-hover-light.svg?react';
-import { openUrl } from 'src/utils/openUrl';
+import LogoMain from '#assets/icons/BBP-logo-hover-light.svg?react';
+import { openUrl } from '#utils';
 
 export const PHLogo = () => {
     return (

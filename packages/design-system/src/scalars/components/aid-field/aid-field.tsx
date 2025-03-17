@@ -1,15 +1,12 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useCallback, useMemo } from "react";
+import React, { useCallback, useId, useMemo } from "react";
 import { isAddress } from "viem";
-import { IdAutocompleteFieldRaw } from "@/scalars/components/fragments/id-autocomplete-field";
-import { IdAutocompleteListOption } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-list-option";
-import { IdAutocompleteContext } from "@/scalars/components/fragments/id-autocomplete-field/id-autocomplete-context";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import type {
-  FieldCommonProps,
-  ErrorHandling,
-} from "@/scalars/components/types";
-import type { AIDProps, AIDOption } from "./types";
+import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
+import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
+import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/index.js";
+import type { ErrorHandling, FieldCommonProps } from "../types.js";
+import type { AIDProps, AIDOption } from "./types.js";
 
 type AIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,

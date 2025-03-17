@@ -1,7 +1,7 @@
-import React, { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDebounceCallback } from "usehooks-ts";
-import { useIdAutocompleteContext } from "./id-autocomplete-context";
-import type { IdAutocompleteProps, IdAutocompleteOption } from "./types";
+import { useIdAutocompleteContext } from "./id-autocomplete-context.js";
+import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";
 
 interface UseIdAutocompleteFieldParams {
   autoComplete: IdAutocompleteProps["autoComplete"];

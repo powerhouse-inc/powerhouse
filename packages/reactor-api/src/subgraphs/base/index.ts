@@ -1,12 +1,9 @@
-import { ISubgraph } from "../types";
-import { DocumentNode } from "graphql";
+import { SubgraphManager } from "#subgraphs/manager.js";
+import { ISubgraph, SubgraphArgs } from "#subgraphs/types.js";
+import { Db } from "#types.js";
 import { IDocumentDriveServer } from "document-drive";
-import { SubgraphArgs } from "../types";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
-import { Context } from "../types";
-import { Db } from "src/types";
-import { SubgraphManager } from "../manager";
 
 export class Subgraph implements ISubgraph {
   name = "example";

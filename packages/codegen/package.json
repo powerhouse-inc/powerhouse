@@ -1,33 +1,28 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.32.3",
+  "version": "0.43.1",
   "license": "AGPL-3.0-only",
   "private": false,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "type": "module",
-  "bin": {
-    "powerhouse": "./dist/cli.js",
-    "create-document-model-lib": "./dist/create-lib/index.js"
-  },
   "files": [
-    "/dist"
+    "dist/*"
   ],
-  "exports": {
-    ".": "./dist/index.js",
-    "./graphql": "./dist/codegen/graphql.js",
-    "./hygen": "./dist/codegen/hygen.js",
-    "./create-lib": "./dist/create-lib/index.js",
-    "./utils": "./dist/utils/index.js"
+  "exports": "./dist/index.js",
+  "imports": {
+    "#utils/*": "./dist/src/utils/*.js",
+    "#codegen/*": "./dist/src/codegen/*.js",
+    "#create-lib/*": "./dist/src/create-lib/*.js"
   },
   "scripts": {
-    "check-types": "tsc --build",
-    "postlint": "npm run check-types",
+    "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "clean": "rimraf dist/",
-    "copy-files": "copyfiles -u 1 src/codegen/.hygen/templates/**/*.esm.t dist/",
-    "build": "tsup",
+    "copy-templates": "copyfiles src/codegen/.hygen/templates/**/*.esm.t dist/",
+    "copy-hygen-pkg": "copyfiles src/codegen/.hygen/package.json dist/",
+    "prebuild": "rimraf dist/src/codegen/.hygen/**/*.esm.t",
+    "build": "tsc --build",
+    "postbuild": "npm run copy-templates && npm run copy-hygen-pkg",
     "prepublishOnly": "npm run build",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
@@ -40,6 +35,7 @@
     "@faker-js/faker": "^8.3.1",
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/typescript": "^4.0.1",
+    "@powerhousedao/scalars": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@types/node": "^20.11.2",
     "arg": "^5.0.2",
@@ -51,7 +47,6 @@
     "prettier": "^3.4.2"
   },
   "devDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
     "copyfiles": "^2.4.1",
     "esbuild-fix-imports-plugin": "^1.0.7",
     "graphql": "^16.8.1",

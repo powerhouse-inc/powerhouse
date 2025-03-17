@@ -1,3 +1,3 @@
-export * from "./fixedForwardRef";
-export * from "./getDimensions";
-export * from "./mergeClassNameProps";
+export * from "./fixedForwardRef.js";
+export * from "./getDimensions.js";
+export * from "./mergeClassNameProps.js";

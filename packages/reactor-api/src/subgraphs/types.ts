@@ -1,9 +1,9 @@
-import type { IncomingHttpHeaders } from "http";
+import { Db } from "#types.js";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { IDocumentDriveServer } from "document-drive";
 import { DocumentNode } from "graphql";
-import { SubgraphManager } from "./manager";
-import { Db } from "src/types";
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { IncomingHttpHeaders } from "http";
+import { SubgraphManager } from "./manager.js";
 
 export type Context = {
   driveServer: IDocumentDriveServer;

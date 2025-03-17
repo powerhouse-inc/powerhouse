@@ -1,5 +1,5 @@
 import { ConnectUpgradeDriveModal } from '@powerhousedao/design-system';
-import React from 'react';
+import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface UpgradeDriveModalProps {
@@ -27,7 +27,7 @@ export const UpgradeDriveModal: React.FC<UpgradeDriveModalProps> = props => {
             body={t('modals.upgradeDrive.body')}
             cancelLabel={t('common.cancel')}
             continueLabel={t('common.continue')}
-            onOpenChange={status => {
+            onOpenChange={(status: boolean) => {
                 if (!status) return onClose();
             }}
         />

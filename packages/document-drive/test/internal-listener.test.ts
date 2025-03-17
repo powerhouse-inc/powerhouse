@@ -1,26 +1,25 @@
-import {
-  DocumentDriveDocument,
-  utils,
-} from "document-model-libs/document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import * as DocumentModelLib from "document-model/document-model";
+import { DocumentModelModule, setModelName } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+import { ReactorBuilder } from "../src/server/builder.js";
 import {
-  DocumentDriveServer,
   InternalTransmitterUpdate,
   IReceiver,
-} from "../src";
+} from "../src/server/listener/transmitter/internal.js";
 import { expectUTCTimestamp, expectUUID } from "./utils";
+
+import { documentModelDocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
-    DocumentModelLib,
-    ...Object.values(DocumentModelsLibs),
-  ] as DocumentModel[];
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+  ] as DocumentModelModule[];
 
   async function buildServer(receiver: IReceiver) {
-    const server = new DocumentDriveServer(documentModels);
+    const server = new ReactorBuilder(documentModels).build();
     await server.initialize();
 
     await server.addDrive({
@@ -66,7 +65,7 @@ describe("Internal Listener", () => {
     });
     const drive = await server.getDrive("drive");
 
-    const action = utils.generateAddNodeAction(
+    const action = generateAddNodeAction(
       drive.state.global,
       {
         id: "1",
@@ -78,7 +77,7 @@ describe("Internal Listener", () => {
     await server.addDriveAction("drive", action);
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
 
-    const update: InternalTransmitterUpdate<DocumentDriveDocument, "global"> = {
+    const update: InternalTransmitterUpdate<DocumentDriveDocument> = {
       branch: "main",
       documentId: "",
       driveId: "drive",
@@ -159,11 +158,7 @@ describe("Internal Listener", () => {
     };
     expect(transmitFn).toHaveBeenCalledWith([update]);
 
-    await server.addAction(
-      "drive",
-      "1",
-      DocumentModelLib.actions.setModelName({ name: "test" }),
-    );
+    await server.addAction("drive", "1", setModelName({ name: "test" }));
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
 
@@ -222,11 +217,7 @@ describe("Internal Listener", () => {
       },
     ]);
 
-    await server.addAction(
-      "drive",
-      "1",
-      DocumentModelLib.actions.setModelName({ name: "test 2" }),
-    );
+    await server.addAction("drive", "1", setModelName({ name: "test 2" }));
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
     expect(transmitFn).toHaveBeenLastCalledWith([

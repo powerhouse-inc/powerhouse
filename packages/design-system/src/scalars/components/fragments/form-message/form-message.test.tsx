@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { FormMessage } from "./form-message";
+import { FormMessage } from "./form-message.js";
 
 describe("FormMessage", () => {
   it("should match snapshot", () => {
@@ -54,7 +54,7 @@ describe("FormMessage", () => {
 
   it("renders with custom className", () => {
     // this is a custom class name for testing purposes
-    // eslint-disable-next-line tailwindcss/no-custom-classname
+
     render(<FormMessage className="custom-class">Custom class</FormMessage>);
     expect(screen.getByText("Custom class")).toHaveClass("custom-class");
   });

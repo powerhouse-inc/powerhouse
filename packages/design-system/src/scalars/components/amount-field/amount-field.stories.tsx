@@ -1,17 +1,14 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
-import { AmountField } from "./amount-field";
 import {
+  commonCryptoCurrencies,
+  commonFiatCurrencies,
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import {
-  commonCryptoCurrencies,
-  commonFiatCurrencies,
-} from "../currency-code-field";
-
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { AmountField } from "./amount-field.js";
 const mappedFiatCurrencies = commonFiatCurrencies.map((currency) => ({
   ...currency,
   label: currency.ticker,

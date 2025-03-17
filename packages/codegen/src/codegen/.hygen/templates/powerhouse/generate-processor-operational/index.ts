@@ -15,10 +15,7 @@ export default {
       documentTypes: args.documentTypes
         .split(",")
         .filter((type) => type !== ""),
-      documentTypesMap: JSON.parse(args.documentTypesMap) as Record<
-        string,
-        string
-      >,
+      documentTypesMap: JSON.parse(args.documentTypesMap) as JSON,
     };
   },
 };

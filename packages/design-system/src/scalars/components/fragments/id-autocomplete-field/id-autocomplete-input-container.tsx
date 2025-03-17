@@ -1,15 +1,12 @@
 /* eslint-disable react/jsx-no-bind */
-import React, { useState } from "react";
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
 import { Command as CommandPrimitive } from "cmdk";
+import React, { useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
-import { Icon } from "@/powerhouse/components/icon";
-import { Input } from "@/scalars/components/fragments/input";
-import {
-  Tooltip,
-  TooltipProvider,
-} from "@/scalars/components/fragments/tooltip";
-import { cn } from "@/scalars/lib/utils";
-import type { IdAutocompleteOption } from "./types";
+import { Input } from "../input/input.js";
+import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
+import type { IdAutocompleteOption } from "./types.js";
 
 interface IdAutocompleteInputContainerProps {
   id: string;

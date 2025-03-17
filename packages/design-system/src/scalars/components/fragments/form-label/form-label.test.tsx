@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { FormLabel } from "./form-label";
+import { FormLabel } from "./form-label.js";
 
 describe("FormLabel Component", () => {
   it("should match snapshot", () => {

@@ -1,0 +1,10 @@
+{
+  "documentModelsDir": "./document-models",
+  "editorsDir": "./editors",
+  "studio": {
+    "port": 3000
+  },
+  "reactor": {
+    "port": 4001
+  }
+}

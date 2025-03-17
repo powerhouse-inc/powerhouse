@@ -1,19 +1,27 @@
-import connectConfig from 'connect-config';
+import connectConfig from '#connect-config';
 import React, { Suspense } from 'react';
 import {
-    RouteObject,
+    type RouteObject,
     RouterProvider,
     createBrowserRouter,
     createMemoryRouter,
 } from 'react-router-dom';
+import { AtlasImport } from './demo/atlas-import.js';
+import { Home } from '../pages/home.js';
+import Root from './root.js';
 
-const Root = React.lazy(() => import('./root'));
-const Content = React.lazy(() => import('src/pages/content'));
+const Content = React.lazy(() => import('../pages/content.js'));
 
 async function createRouter(routes: RouteObject[]) {
     const isPackaged = await window.electronAPI?.isPackaged();
     const createRouter = isPackaged ? createMemoryRouter : createBrowserRouter;
-    return createRouter(routes, { basename: connectConfig.routerBasename });
+    return createRouter(routes, {
+        basename: connectConfig.routerBasename,
+        future: {
+            v7_fetcherPersist: true,
+            v7_relativeSplatPath: true,
+        },
+    });
 }
 
 const RouterAsync = async () => {
@@ -27,12 +35,20 @@ const RouterAsync = async () => {
             ),
             children: [
                 {
+                    path: '/',
+                    element: <Home />,
+                },
+                {
                     path: 'd?/:driveId?/*?',
                     element: (
                         <Suspense>
                             <Content />
                         </Suspense>
                     ),
+                },
+                {
+                    path: 'import/:documentId',
+                    element: <AtlasImport />,
                 },
             ],
         },

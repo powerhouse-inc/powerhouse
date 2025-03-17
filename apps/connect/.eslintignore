@@ -1,7 +1,0 @@
-.vite/
-out/
-node_modules/
-forge.config.js
-src/preload.js
-scripts
-dist

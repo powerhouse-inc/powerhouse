@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/EmailAddress";
+import { scalar } from "../src/scalars/EmailAddress.js";
 
 describe("EmailAddress Scalar", () => {
   it("should serialize an email address", () => {

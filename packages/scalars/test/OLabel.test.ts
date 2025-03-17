@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/OLabel";
+import { scalar } from "../src/scalars/OLabel.js";
 
 describe("OLabel Scalar", () => {
   it("should serialize a valid OLabel address", () => {

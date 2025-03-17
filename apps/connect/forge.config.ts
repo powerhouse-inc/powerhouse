@@ -6,7 +6,7 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import * as fs from 'fs/promises';
 import path from 'path';
-import pkg from './package.json';
+import pkg from './package.json' with { type: "json" };
 
 const config: ForgeConfig = {
     packagerConfig: {
@@ -15,11 +15,12 @@ const config: ForgeConfig = {
         osxSign: {},
         icon: 'assets/icon',
         overwrite: true,
-        protocols: [{
-            name: 'connect',
-            schemes: ['phd'],
-        
-        }],
+        protocols: [
+            {
+                name: 'connect',
+                schemes: ['phd'],
+            },
+        ],
     },
     rebuildConfig: {},
     makers: [
@@ -29,14 +30,14 @@ const config: ForgeConfig = {
             options: {
                 bin: pkg.productName,
                 name: pkg.productName,
-                mimeType: ['x-scheme-handler/phd',]
+                mimeType: ['x-scheme-handler/phd'],
             },
         }),
         new MakerDeb({
             options: {
                 bin: pkg.productName,
                 name: pkg.productName,
-                mimeType: ['x-scheme-handler/phd',]
+                mimeType: ['x-scheme-handler/phd'],
             },
         }),
     ],
@@ -47,12 +48,12 @@ const config: ForgeConfig = {
             build: [
                 {
                     // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
-                    entry: 'src/main.ts',
-                    config: 'vite.main.config.ts',
+                    entry: './src/main.ts',
+                    config: './vite.main.config.ts',
                 },
                 {
-                    entry: 'src/preload.ts',
-                    config: 'vite.preload.config.ts',
+                    entry: './src/preload.ts',
+                    config: './vite.preload.config.ts',
                 },
             ],
             renderer: [
@@ -79,11 +80,11 @@ const config: ForgeConfig = {
             try {
                 const sourcePath = path.resolve(
                     __dirname,
-                    'node_modules/@powerhousedao/design-system/dist/icons.svg'
+                    'node_modules/@powerhousedao/design-system/dist/icons.svg',
                 );
                 const destinationPath = path.resolve(
                     __dirname,
-                    'public/icons.svg'
+                    'public/icons.svg',
                 );
 
                 await fs.copyFile(sourcePath, destinationPath);

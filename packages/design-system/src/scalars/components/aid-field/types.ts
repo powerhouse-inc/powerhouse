@@ -1,7 +1,7 @@
 import type {
   IdAutocompleteOption,
   IdAutocompleteProps,
-} from "@/scalars/components/fragments/id-autocomplete-field/types";
+} from "../fragments/id-autocomplete-field/types.js";
 
 export interface Network {
   chainId: string;

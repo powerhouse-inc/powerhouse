@@ -1,4 +1,4 @@
-import { IEventEmitter } from "./types";
+import { IEventEmitter } from "./types.js";
 
 export class TypedCustomEvent<T> extends CustomEvent<T> {
   constructor(type: string, detail?: T) {

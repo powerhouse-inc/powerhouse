@@ -1,11 +1,14 @@
+import { useEffect, useMemo, useState } from "react";
+import { type Currency } from "../currency-code-field/types.js";
+import { isValidNumber } from "../number-field/number-field-validations.js";
 import {
-  Amount,
-  AmountCrypto,
-  AmountCurrency,
-  AmountFiat,
-  AmountFieldPropsGeneric,
-  AmountValue,
-} from "./types";
+  type Amount,
+  type AmountCrypto,
+  type AmountCurrency,
+  type AmountFiat,
+  type AmountFieldPropsGeneric,
+  type AmountValue,
+} from "./types.js";
 import {
   createAmountValue,
   displayValueAmount,
@@ -15,10 +18,7 @@ import {
   isNotSafeValue,
   isValidBigInt,
   isValidNumberGreaterThanMaxSafeInteger,
-} from "./utils";
-import { isValidNumber } from "../number-field/number-field-validations";
-import { useEffect, useMemo, useState } from "react";
-import { Currency } from "../currency-code-field";
+} from "./utils.js";
 
 interface UseAmountFieldProps {
   value?: AmountValue;

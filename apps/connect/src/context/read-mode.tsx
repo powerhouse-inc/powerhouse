@@ -1,33 +1,29 @@
+import { drivesToHash, useUserPermissions } from '#hooks';
 import {
-    IDocumentDriveServer,
-    InferDocumentLocalState,
-    InferDocumentOperation,
-    InferDocumentState,
-    IReadModeDriveServer,
-    ReadDocumentNotFoundError,
-    ReadDrive,
-    ReadDriveContext,
+    type DocumentModelNotFoundError,
+    type IDocumentDriveServer,
+    type IReadModeDriveServer,
+    logger,
+    type ReadDocumentNotFoundError,
+    type ReadDrive,
+    type ReadDriveContext,
     ReadDriveNotFoundError,
-    ReadDrivesListener,
-    ReadDrivesListenerUnsubscribe,
-    ReadDriveSlugNotFoundError,
-    RemoteDriveOptions,
+    type ReadDrivesListener,
+    type ReadDrivesListenerUnsubscribe,
+    type ReadDriveSlugNotFoundError,
+    type RemoteDriveOptions,
 } from 'document-drive';
-import { Document, DocumentModel } from 'document-model/document';
-import { DocumentModelNotFoundError } from 'node_modules/document-drive/src/server/error';
+import { type PHDocument } from 'document-model';
 import {
     createContext,
-    FC,
-    ReactNode,
+    type FC,
+    type ReactNode,
     useContext,
     useEffect,
     useMemo,
     useState,
 } from 'react';
-import { drivesToHash } from 'src/hooks/useDocumentDrives';
-import { useUserPermissions } from 'src/hooks/useUserPermissions';
-import { logger } from 'src/services/logger';
-import { useReactorAsync } from '../store/reactor';
+import { useAsyncReactor } from '../store/reactor.js';
 
 export interface IReadModeContext extends IReadModeDriveServer {
     readDrives: ReadDrive[];
@@ -129,25 +125,17 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     }
 
     @checkServer
-    fetchDocument<D extends Document>(
+    fetchDocument<TDocument extends PHDocument>(
         driveId: string,
         documentId: string,
-        documentType: DocumentModel<
-            InferDocumentState<D>,
-            InferDocumentOperation<D>,
-            InferDocumentLocalState<D>
-        >['documentModel']['id'],
+        documentType: string,
     ): Promise<
-        | Document<
-              InferDocumentState<D>,
-              InferDocumentOperation<D>,
-              InferDocumentLocalState<D>
-          >
+        | TDocument
         | DocumentModelNotFoundError
         | ReadDriveNotFoundError
         | ReadDocumentNotFoundError
     > {
-        return this.server!.fetchDocument<D>(driveId, documentId, documentType);
+        return this.server!.fetchDocument(driveId, documentId, documentType);
     }
 
     @checkServer
@@ -191,19 +179,17 @@ async function getReadDrives(
 export const ReadModeContextProvider: FC<
     ReadModeContextProviderProps
 > = props => {
-    const reactorPromise = useReactorAsync();
+    const reactor = useAsyncReactor();
     const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
     const userPermissions = useUserPermissions();
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
-        reactorPromise
-            .then(reactor => {
-                ReadModeInstance.setDocumentDrive(reactor);
-                setReady(true);
-            })
-            .catch(logger.error);
-    }, [reactorPromise]);
+        if (reactor) {
+            ReadModeInstance.setDocumentDrive(reactor);
+            setReady(true);
+        }
+    }, [reactor]);
 
     // updates drive access level when user permissions change
     const readMode =

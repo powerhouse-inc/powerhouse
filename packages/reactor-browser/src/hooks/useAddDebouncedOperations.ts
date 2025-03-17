@@ -1,12 +1,12 @@
-import { useMemo, useCallback } from "react";
-import { Document, Operation } from "document-model/document";
+import { type Operation, type PHDocument } from "document-model";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
-import { useUserPermissions } from "./useUserPermissions";
-import { useDocumentDrives } from "./useDocumentDrives";
-import { IDocumentDriveServer } from "document-drive";
+import { type IDocumentDriveServer } from "document-drive";
+import { useDocumentDrives } from "./useDocumentDrives.js";
+import { useUserPermissions } from "./useUserPermissions.js";
 
 function debounceOperations(
-  callback: (operations: Operation[]) => Promise<Document | undefined>,
+  callback: (operations: Operation[]) => Promise<PHDocument | undefined>,
   timeout = 50,
 ) {
   let timer: number;
@@ -36,7 +36,7 @@ function debounceOperations(
     } else {
       operations.push(operation);
     }
-    return new Promise<Document | undefined>((resolve, reject) => {
+    return new Promise<PHDocument | undefined>((resolve, reject) => {
       timer = setTimeout(() => {
         callback(operations).then(resolve).catch(reject);
       }, timeout) as unknown as number;
@@ -56,10 +56,16 @@ export function useAddDebouncedOperations(
   const { driveId, documentId } = props;
   const [documentDrives] = useDocumentDrives(reactor);
 
+  const documentDrivesRef = useRef(documentDrives);
+
   const { isAllowedToEditDocuments } = useUserPermissions() || {
     isAllowedToCreateDocuments: false,
     isAllowedToEditDocuments: false,
   };
+
+  useEffect(() => {
+    documentDrivesRef.current = documentDrives;
+  }, [documentDrives]);
 
   const addOperations = useCallback(
     async (driveId: string, id: string, operations: Operation[]) => {
@@ -71,7 +77,7 @@ export function useAddDebouncedOperations(
         throw new Error("Reactor is not loaded");
       }
 
-      const drive = documentDrives.find(
+      const drive = documentDrivesRef.current.find(
         (drive) => drive.state.global.id === driveId,
       );
       if (!drive) {
@@ -85,7 +91,7 @@ export function useAddDebouncedOperations(
       );
       return newDocument.document;
     },
-    [documentDrives, isAllowedToEditDocuments, reactor],
+    [isAllowedToEditDocuments, reactor],
   );
 
   const addDebouncedOperations = useMemo(() => {

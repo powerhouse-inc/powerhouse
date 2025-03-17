@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import { DateTimeField } from "./date-time-field";
-import { FORMAT_MAPPING } from "./utils";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { DateTimeField } from "./date-time-field.js";
+import { FORMAT_MAPPING } from "./utils.js";
 
 const meta: Meta<typeof DateTimeField> = {
   title: "Document Engineering/Simple Components/Date Time Field",
@@ -192,26 +192,6 @@ const meta: Meta<typeof DateTimeField> = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-export const DatePicker: Story = {
-  args: {
-    label: "Date Picker Field",
-    description: "This is a date picker field",
-    showDateSelect: true,
-    showTimeSelect: false,
-    placeholder: "2025/01/27",
-  },
-};
-
-export const TimePicker: Story = {
-  args: {
-    label: "Time Picker Field",
-    description: "This is a time picker field",
-    placeholder: "12:00 AM",
-    showDateSelect: false,
-    showTimeSelect: true,
-  },
-};
 
 export const DateTimePicker: Story = {
   args: {

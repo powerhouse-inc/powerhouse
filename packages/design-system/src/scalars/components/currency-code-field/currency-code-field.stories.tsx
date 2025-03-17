@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { CurrencyCodeField } from "./currency-code-field";
-import { withForm } from "@/scalars/lib/decorators";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { CurrencyCodeField } from "./currency-code-field.js";
+import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults.js";
 
 const meta: Meta<typeof CurrencyCodeField> = {
   title: "Document Engineering/Simple Components/Currency Code Field",
@@ -90,6 +90,13 @@ export const Default: Story = {
   args: {
     label: "Currency",
     currencies: commonCryptoCurrencies,
+  },
+};
+export const FavoriteCurrencies: Story = {
+  args: {
+    label: "Currency",
+    currencies: commonCryptoCurrencies,
+    favoriteCurrencies: ["BTC", "ETH"],
   },
 };
 

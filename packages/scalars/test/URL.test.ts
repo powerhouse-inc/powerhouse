@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/URL";
+import { scalar } from "../src/scalars/URL.js";
 
 describe("URL Scalar", () => {
   it("should serialize a valid URL address", () => {

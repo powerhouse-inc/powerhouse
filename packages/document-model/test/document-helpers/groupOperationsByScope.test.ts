@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { groupOperationsByScope } from "../../src/document/utils/document-helpers";
-import { buildOperations, InputOperation } from "./utils";
+import { type Operation } from "../../src/document/types.js";
+import { groupOperationsByScope } from "../../src/document/utils/document-helpers.js";
+import { buildOperations } from "./utils.js";
 
 describe("groupOperationsByScope", () => {
   const scenarios = [
@@ -13,7 +14,7 @@ describe("groupOperationsByScope", () => {
         { index: 2, skip: 0, scope: "global", hash: "hash3" },
         { index: 0, skip: 0, scope: "local", hash: "hash4" },
         { index: 1, skip: 0, scope: "local", hash: "hash5" },
-      ] as Array<InputOperation>,
+      ],
       expected: {
         global: [
           { index: 0, skip: 0, scope: "global", hash: "hash1" },
@@ -39,7 +40,7 @@ describe("groupOperationsByScope", () => {
         { index: 4, skip: 0, scope: "global", hash: "hash7" },
         { index: 5, skip: 0, scope: "global", hash: "hash8" },
         { index: 2, skip: 0, scope: "local", hash: "hash9" },
-      ] as Array<InputOperation>,
+      ],
       expected: {
         global: [
           { index: 0, skip: 0, scope: "global", hash: "hash1" },
@@ -63,7 +64,7 @@ describe("groupOperationsByScope", () => {
         { index: 0, skip: 0, scope: "global", hash: "hash1" },
         { index: 1, skip: 0, scope: "global", hash: "hash2" },
         { index: 2, skip: 0, scope: "global", hash: "hash3" },
-      ] as Array<InputOperation>,
+      ],
       expected: {
         global: [
           { index: 0, skip: 0, scope: "global", hash: "hash1" },
@@ -82,7 +83,7 @@ describe("groupOperationsByScope", () => {
       operations: [
         { index: 0, skip: 0, scope: "local", hash: "hash1" },
         { index: 1, skip: 0, scope: "local", hash: "hash2" },
-      ] as Array<InputOperation>,
+      ],
       expected: {
         local: [
           { index: 0, skip: 0, scope: "local", hash: "hash1" },
@@ -95,7 +96,7 @@ describe("groupOperationsByScope", () => {
   it.each(scenarios)(
     "should group operations by scope: $title",
     (testInput) => {
-      const operations = buildOperations(testInput.operations);
+      const operations = buildOperations(testInput.operations as Operation[]);
 
       const result = groupOperationsByScope(operations);
 

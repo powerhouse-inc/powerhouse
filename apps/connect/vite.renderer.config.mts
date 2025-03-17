@@ -1,47 +1,34 @@
+import {
+    externalIds,
+    generateImportMapPlugin,
+    viteConnectDevStudioPlugin,
+    viteLoadExternalPackages,
+} from '@powerhousedao/builder-tools/connect-studio';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
+import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
-import path from 'path';
-import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
+import path from 'node:path';
+import {
+    defineConfig,
+    HtmlTagDescriptor,
+    loadEnv,
+    type PluginOption,
+} from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
-import clientConfig from './client.config';
-import pkg from './package.json';
-import {
-    externalIds,
-    viteConnectDevStudioPlugin,
-    viteLoadExternalProjects,
-} from './studio/vite-plugin';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import clientConfig from './client.config.js';
+import pkg from './package.json' with { type: 'json' };
 
-const isBuildStudio = process.env.BUILD_STUDIO === 'true';
-const buildStudioExternals = isBuildStudio
-    ? [
-          externalIds,
-          '@powerhousedao/studio',
-          '@powerhousedao/design-system',
-          'document-model-libs',
-      ]
-    : [externalIds];
-
-const reactImportScript = `
-    <script type="importmap">
-        {
-            "imports": 
-            {
-                "react": "https://esm.sh/react",
-                "react/": "https://esm.sh/react/",
-                "react-dom": "https://esm.sh/react-dom",
-                "react-dom/": "https://esm.sh/react-dom/"
-            }
-        }
-    </script>
-`;
-
-process.env.VITE_IMPORT_REACT_SCRIPT = isBuildStudio ? '' : reactImportScript;
+const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
+    const outDir = path.resolve(__dirname, './dist');
     const isProd = mode === 'production';
     const env = loadEnv(mode, process.cwd());
 
@@ -67,11 +54,25 @@ export default defineConfig(({ mode }) => {
         (process.env.SENTRY_RELEASE ?? env.SENTRY_RELEASE) || APP_VERSION;
     const uploadSentrySourcemaps = authToken && org && project;
 
+    const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
+    const phPackages = phPackagesStr?.split(',') || [];
+
     const plugins: PluginOption[] = [
-        viteConnectDevStudioPlugin(false, env),
-        viteLoadExternalProjects(),
+        nodeResolve(),
+        tailwind(),
+        nodePolyfills({
+            include: ['events'],
+            globals: {
+                Buffer: false,
+                global: false,
+                process: false,
+            },
+        }),
+        viteConnectDevStudioPlugin(false, outDir, env),
+        viteLoadExternalPackages(phPackages, outDir),
+        tsconfigPaths(),
         react({
-            include: 'src/**/*.tsx',
+            include: './src/**/*.tsx',
             babel: {
                 parserOpts: {
                     plugins: ['decorators'],
@@ -97,6 +98,7 @@ export default defineConfig(({ mode }) => {
                     APP_VERSION,
                     REQUIRES_HARD_REFRESH,
                     SENTRY_RELEASE: release,
+                    LOAD_EXTERNAL_PACKAGES: phPackages.length > 0,
                 };
             },
         }),
@@ -116,41 +118,41 @@ export default defineConfig(({ mode }) => {
         );
     }
 
+    if (isProd) {
+        plugins.push(
+            generateImportMapPlugin(outDir, [
+                { name: 'react', provider: 'esm.sh' },
+                { name: 'react-dom', provider: 'esm.sh' },
+                '@powerhousedao/reactor-browser',
+            ]),
+        );
+    }
+
     return {
         plugins,
         build: {
-            minify: isProd,
-            sourcemap: isProd,
+            minify: false,
+            sourcemap: false,
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
-                    // Adds the service worker as a separate file
                     'service-worker': path.resolve(
                         __dirname,
-                        'src/service-worker.ts',
+                        './src/service-worker.ts',
                     ),
                 },
                 output: {
-                    // Ensure the service worker file goes to the root of the dist folder
                     entryFileNames: chunk =>
                         ['service-worker'].includes(chunk.name)
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: ['node:crypto', ...buildStudioExternals],
+                external: [...externalAndExclude, ...externalIds],
             },
         },
-        resolve: {
-            alias: {
-                '@/assets': path.resolve(__dirname, './assets'),
-                src: path.resolve(__dirname, './src'),
-                'connect-config': path.resolve(
-                    __dirname,
-                    './src/connect.config.ts',
-                ),
-                path: 'rollup-plugin-node-polyfills/polyfills/path',
-                events: 'rollup-plugin-node-polyfills/polyfills/events',
-            },
+        optimizeDeps: {
+            include: ['did-key-creator'],
+            exclude: externalAndExclude,
         },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),

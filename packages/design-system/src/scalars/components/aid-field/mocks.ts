@@ -1,4 +1,4 @@
-import type { AIDOption, Network } from "./types";
+import type { AIDOption, Network } from "./types.js";
 
 export const mockedOptions: AIDOption[] = [
   {

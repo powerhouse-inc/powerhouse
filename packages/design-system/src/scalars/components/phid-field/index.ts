@@ -1,1 +1,1 @@
-export * from "./phid-field";
+export * from "./phid-field.js";

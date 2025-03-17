@@ -1,5 +1,5 @@
 import { GraphQLError } from "graphql";
-import { Db } from "../../../utils/db";
+import { Db } from "#utils/db.js";
 
 interface User {
   address: string;

@@ -1,4 +1,4 @@
-import { RWACreateItemModal, RWADeleteItemModal } from "@/rwa";
+import { RWACreateItemModal, RWADeleteItemModal } from "#rwa";
 
 export const modals = {
   createItem: RWACreateItemModal,

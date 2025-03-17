@@ -1,4 +1,4 @@
-import { ElectronApplication } from 'playwright-core';
+import { type ElectronApplication } from 'playwright-core';
 
 let electronApp: ElectronApplication;
 

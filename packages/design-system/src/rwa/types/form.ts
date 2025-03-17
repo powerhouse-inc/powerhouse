@@ -1,9 +1,9 @@
 import {
-  GroupTransactionType,
-  Operation,
-  TableItemType,
-  TableName,
-} from "@/rwa";
+  type GroupTransactionType,
+  type Operation,
+  type TableItemType,
+  type TableName,
+} from "#rwa";
 
 export type AssetFormInputs = {
   id?: string;

@@ -1,19 +1,19 @@
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { Subgraph } from "#subgraphs/index.js";
+import { Db } from "#types.js";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { generateUUID } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { SiweMessage } from "siwe";
-import { Db } from "src/types";
-import { Subgraph } from "../base";
-import { Context } from "../types";
-import { AuthContext, Challenge, Session, SessionInput } from "./types";
-import { generateTokenAndSession } from "./utils/helpers";
+import { Context } from "../types.js";
+import { AuthContext, Challenge, Session, SessionInput } from "./types.js";
+import { generateTokenAndSession } from "./utils/helpers.js";
 import {
   authenticate,
   createAuthenticationSession,
   verifySignature,
-} from "./utils/session";
-import { getUser, upsertUser } from "./utils/user";
+} from "./utils/session.js";
+import { getUser, upsertUser } from "./utils/user.js";
 
 export class AuthSubgraph extends Subgraph {
   name = "auth";

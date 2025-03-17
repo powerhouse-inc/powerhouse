@@ -1,14 +1,14 @@
-import fs from "node:fs";
+import { type Command } from "commander";
 import { execSync } from "node:child_process";
-import { Command } from "commander";
+import fs from "node:fs";
 
-import { CommandActionType } from "../types.js";
+import { type CommandActionType } from "../types.js";
 import {
-  PackageManager,
+  getPackageManagerFromLockfile,
+  getProjectInfo,
+  type PackageManager,
   packageManagers,
   SUPPORTED_PACKAGE_MANAGERS,
-  getProjectInfo,
-  getPackageManagerFromLockfile,
   updateConfigFile,
 } from "../utils.js";
 
@@ -121,6 +121,8 @@ export const install: CommandActionType<
 export function installCommand(program: Command) {
   program
     .command("install")
+    .alias("add")
+    .alias("i")
     .description("Install a powerhouse dependency")
     .argument("[dependencies...]", "Names of the dependencies to install")
     .option("-g, --global", "Install the dependency globally")

@@ -1,21 +1,22 @@
-#! /usr/bin/env node
-import { DocumentModelState } from "document-model/document-model";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/scalars";
+import { paramCase, pascalCase } from "change-case";
 import {
-  generateAll,
-  generateEditor as _generateEditor,
-  generateProcessor as _generateProcessor,
-  generateDocumentModel,
-  generateSubgraph as _generateSubgraph,
-  generateImportScript as _generateImportScript,
-} from "./hygen";
-import { generateSchemas, generateSchema } from "./graphql";
+  type DocumentModelModule,
+  type DocumentModelState,
+} from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
-import { paramCase, pascalCase } from "change-case";
-import { loadDocumentModel } from "./utils";
-import { DocumentModel } from "document-model/document";
-import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { generateSchema, generateSchemas } from "./graphql.js";
+import {
+  generateEditor as _generateEditor,
+  generateImportScript as _generateImportScript,
+  generateProcessor as _generateProcessor,
+  generateSubgraph as _generateSubgraph,
+  generateAll,
+  generateDocumentModel,
+} from "./hygen.js";
+import { loadDocumentModel } from "./utils.js";
 
 function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
@@ -45,7 +46,7 @@ function generateGraphqlSchema(documentModel: DocumentModelState) {
 }
 
 export type DocumentTypesMap = Record<
-  DocumentModel["documentModel"]["id"],
+  string,
   { name: string; importPath: string }
 >;
 
@@ -90,7 +91,7 @@ async function getDocumentTypesMap(
     Object.keys(documentModels).forEach((name) => {
       const documentModel = documentModels[
         name as keyof typeof documentModels
-      ] as DocumentModel;
+      ] as DocumentModelModule;
       documentTypesMap[documentModel.documentModel.id] = {
         name,
         importPath: `document-model-libs/${paramCase(name)}`,
@@ -169,6 +170,19 @@ export async function generateEditor(
   );
 }
 
+export async function generateSubgraph(
+  name: string,
+  file: string | null,
+  config: PowerhouseConfig,
+) {
+  return _generateSubgraph(
+    name,
+    file !== null ? await loadDocumentModel(file) : null,
+    config.subgraphsDir,
+    config,
+  );
+}
+
 export async function generateProcessor(
   name: string,
   type: "analytics" | "operational",
@@ -194,10 +208,6 @@ export async function generateProcessor(
     type,
     { skipFormat },
   );
-}
-
-export async function generateSubgraph(name: string, config: PowerhouseConfig) {
-  return _generateSubgraph(name, config.subgraphsDir, config);
 }
 
 export async function generateImportScript(

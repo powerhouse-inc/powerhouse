@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { FormDescription } from "./form-description";
+import { describe, expect, it } from "vitest";
+import { FormDescription } from "./form-description.js";
 
 describe("FormDescription", () => {
   it("should render correctly", () => {
@@ -18,7 +18,7 @@ describe("FormDescription", () => {
   it("should apply custom className", () => {
     render(
       // for testing purposes, we disable the no-custom-classname rule
-      // eslint-disable-next-line tailwindcss/no-custom-classname
+
       <FormDescription className="custom-class">
         Test description
       </FormDescription>,

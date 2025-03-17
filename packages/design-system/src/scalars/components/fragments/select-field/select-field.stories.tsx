@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
-import { withForm } from "@/scalars/lib/decorators";
-import { SelectField } from "./select-field";
+import { Icon, type IconName } from "#powerhouse";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { SelectField } from "./select-field.js";
 
 const meta: Meta<typeof SelectField> = {
   title: "Document Engineering/Fragments/SelectField",

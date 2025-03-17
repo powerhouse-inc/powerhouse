@@ -1,4 +1,4 @@
-import { Context } from "../types";
+import { Context } from "#subgraphs/types.js";
 
 export interface SessionInput {
   name: string;

@@ -1,13 +1,13 @@
 import {
-  AddOperationErrorAction,
-  SetOperationErrorCodeAction,
-  SetOperationErrorNameAction,
-  SetOperationErrorDescriptionAction,
-  SetOperationErrorTemplateAction,
-  DeleteOperationErrorAction,
-  ReorderOperationErrorsAction,
-} from "./actions";
-import { DocumentModelState } from "../types";
+    AddOperationErrorAction,
+    SetOperationErrorCodeAction,
+    SetOperationErrorNameAction,
+    SetOperationErrorDescriptionAction,
+    SetOperationErrorTemplateAction,
+    DeleteOperationErrorAction,
+    ReorderOperationErrorsAction,
+} from "./actions.js";
+import { DocumentModelState } from "../types.js";
 
 export interface DocumentModelOperationErrorOperations {
   addOperationErrorOperation: (

@@ -1,20 +1,22 @@
-import { AddLocalDriveModal } from './AddLocalDriveModal';
-import { AddRemoteDriveModal } from './AddRemoteDriveModal';
-import { ConfirmationModal } from './ConfirmationModal';
-import { CookiesPolicyModal } from './CookiesPolicyModal';
-import { CreateDocumentModal } from './CreateDocumentModal';
-import { DebugSettingsModal } from './DebugSettingsModal';
-import { DeleteDriveModal } from './DeleteDriveModal';
-import { DeleteItemModal } from './DeleteItemModal';
-import { DisclaimerModal } from './DisclaimerModal';
-import { DriveSettingsModal } from './DriveSettingsModal';
-import { SettingsModal } from './SettingsModal';
-import { UpgradeDriveModal } from './UpgradeDriveModal';
+import { AddDriveModal } from './AddDriveModal.js';
+import { AddLocalDriveModal } from './AddLocalDriveModal.js';
+import { AddRemoteDriveModal } from './AddRemoteDriveModal.js';
+import { ConfirmationModal } from './ConfirmationModal.js';
+import { CookiesPolicyModal } from './CookiesPolicyModal.js';
+import { CreateDocumentModal } from './CreateDocumentModal.js';
+import { DebugSettingsModal } from './DebugSettingsModal.js';
+import { DeleteDriveModal } from './DeleteDriveModal.js';
+import { DeleteItemModal } from './DeleteItemModal.js';
+import { DisclaimerModal } from './DisclaimerModal.js';
+import { DriveSettingsModal } from './DriveSettingsModal.js';
+import { SettingsModal } from './SettingsModal.js';
+import { UpgradeDriveModal } from './UpgradeDriveModal.js';
 
 export const modals = {
     deleteItem: DeleteItemModal,
     upgradeDrive: UpgradeDriveModal,
     createDocument: CreateDocumentModal,
+    addDriveModal: AddDriveModal,
     addLocalDrive: AddLocalDriveModal,
     addRemoteDrive: AddRemoteDriveModal,
     driveSettings: DriveSettingsModal,

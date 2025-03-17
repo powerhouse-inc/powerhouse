@@ -1,10 +1,10 @@
 import {
-  EditorAction,
-  GroupTransactionType,
-  RealWorldAssetsState,
-  TableName,
-  TableNameFor,
-} from "@/rwa";
+  type EditorAction,
+  type GroupTransactionType,
+  type RealWorldAssetsState,
+  type TableName,
+  type TableNameFor,
+} from "#rwa";
 
 export const defaultColumnCountByTableWidth = {
   1520: 10,

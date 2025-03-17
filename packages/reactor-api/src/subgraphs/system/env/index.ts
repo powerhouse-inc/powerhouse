@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { getAdminUsers } from "./getters";
+import { getAdminUsers } from "./getters.js";
 
 dotenv.config();
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeOperations } from "../../src";
+import { mergeOperations } from "../../src/utils/misc";
 
 describe("mergeOperations", () => {
   it("should merge operations correcly", async () => {

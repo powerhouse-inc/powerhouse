@@ -1,5 +1,5 @@
-import { Currency } from "../currency-code-field";
-import { AmountFieldPropsGeneric, AmountValue } from "./types";
+import type { Currency } from "../currency-code-field/types.js";
+import type { AmountFieldPropsGeneric, AmountValue } from "./types.js";
 export const DEFAULT_FIAT_CURRENCIES: Currency[] = [
   { ticker: "USD", crypto: false, label: "USD", symbol: "$" },
   { ticker: "EUR", crypto: false, label: "EUR", symbol: "€" },

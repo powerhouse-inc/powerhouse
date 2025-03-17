@@ -1,4 +1,4 @@
-import { RealWorldAssetsState } from "../types";
+import { type RealWorldAssetsState } from "../types/index.js";
 import {
   mockAccounts,
   mockCashAsset,
@@ -7,8 +7,8 @@ import {
   mockPrincipalLenderAccountId,
   mockSPVs,
   mockServiceProviderFeeTypes,
-} from "./assets";
-import { mockGroupTransactions } from "./transactions";
+} from "./assets.js";
+import { mockGroupTransactions } from "./transactions.js";
 
 export const mockStateInitial: RealWorldAssetsState = {
   accounts: [],

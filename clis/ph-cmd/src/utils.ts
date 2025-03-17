@@ -1,7 +1,7 @@
-import path, { dirname } from "node:path";
-import fs from "node:fs";
 import { execSync } from "node:child_process";
+import fs from "node:fs";
 import { homedir } from "node:os";
+import path, { dirname } from "node:path";
 
 export const PH_BIN_PATH = process.argv[1];
 export const PH_BIN = "ph-cli";
@@ -11,9 +11,17 @@ export const PH_CLI_COMMANDS = [
   "connect",
   "generate",
   "reactor",
+  "switchboard",
   "help",
   "install",
+  "add",
+  "i",
+  "remove",
+  "uninstall",
   "service",
+  "list",
+  "inspect",
+  "version",
 ];
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const HOME_DIR = homedir();
@@ -139,12 +147,10 @@ export function forwardPHCommand(
   packageManager: PackageManager,
   projectPath: string,
   args: string,
-  isPackageScript: boolean,
   debug?: boolean,
 ) {
   const manager = packageManagers[packageManager];
-  const command = isPackageScript ? manager.execScript : manager.execCommand;
-
+  const command = manager.execCommand;
   const execCommand = command.replace("{{arguments}}", args);
 
   const commandOptions = { cwd: projectPath };

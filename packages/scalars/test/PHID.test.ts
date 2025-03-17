@@ -1,5 +1,5 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/PHID";
+import { scalar } from "../src/scalars/PHID.js";
 
 describe("PHID Scalar", () => {
   it("should serialize a valid PHID address", () => {

@@ -1,10 +1,11 @@
-import { NodeStatus } from "../types";
-import Created from "@/assets/icon-components/Created";
-import Modified from "@/assets/icon-components/Modified";
-import Removed from "@/assets/icon-components/Removed";
-import Duplicated from "@/assets/icon-components/Duplicated";
-import Moved from "@/assets/icon-components/Moved";
-import DescendenceModified from "@/assets/icon-components/DescendenceModified";
+import Created from "../../../../powerhouse/components/icon-components/Created.js";
+import DescendenceModified from "../../../../powerhouse/components/icon-components/DescendenceModified.js";
+import Duplicated from "../../../../powerhouse/components/icon-components/Duplicated.js";
+import Modified from "../../../../powerhouse/components/icon-components/Modified.js";
+import Moved from "../../../../powerhouse/components/icon-components/Moved.js";
+import Removed from "../../../../powerhouse/components/icon-components/Removed.js";
+import { NodeStatus } from "../types.js";
+
 interface StatusIconProps {
   status: NodeStatus;
   isDescendenceModified?: boolean;

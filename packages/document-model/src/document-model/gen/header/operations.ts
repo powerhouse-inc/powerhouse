@@ -1,12 +1,12 @@
+import { DocumentModelState } from "../types.js";
 import {
-  SetModelNameAction,
-  SetModelIdAction,
-  SetModelExtensionAction,
-  SetModelDescriptionAction,
   SetAuthorNameAction,
   SetAuthorWebsiteAction,
-} from "./actions";
-import { DocumentModelState } from "../types";
+  SetModelDescriptionAction,
+  SetModelExtensionAction,
+  SetModelIdAction,
+  SetModelNameAction,
+} from "./actions.js";
 
 export interface DocumentModelHeaderOperations {
   setModelNameOperation: (

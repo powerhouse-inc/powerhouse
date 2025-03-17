@@ -1,7 +1,6 @@
+import { commonCryptoCurrencies, renderWithForm } from "#scalars";
 import { screen, waitFor } from "@testing-library/react";
-import { AmountField } from "./amount-field";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { commonCryptoCurrencies } from "../currency-code-field";
+import { AmountField } from "./amount-field.js";
 
 describe("AmountField Component", () => {
   it("should match snapshot", () => {

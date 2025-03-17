@@ -1,7 +1,7 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
-import { ToggleField } from "./toggle-field";
-import { renderWithForm } from "@/scalars/lib/testing";
+import { renderWithForm } from "../../../lib/testing.js";
+import { ToggleField } from "./toggle-field.js";
 
 describe("ToggleField Component", () => {
   const mockOnChange = vi.fn();
@@ -64,7 +64,6 @@ describe("ToggleField Component", () => {
 
   it("should render with custom className", () => {
     // this is a custom class name for testing purposes
-    // eslint-disable-next-line tailwindcss/no-custom-classname
     renderWithForm(<ToggleField name="test" className="custom-class" />);
     const toggle = screen.getByTestId("custom-class");
     expect(toggle).toHaveClass("custom-class");

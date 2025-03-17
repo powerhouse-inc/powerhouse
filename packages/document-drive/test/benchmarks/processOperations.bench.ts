@@ -1,31 +1,25 @@
-import * as documentModelsMap from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import { bench, BenchOptions, describe, vi } from "vitest";
+import { driveDocumentModelModule } from "#drive-document-model/module";
+import { ReactorBuilder } from "#server/builder";
 import {
   DefaultRemoteDriveInput,
-  DocumentDriveServer,
   DocumentDriveServerOptions,
-  generateUUID,
-  RunAsap,
-} from "../../src";
+} from "#server/types";
+import { generateUUID } from "#utils/misc";
+import { RunAsap } from "#utils/run-asap";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
+import { bench, BenchOptions, describe, vi } from "vitest";
 import { BrowserStorage } from "../../src/storage/browser";
-import { setLogger } from "../../src/utils/logger";
 import GetDrive from "./getDrive.json";
 import Strands from "./strands.small.json";
 
 const DRIVE_ID = GetDrive.data.drive.id;
-const documentModels = Object.values(documentModelsMap) as DocumentModel[];
-
-setLogger({
-  log: function (...data: any[]): void {},
-  info: function (...data: any[]): void {},
-  warn: function (...data: any[]): void {},
-  error: function (...data: any[]): void {
-    console.error(data);
-  },
-  debug: function (...data: any[]): void {},
-  trace: function (...data: any[]): void {},
-});
+const documentModels = [
+  driveDocumentModelModule,
+  documentModelDocumentModelModule,
+] as DocumentModelModule[];
 
 vi.mock(import("graphql-request"), async () => {
   const originalModule = await vi.importActual("graphql-request");
@@ -115,7 +109,6 @@ describe("Process Operations", () => {
           },
         ],
         triggers: [],
-        pullInterval: 3000,
         accessLevel: "WRITE",
       },
     },
@@ -126,16 +119,13 @@ describe("Process Operations", () => {
     callback: () => void,
     onError: (error: Error) => void,
   ) {
-    const server = new DocumentDriveServer(
-      documentModels,
-      new BrowserStorage(generateUUID()),
-      undefined,
-      undefined,
-      {
+    const server = new ReactorBuilder(documentModels)
+      .withStorage(new BrowserStorage(generateUUID()))
+      .withOptions({
         defaultDrives: { remoteDrives: defaultRemoteDrives },
         taskQueueMethod: runOnMacroTask,
-      },
-    );
+      })
+      .build();
     let strands = 0;
     server.on("syncStatus", (driveId, status, error, object) => {
       if (status === "SUCCESS") {

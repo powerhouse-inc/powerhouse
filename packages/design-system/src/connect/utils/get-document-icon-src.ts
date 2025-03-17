@@ -1,4 +1,4 @@
-import { DEFAULT, documentTypes, iconMap, TDocumentType } from "@/connect";
+import { DEFAULT, documentTypes, iconMap, type TDocumentType } from "#connect";
 
 export function getDocumentIconSrc(
   documentType: TDocumentType,
@@ -8,7 +8,7 @@ export function getDocumentIconSrc(
     return customDocumentIconSrc;
   }
 
-  if (documentTypes.includes(documentType)) {
+  if (documentTypes.includes(documentType as (typeof documentTypes)[number])) {
     return iconMap[documentType];
   }
 

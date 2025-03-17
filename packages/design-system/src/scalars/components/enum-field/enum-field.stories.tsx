@@ -1,13 +1,13 @@
-import React from "react";
-import type { Meta, StoryObj } from "@storybook/react";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
-import { withForm } from "@/scalars/lib/decorators";
-import { EnumField } from "./enum-field";
+import { Icon, type IconName } from "#powerhouse";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+  withForm,
+} from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+
+import { EnumField } from "./enum-field.js";
 
 const meta: Meta<typeof EnumField> = {
   title: "Document Engineering/Simple Components/Enum Field",

@@ -1,1 +1,1 @@
-export * from "./document-toolbar";
+export * from "./document-toolbar.js";

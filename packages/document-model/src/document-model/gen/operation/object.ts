@@ -1,38 +1,37 @@
-import { BaseDocument } from "../../../document/object";
-
+import { BaseDocumentClass } from "../../../document/object.js";
+import { ReducerOptions } from "../../../document/types.js";
+import { DocumentModelAction } from "../actions.js";
 import {
   AddOperationInput,
-  SetOperationNameInput,
-  SetOperationSchemaInput,
-  SetOperationDescriptionInput,
-  SetOperationTemplateInput,
-  SetOperationReducerInput,
-  MoveOperationInput,
   DeleteOperationInput,
-  ReorderModuleOperationsInput,
   DocumentModelState,
+  MoveOperationInput,
+  ReorderModuleOperationsInput,
+  SetOperationDescriptionInput,
+  SetOperationNameInput,
+  SetOperationReducerInput,
+  SetOperationSchemaInput,
   SetOperationScopeInput,
-  DocumentModelLocalState,
-} from "../types";
+  SetOperationTemplateInput,
+} from "../schema/types.js";
+import { DocumentModelLocalState } from "../types.js";
 import {
   addOperation,
-  setOperationName,
-  setOperationSchema,
-  setOperationDescription,
-  setOperationTemplate,
-  setOperationReducer,
-  moveOperation,
   deleteOperation,
+  moveOperation,
   reorderModuleOperations,
+  setOperationDescription,
+  setOperationName,
+  setOperationReducer,
+  setOperationSchema,
   setOperationScope,
-} from "./creators";
-import { DocumentModelAction } from "../actions";
-import { ReducerOptions } from "../../../document";
+  setOperationTemplate,
+} from "./creators.js";
 
-export default class DocumentModel_Operation extends BaseDocument<
+export default class DocumentModel_Operation extends BaseDocumentClass<
   DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
+  DocumentModelLocalState,
+  DocumentModelAction
 > {
   public addOperation(input: AddOperationInput, options?: ReducerOptions) {
     return this.dispatch(addOperation(input), options);

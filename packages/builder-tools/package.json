@@ -1,0 +1,102 @@
+{
+  "name": "@powerhousedao/builder-tools",
+  "version": "0.6.1",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./connect-studio": "./dist/connect-studio/index.js",
+    "./connect-studio/hmr": "./dist/connect-studio/hmr.js",
+    "./document-model-editor": "./dist/document-model-editor/index.js",
+    "./editor-utils": "./dist/editor-utils/index.js",
+    "./style.css": "./dist/style.css"
+  },
+  "imports": {
+    "#editor-utils/*": "./dist/editor-utils/*.js",
+    "#document-model-editor/*": "./dist/document-model-editor/*.js",
+    "#connect-studio/*": "./dist/connect-studio/*.js"
+  },
+  "scripts": {
+    "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
+    "build": "npm run build:css && tsc --build",
+    "storybook": "storybook dev -p 6006",
+    "build:tsc": "tsc --build",
+    "lint": "eslint .",
+    "lint:nx": "eslint . --fix --quiet",
+    "prepublishOnly": "npm run build",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
+  },
+  "devDependencies": {
+    "@storybook/types": "^8.5.2",
+    "@types/react": "^18.3.18",
+    "@types/validator": "^13.12.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.18.6",
+    "@codemirror/commands": "^6.8.0",
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/language": "^6.10.8",
+    "@codemirror/lint": "^6.8.4",
+    "@codemirror/search": "^6.5.8",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.36.2",
+    "@graphql-tools/schema": "^10.0.16",
+    "@graphql-tools/utils": "^10.7.2",
+    "@hookform/resolvers": "^3.10.0",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
+    "@prettier/sync": "^0.5.2",
+    "@radix-ui/react-checkbox": "^1.1.3",
+    "@radix-ui/react-icons": "^1.3.2",
+    "@radix-ui/react-label": "^2.1.1",
+    "@radix-ui/react-radio-group": "^1.2.2",
+    "@radix-ui/react-select": "^2.1.5",
+    "@radix-ui/react-slot": "^1.1.1",
+    "@radix-ui/react-tabs": "^1.1.2",
+    "@vitejs/plugin-basic-ssl": "^1.2.0",
+    "@theguild/editor": "^1.3.10",
+    "@tailwindcss/cli": "^4.0.9",
+    "@tailwindcss/vite": "^4.0.9",
+    "change-case": "^5.4.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cm6-graphql": "^0.2.0",
+    "commander": "^12.1.0",
+    "constrained-editor-plugin": "^1.3.0",
+    "copy-anything": "^4.0.2",
+    "date-fns": "^3.6.0",
+    "document-model": "workspace:*",
+    "dspot-powerhouse-components": "^1.1.0",
+    "esbuild": "^0.24.0",
+    "fast-glob": "^3.3.3",
+    "graphql": "^16.10.0",
+    "magic-string": "^0.30.17",
+    "react-hook-form": "^7.54.2",
+    "resolve.exports": "^2.0.3",
+    "tailwind-merge": "^3.0.2",
+    "thememirror": "^2.0.1",
+    "usehooks-ts": "^3.1.0",
+    "uuid": "^11.0.5",
+    "validator": "^13.12.0",
+    "viem": "^2.23.3",
+    "vite": "^6.2.0",
+    "vite-envs": "^4.4.5",
+    "tailwindcss": "^4.0.9",
+    "zod": "^3.24.2"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}

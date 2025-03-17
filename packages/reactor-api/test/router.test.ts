@@ -1,28 +1,24 @@
-import { DocumentDriveServer } from "document-drive";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
-import { DocumentModel } from "document-model/document";
-import { module as DocumentModelLib } from "document-model/document-model";
-import express from "express";
-import { SubgraphManager } from "src";
-import { getDbClient } from "src/utils/db";
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
 import { describe, expect, it } from "vitest";
 
 const documentModels = [
-  DocumentModelLib,
-  ...Object.values(DocumentModelsLibs),
-] as DocumentModel[];
+  documentModelDocumentModelModule,
+] as DocumentModelModule[];
 
 describe("Reactor Router", () => {
   it("should be initialized", () => {
     // const app = express();
     // const knex = getDbClient();
-    // const reactor = new DocumentDriveServer(documentModels);
+    // const reactor = new ReactorBuilder(documentModels).build();
     // const reactorRouter = new SubgraphManager("/", app, reactor, knex);
     expect(true).toBe(true);
   });
 
   // it("should be able to add a new subgraph", async () => {
-  //   const driveServer = new DocumentDriveServer(documentModels);
+  //   const driveServer = new ReactorBuilder(documentModels).build();
   //   await driveServer.initialize();
   //   const newSubgraph = {
   //     name: "newSubgraph",

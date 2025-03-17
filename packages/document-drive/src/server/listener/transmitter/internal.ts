@@ -1,41 +1,49 @@
-import { Document, Operation, OperationScope } from "document-model/document";
-import { logger } from "../../../utils/logger";
 import {
-  GetDocumentOptions,
-  IBaseDocumentDriveServer,
-  Listener,
-  ListenerRevision,
-  StrandUpdate,
-} from "../../types";
-import { ITransmitter, StrandUpdateSource } from "./types";
-import { InferDocumentOperation } from "../../../read-mode/types";
+  type GlobalStateFromDocument,
+  type LocalStateFromDocument,
+  type OperationFromDocument,
+  type OperationScope,
+  type PHDocument,
+} from "document-model";
 
-export interface IReceiver<
-  T extends Document = Document,
-  S extends OperationScope = OperationScope,
-> {
-  onStrands: (strands: InternalTransmitterUpdate<T, S>[]) => Promise<void>;
+import {
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "#drive-document-model/gen/types";
+import {
+  type GetDocumentOptions,
+  type IBaseDocumentDriveServer,
+  type Listener,
+  type ListenerRevision,
+  type StrandUpdate,
+} from "#server/types";
+import { logger } from "#utils/logger";
+import { type ITransmitter, type StrandUpdateSource } from "./types.js";
+
+export interface IReceiver {
+  onStrands: <TDocument extends PHDocument>(
+    strands: InternalTransmitterUpdate<TDocument>[],
+  ) => Promise<void>;
   onDisconnect: () => Promise<void>;
 }
 
-export type InternalOperationUpdate<
-  D extends Document = Document,
-  S extends OperationScope = OperationScope,
-> = Omit<Operation<InferDocumentOperation<D>>, "scope"> & {
-  state: D["state"][S];
-  previousState: D["state"][S];
+export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
+  OperationFromDocument<TDocument>,
+  "scope"
+> & {
+  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
+  previousState:
+    | GlobalStateFromDocument<TDocument>
+    | LocalStateFromDocument<TDocument>;
 };
 
-export type InternalTransmitterUpdate<
-  D extends Document = Document,
-  S extends OperationScope = OperationScope,
-> = {
+export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
   driveId: string;
   documentId: string;
-  scope: S;
+  scope: OperationScope;
   branch: string;
-  operations: InternalOperationUpdate<D, S>[];
-  state: D["state"][S];
+  operations: InternalOperationUpdate<TDocument>[];
+  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
 };
 
 export interface IInternalTransmitter extends ITransmitter {
@@ -52,9 +60,14 @@ export class InternalTransmitter implements ITransmitter {
     this.drive = drive;
   }
 
-  async #buildInternalOperationUpdate(strand: StrandUpdate) {
-    const operations: InternalOperationUpdate[] = [];
-    const stateByIndex = new Map<number, unknown>();
+  async #buildInternalOperationUpdate<TDocument extends PHDocument>(
+    strand: StrandUpdate,
+  ) {
+    const operations = [];
+    const stateByIndex = new Map<
+      number,
+      GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>
+    >();
     const getStateByIndex = async (index: number) => {
       const state = stateByIndex.get(index);
       if (state) {
@@ -68,7 +81,7 @@ export class InternalTransmitter implements ITransmitter {
         checkHashes: false,
       };
       const document = await (strand.documentId
-        ? this.drive.getDocument(
+        ? this.drive.getDocument<TDocument>(
             strand.driveId,
             strand.documentId,
             getDocumentOptions,
@@ -101,7 +114,7 @@ export class InternalTransmitter implements ITransmitter {
       return [];
     }
 
-    const updates: InternalTransmitterUpdate[] = [];
+    const updates = [];
     for (const strand of strands) {
       const operations = await this.#buildInternalOperationUpdate(strand);
       const state = operations.at(-1)?.state ?? {};

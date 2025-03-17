@@ -1,4 +1,4 @@
-import type { IconName } from "@/powerhouse/components/icon";
+import type { IconName } from "#powerhouse";
 
 export interface RadioGroupProps {
   options?: {
@@ -19,6 +19,7 @@ export interface SelectOption {
 
 export interface SelectBaseProps {
   options?: SelectOption[];
+  favoriteOptions?: SelectOption[];
   placeholder?: string;
   multiple?: boolean;
   searchable?: boolean;

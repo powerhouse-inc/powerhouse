@@ -1,10 +1,11 @@
+import { Context } from "#subgraphs/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import { IDocumentDriveServer } from "document-drive";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
-import { DocumentNode, parse } from "graphql";
-import gql from "graphql-tag";
-import { Context } from "src/subgraphs";
+import { pascalCase } from "change-case";
+import { IDocumentDriveServer } from "document-drive";
+import { DocumentNode } from "graphql";
+import { gql } from "graphql-tag";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
@@ -22,10 +23,10 @@ export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
   typeDefs: DocumentNode,
 ) => {
-  const documentModels = documentDriveServer.getDocumentModels();
+  const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
   documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = documentModel.name.replaceAll(" ", "");
+    const dmSchemaName = pascalCase(documentModel.name.replaceAll("/", " "));
     let tmpDmSchema = `
           ${documentModel.specifications
             .map((specification) =>

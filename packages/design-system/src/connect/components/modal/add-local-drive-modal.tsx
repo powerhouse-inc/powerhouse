@@ -1,6 +1,7 @@
-import { AddLocalDriveForm, AddLocalDriveInput, Divider } from "@/connect";
-import { DivProps, Icon, Modal } from "@/powerhouse";
-import { ComponentPropsWithoutRef } from "react";
+import { AddLocalDriveForm, type AddLocalDriveInput, Divider } from "#connect";
+import { type DivProps, Icon, Modal } from "#powerhouse";
+import { type App } from "document-model";
+import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
@@ -10,9 +11,17 @@ export type AddLocalDriveModal = {
   readonly onSubmit: (data: AddLocalDriveInput) => void;
   readonly modalProps?: ModalProps;
   readonly containerProps?: DivProps;
+  readonly appOptions: App[];
 };
 export function AddLocalDriveModal(props: AddLocalDriveModal) {
-  const { open, onOpenChange, onSubmit, modalProps, containerProps } = props;
+  const {
+    open,
+    onOpenChange,
+    onSubmit,
+    modalProps,
+    containerProps,
+    appOptions,
+  } = props;
   function handleCancel() {
     onOpenChange(false);
   }
@@ -43,7 +52,11 @@ export function AddLocalDriveModal(props: AddLocalDriveModal) {
           </button>
         </div>
         <Divider className="my-4" />
-        <AddLocalDriveForm onCancel={handleCancel} onSubmit={onSubmit} />
+        <AddLocalDriveForm
+          onCancel={handleCancel}
+          onSubmit={onSubmit}
+          appOptions={appOptions}
+        />
       </div>
     </Modal>
   );

@@ -1,12 +1,10 @@
-/* eslint-disable tailwindcss/no-unnecessary-arbitrary-value */
+import { useAcceptedCookies, useCookieBanner } from '#hooks';
 import {
-    CookieInput,
+    type CookieInput,
     CookieBanner as PHCookieBanner,
 } from '@powerhousedao/design-system';
 import { Trans, useTranslation } from 'react-i18next';
-import { useAcceptedCookies } from 'src/hooks/useAcceptedCookies';
-import { useCookieBanner } from 'src/hooks/useCookieBanner';
-import { useModal } from './modal';
+import { useModal } from './modal/index.js';
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {
     return cookies.some(cookie => cookie.id === id && cookie.value);

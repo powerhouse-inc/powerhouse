@@ -1,20 +1,8 @@
 {
+    "extends": "../../tsconfig.options.json",
     "compilerOptions": {
-        "rootDir": ".",
-        "sourceMap": true,
-        "declaration": false,
-        "moduleResolution": "node",
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
-        "importHelpers": true,
-        "target": "es2015",
+        "outDir": "./dist",
         "lib": ["es2020", "dom"],
-        "skipLibCheck": true,
-        "skipDefaultLibCheck": true,
-        "baseUrl": ".",
-        "module": "commonjs",
-        "strictNullChecks": true
     },
-    "include": ["src/**/*.ts"],
-    "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"]
+    "include": ["**/*"]
 }

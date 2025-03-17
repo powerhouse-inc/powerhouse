@@ -1,28 +1,27 @@
-import { BaseDocument } from "../../../document/object";
-
+import { BaseDocumentClass } from "../../../document/object.js";
+import { ReducerOptions } from "../../../document/types.js";
+import { DocumentModelAction } from "../actions.js";
 import {
   AddModuleInput,
-  SetModuleNameInput,
-  SetModuleDescriptionInput,
   DeleteModuleInput,
-  ReorderModulesInput,
-  DocumentModelState,
   DocumentModelLocalState,
-} from "../types";
+  DocumentModelState,
+  ReorderModulesInput,
+  SetModuleDescriptionInput,
+  SetModuleNameInput,
+} from "../schema/types.js";
 import {
   addModule,
-  setModuleName,
-  setModuleDescription,
   deleteModule,
   reorderModules,
-} from "./creators";
-import { DocumentModelAction } from "../actions";
-import { ReducerOptions } from "../../../document";
+  setModuleDescription,
+  setModuleName,
+} from "./creators.js";
 
-export default class DocumentModel_Module extends BaseDocument<
+export default class DocumentModel_Module extends BaseDocumentClass<
   DocumentModelState,
-  DocumentModelAction,
-  DocumentModelLocalState
+  DocumentModelLocalState,
+  DocumentModelAction
 > {
   public addModule(input: AddModuleInput, options?: ReducerOptions) {
     return this.dispatch(addModule(input), options);

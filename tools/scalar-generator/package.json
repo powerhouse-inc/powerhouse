@@ -9,5 +9,8 @@
     "main": "./src/index.js",
     "typings": "./src/index.d.ts",
     "private": true,
-    "generators": "./generators.json"
+    "generators": "./generators.json",
+    "scripts": {
+        "build": "tsc --build"
+    }
 }

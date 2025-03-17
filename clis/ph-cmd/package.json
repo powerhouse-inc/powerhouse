@@ -1,6 +1,6 @@
 {
   "name": "ph-cmd",
-  "version": "0.32.8",
+  "version": "0.39.1",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -8,13 +8,13 @@
     "access": "public"
   },
   "bin": {
-    "ph": "dist/cli.cjs"
+    "ph": "dist/src/cli.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsc --build",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
@@ -26,7 +26,6 @@
   "author": "",
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
     "commander": "^12.1.0"
   }
 }

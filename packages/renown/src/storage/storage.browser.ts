@@ -1,4 +1,4 @@
-import { BaseStorage } from "./common";
+import { BaseStorage } from "./common.js";
 
 export class BrowserStorage<
   T extends Record<string, unknown> = Record<string, unknown>,

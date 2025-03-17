@@ -1,16 +1,19 @@
-import { type IconName, Props } from "@/assets/icon-components/types";
-import { Color, getDimensions, Size } from "@/powerhouse";
 import {
-  ComponentPropsWithoutRef,
-  ComponentType,
-  ElementType,
+  type IconName,
+  iconNames,
+  type Props,
+} from "../icon-components/types.js";
+import { type Color, getDimensions, type Size } from "#powerhouse";
+import {
+  type ComponentPropsWithoutRef,
+  type ComponentType,
+  type ElementType,
   lazy,
   Suspense,
   useMemo,
 } from "react";
 
-export { iconNames } from "@/assets/icon-components/types";
-export type { IconName } from "@/assets/icon-components/types";
+export { iconNames, type IconName, type Props };
 
 export type IconProps = ComponentPropsWithoutRef<"svg"> & {
   readonly name: IconName;
@@ -25,7 +28,7 @@ function IconErrorFallback(props: Props) {
 function loadIcon(name: IconName): ElementType {
   try {
     return lazy<ComponentType<Props>>(
-      () => import(`@/assets/icon-components/${name}.tsx`),
+      () => import(`../icon-components/${name}.js`),
     );
   } catch (e) {
     console.error(e);

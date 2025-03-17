@@ -1,16 +1,16 @@
-import React from "react";
-import { describe, it, expect } from "vitest";
 import { act, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { withFieldValidation } from "./with-field-validation";
-import { Form } from "../../form";
-import { FormGroup } from "../form-group";
-import { TextFieldProps } from "../text-field";
-import { FormLabel } from "../form-label";
-import { Input } from "../input";
-import { FormMessageList } from "../form-message";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { ValidatorHandler } from "../../types";
+import { userEvent } from "@testing-library/user-event";
+import React from "react";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../../lib/testing.js";
+import { Form } from "../../form/index.js";
+import { type ValidatorHandler } from "../../types.js";
+import { FormGroup } from "../form-group/index.js";
+import { FormLabel } from "../form-label/index.js";
+import { FormMessageList } from "../form-message/index.js";
+import { Input } from "../input/index.js";
+import { type TextFieldProps } from "../text-field/index.js";
+import { withFieldValidation } from "./with-field-validation.js";
 
 // Test component that will be wrapped
 const TextFieldTesting = React.forwardRef<

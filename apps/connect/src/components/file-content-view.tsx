@@ -1,9 +1,8 @@
-import { FileItem, UiFileNode } from '@powerhousedao/design-system';
+import { useWindowSize, type TUiNodes } from '#hooks';
+import { FileItem, type UiFileNode } from '@powerhousedao/design-system';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TUiNodes } from 'src/hooks/useUiNodes';
-import { useWindowSize } from 'src/hooks/useWindowSize';
 
 type Props = TUiNodes & {
     fileNodes: UiFileNode[];
@@ -82,7 +81,15 @@ export function FileContentView(props: Props) {
                     marginLeft: columnIndex === 0 ? 0 : GAP,
                 }}
             >
-                <FileItem {...props} key={fileNode.id} uiNode={fileNode} />
+                <FileItem
+                    {...props}
+                    key={fileNode.id}
+                    uiNode={fileNode}
+                    onSelectNode={props.setSelectedNode}
+                    isAllowedToCreateDocuments={
+                        props.isAllowedToCreateDocuments ?? false
+                    }
+                />
             </div>
         );
     };

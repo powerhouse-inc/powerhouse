@@ -1,12 +1,15 @@
+import { setModelName } from "document-model";
 import { describe, expect, it } from "vitest";
-import { RunAsap, runAsapAsync } from "../src/utils";
-import { utils, reducer, actions } from "document-model/document-model";
+import { reducer } from "../src/drive-document-model/gen/reducer";
+import { createDocument } from "../src/drive-document-model/gen/utils";
 import {
-  isAtRevision,
-  isAfterRevision,
   buildDocumentRevisionsFilter,
   filterOperationsByRevision,
+  isAfterRevision,
+  isAtRevision,
 } from "../src/server/utils";
+import { runAsapAsync } from "../src/utils/misc";
+import { RunAsap } from "../src/utils/run-asap";
 
 describe("utils", () => {
   it("should run setTimeout", async () => {
@@ -18,14 +21,14 @@ describe("utils", () => {
   });
 
   it("should build document revisions filter", async () => {
-    let document = utils.createDocument();
+    let document = createDocument();
 
     expect(buildDocumentRevisionsFilter(document)).toStrictEqual({
       global: -1,
       local: -1,
     });
 
-    document = reducer(document, actions.setModelName({ name: "0" }));
+    document = reducer(document, setModelName({ name: "0" }));
 
     expect(buildDocumentRevisionsFilter(document)).toStrictEqual({
       global: 0,
@@ -34,7 +37,7 @@ describe("utils", () => {
   });
 
   it("should check revisions filter", async () => {
-    let document = utils.createDocument();
+    let document = createDocument();
 
     expect(isAtRevision(document)).toBe(true);
     expect(isAtRevision(document, { global: -1, local: -1 })).toBe(true);
@@ -43,7 +46,7 @@ describe("utils", () => {
     expect(isAtRevision(document, { global: 0, local: 0 })).toBe(false);
     expect(isAtRevision(document, { global: 0, local: -1 })).toBe(false);
 
-    document = reducer(document, actions.setModelName({ name: "0" }));
+    document = reducer(document, setModelName({ name: "0" }));
     expect(isAtRevision(document, { global: 0, local: -1 })).toBe(true);
     expect(isAtRevision(document, { global: -1, local: -1 })).toBe(false);
     expect(isAtRevision(document, { global: 0 })).toBe(true);
@@ -54,7 +57,7 @@ describe("utils", () => {
   });
 
   it("should check document is at least at revisions filter", async () => {
-    let document = utils.createDocument();
+    let document = createDocument();
 
     expect(isAfterRevision(document)).toBe(true);
     expect(isAfterRevision(document, { global: -1, local: -1 })).toBe(false);
@@ -63,7 +66,7 @@ describe("utils", () => {
     expect(isAfterRevision(document, { global: 0, local: 0 })).toBe(false);
     expect(isAfterRevision(document, { global: 0, local: -1 })).toBe(false);
 
-    document = reducer(document, actions.setModelName({ name: "0" }));
+    document = reducer(document, setModelName({ name: "0" }));
     expect(isAfterRevision(document, { global: 0, local: -1 })).toBe(false);
     expect(isAfterRevision(document, { global: -1 })).toBe(true);
     expect(isAfterRevision(document, { global: 0 })).toBe(false);
@@ -74,18 +77,18 @@ describe("utils", () => {
   });
 
   it("should filter operations by revision", async () => {
-    let document = utils.createDocument();
+    let document = createDocument();
 
     expect(filterOperationsByRevision(document.operations)).toStrictEqual({
       global: [],
       local: [],
     });
 
-    document = reducer(document, actions.setModelName({ name: "0" }));
-    document = reducer(document, actions.setModelName({ name: "1" }));
-    document = reducer(document, actions.setModelName({ name: "2" }));
-    document = reducer(document, actions.setModelName({ name: "3" }));
-    document = reducer(document, actions.setModelName({ name: "4" }));
+    document = reducer(document, setModelName({ name: "0" }));
+    document = reducer(document, setModelName({ name: "1" }));
+    document = reducer(document, setModelName({ name: "2" }));
+    document = reducer(document, setModelName({ name: "3" }));
+    document = reducer(document, setModelName({ name: "4" }));
 
     expect(filterOperationsByRevision(document.operations)).toStrictEqual(
       document.operations,

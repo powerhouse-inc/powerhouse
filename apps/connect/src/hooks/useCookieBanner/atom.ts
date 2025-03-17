@@ -1,4 +1,4 @@
-import { atomWithStorage } from 'src/store/utils';
+import { atomWithStorage } from '#store';
 
 export const COOKIE_BANNER_KEY_STORAGE = 'display-cookie-banner';
 

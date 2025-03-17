@@ -1,0 +1,23 @@
+import type { Props } from "./types.js";
+export default function CaretRight(props: Props) {
+  return (
+    <svg
+      {...props}
+      width="18"
+      height="18"
+      viewBox="0 0 18 18"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <g id="Caret Right">
+        <path
+          id="Shape"
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M7.4181 5.01821C7.62899 4.80733 7.9709 4.80733 8.18178 5.01821L11.7818 8.61821C11.883 8.71948 11.9399 8.85683 11.9399 9.00005C11.9399 9.14326 11.883 9.28061 11.7818 9.38188L8.18178 12.9819C7.9709 13.1928 7.62899 13.1928 7.4181 12.9819C7.20722 12.771 7.20722 12.4291 7.4181 12.2182L10.6363 9.00005L7.4181 5.78188C7.20722 5.571 7.20722 5.22909 7.4181 5.01821Z"
+          fill="currentColor"
+        />
+      </g>
+    </svg>
+  );
+}

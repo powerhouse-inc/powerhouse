@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 
 export type EditorActionButtonsProps = {
   readonly onSwitchboardLinkClick?: (() => void) | undefined;

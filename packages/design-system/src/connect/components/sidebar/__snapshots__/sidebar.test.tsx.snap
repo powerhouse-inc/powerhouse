@@ -3,78 +3,57 @@
 exports[`Connect Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="group expanded flex h-full flex-col overflow-hidden transition-none duration-300 animate-in fade-in shadow-sidebar"
+    class="group flex h-full flex-col bg-slate-50"
     data-testid="sidebar"
-    style="width: 304px;"
+    style="width: 58px;"
   >
     <div
       class="no-scrollbar flex-1 overflow-auto text-gray-900 transition-shadow"
     >
       <div
-        class="shrink-0 mb-4 flex justify-between gap-4 px-4 pt-11 collapsed:justify-center"
+        class="shrink-0 flex justify-center gap-4 border-b border-gray-300 py-4"
       >
-        <div
-          class="collapsed:hidden expanding:hidden"
-        >
-          <input
-            class="flex-1 rounded-md border border-gray-100 px-5 py-3 leading-none text-gray-600 placeholder-shown:bg-transparent"
-            placeholder="Create new document"
-          />
-        </div>
         <button
-          class="rounded-md border border-gray-100 p-3 outline-none hover:bg-slate-50
-                collapsed:rotate-180 collapsed:border-gray-100/10 collapsed:bg-gray-100
-                collapsed:shadow-sidebar collapsed:hover:bg-slate-50
-                expanding:hidden"
+          class=""
+          type="button"
         >
           <svg
             class="text-gray-600"
             fill="none"
-            stroke="currentcolor"
-            style="width: 16px; height: 16px;"
-            viewBox="0 0 16 16"
+            height="24"
+            style="width: 24px; height: 24px;"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              d="M8 1L0.999998 8M0.999998 8L8 15M0.999998 8L15 8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
+              d="M11.0306 3.68615C11.2854 3.68614 11.492 3.47932 11.4921 3.2242L11.4921 9.03413e-06C8.29133 0.132881 5.41451 1.52048 3.33928 3.68633L11.0306 3.68615ZM14.2609 8.42821C14.2609 8.68334 14.0543 8.89016 13.7994 8.89016L0.406086 8.89043C0.81778 7.34998 1.52777 5.93103 2.46931 4.70043L13.7995 4.70024C14.0544 4.70023 14.261 4.90707 14.261 5.16221L14.2609 8.42821ZM20.6591 20.3137C18.5847 22.4787 15.7079 23.8663 12.5062 24L12.5063 20.7758C12.5063 20.5207 12.7129 20.3139 12.9678 20.3139L20.6591 20.3137ZM11.4924 23.9992C8.29157 23.8665 5.41401 22.4782 3.33969 20.3133L11.0309 20.3131C11.2858 20.3131 11.4924 20.52 11.4924 20.7751L11.4924 23.9992ZM17.5946 15.5703C17.5947 15.3152 17.8013 15.1083 18.0561 15.1083L23.5923 15.108C23.1806 16.6484 22.4714 18.0666 21.5291 19.298L18.0561 19.2983C17.8012 19.2983 17.5946 19.0914 17.5946 18.8363L17.5946 15.5703ZM8.84765 10.3544C8.85393 10.1039 9.05863 9.90407 9.30899 9.90407L23.8175 9.90396C23.9373 10.584 24 11.2842 24 11.9989C24 12.7136 23.9372 13.4138 23.8174 14.0939L9.31089 14.0933C9.06005 14.0932 8.85517 13.8927 8.84957 13.6416L8.80986 11.8617L8.84765 10.3544ZM16.7389 18.8372C16.7389 19.0923 16.5323 19.2991 16.2774 19.2991L2.46978 19.2992C1.52749 18.0679 0.818373 16.6498 0.406752 15.1093L16.2775 15.1092C16.5324 15.1092 16.739 15.316 16.739 15.5712L16.7389 18.8372ZM0.182552 9.90452L7.3636 9.90412C7.61849 9.90411 7.82511 10.1109 7.82511 10.3661L7.82503 13.6321C7.82503 13.8872 7.61842 14.0941 7.36355 14.0941L0.182447 14.0945C0.062664 13.4144 -1.71661e-05 12.7142 0 11.9995C1.71661e-05 11.2848 0.0627384 10.5846 0.182552 9.90452ZM15.2756 5.16214C15.2757 4.90701 15.4823 4.70019 15.7371 4.70019L21.5294 4.69998C22.4717 5.93135 23.1808 7.34943 23.5924 8.88987L15.7371 8.89013C15.4822 8.89014 15.2756 8.6833 15.2756 8.42816L15.2756 5.16214ZM12.5068 0C15.7076 0.132721 18.5852 1.52098 20.6595 3.68592L12.9682 3.6861C12.7133 3.6861 12.5067 3.47927 12.5067 3.22413L12.5068 0Z"
+              fill="#9EA0A1"
             />
           </svg>
         </button>
       </div>
       <div
-        class="hidden expanded:block"
+        class="flex flex-col"
       />
     </div>
     <div
-      class="shrink-0 bg-gray-50 p-4 collapsed:px-1 expanding:px-1"
+      class="shrink-0 flex flex-col gap-2 border-t border-gray-300 px-2 py-4"
     >
       <div
-        class="collapsed:bg-transparent collapsing:bg-transparent expanding:bg-transparent"
+        class=""
       >
         <div
-          class="flex gap-2 rounded-sm py-2.5 collapsed:justify-center
-            collapsed:px-1 expanding:justify-center expanding:px-1"
+          class="flex items-center justify-center rounded-sm"
         >
           <div
-            class="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
+            class="fade-out flex-none animate-pulse rounded-full bg-gray-400"
             style="width: 40px; height: 40px;"
           />
-          <div
-            class="grid w-full items-center font-semibold collapsed:hidden expanding:hidden"
-          >
-            <p
-              class="mb-2 h-4 w-4/5 animate-pulse rounded bg-gray-400"
-            />
-            <p
-              class="h-3 w-4/5 animate-pulse rounded bg-gray-400"
-            />
-          </div>
         </div>
       </div>
       <button
-        class="mt-3 flex w-full cursor-pointer gap-3 outline-none collapsed:px-3 expanding:px-3"
+        class="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
       >
         <svg
           class="text-gray-600"
@@ -94,7 +73,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           />
         </svg>
         <span
-          class="text-sm font-semibold leading-6 text-gray-800 collapsed:hidden expanding:hidden"
+          class="hidden text-sm font-semibold leading-6 text-gray-800"
         >
           Settings
         </span>

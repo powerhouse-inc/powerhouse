@@ -1,11 +1,5 @@
-import {
-  Day,
-  Operation,
-  Revision,
-  Signature,
-  SignatureArray,
-  Skip,
-} from "./types";
+import { type Operation } from "document-model";
+import { type Day, type Revision, type Signature, type Skip } from "./types.js";
 
 export function makeRows(operations: Operation[]) {
   const revisionsAndSkips: (Revision | Skip | Day)[] = [];
@@ -31,10 +25,14 @@ export function makeRows(operations: Operation[]) {
       stateHash: operation.hash,
       operationType: operation.type,
       operationInput: operation.input ?? {},
-      address: operation.context?.signer?.user?.address,
-      chainId: operation.context?.signer?.user?.chainId,
+      address: operation.context?.signer?.user.address as
+        | `0x${string}`
+        | undefined,
+      chainId: operation.context?.signer?.user.chainId,
       timestamp: operation.timestamp,
-      signatures: makeSignatures(operation.context?.signer?.signatures),
+      signatures: makeSignatures(
+        (operation.context?.signer?.signatures as string[][] | undefined) ?? [],
+      ),
       errors: operation.error ? [operation.error] : undefined,
     });
 
@@ -65,9 +63,7 @@ export function getUniqueDatesInOrder(operations: Operation[]) {
   );
 }
 
-function makeSignatureFromSignatureArray(
-  signatureArray: SignatureArray,
-): Signature {
+function makeSignatureFromSignatureArray(signatureArray: string[]): Signature {
   const [signerAddress, hash, prevStateHash, signatureBytes] = signatureArray;
 
   return {
@@ -79,6 +75,6 @@ function makeSignatureFromSignatureArray(
   };
 }
 
-function makeSignatures(signaturesArray: SignatureArray[] | undefined) {
+function makeSignatures(signaturesArray: string[][] | undefined) {
   return signaturesArray?.map(makeSignatureFromSignatureArray);
 }

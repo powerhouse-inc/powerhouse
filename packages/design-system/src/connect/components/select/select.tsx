@@ -1,5 +1,5 @@
-import { Icon, fixedForwardRef } from "@/powerhouse";
-import { CSSProperties, ForwardedRef, useState } from "react";
+import { Icon, fixedForwardRef } from "#powerhouse";
+import { type CSSProperties, type ForwardedRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 export type SelectItem<TValue extends string> = {
@@ -35,7 +35,7 @@ export const Select = fixedForwardRef(function Select<TValue extends string>(
     menuClassName,
     itemClassName,
     absolutePositionMenu = false,
-    borderRadius = "12px",
+    borderRadius = "6px",
   } = props;
   const [showItems, setShowItems] = useState(false);
   const selectedItem = getItemByValue(value) ?? items[0];
@@ -53,16 +53,14 @@ export const Select = fixedForwardRef(function Select<TValue extends string>(
   return (
     <div
       className={twMerge(
-        "bg-gray-100 transition-[border-radius]",
+        "border border-gray-200 bg-gray-50 text-gray-800 transition-[border-radius]",
         absolutePositionMenu && "relative",
         containerClassName,
       )}
       data-open={showItems}
       ref={ref}
       style={{
-        borderRadius: showItems
-          ? `${borderRadius} ${borderRadius} 0 0`
-          : borderRadius,
+        borderRadius: borderRadius,
       }}
     >
       <div
@@ -132,7 +130,7 @@ function ItemContainer<TValue extends string>(
         <p className="capitalize text-inherit">
           {displayValue ?? value.toLowerCase()}
         </p>
-        <p className="text-xs text-inherit">{description}</p>
+        <p className="text-xs text-gray-600">{description}</p>
       </div>
     </div>
   );

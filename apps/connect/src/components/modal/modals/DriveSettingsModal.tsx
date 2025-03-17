@@ -1,7 +1,7 @@
 import {
     DriveSettingsModal as ConnectDriveSettingsModal,
-    SharingType,
-    UiDriveNode,
+    type SharingType,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
 
 type Props = {

@@ -1,5 +1,4 @@
-import { Button, ButtonProps, mergeClassNameProps } from "@/powerhouse";
-import React from "react";
+import { Button, type ButtonProps, mergeClassNameProps } from "#powerhouse";
 
 export const RWAButton: React.FC<ButtonProps> = (props) => {
   return (

@@ -1,15 +1,15 @@
 import {
-  TNodeOptions,
-  UiDriveNode,
-  UiFileNode,
-  UiFolderNode,
-  UiNode,
-} from "@/connect";
+  type TNodeOptions,
+  type UiDriveNode,
+  type UiFileNode,
+  type UiFolderNode,
+  type UiNode,
+} from "#connect";
 
 export type NodeProps = {
   nodeOptions: TNodeOptions;
-  isAllowedToCreateDocuments: boolean;
-  isRemoteDrive: boolean;
+  isAllowedToCreateDocuments?: boolean;
+  isRemoteDrive?: boolean;
   onAddFolder: (name: string, uiNode: UiNode) => void;
   onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
   onAddAndSelectNewFolder: (name: string) => Promise<void>;

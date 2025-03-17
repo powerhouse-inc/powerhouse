@@ -1,7 +1,1 @@
-#! /usr/bin/env node
-
-import { initCli } from "./init";
-
-initCli().catch((e: unknown) => {
-  throw e;
-});
+export * from "./create-project.js";

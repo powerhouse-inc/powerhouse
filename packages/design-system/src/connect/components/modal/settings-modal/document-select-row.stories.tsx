@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { DocumentSelectSettingsRow } from "./document-select-row";
+import { DocumentSelectSettingsRow } from "./document-select-row.js";
 
 const meta: Meta<typeof DocumentSelectSettingsRow> = {
   title: "Connect/Components/Modal/SettingsModal/DocumentSelectSettingsRow",

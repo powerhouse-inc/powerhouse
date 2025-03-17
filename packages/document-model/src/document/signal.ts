@@ -1,21 +1,23 @@
-import { Document, OperationScope } from "./types";
+import { type OperationScope, type PHDocument } from "./types.js";
 
-export interface ISignal<T extends string = string, I = unknown> {
-  type: T;
-  input: I;
+export interface ISignal<TType extends string, TInput> {
+  type: TType;
+  input: TInput;
 }
 
-export type SynchronizationUnit = {
+export type SynchronizationUnitInput = {
   syncId: string;
   scope: OperationScope;
   branch: string;
 };
 
-export type CreateChildDocumentInput = {
+export type CreateChildDocumentInput<
+  TDocument extends PHDocument = PHDocument,
+> = {
   id: string;
   documentType: string;
-  document?: Document;
-  synchronizationUnits: SynchronizationUnit[];
+  document?: TDocument;
+  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CreateChildDocumentSignal = ISignal<
@@ -35,7 +37,7 @@ export type DeleteChildDocumentSignal = ISignal<
 export type CopyChildDocumentInput = {
   id: string;
   newId: string;
-  synchronizationUnits: SynchronizationUnit[];
+  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CopyChildDocumentSignal = ISignal<

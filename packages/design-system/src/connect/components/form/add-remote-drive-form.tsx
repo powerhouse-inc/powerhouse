@@ -4,13 +4,12 @@ import {
   Divider,
   DriveName,
   FormInput,
-  Label,
   LocationInfo,
   PUBLIC,
-  SharingType,
+  type SharingType,
   SWITCHBOARD,
-} from "@/connect";
-import { Button, Icon } from "@/powerhouse";
+} from "#connect";
+import { Button } from "#powerhouse";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useDebounceValue } from "usehooks-ts";
@@ -97,7 +96,6 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <Label htmlFor="url">Add existing drive</Label>
       {hasConfirmedUrl ? (
         <>
           <DriveName driveName={remoteDriveDetails?.name ?? "New drive"} />
@@ -110,26 +108,24 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             <LocationInfo location={SWITCHBOARD} />
             <AvailableOfflineToggle {...register("availableOffline")} />
           </Disclosure>
-          <Divider className="my-3" />
           <Button className="mt-4 w-full" color="dark" type="submit">
-            Add drive
+            Add new drive
           </Button>
         </>
       ) : (
         <>
           <FormInput
             errorMessage={errorMessage}
-            icon={<Icon name="BrickGlobe" />}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Drive URL"
             required
             type="url"
             value={url}
           />
-          <Divider className="mb-3" />
           <Button
-            className="mt-4 w-full"
-            color="light"
+            className="mt-4 w-full py-2 text-base"
+            color="dark"
+            size="small"
             disabled={!isUrlValid || url === ""}
             onClick={(e) => {
               e.preventDefault();
@@ -137,7 +133,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             }}
             type="button"
           >
-            Confirm URL
+            Add drive
           </Button>
         </>
       )}

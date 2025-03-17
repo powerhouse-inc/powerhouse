@@ -1,4 +1,4 @@
-import { ColumnCountByTableWidth, TableColumn } from "@/rwa";
+import { type ColumnCountByTableWidth, type TableColumn } from "#rwa";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Props<TColumn extends TableColumn> = {
@@ -70,7 +70,9 @@ export function useColumnPriority<TColumn extends TableColumn>(
     const dynamicColumnsToShow = columns?.slice(0, columnCount) ?? [];
     // Ensure the index column is first and the "more details" column is last
     setColumnsToShow(
-      [indexColumn, ...dynamicColumnsToShow, moreDetailsColumn].filter(Boolean),
+      [indexColumn, ...dynamicColumnsToShow, moreDetailsColumn].filter(
+        Boolean,
+      ) as TColumn[],
     );
   }, [
     parentWidth,

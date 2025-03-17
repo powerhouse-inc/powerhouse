@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
-import { AIDField } from "./aid-field";
-import { mockedOptions, fetchOptions, fetchSelectedOption } from "./mocks";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { AIDField } from "./aid-field.js";
+import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
 
 const meta: Meta<typeof AIDField> = {
   title: "Document Engineering/Simple Components/AID Field",

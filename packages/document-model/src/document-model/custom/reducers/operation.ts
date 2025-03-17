@@ -1,5 +1,5 @@
-import { Operation } from "../../gen";
-import { DocumentModelOperationOperations } from "../../gen/operation/operations";
+import { type DocumentModelOperationOperations } from "../../gen/operation/operations.js";
+import { type Operation } from "../../gen/schema/types.js";
 
 const operationSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};

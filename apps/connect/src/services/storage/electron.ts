@@ -1,5 +1,5 @@
-import store from 'src/app/store';
-import { BaseStorage, IStorage } from '.';
+import store from '../../app/store.js';
+import { BaseStorage, type IStorage } from './index.js';
 
 export class ElectronStorage<
     T extends Record<string, unknown> = Record<string, unknown>,

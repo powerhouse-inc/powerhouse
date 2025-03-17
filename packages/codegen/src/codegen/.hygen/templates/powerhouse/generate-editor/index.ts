@@ -1,5 +1,3 @@
-import { DocumentTypesMap } from "../../../..";
-
 export type Args = {
   name: string;
   rootDir: string;
@@ -17,7 +15,7 @@ export default {
       documentTypes: args.documentTypes
         .split(",")
         .filter((type) => type !== ""),
-      documentTypesMap: JSON.parse(args.documentTypesMap) as DocumentTypesMap,
+      documentTypesMap: JSON.parse(args.documentTypesMap) as JSON,
     };
   },
 };

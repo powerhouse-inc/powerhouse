@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { ConnectDeleteItemModal } from "./delete-item-modal";
+import { ConnectDeleteItemModal } from "./delete-item-modal.js";
 import { it, vi } from "vitest";
 describe("Modal Component", () => {
   it("should match snapshot", () => {

@@ -1,55 +1,53 @@
+import { type IDocumentDriveServer } from "document-drive";
 import {
-  Action,
-  Document,
-  Operation,
-  BaseAction,
-  DocumentModel,
-  ActionErrorCallback,
-} from "document-model/document";
-import { useDocumentDispatch } from "./useDocumentDispatch";
-import { signOperation, addActionContext } from "../utils/signature";
-import { useConnectCrypto, useConnectDid } from "./useConnectCrypto";
-import { useAddDebouncedOperations } from "./useAddDebouncedOperations";
-import { IDocumentDriveServer } from "document-drive";
-import { User } from "../renown/types";
+  type ActionErrorCallback,
+  type ActionFromDocument,
+  type DocumentModelModule,
+  type OperationFromDocument,
+  type PHDocument,
+} from "document-model";
+import { type DID, type IConnectCrypto } from "../crypto/index.js";
+import { type User } from "../renown/types.js";
+import { addActionContext, signOperation } from "../utils/signature.js";
+import { useAddDebouncedOperations } from "./useAddDebouncedOperations.js";
+import { useConnectCrypto, useConnectDid } from "./useConnectCrypto.js";
+import { useDocumentDispatch } from "./useDocumentDispatch.js";
 
-export type DocumentDispatchCallback<State, A extends Action, LocalState> = (
-  operation: Operation,
+export type DocumentDispatchCallback<TDocument extends PHDocument> = (
+  operation: OperationFromDocument<TDocument>,
   state: {
-    prevState: Document<State, A, LocalState>;
-    newState: Document<State, A, LocalState>;
+    prevState: TDocument;
+    newState: TDocument;
   },
 ) => void;
 
-export type UseDocumentEditorProps<
-  T = unknown,
-  A extends Action = Action,
-  LocalState = unknown,
-> = {
+export type UseDocumentEditorProps<TDocument extends PHDocument> = {
   driveId: string;
   nodeId: string;
-  document: Document<T, A, LocalState> | undefined;
-  documentModel: DocumentModel<unknown, Action>;
+  document: TDocument | undefined;
+  documentModelModule: DocumentModelModule<TDocument>;
   user?: User;
   onExport?: () => void;
   onOpenSwitchboardLink?: () => Promise<void>;
-  onChange?: (document: Document<T, A, LocalState>) => void;
+  onChange?: (document: TDocument) => void;
 };
 
-export function useDocumentEditor(
+export function useDocumentEditorProps<TDocument extends PHDocument>(
   reactor: IDocumentDriveServer | undefined,
-  props: UseDocumentEditorProps,
+  props: UseDocumentEditorProps<TDocument> & {
+    connectDid?: DID;
+    sign: IConnectCrypto["sign"];
+  },
 ) {
   const {
     nodeId,
     driveId,
-    documentModel,
+    documentModelModule,
     document: initialDocument,
     user,
+    connectDid,
+    sign,
   } = props;
-
-  const connectDid = useConnectDid();
-  const { sign } = useConnectCrypto();
 
   const addDebouncedOprations = useAddDebouncedOperations(reactor, {
     driveId,
@@ -57,26 +55,26 @@ export function useDocumentEditor(
   });
 
   const [document, _dispatch, error] = useDocumentDispatch(
-    documentModel.reducer,
+    documentModelModule.reducer,
     initialDocument,
   );
 
   function dispatch(
-    action: BaseAction | Action,
+    action: ActionFromDocument<TDocument>,
     onErrorCallback?: ActionErrorCallback,
   ) {
-    const callback: DocumentDispatchCallback<unknown, Action, unknown> = (
+    const callback: DocumentDispatchCallback<TDocument> = (
       operation,
       state,
     ) => {
       const { prevState } = state;
 
-      signOperation(
+      signOperation<TDocument>(
         operation,
         sign,
         nodeId,
         prevState,
-        documentModel.reducer,
+        documentModelModule.reducer,
         user,
       )
         .then((op) => {
@@ -97,4 +95,20 @@ export function useDocumentEditor(
     document,
     error,
   };
+}
+
+export function useDocumentEditor<TDocument extends PHDocument>(
+  reactor: IDocumentDriveServer | undefined,
+  props: UseDocumentEditorProps<TDocument>,
+) {
+  const connectDid = useConnectDid();
+  const { sign } = useConnectCrypto();
+
+  const documentEditorDispatch = useDocumentEditorProps(reactor, {
+    ...props,
+    connectDid,
+    sign,
+  });
+
+  return documentEditorDispatch;
 }

@@ -1,13 +1,10 @@
 import {
-  DocumentOperations,
-  Action,
-  ValidationError,
-  OperationScope,
-} from "../types";
+  type DocumentOperations,
+  type OperationScope,
+  type ValidationError,
+} from "../types.js";
 
-export function validateOperations<A extends Action>(
-  operations: DocumentOperations<A>,
-) {
+export function validateOperations(operations: DocumentOperations) {
   const errors: ValidationError[] = [];
   const scopes = Object.keys(operations) as OperationScope[];
 

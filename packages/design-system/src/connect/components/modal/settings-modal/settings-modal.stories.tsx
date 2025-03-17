@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ClearStorageSettingsRow } from "./clear-storage-row";
-import { DependencyVersions } from "./dependency-versions";
+import { ClearStorageSettingsRow } from "./clear-storage-row.js";
+import { DependencyVersions } from "./dependency-versions/index.js";
 import mockPackageJson from "./dependency-versions/mock-package-json.json";
-import { DocumentSelectSettingsRow } from "./document-select-row";
-import { SettingsModal } from "./settings-modal";
+import { DocumentSelectSettingsRow } from "./document-select-row.js";
+import { SettingsModalOld } from "./settings-modal.js";
 
-const meta: Meta<typeof SettingsModal> = {
+const meta: Meta<typeof SettingsModalOld> = {
   title: "Connect/Components/Modal/SettingsModal",
-  component: SettingsModal,
+  component: SettingsModalOld,
 };
 
 export default meta;

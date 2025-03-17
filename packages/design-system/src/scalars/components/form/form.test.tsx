@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-import { Form } from "./form";
-import { StringField } from "../string-field";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { StringField } from "../string-field/index.js";
+import { Form } from "./form.js";
 
 describe("Form", () => {
   it("should render children as React nodes", () => {
@@ -121,7 +121,7 @@ describe("Form", () => {
   it("should apply className to form element", () => {
     render(
       // disable tailwind custom classname rule for this test
-      // eslint-disable-next-line tailwindcss/no-custom-classname
+
       <Form onSubmit={() => {}} className="test-class">
         Test
       </Form>,
