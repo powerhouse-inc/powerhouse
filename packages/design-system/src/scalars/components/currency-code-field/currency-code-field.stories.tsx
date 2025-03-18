@@ -95,7 +95,32 @@ export const Default: Story = {
 export const FavoriteCurrencies: Story = {
   args: {
     label: "Currency",
-    currencies: commonCryptoCurrencies,
+    currencies: [
+      {
+        ticker: "BTC",
+        crypto: true,
+        label: "Bitcoin",
+        symbol: "₿",
+      },
+      {
+        ticker: "ETH",
+        crypto: true,
+        label: "Ether",
+        symbol: "Ξ",
+      },
+      {
+        ticker: "USDS",
+        crypto: true,
+        label: "Sky USD",
+        symbol: "USDS",
+      },
+      {
+        ticker: "USDC",
+        crypto: true,
+
+        icon: "Briefcase",
+      },
+    ],
     favoriteCurrencies: ["BTC", "ETH"],
   },
 };

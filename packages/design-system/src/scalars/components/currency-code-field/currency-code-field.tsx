@@ -71,6 +71,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
             return {
               label,
               value: currency.ticker,
+              icon: currency.icon,
             };
           })
           .filter(Boolean) as SelectOption[]) ?? []
@@ -83,7 +84,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
     ]);
 
     const favoriteOptions: SelectOption[] = useMemo(() => {
-      const favoriteTickers = new Set(favoriteCurrencies || []);
+      const favoriteTickers = new Set(favoriteCurrencies);
       return (
         currencies
           ?.filter((currency) => favoriteTickers.has(currency.ticker))
@@ -98,6 +99,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
             return {
               label,
               value: currency.ticker,
+              icon: currency.icon,
             };
           }) ?? []
       );
