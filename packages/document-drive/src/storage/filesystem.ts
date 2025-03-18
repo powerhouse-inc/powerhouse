@@ -22,8 +22,7 @@ import {
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
-import sanitize from "sanitize-filename";
-import { type IDriveStorage } from "./types.js";
+import { IDocumentStorage, type IDriveStorage } from "./types.js";
 
 type FSError = {
   errno: number;
@@ -38,7 +37,7 @@ function ensureDir(dir: string) {
   }
 }
 
-export class FilesystemStorage implements IDriveStorage {
+export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   private basePath: string;
   private drivesPath: string;
   private static DRIVES_DIR = "drives";
@@ -50,11 +49,8 @@ export class FilesystemStorage implements IDriveStorage {
     ensureDir(this.drivesPath);
   }
 
-  private _buildDocumentPath(...args: string[]) {
-    return `${path.join(
-      this.basePath,
-      ...args.map((arg) => sanitize(arg)),
-    )}.json`;
+  private _buildDocumentPath(documentId: string) {
+    return `${this.basePath}/document-${documentId}.json`;
   }
 
   async getDocuments(drive: string) {
@@ -84,9 +80,13 @@ export class FilesystemStorage implements IDriveStorage {
     return documents;
   }
 
-  checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    const documentExists = existsSync(this._buildDocumentPath(drive, id));
+  exists(documentId: string): Promise<boolean> {
+    const documentExists = existsSync(this._buildDocumentPath(documentId));
     return Promise.resolve(documentExists);
+  }
+
+  checkDocumentExists(drive: string, id: string): Promise<boolean> {
+    return this.exists(id);
   }
 
   async getDocument<TDocument extends PHDocument>(
@@ -94,7 +94,7 @@ export class FilesystemStorage implements IDriveStorage {
     id: string,
   ): Promise<TDocument> {
     try {
-      const content = readFileSync(this._buildDocumentPath(drive, id), {
+      const content = readFileSync(this._buildDocumentPath(id), {
         encoding: "utf-8",
       });
       return JSON.parse(content) as TDocument;
@@ -104,7 +104,7 @@ export class FilesystemStorage implements IDriveStorage {
   }
 
   async createDocument(drive: string, id: string, document: PHDocument) {
-    const documentPath = this._buildDocumentPath(drive, id);
+    const documentPath = this._buildDocumentPath(id);
     ensureDir(path.dirname(documentPath));
     writeFileSync(documentPath, stringify(document), {
       encoding: "utf-8",
@@ -147,8 +147,8 @@ export class FilesystemStorage implements IDriveStorage {
     );
   }
 
-  async deleteDocument(drive: string, id: string) {
-    return fs.rm(this._buildDocumentPath(drive, id));
+  async deleteDocument(driveId: string, id: string) {
+    return fs.rm(this._buildDocumentPath(id));
   }
 
   async addDocumentOperations(
