@@ -216,7 +216,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
       ...header,
       operations: mergedOperations,
     });
-    return;
   }
 
   async getSynchronizationUnitsRevision(

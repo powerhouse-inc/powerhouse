@@ -11,14 +11,7 @@ import {
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import type { Dirent } from "fs";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
@@ -31,6 +24,11 @@ type FSError = {
   path: string;
 };
 
+// Interface for drive manifest that tracks document IDs in a drive
+interface DriveManifest {
+  documentIds: string[];
+}
+
 function ensureDir(dir: string) {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
@@ -39,45 +37,46 @@ function ensureDir(dir: string) {
 
 export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   private basePath: string;
-  private drivesPath: string;
-  private static DRIVES_DIR = "drives";
 
   constructor(basePath: string) {
     this.basePath = basePath;
     ensureDir(this.basePath);
-    this.drivesPath = path.join(this.basePath, FilesystemStorage.DRIVES_DIR);
-    ensureDir(this.drivesPath);
   }
 
   private _buildDocumentPath(documentId: string) {
     return `${this.basePath}/document-${documentId}.json`;
   }
 
-  async getDocuments(drive: string) {
-    let files: Dirent[] = [];
-    try {
-      files = readdirSync(path.join(this.basePath, drive), {
-        withFileTypes: true,
-      });
-    } catch (error) {
-      // if folder is not found then drive has no documents
-      if ((error as FSError).code !== "ENOENT") {
-        throw error;
-      }
-    }
-    const documents: string[] = [];
-    for (const file of files.filter((file) => file.isFile())) {
-      try {
-        const documentId = path.parse(file.name).name;
+  private _buildDrivePath(driveId: string) {
+    return `${this.basePath}/drive-${driveId}.json`;
+  }
 
-        // checks if file is document
-        await this.getDocument(drive, documentId);
-        documents.push(documentId);
-      } catch {
-        /* Ignore invalid document*/
-      }
+  private _buildManifestPath(driveId: string) {
+    return `${this.basePath}/manifest-${driveId}.json`;
+  }
+
+  private async getDriveManifest(driveId: string): Promise<DriveManifest> {
+    const manifestPath = this._buildManifestPath(driveId);
+    try {
+      const content = readFileSync(manifestPath, { encoding: "utf-8" });
+      return JSON.parse(content) as DriveManifest;
+    } catch (error) {
+      // Return empty manifest if file doesn't exist
+      return { documentIds: [] };
     }
-    return documents;
+  }
+
+  private async updateDriveManifest(
+    driveId: string,
+    manifest: DriveManifest,
+  ): Promise<void> {
+    const manifestPath = this._buildManifestPath(driveId);
+    writeFileSync(manifestPath, stringify(manifest), { encoding: "utf-8" });
+  }
+
+  async getDocuments(drive: string) {
+    const manifest = await this.getDriveManifest(drive);
+    return manifest.documentIds;
   }
 
   exists(documentId: string): Promise<boolean> {
@@ -105,38 +104,25 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
   async createDocument(drive: string, id: string, document: PHDocument) {
     const documentPath = this._buildDocumentPath(id);
-    ensureDir(path.dirname(documentPath));
     writeFileSync(documentPath, stringify(document), {
       encoding: "utf-8",
     });
+
+    // Update the drive manifest to include this document
+    const manifest = await this.getDriveManifest(drive);
+    if (!manifest.documentIds.includes(id)) {
+      manifest.documentIds.push(id);
+      await this.updateDriveManifest(drive, manifest);
+    }
+
     return Promise.resolve();
   }
 
   async clearStorage() {
-    const drivesPath = path.join(this.basePath, FilesystemStorage.DRIVES_DIR);
-
-    // delete content of drives directory
-    const drives = (
-      await fs.readdir(drivesPath, {
-        withFileTypes: true,
-        recursive: true,
-      })
-    ).filter((dirent) => !!dirent.name);
-
-    await Promise.all(
-      drives.map(async (dirent) => {
-        await fs.rm(path.join(drivesPath, dirent.name), {
-          recursive: true,
-        });
-      }),
-    );
-
-    // delete files in basePath
+    // delete content of basePath
     const files = (
       await fs.readdir(this.basePath, { withFileTypes: true })
-    ).filter(
-      (file) => file.name !== FilesystemStorage.DRIVES_DIR && !!file.name,
-    );
+    ).filter((dirent) => !!dirent.name);
 
     await Promise.all(
       files.map(async (dirent) => {
@@ -147,7 +133,29 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     );
   }
 
-  async deleteDocument(driveId: string, id: string) {
+  async deleteDocument(drive: string, id: string) {
+    // Update the drive manifest to remove this document
+    const manifest = await this.getDriveManifest(drive);
+    const docIndex = manifest.documentIds.indexOf(id);
+    if (docIndex !== -1) {
+      manifest.documentIds.splice(docIndex, 1);
+      await this.updateDriveManifest(drive, manifest);
+    }
+
+    // Check if this document exists in other drive manifests
+    // Only delete the actual file if no other drive references it
+    const drives = await this.getDrives();
+    for (const driveId of drives) {
+      if (driveId === drive) continue;
+
+      const otherManifest = await this.getDriveManifest(driveId);
+      if (otherManifest.documentIds.includes(id)) {
+        // Document still referenced by another drive, don't delete the file
+        return Promise.resolve();
+      }
+    }
+
+    // If we got here, no other drive references this document, so we can delete it
     return fs.rm(this._buildDocumentPath(id));
   }
 
@@ -164,42 +172,44 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
     const mergedOperations = mergeOperations(document.operations, operations);
 
-    await this.createDocument(drive, id, {
-      ...document,
-      ...header,
-      operations: mergedOperations,
-    });
+    const documentPath = this._buildDocumentPath(id);
+    writeFileSync(
+      documentPath,
+      stringify({
+        ...document,
+        ...header,
+        operations: mergedOperations,
+      }),
+      {
+        encoding: "utf-8",
+      },
+    );
   }
 
   async getDrives() {
-    const files = readdirSync(this.drivesPath, {
-      withFileTypes: true,
-    });
-    const drives: string[] = [];
-    for (const file of files.filter((file) => file.isFile())) {
-      try {
-        const driveId = path.parse(file.name).name;
-
-        // checks if file is drive
-        await this.getDrive(driveId);
-        drives.push(driveId);
-      } catch {
-        /* Ignore invalid drive document found on drives dir */
-      }
-    }
-    return drives;
+    // get anything that starts with drive-
+    const files = await fs.readdir(this.basePath, { withFileTypes: true });
+    return (
+      files
+        .filter((file) => file.name.startsWith("drive-"))
+        // remove drive- prefix and extension
+        .map((file) => file.name.replace("drive-", "").replace(".json", ""))
+    );
   }
 
   async getDrive(id: string): Promise<DocumentDriveDocument> {
     try {
-      return await this.getDocument(FilesystemStorage.DRIVES_DIR, id);
-    } catch {
+      const content = readFileSync(this._buildDrivePath(id), {
+        encoding: "utf-8",
+      });
+      return JSON.parse(content) as DocumentDriveDocument;
+    } catch (error) {
       throw new DriveNotFoundError(id);
     }
   }
 
   async getDriveBySlug(slug: string) {
-    // get oldes drives first
+    // get oldest drives first
     const drives = (await this.getDrives()).reverse();
     for (const drive of drives) {
       const {
@@ -213,19 +223,32 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
         return this.getDrive(drive);
       }
     }
+
     throw new Error(`Drive with slug ${slug} not found`);
   }
 
-  createDrive(id: string, drive: DocumentDriveDocument) {
-    return this.createDocument(FilesystemStorage.DRIVES_DIR, id, drive);
+  async createDrive(id: string, drive: DocumentDriveDocument) {
+    const drivePath = this._buildDrivePath(id);
+    writeFileSync(drivePath, stringify(drive), {
+      encoding: "utf-8",
+    });
+
+    // Initialize an empty manifest for the new drive
+    await this.updateDriveManifest(id, { documentIds: [] });
   }
 
   async deleteDrive(id: string) {
+    // First get all documents in this drive
     const documents = await this.getDocuments(id);
-    await this.deleteDocument(FilesystemStorage.DRIVES_DIR, id);
-    await Promise.all(
-      documents.map((document) => this.deleteDocument(id, document)),
-    );
+
+    // Delete each document from this drive (may not actually delete the file if shared with other drives)
+    await Promise.all(documents.map((doc) => this.deleteDocument(id, doc)));
+
+    // Delete the drive manifest and the drive itself
+    await fs.rm(this._buildManifestPath(id)).catch(() => {
+      /* ignore error if manifest doesn't exist */
+    });
+    await fs.rm(this._buildDrivePath(id));
   }
 
   async addDriveOperations(
@@ -239,11 +262,18 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
       operations,
     );
 
-    await this.createDrive(id, {
-      ...drive,
-      ...header,
-      operations: mergedOperations,
-    });
+    const drivePath = this._buildDrivePath(id);
+    writeFileSync(
+      drivePath,
+      stringify({
+        ...drive,
+        ...header,
+        operations: mergedOperations,
+      }),
+      {
+        encoding: "utf-8",
+      },
+    );
   }
 
   async getSynchronizationUnitsRevision(
