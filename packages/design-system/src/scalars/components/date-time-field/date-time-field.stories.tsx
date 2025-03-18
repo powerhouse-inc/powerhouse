@@ -20,22 +20,7 @@ const meta: Meta<typeof DateTimeField> = {
       },
     }),
     ...getValidationArgTypes({}),
-    showDateSelect: {
-      control: "boolean",
-      description: "Show the date picker",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-    showTimeSelect: {
-      control: "boolean",
-      description: "Show the time picker",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
+
     minDate: {
       control: "date",
       description: "Minimum selectable date in the date picker",
@@ -43,7 +28,6 @@ const meta: Meta<typeof DateTimeField> = {
         type: { summary: "date" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showDateSelect", truthy: true },
     },
     maxDate: {
       control: "date",
@@ -52,7 +36,6 @@ const meta: Meta<typeof DateTimeField> = {
         type: { summary: "date" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showDateSelect", truthy: true },
     },
     disablePastDates: {
       control: "boolean",
@@ -61,7 +44,6 @@ const meta: Meta<typeof DateTimeField> = {
         type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showDateSelect", truthy: true },
     },
     disableFutureDates: {
       control: "boolean",
@@ -70,24 +52,24 @@ const meta: Meta<typeof DateTimeField> = {
         type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showDateSelect", truthy: true },
     },
     dateFormat: {
       control: {
         type: "select",
       },
+      description: "The format of the date in the date picker",
       options: Object.keys(FORMAT_MAPPING),
       table: {
-        defaultValue: { summary: "yyyy-MM-dd" },
+        defaultValue: { summary: "YYYY-MM-DD" },
         type: {
           summary: "string",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showDateSelect", truthy: true },
     },
     weekStart: {
       control: "select",
+      description: "The first day of the week in the date picker",
       options: [
         "Monday",
         "Tuesday",
@@ -104,7 +86,6 @@ const meta: Meta<typeof DateTimeField> = {
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showDateSelect", truthy: true },
     },
     autoClose: {
       control: "boolean",
@@ -114,13 +95,13 @@ const meta: Meta<typeof DateTimeField> = {
         defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showDateSelect", truthy: true },
     },
     // Time picker props
     timeFormat: {
       control: {
         type: "select",
       },
+      description: "The format of the time in the time picker",
       table: {
         defaultValue: { summary: "hh:mm a" },
         type: {
@@ -128,7 +109,7 @@ const meta: Meta<typeof DateTimeField> = {
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showTimeSelect", truthy: true },
+
       options: ["hh:mm a", "HH:mm"],
       defaultValue: { summary: "hh:mm a" },
     },
@@ -141,34 +122,48 @@ const meta: Meta<typeof DateTimeField> = {
         type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
-      if: { arg: "showTimeSelect", truthy: true },
-      defaultValue: { summary: false },
     },
     timeZone: {
-      control: "text",
-      description: "Timezone",
-      if: { arg: "showTimeSelect", truthy: true },
+      control: {
+        type: "text",
+      },
+      description: "The timezone to display in the time picker",
+
       table: {
+        type: { summary: "string" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
     timeIntervals: {
-      control: "number",
-      description: "Date intervals",
-      if: { arg: "showTimeSelect", truthy: true },
+      description: "The interval between each time option",
+      control: {
+        type: "number",
+      },
+
+      type: "number",
+      min: 1,
+      max: 60,
       table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+
+      defaultValue: { summary: 1 },
+    },
+
+    includeContinent: {
+      control: "boolean",
+      description: "Show continent name in the timezone select",
+      table: {
+        type: { summary: "boolean" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    includeContinent: {
-      control: {
-        type: "boolean",
-        description: "Show continent name in the timezone select",
-        defaultValue: false,
-      },
-      if: { arg: "showTimeSelect", truthy: true },
+    placeholder: {
+      control: "text",
+      description: "The placeholder text for the date time picker",
       table: {
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        type: { summary: "string" },
+        category: StorybookControlCategory.DEFAULT,
       },
     },
   },
@@ -184,7 +179,7 @@ const meta: Meta<typeof DateTimeField> = {
     docs: {
       description: {
         component:
-          "A DateTimeField component that can be used as a [DatePicker](?path=/docs/document-engineering-fragments-date-picker-field--readme) or [TimePicker](?path=/docs/document-engineering-fragments-time-picker-field--readme) depending on the `showDateSelect` and `showTimeSelect` props.",
+          "A DateTimeField component that renders both a DatePicker and TimePicker functionality in a single component.",
       },
     },
   },
@@ -197,8 +192,6 @@ export const DateTimePicker: Story = {
   args: {
     label: "Date Time Picker Field",
     description: "This is a date time picker field",
-    showDateSelect: true,
-    showTimeSelect: true,
     placeholder: "2025/01/27 12:00",
   },
 };
