@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import type React from "react";
+import { useMemo, useState } from "react";
 import { createBlurEvent, getOffset } from "../date-time-field/utils.js";
-import { TimeFieldValue, TimePeriod } from "./type.js";
+import { type TimeFieldValue, type TimePeriod } from "./type.js";
 import {
   cleanTime,
   convert12hTo24h,

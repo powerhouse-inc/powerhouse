@@ -2,12 +2,12 @@ import { type ValidatorResult } from "#scalars";
 import { isValidNumber } from "../number-field/number-field-validations.js";
 import { type AmountFieldProps } from "./amount-field.js";
 import {
-  Amount,
-  AmountCrypto,
-  AmountCurrency,
-  AmountFiat,
-  AmountFieldPropsGeneric,
-  AmountValue,
+  type Amount,
+  type AmountCrypto,
+  type AmountCurrency,
+  type AmountFiat,
+  type AmountFieldPropsGeneric,
+  type AmountValue,
 } from "./types.js";
 import { isValidBigInt, isValidUnit } from "./utils.js";
 

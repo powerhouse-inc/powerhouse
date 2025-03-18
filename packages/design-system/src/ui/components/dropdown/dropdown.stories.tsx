@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { StorybookControlCategory } from "../../lib/storybook-arg-types.js";
+import { StorybookControlCategory } from "../../../scalars/lib/storybook-arg-types.js";
 import DropdownExample from "./dropdown-example.js";
 
 /**

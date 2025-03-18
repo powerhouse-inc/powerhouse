@@ -1,4 +1,4 @@
-import { TimePickerFieldProps } from "./time-picker-field.js";
+import { type TimePickerFieldProps } from "./time-picker-field.js";
 import {
   convert24hTo12h,
   getTime,
