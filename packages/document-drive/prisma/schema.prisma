@@ -25,6 +25,7 @@ model Document {
   operations          Operation[]
   initialState        String // json object with the scope as keys of the root object
   documentType        String
+  meta                String?
   syncronizationUnits SyncronizationUnit[]
 
   @@id([id, driveId])
