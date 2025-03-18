@@ -10,4 +10,3 @@ export * from "./select-field/index.js";
 export * from "./text-field/index.js";
 export * from "./textarea-field/index.js";
 export * from "./toggle-field/index.js";
-export * from "./tooltip/index.js";
