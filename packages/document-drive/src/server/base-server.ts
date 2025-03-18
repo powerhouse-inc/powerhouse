@@ -1965,4 +1965,4 @@ export type DocumentDriveServerMixin<I> = Mixin<
   I
 >;
 
-export const DocumentDriveServer = ReadModeServer;
+export const DocumentDriveServer = ReadModeServer(BaseDocumentDriveServer);
