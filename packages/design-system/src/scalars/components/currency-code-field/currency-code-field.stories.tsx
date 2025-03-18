@@ -36,15 +36,6 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    allowedTypes: {
-      control: "select",
-      description: "Either Crypto, Fiat or Both",
-      options: ["Fiat", "Crypto", "Both"],
-      table: {
-        defaultValue: { summary: "Both" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
     favoriteCurrencies: {
       control: "object",
       description:
