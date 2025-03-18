@@ -3,9 +3,9 @@ import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithForm } from "../../lib/testing.js";
 import { Form } from "../form/index.js";
-import { AIDField } from "./aid-field.js";
+import { OIDField } from "./oid-field.js";
 
-describe("AIDField Component", () => {
+describe("OIDField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   window.Element.prototype.scrollTo = vi.fn();
   window.matchMedia = vi.fn().mockImplementation((query) => ({
@@ -22,25 +22,21 @@ describe("AIDField Component", () => {
   const mockedOptions = [
     {
       icon: "Braces",
-      title: "Agent A",
+      title: "Object A",
       path: {
-        text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
-        url: "https://www.renown.id/",
+        text: "rwa-portfolio-a",
       },
-      value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e8a",
-      description: "Agent A description",
-      agentType: "Human Contributor",
+      value: "baefc2a4-f9a0-4950-8161-fd8d8cc7dea7",
+      description: "Object A description",
     },
     {
       icon: "Braces",
-      title: "Agent B",
+      title: "Object B",
       path: {
-        text: "renown.id/0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
-        url: "https://www.renown.id/",
+        text: "rwa-portfolio-b",
       },
-      value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
-      description: "Agent B description",
-      agentType: "Contributor Team",
+      value: "baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8",
+      description: "Object B description",
     },
   ];
 
@@ -53,10 +49,10 @@ describe("AIDField Component", () => {
 
   it("should match snapshot", () => {
     const { asFragment } = renderWithForm(
-      <AIDField
-        name="aid"
-        label="AID Field"
-        placeholder="did:ethr:"
+      <OIDField
+        name="oid"
+        label="OID Field"
+        placeholder="uuid"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -66,8 +62,8 @@ describe("AIDField Component", () => {
 
   it("should render with label", () => {
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
@@ -78,8 +74,8 @@ describe("AIDField Component", () => {
 
   it("should render with description", () => {
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         description="Test Description"
         fetchOptionsCallback={defaultGetOptions}
@@ -91,8 +87,8 @@ describe("AIDField Component", () => {
 
   it("should handle disabled state", () => {
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         disabled
         fetchOptionsCallback={defaultGetOptions}
@@ -104,30 +100,30 @@ describe("AIDField Component", () => {
 
   it("should display error messages", async () => {
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
-        errors={["Invalid AID format"]}
+        errors={["Invalid OID format"]}
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
     await waitFor(() =>
-      expect(screen.getByText("Invalid AID format")).toBeInTheDocument(),
+      expect(screen.getByText("Invalid OID format")).toBeInTheDocument(),
     );
   });
 
   it("should display warning messages", () => {
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
-        warnings={["AID may be deprecated"]}
+        warnings={["OID may be deprecated"]}
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
     );
-    expect(screen.getByText("AID may be deprecated")).toBeInTheDocument();
+    expect(screen.getByText("OID may be deprecated")).toBeInTheDocument();
   });
 
   it("should show autocomplete options", async () => {
@@ -136,8 +132,8 @@ describe("AIDField Component", () => {
     Math.random = vi.fn().mockReturnValue(1);
 
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
@@ -151,9 +147,7 @@ describe("AIDField Component", () => {
     await user.type(input, "test");
 
     await waitFor(() => {
-      expect(defaultGetOptions).toHaveBeenCalledWith("test", {
-        supportedNetworks: undefined,
-      });
+      expect(defaultGetOptions).toHaveBeenCalledWith("test", {});
     });
 
     await waitFor(() => {
@@ -167,8 +161,8 @@ describe("AIDField Component", () => {
 
   it("should have correct ARIA attributes", async () => {
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         required
         errors={["Error message"]}
@@ -185,8 +179,8 @@ describe("AIDField Component", () => {
 
   it("should show correct placeholders for different variants", () => {
     const { rerender } = renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
@@ -197,11 +191,10 @@ describe("AIDField Component", () => {
     expect(screen.getByText("Title not available")).toBeInTheDocument();
     expect(screen.getByText("Path not available")).toBeInTheDocument();
     expect(screen.getByText("Description not available")).toBeInTheDocument();
-    expect(screen.getByText("Agent type not available")).toBeInTheDocument();
 
     rerender(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         variant="withValueAndTitle"
         fetchOptionsCallback={defaultGetOptions}
@@ -214,13 +207,10 @@ describe("AIDField Component", () => {
     expect(
       screen.queryByText("Description not available"),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Agent type not available"),
-    ).not.toBeInTheDocument();
 
     rerender(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         variant="withValue"
         fetchOptionsCallback={defaultGetOptions}
@@ -233,37 +223,28 @@ describe("AIDField Component", () => {
     expect(
       screen.queryByText("Description not available"),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Agent type not available"),
-    ).not.toBeInTheDocument();
   });
 
   it("should handle autoComplete disabled", () => {
     renderWithForm(
-      <AIDField name="aid" label="Test Label" autoComplete={false} />,
+      <OIDField name="oid" label="Test Label" autoComplete={false} />,
     );
 
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
 
-  it("should validate AID format on submit", async () => {
+  it("should validate OID format on submit", async () => {
     const mockOnSubmit = vi.fn();
     const user = userEvent.setup();
-    const validAid = mockedOptions[1].value;
-    const invalidAid = "invalid-aid";
+    const validOID = mockedOptions[1].value;
+    const invalidOID = "invalid-oid";
 
     render(
       <Form onSubmit={mockOnSubmit}>
-        <AIDField
-          name="aid"
+        <OIDField
+          name="oid"
           label="Test Label"
-          supportedNetworks={[
-            {
-              chainId: "0x5",
-              name: "Goerli",
-            },
-          ]}
           fetchOptionsCallback={defaultGetOptions}
           fetchSelectedOptionCallback={defaultGetSelectedOption}
         />
@@ -273,21 +254,21 @@ describe("AIDField Component", () => {
 
     const input = screen.getByRole("combobox");
     await user.click(input);
-    await user.type(input, invalidAid);
+    await user.type(input, invalidOID);
 
     await user.click(screen.getByText("Submit"));
     await waitFor(() => {
       expect(mockOnSubmit).not.toHaveBeenCalled();
-      expect(screen.getByText(/Invalid DID format/)).toBeInTheDocument();
+      expect(screen.getByText(/Invalid OID format/)).toBeInTheDocument();
     });
 
     await user.clear(input);
-    await user.type(input, validAid);
+    await user.type(input, validOID);
 
     await user.click(screen.getByText("Submit"));
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
-        aid: validAid,
+        oid: validOID,
       });
     });
   });
@@ -298,8 +279,8 @@ describe("AIDField Component", () => {
     Math.random = vi.fn().mockReturnValue(1);
 
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
@@ -321,7 +302,6 @@ describe("AIDField Component", () => {
       expect(
         screen.getByText(mockedOptions[0].description),
       ).toBeInTheDocument();
-      expect(screen.getByText(mockedOptions[0].agentType)).toBeInTheDocument();
     });
 
     Math.random = originalRandom;
@@ -330,8 +310,8 @@ describe("AIDField Component", () => {
   it("should not invoke onChange on mount when it has a defaultValue", () => {
     const onChange = vi.fn();
     renderWithForm(
-      <AIDField
-        name="aid"
+      <OIDField
+        name="oid"
         label="Test Label"
         defaultValue={mockedOptions[0].value}
         fetchOptionsCallback={defaultGetOptions}
