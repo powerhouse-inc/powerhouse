@@ -62,9 +62,10 @@ const meta: Meta<typeof DateField> = {
       control: {
         type: "select",
       },
+      description: "The format of the date in the date picker",
       options: Object.keys(FORMAT_MAPPING),
       table: {
-        defaultValue: { summary: "yyyy-MM-dd" },
+        defaultValue: { summary: "YYYY-MM-DD" },
         type: {
           summary: "string",
         },
@@ -97,6 +98,14 @@ const meta: Meta<typeof DateField> = {
         type: { summary: "boolean" },
         defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    placeholder: {
+      control: "text",
+      description: "The placeholder text for the date picker",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.DEFAULT,
       },
     },
   },
