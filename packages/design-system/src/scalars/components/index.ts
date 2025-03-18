@@ -11,8 +11,6 @@ export * from "./fragments/index.js";
 export * from "./id-field/index.js";
 export * from "./number-field/index.js";
 export * from "./phid-field/index.js";
-export * from "./sidebar/index.js";
-export * from "./sidebar/subcomponents/sidebar-provider/index.js";
 export * from "./string-field/index.js";
 export * from "./time-picker-field/index.js";
 export * from "./types.js";
@@ -51,3 +49,46 @@ export {
    */
   DropdownTrigger,
 } from "../../ui/components/dropdown/index.js";
+
+export {
+  /**
+   * @deprecated Use the `Sidebar` component from the `@powerhousedao/design-system/ui` package instead.
+   * This component is deprecated and will be removed in a future version.
+   */
+  Sidebar,
+  /**
+   * @deprecated Use the `SidebarProvider` component from the `@powerhousedao/design-system/ui` package instead.
+   * This component is deprecated and will be removed in a future version.
+   */
+  SidebarProvider,
+  /**
+   * @deprecated Use the `useSidebar` hook from the `@powerhousedao/design-system/ui` package instead.
+   * This hook is deprecated and will be removed in a future version.
+   */
+  useSidebar,
+  /**
+   * @deprecated Use the `FlattenedNode` type from the `@powerhousedao/design-system/ui` package instead.
+   * This type is deprecated and will be removed in a future version.
+   */
+  type FlattenedNode,
+  /**
+   * @deprecated Use the `NodeStatus` type from the `@powerhousedao/design-system/ui` package instead.
+   * This type is deprecated and will be removed in a future version.
+   */
+  type NodeStatus,
+  /**
+   * @deprecated Use the `SidebarIcon` type from the `@powerhousedao/design-system/ui` package instead.
+   * This type is deprecated and will be removed in a future version.
+   */
+  type SidebarIcon,
+  /**
+   * @deprecated Use the `SidebarNode` type from the `@powerhousedao/design-system/ui` package instead.
+   * This type is deprecated and will be removed in a future version.
+   */
+  type SidebarNode,
+  /**
+   * @deprecated Use the `SidebarProps` type from the `@powerhousedao/design-system/ui` package instead.
+   * This type is deprecated and will be removed in a future version.
+   */
+  type SidebarProps,
+} from "../../ui/components/sidebar/index.js";

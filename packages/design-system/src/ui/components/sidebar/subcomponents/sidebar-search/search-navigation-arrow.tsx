@@ -1,4 +1,4 @@
-import { cn } from "../../../../lib/utils.js";
+import { cn } from "../../../../../scalars/lib/utils.js";
 
 interface SearchNavigationArrowProps {
   direction: "up" | "down";
