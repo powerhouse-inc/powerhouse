@@ -31,13 +31,8 @@ import {
   type SynchronizationUnitNotFoundError,
 } from "./error.js";
 import {
-  type IInternalTransmitter,
-  type IReceiver,
-} from "./listener/transmitter/internal.js";
-import {
   type ITransmitter,
-  type PullResponderTrigger,
-  type StrandUpdateSource,
+  type StrandUpdateSource
 } from "./listener/transmitter/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
@@ -337,6 +332,10 @@ type PublicPart<T> = Pick<T, PublicKeys<T>>;
 
 export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
+
+  // todo: remove this once we have DI
+  get listeners():IListenerManager;
+
   setDocumentModelModules(models: DocumentModelModule[]): void;
   getDrives(): Promise<string[]>;
   addDrive(
@@ -468,17 +467,6 @@ export interface IBaseDocumentDriveServer {
     syncUnitId: string,
   ): SyncStatus | SynchronizationUnitNotFoundError;
 
-  addInternalListener(
-    driveId: string,
-    receiver: IReceiver,
-    options: {
-      listenerId: string;
-      label: string;
-      block: boolean;
-      filter: ListenerFilter;
-    },
-  ): Promise<IInternalTransmitter>;
-
   /** Synchronization methods */
   getSynchronizationUnits(
     driveId: string,
@@ -511,18 +499,7 @@ export interface IBaseDocumentDriveServer {
   /** Internal methods **/
   getDocumentModelModules(): DocumentModelModule[];
 
-  getTransmitter(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ITransmitter | undefined>;
-
   clearStorage(): Promise<void>;
-
-  registerPullResponderTrigger(
-    id: string,
-    url: string,
-    options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
-  ): Promise<PullResponderTrigger>;
 
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
 }

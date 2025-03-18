@@ -140,6 +140,7 @@ export async function startServer(
           replacement: join(projectRoot, "node_modules", "react-dom"),
         },
       ],
+      dedupe: ["@powerhousedao/reactor-browser"],
     },
     plugins: [
       viteConnectDevStudioPlugin(true, studioPath),

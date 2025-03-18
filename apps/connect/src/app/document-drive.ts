@@ -3,12 +3,15 @@ import {
     BaseQueueManager,
     type DocumentDriveAction,
     type DriveInput,
+    generateUUID,
     type IDocumentDriveServer,
     InMemoryCache,
     logger,
+    PullResponderTransmitter,
     ReactorBuilder,
     type RemoteDriveOptions,
 } from 'document-drive';
+import { Listener } from 'document-drive/server/types';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import {
     type DocumentAction,
@@ -159,12 +162,58 @@ export default (
 
     ipcMain.handle(
         'documentDrive:registerPullResponderTrigger',
-        (
+        async (
             _e,
             drive: string,
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
-        ) => documentDrive.registerPullResponderTrigger(drive, url, options),
+        ) => {
+            const uuid = generateUUID();
+            const listener: Listener = {
+                driveId: drive,
+                listenerId: uuid,
+                block: false,
+                filter: {
+                    branch: options.pullFilter?.branch ?? [],
+                    documentId: options.pullFilter?.documentId ?? [],
+                    documentType: options.pullFilter?.documentType ?? [],
+                    scope: options.pullFilter?.scope ?? [],
+                },
+                system: false,
+                label: `Pullresponder #${uuid}`,
+                callInfo: {
+                    data: '',
+                    name: 'PullResponder',
+                    transmitterType: 'PullResponder',
+                },
+            };
+
+            // TODO: circular reference
+            // TODO: once we have DI, remove this and pass around
+            const listenerManager = documentDrive.listeners;
+            listener.transmitter = new PullResponderTransmitter(
+                listener,
+                listenerManager,
+            );
+
+            // set the listener on the manager directly (bypassing operations)
+            try {
+                await listenerManager.setListener(drive, listener);
+            } catch (error) {
+                throw new Error(`Listener couldn't be registered: ${error}`);
+            }
+
+            // for backwards compatibility: return everything but the transmitter
+            return {
+                driveId: listener.driveId,
+                listenerId: listener.listenerId,
+                label: listener.label,
+                block: listener.block,
+                system: listener.system,
+                filter: listener.filter,
+                callInfo: listener.callInfo,
+            };
+        },
     );
 
     function bindEvents(drive: IDocumentDriveServer) {

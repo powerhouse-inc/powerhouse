@@ -1,12 +1,12 @@
 import { Icon, type IconName } from "#powerhouse";
+import type { Meta, StoryObj } from "@storybook/react";
+import { withForm } from "../../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-  withForm,
-} from "#scalars";
-import type { Meta, StoryObj } from "@storybook/react";
+} from "../../../lib/storybook-arg-types.js";
 import { SelectField } from "./select-field.js";
 
 const meta: Meta<typeof SelectField> = {

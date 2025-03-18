@@ -1,13 +1,12 @@
+import { commonCryptoCurrencies, commonFiatCurrencies } from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import { withForm } from "../../lib/decorators.js";
 import {
-  commonCryptoCurrencies,
-  commonFiatCurrencies,
-  getDefaultArgTypes,
-  getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-  withForm,
-} from "#scalars";
-import type { Meta, StoryObj } from "@storybook/react";
+  getDefaultArgTypes,
+  getValidationArgTypes,
+} from "../../lib/storybook-arg-types.js";
 import { AmountField } from "./amount-field.js";
 const mappedFiatCurrencies = commonFiatCurrencies.map((currency) => ({
   ...currency,

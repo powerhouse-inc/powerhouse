@@ -25,6 +25,7 @@ function generateImportScript(packages: string[], targetDir: string) {
     const moduleName = `module${counter}`;
     moduleNames.push(moduleName);
     imports.push(`import * as ${moduleName} from '${packageName}';`);
+    imports.push(`import '${packageName}/style.css';`);
     counter++;
   }
 

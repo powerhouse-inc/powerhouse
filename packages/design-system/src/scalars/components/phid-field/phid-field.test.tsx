@@ -1,6 +1,7 @@
-import { Form, renderWithForm } from "#scalars";
+import { Form } from "#scalars";
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
+import { renderWithForm } from "../../lib/testing.js";
 import { PHIDField } from "./phid-field.js";
 
 describe("PHIDField Component", () => {

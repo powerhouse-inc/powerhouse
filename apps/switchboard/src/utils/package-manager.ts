@@ -14,11 +14,7 @@ import { getConfig } from "@powerhousedao/config/powerhouse";
 import { type Subgraph } from "@powerhousedao/reactor-api";
 import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
-import { existsSync, readFileSync, type StatWatcher, watchFile } from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
-
-const require = createRequire(import.meta.url);
+import { type StatWatcher, watchFile } from "node:fs";
 
 interface IPackagesManager {
   onDocumentModelsChange(
@@ -29,35 +25,6 @@ interface IPackagesManager {
 type IPackagesManagerOptions = { packages: string[] };
 
 export async function loadDependency(packageName: string, subPath: string) {
-  const packagePath = require.resolve(packageName, {
-    paths: [process.cwd()],
-  });
-
-  const packageDir = dirname(packagePath);
-  const packageRootPath = join(packageDir, "../../");
-  const packageJsonPath = join(packageRootPath, "package.json");
-
-  if (!existsSync(packageJsonPath)) {
-    throw new Error(`Could not find package.json for ${packageName}`);
-  }
-
-  // read exports map from package.json
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  // const exportsMap = packageJson.exports?.[subPath || "."];
-
-  // if (!exportsMap) {
-  //   throw new Error(`No exports found for ${packageName}/${subPath}`);
-  // }
-
-  // use the "import" field explicitly
-  // const esmPath = join(
-  //   packageRootPath,
-  //   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-  //   exportsMap.import || exportsMap.default || exportsMap,
-  // );
-
   const module = (await import(`${packageName}/${subPath}`)) as unknown;
   return module;
 }

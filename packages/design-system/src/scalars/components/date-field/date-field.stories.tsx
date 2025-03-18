@@ -1,11 +1,10 @@
+import type { Meta, StoryObj } from "@storybook/react";
+import { withForm, withTimestampsAsISOStrings } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-  withForm,
-  withTimestampsAsISOStrings,
-} from "#scalars";
-import type { Meta, StoryObj } from "@storybook/react";
+} from "../../lib/storybook-arg-types.js";
 import { FORMAT_MAPPING } from "../date-time-field/utils.js";
 import { DateField } from "./date-field.js";
 

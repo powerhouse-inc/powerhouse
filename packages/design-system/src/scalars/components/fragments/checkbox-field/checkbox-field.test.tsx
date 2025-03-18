@@ -1,6 +1,6 @@
-import { renderWithForm } from "#scalars";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../../lib/testing.js";
 import { CheckboxField } from "./checkbox-field.js";
 
 describe("CheckboxField", () => {

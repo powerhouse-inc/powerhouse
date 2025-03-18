@@ -1,3 +1,28 @@
+## 1.30.0 (2025-03-17)
+
+### 🚀 Features
+
+- ignore .cursor ([ae05844d](https://github.com/powerhouse-inc/powerhouse/commit/ae05844d))
+- **scalars:** support trigger submit form programatically ([16e2773a](https://github.com/powerhouse-inc/powerhouse/commit/16e2773a))
+- **scalars:** add the icons and install menu dropdown ([95ee538d](https://github.com/powerhouse-inc/powerhouse/commit/95ee538d))
+- **scalars:** uilgu;gou'ihp ([793770e9](https://github.com/powerhouse-inc/powerhouse/commit/793770e9))
+- **scalars:** validate DID format in AID field ([b6865b6f](https://github.com/powerhouse-inc/powerhouse/commit/b6865b6f))
+
+### 🩹 Fixes
+
+- increase max header length in commit lint ([90a28de7](https://github.com/powerhouse-inc/powerhouse/commit/90a28de7))
+- regenerate pnpm-lock file ([d208e710](https://github.com/powerhouse-inc/powerhouse/commit/d208e710))
+- **scalars:** improve showErrorOnBlur behavior & callback functions mocks ([283d9731](https://github.com/powerhouse-inc/powerhouse/commit/283d9731))
+- **scalars:** navigating/expanding/collapsing to new nodes while searching ([71c3a5ce](https://github.com/powerhouse-inc/powerhouse/commit/71c3a5ce))
+- **sclars:** dropdown export ([883649f4](https://github.com/powerhouse-inc/powerhouse/commit/883649f4))
+
+### ❤️ Thank You
+
+- alejandrocabriales
+- Benjamin Jordan
+- nestor
+- Yasiel Cabrera
+
 ## 1.29.1 (2025-03-13)
 
 ### 🩹 Fixes

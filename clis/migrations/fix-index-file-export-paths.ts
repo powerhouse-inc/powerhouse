@@ -11,20 +11,27 @@ function processFile(filePath: string): void {
   try {
     const content = readFileSync(filePath, "utf-8");
 
-    // Simple regex to match imports and exports
-    const regex = /(import|export)[\s\S]*?from\s+['"]([^'"]+)['"]/g;
+    // Updated regex to capture the entire import statement including any existing type assertion
+    const regex =
+      /(import|export)[\s\S]*?from\s+['"]([^'"]+)['"](\s*with\s*{\s*type:\s*"json"\s*}\s*)?;?/g;
 
     // Replace all matches
     const newContent = content.replace(
       regex,
-      (match, statement: string, path: string) => {
+      (match, statement: string, path: string, typeAssertion: string) => {
+        // Skip GraphQL files entirely
+        if (path.endsWith(".graphql")) {
+          return match;
+        }
+
         // Handle JSON imports
         if (path.endsWith(".json")) {
-          // Check if type assertion is already present
-          if (!match.includes('with { type: "json" }')) {
-            return `${match} with { type: "json" }`;
+          // If there's already a type assertion, return the original match
+          if (typeAssertion) {
+            return match;
           }
-          return match;
+          // Add type assertion if it's not present
+          return `${match.replace(/;?\s*$/, "")} with { type: "json" };`;
         }
 
         // Only process relative imports

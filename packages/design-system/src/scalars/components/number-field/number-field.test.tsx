@@ -1,8 +1,7 @@
 import { Button } from "#powerhouse";
-import { renderWithForm } from "#scalars";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-
+import { renderWithForm } from "../../lib/testing.js";
 import { Form } from "../form/form.js";
 import { NumberField } from "./number-field.js";
 

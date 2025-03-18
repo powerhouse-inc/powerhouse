@@ -281,7 +281,7 @@ export class DriveSubgraph extends Subgraph {
           throw new Error("Drive ID is required");
         }
 
-        // Create the transmitter for the PullResponder
+        // Create the listener and transmitter
         const uuid = generateUUID();
         const listener:Listener = {
           driveId: ctx.driveId,
@@ -297,13 +297,12 @@ export class DriveSubgraph extends Subgraph {
           },
         };
         
-
         // TODO: circular reference
         // TODO: once we have DI, remove this and pass around
-        const listenerManager = (this.reactor as any).getListenerManager();
+        const listenerManager = this.reactor.listeners;
         listener.transmitter = new PullResponderTransmitter(listener, listenerManager);
 
-        // Use the new ephemeral listener method instead of queueDriveAction
+        // set the listener on the manager directly (bypassing operations)
         try {
           await listenerManager.setListener(ctx.driveId, listener);
         } catch (error) {

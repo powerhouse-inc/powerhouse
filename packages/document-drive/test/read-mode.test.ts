@@ -7,6 +7,7 @@ import {
   DocumentModelState,
   PHDocument,
 } from "document-model";
+import { GraphQLError } from "graphql";
 import { beforeEach, describe, it, vi, vitest } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 import { addFile, updateNode } from "../src/drive-document-model/gen/creators";
@@ -530,7 +531,7 @@ describe("Read mode methods", () => {
     await expect(
       readModeService.addReadDrive(context.url),
     ).rejects.toThrowError(
-      `Drive "${readDriveId}" not found at ${context.url}`,
+      new ReadDriveNotFoundError(readDriveId),
     );
   });
 
@@ -590,15 +591,15 @@ describe("Read mode methods", () => {
       }),
     }));
 
-    await expect(
-      readModeService.fetchDocument(
+    try {
+      await readModeService.fetchDocument(
         readDriveId,
         "document-id",
         "powerhouse/document-drive",
-      ),
-    ).rejects.toThrowError(
-      'Cannot query field "revisio" on type "IDocument". Did you mean "revision"?',
-    );
+      );
+    } catch (error) {
+      expect(error).toStrictEqual(new GraphQLError('Cannot query field "revisio" on type "IDocument". Did you mean "revision"?'));
+    }
 
     fetchMocker.mockOnceIf(context.url, () => ({
       headers: { "content-type": "application/json; charset=utf-8" },
@@ -658,7 +659,7 @@ describe("Read mode methods", () => {
     await expect(
       readModeService.addReadDrive(context.url),
     ).rejects.toThrowError(
-      `Drive "${readDriveId}" not found at ${context.url}`,
+      new GraphQLError(`Drive "${readDriveId}" not found at ${context.url}`),
     );
   });
 

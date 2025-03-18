@@ -154,6 +154,9 @@ export default defineConfig(({ mode }) => {
             include: ['did-key-creator'],
             exclude: externalAndExclude,
         },
+        resolve: {
+            dedupe: ['@powerhousedao/reactor-browser'],
+        },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),
             __REQUIRES_HARD_REFRESH__: JSON.stringify(REQUIRES_HARD_REFRESH),
