@@ -19,7 +19,6 @@ export interface InputBaseProps<T> {
   errors?: ErrorMessage[];
   warnings?: ErrorMessage[];
   className?: string;
-  autoFocus?: boolean; // is it required??
 }
 
 export interface FieldErrorHandling {
