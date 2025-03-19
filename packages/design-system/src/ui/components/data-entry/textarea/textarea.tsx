@@ -1,16 +1,16 @@
 import { cn, sharedValueTransformers } from "#scalars";
 import React, { useEffect, useId, useMemo, useRef } from "react";
 import { useResizeObserver } from "usehooks-ts";
-import type { InputBaseProps } from "../../types.js";
-import { CharacterCounter } from "../character-counter/index.js";
-import { FormDescription } from "../form-description/index.js";
-import { FormGroup } from "../form-group/index.js";
-import { FormLabel } from "../form-label/index.js";
-import { FormMessageList } from "../form-message/index.js";
-import type { CommonTextProps } from "../text-field/types.js";
+import { CharacterCounter } from "../../../../scalars/components/fragments/character-counter/index.js";
+import { FormDescription } from "../../../../scalars/components/fragments/form-description/index.js";
+import { FormGroup } from "../../../../scalars/components/fragments/form-group/index.js";
+import { FormLabel } from "../../../../scalars/components/fragments/form-label/index.js";
+import { FormMessageList } from "../../../../scalars/components/fragments/form-message/index.js";
 import ValueTransformer, {
   type TransformerType,
-} from "../value-transformer/index.js";
+} from "../../../../scalars/components/fragments/value-transformer/index.js";
+import type { InputBaseProps } from "../../../../scalars/components/types.js";
+import type { CommonTextProps } from "../text-input/types.js";
 
 type TextareaBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,

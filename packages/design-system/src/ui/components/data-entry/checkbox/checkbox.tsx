@@ -1,8 +1,8 @@
 import { cn } from "#scalars";
 import React, { useId } from "react";
-import type { InputBaseProps } from "../../types.js";
-import { FormLabel } from "../form-label/index.js";
-import { FormMessageList } from "../form-message/index.js";
+import { FormLabel } from "../../../../scalars/components/fragments/form-label/index.js";
+import { FormMessageList } from "../../../../scalars/components/fragments/form-message/index.js";
+import type { InputBaseProps } from "../../../../scalars/components/types.js";
 import { CheckboxBase, type CheckboxValue } from "./checkbox-base.js";
 
 type CheckboxBaseProps = Omit<

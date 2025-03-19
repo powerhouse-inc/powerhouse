@@ -3,7 +3,8 @@ import { type Decorator } from "@storybook/react";
 import { type Args, type DecoratorFunction } from "@storybook/types";
 import { useCallback, useId, useRef, useState } from "react";
 import { type UseFormReturn } from "react-hook-form";
-import { Checkbox, Form } from "../components/index.js";
+import { Checkbox } from "../../ui/components/data-entry/checkbox/checkbox.js";
+import { Form } from "../components/index.js";
 
 function _isValidRegex(pattern: unknown): boolean {
   try {
