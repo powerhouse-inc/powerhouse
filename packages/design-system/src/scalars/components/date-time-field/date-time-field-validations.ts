@@ -14,7 +14,13 @@ import {
 } from "./utils.js";
 
 export const dateTimeFieldValidations =
-  ({ dateFormat, minDate, maxDate }: DateFieldProps) =>
+  ({
+    dateFormat,
+    minDate,
+    maxDate,
+    disablePastDates,
+    disableFutureDates,
+  }: DateFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;
@@ -59,6 +65,19 @@ export const dateTimeFieldValidations =
         return `Date must be on or before ${formattedMaxDate}.`;
       }
     }
-
+    if (disablePastDates) {
+      const today = new Date();
+      if (validDate < today) {
+        const formattedToday = format(today, "dd/MM/yyyy");
+        return `Date must be on or after ${formattedToday}.`;
+      }
+    }
+    if (disableFutureDates) {
+      const today = new Date();
+      if (validDate > today) {
+        const formattedToday = format(today, "dd/MM/yyyy");
+        return `Date must be on or before ${formattedToday}.`;
+      }
+    }
     return true;
   };

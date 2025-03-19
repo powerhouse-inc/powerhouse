@@ -13,7 +13,13 @@ import {
 } from "../date-time-field/utils.js";
 
 export const validateDatePicker =
-  ({ dateFormat, minDate, maxDate }: DateFieldProps) =>
+  ({
+    dateFormat,
+    minDate,
+    maxDate,
+    disablePastDates,
+    disableFutureDates,
+  }: DateFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;
@@ -45,6 +51,20 @@ export const validateDatePicker =
       if (validDate > maxDateValue) {
         const formattedMaxDate = format(maxDateValue, "dd/MM/yyyy");
         return `Date must be on or before ${formattedMaxDate}.`;
+      }
+    }
+    if (disablePastDates) {
+      const today = new Date();
+      if (validDate < today) {
+        const formattedToday = format(today, "dd/MM/yyyy");
+        return `Date must be on or after ${formattedToday}.`;
+      }
+    }
+    if (disableFutureDates) {
+      const today = new Date();
+      if (validDate > today) {
+        const formattedToday = format(today, "dd/MM/yyyy");
+        return `Date must be on or before ${formattedToday}.`;
       }
     }
     return true;
