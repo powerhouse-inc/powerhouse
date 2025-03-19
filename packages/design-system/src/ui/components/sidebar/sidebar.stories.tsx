@@ -15,14 +15,16 @@ import { type SidebarNode } from "./types.js";
  * If neither source provides nodes, the sidebar will render empty.
  *
  * Usage:
- * ```
+ *
+ * ```tsx
  * <SidebarProvider nodes={nodes}>
  *   <Sidebar {...sidebarProps} />
  * </SidebarProvider>
  * ```
  *
  * The sidebar nodes are defined as follows:
- * ```
+ *
+ * ```tsx
  * type SidebarNode = {
  *   id: string;
  *   title: string;
@@ -61,7 +63,8 @@ import { type SidebarNode } from "./types.js";
  *  - Data: `{ isSidebarOpen: boolean }`
  *
  * ### Example of listening to the events
- * ```
+ *
+ * ```tsx
  * useEffect(() => {
  *   const onResize = (event: Event) => {
  *     console.log("sidebar:resize", event);
@@ -78,7 +81,7 @@ import { type SidebarNode } from "./types.js";
  * ```
  */
 const meta: Meta<typeof Sidebar> = {
-  title: "Document Engineering/Complex Components/Sidebar",
+  title: "Document Engineering/Navigation/Sidebar",
   component: Sidebar,
   tags: ["autodocs"],
   decorators: [

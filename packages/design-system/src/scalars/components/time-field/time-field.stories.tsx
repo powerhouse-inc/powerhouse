@@ -8,7 +8,7 @@ import {
 import { TimeField } from "./time-field.js";
 
 const meta: Meta<typeof TimeField> = {
-  title: "Document Engineering/Simple Components/Time Field",
+  title: "Document Engineering/Scalars/Time Field",
   component: TimeField,
   parameters: {
     layout: "centered",
