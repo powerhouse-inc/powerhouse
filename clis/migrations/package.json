@@ -1,9 +1,3 @@
 {
-  "name": "@powerhousedao/migrations",
-  "version": "1.5.0",
-  "description": "Code migrations for the monorepo",
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "access": "public"
+  "type": "module"
 }
