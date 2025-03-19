@@ -7,6 +7,7 @@ import {
 } from "../../lib/storybook-arg-types.js";
 import { CurrencyCodeField } from "./currency-code-field.js";
 import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults.js";
+import { CurrencyType } from "./types.js";
 
 const meta: Meta<typeof CurrencyCodeField> = {
   title: "Document Engineering/Simple Components/Currency Code Field",
@@ -66,11 +67,20 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    currencyType: {
+      control: "select",
+      description: "Type of currency to display",
+      options: ["fiat", "crypto", "all"],
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
 
   args: {
     name: "currency-code-field",
     placeholder: "Select a currency",
+    favoriteCurrencies: [],
   },
 };
 
@@ -122,5 +132,13 @@ export const Disabled: Story = {
     value: "EUR",
     disabled: true,
     currencies: commonFiatCurrencies,
+    currencyType: CurrencyType.FIAT,
   },
 };
+
+// export const DefaultCurrencies: Story = {
+//   args: {
+//     label: "Currency",
+//     currencyType: CurrencyType.CRYPTO,
+//   },
+// };
