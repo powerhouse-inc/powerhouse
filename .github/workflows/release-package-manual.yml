@@ -74,7 +74,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish to npm
-        run: pnpm nx release publish --projects='apps/connect,packages/*,clis/*' --tag=${{ inputs.tag }}
+        run: pnpm nx release publish --projects='apps/*,packages/*,clis/*' --tag=${{ inputs.tag }}
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
