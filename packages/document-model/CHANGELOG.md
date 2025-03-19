@@ -1,3 +1,14 @@
+## 2.27.1 (2025-03-19)
+
+### 🩹 Fixes
+
+- roll back replace plugin ([6c4781da](https://github.com/powerhouse-inc/powerhouse/commit/6c4781da))
+- **codegen:** update validation plugin name ([18de5641](https://github.com/powerhouse-inc/powerhouse/commit/18de5641))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 2.27.0 (2025-03-19)
 
 ### 🚀 Features
