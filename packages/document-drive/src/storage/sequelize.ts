@@ -23,6 +23,20 @@ export class SequelizeStorage implements IDriveStorage, IDocumentStorage {
     this.db = new Sequelize(options);
   }
 
+  async exists(id: string): Promise<boolean> {
+    const Document = this.db.models.document;
+    if (!Document) {
+      throw new Error("Document model not found");
+    }
+    const count = await Document.count({
+      where: {
+        id: id,
+      },
+    });
+
+    return count > 0;
+  }
+
   public syncModels() {
     const Drive = this.db.define("drive", {
       slug: {
@@ -282,20 +296,6 @@ export class SequelizeStorage implements IDriveStorage, IDocumentStorage {
       return id;
     });
     return ids;
-  }
-
-  async exists(id: string): Promise<boolean> {
-    const Document = this.db.models.document;
-    if (!Document) {
-      throw new Error("Document model not found");
-    }
-    const count = await Document.count({
-      where: {
-        id: id,
-      },
-    });
-
-    return count > 0;
   }
 
   async checkDocumentExists(drive: string, id: string): Promise<boolean> {

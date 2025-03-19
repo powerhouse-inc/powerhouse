@@ -729,6 +729,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await addDrive("1", "slug1");
     await addDrive("2", "slug2");
     await addDrive("3", "slug3");
+
+    // add drive with the same slug as the first drive, which should overwrite it
     await addDrive("4", "slug1");
 
     let drive = await server.getDriveBySlug("slug1");
