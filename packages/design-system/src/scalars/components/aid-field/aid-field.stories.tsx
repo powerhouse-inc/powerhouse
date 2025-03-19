@@ -10,7 +10,7 @@ import { AIDField } from "./aid-field.js";
 import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
 
 const meta: Meta<typeof AIDField> = {
-  title: "Document Engineering/Simple Components/AID Field",
+  title: "Document Engineering/Scalars/AID Field",
   component: AIDField,
   decorators: [
     withForm,
