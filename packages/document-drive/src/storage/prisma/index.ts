@@ -23,7 +23,11 @@ import {
 } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { logger } from "../../utils/logger.js";
-import { type IDriveStorage, type IStorageDelegate } from "../types.js";
+import {
+  IDocumentStorage,
+  type IDriveStorage,
+  type IStorageDelegate,
+} from "../types.js";
 
 export * from "./factory.js";
 
@@ -92,7 +96,7 @@ type ExtendedPrismaClient = ReturnType<
   typeof getRetryTransactionsClient<PrismaClient>
 >;
 
-export class PrismaStorage implements IDriveStorage {
+export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   private db: ExtendedPrismaClient;
   private delegate: IStorageDelegate | undefined;
 
@@ -334,6 +338,16 @@ export class PrismaStorage implements IDriveStorage {
     });
 
     return docs.map((doc) => doc.id);
+  }
+
+  async exists(documentId: string) {
+    const count = await this.db.document.count({
+      where: {
+        id: documentId,
+      },
+    });
+
+    return count > 0;
   }
 
   async checkDocumentExists(driveId: string, id: string) {

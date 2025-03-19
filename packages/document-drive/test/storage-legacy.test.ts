@@ -1,3 +1,4 @@
+import { PrismaClient } from "@prisma/client";
 import path from "path";
 import { describe, it } from "vitest";
 import {
@@ -9,9 +10,11 @@ import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
+import { PrismaStorage } from "../src/storage/prisma";
 import { SequelizeStorage } from "../src/storage/sequelize";
 import { IStorage } from "../src/storage/types";
-const PG_URL = process.env.PG_URL || "postgresql://localhost:5432/postgres";
+
+const PG_URL = process.env.PG_URL || "postgresql://localhost:5444/postgres";
 
 const documentModels = [
   documentModelDocumentModelModule,
@@ -40,6 +43,7 @@ const storageImplementations: [string, () => Promise<IStorage>][] = [
     },
   ],
   ["Browser Storage", () => Promise.resolve(new BrowserStorage())],
+  ["PrismaStorage", async () => new PrismaStorage(new PrismaClient())],
 ] as unknown as [string, () => Promise<IStorage>][];
 
 describe.each(storageImplementations)("%s", async (_, buildStorage) => {

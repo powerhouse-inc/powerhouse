@@ -17,13 +17,6 @@ import stringify from "json-stringify-deterministic";
 import path from "path";
 import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
-type FSError = {
-  errno: number;
-  code: string;
-  syscall: string;
-  path: string;
-};
-
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
   documentIds: string[];
@@ -43,45 +36,29 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     ensureDir(this.basePath);
   }
 
-  private _buildDocumentPath(documentId: string) {
-    return `${this.basePath}/document-${documentId}.json`;
-  }
-
-  private _buildDrivePath(driveId: string) {
-    return `${this.basePath}/drive-${driveId}.json`;
-  }
-
-  private _buildManifestPath(driveId: string) {
-    return `${this.basePath}/manifest-${driveId}.json`;
-  }
-
-  private async getDriveManifest(driveId: string): Promise<DriveManifest> {
-    const manifestPath = this._buildManifestPath(driveId);
-    try {
-      const content = readFileSync(manifestPath, { encoding: "utf-8" });
-      return JSON.parse(content) as DriveManifest;
-    } catch (error) {
-      // Return empty manifest if file doesn't exist
-      return { documentIds: [] };
-    }
-  }
-
-  private async updateDriveManifest(
-    driveId: string,
-    manifest: DriveManifest,
-  ): Promise<void> {
-    const manifestPath = this._buildManifestPath(driveId);
-    writeFileSync(manifestPath, stringify(manifest), { encoding: "utf-8" });
-  }
-
-  async getDocuments(drive: string) {
-    const manifest = await this.getDriveManifest(drive);
-    return manifest.documentIds;
-  }
+  ////////////////////////////////
+  // IDocumentStorage
+  ////////////////////////////////
 
   exists(documentId: string): Promise<boolean> {
     const documentExists = existsSync(this._buildDocumentPath(documentId));
     return Promise.resolve(documentExists);
+  }
+
+  async create(documentId: string, document: PHDocument) {
+    const documentPath = this._buildDocumentPath(documentId);
+    writeFileSync(documentPath, stringify(document), {
+      encoding: "utf-8",
+    });
+  }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
+
+  async getDocuments(drive: string) {
+    const manifest = await this.getDriveManifest(drive);
+    return manifest.documentIds;
   }
 
   checkDocumentExists(drive: string, id: string): Promise<boolean> {
@@ -329,5 +306,40 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
       }
       return acc;
     }, []);
+  }
+
+  ////////////////////////////////
+  // Private
+  ////////////////////////////////
+
+  private _buildDocumentPath(documentId: string) {
+    return `${this.basePath}/document-${documentId}.json`;
+  }
+
+  private _buildDrivePath(driveId: string) {
+    return `${this.basePath}/drive-${driveId}.json`;
+  }
+
+  private _buildManifestPath(driveId: string) {
+    return `${this.basePath}/manifest-${driveId}.json`;
+  }
+
+  private async getDriveManifest(driveId: string): Promise<DriveManifest> {
+    const manifestPath = this._buildManifestPath(driveId);
+    try {
+      const content = readFileSync(manifestPath, { encoding: "utf-8" });
+      return JSON.parse(content) as DriveManifest;
+    } catch (error) {
+      // Return empty manifest if file doesn't exist
+      return { documentIds: [] };
+    }
+  }
+
+  private async updateDriveManifest(
+    driveId: string,
+    manifest: DriveManifest,
+  ): Promise<void> {
+    const manifestPath = this._buildManifestPath(driveId);
+    writeFileSync(manifestPath, stringify(manifest), { encoding: "utf-8" });
   }
 }

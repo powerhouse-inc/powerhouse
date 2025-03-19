@@ -81,7 +81,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     vi.useRealTimers();
 
     if (storageName === "FilesystemStorage") {
-      //return fs.rm(FileStorageDir, { recursive: true, force: true });
+      return fs.rm(FileStorageDir, { recursive: true, force: true });
     } else if (storageName === "BrowserStorage") {
       return (await buildStorage()).clearStorage?.();
     } else if (storageName === "PrismaStorage") {
