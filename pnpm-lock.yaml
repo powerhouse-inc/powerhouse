@@ -709,6 +709,9 @@ importers:
       execa:
         specifier: ^8.0.1
         version: 8.0.1
+      graphql-codegen-typescript-validation-schema:
+        specifier: ^0.17.1
+        version: 0.17.1(encoding@0.1.13)(graphql@16.10.0)
       hygen:
         specifier: ^6.2.11
         version: 6.2.11
@@ -725,9 +728,6 @@ importers:
       graphql:
         specifier: ^16.8.1
         version: 16.10.0
-      graphql-codegen-typescript-validation-schema:
-        specifier: ^0.17.1
-        version: 0.17.1(encoding@0.1.13)(graphql@16.10.0)
       husky:
         specifier: ^8.0.3
         version: 8.0.3
@@ -10863,7 +10863,6 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
-    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
