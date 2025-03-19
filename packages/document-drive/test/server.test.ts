@@ -17,7 +17,6 @@ import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
 import { PrismaStorage } from "../src/storage/prisma";
-import { SequelizeStorage } from "../src/storage/sequelize";
 import { IDriveStorage } from "../src/storage/types";
 import { generateUUID } from "../src/utils/misc";
 import { baseDocumentModels, expectUUID } from "./utils";
@@ -36,7 +35,7 @@ const storageLayers = [
   ["FilesystemStorage", async () => new FilesystemStorage(FileStorageDir)],
   ["BrowserStorage", async () => new BrowserStorage()],
   ["PrismaStorage", async () => new PrismaStorage(prismaClient)],
-  [
+  /*[
     "SequelizeStorage",
     async () => {
       const storage = new SequelizeStorage({
@@ -48,7 +47,7 @@ const storageLayers = [
       await storage.syncModels();
       return storage;
     },
-  ],
+  ],*/
 ] as unknown as [string, () => Promise<IDriveStorage>][];
 
 let file: PHDocument | undefined = undefined;

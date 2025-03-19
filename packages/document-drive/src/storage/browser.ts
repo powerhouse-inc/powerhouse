@@ -39,17 +39,9 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     );
   }
 
-  buildDriveKey(driveId: string) {
-    return `${BrowserStorage.DRIVES_KEY}${BrowserStorage.SEP}${driveId}`;
-  }
-
-  buildDocumentKey(documentId: string) {
-    return `${BrowserStorage.DOCUMENT_KEY}${BrowserStorage.SEP}${documentId}`;
-  }
-
-  buildManifestKey(driveId: string) {
-    return `${BrowserStorage.MANIFEST_KEY}${BrowserStorage.SEP}${driveId}`;
-  }
+  ////////////////////////////////
+  // IDocumentStorage
+  ////////////////////////////////
 
   async exists(documentId: string): Promise<boolean> {
     const db = await this.db;
@@ -59,6 +51,15 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
 
     return !!document;
   }
+
+  async create(documentId: string, document: PHDocument): Promise<void> {
+    const db = await this.db;
+    await db.setItem(this.buildDocumentKey(documentId), document);
+  }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
 
   checkDocumentExists(drive: string, documentId: string): Promise<boolean> {
     return this.exists(documentId);
@@ -99,8 +100,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async createDocument(drive: string, id: string, document: PHDocument) {
-    const db = await this.db;
-    await db.setItem(this.buildDocumentKey(id), document);
+    await this.create(id, document);
 
     // Update the drive manifest to include this document
     const manifest = await this.getDriveManifest(drive);
@@ -306,5 +306,21 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
         migratedDocument,
       );
     }
+  }
+
+  ////////////////////////////////
+  // Private methods
+  ////////////////////////////////
+
+  buildDriveKey(driveId: string) {
+    return `${BrowserStorage.DRIVES_KEY}${BrowserStorage.SEP}${driveId}`;
+  }
+
+  buildDocumentKey(documentId: string) {
+    return `${BrowserStorage.DOCUMENT_KEY}${BrowserStorage.SEP}${documentId}`;
+  }
+
+  buildManifestKey(driveId: string) {
+    return `${BrowserStorage.MANIFEST_KEY}${BrowserStorage.SEP}${driveId}`;
   }
 }

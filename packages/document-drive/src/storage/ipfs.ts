@@ -16,71 +16,59 @@ import { type Helia } from "helia";
 import stringify from "json-stringify-deterministic";
 import { IDocumentStorage, IStorage } from "./types.js";
 
+// Interface for drive manifest that tracks document IDs in a drive
+interface DriveManifest {
+  documentIds: string[];
+}
+
 export class IPFSStorage implements IStorage, IDocumentStorage {
   private fs: MFS;
-  private static DRIVES_DIR = "/drives";
 
   constructor(helia: Helia) {
     this.fs = mfs(helia);
   }
 
-  private async _touchDrivesDir(): Promise<void> {
-    // Ensure drives directory exists
-    try {
-      await this.fs.stat(IPFSStorage.DRIVES_DIR);
-    } catch (error) {
-      // If directory doesn't exist, create it
-      await this.fs.mkdir(IPFSStorage.DRIVES_DIR);
-    }
-  }
-
-  private _buildDocumentPath(documentId: string): string {
-    return `/document-${documentId}.json`;
-  }
+  ////////////////////////////////
+  // IDocumentStorage
+  ////////////////////////////////
 
   async exists(documentId: string): Promise<boolean> {
     try {
       await this.fs.stat(this._buildDocumentPath(documentId));
+
       return true;
     } catch (error) {
-      return false;
+      //
     }
+
+    try {
+      await this.fs.stat(this._buildDrivePath(documentId));
+      return true;
+    } catch (error) {
+      //
+    }
+
+    return false;
   }
+
+  async create(documentId: string, document: PHDocument): Promise<void> {
+    await this.fs.writeBytes(
+      new TextEncoder().encode(stringify(document)),
+      this._buildDocumentPath(documentId),
+    );
+  }
+
+  ////////////////////////////////s
+  // IDriveStorage
+  ////////////////////////////////
 
   async checkDocumentExists(drive: string, id: string): Promise<boolean> {
     return this.exists(id);
   }
 
   async getDocuments(drive: string): Promise<string[]> {
-    try {
-      // Create drive directory if it doesn't exist
-      const driveDirPath = `/${drive}`;
-      try {
-        await this.fs.stat(driveDirPath);
-      } catch (error) {
-        // Directory doesn't exist
-        return [];
-      }
-
-      // List all files in the drive directory
-      const files = [];
-      for await (const entry of this.fs.ls(driveDirPath)) {
-        if (entry.type === "file" && entry.name.endsWith(".json")) {
-          try {
-            const documentId = entry.name.replace(".json", "");
-            // Validate that this is a document by attempting to get it
-            await this.getDocument(drive, documentId);
-            files.push(documentId);
-          } catch {
-            /* Ignore invalid document */
-          }
-        }
-      }
-      return files;
-    } catch (error) {
-      // If drive directory doesn't exist, return empty array
-      return [];
-    }
+    const manifest = await this.getDriveManifest(drive);
+    return manifest.documentIds;
   }
 
   async getDocument<TDocument extends PHDocument>(
@@ -89,12 +77,15 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   ): Promise<TDocument> {
     try {
       const documentPath = this._buildDocumentPath(id);
+
       const chunks = [];
       for await (const chunk of this.fs.cat(documentPath)) {
         chunks.push(chunk);
       }
+
       const buffer = Buffer.concat(chunks);
       const content = new TextDecoder().decode(buffer);
+
       return JSON.parse(content) as TDocument;
     } catch (error) {
       throw new Error(`Document with id ${id} not found`);
@@ -106,22 +97,41 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     id: string,
     document: PHDocument,
   ): Promise<void> {
-    const documentPath = this._buildDocumentPath(id);
-    const documentContent = stringify(document);
-    const documentBuffer = new TextEncoder().encode(documentContent);
+    await this.create(id, document);
 
-    // Ensure drive directory exists
-    try {
-      await this.fs.stat(`/${drive}`);
-    } catch (error) {
-      await this.fs.mkdir(`/${drive}`);
+    // Update the drive manifest to include this document
+    const manifest = await this.getDriveManifest(drive);
+    if (!manifest.documentIds.includes(id)) {
+      manifest.documentIds.push(id);
+      await this.updateDriveManifest(drive, manifest);
     }
 
-    await this.fs.writeBytes(documentBuffer, documentPath);
     return Promise.resolve();
   }
 
   async deleteDocument(drive: string, id: string): Promise<void> {
+    // Update the drive manifest to remove this document
+    const manifest = await this.getDriveManifest(drive);
+    const docIndex = manifest.documentIds.indexOf(id);
+    if (docIndex !== -1) {
+      manifest.documentIds.splice(docIndex, 1);
+      await this.updateDriveManifest(drive, manifest);
+    }
+
+    // Check if this document exists in other drive manifests
+    // Only delete the actual file if no other drive references it
+    const drives = await this.getDrives();
+    for (const driveId of drives) {
+      if (driveId === drive) continue;
+
+      const otherManifest = await this.getDriveManifest(driveId);
+      if (otherManifest.documentIds.includes(id)) {
+        // Document still referenced by another drive, don't delete the file
+        return Promise.resolve();
+      }
+    }
+
+    // If we got here, no other drive references this document, so we can delete it
     try {
       await this.fs.rm(this._buildDocumentPath(id));
       return Promise.resolve();
@@ -153,19 +163,16 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
 
   async getDrives(): Promise<string[]> {
     try {
-      await this._touchDrivesDir();
-
+      // List all files in root directory
       const drives = [];
-      for await (const entry of this.fs.ls(IPFSStorage.DRIVES_DIR)) {
-        if (entry.type === "file" && entry.name.endsWith(".json")) {
-          try {
-            const driveId = entry.name.replace(".json", "");
-            // Validate that this is a drive by attempting to get it
-            await this.getDrive(driveId);
-            drives.push(driveId);
-          } catch {
-            /* Ignore invalid drive document found on drives dir */
-          }
+      for await (const entry of this.fs.ls("/")) {
+        if (
+          entry.type === "file" &&
+          entry.name.startsWith("drive-") &&
+          entry.name.endsWith(".json")
+        ) {
+          const driveId = entry.name.replace("drive-", "").replace(".json", "");
+          drives.push(driveId);
         }
       }
       return drives;
@@ -176,7 +183,14 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
 
   async getDrive(id: string): Promise<DocumentDriveDocument> {
     try {
-      return await this.getDocument(IPFSStorage.DRIVES_DIR, id);
+      const drivePath = this._buildDrivePath(id);
+      const chunks = [];
+      for await (const chunk of this.fs.cat(drivePath)) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+      const content = new TextDecoder().decode(buffer);
+      return JSON.parse(content) as DocumentDriveDocument;
     } catch {
       throw new DriveNotFoundError(id);
     }
@@ -201,15 +215,44 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    return this.createDocument(IPFSStorage.DRIVES_DIR, id, drive);
+    const drivePath = this._buildDrivePath(id);
+    const driveContent = stringify(drive);
+    const driveBuffer = new TextEncoder().encode(driveContent);
+
+    // Write the drive to storage
+    await this.fs.writeBytes(driveBuffer, drivePath);
+
+    // Initialize an empty manifest for the new drive
+    await this.updateDriveManifest(id, { documentIds: [] });
+
+    return Promise.resolve();
   }
 
   async deleteDrive(id: string): Promise<void> {
-    const documents = await this.getDocuments(id);
-    await this.deleteDocument(IPFSStorage.DRIVES_DIR, id);
+    // Get all documents in this drive
+    const manifest = await this.getDriveManifest(id);
+    const documents = manifest.documentIds;
+
+    // Delete each document from this drive (may not actually delete files if shared with other drives)
     await Promise.all(
       documents.map((document) => this.deleteDocument(id, document)),
     );
+
+    // Delete the drive manifest
+    try {
+      await this.fs.rm(this._buildDriveManifestPath(id));
+    } catch (error) {
+      // If manifest doesn't exist, ignore the error
+    }
+
+    // Delete the drive document
+    try {
+      await this.fs.rm(this._buildDrivePath(id));
+    } catch (error) {
+      // If file doesn't exist, ignore the error
+    }
+
+    return Promise.resolve();
   }
 
   async addDriveOperations(
@@ -231,22 +274,10 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   }
 
   async clearStorage(): Promise<void> {
-    // Delete all files in the drives directory
-    const drives = await this.getDrives();
-    await Promise.all(
-      drives.map(async (drive) => {
-        await this.deleteDrive(drive);
-      }),
-    );
-
-    // Delete all document files
+    // Delete all files
     try {
       for await (const entry of this.fs.ls("/")) {
-        if (
-          entry.type === "file" &&
-          entry.name.startsWith("document-") &&
-          entry.name.endsWith(".json")
-        ) {
+        if (entry.type === "file") {
           await this.fs.rm(`/${entry.name}`);
         }
       }
@@ -308,5 +339,47 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
       }
       return acc;
     }, []);
+  }
+
+  ////////////////////////////////
+  // Private methods
+  ////////////////////////////////
+
+  private _buildDocumentPath(documentId: string): string {
+    return `/document-${documentId}.json`;
+  }
+
+  private _buildDrivePath(driveId: string): string {
+    return `/drive-${driveId}.json`;
+  }
+
+  private _buildDriveManifestPath(driveId: string): string {
+    return `/manifest-${driveId}.json`;
+  }
+
+  private async getDriveManifest(driveId: string): Promise<DriveManifest> {
+    try {
+      const manifestPath = this._buildDriveManifestPath(driveId);
+      const chunks = [];
+      for await (const chunk of this.fs.cat(manifestPath)) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+      const content = new TextDecoder().decode(buffer);
+      return JSON.parse(content) as DriveManifest;
+    } catch (error) {
+      // If manifest doesn't exist, return an empty one
+      return { documentIds: [] };
+    }
+  }
+
+  private async updateDriveManifest(
+    driveId: string,
+    manifest: DriveManifest,
+  ): Promise<void> {
+    const manifestPath = this._buildDriveManifestPath(driveId);
+    const manifestContent = stringify(manifest);
+    const manifestBuffer = new TextEncoder().encode(manifestContent);
+    await this.fs.writeBytes(manifestBuffer, manifestPath);
   }
 }

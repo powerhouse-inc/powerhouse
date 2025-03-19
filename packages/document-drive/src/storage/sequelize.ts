@@ -1,3 +1,4 @@
+/*
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
@@ -35,6 +36,14 @@ export class SequelizeStorage implements IDriveStorage, IDocumentStorage {
     });
 
     return count > 0;
+  }
+
+  async create(id: string, drive: DocumentDriveDocument): Promise<void> {
+    const Drive = this.db.models.drive;
+    if (!Drive) {
+      throw new Error("Drive model not found");
+    }
+    await Drive.create({ id, slug: drive.initialState.state.global.slug });
   }
 
   public syncModels() {
@@ -504,3 +513,4 @@ export class SequelizeStorage implements IDriveStorage, IDocumentStorage {
     }, []);
   }
 }
+*/

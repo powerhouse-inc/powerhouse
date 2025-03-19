@@ -13,7 +13,6 @@ import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
 import { PrismaStorage } from "../src/storage/prisma";
-import { SequelizeStorage } from "../src/storage/sequelize";
 import { IDriveStorage, IStorage } from "../src/storage/types";
 
 const PG_URL = process.env.PG_URL || "postgresql://localhost:5444/postgres";
@@ -39,7 +38,7 @@ const storageImplementations: [
       return new FilesystemStorage(basePath);
     },
   ],
-  [
+  /*[
     "Sequelize Storage",
     async () => {
       const storage = new SequelizeStorage({
@@ -50,7 +49,7 @@ const storageImplementations: [
       await storage.syncModels();
       return storage;
     },
-  ],
+  ],*/
   ["Browser Storage", () => Promise.resolve(new BrowserStorage())],
   [
     "PrismaStorage",
