@@ -27,7 +27,7 @@ export function Icon({ name, size = 24, color, style, ...props }: IconProps) {
   };
 
   const IconComponent = iconComponents[name];
-  
+
   return (
     // displays div with the same size while icon
     // loads to avoid UI displacement

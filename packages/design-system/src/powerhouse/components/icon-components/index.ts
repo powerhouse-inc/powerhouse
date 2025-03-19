@@ -218,7 +218,10 @@ export const iconNames = [
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
-export const iconComponents: Record<IconName, (props: Props) => JSX.Element> = {
+export const iconComponents: Record<
+  IconName,
+  (props: Props) => React.JSX.Element
+> = {
   CalendarTime,
   CaretLeft,
   CaretRight,

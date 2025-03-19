@@ -89,8 +89,8 @@ readdir(iconsDir, (err, files) => {
   indexContent += `export type Props = ComponentPropsWithoutRef<'svg'>;\n\n`;
   indexContent += `export const iconNames = ${JSON.stringify(iconNames, null, 2)} as const;\n\n`;
   indexContent += `export type IconName = (typeof iconNames)[number];\n`;
-  indexContent += `export const iconComponents: Record<IconName, (props: Props) => JSX.Element> = {
-    ${iconNames.map((name) => `${name}`).join(",\n    ")}
+  indexContent += `export const iconComponents: Record<IconName, (props: Props) => React.JSX.Element> = {
+    ${iconNames.map((name) => name).join(",\n    ")}
   } as const;\n`;
   const formattedTypesContent = prettier.format(indexContent, {
     parser: "typescript",

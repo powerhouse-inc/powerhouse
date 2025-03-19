@@ -88,6 +88,5 @@ export {
   Provider as TooltipProvider,
   Root as TooltipRoot,
   Trigger as TooltipTrigger,
-  type TooltipProps
+  type TooltipProps,
 };
-

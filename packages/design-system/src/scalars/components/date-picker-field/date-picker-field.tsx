@@ -9,7 +9,7 @@ import { FormDescription } from "../fragments/form-description/index.js";
 import { FormGroup } from "../fragments/form-group/index.js";
 import { FormLabel } from "../fragments/form-label/index.js";
 import { FormMessageList } from "../fragments/form-message/index.js";
-import { InputProps } from "../fragments/index.js";
+import { type InputProps } from "../fragments/index.js";
 import { validateDatePicker } from "./date-picker-validations.js";
 import { Calendar } from "./subcomponents/calendar/calendar.js";
 import { useDatePickerField } from "./use-date-picker-field.js";
