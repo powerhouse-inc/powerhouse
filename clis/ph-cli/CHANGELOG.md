@@ -1,3 +1,29 @@
+## 0.40.1-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.233
+
+## 0.40.0 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.28.0
+- Updated document-model to 2.27.0
+- Updated @powerhousedao/builder-tools to 0.9.0
+- Updated @powerhousedao/reactor-local to 1.27.0
+- Updated @powerhousedao/codegen to 0.46.0
+- Updated @powerhousedao/config to 1.24.0
+- Updated @powerhousedao/connect to 1.0.9
+
+### ❤️ Thank You
+
+- Frank
+
 ## 0.39.7-dev.0 (2025-03-19)
 
 ### 🧱 Updated Dependencies

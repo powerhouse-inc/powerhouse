@@ -1,3 +1,13 @@
+## 1.0.0-dev.233 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 1.0.0-dev.232 (2025-03-19)
 
 ### 🚀 Features
