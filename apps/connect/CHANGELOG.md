@@ -1,3 +1,21 @@
+## 1.0.0-dev.229 (2025-03-19)
+
+### 🚀 Features
+
+- **connect:** remove accidentally added dep ([5f6ba2e4](https://github.com/powerhouse-inc/powerhouse/commit/5f6ba2e4))
+- **design-system:** simplify icons and remove dynamic loader ([1db37756](https://github.com/powerhouse-inc/powerhouse/commit/1db37756))
+- **connect:** load packages styles ([5521c363](https://github.com/powerhouse-inc/powerhouse/commit/5521c363))
+
+### 🩹 Fixes
+
+- **document-drive:** typescript should be a dev dependency of document-drive ([b5ddc827](https://github.com/powerhouse-inc/powerhouse/commit/b5ddc827))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- ryanwolhuter
+
 ## 1.0.0-dev.228 (2025-03-17)
 
 ### 🩹 Fixes

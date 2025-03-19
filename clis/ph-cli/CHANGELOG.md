@@ -1,3 +1,32 @@
+## 0.39.4-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.229
+
+## 0.39.3 (2025-03-19)
+
+### 🚀 Features
+
+- **connect:** remove accidentally added dep ([5f6ba2e4](https://github.com/powerhouse-inc/powerhouse/commit/5f6ba2e4))
+- **design-system:** simplify icons and remove dynamic loader ([1db37756](https://github.com/powerhouse-inc/powerhouse/commit/1db37756))
+
+### 🩹 Fixes
+
+- **document-drive:** typescript should be a dev dependency of document-drive ([b5ddc827](https://github.com/powerhouse-inc/powerhouse/commit/b5ddc827))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.27.1
+- Updated @powerhousedao/builder-tools to 0.8.0
+- Updated @powerhousedao/reactor-local to 1.26.2
+- Updated @powerhousedao/connect to 1.0.5
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- ryanwolhuter
+
 ## 0.39.3-dev.0 (2025-03-17)
 
 ### 🧱 Updated Dependencies
