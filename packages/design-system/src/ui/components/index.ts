@@ -1,5 +1,7 @@
 // export all components accessible outside the package
 
+export * from "./data-entry/index.js";
+
 // dropdown
 export {
   Dropdown,

@@ -32,6 +32,7 @@
     "#powerhouse": "./dist/src/powerhouse/index.js",
     "#rwa": "./dist/src/rwa/index.js",
     "#scalars": "./dist/src/scalars/index.js",
+    "#ui": "./dist/src/ui/index.js",
     "#services": "./dist/src/services/index.js"
   },
   "scripts": {
