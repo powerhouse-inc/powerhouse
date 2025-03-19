@@ -1,22 +1,21 @@
-import {
-  SelectFieldRaw,
-  type ErrorHandling,
-  type FieldCommonProps,
-} from "#scalars";
+import { SelectFieldRaw } from "#scalars";
 import React from "react";
 import { CircleFlag } from "react-circle-flags";
 import countries, { type Countries } from "world-countries";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import type { CountryCodeProps } from "./types.js";
 
 type CountryCodeFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
-  keyof FieldCommonProps<string> | keyof ErrorHandling | keyof CountryCodeProps
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
+  | keyof CountryCodeProps
 >;
 
 export type CountryCodeFieldProps = CountryCodeFieldBaseProps &
-  FieldCommonProps<string> &
-  ErrorHandling &
+  InputBaseProps<string> &
+  FieldErrorHandling &
   CountryCodeProps;
 
 const CountryCodeFieldRaw = React.forwardRef<

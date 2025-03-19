@@ -1,6 +1,6 @@
 import { format, parse } from "date-fns";
 import { type AmountValue } from "../components/amount-field/types.js";
-import { getDateFromValue } from "../components/date-picker-field/utils.js";
+import { getDateFromValue } from "../components/date-field/utils.js";
 import {
   getDateFormat,
   normalizeMonthFormat,
@@ -55,12 +55,12 @@ export const castFunctions: Record<
   DateString: (value: string, dateFormat = "yyyy-MM-dd") => {
     const momentDate = getDateFromValue(value);
     const date = normalizeMonthFormat(momentDate);
-
     const correctFormat = getDateFormat(dateFormat);
     const newValue = parseInputString(date, correctFormat);
 
     const fechaUTC = parse(newValue, correctFormat ?? "yyyy-MM-dd", new Date());
-    const isoDate = format(fechaUTC, "yyyy-MM-dd");
+
+    const isoDate = format(fechaUTC, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     return isoDate;
   },
   DateTimeString: (value: string, dateFormat = "yyyy-MM-dd") => {

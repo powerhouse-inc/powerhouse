@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 import type {
-  ErrorHandling,
-  FieldCommonProps,
+  FieldErrorHandling,
+  InputBaseProps,
   ValidatorHandler,
 } from "../../types.js";
 
-interface PossibleProps extends FieldCommonProps<unknown>, ErrorHandling {
+interface PossibleProps extends InputBaseProps<unknown>, FieldErrorHandling {
   pattern?: RegExp;
   maxLength?: number;
   minLength?: number;
@@ -55,6 +55,12 @@ export const withFieldValidation = <
         getValues,
       } = useFormContext();
       const { submitCount } = useFormState();
+
+      if (!name) {
+        throw new Error(
+          `[Field: ${Component.displayName}] The name prop is required.`,
+        );
+      }
 
       const errors = [
         ...(formErrors[name]?.types

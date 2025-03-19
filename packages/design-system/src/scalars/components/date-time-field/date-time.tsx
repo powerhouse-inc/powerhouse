@@ -1,7 +1,7 @@
 import { cn } from "#scalars";
 import type React from "react";
 import { forwardRef } from "react";
-import { type DateFieldValue } from "../date-picker-field/types.js";
+import { type DateFieldValue } from "../date-field/types.js";
 import {
   FormDescription,
   FormGroup,
@@ -9,13 +9,13 @@ import {
   FormMessageList,
 } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
-import { type FieldCommonProps } from "../types.js";
+import { type InputBaseProps } from "../types.js";
 import { BasePickerField } from "./base-picker-field.js";
+import DateTimePickerContent from "./date-time-contet.js";
 import { dateTimeFieldValidations } from "./date-time-field-validations.js";
-import DateTimePickerContent from "./date-time-picker-contet.js";
 import { useDateTime } from "./use-date-time.js";
 
-interface DateTimePickerProps extends FieldCommonProps<DateFieldValue> {
+interface DateTimePickerProps extends InputBaseProps<DateFieldValue> {
   name: string;
   id?: string;
   label?: string;

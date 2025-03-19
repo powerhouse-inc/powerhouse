@@ -1,11 +1,11 @@
 import { format } from "date-fns";
-import { type DatePickerFieldProps } from "../date-picker-field/date-picker-field.js";
-import { type DateFieldValue } from "../date-picker-field/types.js";
+import { type DateFieldProps } from "../date-field/date-field.js";
+import { type DateFieldValue } from "../date-field/types.js";
 import {
   formatDateToValidCalendarDateFormat,
   getDateFromValue,
   splitIso8601DateTime,
-} from "../date-picker-field/utils.js";
+} from "../date-field/utils.js";
 import {
   getDateFormat,
   isDateFormatAllowed,
@@ -14,11 +14,12 @@ import {
 } from "./utils.js";
 
 export const dateTimeFieldValidations =
-  ({ dateFormat, minDate, maxDate }: DatePickerFieldProps) =>
+  ({ dateFormat, minDate, maxDate }: DateFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;
     }
+    const internalFormat = getDateFormat(dateFormat ?? "");
 
     // 1. Validate that it has date and time separated by space
     const { date, time } = splitIso8601DateTime(value as string);
@@ -27,7 +28,6 @@ export const dateTimeFieldValidations =
       return "Invalid format. Use DATE and TIME separated by a space.";
     }
 
-    const internalFormat = getDateFormat(dateFormat ?? "");
     const stringDate = normalizeMonthFormat(
       getDateFromValue(value as DateFieldValue),
     );
@@ -35,7 +35,7 @@ export const dateTimeFieldValidations =
     const isValid = isDateFormatAllowed(stringDate, internalFormat);
 
     if (!isValid) {
-      return "Invalid date format.";
+      return "Invalid format. Use DATE and TIME separated by a space.";
     }
 
     if (!isValidTime(time)) {

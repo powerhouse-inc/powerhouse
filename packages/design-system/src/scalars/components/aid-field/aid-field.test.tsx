@@ -21,24 +21,26 @@ describe("AIDField Component", () => {
 
   const mockedOptions = [
     {
-      icon: "Person",
+      icon: "Braces",
       title: "Agent A",
       path: {
         text: "renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
-        url: "https://www.renown.id/0xb9c5714089478a327f09197987f16f9e5d936e8a",
+        url: "https://www.renown.id/",
       },
       value: "did:ethr:0xb9c5714089478a327f09197987f16f9e5d936e8a",
       description: "Agent A description",
+      agentType: "Human Contributor",
     },
     {
-      icon: "Person",
+      icon: "Braces",
       title: "Agent B",
       path: {
         text: "renown.id/0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
-        url: "https://www.renown.id/0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
+        url: "https://www.renown.id/",
       },
       value: "did:ethr:0x5:0xb9c5714089478a327f09197987f16f9e5d936e8a",
       description: "Agent B description",
+      agentType: "Contributor Team",
     },
   ];
 
@@ -195,6 +197,7 @@ describe("AIDField Component", () => {
     expect(screen.getByText("Title not available")).toBeInTheDocument();
     expect(screen.getByText("Path not available")).toBeInTheDocument();
     expect(screen.getByText("Description not available")).toBeInTheDocument();
+    expect(screen.getByText("Agent type not available")).toBeInTheDocument();
 
     rerender(
       <AIDField
@@ -211,6 +214,9 @@ describe("AIDField Component", () => {
     expect(
       screen.queryByText("Description not available"),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Agent type not available"),
+    ).not.toBeInTheDocument();
 
     rerender(
       <AIDField
@@ -226,6 +232,9 @@ describe("AIDField Component", () => {
     expect(screen.queryByText("Path not available")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Description not available"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Agent type not available"),
     ).not.toBeInTheDocument();
   });
 
@@ -312,6 +321,7 @@ describe("AIDField Component", () => {
       expect(
         screen.getByText(mockedOptions[0].description),
       ).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].agentType)).toBeInTheDocument();
     });
 
     Math.random = originalRandom;

@@ -72,8 +72,8 @@ const meta: Meta<typeof PHIDField> = {
       table: {
         type: {
           summary:
-            "(userInput: string, context?: { allowUris?: boolean; " +
-            "allowedScopes?: string[]; }) => Promise<IdAutocompleteOption[]> | IdAutocompleteOption[]",
+            "(userInput: string; context?: { allowUris?: boolean; " +
+            "allowedScopes?: string[]; }) => Promise<PHIDOption[]> | PHIDOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -95,7 +95,7 @@ const meta: Meta<typeof PHIDField> = {
       table: {
         type: {
           summary:
-            "(value: string) => Promise<IdAutocompleteOption | undefined> | IdAutocompleteOption | undefined",
+            "(value: string) => Promise<PHIDOption | undefined> | PHIDOption | undefined",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
