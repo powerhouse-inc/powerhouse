@@ -20,10 +20,10 @@ import {
 import { ConflictOperationError } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { logger } from "../../utils/logger.js";
-import {
+import type {
   IDocumentStorage,
-  type IDriveStorage,
-  type IStorageDelegate,
+  IDriveStorage,
+  IStorageDelegate,
 } from "../types.js";
 
 export * from "./factory.js";
@@ -431,6 +431,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     };
 
     if (driveId !== "drives") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       query.where.driveDocuments = {
         some: {
           driveId,

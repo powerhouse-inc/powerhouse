@@ -14,7 +14,7 @@ import {
 } from "document-model";
 import { type Helia } from "helia";
 import stringify from "json-stringify-deterministic";
-import { IDocumentStorage, IStorage } from "./types.js";
+import type { IDocumentStorage, IStorage } from "./types.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
