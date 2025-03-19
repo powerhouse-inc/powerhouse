@@ -1,3 +1,13 @@
+## 1.0.0-dev.238 (2025-03-19)
+
+### 🩹 Fixes
+
+- roll back replace plugin ([6c4781da](https://github.com/powerhouse-inc/powerhouse/commit/6c4781da))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 1.0.0-dev.237 (2025-03-19)
 
 ### 🩹 Fixes
