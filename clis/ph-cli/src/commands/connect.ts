@@ -42,9 +42,7 @@ export function connectCommand(program: Command) {
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg
-    ? (JSON.parse(optionsArg) as ConnectOptions)
-    : {};
+  const options = optionsArg ? (JSON.parse(optionsArg) as ConnectOptions) : {};
   startConnect(options).catch((e: unknown) => {
     throw e;
   });
