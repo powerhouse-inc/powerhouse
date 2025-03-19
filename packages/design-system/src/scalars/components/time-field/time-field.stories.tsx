@@ -12,6 +12,9 @@ const meta: Meta<typeof TimeField> = {
   component: TimeField,
   parameters: {
     layout: "centered",
+    form: {
+      resetBehavior: "unmount",
+    },
   },
   decorators: [withForm],
   tags: ["autodocs"],
