@@ -1,3 +1,29 @@
+## 2.27.0 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+- **monorepo:** remove migrations ([0c698b39](https://github.com/powerhouse-inc/powerhouse/commit/0c698b39))
+- **design-system:** fix storybook type errors ([75cd9dd5](https://github.com/powerhouse-inc/powerhouse/commit/75cd9dd5))
+- **monorepo:** regenerate lockfile ([10b40ad0](https://github.com/powerhouse-inc/powerhouse/commit/10b40ad0))
+- **connect:** remove accidentally added dep ([5f6ba2e4](https://github.com/powerhouse-inc/powerhouse/commit/5f6ba2e4))
+- **design-system:** simplify icons and remove dynamic loader ([1db37756](https://github.com/powerhouse-inc/powerhouse/commit/1db37756))
+
+### 🩹 Fixes
+
+- **reactor-local:** support commonjs code on local subgraphs ([c49914e2](https://github.com/powerhouse-inc/powerhouse/commit/c49914e2))
+- **document-drive:** typescript should be a dev dependency of document-drive ([b5ddc827](https://github.com/powerhouse-inc/powerhouse/commit/b5ddc827))
+- **reactor-api:** add ethers as peer dependency ([069767f8](https://github.com/powerhouse-inc/powerhouse/commit/069767f8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 2.26.0 (2025-03-17)
 
 ### 🚀 Features
