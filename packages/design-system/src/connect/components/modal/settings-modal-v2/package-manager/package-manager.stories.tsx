@@ -50,6 +50,7 @@ function PackageManagerStoryWrapper(storyArgs: Partial<Props> = {}): Story {
     ...storyArgs,
   } as Props;
   return {
+    // @ts-expect-error
     render: PackageManagerWrapper,
     args: defaultArgs,
   };

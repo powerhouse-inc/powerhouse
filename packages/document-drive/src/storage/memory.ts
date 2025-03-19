@@ -9,9 +9,9 @@ import {
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import { type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
-export class MemoryStorage implements IDriveStorage {
+export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   private documents: Record<string, Record<string, PHDocument>>;
   private drives: Record<string, DocumentDriveDocument>;
   private slugToDriveId: Record<string, string> = {};
@@ -21,8 +21,18 @@ export class MemoryStorage implements IDriveStorage {
     this.drives = {};
   }
 
+  exists(id: string): Promise<boolean> {
+    for (const drive of Object.values(this.documents)) {
+      if (drive[id]) {
+        return Promise.resolve(true);
+      }
+    }
+
+    return Promise.resolve(false);
+  }
+
   checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    return Promise.resolve(this.documents[drive][id] !== undefined);
+    return this.exists(id);
   }
 
   async getDocuments(drive: string) {

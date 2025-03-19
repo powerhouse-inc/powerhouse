@@ -166,6 +166,7 @@ export class PrismaStorage implements IDriveStorage {
         initialState: JSON.stringify(document.initialState),
         lastModified: document.lastModified,
         revision: JSON.stringify(document.revision),
+        meta: document.meta ? JSON.stringify(document.meta) : undefined,
         id,
       },
     });
@@ -469,6 +470,7 @@ export class PrismaStorage implements IDriveStorage {
       operations: operationsByScope,
       clipboard: [],
       revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
+      meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
       attachments: {},
     };
     return doc as unknown as TDocument;

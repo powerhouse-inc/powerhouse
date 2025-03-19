@@ -12,7 +12,8 @@
       "node",
       "vite/client",
       "vitest/globals",
-      "@testing-library/jest-dom"
+      "@testing-library/jest-dom",
+      "@storybook/types"
     ],
     "outDir": ".storybook/dist",
     "moduleResolution": "bundler",

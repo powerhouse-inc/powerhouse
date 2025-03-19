@@ -32,7 +32,7 @@ import {
 } from "./error.js";
 import {
   type ITransmitter,
-  type StrandUpdateSource
+  type StrandUpdateSource,
 } from "./listener/transmitter/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
@@ -334,7 +334,7 @@ export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
 
   // todo: remove this once we have DI
-  get listeners():IListenerManager;
+  get listeners(): IListenerManager;
 
   setDocumentModelModules(models: DocumentModelModule[]): void;
   getDrives(): Promise<string[]>;
