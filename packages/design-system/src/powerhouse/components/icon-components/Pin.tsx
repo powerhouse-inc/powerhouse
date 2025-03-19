@@ -1,4 +1,4 @@
-import type { Props } from "./types.js";
+import type { Props } from "./index.js";
 export default function Pin(props: Props) {
   return (
     <svg

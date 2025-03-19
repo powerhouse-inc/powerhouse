@@ -1,4 +1,4 @@
-import { type IconName, iconNames } from "#powerhouse";
+import { iconNames, type IconName,} from "#powerhouse";
 import { Icon } from "#powerhouse";
 import { useMemo } from "react";
 
