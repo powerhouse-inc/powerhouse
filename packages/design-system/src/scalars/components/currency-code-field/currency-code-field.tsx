@@ -24,7 +24,7 @@ export interface CurrencyCodeFieldProps
   placeholder?: string;
   onChange?: (value: string | string[]) => void;
   onBlur?: () => void;
-  currencies?: Currency[];
+  currencies: Currency[];
   includeCurrencySymbols?: boolean;
   favoriteCurrencies?: string[];
   symbolPosition?: "left" | "right";
@@ -58,7 +58,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
 
       return (
         (currencies
-          ?.map((currency) => {
+          .map((currency) => {
             if (favoriteTickers.has(currency.ticker)) {
               return null;
             }
@@ -70,11 +70,16 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
                   ? `${label} (${currency.symbol})`
                   : `(${currency.symbol}) ${label}`;
             }
-            return {
+            const option: SelectOption = {
               label,
               value: currency.ticker,
-              icon: currency.icon,
             };
+
+            if ("icon" in currency) {
+              option.icon = currency.icon;
+            }
+
+            return option;
           })
           .filter(Boolean) as SelectOption[]) ?? []
       );
@@ -89,7 +94,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       const favoriteTickers = new Set(favoriteCurrencies);
       return (
         currencies
-          ?.filter((currency) => favoriteTickers.has(currency.ticker))
+          .filter((currency) => favoriteTickers.has(currency.ticker))
           .map((currency) => {
             let label = currency.label ?? currency.ticker;
             if (includeCurrencySymbols && currency.symbol) {
@@ -98,11 +103,16 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
                   ? `${label} (${currency.symbol})`
                   : `(${currency.symbol}) ${label}`;
             }
-            return {
+            const option: SelectOption = {
               label,
               value: currency.ticker,
-              icon: currency.icon,
             };
+
+            if ("icon" in currency) {
+              option.icon = currency.icon;
+            }
+
+            return option;
           }) ?? []
       );
     }, [
