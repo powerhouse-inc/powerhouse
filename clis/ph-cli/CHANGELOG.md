@@ -1,3 +1,9 @@
+## 0.40.2-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.234
+
 ## 0.40.1-dev.0 (2025-03-19)
 
 ### 🧱 Updated Dependencies
