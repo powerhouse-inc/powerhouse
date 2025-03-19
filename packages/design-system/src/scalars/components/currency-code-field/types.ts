@@ -1,9 +1,12 @@
+import type { IconName } from "#powerhouse";
+import type React from "react";
+
 export interface Currency {
   ticker: string;
   crypto: boolean;
   label?: string;
   symbol?: string;
-  icon?: string;
+  icon?: IconName | React.ComponentType<{ className?: string }>;
 }
 
 export type CurrencyType = "Fiat" | "Crypto";

@@ -3,7 +3,7 @@ import type { SelectOption } from "../enum-field/types.js";
 import { SelectFieldRaw } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
-import type { Currency, CurrencyType } from "./types.js";
+import type { Currency } from "./types.js";
 
 type CurrencyCodeFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -22,7 +22,6 @@ export interface CurrencyCodeFieldProps
   onBlur?: () => void;
   currencies?: Currency[];
   includeCurrencySymbols?: boolean;
-  allowedTypes?: CurrencyType | "Both";
   favoriteCurrencies?: string[];
   symbolPosition?: "left" | "right";
   searchable?: boolean;
@@ -44,9 +43,6 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       searchable = false,
       contentClassName,
       contentAlign = "start",
-      // TODO: implement following props
-      // allowedTypes = "Both",
-      // favoriteCurrencies,
       ...props
     },
     ref,
@@ -71,6 +67,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
             return {
               label,
               value: currency.ticker,
+              icon: currency.icon,
             };
           })
           .filter(Boolean) as SelectOption[]) ?? []
@@ -83,7 +80,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
     ]);
 
     const favoriteOptions: SelectOption[] = useMemo(() => {
-      const favoriteTickers = new Set(favoriteCurrencies || []);
+      const favoriteTickers = new Set(favoriteCurrencies);
       return (
         currencies
           ?.filter((currency) => favoriteTickers.has(currency.ticker))
@@ -98,6 +95,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
             return {
               label,
               value: currency.ticker,
+              icon: currency.icon,
             };
           }) ?? []
       );

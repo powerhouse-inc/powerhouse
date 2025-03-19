@@ -36,15 +36,6 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    allowedTypes: {
-      control: "select",
-      description: "Either Crypto, Fiat or Both",
-      options: ["Fiat", "Crypto", "Both"],
-      table: {
-        defaultValue: { summary: "Both" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
     favoriteCurrencies: {
       control: "object",
       description:
@@ -95,7 +86,32 @@ export const Default: Story = {
 export const FavoriteCurrencies: Story = {
   args: {
     label: "Currency",
-    currencies: commonCryptoCurrencies,
+    currencies: [
+      {
+        ticker: "BTC",
+        crypto: true,
+        label: "Bitcoin",
+        symbol: "₿",
+      },
+      {
+        ticker: "ETH",
+        crypto: true,
+        label: "Ether",
+        symbol: "Ξ",
+      },
+      {
+        ticker: "USDS",
+        crypto: true,
+        label: "Sky USD",
+        symbol: "USDS",
+      },
+      {
+        ticker: "USDC",
+        crypto: true,
+
+        icon: "Briefcase",
+      },
+    ],
     favoriteCurrencies: ["BTC", "ETH"],
   },
 };
