@@ -135,10 +135,3 @@ export const Disabled: Story = {
     currencyType: CurrencyType.FIAT,
   },
 };
-
-// export const DefaultCurrencies: Story = {
-//   args: {
-//     label: "Currency",
-//     currencyType: CurrencyType.CRYPTO,
-//   },
-// };
