@@ -1,3 +1,13 @@
+## 1.0.0-dev.231 (2025-03-19)
+
+### 🩹 Fixes
+
+- **reactor-local:** support commonjs code on local subgraphs ([c49914e2](https://github.com/powerhouse-inc/powerhouse/commit/c49914e2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.230 (2025-03-19)
 
 ### 🚀 Features

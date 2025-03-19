@@ -1,3 +1,23 @@
+## 0.39.6-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.231
+
+## 0.39.5 (2025-03-19)
+
+### 🩹 Fixes
+
+- **reactor-local:** support commonjs code on local subgraphs ([c49914e2](https://github.com/powerhouse-inc/powerhouse/commit/c49914e2))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-local to 1.26.3
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 0.39.5-dev.0 (2025-03-19)
 
 ### 🧱 Updated Dependencies
