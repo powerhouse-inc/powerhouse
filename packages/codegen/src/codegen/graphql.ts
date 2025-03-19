@@ -46,7 +46,7 @@ export function schemaConfig(
     },
     [`${dir}/${name}/gen/schema/zod.ts`]: {
       schema: `${dir}/${name}/schema.graphql`,
-      plugins: ["typescript-validation-schema"],
+      plugins: ["@acaldas/graphql-codegen-typescript-validation-schema"],
       config: {
         ...tsConfig,
         importFrom: `./types.js`,
