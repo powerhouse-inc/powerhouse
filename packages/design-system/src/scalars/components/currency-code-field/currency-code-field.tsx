@@ -1,6 +1,10 @@
 import React, { useMemo } from "react";
 import type { SelectOption } from "../enum-field/types.js";
-import { SelectFieldRaw } from "../fragments/index.js";
+import {
+  FormGroup,
+  FormMessageList,
+  SelectFieldRaw,
+} from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import type { Currency } from "./types.js";
@@ -43,6 +47,8 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       searchable = false,
       contentClassName,
       contentAlign = "start",
+      warnings,
+      errors,
       ...props
     },
     ref,
@@ -107,18 +113,22 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
     ]);
 
     return (
-      <SelectFieldRaw
-        ref={ref}
-        options={options}
-        selectionIcon="checkmark"
-        searchable={searchable}
-        multiple={false}
-        placeholder={placeholder}
-        contentAlign={contentAlign}
-        contentClassName={contentClassName}
-        favoriteOptions={favoriteOptions}
-        {...props}
-      />
+      <FormGroup>
+        <SelectFieldRaw
+          ref={ref}
+          options={options}
+          selectionIcon="checkmark"
+          searchable={searchable}
+          multiple={false}
+          placeholder={placeholder}
+          contentAlign={contentAlign}
+          contentClassName={contentClassName}
+          favoriteOptions={favoriteOptions}
+          {...props}
+        />
+        {warnings && <FormMessageList messages={warnings} type="warning" />}
+        {errors && <FormMessageList messages={errors} type="error" />}
+      </FormGroup>
     );
   },
 );
