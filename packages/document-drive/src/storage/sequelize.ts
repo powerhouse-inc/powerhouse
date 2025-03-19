@@ -14,7 +14,7 @@ import {
   type PHDocument,
 } from "document-model";
 import { DataTypes, type Options, Sequelize } from "sequelize";
-import { IDocumentStorage, type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
 export class SequelizeStorage implements IDriveStorage, IDocumentStorage {
   private db: Sequelize;

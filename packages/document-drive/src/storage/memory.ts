@@ -9,7 +9,7 @@ import {
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import { IDocumentStorage, type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
 export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   private documents: Record<string, Record<string, PHDocument>>;

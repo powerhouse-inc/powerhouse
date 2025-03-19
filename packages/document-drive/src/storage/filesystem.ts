@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
-import { IDocumentStorage, type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
 type FSError = {
   errno: number;

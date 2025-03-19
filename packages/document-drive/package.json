@@ -33,7 +33,8 @@
     "migrate": "prisma generate && prisma db push",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/",
     "prebuild:tsc": "prisma generate --no-hints",
-    "prebuild": "prisma generate --no-hints"
+    "prebuild": "prisma generate --no-hints",
+    "prelint:nx": "prisma generate --no-hints"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",

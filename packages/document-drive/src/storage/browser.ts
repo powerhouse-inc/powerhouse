@@ -13,7 +13,7 @@ import type {
   PHDocument,
 } from "document-model";
 import LocalForage from "localforage";
-import { IDocumentStorage, type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
