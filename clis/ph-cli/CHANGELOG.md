@@ -1,3 +1,19 @@
+## 0.40.5-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.240
+
+## 0.40.4 (2025-03-19)
+
+### 🩹 Fixes
+
+- **ph-cli:** trigger new release ([69fca6e3](https://github.com/powerhouse-inc/powerhouse/commit/69fca6e3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 0.40.4-dev.0 (2025-03-19)
 
 ### 🧱 Updated Dependencies
