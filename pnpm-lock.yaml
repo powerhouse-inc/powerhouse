@@ -438,8 +438,6 @@ importers:
         specifier: ^5.7.3
         version: 5.8.2
 
-  clis/migrations: {}
-
   clis/ph-cli:
     dependencies:
       '@powerhousedao/builder-tools':
