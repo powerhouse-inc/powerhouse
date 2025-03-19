@@ -1,3 +1,26 @@
+## 0.39.5-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.230
+
+## 0.39.4 (2025-03-19)
+
+### 🚀 Features
+
+- **monorepo:** remove migrations ([0c698b39](https://github.com/powerhouse-inc/powerhouse/commit/0c698b39))
+- **design-system:** fix storybook type errors ([75cd9dd5](https://github.com/powerhouse-inc/powerhouse/commit/75cd9dd5))
+- **monorepo:** regenerate lockfile ([10b40ad0](https://github.com/powerhouse-inc/powerhouse/commit/10b40ad0))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/builder-tools to 0.8.1
+- Updated @powerhousedao/connect to 1.0.3
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 0.39.4-dev.0 (2025-03-19)
 
 ### 🧱 Updated Dependencies
