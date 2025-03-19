@@ -163,7 +163,6 @@ const SidebarProvider = ({
     [_state.expandedNodes],
   );
 
-  // TODO: update flattenedNodes in reducer
   const flattenedNodes = useMemo(() => {
     const flattened = flattenTree(currentRoots);
     flattenedNodesRef.current = flattened;

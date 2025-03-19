@@ -1,6 +1,4 @@
 import {
-  type IProcessorManager,
-  isProcessorClass,
   isSubgraphClass,
   startAPI,
   type SubgraphClass,
@@ -11,12 +9,9 @@ import {
   driveDocumentModelModule,
   type DriveInput,
   type IDocumentDriveServer,
-  type IReceiver,
-  type ListenerFilter,
   logger,
   ReactorBuilder
 } from "document-drive";
-import { IInternalTransmitter } from "document-drive/server/listener/transmitter/internal";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import {
   documentModelDocumentModelModule,
@@ -80,16 +75,7 @@ export const DefaultStartServerOptions = {
 export type LocalReactor = {
   driveUrl: string;
   getDocumentPath: (driveId: string, documentId: string) => string;
-  addListener: (
-    driveId: string,
-    receiver: IReceiver,
-    options: {
-      listenerId: string;
-      label: string;
-      block: boolean;
-      filter: ListenerFilter;
-    },
-  ) => Promise<IInternalTransmitter>;
+  server: IDocumentDriveServer;
 };
 
 const baseDocumentModelModules = [
@@ -164,9 +150,6 @@ const startServer = async (
 
   if (vite) {
     api.app.use(vite.middlewares);
-    // load local processors
-    const processorsPath = path.join(process.cwd(), "./processors"); // TODO get path from powerhouse config
-    await loadProcessors(processorsPath, vite, api.processorManager);
 
     // load local subgraphs
     const subgraphsPath = path.join(process.cwd(), "./subgraphs"); // TODO get path from powerhouse config
@@ -180,16 +163,7 @@ const startServer = async (
     getDocumentPath: (driveId: string, documentId: string): string => {
       return path.join(storagePath, driveId, `${documentId}.json`);
     },
-    addListener: (
-      driveId: string,
-      receiver: IReceiver,
-      options: {
-        listenerId: string;
-        label: string;
-        block: boolean;
-        filter: ListenerFilter;
-      },
-    ) => driveServer.addInternalListener(driveId, receiver, options),
+    server: driveServer,
   };
 };
 
@@ -249,31 +223,6 @@ async function loadDocumentModels(path: string, vite: ViteDevServer) {
       console.warn("No local document models found");
     } else {
       console.error("Error loading document models", e);
-    }
-  }
-}
-
-async function loadProcessors(
-  path: string,
-  vite: ViteDevServer,
-  processorManager: IProcessorManager,
-) {
-  try {
-    console.log("> Loading processors from", path);
-    await access(path);
-    const localProcessors = await vite.ssrLoadModule(path);
-    for (const [name, processor] of Object.entries(localProcessors)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const ProcessorClass = processor[name];
-      if (isProcessorClass(ProcessorClass)) {
-        await processorManager.registerProcessor(ProcessorClass);
-      }
-    }
-  } catch (e) {
-    if ((e as FSError).code === "ENOENT") {
-      console.warn("No local document models found");
-    } else {
-      console.error("Error loading processors", e);
     }
   }
 }

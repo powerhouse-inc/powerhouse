@@ -1,3 +1,24 @@
+## 0.22.0 (2025-03-17)
+
+### 🚀 Features
+
+- ignore .cursor ([ae05844d](https://github.com/powerhouse-inc/powerhouse/commit/ae05844d))
+- **scalars:** add the icons and install menu dropdown ([95ee538d](https://github.com/powerhouse-inc/powerhouse/commit/95ee538d))
+- **scalars:** validate DID format in AID field ([b6865b6f](https://github.com/powerhouse-inc/powerhouse/commit/b6865b6f))
+
+### 🩹 Fixes
+
+- increase max header length in commit lint ([90a28de7](https://github.com/powerhouse-inc/powerhouse/commit/90a28de7))
+- regenerate pnpm-lock file ([d208e710](https://github.com/powerhouse-inc/powerhouse/commit/d208e710))
+- **scalars:** improve showErrorOnBlur behavior & callback functions mocks ([283d9731](https://github.com/powerhouse-inc/powerhouse/commit/283d9731))
+
+### ❤️ Thank You
+
+- alejandrocabriales
+- Benjamin Jordan
+- nestor
+- Yasiel Cabrera @YasielCabrera
+
 ## 0.21.1 (2025-03-13)
 
 ### 🩹 Fixes

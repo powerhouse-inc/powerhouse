@@ -1,11 +1,11 @@
+import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
+import { withForm } from "../../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
-  withForm,
-} from "#scalars";
-import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
+} from "../../../lib/storybook-arg-types.js";
 import { TextField } from "./text-field.js";
 
 const meta = {

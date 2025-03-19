@@ -4,10 +4,10 @@ import { cloneElement, forwardRef, useCallback, useMemo, useRef } from "react";
 import CaretDown from "../../../../powerhouse/components/icon-components/CaretDown.js";
 import Pin from "../../../../powerhouse/components/icon-components/Pin.js";
 import PinFilled from "../../../../powerhouse/components/icon-components/PinFilled.js";
-import { useEllipsis } from "../../../hooks/useEllipsis.js";
-import { isEmpty } from "../../../lib/is-empty.js";
-import { cn } from "../../../lib/utils.js";
-import { Tooltip, TooltipProvider } from "../../fragments/index.js";
+import { useEllipsis } from "../../../../scalars/hooks/useEllipsis.js";
+import { isEmpty } from "../../../../scalars/lib/is-empty.js";
+import { cn } from "../../../../scalars/lib/utils.js";
+import { Tooltip, TooltipProvider } from "../../tooltip/index.js";
 import { type FlattenedNode, NodeStatus, type SidebarNode } from "../types.js";
 import { StatusIcon } from "./status-icon.js";
 

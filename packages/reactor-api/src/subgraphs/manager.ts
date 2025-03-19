@@ -1,19 +1,21 @@
-import { Db } from "#types.js";
+import { type Db } from "#types.js";
 import { createSchema } from "#utils/create-schema.js";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
+import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { IDocumentDriveServer } from "document-drive";
-import express, { IRouter, Router } from "express";
+import { type IDocumentDriveServer } from "document-drive";
+import type express from "express";
+import { Router, type IRouter } from "express";
 import { AnalyticsSubgraph } from "./analytics/index.js";
 import { AuthSubgraph } from "./auth/index.js";
 import { DriveSubgraph } from "./drive/index.js";
-import { Subgraph, SubgraphClass } from "./index.js";
+import { type Subgraph, type SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
-import { Context } from "./types.js";
+import { type Context } from "./types.js";
 
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
@@ -73,7 +75,10 @@ export class SubgraphManager {
       const server = new ApolloServer({
         schema,
         introspection: true,
-        plugins: [ApolloServerPluginInlineTraceDisabled()],
+        plugins: [
+          ApolloServerPluginInlineTraceDisabled(),
+          ApolloServerPluginLandingPageLocalDefault(),
+        ],
       });
 
       // start apollo server

@@ -1,4 +1,4 @@
-import { renderWithForm } from "#scalars";
+import { renderWithForm } from "../../lib/testing.js";
 import { BooleanField } from "./boolean-field.js";
 
 describe("BooleanField", () => {

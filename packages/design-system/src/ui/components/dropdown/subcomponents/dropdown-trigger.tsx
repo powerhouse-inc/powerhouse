@@ -1,6 +1,6 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import ChevronDown from "../../../../powerhouse/components/icon-components/ChevronDown.js";
-import { cn } from "../../../lib/utils.js";
+import { cn } from "../../../../scalars/lib/utils.js";
 
 export const DropdownTrigger: React.FC<
   React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>

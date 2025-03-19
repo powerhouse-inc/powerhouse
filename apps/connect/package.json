@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.0-dev.225",
+    "version": "1.0.0-dev.228",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "type": "module",
@@ -41,6 +41,7 @@
         "dev": "vite -c vite.renderer.config.mts",
         "dev:web": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev:web",
+        "prebuild": "tsc --build --noEmit",
         "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",

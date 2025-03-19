@@ -4,6 +4,7 @@ import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js"
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
 import { ReactorBuilder } from "../src/server/builder.js";
 import {
+  InternalTransmitter,
   InternalTransmitterUpdate,
   IReceiver,
 } from "../src/server/listener/transmitter/internal.js";
@@ -11,6 +12,8 @@ import { expectUTCTimestamp, expectUUID } from "./utils";
 
 import { documentModelDocumentModelModule } from "document-model";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import { Listener } from "../src/server/types.js";
+import { generateUUID } from "../src/utils/misc.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
@@ -19,12 +22,14 @@ describe("Internal Listener", () => {
   ] as DocumentModelModule[];
 
   async function buildServer(receiver: IReceiver) {
-    const server = new ReactorBuilder(documentModels).build();
+    const builder = new ReactorBuilder(documentModels);
+    const server = builder.build();
     await server.initialize();
 
+    const driveId = "drive";
     await server.addDrive({
       global: {
-        id: "drive",
+        id: driveId,
         name: "Global Drive",
         icon: "",
         slug: "global",
@@ -36,17 +41,35 @@ describe("Internal Listener", () => {
         triggers: [],
       },
     });
-    await server.addInternalListener("drive", receiver, {
-      block: true,
+
+    const listenerManager = builder.listenerManager;
+
+    // Create the listener and transmitter
+    const uuid = generateUUID();
+    const listener:Listener = {
+      driveId,
+      listenerId: uuid,
+      block: false,
       filter: {
         branch: ["main"],
         documentId: ["*"],
         documentType: ["*"],
         scope: ["global"],
       },
-      label: "Internal",
-      listenerId: "internal",
-    });
+      system: false,
+      label: `Internal #${uuid}`,
+      callInfo: {
+        data: "",
+        name: "Internal",
+        transmitterType: "Internal",
+      },
+    };
+    
+    // TODO: circular reference
+    listener.transmitter = new InternalTransmitter(listener, server, receiver);
+
+    await listenerManager?.setListener(driveId, listener);
+
     return server;
   }
 

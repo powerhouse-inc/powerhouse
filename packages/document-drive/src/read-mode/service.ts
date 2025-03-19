@@ -137,7 +137,7 @@ export class ReadModeService implements IReadModeDriveService {
     if (result instanceof Error) {
       throw result;
     } else if (!result) {
-      throw new Error(`Drive "${id}" not found at ${url}`);
+      throw new ReadDriveNotFoundError(id);
     }
     this.#drives.set(id, {
       drive: result,

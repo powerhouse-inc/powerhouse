@@ -24,16 +24,16 @@ import {
  * Builder class for constructing Reactor instances with proper configuration
  */
 export class ReactorBuilder {
-  private documentModelModules: DocumentModelModule[] = [];
+  public documentModelModules: DocumentModelModule[] = [];
 
-  private storage?: IDriveStorage;
-  private cache?: ICache;
-  private queueManager?: IQueueManager;
-  private eventEmitter?: IEventEmitter;
-  private options?: DocumentDriveServerOptions;
-  private synchronizationManager?: ISynchronizationManager;
-  private listenerManager?: IListenerManager;
-  private transmitterFactory?: ITransmitterFactory;
+  public storage?: IDriveStorage;
+  public cache?: ICache;
+  public queueManager?: IQueueManager;
+  public eventEmitter?: IEventEmitter;
+  public options?: DocumentDriveServerOptions;
+  public synchronizationManager?: ISynchronizationManager;
+  public listenerManager?: IListenerManager;
+  public transmitterFactory?: ITransmitterFactory;
 
   constructor(documentModelModules: DocumentModelModule[]) {
     this.documentModelModules = documentModelModules;
@@ -135,7 +135,6 @@ export class ReactorBuilder {
       this.eventEmitter,
       this.synchronizationManager,
       this.listenerManager,
-      this.transmitterFactory,
       this.options,
     );
   }

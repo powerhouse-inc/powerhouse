@@ -1,7 +1,8 @@
-import { Form, renderWithForm } from "#scalars";
+import { Form } from "#scalars";
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../lib/testing.js";
 import { UrlField } from "./url-field.js";
 
 describe("UrlField", () => {

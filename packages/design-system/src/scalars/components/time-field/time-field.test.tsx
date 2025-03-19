@@ -1,6 +1,8 @@
-import { renderWithForm } from "#scalars";
 import { screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
+import { vi } from "vitest";
+import { renderWithForm } from "../../lib/testing.js";
+
 import { TimeField } from "./time-field.js";
 vi.mock("#powerhouse", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (

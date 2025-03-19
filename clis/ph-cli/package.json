@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.38.2-dev.0",
+  "version": "0.39.3-dev.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -36,6 +36,7 @@
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "document-model": "workspace:*",
+    "document-drive": "workspace:*",
     "pm2": "^5.4.3"
   }
 }

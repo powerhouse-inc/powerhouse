@@ -1,12 +1,12 @@
 import { Icon, type IconName } from "#powerhouse";
+import type { Meta, StoryObj } from "@storybook/react";
+
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-  withForm,
-} from "#scalars";
-import type { Meta, StoryObj } from "@storybook/react";
-
+} from "../../lib/storybook-arg-types.js";
 import { EnumField } from "./enum-field.js";
 
 const meta: Meta<typeof EnumField> = {
