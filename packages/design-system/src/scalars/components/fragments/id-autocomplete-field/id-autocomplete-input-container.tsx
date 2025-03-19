@@ -4,11 +4,11 @@ import { cn } from "#scalars";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
+import { Input } from "../../../../ui/components/data-entry/index.js";
 import {
   Tooltip,
   TooltipProvider,
 } from "../../../../ui/components/tooltip/tooltip.js";
-import { Input } from "../input/input.js";
 import type { IdAutocompleteOption } from "./types.js";
 
 // TODO: can we use generic InputProps here?
