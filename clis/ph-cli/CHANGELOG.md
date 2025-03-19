@@ -1,3 +1,29 @@
+## 0.39.7-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.232
+
+## 0.39.6 (2025-03-19)
+
+### 🚀 Features
+
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.27.2
+- Updated @powerhousedao/builder-tools to 0.8.2
+- Updated @powerhousedao/reactor-local to 1.26.4
+- Updated @powerhousedao/codegen to 0.45.0
+- Updated @powerhousedao/connect to 1.0.6
+
+### ❤️ Thank You
+
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 0.39.6-dev.0 (2025-03-19)
 
 ### 🧱 Updated Dependencies

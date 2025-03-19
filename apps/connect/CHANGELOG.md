@@ -1,3 +1,20 @@
+## 1.0.0-dev.232 (2025-03-19)
+
+### 🚀 Features
+
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+
+### 🩹 Fixes
+
+- **connect:** relative favicon path ([1db65a85](https://github.com/powerhouse-inc/powerhouse/commit/1db65a85))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 1.0.0-dev.231 (2025-03-19)
 
 ### 🩹 Fixes
