@@ -1,3 +1,33 @@
+## 1.0.0-dev.241 (2025-03-20)
+
+### 🩹 Fixes
+
+- return to homescreen after deleting a drive ([4fca25055](https://github.com/powerhouse-inc/powerhouse/commit/4fca25055))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
+## 1.0.7 (2025-03-20)
+
+### 🩹 Fixes
+
+- return to homescreen after deleting a drive ([4fca25055](https://github.com/powerhouse-inc/powerhouse/commit/4fca25055))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.22.3
+- Updated document-drive to 1.28.3
+- Updated @powerhousedao/builder-tools to 0.9.3
+- Updated @powerhousedao/builder-tools to 0.9.3
+- Updated @powerhousedao/design-system to 1.38.0
+- Updated @powerhousedao/scalars to 1.32.0
+- Updated @powerhousedao/common to 1.10.3
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 1.0.0-dev.240 (2025-03-19)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
