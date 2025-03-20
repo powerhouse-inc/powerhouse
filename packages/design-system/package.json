@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.34.2-canary.2",
+  "version": "1.34.2-canary.4",
   "description": "",
   "files": [
     "/dist"
@@ -32,6 +32,7 @@
     "#powerhouse": "./dist/src/powerhouse/index.js",
     "#rwa": "./dist/src/rwa/index.js",
     "#scalars": "./dist/src/scalars/index.js",
+    "#ui": "./dist/src/ui/index.js",
     "#services": "./dist/src/services/index.js"
   },
   "scripts": {

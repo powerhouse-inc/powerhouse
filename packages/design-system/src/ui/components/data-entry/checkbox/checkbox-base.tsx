@@ -2,7 +2,7 @@ import { cn } from "#scalars";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
 
-export type CheckboxValue = boolean | "indeterminate";
+type CheckboxValue = boolean | "indeterminate";
 
 type CheckboxBaseProps = React.ComponentPropsWithoutRef<
   typeof CheckboxPrimitive.Root
@@ -83,4 +83,4 @@ const CheckboxBase = React.forwardRef<
 
 CheckboxBase.displayName = "CheckboxBase";
 
-export { CheckboxBase };
+export { CheckboxBase, type CheckboxValue };

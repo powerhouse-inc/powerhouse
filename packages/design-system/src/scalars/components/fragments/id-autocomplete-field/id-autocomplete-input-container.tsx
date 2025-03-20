@@ -4,12 +4,12 @@ import { cn } from "#scalars";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
+import { Input } from "../../../../ui/components/data-entry/index.js";
 import {
   Tooltip,
   TooltipProvider,
 } from "../../../../ui/components/tooltip/tooltip.js";
 import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
-import { Input } from "../input/input.js";
 import ValueTransformer, {
   type TransformerType,
 } from "../value-transformer/value-transformer.js";

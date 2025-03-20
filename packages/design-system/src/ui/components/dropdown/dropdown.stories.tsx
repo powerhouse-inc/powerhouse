@@ -13,12 +13,14 @@ import DropdownExample from "./dropdown-example.js";
  * ## How to setup the component
  *
  * First import the necessary components:
- * ```
- * import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from "@powerhousedao/design-system/scalars";
+ *
+ * ```tsx
+ * import { Dropdown, DropdownTrigger, DropdownContent, DropdownItem } from "@powerhousedao/design-system/ui";
  * ```
  *
  * Basic implementation:
- * ```
+ *
+ * ```tsx
  * function MyComponent() {
  *   return (
  *     <Dropdown>
@@ -33,7 +35,8 @@ import DropdownExample from "./dropdown-example.js";
  * ```
  *
  * Basic usage with icons:
- * ```
+ *
+ * ```tsx
  * <Dropdown>
  *   <DropdownTrigger className="w-[184px]">
  *     <DownloadIcon width={16} height={16} />
@@ -60,7 +63,8 @@ import DropdownExample from "./dropdown-example.js";
  * ## Creating Different Menu Types
  *
  * Example 1: Export Menu (from current implementation)
- * ```
+ *
+ * ```tsx
  * <Dropdown>
  *   <DropdownTrigger>
  *     <DownloadFileIcon />
@@ -75,7 +79,8 @@ import DropdownExample from "./dropdown-example.js";
  * ```
  *
  * Example 2: Settings Menu
- * ```
+ *
+ * ```tsx
  * <Dropdown>
  *   <DropdownTrigger>
  *     <SettingsIcon />
@@ -90,7 +95,8 @@ import DropdownExample from "./dropdown-example.js";
  * ```
  *
  * Example 3: Navigation Menu
- * ```
+ *
+ * ```tsx
  * <Dropdown>
  *   <DropdownTrigger>
  *     <MenuIcon />
@@ -108,7 +114,8 @@ import DropdownExample from "./dropdown-example.js";
  * Icons can be used in two ways:
  *
  * ** Direct SVG Import** (Recommended for custom icons):
- * ```
+ *
+ * ```tsx
  * import DownloadFile from "@/assets/icon-components/DownloadFile";
  * <DropdownItem>
  *   <DownloadFile width={16} height={16} /> Download File
@@ -117,7 +124,8 @@ import DropdownExample from "./dropdown-example.js";
  *
  *
  * ** Using Icon Component** (Recommended for dynamic icons):
- * ```
+ *
+ * ```tsx
  * import { Icon } from "@/powerhouse";
  * <Dropdown>
  *   <DropdownTrigger>
@@ -141,7 +149,8 @@ import DropdownExample from "./dropdown-example.js";
  * `DropdownItem` component extends `HTMLDivElement` attributes. To handle click events:
  *
  * **Inline implementation:**
- * ```
+ *
+ * ```tsx
  * <DropdownItem onClick={() => console.log('Item clicked')}>
  *   <SettingsIcon /> Configuration
  * </DropdownItem>
@@ -156,7 +165,7 @@ import DropdownExample from "./dropdown-example.js";
  * TypeScript users get full type checking for native div element props.
  */
 const meta: Meta<typeof DropdownExample> = {
-  title: "Document Engineering/Simple Components/Dropdown",
+  title: "Document Engineering/Data Display/Dropdown",
   component: DropdownExample,
   parameters: {
     layout: "centered",

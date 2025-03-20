@@ -9,7 +9,7 @@ import { FORMAT_MAPPING } from "../date-time-field/utils.js";
 import { DateField } from "./date-field.js";
 
 const meta: Meta<typeof DateField> = {
-  title: "Document Engineering/Simple Components/Date Field",
+  title: "Document Engineering/Scalars/Date Field",
   component: DateField,
   parameters: {
     layout: "centered",

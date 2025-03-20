@@ -8,7 +8,7 @@ import {
 import { CurrencyCodeField } from "./currency-code-field.js";
 import { cryptoCurrencies, fiatCurrencies } from "./utils.js";
 const meta: Meta<typeof CurrencyCodeField> = {
-  title: "Document Engineering/Simple Components/Currency Code Field",
+  title: "Document Engineering/Scalars/Currency Code Field",
   component: CurrencyCodeField,
   decorators: [withForm, (Story) => <div className="w-48">{Story()}</div>],
   parameters: {

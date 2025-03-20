@@ -92,3 +92,17 @@ export {
    */
   type SidebarProps,
 } from "../../ui/components/sidebar/index.js";
+
+// deprecated fragments
+export {
+  /**
+   * @deprecated Use the `Input` component from the `@powerhousedao/design-system/ui` package instead.
+   * This component is deprecated and will be removed in a future version.
+   */
+  Input,
+  /**
+   * @deprecated Use the `InputProps` type from the `@powerhousedao/design-system/ui` package instead.
+   * This type is deprecated and will be removed in a future version.
+   */
+  type InputProps,
+} from "../../ui/components/data-entry/index.js";

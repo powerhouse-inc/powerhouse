@@ -1,15 +1,15 @@
 import { cn, FormMessageList } from "#scalars";
 import { forwardRef, useId, useMemo } from "react";
-import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
-import type { InputBaseProps } from "../../types.js";
-import { CharacterCounter } from "../character-counter/index.js";
-import { FormDescription } from "../form-description/index.js";
-import { FormGroup } from "../form-group/form-group.js";
-import { FormLabel } from "../form-label/form-label.js";
-import { Input } from "../input/input.js";
+import { CharacterCounter } from "../../../../scalars/components/fragments/character-counter/index.js";
+import { FormDescription } from "../../../../scalars/components/fragments/form-description/index.js";
+import { FormGroup } from "../../../../scalars/components/fragments/form-group/form-group.js";
+import { FormLabel } from "../../../../scalars/components/fragments/form-label/form-label.js";
 import ValueTransformer, {
   type TransformerType,
-} from "../value-transformer/value-transformer.js";
+} from "../../../../scalars/components/fragments/value-transformer/value-transformer.js";
+import type { InputBaseProps } from "../../../../scalars/components/types.js";
+import { sharedValueTransformers } from "../../../../scalars/lib/shared-value-transformers.js";
+import { Input } from "../index.js";
 import type { CommonTextProps } from "./types.js";
 
 interface TextInputProps
