@@ -2,18 +2,18 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
-import { generateId } from "document-model/utils";
-import {
+import { generateId } from "document-model";
+import type {
   OperationalProcessor,
   ProcessorOptions,
   ProcessorSetupArgs,
   ProcessorUpdate,
 } from "@powerhousedao/reactor-api";
 <% documentTypes.forEach(type => { _%>
-import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
+import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
 %><% }); _%>
-<% if(documentTypes.length === 0) { %>import { Document } from "document-model";<% } %>
-type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>Document<% } %>;
+<% if(documentTypes.length === 0) { %>import { PHDocument } from "document-model";<% } %>
+type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
 export class <%= pascalName %>Processor extends OperationalProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
 

@@ -15,6 +15,11 @@ export interface IStorageDelegate {
   ): Promise<OperationsFromDocument<TDocument> | undefined>;
 }
 
+export interface IDocumentStorage {
+  exists(documentId: string): Promise<boolean>;
+  create(documentId: string, document: PHDocument): Promise<void>;
+}
+
 export interface IStorage {
   checkDocumentExists(drive: string, id: string): Promise<boolean>;
   getDocuments: (drive: string) => Promise<string[]>;

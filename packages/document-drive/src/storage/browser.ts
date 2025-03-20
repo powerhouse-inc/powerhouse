@@ -13,14 +13,21 @@ import type {
   PHDocument,
 } from "document-model";
 import LocalForage from "localforage";
-import { type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
-export class BrowserStorage implements IDriveStorage {
+// Interface for drive manifest that tracks document IDs in a drive
+interface DriveManifest {
+  documentIds: string[];
+}
+
+export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   private db: Promise<LocalForage>;
 
   static DBName = "DOCUMENT_DRIVES";
   static SEP = ":";
   static DRIVES_KEY = "DRIVES";
+  static DOCUMENT_KEY = "DOCUMENT";
+  static MANIFEST_KEY = "MANIFEST";
 
   constructor(namespace?: string) {
     this.db = LocalForage.ready().then(() =>
@@ -32,24 +39,51 @@ export class BrowserStorage implements IDriveStorage {
     );
   }
 
-  buildKey(...args: string[]) {
-    return args.join(BrowserStorage.SEP);
-  }
+  ////////////////////////////////
+  // IDocumentStorage
+  ////////////////////////////////
 
-  async checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    const document = await (
-      await this.db
-    ).getItem<Document>(this.buildKey(drive, id));
+  async exists(documentId: string): Promise<boolean> {
+    const db = await this.db;
+    const document = await db.getItem<Document>(
+      this.buildDocumentKey(documentId),
+    );
+
     return !!document;
   }
 
-  async getDocuments(drive: string) {
+  async create(documentId: string, document: PHDocument): Promise<void> {
     const db = await this.db;
-    const keys = await db.keys();
-    const driveKey = `${drive}${BrowserStorage.SEP}`;
-    return keys
-      .filter((key) => key.startsWith(driveKey))
-      .map((key) => key.slice(driveKey.length));
+    await db.setItem(this.buildDocumentKey(documentId), document);
+  }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
+
+  checkDocumentExists(drive: string, documentId: string): Promise<boolean> {
+    return this.exists(documentId);
+  }
+
+  private async getDriveManifest(driveId: string): Promise<DriveManifest> {
+    const db = await this.db;
+    const manifest = await db.getItem<DriveManifest>(
+      this.buildManifestKey(driveId),
+    );
+    return manifest || { documentIds: [] };
+  }
+
+  private async updateDriveManifest(
+    driveId: string,
+    manifest: DriveManifest,
+  ): Promise<void> {
+    const db = await this.db;
+    await db.setItem(this.buildManifestKey(driveId), manifest);
+  }
+
+  async getDocuments(drive: string) {
+    const manifest = await this.getDriveManifest(drive);
+    return manifest.documentIds;
   }
 
   async getDocument<TDocument extends PHDocument>(
@@ -58,7 +92,7 @@ export class BrowserStorage implements IDriveStorage {
   ): Promise<TDocument> {
     const document = await (
       await this.db
-    ).getItem<TDocument>(this.buildKey(driveId, id));
+    ).getItem<TDocument>(this.buildDocumentKey(id));
     if (!document) {
       throw new Error(`Document with id ${id} not found`);
     }
@@ -66,11 +100,26 @@ export class BrowserStorage implements IDriveStorage {
   }
 
   async createDocument(drive: string, id: string, document: PHDocument) {
-    await (await this.db).setItem(this.buildKey(drive, id), document);
+    await this.create(id, document);
+
+    // Update the drive manifest to include this document
+    const manifest = await this.getDriveManifest(drive);
+    if (!manifest.documentIds.includes(id)) {
+      manifest.documentIds.push(id);
+      await this.updateDriveManifest(drive, manifest);
+    }
   }
 
   async deleteDocument(drive: string, id: string) {
-    await (await this.db).removeItem(this.buildKey(drive, id));
+    await (await this.db).removeItem(this.buildDocumentKey(id));
+
+    // Update the drive manifest to remove this document
+    const manifest = await this.getDriveManifest(drive);
+    const docIndex = manifest.documentIds.indexOf(id);
+    if (docIndex !== -1) {
+      manifest.documentIds.splice(docIndex, 1);
+      await this.updateDriveManifest(drive, manifest);
+    }
   }
 
   async clearStorage(): Promise<void> {
@@ -91,7 +140,7 @@ export class BrowserStorage implements IDriveStorage {
     const mergedOperations = mergeOperations(document.operations, operations);
 
     const db = await this.db;
-    await db.setItem(this.buildKey(drive, id), {
+    await db.setItem(this.buildDocumentKey(id), {
       ...document,
       ...header,
       operations: mergedOperations,
@@ -111,7 +160,7 @@ export class BrowserStorage implements IDriveStorage {
   async getDrive(id: string) {
     const db = await this.db;
     const drive = await db.getItem<DocumentDriveDocument>(
-      this.buildKey(BrowserStorage.DRIVES_KEY, id),
+      this.buildDriveKey(id),
     );
     if (!drive) {
       throw new DriveNotFoundError(id);
@@ -134,15 +183,23 @@ export class BrowserStorage implements IDriveStorage {
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
     const db = await this.db;
-    await db.setItem(this.buildKey(BrowserStorage.DRIVES_KEY, id), drive);
+    await db.setItem(this.buildDriveKey(id), drive);
+
+    // Initialize an empty manifest for the new drive
+    await this.updateDriveManifest(id, { documentIds: [] });
   }
 
   async deleteDrive(id: string) {
+    // First get all documents in this drive
     const documents = await this.getDocuments(id);
+
+    // Delete each document (this already updates the manifest)
     await Promise.all(documents.map((doc) => this.deleteDocument(id, doc)));
-    return (await this.db).removeItem(
-      this.buildKey(BrowserStorage.DRIVES_KEY, id),
-    );
+
+    // Delete the drive and its manifest
+    const db = await this.db;
+    await db.removeItem(this.buildManifestKey(id));
+    return db.removeItem(this.buildDriveKey(id));
   }
 
   async addDriveOperations(
@@ -154,12 +211,11 @@ export class BrowserStorage implements IDriveStorage {
     const mergedOperations = mergeOperations(drive.operations, operations);
     const db = await this.db;
 
-    await db.setItem(this.buildKey(BrowserStorage.DRIVES_KEY, id), {
+    await db.setItem(this.buildDriveKey(id), {
       ...drive,
       ...header,
       operations: mergedOperations,
     });
-    return;
   }
 
   async getSynchronizationUnitsRevision(
@@ -221,11 +277,22 @@ export class BrowserStorage implements IDriveStorage {
   async migrateOperationSignatures() {
     const drives = await this.getDrives();
     for (const drive of drives) {
-      await this.migrateDocument(BrowserStorage.DRIVES_KEY, drive);
+      await this.migrateDrive(drive);
 
       const documents = await this.getDocuments(drive);
       await Promise.all(
         documents.map(async (docId) => this.migrateDocument(drive, docId)),
+      );
+    }
+  }
+
+  private async migrateDrive(driveId: string) {
+    const drive = await this.getDrive(driveId);
+    const migratedDrive = migrateDocumentOperationSignatures(drive);
+    if (migratedDrive !== drive) {
+      return (await this.db).setItem(
+        this.buildDriveKey(driveId),
+        migratedDrive,
       );
     }
   }
@@ -235,9 +302,25 @@ export class BrowserStorage implements IDriveStorage {
     const migratedDocument = migrateDocumentOperationSignatures(document);
     if (migratedDocument !== document) {
       return (await this.db).setItem(
-        this.buildKey(drive, id),
+        this.buildDocumentKey(id),
         migratedDocument,
       );
     }
+  }
+
+  ////////////////////////////////
+  // Private methods
+  ////////////////////////////////
+
+  buildDriveKey(driveId: string) {
+    return `${BrowserStorage.DRIVES_KEY}${BrowserStorage.SEP}${driveId}`;
+  }
+
+  buildDocumentKey(documentId: string) {
+    return `${BrowserStorage.DOCUMENT_KEY}${BrowserStorage.SEP}${documentId}`;
+  }
+
+  buildManifestKey(driveId: string) {
+    return `${BrowserStorage.MANIFEST_KEY}${BrowserStorage.SEP}${driveId}`;
   }
 }

@@ -2,7 +2,7 @@ import { type ICache } from "#cache/types";
 import {
   removeListener,
   removeTrigger,
-  setSharingType
+  setSharingType,
 } from "#drive-document-model/gen/creators";
 import { createDocument } from "#drive-document-model/gen/utils";
 import {
@@ -14,7 +14,7 @@ import {
   isOperationJob,
 } from "#queue/types";
 import { ReadModeServer } from "#read-mode/server";
-import { type IDriveStorage } from "#storage/types";
+import { type IDocumentStorage, type IDriveStorage } from "#storage/types";
 import {
   DefaultDrivesManager,
   type IDefaultDrivesManager,
@@ -27,7 +27,7 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type DocumentDriveState,
-  type Trigger
+  type Trigger,
 } from "document-drive";
 import {
   type Action,
@@ -61,9 +61,7 @@ import {
   type CancelPullLoop,
   PullResponderTransmitter,
 } from "./listener/transmitter/pull-responder.js";
-import {
-  type StrandUpdateSource
-} from "./listener/transmitter/types.js";
+import { type StrandUpdateSource } from "./listener/transmitter/types.js";
 import {
   type AddOperationOptions,
   type Constructor,
@@ -90,7 +88,7 @@ import {
   type SyncStatus,
   type SyncUnitStatusObject,
   type SynchronizationUnit,
-  type SynchronizationUnitQuery
+  type SynchronizationUnitQuery,
 } from "./types.js";
 import { filterOperationsByRevision, isAtRevision } from "./utils.js";
 
@@ -100,6 +98,7 @@ export class BaseDocumentDriveServer
   // external dependencies
   private documentModelModules: DocumentModelModule[];
   private storage: IDriveStorage;
+  private documentStorage: IDocumentStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
   private eventEmitter: IEventEmitter;
@@ -109,6 +108,46 @@ export class BaseDocumentDriveServer
 
   // internal dependencies
   private defaultDrivesManager: DefaultDrivesManager;
+
+  private defaultDrivesManagerDelegate = {
+    detachDrive: this.detachDrive.bind(this),
+    emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) =>
+      this.eventEmitter.emit("defaultRemoteDrive", ...args),
+  };
+
+  private queueDelegate = {
+    checkDocumentExists: (documentId: string): Promise<boolean> =>
+      this.documentStorage.exists(documentId),
+    processOperationJob: async ({
+      driveId,
+      documentId,
+      operations,
+      options,
+    }: OperationJob) => {
+      return documentId
+        ? this.addOperations(driveId, documentId, operations, options)
+        : this.addDriveOperations(driveId, operations, options);
+    },
+    processActionJob: async ({
+      driveId,
+      documentId,
+      actions,
+      options,
+    }: ActionJob) => {
+      return documentId
+        ? this.addActions(driveId, documentId, actions, options)
+        : this.addDriveActions(driveId, actions, options);
+    },
+    processJob: async (job: Job) => {
+      if (isOperationJob(job)) {
+        return this.queueDelegate.processOperationJob(job);
+      } else if (isActionJob(job)) {
+        return this.queueDelegate.processActionJob(job);
+      } else {
+        throw new Error("Unknown job type", job);
+      }
+    },
+  };
 
   // internal state
   private triggerMap = new Map<
@@ -120,6 +159,7 @@ export class BaseDocumentDriveServer
   constructor(
     documentModelModules: DocumentModelModule[],
     storage: IDriveStorage,
+    documentStorage: IDocumentStorage,
     cache: ICache,
     queueManager: IQueueManager,
     eventEmitter: IEventEmitter,
@@ -130,6 +170,7 @@ export class BaseDocumentDriveServer
   ) {
     this.documentModelModules = documentModelModules;
     this.storage = storage;
+    this.documentStorage = documentStorage;
     this.cache = cache;
     this.queueManager = queueManager;
     this.eventEmitter = eventEmitter;
@@ -178,7 +219,7 @@ export class BaseDocumentDriveServer
 
   // workaround for testing the ephemeral listeners -- we don't have DI in place yet
   // todo: remove this once we have DI
-  get listeners():IListenerManager {
+  get listeners(): IListenerManager {
     return this.listenerManager;
   }
 
@@ -406,49 +447,6 @@ export class BaseDocumentDriveServer
     }
     return this.triggerMap.delete(driveId);
   }
-
-  private defaultDrivesManagerDelegate = {
-    detachDrive: this.detachDrive.bind(this),
-    emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) =>
-      this.eventEmitter.emit("defaultRemoteDrive", ...args),
-  };
-
-  private queueDelegate = {
-    checkDocumentExists: (
-      driveId: string,
-      documentId: string,
-    ): Promise<boolean> =>
-      this.storage.checkDocumentExists(driveId, documentId),
-    processOperationJob: async ({
-      driveId,
-      documentId,
-      operations,
-      options,
-    }: OperationJob) => {
-      return documentId
-        ? this.addOperations(driveId, documentId, operations, options)
-        : this.addDriveOperations(driveId, operations, options);
-    },
-    processActionJob: async ({
-      driveId,
-      documentId,
-      actions,
-      options,
-    }: ActionJob) => {
-      return documentId
-        ? this.addActions(driveId, documentId, actions, options)
-        : this.addDriveActions(driveId, actions, options);
-    },
-    processJob: async (job: Job) => {
-      if (isOperationJob(job)) {
-        return this.queueDelegate.processOperationJob(job);
-      } else if (isActionJob(job)) {
-        return this.queueDelegate.processActionJob(job);
-      } else {
-        throw new Error("Unknown job type", job);
-      }
-    },
-  };
 
   private async _initializeDrive(driveId: string) {
     const drive = await this.getDrive(driveId);

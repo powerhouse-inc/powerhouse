@@ -17,13 +17,14 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "../../drive-document-model/gen/types.js";
-import {
-  ConflictOperationError,
-  DriveNotFoundError,
-} from "../../server/error.js";
+import { ConflictOperationError } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { logger } from "../../utils/logger.js";
-import { type IDriveStorage, type IStorageDelegate } from "../types.js";
+import type {
+  IDocumentStorage,
+  IDriveStorage,
+  IStorageDelegate,
+} from "../types.js";
 
 export * from "./factory.js";
 
@@ -92,7 +93,7 @@ type ExtendedPrismaClient = ReturnType<
   typeof getRetryTransactionsClient<PrismaClient>
 >;
 
-export class PrismaStorage implements IDriveStorage {
+export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   private db: ExtendedPrismaClient;
   private delegate: IStorageDelegate | undefined;
 
@@ -104,26 +105,103 @@ export class PrismaStorage implements IDriveStorage {
     });
   }
 
+  ////////////////////////////////
+  // IDocumentStorage
+  ////////////////////////////////
+
+  async exists(documentId: string) {
+    const count = await this.db.document.count({
+      where: {
+        id: documentId,
+      },
+    });
+
+    return count > 0;
+  }
+
+  async create(documentId: string, document: PHDocument) {
+    await this.db.document.upsert({
+      where: {
+        id: documentId,
+      },
+      update: {},
+      create: {
+        name: document.name,
+        documentType: document.documentType,
+        isDrive: false,
+        initialState: JSON.stringify(document.initialState),
+        lastModified: document.lastModified,
+        revision: JSON.stringify(document.revision),
+        meta: document.meta ? JSON.stringify(document.meta) : undefined,
+        id: documentId,
+      },
+    });
+  }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
+
   setStorageDelegate(delegate: IStorageDelegate): void {
     this.delegate = delegate;
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    // drive for all drive documents
-    await this.createDocument("drives", id, drive);
+    const doc = {
+      name: drive.name,
+      documentType: drive.documentType,
+      isDrive: true,
+      initialState: JSON.stringify(drive.initialState),
+      lastModified: drive.lastModified,
+      revision: JSON.stringify(drive.revision),
+      meta: drive.meta ? JSON.stringify(drive.meta) : undefined,
+      id,
+    };
+
+    await this.db.document.upsert({
+      where: {
+        id,
+      },
+      update: doc,
+      create: doc,
+    });
+
+    // backwards compatibility -- if the drive has a slug, check if it already exists
+    if (drive.initialState.state.global.slug) {
+      const existingDrive = await this.db.drive.findFirst({
+        where: {
+          slug: drive.initialState.state.global.slug,
+        },
+      });
+
+      if (existingDrive) {
+        await this.db.drive.update({
+          where: { id: existingDrive.id },
+          data: {
+            id,
+            slug: drive.initialState.state.global.slug,
+          },
+        });
+
+        return;
+      }
+    }
+
     await this.db.drive.upsert({
       where: {
-        slug: drive.initialState.state.global.slug ?? id,
+        id,
       },
       create: {
-        id: id,
+        id,
         slug: drive.initialState.state.global.slug ?? id,
       },
       update: {
         id,
+        slug: drive.initialState.state.global.slug ?? id,
       },
     });
   }
+
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
@@ -151,22 +229,15 @@ export class PrismaStorage implements IDriveStorage {
     id: string,
     document: PHDocument,
   ): Promise<void> {
-    await this.db.document.upsert({
+    await this.create(id, document);
+
+    // create the many-to-many relation
+    await this.db.document.update({
       where: {
-        id_driveId: {
-          id,
-          driveId: drive,
-        },
-      },
-      update: {},
-      create: {
-        name: document.name,
-        documentType: document.documentType,
-        driveId: drive,
-        initialState: JSON.stringify(document.initialState),
-        lastModified: document.lastModified,
-        revision: JSON.stringify(document.revision),
         id,
+      },
+      data: {
+        driveDocuments: { create: { driveId: drive } },
       },
     });
   }
@@ -202,7 +273,6 @@ export class PrismaStorage implements IDriveStorage {
       await tx.document.updateMany({
         where: {
           id,
-          driveId: drive,
         },
         data: {
           lastModified: header.lastModified,
@@ -323,10 +393,9 @@ export class PrismaStorage implements IDriveStorage {
         id: true,
       },
       where: {
-        AND: {
-          driveId: drive,
-          NOT: {
-            id: "drives",
+        driveDocuments: {
+          some: {
+            driveId: drive,
           },
         },
       },
@@ -339,7 +408,11 @@ export class PrismaStorage implements IDriveStorage {
     const count = await this.db.document.count({
       where: {
         id: id,
-        driveId: driveId,
+        driveDocuments: {
+          some: {
+            driveId: driveId,
+          },
+        },
       },
     });
     return count > 0;
@@ -351,14 +424,22 @@ export class PrismaStorage implements IDriveStorage {
     tx?: Transaction,
   ): Promise<TDocument> {
     const prisma = tx ?? this.db;
-    const result = await prisma.document.findUnique({
+    const query: any = {
       where: {
-        id_driveId: {
-          driveId,
-          id,
-        },
+        id,
       },
-    });
+    };
+
+    if (driveId !== "drives") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      query.where.driveDocuments = {
+        some: {
+          driveId,
+        },
+      };
+    }
+
+    const result = await prisma.document.findUnique(query);
 
     if (result === null) {
       throw new Error(`Document with id ${id} not found`);
@@ -469,6 +550,7 @@ export class PrismaStorage implements IDriveStorage {
       operations: operationsByScope,
       clipboard: [],
       revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
+      meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
       attachments: {},
     };
     return doc as unknown as TDocument;
@@ -476,10 +558,26 @@ export class PrismaStorage implements IDriveStorage {
 
   async deleteDocument(drive: string, id: string) {
     try {
+      // delete out of drives
+      await this.db.drive.deleteMany({
+        where: {
+          driveDocuments: {
+            none: {
+              documentId: id,
+            },
+          },
+        },
+      });
+
+      // delete document
       await this.db.document.deleteMany({
         where: {
-          driveId: drive,
-          id: id,
+          driveDocuments: {
+            some: {
+              driveId: drive,
+            },
+          },
+          id,
         },
       });
     } catch (e: unknown) {
@@ -499,17 +597,17 @@ export class PrismaStorage implements IDriveStorage {
   }
 
   async getDrives() {
-    return this.getDocuments("drives");
+    const drives = await this.db.drive.findMany({
+      select: {
+        id: true,
+      },
+    });
+
+    return drives.map((d) => d.id);
   }
 
   async getDrive(id: string) {
-    try {
-      const doc = await this.getDocument("drives", id);
-      return doc as DocumentDriveDocument;
-    } catch (e) {
-      logger.error(e);
-      throw new DriveNotFoundError(id);
-    }
+    return this.getDocument<DocumentDriveDocument>("drives", id);
   }
 
   async getDriveBySlug(slug: string) {
@@ -527,20 +625,28 @@ export class PrismaStorage implements IDriveStorage {
   }
 
   async deleteDrive(id: string) {
-    // delete drive and associated slug
-    await this.db.drive.deleteMany({
+    // delete drive
+    await this.db.drive.delete({
       where: {
         id,
       },
     });
 
-    // delete drive document and its operations
-    await this.deleteDocument("drives", id);
+    // delete drive document (will cascade)
+    await this.db.document.delete({
+      where: {
+        id,
+      },
+    });
 
-    // deletes all documents of the drive
+    // deletes all documents that only belong to this drive
     await this.db.document.deleteMany({
       where: {
-        driveId: id,
+        driveDocuments: {
+          none: {
+            driveId: id,
+          },
+        },
       },
     });
   }

@@ -7,7 +7,7 @@ unless_exists: true
  * - change it by adding new tests or modifying the existing ones
  */
 
-import utils, { initialGlobalState, initialLocalState } from '../../gen/utils';
+import utils, { initialGlobalState, initialLocalState } from '../../gen/utils.js';
 
 describe('<%= h.changeCase.title(documentType) %> Document Model', () => {
     it('should create a new <%= h.changeCase.title(documentType) %> document', () => {
