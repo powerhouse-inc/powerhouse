@@ -2,13 +2,17 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
 import { Command as CommandPrimitive } from "cmdk";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
 import { Input } from "../../../../ui/components/index.js";
 import {
   Tooltip,
   TooltipProvider,
 } from "../../../../ui/components/tooltip/tooltip.js";
+import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
+import ValueTransformer, {
+  type TransformerType,
+} from "../value-transformer/value-transformer.js";
 import type { IdAutocompleteOption } from "./types.js";
 
 // TODO: can we use generic InputProps here?
@@ -74,71 +78,81 @@ export const IdAutocompleteInputContainer = React.forwardRef<
     const [hasCopied, setHasCopied] = useState(false);
     const hasHover = useMediaQuery("(hover: hover) and (pointer: fine)");
 
+    const transformers: TransformerType = useMemo(
+      () => [
+        sharedValueTransformers.trimOnBlur(),
+        sharedValueTransformers.trimOnEnter(),
+      ],
+      [],
+    );
+
     return (
       <div className={cn("group relative")}>
-        <CommandPrimitive.Input asChild>
-          <Input
-            id={id}
-            name={name}
-            value={value}
-            className={cn("pr-9", className)}
-            disabled={disabled}
-            onChange={onChange}
-            onBlur={onBlur}
-            onClick={(e) => {
-              const input = e.target as HTMLInputElement;
-              if (
-                !(isLoading || haveFetchError) &&
-                !selectedOption &&
-                input.value !== ""
-              ) {
-                handleOpenChange?.(true);
-              }
-              onClick?.(e);
-            }}
-            onKeyDown={(e) => {
-              onKeyDown?.(e);
-              const isOptionsRelatedKey = [
-                "ArrowUp",
-                "ArrowDown",
-                "Enter",
-              ].includes(e.key);
+        <ValueTransformer transformers={transformers}>
+          <CommandPrimitive.Input asChild>
+            <Input
+              id={id}
+              name={name}
+              value={value}
+              className={cn("pr-9", className)}
+              disabled={disabled}
+              onChange={onChange}
+              onBlur={onBlur}
+              onClick={(e) => {
+                const input = e.target as HTMLInputElement;
+                if (
+                  !(isLoading || haveFetchError) &&
+                  !selectedOption &&
+                  input.value !== ""
+                ) {
+                  handleOpenChange?.(true);
+                }
+                onClick?.(e);
+              }}
+              onKeyDown={(e) => {
+                onKeyDown?.(e);
+                const isOptionsRelatedKey = [
+                  "ArrowUp",
+                  "ArrowDown",
+                  "Enter",
+                ].includes(e.key);
 
-              if (e.key === "Enter" && isPopoverOpen && optionsLength === 0) {
-                handleOpenChange?.(false);
-                e.preventDefault();
-                return;
-              }
-              if (
-                !(isOptionsRelatedKey && isPopoverOpen && optionsLength > 0)
-              ) {
-                e.stopPropagation();
-              }
-            }}
-            onMouseDown={(e) => {
-              const input = e.target as HTMLInputElement;
-              if (!input.contains(document.activeElement)) {
-                // wait for the next tick to ensure the focus occurs first
-                requestAnimationFrame(() => {
-                  input.select();
-                });
-              }
-              onMouseDown?.(e);
-            }}
-            onPaste={(e) => {
-              handlePaste?.(e);
-              onPaste?.(e);
-            }}
-            placeholder={placeholder}
-            aria-invalid={hasError}
-            aria-label={!label ? "Id Autocomplete field" : undefined}
-            aria-required={required}
-            aria-expanded={isPopoverOpen}
-            maxLength={maxLength}
-            {...props}
-            ref={ref}
-          />
-        </CommandPrimitive.Input>
+                if (e.key === "Enter" && isPopoverOpen && optionsLength === 0) {
+                  handleOpenChange?.(false);
+                  e.preventDefault();
+                  return;
+                }
+                if (
+                  !(isOptionsRelatedKey && isPopoverOpen && optionsLength > 0)
+                ) {
+                  e.stopPropagation();
+                }
+              }}
+              onMouseDown={(e) => {
+                const input = e.target as HTMLInputElement;
+                if (!input.contains(document.activeElement)) {
+                  // wait for the next tick to ensure the focus occurs first
+                  requestAnimationFrame(() => {
+                    input.select();
+                  });
+                }
+                onMouseDown?.(e);
+              }}
+              onPaste={(e) => {
+                handlePaste?.(e);
+                onPaste?.(e);
+              }}
+              placeholder={placeholder}
+              aria-invalid={hasError}
+              aria-label={!label ? "Id Autocomplete field" : undefined}
+              aria-required={required}
+              aria-expanded={isPopoverOpen}
+              maxLength={maxLength}
+              {...props}
+              ref={ref}
+            />
+          </CommandPrimitive.Input>
+        </ValueTransformer>
         <div
           className={cn(
             "absolute right-3 top-1/2 flex size-4 -translate-y-1/2 items-center",
