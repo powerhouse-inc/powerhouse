@@ -118,6 +118,7 @@ export const WithFavorites: Story = {
       {
         ticker: "USDC",
         crypto: true,
+        icon: "Briefcase",
       },
     ],
     favoriteCurrencies: ["BTC", "ETH"],
