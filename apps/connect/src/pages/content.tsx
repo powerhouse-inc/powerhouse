@@ -25,7 +25,7 @@ export default function Content() {
     }, [selectedDriveNode, selectedNode, addFile]);
 
     return (
-        <div className="flex h-full flex-col overflow-auto" id="content-view">
+        <div className="flex h-full flex-col overflow-hidden" id="content-view">
             {fileNodeDocument ? (
                 <DocumentEditorContainer key={fileNodeDocument.documentId} />
             ) : selectedDriveNode ? (
