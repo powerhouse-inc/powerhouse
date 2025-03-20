@@ -7,8 +7,7 @@ import { gql, request } from 'graphql-request';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-const REACTOR_URL =
-    'https://apps.powerhouse.io/develop/powerhouse/switchboard/';
+const REACTOR_URL = 'https://apps.powerhouse.io/sky-atlas/switchboard/';
 const MIN_LOADING_TIME = 2000;
 
 async function forkAtlas(docId: string): Promise<{ ForkAtlas: string }> {
