@@ -1,3 +1,20 @@
+## 1.0.0-dev.242 (2025-03-20)
+
+### 🚀 Features
+
+- added account popover ([#1335](https://github.com/powerhouse-inc/powerhouse/pull/1335))
+
+### 🩹 Fixes
+
+- remove horizontal scrollbar ([7d4412013](https://github.com/powerhouse-inc/powerhouse/commit/7d4412013))
+- **connect:** set dark mode with class ([094db0b34](https://github.com/powerhouse-inc/powerhouse/commit/094db0b34))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Guillermo Puente Sandoval
+
 ## 1.0.0-dev.241 (2025-03-20)
 
 ### 🩹 Fixes
