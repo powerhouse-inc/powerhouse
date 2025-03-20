@@ -1,6 +1,5 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useCallback, useId, useMemo } from "react";
-import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
+import React, { useCallback, useId } from "react";
 import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
 import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
@@ -53,8 +52,6 @@ const OIDFieldRaw = React.forwardRef<HTMLInputElement, OIDFieldProps>(
     const id = idProp ?? `${prefix}-oid`;
     const autoComplete = autoCompleteProp ?? true;
 
-    const contextValue = useMemo(() => ({}), []);
-
     const renderOption = useCallback(
       (
         option: OIDOption,
@@ -87,60 +84,56 @@ const OIDFieldRaw = React.forwardRef<HTMLInputElement, OIDFieldProps>(
       [variant],
     );
 
-    return (
-      <IdAutocompleteContext.Provider value={contextValue}>
-        {autoComplete && fetchOptionsCallback ? (
-          <IdAutocompleteFieldRaw
-            id={id}
-            name={name}
-            className={className}
-            label={label}
-            description={description}
-            value={value}
-            defaultValue={defaultValue}
-            disabled={disabled}
-            placeholder={placeholder}
-            required={required}
-            errors={errors}
-            warnings={warnings}
-            onChange={onChange}
-            onBlur={onBlur}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            autoComplete={true}
-            variant={variant}
-            fetchOptionsCallback={fetchOptionsCallback}
-            fetchSelectedOptionCallback={fetchSelectedOptionCallback}
-            isOpenByDefault={isOpenByDefault}
-            initialOptions={initialOptions}
-            renderOption={renderOption}
-            {...props}
-            ref={ref}
-          />
-        ) : (
-          <IdAutocompleteFieldRaw
-            id={id}
-            name={name}
-            className={className}
-            label={label}
-            description={description}
-            value={value}
-            defaultValue={defaultValue}
-            disabled={disabled}
-            placeholder={placeholder}
-            required={required}
-            errors={errors}
-            warnings={warnings}
-            onChange={onChange}
-            onBlur={onBlur}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            autoComplete={false}
-            {...props}
-            ref={ref}
-          />
-        )}
-      </IdAutocompleteContext.Provider>
+    return autoComplete && fetchOptionsCallback ? (
+      <IdAutocompleteFieldRaw
+        id={id}
+        name={name}
+        className={className}
+        label={label}
+        description={description}
+        value={value}
+        defaultValue={defaultValue}
+        disabled={disabled}
+        placeholder={placeholder}
+        required={required}
+        errors={errors}
+        warnings={warnings}
+        onChange={onChange}
+        onBlur={onBlur}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        autoComplete={true}
+        variant={variant}
+        fetchOptionsCallback={fetchOptionsCallback}
+        fetchSelectedOptionCallback={fetchSelectedOptionCallback}
+        isOpenByDefault={isOpenByDefault}
+        initialOptions={initialOptions}
+        renderOption={renderOption}
+        {...props}
+        ref={ref}
+      />
+    ) : (
+      <IdAutocompleteFieldRaw
+        id={id}
+        name={name}
+        className={className}
+        label={label}
+        description={description}
+        value={value}
+        defaultValue={defaultValue}
+        disabled={disabled}
+        placeholder={placeholder}
+        required={required}
+        errors={errors}
+        warnings={warnings}
+        onChange={onChange}
+        onBlur={onBlur}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        autoComplete={false}
+        {...props}
+        ref={ref}
+      />
     );
   },
 );
