@@ -83,7 +83,17 @@ export const Default: Story = {
     currencies: cryptoCurrencies(),
   },
 };
-export const FavoriteCurrencies: Story = {
+
+export const Disabled: Story = {
+  args: {
+    label: "Currency",
+    value: "EUR",
+    disabled: true,
+    currencies: fiatCurrencies(),
+  },
+};
+
+export const WithFavorites: Story = {
   args: {
     label: "Currency",
     currencies: [
@@ -108,19 +118,8 @@ export const FavoriteCurrencies: Story = {
       {
         ticker: "USDC",
         crypto: true,
-
-        icon: "Briefcase",
       },
     ],
     favoriteCurrencies: ["BTC", "ETH"],
-  },
-};
-
-export const Disabled: Story = {
-  args: {
-    label: "Currency",
-    value: "EUR",
-    disabled: true,
-    currencies: fiatCurrencies(),
   },
 };
