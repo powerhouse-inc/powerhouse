@@ -1,8 +1,9 @@
 /* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useRef } from "react";
+import React, { useId, useMemo, useRef } from "react";
 import { Input } from "../../../../ui/components/data-entry/index.js";
+import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
 import { cn } from "../../../lib/utils.js";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Command } from "../command/command.js";
@@ -11,6 +12,9 @@ import { FormGroup } from "../form-group/form-group.js";
 import { FormLabel } from "../form-label/form-label.js";
 import { FormMessageList } from "../form-message/index.js";
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
+import ValueTransformer, {
+  type TransformerType,
+} from "../value-transformer/value-transformer.js";
 import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 import { IdAutocompleteInputContainer } from "./id-autocomplete-input-container.js";
 import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
@@ -120,6 +124,14 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
     const asCard =
       variant === "withValueAndTitle" ||
       variant === "withValueTitleAndDescription";
+
+    const transformers: TransformerType = useMemo(
+      () => [
+        sharedValueTransformers.trimOnBlur(),
+        sharedValueTransformers.trimOnEnter(),
+      ],
+      [],
+    );
 
     return (
       <FormGroup>
@@ -232,24 +244,26 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
             </Command>
           </Popover>
         ) : (
-          <Input
-            id={id}
-            name={name}
-            value={selectedValue}
-            className={className}
-            disabled={disabled}
-            onChange={handleChange}
-            onBlur={onBlur}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            placeholder={placeholder}
-            aria-invalid={hasError}
-            aria-label={!label ? "Id Autocomplete field" : undefined}
-            aria-required={required}
-            maxLength={maxLength}
-            {...props}
-            ref={mergedRef}
-          />
+          <ValueTransformer transformers={transformers}>
+            <Input
+              id={id}
+              name={name}
+              value={selectedValue}
+              className={className}
+              disabled={disabled}
+              onChange={handleChange}
+              onBlur={onBlur}
+              onClick={onClick}
+              onMouseDown={onMouseDown}
+              placeholder={placeholder}
+              aria-invalid={hasError}
+              aria-label={!label ? "Id Autocomplete field" : undefined}
+              aria-required={required}
+              maxLength={maxLength}
+              {...props}
+              ref={mergedRef}
+            />
+          </ValueTransformer>
         )}
         {!!description && <FormDescription>{description}</FormDescription>}
         {hasWarning && <FormMessageList messages={warnings} type="warning" />}
