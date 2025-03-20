@@ -4,5 +4,5 @@ force: true
 ---
 
 <% modules.forEach(module => { _%>
-export * from './<%= module.name %>/creators';
+export * from './<%= module.name %>/creators.js';
 <% }); _%>

@@ -17,6 +17,7 @@ export interface IStorageDelegate {
 
 export interface IDocumentStorage {
   exists(documentId: string): Promise<boolean>;
+  create(documentId: string, document: PHDocument): Promise<void>;
 }
 
 export interface IStorage {

@@ -5,14 +5,14 @@ force: true
 import { createAction<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model';
 import { z,
 <% actions.filter(a => a.hasInput).forEach(action => { _%>
-    <%= h.changeCase.pascal(action.name) %>Input,
+    <%= 'type ' + h.changeCase.pascal(action.name) %>Input,
 <% }); _%>
-} from '../types';
+} from '../types.js';
 import {
 <% actions.forEach(action => { _%>
-    <%= h.changeCase.pascal(action.name) %>Action,
+    <%= 'type ' + h.changeCase.pascal(action.name) %>Action,
 <% }); _%>
-} from './actions';
+} from './actions.js';
 
 <% actions.filter(a => a.hasInput).forEach(action => { _%>
 export const <%= h.changeCase.camel(action.name) %> = (input: <%= h.changeCase.pascal(action.name) %>Input<%if(action.hasAttachment){ %>, attachments: AttachmentInput[] <% } %>) =>

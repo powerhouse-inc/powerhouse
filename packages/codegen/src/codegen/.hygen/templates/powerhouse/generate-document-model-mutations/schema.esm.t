@@ -1,7 +1,10 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(subgraph) %>/schema.graphql"
+to: "<%= rootDir %>/<%= h.changeCase.param(subgraph) %>/schema.ts"
 force: true
 ---
+import { gql } from "graphql-tag";
+
+export const schema = gql`
 """
 Subgraph definition for <%= h.changeCase.pascal(documentType) %> (<%- documentTypeId %>)
 
@@ -29,3 +32,4 @@ Module: <%= h.changeCase.pascal(module.name) %>
 <% module.operations.forEach(op => { _%>
 <%- op.schema.replace('input ', 'input ' + h.changeCase.pascal(documentType) + '_') %>
 <%_ })}); %>
+`;

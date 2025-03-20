@@ -1,3 +1,89 @@
+## 0.40.5-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.240
+
+## 0.40.4 (2025-03-19)
+
+### 🩹 Fixes
+
+- **ph-cli:** trigger new release ([69fca6e3](https://github.com/powerhouse-inc/powerhouse/commit/69fca6e3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 0.40.4-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.236
+
+## 0.40.3-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.235
+
+## 0.40.2-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.234
+
+## 0.40.1-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.233
+
+## 0.40.0 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.28.0
+- Updated document-model to 2.27.0
+- Updated @powerhousedao/builder-tools to 0.9.0
+- Updated @powerhousedao/reactor-local to 1.27.0
+- Updated @powerhousedao/codegen to 0.46.0
+- Updated @powerhousedao/config to 1.24.0
+- Updated @powerhousedao/connect to 1.0.9
+
+### ❤️ Thank You
+
+- Frank
+
+## 0.39.7-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.232
+
+## 0.39.6 (2025-03-19)
+
+### 🚀 Features
+
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.27.2
+- Updated @powerhousedao/builder-tools to 0.8.2
+- Updated @powerhousedao/reactor-local to 1.26.4
+- Updated @powerhousedao/codegen to 0.45.0
+- Updated @powerhousedao/connect to 1.0.6
+
+### ❤️ Thank You
+
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 0.39.6-dev.0 (2025-03-19)
 
 ### 🧱 Updated Dependencies

@@ -1,3 +1,70 @@
+## 1.0.0-dev.240 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.239 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.238 (2025-03-19)
+
+### 🩹 Fixes
+
+- roll back replace plugin ([6c4781da](https://github.com/powerhouse-inc/powerhouse/commit/6c4781da))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 1.0.0-dev.237 (2025-03-19)
+
+### 🩹 Fixes
+
+- **codegen:** update validation plugin name ([18de5641](https://github.com/powerhouse-inc/powerhouse/commit/18de5641))
+
+### ❤️ Thank You
+
+- ryanwolhuter
+
+## 1.0.0-dev.236 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.235 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.234 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.233 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+
+### ❤️ Thank You
+
+- Frank
+
+## 1.0.0-dev.232 (2025-03-19)
+
+### 🚀 Features
+
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+
+### 🩹 Fixes
+
+- **connect:** relative favicon path ([1db65a85](https://github.com/powerhouse-inc/powerhouse/commit/1db65a85))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 1.0.0-dev.231 (2025-03-19)
 
 ### 🩹 Fixes

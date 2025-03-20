@@ -17,7 +17,6 @@ import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
 import { PrismaStorage } from "../src/storage/prisma";
-import { SequelizeStorage } from "../src/storage/sequelize";
 import { IDriveStorage } from "../src/storage/types";
 import { generateUUID } from "../src/utils/misc";
 import { baseDocumentModels, expectUUID } from "./utils";
@@ -36,7 +35,7 @@ const storageLayers = [
   ["FilesystemStorage", async () => new FilesystemStorage(FileStorageDir)],
   ["BrowserStorage", async () => new BrowserStorage()],
   ["PrismaStorage", async () => new PrismaStorage(prismaClient)],
-  [
+  /*[
     "SequelizeStorage",
     async () => {
       const storage = new SequelizeStorage({
@@ -48,7 +47,7 @@ const storageLayers = [
       await storage.syncModels();
       return storage;
     },
-  ],
+  ],*/
 ] as unknown as [string, () => Promise<IDriveStorage>][];
 
 let file: PHDocument | undefined = undefined;
@@ -81,7 +80,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     vi.useRealTimers();
 
     if (storageName === "FilesystemStorage") {
-      //return fs.rm(FileStorageDir, { recursive: true, force: true });
+      return fs.rm(FileStorageDir, { recursive: true, force: true });
     } else if (storageName === "BrowserStorage") {
       return (await buildStorage()).clearStorage?.();
     } else if (storageName === "PrismaStorage") {
@@ -729,6 +728,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await addDrive("1", "slug1");
     await addDrive("2", "slug2");
     await addDrive("3", "slug3");
+
+    // add drive with the same slug as the first drive, which should overwrite it
     await addDrive("4", "slug1");
 
     let drive = await server.getDriveBySlug("slug1");

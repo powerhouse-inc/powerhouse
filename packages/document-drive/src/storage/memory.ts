@@ -11,43 +11,54 @@ import {
 } from "document-model";
 import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
+type DriveManifest = {
+  documentIds: Set<string>;
+};
+
 export class MemoryStorage implements IDriveStorage, IDocumentStorage {
-  private documents: Record<string, Record<string, PHDocument>>;
+  private documents: Record<string, PHDocument>;
   private drives: Record<string, DocumentDriveDocument>;
+  private driveManifests: Record<string, DriveManifest>;
   private slugToDriveId: Record<string, string> = {};
 
   constructor() {
     this.documents = {};
     this.drives = {};
+    this.driveManifests = {};
   }
 
-  exists(id: string): Promise<boolean> {
-    for (const drive of Object.values(this.documents)) {
-      if (drive[id]) {
-        return Promise.resolve(true);
-      }
-    }
+  ////////////////////////////////
+  // IDocumentStorage
+  ////////////////////////////////
 
-    return Promise.resolve(false);
+  exists(documentId: string): Promise<boolean> {
+    return Promise.resolve(!!this.documents[documentId]);
   }
+
+  create(documentId: string, document: PHDocument) {
+    this.documents[documentId] = document;
+
+    return Promise.resolve();
+  }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
 
   checkDocumentExists(drive: string, id: string): Promise<boolean> {
     return this.exists(id);
   }
 
-  async getDocuments(drive: string) {
-    return Object.keys(this.documents[drive] ?? {});
+  getDocuments(drive: string) {
+    const manifest = this.getDriveManifest(drive);
+    return Promise.resolve([...manifest.documentIds]);
   }
 
   async getDocument<TDocument extends PHDocument>(
     driveId: string,
     id: string,
   ): Promise<TDocument> {
-    const drive = this.documents[driveId];
-    if (!drive) {
-      throw new DriveNotFoundError(driveId);
-    }
-    const document = drive[id];
+    const document = this.documents[id];
     if (!document) {
       throw new Error(`Document with id ${id} not found`);
     }
@@ -56,39 +67,28 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async saveDocument(drive: string, id: string, document: PHDocument) {
-    this.documents[drive] = this.documents[drive] ?? {};
-    this.documents[drive][id] = document;
+    this.documents[id] = document;
+
+    // Update the drive manifest
+    const manifest = this.getDriveManifest(drive);
+    manifest.documentIds.add(id);
+    this.updateDriveManifest(drive, manifest);
   }
 
   async clearStorage(): Promise<void> {
     this.documents = {};
     this.drives = {};
+    this.driveManifests = {};
+    this.slugToDriveId = {};
   }
 
   async createDocument(drive: string, id: string, document: PHDocument) {
-    this.documents[drive] = this.documents[drive] ?? {};
-    const {
-      operations,
-      initialState,
-      name,
-      revision,
-      documentType,
-      created,
-      lastModified,
-      clipboard,
-      state,
-    } = document;
-    this.documents[drive][id] = {
-      operations,
-      initialState,
-      name,
-      revision,
-      documentType,
-      created,
-      lastModified,
-      clipboard,
-      state,
-    } as PHDocument;
+    await this.create(id, document);
+
+    // Update the drive manifest
+    const manifest = this.getDriveManifest(drive);
+    manifest.documentIds.add(id);
+    this.updateDriveManifest(drive, manifest);
   }
 
   async addDocumentOperations(
@@ -104,7 +104,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
 
     const mergedOperations = mergeOperations(document.operations, operations);
 
-    this.documents[drive][id] = {
+    this.documents[id] = {
       ...document,
       ...header,
       operations: mergedOperations,
@@ -112,10 +112,17 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async deleteDocument(drive: string, id: string) {
-    if (!this.documents[drive]) {
-      throw new DriveNotFoundError(drive);
+    // delete the document from all drive manifests
+    const drives = await this.getDrives();
+    for (const driveId of drives) {
+      const manifest = this.getDriveManifest(driveId);
+      if (manifest.documentIds.has(id)) {
+        manifest.documentIds.delete(id);
+        this.updateDriveManifest(driveId, manifest);
+      }
     }
-    delete this.documents[drive][id];
+
+    delete this.documents[id];
   }
 
   async getDrives() {
@@ -140,7 +147,10 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
     this.drives[id] = drive;
-    this.documents[id] = {};
+
+    // Initialize an empty manifest for the new drive
+    this.updateDriveManifest(id, { documentIds: new Set() });
+
     const { slug } = drive.initialState.state.global;
     if (slug) {
       this.slugToDriveId[slug] = id;
@@ -166,8 +176,38 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async deleteDrive(id: string) {
-    delete this.documents[id];
+    // Get all documents in this drive
+    const manifest = this.getDriveManifest(id);
+
+    // delete each document that belongs only to this drive
+    const drives = await this.getDrives();
+    await Promise.all(
+      [...manifest.documentIds].map((docId) => {
+        for (const driveId of drives) {
+          if (driveId === id) {
+            continue;
+          }
+
+          const manifest = this.getDriveManifest(driveId);
+          if (manifest.documentIds.has(docId)) {
+            return;
+          }
+        }
+
+        delete this.documents[docId];
+      }),
+    );
+
+    // Delete the drive manifest and the drive itself
+    delete this.driveManifests[id];
     delete this.drives[id];
+
+    // Clean up slug mapping if needed
+    for (const [slug, driveId] of Object.entries(this.slugToDriveId)) {
+      if (driveId === id) {
+        delete this.slugToDriveId[slug];
+      }
+    }
   }
 
   async getSynchronizationUnitsRevision(
@@ -223,5 +263,21 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
       }
       return acc;
     }, []);
+  }
+
+  ////////////////////////////////
+  // Private
+  ////////////////////////////////
+
+  private getDriveManifest(driveId: string): DriveManifest {
+    if (!this.driveManifests[driveId]) {
+      this.driveManifests[driveId] = { documentIds: new Set() };
+    }
+
+    return this.driveManifests[driveId];
+  }
+
+  private updateDriveManifest(driveId: string, manifest: DriveManifest): void {
+    this.driveManifests[driveId] = manifest;
   }
 }
