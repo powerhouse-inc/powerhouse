@@ -36,6 +36,7 @@ import Created from "./Created.js";
 import CrossCircle from "./CrossCircle.js";
 import Danger from "./Danger.js";
 import DescendenceModified from "./DescendenceModified.js";
+import Disconnect from "./Disconnect.js";
 import Discord from "./Discord.js";
 import DownloadFile from "./DownloadFile.js";
 import Drive from "./Drive.js";
@@ -43,6 +44,7 @@ import Duplicated from "./Duplicated.js";
 import Edit from "./Edit.js";
 import Ellipsis from "./Ellipsis.js";
 import Error from "./Error.js";
+import Ethscan from "./Ethscan.js";
 import Exclamation from "./Exclamation.js";
 import ExportCsv from "./ExportCsv.js";
 import ExportJson from "./ExportJson.js";
@@ -85,6 +87,7 @@ import RedoArrow from "./RedoArrow.js";
 import Reload from "./Reload.js";
 import Removed from "./Removed.js";
 import RenownHover from "./RenownHover.js";
+import RenownLight from "./RenownLight.js";
 import Renown from "./Renown.js";
 import Ring from "./Ring.js";
 import Save from "./Save.js";
@@ -145,6 +148,7 @@ export const iconNames = [
   "CrossCircle",
   "Danger",
   "DescendenceModified",
+  "Disconnect",
   "Discord",
   "DownloadFile",
   "Drive",
@@ -152,6 +156,7 @@ export const iconNames = [
   "Edit",
   "Ellipsis",
   "Error",
+  "Ethscan",
   "Exclamation",
   "ExportCsv",
   "ExportJson",
@@ -194,6 +199,7 @@ export const iconNames = [
   "Reload",
   "Removed",
   "RenownHover",
+  "RenownLight",
   "Renown",
   "Ring",
   "Save",
@@ -258,6 +264,7 @@ export const iconComponents: Record<
   CrossCircle,
   Danger,
   DescendenceModified,
+  Disconnect,
   Discord,
   DownloadFile,
   Drive,
@@ -265,6 +272,7 @@ export const iconComponents: Record<
   Edit,
   Ellipsis,
   Error,
+  Ethscan,
   Exclamation,
   ExportCsv,
   ExportJson,
@@ -307,6 +315,7 @@ export const iconComponents: Record<
   Reload,
   Removed,
   RenownHover,
+  RenownLight,
   Renown,
   Ring,
   Save,
