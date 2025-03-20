@@ -2,7 +2,7 @@
 /* eslint-disable react/jsx-no-bind */
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId, useRef } from "react";
-import { Input } from "../../../../ui/components/data-entry/index.js";
+import { Input } from "../../../../ui/components/index.js";
 import { cn } from "../../../lib/utils.js";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Command } from "../command/command.js";

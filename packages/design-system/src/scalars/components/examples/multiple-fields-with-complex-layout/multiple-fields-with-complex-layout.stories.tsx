@@ -3,7 +3,7 @@ import MultipleFieldsWithComplexLayout from "./multiple-fields-with-complex-layo
 
 const meta = {
   title:
-    "Document Engineering/Docs/Examples/Multiple Fields With Complex Layout",
+    "Document Engineering/Scalars/Examples/Multiple Fields With Complex Layout",
   component: MultipleFieldsWithComplexLayout,
   tags: ["autodocs"],
   parameters: {

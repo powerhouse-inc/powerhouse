@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { Input } from "../../../../ui/components/data-entry/index.js";
+import { Input } from "../../../../ui/components/index.js";
 import { renderWithForm } from "../../../lib/testing.js";
 import { Form } from "../../form/index.js";
 import { type ValidatorHandler } from "../../types.js";

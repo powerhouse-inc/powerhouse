@@ -1,6 +1,18 @@
 // export all components accessible outside the package
 
-export * from "./data-entry/index.js";
+// data entry
+export {
+  Checkbox,
+  type CheckboxProps,
+  type CheckboxValue,
+} from "./data-entry/checkbox/index.js";
+export { Input, type InputProps } from "./data-entry/input/index.js";
+export {
+  TextInput,
+  type TextInputProps,
+} from "./data-entry/text-input/index.js";
+export { Textarea, type TextareaProps } from "./data-entry/textarea/index.js";
+export { Toggle, type ToggleProps } from "./data-entry/toggle/index.js";
 
 // dropdown
 export {

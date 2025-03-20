@@ -1,6 +1,6 @@
 import { type IconName } from "#powerhouse";
 import React, { useCallback, useId, useMemo } from "react";
-import { Input } from "../../../ui/components/data-entry/index.js";
+import { Input } from "../../../ui/components/index.js";
 import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
 import { cn } from "../../lib/utils.js";
 import {

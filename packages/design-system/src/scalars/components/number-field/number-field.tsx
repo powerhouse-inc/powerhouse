@@ -1,7 +1,7 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
 import { forwardRef, useId } from "react";
-import { Input } from "../../../ui/components/data-entry/index.js";
+import { Input } from "../../../ui/components/index.js";
 import { FormDescription } from "../fragments/form-description/index.js";
 import { FormGroup } from "../fragments/form-group/index.js";
 import { FormLabel } from "../fragments/form-label/index.js";

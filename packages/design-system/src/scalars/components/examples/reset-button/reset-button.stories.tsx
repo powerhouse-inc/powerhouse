@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import FormWithResetButton from "./reset-button.js";
 
 const meta = {
-  title: "Document Engineering/Docs/Examples/Reset Button",
+  title: "Document Engineering/Scalars/Examples/Reset Button",
   component: FormWithResetButton,
   tags: ["autodocs"],
   parameters: {

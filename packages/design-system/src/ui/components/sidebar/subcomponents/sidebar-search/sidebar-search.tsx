@@ -5,7 +5,7 @@ import CrossCircle from "../../../../../powerhouse/components/icon-components/Cr
 import Search from "../../../../../powerhouse/components/icon-components/Search.js";
 import Tabler from "../../../../../powerhouse/components/icon-components/Tabler.js";
 import { cn } from "../../../../../scalars/lib/utils.js";
-import { Input } from "../../../../../ui/components/data-entry/index.js";
+import { Input } from "../../../../../ui/components/index.js";
 import { useSidebar } from "../sidebar-provider/index.js";
 import { SearchNavigationArrow } from "./search-navigation-arrow.js";
 import { SearchResultCounter } from "./search-result-counter.js";
