@@ -169,3 +169,82 @@ export async function startServer(
   server.printUrls();
   server.bindCLIShortcuts({ print: true });
 }
+
+export async function buildConnect(
+  options: ConnectStudioOptions = {
+    logLevel: "debug",
+  },
+) {
+  // set from options, as they are dynamically loaded
+  process.env.LOG_LEVEL = options.logLevel;
+
+  const connectPath = options.connectPath ?? resolveConnect();
+  const projectRoot = process.cwd();
+  const studioPath = join(projectRoot, ".ph", "connect-studio");
+
+  copyConnect(connectPath, studioPath);
+
+  // backups index html if running on windows
+  backupIndexHtml(studioPath, true);
+
+  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+  const HOST = process.env.HOST ? process.env.HOST : "0.0.0.0";
+
+  const OPEN_BROWSER =
+    typeof process.env.OPEN_BROWSER === "string"
+      ? process.env.OPEN_BROWSER === "true"
+      : false;
+  const studioConfig = getStudioConfig();
+
+  // needed for viteEnvs
+  if (!fs.existsSync(join(studioPath, "src"))) {
+    fs.mkdirSync(join(studioPath, "src"));
+  }
+
+  process.env.PH_CONNECT_STUDIO_MODE = "true";
+  process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
+  const computedEnv = { ...studioConfig, LOG_LEVEL: options.logLevel };
+
+  const config: InlineConfig = {
+    customLogger: logger,
+    configFile: false,
+    root: studioPath,
+    server: {
+      port: PORT,
+      open: options.open ?? OPEN_BROWSER,
+      host: HOST,
+    },
+    resolve: {
+      alias: [
+        { find: "jszip", replacement: "jszip/dist/jszip.min.js" },
+        {
+          find: "react",
+          replacement: join(projectRoot, "node_modules", "react"),
+        },
+        {
+          find: "react-dom",
+          replacement: join(projectRoot, "node_modules", "react-dom"),
+        },
+      ],
+      dedupe: ["@powerhousedao/reactor-browser"],
+    },
+    plugins: [
+      viteConnectDevStudioPlugin(true, studioPath),
+      viteLoadExternalPackages(options.packages, studioPath, true),
+      viteEnvs({
+        declarationFile: join(studioPath, ".env"),
+        computedEnv,
+      }),
+      runShellScriptPlugin("vite-envs.sh", studioPath),
+      options.https &&
+        basicSsl({
+          name: "Powerhouse Connect Studio",
+        }),
+      generateImportMapPlugin(studioPath, [
+        { name: "react", provider: "esm.sh" },
+        { name: "react-dom", provider: "esm.sh" },
+        "@powerhousedao/reactor-browser",
+      ]),
+    ],
+  };
+}

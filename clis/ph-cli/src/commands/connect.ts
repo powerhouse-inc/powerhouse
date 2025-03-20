@@ -19,6 +19,7 @@ export function connectCommand(program: Command) {
   program
     .command("connect")
     .description("Starts Connect Studio")
+    .option("--build", "Build Connect with the local configuration")
     .option("-p, --port <port>", "Port to run the server on", "3000")
     .option("-h, --host", "Expose the server to the network")
     .option("--https", "Enable HTTPS")

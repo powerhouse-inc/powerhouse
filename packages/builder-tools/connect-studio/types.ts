@@ -1,4 +1,5 @@
 export type ConnectStudioOptions = {
+  build?: boolean;
   connectPath?: string;
   port?: string;
   host?: boolean;

@@ -1,6 +1,6 @@
 import { dirname, isAbsolute, join } from "path";
 import { readJsonFile } from "./helpers.js";
-import { startServer } from "./server.js";
+import { buildConnect, startServer } from "./server.js";
 import { type ConnectStudioOptions, type StartServerOptions } from "./types.js";
 
 export function startConnectStudio(options: ConnectStudioOptions) {
@@ -78,7 +78,13 @@ export function startConnectStudio(options: ConnectStudioOptions) {
     serverOptions.logLevel = options.logLevel;
   }
 
-  return startServer(serverOptions).catch((error) => {
-    throw error;
-  });
+  if (options.build) {
+    return buildConnect(serverOptions).catch((error) => {
+      throw error;
+    });
+  } else {
+    return startServer(serverOptions).catch((error) => {
+      throw error;
+    });
+  }
 }
