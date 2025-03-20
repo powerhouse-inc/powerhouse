@@ -1,5 +1,5 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useCallback, useId } from "react";
+import React, { useCallback, useId, useMemo } from "react";
 import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
 import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
 import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
@@ -53,6 +53,8 @@ const OIDFieldRaw = React.forwardRef<HTMLInputElement, OIDFieldProps>(
     const id = idProp ?? `${prefix}-oid`;
     const autoComplete = autoCompleteProp ?? true;
 
+    const contextValue = useMemo(() => ({}), []);
+
     const renderOption = useCallback(
       (
         option: OIDOption,
@@ -69,9 +71,13 @@ const OIDFieldRaw = React.forwardRef<HTMLInputElement, OIDFieldProps>(
           variant={variant}
           icon={option.icon}
           title={option.title}
-          path={option.path}
+          path={
+            displayProps?.asPlaceholder
+              ? { text: "Type not available" }
+              : option.path
+          }
           value={
-            displayProps?.asPlaceholder ? "uuid not available" : option.value
+            displayProps?.asPlaceholder ? "oid not available" : option.value
           }
           description={option.description}
           placeholderIcon="Braces"
@@ -82,7 +88,7 @@ const OIDFieldRaw = React.forwardRef<HTMLInputElement, OIDFieldProps>(
     );
 
     return (
-      <IdAutocompleteContext.Provider value={{}}>
+      <IdAutocompleteContext.Provider value={contextValue}>
         {autoComplete && fetchOptionsCallback ? (
           <IdAutocompleteFieldRaw
             id={id}
@@ -151,7 +157,7 @@ export const OIDField = withFieldValidation<OIDFieldProps>(OIDFieldRaw, {
 
       const isValidUUID = new RegExp(uuidPattern).test(value);
       if (!isValidUUID) {
-        return "Invalid uuid format. Please enter a valid uuid.";
+        return "Invalid uuid format. Please enter a valid uuid v4.";
       }
 
       return true;

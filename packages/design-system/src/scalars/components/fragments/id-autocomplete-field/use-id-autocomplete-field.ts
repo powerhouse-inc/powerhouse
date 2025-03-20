@@ -197,12 +197,40 @@ export function useIdAutocompleteField({
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
-      const pastedValue = e.clipboardData.getData("text");
-      if (pastedValue === selectedValue) {
+      // Get clipboard data and trim it
+      const clipboardData = e.clipboardData.getData("text");
+      const trimmedValue = clipboardData.trim();
+
+      // If trimming changed the value, handle paste manually
+      if (clipboardData !== trimmedValue) {
+        e.preventDefault();
+
+        // Get current input element and selection positions
+        const input = e.currentTarget;
+        const start = input.selectionStart || 0;
+        const end = input.selectionEnd || 0;
+
+        // Create new value by inserting trimmed text at cursor position
+        const currentValue = input.value;
+        const newValue =
+          currentValue.substring(0, start) +
+          trimmedValue +
+          currentValue.substring(end);
+
+        // Update input value via onChange
+        onChange?.(newValue);
+
+        // Set cursor position after pasted text and fetch options
+        requestAnimationFrame(() => {
+          const newPosition = start + trimmedValue.length;
+          input.setSelectionRange(newPosition, newPosition);
+          debouncedFetchOptions(newValue);
+        });
+      } else if (clipboardData === selectedValue) {
         debouncedFetchOptions(selectedValue);
       }
     },
-    [selectedValue, debouncedFetchOptions],
+    [selectedValue, debouncedFetchOptions, onChange],
   );
 
   useEffect(() => {
