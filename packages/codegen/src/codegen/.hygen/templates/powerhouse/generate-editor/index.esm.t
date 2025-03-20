@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { EditorModule } from 'document-model';
-import Editor from './editor';
+import Editor from './editor.js';
 <% documentTypes.forEach(type => { _%>
 import { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
 %><% }); _%>
