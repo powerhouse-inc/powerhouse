@@ -1,3 +1,13 @@
+## 1.32.0 (2025-03-20)
+
+### 🚀 Features
+
+- added new amount scalars ([#1283](https://github.com/powerhouse-inc/powerhouse/pull/1283))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 1.31.1 (2025-03-19)
 
 ### 🩹 Fixes
