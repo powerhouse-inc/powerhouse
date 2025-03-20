@@ -3,27 +3,17 @@ import type {
   IdAutocompleteProps,
 } from "../fragments/id-autocomplete-field/types.js";
 
-export interface Network {
-  chainId: string;
-  name?: string;
-}
+export type OIDOption = IdAutocompleteOption;
 
-type AIDOptionProps = {
-  agentType?: string;
-};
-export type AIDOption = IdAutocompleteOption<AIDOptionProps>;
-
-type AIDBaseProps = Omit<
+type OIDBaseProps = Omit<
   IdAutocompleteProps,
   | "autoComplete"
   | "fetchOptionsCallback"
   | "fetchSelectedOptionCallback"
   | "renderOption"
-> & {
-  supportedNetworks?: Network[];
-};
+>;
 
-export type AIDProps = AIDBaseProps &
+export type OIDProps = OIDBaseProps &
   (
     | {
         autoComplete: false;
@@ -35,9 +25,9 @@ export type AIDProps = AIDBaseProps &
         fetchOptionsCallback: (
           userInput: string,
           context?: Record<string, unknown>,
-        ) => Promise<AIDOption[]> | AIDOption[];
+        ) => Promise<OIDOption[]> | OIDOption[];
         fetchSelectedOptionCallback?: (
           value: string,
-        ) => Promise<AIDOption | undefined> | AIDOption | undefined;
+        ) => Promise<OIDOption | undefined> | OIDOption | undefined;
       }
   );

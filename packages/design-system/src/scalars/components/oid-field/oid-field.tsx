@@ -1,27 +1,26 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useCallback, useId, useMemo } from "react";
-import { isAddress } from "viem";
+import React, { useCallback, useId } from "react";
 import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
 import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
 import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
-import type { AIDOption, AIDProps } from "./types.js";
+import type { OIDOption, OIDProps } from "./types.js";
 
-type AIDFieldBaseProps = Omit<
+type OIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
   | keyof InputBaseProps<string>
   | keyof FieldErrorHandling
-  | keyof AIDProps
+  | keyof OIDProps
   | "pattern"
 >;
 
-export type AIDFieldProps = AIDFieldBaseProps &
+export type OIDFieldProps = OIDFieldBaseProps &
   InputBaseProps<string> &
   FieldErrorHandling &
-  AIDProps;
+  OIDProps;
 
-const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
+const OIDFieldRaw = React.forwardRef<HTMLInputElement, OIDFieldProps>(
   (
     {
       id: idProp,
@@ -40,10 +39,8 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
       onBlur,
       onClick,
       onMouseDown,
-      supportedNetworks,
       autoComplete: autoCompleteProp,
       variant = "withValue",
-      maxLength,
       fetchOptionsCallback,
       fetchSelectedOptionCallback,
       isOpenByDefault, // to be used only in stories
@@ -53,17 +50,12 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
     ref,
   ) => {
     const prefix = useId();
-    const id = idProp ?? `${prefix}-aid`;
+    const id = idProp ?? `${prefix}-oid`;
     const autoComplete = autoCompleteProp ?? true;
-
-    const contextValue = useMemo(
-      () => ({ supportedNetworks }),
-      [supportedNetworks],
-    );
 
     const renderOption = useCallback(
       (
-        option: AIDOption,
+        option: OIDOption,
         displayProps?: {
           asPlaceholder?: boolean;
           showValue?: boolean;
@@ -79,15 +71,10 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
           title={option.title}
           path={option.path}
           value={
-            displayProps?.asPlaceholder ? "did not available" : option.value
+            displayProps?.asPlaceholder ? "uuid not available" : option.value
           }
           description={option.description}
-          agentType={
-            displayProps?.asPlaceholder
-              ? "Agent type not available"
-              : option.agentType
-          }
-          placeholderIcon="Person"
+          placeholderIcon="Braces"
           {...displayProps}
         />
       ),
@@ -95,7 +82,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
     );
 
     return (
-      <IdAutocompleteContext.Provider value={contextValue}>
+      <IdAutocompleteContext.Provider value={{}}>
         {autoComplete && fetchOptionsCallback ? (
           <IdAutocompleteFieldRaw
             id={id}
@@ -116,7 +103,6 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
             onMouseDown={onMouseDown}
             autoComplete={true}
             variant={variant}
-            maxLength={maxLength}
             fetchOptionsCallback={fetchOptionsCallback}
             fetchSelectedOptionCallback={fetchSelectedOptionCallback}
             isOpenByDefault={isOpenByDefault}
@@ -144,7 +130,6 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
             onClick={onClick}
             onMouseDown={onMouseDown}
             autoComplete={false}
-            maxLength={maxLength}
             {...props}
             ref={ref}
           />
@@ -154,61 +139,24 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
   },
 );
 
-export const AIDField = withFieldValidation<AIDFieldProps>(AIDFieldRaw, {
+export const OIDField = withFieldValidation<OIDFieldProps>(OIDFieldRaw, {
   validations: {
-    _validAIDFormat:
-      ({ supportedNetworks }) =>
-      (value: string | undefined) => {
-        if (value === "" || value === undefined) {
-          return true;
-        }
-
-        // Basic DID format validation
-        if (!value.startsWith("did:ethr:")) {
-          return "Invalid DID format. Must start with did:ethr:";
-        }
-
-        // Validate DID parts
-        const didParts = value.split(":");
-        if (didParts.length < 3 || didParts.length > 4) {
-          return "Invalid DID format. Must be in the format did:ethr:chainId:address (chainId is optional)";
-        }
-
-        // Validate chainId
-        if (didParts.length === 4) {
-          const chainId = didParts[2];
-
-          if (!/^0x[0-9a-fA-F]+$/.test(chainId)) {
-            return "Invalid chainId format. Must be a hexadecimal number with 0x prefix";
-          }
-
-          if (Array.isArray(supportedNetworks)) {
-            if (
-              !supportedNetworks.some((network) => network.chainId === chainId)
-            ) {
-              return `Invalid chainId. Allowed chainIds are: ${supportedNetworks
-                .map((network) => network.chainId)
-                .join(", ")}`;
-            }
-          }
-        }
-
-        // Extract Ethereum address
-        const address = didParts[didParts.length - 1];
-
-        // Validate basic Ethereum address format
-        if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
-          return "Invalid Ethereum address format. Must be a 40 character hexadecimal number with 0x prefix.";
-        }
-
-        // Validate checksum
-        if (!isAddress(address)) {
-          return "Invalid Ethereum address checksum.";
-        }
-
+    _validOIDFormat: () => (value: string | undefined) => {
+      if (value === "" || value === undefined) {
         return true;
-      },
+      }
+
+      const uuidPattern =
+        "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
+
+      const isValidUUID = new RegExp(uuidPattern).test(value);
+      if (!isValidUUID) {
+        return "Invalid uuid format. Please enter a valid uuid.";
+      }
+
+      return true;
+    },
   },
 });
 
-AIDField.displayName = "AIDField";
+OIDField.displayName = "OIDField";

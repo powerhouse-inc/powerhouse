@@ -5,6 +5,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  --font-sans: "Inter", sans-serif;
+
   --color-white: hsl(0 0% 100%);
   --color-black: hsl(0 0% 0%);
   --color-gray-50: hsl(0 0% 99%);
@@ -245,12 +247,14 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p {
-  color: var(--color-gray-900);
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p {
+    color: var(--color-gray-900);
+  }
 }

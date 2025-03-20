@@ -1,20 +1,14 @@
-import {
-  cn,
-  FormLabel,
-  FormMessageList,
-  type ErrorHandling,
-  type FieldCommonProps,
-  type RadioGroupProps,
-} from "#scalars";
+import { cn, FormLabel, FormMessageList, type RadioGroupProps } from "#scalars";
 import React, { useId } from "react";
+import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 import { RadioGroup } from "./radio-group.js";
 import { Radio } from "./radio.js";
 
 type RadioGroupFieldBaseProps = Omit<
   React.HTMLAttributes<HTMLDivElement>,
-  | keyof FieldCommonProps<string>
-  | keyof ErrorHandling
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
   | keyof RadioGroupProps
   | "dir"
 > & {
@@ -22,8 +16,8 @@ type RadioGroupFieldBaseProps = Omit<
 };
 
 export type RadioGroupFieldProps = RadioGroupFieldBaseProps &
-  FieldCommonProps<string> &
-  ErrorHandling &
+  InputBaseProps<string> &
+  FieldErrorHandling &
   RadioGroupProps;
 
 const RadioGroupFieldRaw = React.forwardRef<

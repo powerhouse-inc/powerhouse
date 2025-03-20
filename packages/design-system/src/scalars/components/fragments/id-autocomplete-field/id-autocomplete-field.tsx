@@ -3,7 +3,7 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useId, useRef } from "react";
 import { cn } from "../../../lib/utils.js";
-import type { ErrorHandling, FieldCommonProps } from "../../types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Command } from "../command/command.js";
 import { FormDescription } from "../form-description/form-description.js";
 import { FormGroup } from "../form-group/form-group.js";
@@ -20,15 +20,15 @@ import { useIdAutocompleteField } from "./use-id-autocomplete-field.js";
 
 type IdAutocompleteFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
-  | keyof FieldCommonProps<string>
-  | keyof ErrorHandling
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
   | keyof IdAutocompleteProps
   | "pattern"
 >;
 
 export type IdAutocompleteFieldProps = IdAutocompleteFieldBaseProps &
-  FieldCommonProps<string> &
-  ErrorHandling &
+  InputBaseProps<string> &
+  FieldErrorHandling &
   IdAutocompleteProps;
 
 export const IdAutocompleteFieldRaw = React.forwardRef<
@@ -177,11 +177,8 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
                 (renderOption ? (
                   renderOption(
                     {
-                      icon: selectedOption?.icon,
-                      title: selectedOption?.title,
-                      path: selectedOption?.path,
+                      ...selectedOption,
                       value: selectedOption?.value ?? "",
-                      description: selectedOption?.description,
                     },
                     {
                       asPlaceholder: selectedOption === undefined,

@@ -1,5 +1,5 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import type { ErrorHandling, FieldCommonProps } from "#scalars";
+import type { FieldErrorHandling, InputBaseProps } from "#scalars";
 import React, { useCallback, useId, useMemo } from "react";
 import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
 import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
@@ -10,15 +10,15 @@ import type { PHIDProps } from "./types.js";
 
 type PHIDFieldBaseProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
-  | keyof FieldCommonProps<string>
-  | keyof ErrorHandling
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
   | keyof PHIDProps
   | "pattern"
 >;
 
 export type PHIDFieldProps = PHIDFieldBaseProps &
-  FieldCommonProps<string> &
-  ErrorHandling &
+  InputBaseProps<string> &
+  FieldErrorHandling &
   PHIDProps;
 
 const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(

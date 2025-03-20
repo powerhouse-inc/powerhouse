@@ -8,9 +8,10 @@ import { Input } from "../input/input.js";
 import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
 import type { IdAutocompleteOption } from "./types.js";
 
+// TODO: can we use generic InputProps here?
 interface IdAutocompleteInputContainerProps {
   id: string;
-  name: string;
+  name?: string;
   value: string;
   className?: string;
   isLoading: boolean;

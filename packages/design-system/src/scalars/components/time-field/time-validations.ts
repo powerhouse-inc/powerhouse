@@ -1,4 +1,4 @@
-import { type TimePickerFieldProps } from "./time-picker-field.js";
+import { type TimeFieldProps } from "./time-field.js";
 import {
   convert24hTo12h,
   getTime,
@@ -7,7 +7,7 @@ import {
 } from "./utils.js";
 
 export const validateTimePicker =
-  ({ timeFormat }: TimePickerFieldProps) =>
+  ({ timeFormat }: TimeFieldProps) =>
   (value: unknown) => {
     if (value === "") {
       return true;

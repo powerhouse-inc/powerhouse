@@ -7,11 +7,11 @@ import {
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
-import { PHIDField } from "./phid-field.js";
+import { OIDField } from "./oid-field.js";
 
-const meta: Meta<typeof PHIDField> = {
-  title: "Document Engineering/Simple Components/PHID Field",
-  component: PHIDField,
+const meta: Meta<typeof OIDField> = {
+  title: "Document Engineering/Simple Components/OID Field",
+  component: OIDField,
   decorators: [
     withForm,
     (Story) => (
@@ -27,26 +27,6 @@ const meta: Meta<typeof PHIDField> = {
   argTypes: {
     ...getDefaultArgTypes(),
     ...PrebuiltArgTypes.placeholder,
-    ...PrebuiltArgTypes.maxLength,
-
-    allowUris: {
-      control: "boolean",
-      description: "Enables URI format as valid input in the field",
-      table: {
-        type: { summary: "boolean" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
-    allowedScopes: {
-      control: "object",
-      description: "List of allowed scopes.",
-      table: {
-        type: { summary: "string[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-      if: { arg: "allowUris", eq: true },
-    },
 
     autoComplete: {
       control: "boolean",
@@ -72,8 +52,7 @@ const meta: Meta<typeof PHIDField> = {
       table: {
         type: {
           summary:
-            "(userInput: string; context?: { allowUris?: boolean; " +
-            "allowedScopes?: string[]; }) => Promise<PHIDOption[]> | PHIDOption[]",
+            "(userInput: string; context?: {}) => Promise<OIDOption[]> | OIDOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -95,7 +74,7 @@ const meta: Meta<typeof PHIDField> = {
       table: {
         type: {
           summary:
-            "(value: string) => Promise<PHIDOption | undefined> | PHIDOption | undefined",
+            "(value: string) => Promise<OIDOption | undefined> | OIDOption | undefined",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -126,18 +105,18 @@ const meta: Meta<typeof PHIDField> = {
     ...getValidationArgTypes(),
   },
   args: {
-    name: "phid-field",
+    name: "oid-field",
   },
-} satisfies Meta<typeof PHIDField>;
+} satisfies Meta<typeof OIDField>;
 
 export default meta;
 
-type Story = StoryObj<typeof PHIDField>;
+type Story = StoryObj<typeof OIDField>;
 
 export const Default: Story = {
   args: {
-    label: "PHID field",
-    placeholder: "phd:",
+    label: "OID field",
+    placeholder: "uuid",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -145,10 +124,10 @@ export const Default: Story = {
 
 export const Empty: Story = {
   args: {
-    label: "PHID field",
-    placeholder: "phd:",
+    label: "OID field",
+    placeholder: "uuid",
     isOpenByDefault: true,
-    defaultValue: "phd:",
+    defaultValue: "uuid",
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
@@ -157,13 +136,12 @@ export const Empty: Story = {
 
 export const Open: Story = {
   args: {
-    label: "PHID field",
-    placeholder: "phd:",
+    label: "OID field",
+    placeholder: "uuid",
     isOpenByDefault: true,
-    defaultValue: "phd:",
-    initialOptions: mockedOptions,
-    allowUris: true,
+    defaultValue: "uuid",
     variant: "withValueTitleAndDescription",
+    initialOptions: mockedOptions,
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -171,11 +149,10 @@ export const Open: Story = {
 
 export const Filled: Story = {
   args: {
-    label: "PHID field",
-    placeholder: "phd:",
+    label: "OID field",
+    placeholder: "uuid",
     defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
-    allowUris: true,
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
