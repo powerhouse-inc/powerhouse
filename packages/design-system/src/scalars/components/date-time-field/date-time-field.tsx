@@ -30,8 +30,6 @@ interface DateTimeFieldPropsTime
 interface DateTimeFieldProps
   extends Omit<InputBaseProps<any>, "value" | "defaultValue">,
     FieldErrorHandling {
-  showDateSelect?: boolean;
-  showTimeSelect?: boolean;
   name: string;
   label?: string;
   onChange?: (value: React.ChangeEvent<HTMLInputElement>) => void;

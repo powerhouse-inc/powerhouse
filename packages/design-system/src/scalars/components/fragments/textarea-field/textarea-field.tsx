@@ -1,6 +1,9 @@
+import {
+  Textarea,
+  type TextareaProps,
+} from "../../../../ui/components/data-entry/textarea/textarea.js";
 import { type FieldErrorHandling } from "../../types.js";
 import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
-import { Textarea, type TextareaProps } from "./textarea.js";
 
 interface TextareaFieldProps extends TextareaProps, FieldErrorHandling {}
 

@@ -1,6 +1,5 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useCallback, useId } from "react";
-import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
 import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
 import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
@@ -69,9 +68,13 @@ const OIDFieldRaw = React.forwardRef<HTMLInputElement, OIDFieldProps>(
           variant={variant}
           icon={option.icon}
           title={option.title}
-          path={option.path}
+          path={
+            displayProps?.asPlaceholder
+              ? { text: "Type not available" }
+              : option.path
+          }
           value={
-            displayProps?.asPlaceholder ? "uuid not available" : option.value
+            displayProps?.asPlaceholder ? "oid not available" : option.value
           }
           description={option.description}
           placeholderIcon="Braces"
@@ -81,60 +84,56 @@ const OIDFieldRaw = React.forwardRef<HTMLInputElement, OIDFieldProps>(
       [variant],
     );
 
-    return (
-      <IdAutocompleteContext.Provider value={{}}>
-        {autoComplete && fetchOptionsCallback ? (
-          <IdAutocompleteFieldRaw
-            id={id}
-            name={name}
-            className={className}
-            label={label}
-            description={description}
-            value={value}
-            defaultValue={defaultValue}
-            disabled={disabled}
-            placeholder={placeholder}
-            required={required}
-            errors={errors}
-            warnings={warnings}
-            onChange={onChange}
-            onBlur={onBlur}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            autoComplete={true}
-            variant={variant}
-            fetchOptionsCallback={fetchOptionsCallback}
-            fetchSelectedOptionCallback={fetchSelectedOptionCallback}
-            isOpenByDefault={isOpenByDefault}
-            initialOptions={initialOptions}
-            renderOption={renderOption}
-            {...props}
-            ref={ref}
-          />
-        ) : (
-          <IdAutocompleteFieldRaw
-            id={id}
-            name={name}
-            className={className}
-            label={label}
-            description={description}
-            value={value}
-            defaultValue={defaultValue}
-            disabled={disabled}
-            placeholder={placeholder}
-            required={required}
-            errors={errors}
-            warnings={warnings}
-            onChange={onChange}
-            onBlur={onBlur}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            autoComplete={false}
-            {...props}
-            ref={ref}
-          />
-        )}
-      </IdAutocompleteContext.Provider>
+    return autoComplete && fetchOptionsCallback ? (
+      <IdAutocompleteFieldRaw
+        id={id}
+        name={name}
+        className={className}
+        label={label}
+        description={description}
+        value={value}
+        defaultValue={defaultValue}
+        disabled={disabled}
+        placeholder={placeholder}
+        required={required}
+        errors={errors}
+        warnings={warnings}
+        onChange={onChange}
+        onBlur={onBlur}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        autoComplete={true}
+        variant={variant}
+        fetchOptionsCallback={fetchOptionsCallback}
+        fetchSelectedOptionCallback={fetchSelectedOptionCallback}
+        isOpenByDefault={isOpenByDefault}
+        initialOptions={initialOptions}
+        renderOption={renderOption}
+        {...props}
+        ref={ref}
+      />
+    ) : (
+      <IdAutocompleteFieldRaw
+        id={id}
+        name={name}
+        className={className}
+        label={label}
+        description={description}
+        value={value}
+        defaultValue={defaultValue}
+        disabled={disabled}
+        placeholder={placeholder}
+        required={required}
+        errors={errors}
+        warnings={warnings}
+        onChange={onChange}
+        onBlur={onBlur}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        autoComplete={false}
+        {...props}
+        ref={ref}
+      />
     );
   },
 );
@@ -151,7 +150,7 @@ export const OIDField = withFieldValidation<OIDFieldProps>(OIDFieldRaw, {
 
       const isValidUUID = new RegExp(uuidPattern).test(value);
       if (!isValidUUID) {
-        return "Invalid uuid format. Please enter a valid uuid.";
+        return "Invalid uuid format. Please enter a valid uuid v4.";
       }
 
       return true;

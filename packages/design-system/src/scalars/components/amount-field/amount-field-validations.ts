@@ -9,7 +9,7 @@ import {
   type AmountFieldPropsGeneric,
   type AmountValue,
 } from "./types.js";
-import { isValidBigInt, isValidUnit } from "./utils.js";
+import { isValidBigInt } from "./utils.js";
 
 const isAmountCurrencyFiat = (
   type: AmountFieldPropsGeneric["type"],
@@ -63,14 +63,12 @@ export const validateAmount =
       }
       return true;
     }
+
     if (amount === undefined) {
       if (required) {
         return "This field is required";
       }
       return true;
-    }
-    if (!isValidUnit(type, value as AmountValue, units)) {
-      return "Select a valid currency";
     }
     if (!isValidNumber(amount) && type !== "AmountCurrency") {
       return "Value is not a valid number";

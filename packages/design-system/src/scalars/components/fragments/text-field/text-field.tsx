@@ -1,6 +1,9 @@
+import {
+  TextInput,
+  type TextInputProps,
+} from "../../../../ui/components/data-entry/text-input/text-input.js";
 import type { FieldErrorHandling } from "../../types.js";
 import { withFieldValidation } from "../with-field-validation/index.js";
-import { TextInput, type TextInputProps } from "./text-input.js";
 
 export type TextFieldProps = TextInputProps & FieldErrorHandling;
 

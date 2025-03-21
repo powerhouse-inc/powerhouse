@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderWithForm } from "../../lib/testing.js";
 import { Form } from "../form/index.js";
 import { CurrencyCodeField } from "./currency-code-field.js";
+import { currencies } from "./utils.js";
 
 describe("CurrencyCodeField", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -15,13 +16,20 @@ describe("CurrencyCodeField", () => {
         label="Currency"
         description="Select a currency"
         value="USD"
+        currencies={currencies()}
       />,
     );
     expect(container).toMatchSnapshot();
   });
 
   it("should render with default props", () => {
-    renderWithForm(<CurrencyCodeField name="currency" label="Currency" />);
+    renderWithForm(
+      <CurrencyCodeField
+        name="currency"
+        label="Currency"
+        currencies={currencies()}
+      />,
+    );
     expect(screen.getByRole("combobox")).toBeInTheDocument();
     expect(screen.getByText("Currency")).toBeInTheDocument();
   });
@@ -30,7 +38,12 @@ describe("CurrencyCodeField", () => {
     const user = userEvent.setup();
     renderWithForm(
       <>
-        <CurrencyCodeField name="currency" label="Currency" required />
+        <CurrencyCodeField
+          name="currency"
+          label="Currency"
+          required
+          currencies={currencies()}
+        />
         <button type="submit">Submit</button>
       </>,
     );
@@ -43,7 +56,12 @@ describe("CurrencyCodeField", () => {
     const user = userEvent.setup();
     render(
       <Form onSubmit={onSubmit}>
-        <CurrencyCodeField name="currency" label="Currency" value="USD" />
+        <CurrencyCodeField
+          name="currency"
+          label="Currency"
+          value="USD"
+          currencies={currencies()}
+        />
         <button type="submit">Submit</button>
       </Form>,
     );
@@ -53,7 +71,12 @@ describe("CurrencyCodeField", () => {
 
   it("should handle disabled state", () => {
     renderWithForm(
-      <CurrencyCodeField name="currency" label="Currency" disabled />,
+      <CurrencyCodeField
+        name="currency"
+        label="Currency"
+        disabled
+        currencies={currencies()}
+      />,
     );
     expect(screen.getByRole("combobox")).toBeDisabled();
   });
@@ -61,7 +84,12 @@ describe("CurrencyCodeField", () => {
   it("should display custom errors", async () => {
     const errors = ["Please select a valid currency"];
     renderWithForm(
-      <CurrencyCodeField name="currency" label="Currency" errors={errors} />,
+      <CurrencyCodeField
+        name="currency"
+        label="Currency"
+        errors={errors}
+        currencies={currencies()}
+      />,
     );
     expect(await screen.findByText(errors[0])).toBeInTheDocument();
   });
@@ -73,6 +101,7 @@ describe("CurrencyCodeField", () => {
         name="currency"
         label="Currency"
         warnings={warnings}
+        currencies={currencies()}
       />,
     );
     expect(await screen.findByText(warnings[0])).toBeInTheDocument();

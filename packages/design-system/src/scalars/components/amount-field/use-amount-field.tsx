@@ -12,7 +12,6 @@ import {
 import {
   createAmountValue,
   displayValueAmount,
-  getDefaultUnits,
   handleEventOnBlur,
   handleEventOnChange,
   isNotSafeValue,
@@ -402,7 +401,7 @@ export const useAmountField = ({
   const handleIsInputFocused = () => {
     setInputFocused(true);
   };
-  const options = units ?? getDefaultUnits(type);
+  const options = units;
   //Put the placeholder in case that value its not in the options
   const validatedValueSelect =
     valueSelect && units?.some((unit) => unit.ticker === valueSelect)

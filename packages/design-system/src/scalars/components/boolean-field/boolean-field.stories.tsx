@@ -8,7 +8,7 @@ import {
 import { BooleanField } from "./boolean-field.js";
 
 const meta = {
-  title: "Document Engineering/Simple Components/Boolean Field",
+  title: "Document Engineering/Scalars/Boolean Field",
   component: BooleanField,
   decorators: [withForm],
   argTypes: {

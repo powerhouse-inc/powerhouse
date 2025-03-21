@@ -1,12 +1,12 @@
 import { cn } from "#scalars";
 import { forwardRef } from "react";
+import { type InputProps } from "../../../ui/components/data-entry/index.js";
 import { BasePickerField } from "../date-time-field/base-picker-field.js";
 import {
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
-  type InputProps,
   type SelectFieldProps,
 } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";

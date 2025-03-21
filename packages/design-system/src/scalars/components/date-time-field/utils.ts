@@ -90,33 +90,31 @@ export const getLocalOffset = (): string => {
  */
 export const getOffset = (timeZone?: string) => {
   // Handle edge cases first
-  if (!timeZone || typeof timeZone !== "string") return getLocalOffset();
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      timeZoneName: "shortOffset",
+    });
+    // Extract the offset from the format
+    const offsetPart = formatter
+      .formatToParts(new Date())
+      .find((part) => part.type === "timeZoneName")?.value;
 
-  // Create a formatter in a safe way
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour12: false,
-    timeZoneName: "shortOffset",
-  });
+    if (!offsetPart) return getLocalOffset();
+    const offsetMatch =
+      /^(?:GMT|UTC)?([+-])(\d{1,2})(?::?(\d{2}))?/i.exec(offsetPart) ||
+      /(UTC|GMT)([+-]\d{2}:\d{2})/.exec(offsetPart);
 
-  // Extract the offset from the format
-  const offsetPart = formatter
-    .formatToParts(new Date())
-    .find((part) => part.type === "timeZoneName")?.value;
+    if (!offsetMatch) return getLocalOffset();
+    const sign = offsetMatch[1] || "+";
+    const hours = (offsetMatch[2] || "00").padStart(2, "0");
+    const minutes = (offsetMatch[3] || "00").padStart(2, "0");
 
-  if (!offsetPart) return getLocalOffset();
-
-  // Handle multiple formats
-  const offsetMatch =
-    /^(?:GMT|UTC)?([+-])(\d{1,2})(?::?(\d{2}))?/i.exec(offsetPart) ||
-    /(UTC|GMT)([+-]\d{2}:\d{2})/.exec(offsetPart);
-
-  if (!offsetMatch) return getLocalOffset();
-  const sign = offsetMatch[1] || "+";
-  const hours = (offsetMatch[2] || "00").padStart(2, "0");
-  const minutes = (offsetMatch[3] || "00").padStart(2, "0");
-
-  return `${sign}${hours}:${minutes}`;
+    return `${sign}${hours}:${minutes}`;
+  } catch (error) {
+    return getLocalOffset();
+  }
 };
 
 /**

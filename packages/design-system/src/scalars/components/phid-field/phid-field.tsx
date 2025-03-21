@@ -78,9 +78,13 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
           variant={variant}
           icon={option.icon}
           title={option.title}
-          path={option.path}
+          path={
+            displayProps?.asPlaceholder
+              ? { text: "Type not available" }
+              : option.path
+          }
           value={
-            displayProps?.asPlaceholder ? "phd not available" : option.value
+            displayProps?.asPlaceholder ? "phid not available" : option.value
           }
           description={option.description}
           {...displayProps}
@@ -164,7 +168,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         const domainSegment = "[a-zA-Z0-9](?:[a-zA-Z0-9\\-]*[a-zA-Z0-9])?";
         const domain = `${domainSegment}(?:\\.${domainSegment})*`;
         const uuidPattern =
-          "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}";
+          "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
         const URLFormat = `^phd://${domain}/${uuidPattern}$`;
 
         // Validate URL format first

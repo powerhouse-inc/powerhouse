@@ -10,7 +10,7 @@ import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
 import { OIDField } from "./oid-field.js";
 
 const meta: Meta<typeof OIDField> = {
-  title: "Document Engineering/Simple Components/OID Field",
+  title: "Document Engineering/Scalars/OID Field",
   component: OIDField,
   decorators: [
     withForm,

@@ -1,5 +1,7 @@
 import { cn, type NumberFieldProps, NumberFieldRaw } from "#scalars";
 import { forwardRef, useId } from "react";
+import { CurrencyCodeFieldRaw } from "../currency-code-field/currency-code-field.js";
+import type { Currency } from "../currency-code-field/types.js";
 import {
   FormDescription,
   FormGroup,
@@ -9,12 +11,10 @@ import {
 } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import type { InputNumberProps } from "../number-field/types.js";
+import { validateAmountCurrency } from "./amount-currency-validations.js";
+import { validateAmount } from "./amount-field-validations.js";
 import type { AmountFieldPropsGeneric, AmountValue } from "./types.js";
 import { useAmountField } from "./use-amount-field.js";
-
-import { CurrencyCodeFieldRaw } from "../currency-code-field/currency-code-field.js";
-import type { Currency } from "../currency-code-field/types.js";
-import { validateAmount } from "./amount-field-validations.js";
 
 export type AmountFieldProps = AmountFieldPropsGeneric &
   Omit<InputNumberProps, "onChange" | "onBlur" | "precision"> & {
@@ -126,7 +126,7 @@ const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
                 contentAlign="start"
                 contentClassName="min-w-[160px]"
                 disabled={disabled}
-                currencies={options}
+                currencies={options ?? []}
                 onChange={handleOnChangeSelect}
                 placeholder={placeholderSelect}
                 includeCurrencySymbols={includeCurrencySymbols}
@@ -145,7 +145,7 @@ const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               />
             )}
             <NumberFieldRaw
-              name={""}
+              name=""
               step={step}
               required={required}
               disabled={disabled}
@@ -194,7 +194,7 @@ const AmountFieldRaw = forwardRef<HTMLInputElement, AmountFieldProps>(
               contentClassName="min-w-[160px]"
               disabled={disabled}
               includeCurrencySymbols={includeCurrencySymbols}
-              currencies={options}
+              currencies={options ?? []}
               value={valueSelect}
               onChange={handleOnChangeSelect}
               name=""
@@ -227,6 +227,7 @@ export const AmountField = withFieldValidation<AmountFieldProps>(
   {
     validations: {
       _numericAmount: validateAmount,
+      _validOptionCurrency: validateAmountCurrency,
     },
   },
 );

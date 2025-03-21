@@ -27,7 +27,7 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({
     <div className="relative w-[43px] overflow-hidden">
       <div
         ref={containerRef}
-        className="scrollbar-hide no-scrollbar absolute inset-0 flex flex-col items-center gap-1 overflow-y-auto"
+        className="absolute inset-0 flex flex-col items-center gap-1 overflow-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar-thumb]:!hidden [&::-webkit-scrollbar-track]:!hidden [&::-webkit-scrollbar]:!hidden"
       >
         {isCyclic && <div className="h-[60px]" />}
         {displayOptions.map((option, index) => {

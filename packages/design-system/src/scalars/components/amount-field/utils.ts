@@ -1,36 +1,5 @@
 import type { Currency } from "../currency-code-field/types.js";
 import type { AmountFieldPropsGeneric, AmountValue } from "./types.js";
-export const DEFAULT_FIAT_CURRENCIES: Currency[] = [
-  { ticker: "USD", crypto: false, label: "USD", symbol: "$" },
-  { ticker: "EUR", crypto: false, label: "EUR", symbol: "€" },
-  { ticker: "GBP", crypto: false, label: "GBP", symbol: "£" },
-];
-
-export const DEFAULT_CRYPTO_CURRENCIES: Currency[] = [
-  { ticker: "DAI", crypto: true, label: "DAI", symbol: "DAI" },
-  { ticker: "ETH", crypto: true, label: "ETH", symbol: "ETH" },
-  { ticker: "MKR", crypto: true, label: "MKR", symbol: "MKR" },
-  { ticker: "SKY", crypto: true, label: "SKY", symbol: "SKY" },
-  { ticker: "USDC", crypto: true, label: "USDC", symbol: "USDC" },
-  { ticker: "USDS", crypto: true, label: "USDS", symbol: "USDS" },
-];
-
-export const DEFAULT_ALL_CURRENCIES: Currency[] = [
-  ...DEFAULT_FIAT_CURRENCIES,
-  ...DEFAULT_CRYPTO_CURRENCIES,
-];
-export const getDefaultUnits = (type: AmountFieldPropsGeneric["type"]) => {
-  switch (type) {
-    case "AmountFiat":
-      return DEFAULT_FIAT_CURRENCIES;
-    case "AmountCrypto":
-      return DEFAULT_CRYPTO_CURRENCIES;
-    case "AmountCurrency":
-      return DEFAULT_ALL_CURRENCIES;
-    default:
-      return [];
-  }
-};
 
 export const isValidBigInt = (value: string | undefined): boolean => {
   if (!value) {
@@ -138,5 +107,5 @@ export const isValidUnit = (
   if (type === "AmountFiat" && typeof value === "object") {
     return units.some((u) => u.ticker === value.unit);
   }
-  return true;
+  return false;
 };

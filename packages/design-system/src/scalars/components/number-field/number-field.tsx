@@ -1,11 +1,11 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
 import { forwardRef, useId } from "react";
+import { Input } from "../../../ui/components/data-entry/index.js";
 import { FormDescription } from "../fragments/form-description/index.js";
 import { FormGroup } from "../fragments/form-group/index.js";
 import { FormLabel } from "../fragments/form-label/index.js";
 import { FormMessageList } from "../fragments/form-message/index.js";
-import { Input } from "../fragments/input/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
 import { validateNumericType } from "./number-field-validations.js";
 import type { InputNumberProps } from "./types.js";
