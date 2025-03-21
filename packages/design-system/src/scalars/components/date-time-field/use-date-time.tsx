@@ -241,6 +241,8 @@ export const useDateTime = ({
     }
     // Get the time and tran
     const timeValue = inputValue.split(" ")[1];
+    // Get period from input if exists
+    const periodInput = inputValue.split(" ")[2] as TimePeriod;
 
     if (!isValidTimeInput(timeValue)) {
       if (inputValue === "") {
@@ -258,30 +260,12 @@ export const useDateTime = ({
       return;
     }
 
-    //  If the time is valid, and is 12 hour format, do nothing not transform the time
-    if (
-      is12HourFormat &&
-      isValidTimeInput(timeValue) &&
-      (inputValue.includes("AM") || inputValue.includes("PM"))
-    ) {
-      return;
-    }
-
-    // if is 24 hour format, and the time is valid, and the time is not AM or PM, do nothing
-    if (
-      !is12HourFormat &&
-      isValidTimeInput(timeValue) &&
-      !inputValue.includes("AM") &&
-      !inputValue.includes("PM")
-    ) {
-      return;
-    }
     const datetimeFormatted = formatInputToDisplayValid(
       timeValue,
       is12HourFormat,
       timeIntervals,
+      periodInput,
     );
-
     const validValue = convert12hTo24h(datetimeFormatted);
     const offsetUTC = getOffset(timeZone);
     const { minutes, hours, period } = getHoursAndMinutes(validValue);

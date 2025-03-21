@@ -1,17 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import FormWithResetOnSuccessfulSubmit from "./reset-on-successful-submit.js";
+import { Button } from "#powerhouse";
+import { Form } from "../../form/index.js";
+import { IdField } from "../../id-field/index.js";
+import { NumberField } from "../../number-field/index.js";
+import { StringField } from "../../string-field/index.js";
 
-const meta = {
-  title: "Document Engineering/Docs/Examples/Reset On Successful Submit",
-  component: FormWithResetOnSuccessfulSubmit,
-  tags: ["autodocs"],
-  parameters: {
-    layout: "centered",
-    docs: {
-      source: {
-        language: "tsx",
-        format: true,
-        code: `
 const FormWithResetOnSuccessfulSubmit = () => {
   return (
     <Form
@@ -31,21 +23,17 @@ const FormWithResetOnSuccessfulSubmit = () => {
           placeholder="Type something"
           label="Field example"
           required
-          autoFocus
         />
         <NumberField name="number" label="Number" required />
+
+        <div className="w-72 text-sm text-gray-500">
+          After submitting the form, all form fields will be reset to their
+          initial values
+        </div>
         <Button type="submit">Submit</Button>
       </div>
     </Form>
   );
 };
-`,
-      },
-    },
-  },
-} satisfies Meta<typeof FormWithResetOnSuccessfulSubmit>;
 
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {};
+export default FormWithResetOnSuccessfulSubmit;

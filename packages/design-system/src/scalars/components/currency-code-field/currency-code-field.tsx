@@ -7,7 +7,8 @@ import {
 } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
-import type { Currency } from "./types.js";
+import type { AllowedTypes, Currency } from "./types.js";
+import { getCurrencies } from "./utils.js";
 
 type CurrencyCodeFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -24,13 +25,14 @@ export interface CurrencyCodeFieldProps
   placeholder?: string;
   onChange?: (value: string | string[]) => void;
   onBlur?: () => void;
-  currencies: Currency[];
+  currencies?: Currency[];
   includeCurrencySymbols?: boolean;
   favoriteCurrencies?: string[];
   symbolPosition?: "left" | "right";
   searchable?: boolean;
   contentClassName?: string;
   contentAlign?: "start" | "end" | "center";
+  allowedTypes?: AllowedTypes;
 }
 
 export const CurrencyCodeFieldRaw = React.forwardRef<
@@ -49,15 +51,17 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       contentAlign = "start",
       warnings,
       errors,
+      allowedTypes = "Both",
       ...props
     },
     ref,
   ) => {
+    const defaultCurrencies = currencies ?? getCurrencies(allowedTypes);
     const options: SelectOption[] = useMemo(() => {
       const favoriteTickers = new Set(favoriteCurrencies);
 
       return (
-        (currencies
+        (defaultCurrencies
           .map((currency) => {
             if (favoriteTickers.has(currency.ticker)) {
               return null;
@@ -84,7 +88,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
           .filter(Boolean) as SelectOption[]) ?? []
       );
     }, [
-      currencies,
+      defaultCurrencies,
       includeCurrencySymbols,
       symbolPosition,
       favoriteCurrencies,
@@ -93,7 +97,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
     const favoriteOptions: SelectOption[] = useMemo(() => {
       const favoriteTickers = new Set(favoriteCurrencies);
       return (
-        currencies
+        defaultCurrencies
           .filter((currency) => favoriteTickers.has(currency.ticker))
           .map((currency) => {
             let label = currency.label ?? currency.ticker;
@@ -116,7 +120,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
           }) ?? []
       );
     }, [
-      currencies,
+      defaultCurrencies,
       favoriteCurrencies,
       includeCurrencySymbols,
       symbolPosition,

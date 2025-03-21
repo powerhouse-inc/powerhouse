@@ -1,10 +1,7 @@
 import { Icon, type IconName } from "#powerhouse";
 import { cn } from "#scalars";
 import React, { type PropsWithChildren } from "react";
-import {
-  Input,
-  type InputProps,
-} from "../../../ui/components/data-entry/index.js";
+import { Input, type InputProps } from "../../../ui/components/index.js";
 import { Button } from "../fragments/button/button.js";
 import {
   Popover,

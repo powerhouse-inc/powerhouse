@@ -1,5 +1,6 @@
 import { Button } from "#powerhouse";
-import { Form, StringField } from "../../../components/index.js";
+import { Form } from "../../form/index.js";
+import { StringField } from "../../string-field/index.js";
 
 const SubmitChangesOnly = () => {
   return (

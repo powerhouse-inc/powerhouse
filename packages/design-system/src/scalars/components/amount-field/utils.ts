@@ -1,5 +1,23 @@
 import type { Currency } from "../currency-code-field/types.js";
+import {
+  cryptoCurrencies,
+  currencies,
+  fiatCurrencies,
+} from "../currency-code-field/utils.js";
 import type { AmountFieldPropsGeneric, AmountValue } from "./types.js";
+
+export const getDefaultUnits = (type: AmountFieldPropsGeneric["type"]) => {
+  switch (type) {
+    case "AmountFiat":
+      return fiatCurrencies();
+    case "AmountCrypto":
+      return cryptoCurrencies();
+    case "AmountCurrency":
+      return currencies();
+    default:
+      return [];
+  }
+};
 
 export const isValidBigInt = (value: string | undefined): boolean => {
   if (!value) {

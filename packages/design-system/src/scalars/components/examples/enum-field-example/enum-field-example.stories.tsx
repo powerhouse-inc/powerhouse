@@ -1,7 +1,18 @@
-import { Button } from "#powerhouse";
-import { EnumField, Form } from "#scalars";
+import type { Meta, StoryObj } from "@storybook/react";
+import EnumFieldExample from "./enum-field-example.js";
 
-const EnumFieldExample = () => {
+const meta = {
+  title: "Document Engineering/Scalars/Examples/Enum Field Example",
+  component: EnumFieldExample,
+  tags: ["autodocs"],
+  parameters: {
+    layout: "centered",
+    docs: {
+      source: {
+        language: "tsx",
+        format: true,
+        code: `
+function EnumFieldExample() {
   const onSubmit = async (data: any) => {
     // simulate a network request
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -24,7 +35,9 @@ const EnumFieldExample = () => {
   ];
 
   return (
-    <Form onSubmit={onSubmit}>
+    <Form
+      onSubmit={onSubmit}
+    >
       {({ formState: { isSubmitting } }) => (
         <div className="flex w-[400px] flex-col gap-4">
           <EnumField
@@ -53,6 +66,16 @@ const EnumFieldExample = () => {
       )}
     </Form>
   );
-};
+}`,
+      },
+    },
+  },
+} satisfies Meta<typeof EnumFieldExample>;
 
-export default EnumFieldExample;
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {
+  args: {},
+};

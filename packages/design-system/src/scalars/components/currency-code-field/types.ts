@@ -9,8 +9,4 @@ export interface Currency {
   icon?: IconName | React.ComponentType<{ className?: string }>;
 }
 
-export enum CurrencyType {
-  FIAT = "fiat",
-  CRYPTO = "crypto",
-  ALL = "all",
-}
+export type AllowedTypes = "Crypto" | "Fiat" | "Both";

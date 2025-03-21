@@ -1,6 +1,6 @@
 import { cn } from "#scalars";
 import { forwardRef } from "react";
-import { type InputProps } from "../../../ui/components/data-entry/index.js";
+import { type InputProps } from "../../../ui/components/index.js";
 import { BasePickerField } from "../date-time-field/base-picker-field.js";
 import {
   FormDescription,

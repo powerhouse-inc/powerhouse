@@ -105,4 +105,4 @@ export {
    * This type is deprecated and will be removed in a future version.
    */
   type InputProps,
-} from "../../ui/components/data-entry/index.js";
+} from "../../ui/components/index.js";

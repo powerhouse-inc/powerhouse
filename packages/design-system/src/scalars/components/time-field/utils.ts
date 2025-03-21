@@ -87,6 +87,7 @@ export const transformInputTime = (
   input: string,
   is12HourFormat: boolean,
   interval = 1,
+  periodToCheck?: TimePeriod,
 ): { hour: string; minute: string; period?: TimePeriod } => {
   if (!input) return { hour: "", minute: "", period: undefined };
   input = input.trim();
@@ -126,6 +127,9 @@ export const transformInputTime = (
     // If still no period assigned, determine based on hour
     if (!period) {
       period = hourNum >= 8 && hourNum <= 11 ? "AM" : "PM";
+    }
+    if (periodToCheck) {
+      period = periodToCheck;
     }
   } else {
     // Convert any AM/PM designator to 24h
@@ -352,18 +356,28 @@ export const convert12hTo24h = (input: string) => {
  *   - 24-hour format (e.g., "14:30", "08:00")
  *   - 12-hour format (e.g., "2:30 PM", "8:00 AM")
  *   - Short format (e.g., "1430", "0800")
- * @param is12HourFormat - If true, outputs in 12-hour format with AM/PM
- *                        If false, outputs in 24-hour format
- * @param timeIntervals - Optional interval in minutes to round the time to
- *                       (e.g., 15 would round to nearest quarter hour)
+ * @param is12HourFormat - If true, returns in 12-hour format with AM/PM
+ *                        If false, returns in 24-hour format
+ * @param timeIntervals - Optional interval in minutes to round the time
+ *                       (e.g., 15 will round to the nearest quarter hour)
+ * @param periodToCheck - Specific period (AM/PM) to force in the output,
+ *                       avoiding automatic period conversion
  * @returns Formatted time string
  *   - 12-hour format: "hh:mm AM/PM" (e.g., "02:30 PM")
  *   - 24-hour format: "HH:mm" (e.g., "14:30")
+ * @example
+ * // With 12-hour format
+ * formatInputToDisplayValid("14:30", true) // Returns "02:30 PM"
+ * formatInputToDisplayValid("14:30", true, undefined, "AM") // Returns "02:30 AM"
+ *
+ * // With 24-hour format
+ * formatInputToDisplayValid("2:30 PM", false) // Returns "14:30"
  */
 export const formatInputToDisplayValid = (
   input: string,
   is12HourFormat: boolean,
   timeIntervals?: number,
+  periodToCheck?: TimePeriod,
 ) => {
   const { hour, minute, period } = transformInputTime(
     input,
@@ -373,7 +387,7 @@ export const formatInputToDisplayValid = (
   if (!hour && !minute) return "";
 
   return is12HourFormat
-    ? `${hour}:${minute} ${period ?? ""}`
+    ? `${hour}:${minute} ${periodToCheck ? periodToCheck : (period ?? "")}`
     : `${hour}:${minute}`;
 };
 

@@ -36,36 +36,66 @@ export const validateDatePicker =
       return `Invalid date format. Please use a valid format`;
     }
     const isoDate = formatDateToValidCalendarDateFormat(stringDate);
-    const validDate = new Date(isoDate);
+    // Split the date and time parts
+    const [datePart] = isoDate.split("T");
+    // Create a valid date object with the date part and set the time to 00:00:00
+    const validDateStartOfDay = new Date(`${datePart}T00:00:00`);
 
+    // Get the most restrictive date between minDate and disablePastDates
+    let effectiveMinDate: Date | null = null;
     if (minDate) {
       const minDateValue = new Date(minDate);
-      if (validDate < minDateValue) {
-        const formattedMinDate = format(minDateValue, "dd/MM/yyyy");
-        return `Date must be on or after ${formattedMinDate}.`;
-      }
-    }
-
-    if (maxDate) {
-      const maxDateValue = new Date(maxDate);
-      if (validDate > maxDateValue) {
-        const formattedMaxDate = format(maxDateValue, "dd/MM/yyyy");
-        return `Date must be on or before ${formattedMaxDate}.`;
-      }
+      effectiveMinDate = new Date(minDateValue.setHours(0, 0, 0, 0));
     }
     if (disablePastDates) {
       const today = new Date();
-      if (validDate < today) {
-        const formattedToday = format(today, "dd/MM/yyyy");
-        return `Date must be on or after ${formattedToday}.`;
+      const todayStartOfDay = new Date(today.setHours(0, 0, 0, 0));
+      if (!effectiveMinDate || todayStartOfDay > effectiveMinDate) {
+        effectiveMinDate = todayStartOfDay;
       }
+    }
+
+    // Get the most restrictive date between maxDate and disableFutureDates
+    let effectiveMaxDate: Date | null = null;
+    if (maxDate) {
+      const maxDateValue = new Date(maxDate);
+      effectiveMaxDate = new Date(maxDateValue.setHours(0, 0, 0, 0));
     }
     if (disableFutureDates) {
       const today = new Date();
-      if (validDate > today) {
-        const formattedToday = format(today, "dd/MM/yyyy");
-        return `Date must be on or before ${formattedToday}.`;
+      const todayStartOfDay = new Date(today.setHours(0, 0, 0, 0));
+      if (!effectiveMaxDate || todayStartOfDay < effectiveMaxDate) {
+        effectiveMaxDate = todayStartOfDay;
       }
     }
+
+    // Validate against the effective dates
+    if (effectiveMinDate && effectiveMaxDate) {
+      if (effectiveMinDate > effectiveMaxDate) {
+        const formattedMinDate = format(effectiveMinDate, "dd/MM/yyyy");
+        const formattedMaxDate = format(effectiveMaxDate, "dd/MM/yyyy");
+        return `Invalid date range: ${formattedMinDate} is after ${formattedMaxDate}`;
+      }
+
+      if (
+        validDateStartOfDay < effectiveMinDate ||
+        validDateStartOfDay > effectiveMaxDate
+      ) {
+        const formattedMinDate = format(effectiveMinDate, "dd/MM/yyyy");
+        const formattedMaxDate = format(effectiveMaxDate, "dd/MM/yyyy");
+        return `Date should be between ${formattedMinDate} - ${formattedMaxDate}`;
+      }
+    } else if (effectiveMinDate) {
+      if (validDateStartOfDay < effectiveMinDate) {
+        const formattedMinDate = format(effectiveMinDate, "dd/MM/yyyy");
+        return `Date must be after ${formattedMinDate}`;
+      }
+    } else if (effectiveMaxDate) {
+      if (validDateStartOfDay > effectiveMaxDate) {
+        const formattedMaxDate = format(effectiveMaxDate, "dd/MM/yyyy");
+        return `Date must be before ${formattedMaxDate}`;
+      }
+    }
+
     return true;
   };
