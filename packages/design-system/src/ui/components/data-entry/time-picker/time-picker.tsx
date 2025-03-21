@@ -5,7 +5,7 @@ import {
   FormLabel,
   FormMessageList,
   type InputBaseProps,
-  type SelectFieldProps
+  type SelectFieldProps,
 } from "#scalars";
 import { forwardRef } from "react";
 import { BasePickerField } from "../../../../scalars/components/date-time-field/base-picker-field.js";
@@ -17,7 +17,7 @@ import { handleKeyDown } from "./utils.js";
 
 interface TimePickerProps
   extends InputBaseProps<TimeFieldValue>,
-    Omit<InputNumberProps, 'value' | 'defaultValue'> {
+    Omit<InputNumberProps, "value" | "defaultValue"> {
   label?: string;
   id?: string;
   name: string;
