@@ -83,6 +83,8 @@ export const useTimePickerField = ({
   };
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const input = e.target.value;
+    // Get the period from the input if exists to avoid use the default period
+    const inputPeriod = input.split(" ")[1] as TimePeriod;
 
     if (!isValidTimeInput(input)) {
       if (input === "") {
@@ -102,6 +104,7 @@ export const useTimePickerField = ({
       input,
       is12HourFormat,
       timeIntervals,
+      inputPeriod,
     );
     // Check if the validDisplay is empty and if it is, set the inputValue to an empty string
     if (!validDisplay) {
