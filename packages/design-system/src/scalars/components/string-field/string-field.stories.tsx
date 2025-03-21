@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { StringField } from "./string-field";
-import { withForm } from "@/scalars/lib/decorators";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { StringField } from "./string-field.js";
 
 const meta: Meta<typeof StringField> = {
   title: "Document Engineering/Simple Components/String Field",

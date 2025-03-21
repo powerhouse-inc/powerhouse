@@ -1,5 +1,5 @@
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { SynchronizationUnitQuery } from "#server/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type SynchronizationUnitQuery } from "#server/types";
 import type {
   DocumentHeader,
   Operation,
@@ -13,6 +13,11 @@ export interface IStorageDelegate {
     drive: string,
     id: string,
   ): Promise<OperationsFromDocument<TDocument> | undefined>;
+}
+
+export interface IDocumentStorage {
+  exists(documentId: string): Promise<boolean>;
+  create(documentId: string, document: PHDocument): Promise<void>;
 }
 
 export interface IStorage {

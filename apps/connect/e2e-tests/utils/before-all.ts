@@ -1,6 +1,6 @@
 import { _electron as electron } from 'playwright-core';
-import { setApp } from './app-manager';
-import { getAppInfo } from './get-app-info';
+import { setApp } from './app-manager.js';
+import { getAppInfo } from './get-app-info.js';
 
 export const beforeAll = async () => {
     const appInfo = getAppInfo();

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { z } from "zod";
-import { Scope } from "../types/documents.js";
+import { type Scope } from "../types/documents.js";
 import {
   makeInitialSchemaDoc,
   renameSchemaType,

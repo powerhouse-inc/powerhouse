@@ -1,13 +1,10 @@
 import React from "react";
-import { ErrorHandling, FieldCommonProps } from "../types";
-import { DateFieldValue } from "../date-picker-field/types";
-import {
-  DatePickerField,
-  DatePickerFieldProps,
-} from "../date-picker-field/date-picker-field";
-import { TimePickerField, TimePickerFieldProps } from "../time-picker-field";
-import { TimeFieldValue } from "../time-picker-field/type";
-import DateTimePickerRaw from "./date-time-picker";
+import { type DateFieldProps } from "../date-field/date-field.js";
+import type { DateFieldValue } from "../date-field/types.js";
+import { type TimeFieldProps } from "../time-field/time-field.js";
+import type { TimeFieldValue } from "../time-field/type.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
+import { DateTimeField as DateTimeRaw } from "./date-time.js";
 
 type CommonOmittedProps =
   | "name"
@@ -19,32 +16,32 @@ type CommonOmittedProps =
   | "placeholder";
 
 interface DateTimeFieldPropsDate
-  extends Omit<DatePickerFieldProps, CommonOmittedProps> {
+  extends Omit<DateFieldProps, CommonOmittedProps> {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
 }
 
 interface DateTimeFieldPropsTime
-  extends Omit<TimePickerFieldProps, CommonOmittedProps> {
+  extends Omit<TimeFieldProps, CommonOmittedProps> {
   value?: TimeFieldValue;
   defaultValue?: TimeFieldValue;
 }
 
 interface DateTimeFieldProps
-  extends Omit<FieldCommonProps<any>, "value" | "defaultValue">,
-    ErrorHandling {
+  extends Omit<InputBaseProps<any>, "value" | "defaultValue">,
+    FieldErrorHandling {
   showDateSelect?: boolean;
   showTimeSelect?: boolean;
   name: string;
   label?: string;
-  // Props específicas de DateTimeField
-  dateFormat?: string;
+  onChange?: (value: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 
+  // Specific DateTimeField props
+  dateFormat?: string;
   weekStart?: string;
   minDate?: string;
   maxDate?: string;
-  onChange?: (value: React.ChangeEvent<HTMLInputElement>) => void;
-  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   placeholder?: string;
   disablePastDates?: boolean;
   disableFutureDates?: boolean;
@@ -52,90 +49,64 @@ interface DateTimeFieldProps
   // Time picker props
   showTimezoneSelect?: boolean;
   timeFormat?: string;
+  timeZone?: string;
+  timeIntervals?: number;
+  includeContinent?: boolean;
 }
-export const DateTimeField: React.FC<
+
+export const DateTimeField = React.forwardRef<
+  HTMLInputElement,
   DateTimeFieldProps & DateTimeFieldPropsDate & DateTimeFieldPropsTime
-> = ({
-  showDateSelect = true,
-  showTimeSelect = true,
-  name,
-  label,
-  dateFormat = "yyyy-MM-dd",
-  timeFormat = "hh:mm a",
-  minDate,
-  maxDate,
-  onChange,
-  onBlur,
-  placeholder,
-  weekStart,
-  disablePastDates,
-  disableFutureDates,
-  autoClose,
-  showTimezoneSelect,
-  value,
-  ...props
-}) => {
-  if (!showDateSelect && !showTimeSelect) {
+>(
+  (
+    {
+      name,
+      label,
+      dateFormat = "yyyy-MM-dd",
+      timeFormat = "hh:mm a",
+      minDate,
+      maxDate,
+      onChange,
+      onBlur,
+      placeholder,
+      weekStart,
+      disablePastDates,
+      disableFutureDates,
+      autoClose,
+      showTimezoneSelect,
+      value,
+      timeZone,
+      timeIntervals,
+      includeContinent,
+      ...props
+    },
+    ref,
+  ) => {
     return (
-      <DatePickerField
+      <DateTimeRaw
         name={name}
-        label={label}
-        onBlur={onBlur}
-        onChange={onChange}
+        value={value}
         placeholder={placeholder}
-        dateFormat={dateFormat}
+        label={label}
+        weekStart={weekStart}
+        autoClose={autoClose}
+        disableFutureDates={disableFutureDates}
+        disablePastDates={disablePastDates}
         minDate={minDate}
         maxDate={maxDate}
-        weekStart={weekStart}
-        disablePastDates={disablePastDates}
-        disableFutureDates={disableFutureDates}
-        autoClose={autoClose}
+        dateFormat={dateFormat}
+        onChange={onChange}
+        onBlur={onBlur}
+        timeZone={timeZone}
+        timeFormat={timeFormat}
+        timeIntervals={timeIntervals}
+        showTimezoneSelect={showTimezoneSelect}
+        includeContinent={includeContinent}
+        ref={ref}
         {...props}
       />
     );
-  }
+  },
+);
 
-  return (
-    <div>
-      {showDateSelect && showTimeSelect && (
-        <DateTimePickerRaw
-          name={name}
-          value={value}
-          placeholder={placeholder}
-          label={label}
-          //  Add rest props WIP
-          {...props}
-        />
-      )}
-      {showDateSelect && !showTimeSelect && (
-        <DatePickerField
-          name={name}
-          label={label}
-          onBlur={onBlur}
-          onChange={onChange}
-          placeholder={placeholder}
-          dateFormat={dateFormat}
-          minDate={minDate}
-          maxDate={maxDate}
-          weekStart={weekStart}
-          disablePastDates={disablePastDates}
-          disableFutureDates={disableFutureDates}
-          autoClose={autoClose}
-          {...props}
-        />
-      )}
-      {!showDateSelect && showTimeSelect && (
-        <TimePickerField
-          name={name}
-          label={label}
-          onBlur={onBlur}
-          onChange={onChange}
-          placeholder={placeholder}
-          timeFormat={timeFormat}
-          showTimezoneSelect={showTimezoneSelect}
-          {...props}
-        />
-      )}
-    </div>
-  );
-};
+DateTimeField.displayName = "DateTimeField";

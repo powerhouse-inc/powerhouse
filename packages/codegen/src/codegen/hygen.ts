@@ -1,11 +1,11 @@
 import { pascalCase } from "change-case";
-import { DocumentModelState } from "document-model";
+import { type DocumentModelState } from "document-model";
 import { Logger, runner } from "hygen";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DocumentTypesMap } from "./index.js";
+import { type DocumentTypesMap } from "./index.js";
 import { loadDocumentModel } from "./utils.js";
 
 const require = createRequire(import.meta.url);

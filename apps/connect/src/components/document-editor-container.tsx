@@ -1,11 +1,11 @@
-import { Operation, PHDocument } from 'document-model';
+import { type Operation, type PHDocument } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useModal } from '../components/modal';
-import { useUiNodes } from '../hooks/useUiNodes';
-import { exportFile } from '../utils';
-import { validateDocument } from '../utils/validate-document';
-import { DocumentEditor } from './editors';
+import { useModal } from '../components/modal/index.js';
+import { useUiNodes } from '../hooks/useUiNodes.js';
+import { exportFile } from '../utils/index.js';
+import { validateDocument } from '../utils/validate-document.js';
+import { DocumentEditor } from './editors.js';
 
 export function DocumentEditorContainer() {
     const { t } = useTranslation();

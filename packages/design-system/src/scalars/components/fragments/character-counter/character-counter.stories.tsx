@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { CharacterCounter } from "./character-counter";
+import { CharacterCounter } from "./character-counter.js";
 
 const meta = {
   title: "Document Engineering/Fragments/CharacterCounter",

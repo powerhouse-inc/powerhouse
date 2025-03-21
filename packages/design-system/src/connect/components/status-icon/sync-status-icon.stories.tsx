@@ -1,7 +1,7 @@
-import { syncStatuses } from "@/connect";
-import { Meta, StoryObj } from "@storybook/react";
+import { syncStatuses } from "#connect";
+import { type Meta, type StoryObj } from "@storybook/react";
 import { capitalCase } from "change-case";
-import { SyncStatusIcon } from ".";
+import { SyncStatusIcon } from "./index.js";
 
 const meta = {
   title: "Connect/Components/SyncStatusIcon",

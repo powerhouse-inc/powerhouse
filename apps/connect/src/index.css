@@ -1,10 +1,9 @@
-@import url('../node_modules/@powerhousedao/design-system/dist/style.css');
+@import '@powerhousedao/design-system/style.css';
+@import 'tailwindcss';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-    --app-height: calc(100vh - 32px);
-    --search-bar-width: 642px;
+@theme {
+    --spacing-app-height: calc(100vh - 32px);
+    --spacing-search-bar-width: 642px;
 }
+
+@custom-variant dark (&:where(.dark, .dark *));

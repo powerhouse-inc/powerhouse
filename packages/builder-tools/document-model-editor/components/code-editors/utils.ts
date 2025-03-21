@@ -19,7 +19,12 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from "@codemirror/language";
-import { Diagnostic, forceLinting, linter, lintKeymap } from "@codemirror/lint";
+import {
+  type Diagnostic,
+  forceLinting,
+  linter,
+  lintKeymap,
+} from "@codemirror/lint";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import {
@@ -32,10 +37,10 @@ import {
   highlightSpecialChars,
   lineNumbers,
   rectangularSelection,
-  ViewUpdate,
+  type ViewUpdate,
 } from "@codemirror/view";
 import { filterSchema, isDocumentString } from "@graphql-tools/utils";
-import { GraphQLError, GraphQLSchema, locatedError, parse } from "graphql";
+import { GraphQLError, type GraphQLSchema, locatedError, parse } from "graphql";
 import { validateSDL } from "graphql/validation/validate.js";
 import { useEffect, useRef } from "react";
 

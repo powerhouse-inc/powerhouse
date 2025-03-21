@@ -1,6 +1,6 @@
 import { exec } from "node:child_process";
 import { join } from "node:path";
-import { normalizePath, PluginOption, ViteDevServer } from "vite";
+import { normalizePath, type PluginOption, type ViteDevServer } from "vite";
 import { HMR_MODULE_IMPORT, viteReplaceImports } from "./base.js";
 
 export const viteLoadHMRModule = (connectPath: string): PluginOption => {

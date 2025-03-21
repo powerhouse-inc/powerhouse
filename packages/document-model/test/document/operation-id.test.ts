@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { ExtendedStateFromDocument } from "#document/types.js";
+import { type ExtendedStateFromDocument } from "#document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
@@ -8,7 +8,7 @@ import {
 import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
 import {
   baseCountReducer,
-  CountDocument,
+  type CountDocument,
   countReducer,
   increment,
 } from "../helpers.js";

@@ -1,4 +1,6 @@
+import { SubgraphManager } from "#subgraphs/manager.js";
 import { PGlite } from "@electric-sql/pglite";
+import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
@@ -11,8 +13,6 @@ import https from "node:https";
 import path from "node:path";
 import { TlsOptions } from "node:tls";
 import { Pool } from "pg";
-import { IAnalyticsStore, ProcessorManager } from "#processors/index.js";
-import { SubgraphManager } from "#subgraphs/manager.js";
 import { API } from "./types.js";
 import { getDbClient } from "./utils/db.js";
 
@@ -42,7 +42,7 @@ export async function startAPI(
   const analyticsStore = new KnexAnalyticsStore({
     executor: new KnexQueryExecutor(),
     knex: db,
-  }) as unknown as IAnalyticsStore; // TODO update @powerhousedao/analytics-engine-pg to use @powerhousedao/analytics-engine-core@0.3.2
+  }) as unknown as IAnalyticsStore;
   const subgraphManager = new SubgraphManager(
     "/",
     app,
@@ -51,7 +51,6 @@ export async function startAPI(
     analyticsStore,
   );
   await subgraphManager.init();
-  const processorManager = new ProcessorManager(reactor, db, analyticsStore);
 
   if (options.https) {
     const currentDir = process.cwd();
@@ -84,5 +83,5 @@ export async function startAPI(
   } else {
     app.listen(port);
   }
-  return { app, subgraphManager, processorManager };
+  return { app, subgraphManager };
 }

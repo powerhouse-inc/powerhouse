@@ -1,10 +1,8 @@
-import Hdd from "@/assets/icon-components/Hdd";
-import M from "@/assets/icon-components/M";
-import PowerhouseLogoSmall from "@/assets/icon-components/PowerhouseLogoSmall";
-import { Meta, StoryObj } from "@storybook/react";
-import { HomeScreen } from "./home-screen";
-import { HomeScreenAddDriveItem } from "./home-screen-add-drive-item";
-import { HomeScreenItem } from "./home-screen-item";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { HomeScreen } from "./home-screen.js";
+import { HomeScreenAddDriveItem } from "./home-screen-add-drive-item/index.js";
+import { HomeScreenItem } from "./home-screen-item/index.js";
+import { Icon } from "#powerhouse";
 
 const meta = {
   title: "Connect/Components/Home Screen",
@@ -25,24 +23,24 @@ const Template: Story = {
         <HomeScreenItem
           title="My Drive"
           description="Drive Explorer App"
-          icon={<Hdd width={32} height={32} />}
+          icon={<Icon name="Hdd" width={32} height={32} />}
         />
         <HomeScreenItem
           title="Maker"
           description="Drive Explorer App"
           shareable
-          icon={<M width={32} height={32} />}
+          icon={<Icon name="M" width={32} height={32} />}
         />
         <HomeScreenItem
           title="Powerhouse Genesis"
           description="OH Admin App"
-          icon={<PowerhouseLogoSmall width={32} height={32} />}
+          icon={<Icon name="PowerhouseLogoSmall" width={32} height={32} />}
         />
         <HomeScreenItem title="Frank Inc." description="Contributor App" />
         <HomeScreenItem
           title="Powerhouse Genesis"
           description="POH Admin App"
-          icon={<PowerhouseLogoSmall width={32} height={32} />}
+          icon={<Icon name="PowerhouseLogoSmall" width={32} height={32} />}
         />
         <HomeScreenAddDriveItem
           onClick={() => {

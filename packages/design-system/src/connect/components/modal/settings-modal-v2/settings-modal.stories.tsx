@@ -1,10 +1,10 @@
-import { UiDriveNode } from "@/connect/types/nodes.js";
 import {
   mockCloudDrive,
   mockLocalDrive,
   mockPublicDrive,
-} from "@/connect/utils/mocks/ui-drive-node.js";
-import { Icon } from "@/powerhouse";
+  type UiDriveNode,
+} from "#connect";
+import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import React from "react";
 import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
@@ -12,7 +12,7 @@ import { About } from "./about.js";
 import { DangerZone } from "./danger-zone.js";
 import { DefaultEditor } from "./default-editor.js";
 import { mockDocumentModelEditorOptions } from "./mocks.js";
-import { PackageManagerWrapper } from "./package-manager/package-manager.stories";
+import { PackageManagerWrapper } from "./package-manager/package-manager.stories.js";
 import { SettingsModal } from "./settings-modal.js";
 
 const meta: Meta<typeof SettingsModal> = {
@@ -28,7 +28,6 @@ const tabs = [
     icon: <Icon name="PackageManager" size={12} />,
     label: "Package Manager",
     content: () => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [reactor, setReactor] = React.useState("");
       return (
         <PackageManagerWrapper
@@ -43,7 +42,6 @@ const tabs = [
     icon: <Icon name="Edit" size={12} />,
     label: "Default Editors",
     content() {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [editor, setEditor] = React.useState(
         mockDocumentModelEditorOptions[0].value,
       );
@@ -61,7 +59,6 @@ const tabs = [
     icon: <Icon name="Danger" size={12} className="text-red-900" />,
     label: <span className="text-red-900">Danger Zone</span>,
     content() {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const [drives, setDrives] = React.useState([
         mockCloudDrive,
         mockLocalDrive,
@@ -103,6 +100,9 @@ export const Primary: Story = {
     ),
   ],
   render: function Wrapper(args) {
-    return <SettingsModal {...args} />;
+    return (
+      // @ts-expect-error
+      <SettingsModal {...args} />
+    );
   },
 };

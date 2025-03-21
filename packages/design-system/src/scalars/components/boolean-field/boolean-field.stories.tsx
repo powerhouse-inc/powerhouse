@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { BooleanField } from "./boolean-field";
-import { withForm } from "@/scalars/lib/decorators";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { BooleanField } from "./boolean-field.js";
 
 const meta = {
   title: "Document Engineering/Simple Components/Boolean Field",

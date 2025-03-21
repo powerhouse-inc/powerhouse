@@ -1,14 +1,14 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import {
   FormInputs,
   RWAButton,
   tableLabels,
-  TableName,
+  type TableName,
   useDependentItemProps,
   useEditorContext,
   useModal,
   useTableForm,
-} from "@/rwa";
+} from "#rwa";
 import { memo, useCallback } from "react";
 
 type Props = {

@@ -5,18 +5,18 @@ import {
   DUPLICATE,
   getDocumentIconSrc,
   NodeInput,
-  NodeOption,
+  type NodeOption,
   nodeOptionsMap,
   READ,
   RENAME,
-  UiFileNode,
+  type UiFileNode,
   useDrag,
   WRITE,
-} from "@/connect";
-import { Icon } from "@/powerhouse";
+} from "#connect";
+import { Icon } from "#powerhouse";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { SyncStatusIcon } from "../status-icon";
+import { SyncStatusIcon } from "../status-icon/index.js";
 
 export type FileItemProps = {
   uiNode: UiFileNode;

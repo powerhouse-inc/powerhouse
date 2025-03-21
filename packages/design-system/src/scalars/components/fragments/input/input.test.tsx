@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { Input } from "./input";
+import { userEvent } from "@testing-library/user-event";
+import { Input } from "./input.js";
 
 describe("Input", () => {
   it("should match snapshot", () => {

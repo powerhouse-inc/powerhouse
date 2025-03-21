@@ -1,9 +1,8 @@
-import { Subgraph } from "#subgraphs/index.js";
-import { DriveInput } from "document-drive";
+import { Subgraph } from "#subgraphs/base/index.js";
+import { type DriveInput } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import { ADMIN_USERS } from "./env/index.js";
-import { SystemContext } from "./types.js";
+import { type SystemContext } from "./types.js";
 
 export class SystemSubgraph extends Subgraph {
   name = "system";
@@ -19,7 +18,6 @@ export class SystemSubgraph extends Subgraph {
         global: DocumentDriveStateInput!
         preferredEditor: String
       ): DocumentDrive_DocumentDriveState
-      deleteDrive(id: ID!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
       setDriveName(id: String!, name: String!): Boolean
     }
@@ -66,10 +64,14 @@ export class SystemSubgraph extends Subgraph {
     await super.onSetup();
     this.subgraphManager.setAdditionalContextFields({
       isAdmin: (ctx: SystemContext) => {
+        const adminUsers =
+          process.env.ADMIN_USERS?.split(",")
+            .map((user) => user.trim())
+            .filter(Boolean) ?? [];
         return (
-          ADMIN_USERS.length === 0 ||
+          adminUsers.length === 0 ||
           (ctx.session.address &&
-            ADMIN_USERS.includes(ctx.session.address.toLocaleLowerCase()))
+            adminUsers.includes(ctx.session.address.toLocaleLowerCase()))
         );
       },
     });

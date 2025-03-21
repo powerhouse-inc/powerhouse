@@ -1,18 +1,18 @@
-import { driveDocumentModelModule } from "#drive-document-model/module";
-import { ReactorBuilder } from "#server/builder";
-import {
-  DefaultRemoteDriveInput,
-  DocumentDriveServerOptions,
-} from "#server/types";
-import { generateUUID } from "#utils/misc";
 import {
   documentModelDocumentModelModule,
   DocumentModelModule,
 } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
+import { driveDocumentModelModule } from "../src/drive-document-model/module";
+import { ReactorBuilder } from "../src/server/builder";
+import {
+  DefaultRemoteDriveInput,
+  DocumentDriveServerOptions,
+} from "../src/server/types";
 import { MemoryStorage } from "../src/storage/memory";
-import { DriveInfo } from "../src/utils/graphql.js";
+import { DriveInfo } from "../src/utils/graphql";
+import { generateUUID } from "../src/utils/misc";
 
 type DriveInput = {
   url: string;
@@ -25,7 +25,7 @@ const drive1: DriveInput = {
 
 const drive2: DriveInput = {
   url: "https://test.com/d/drive2",
-  id: "drive2",
+  id: "drive2", 
 };
 
 const drive3: DriveInput = {
@@ -100,7 +100,6 @@ const getDefaultRemoteDriveInput = (
       },
     ],
     triggers: [],
-    pullInterval: 3000,
   },
 });
 
@@ -197,9 +196,6 @@ describe("default remote drives", () => {
     const mockCallback = vi.fn();
 
     server.on("defaultRemoteDrive", mockCallback);
-    server.on("defaultRemoteDrive", (...args: any) => {
-      console.log("WAT args", args);
-    });
 
     await server.initialize();
 

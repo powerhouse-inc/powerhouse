@@ -1,7 +1,7 @@
 import { attachBranch } from "document-model";
 import { describe, expect, it } from "vitest";
 import { checkCleanedOperationsIntegrity } from "../../../document-model/src/document/utils/document-helpers.js";
-import { buildOperations } from "../utils.js";
+import { buildOperations } from "./utils.js";
 
 describe("attachBranch", () => {
   const scenarios = [

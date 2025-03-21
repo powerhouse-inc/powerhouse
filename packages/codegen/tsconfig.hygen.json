@@ -6,6 +6,6 @@
     "outDir": "./dist"
   },
   "include": ["**/.hygen/**/*"],
-  "exclude": ["dist/"],
+  "exclude": ["dist", "node_modules"],
   "references": [{ "path": "../document-model" }]
 }

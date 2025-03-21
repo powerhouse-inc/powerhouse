@@ -1,8 +1,8 @@
 import stringify from "json-stringify-deterministic";
 import { gql, requestGraphql } from "#utils/graphql";
 import { childLogger } from "#utils/logger";
-import { ListenerRevision, StrandUpdate } from "#server/types";
-import { ITransmitter, StrandUpdateSource } from "./types.js";
+import { type ListenerRevision, type StrandUpdate } from "#server/types";
+import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 const SYNC_OPS_BATCH_LIMIT = 10;
 

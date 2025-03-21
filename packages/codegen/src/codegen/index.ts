@@ -1,7 +1,10 @@
-import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/scalars";
 import { paramCase, pascalCase } from "change-case";
-import { DocumentModelModule, DocumentModelState } from "document-model";
+import {
+  type DocumentModelModule,
+  type DocumentModelState,
+} from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
 import { generateSchema, generateSchemas } from "./graphql.js";

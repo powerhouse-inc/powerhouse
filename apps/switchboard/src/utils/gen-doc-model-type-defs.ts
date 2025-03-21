@@ -1,4 +1,4 @@
-import { BaseDocumentDriveServer } from "document-drive";
+import { type BaseDocumentDriveServer } from "document-drive";
 import { parse } from "graphql";
 
 export const getDocumentModelTypeDefs = (

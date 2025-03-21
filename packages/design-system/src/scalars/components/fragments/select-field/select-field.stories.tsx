@@ -1,13 +1,13 @@
+import { Icon, type IconName } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Icon, type IconName } from "@/powerhouse/components/icon";
-import { withForm } from "@/scalars/lib/decorators";
-import { SelectField } from "./select-field";
+import { withForm } from "../../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../../lib/storybook-arg-types.js";
+import { SelectField } from "./select-field.js";
 
 const meta: Meta<typeof SelectField> = {
   title: "Document Engineering/Fragments/SelectField",
@@ -89,6 +89,23 @@ const meta: Meta<typeof SelectField> = {
       },
     },
 
+    contentAlign: {
+      control: "select",
+      description: "Alignment of the dropdown",
+      options: ["start", "end", "center"],
+      table: {
+        defaultValue: { summary: "start" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    contentClassName: {
+      control: "text",
+      description: "Custom class name for the dropdown content",
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     ...getValidationArgTypes(),
   },
   args: {

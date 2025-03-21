@@ -1,4 +1,4 @@
-import { PHDocument } from "document-model";
+import { type PHDocument } from "document-model";
 
 export interface ICache {
   setDocument(

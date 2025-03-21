@@ -1,2 +1,2 @@
-export * from "./viem";
-export * from "./wagmi";
+export * from "./viem.js";
+export * from "./wagmi.js";

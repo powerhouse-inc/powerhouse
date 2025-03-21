@@ -1,6 +1,6 @@
-import { deepEqual } from "@/scalars/lib/deep-equal";
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
+import { deepEqual } from "../../../lib/deep-equal.js";
 
 export type ValueTransformer = (value?: any) => any;
 
@@ -117,7 +117,8 @@ function _applyTransformers(
  * </ValueTransformer>
  */
 function ValueTransformer({ transformers, children }: ValueTransformerProps) {
-  const { setValue } = useFormContext();
+  const formContext = useFormContext();
+  const setValue = formContext?.setValue;
 
   useEffect(() => {
     // apply all the transformers on mount to prevent untransformed values
@@ -126,7 +127,15 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
     const transformedValue = _applyTransformers(transformers, value, "all");
 
     if (!deepEqual(transformedValue, value)) {
-      setValue((children.props as { name: string }).name, transformedValue);
+      if (typeof setValue === "function") {
+        setValue?.((children.props as { name: string }).name, transformedValue);
+      } else {
+        // if setValue is not available, then we're not inside a form context
+        // so we need to update the value using onChange if available
+        (children.props as React.HTMLAttributes<HTMLInputElement>).onChange?.({
+          target: { value: transformedValue },
+        } as React.ChangeEvent<HTMLInputElement>);
+      }
     }
   }, [transformers]);
 
@@ -142,7 +151,7 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
       );
 
       if (transformedValue !== event.target.value) {
-        setValue((children.props as { name: string }).name, transformedValue);
+        setValue?.((children.props as { name: string }).name, transformedValue);
         setNativeValue(event.target, transformedValue);
       }
 

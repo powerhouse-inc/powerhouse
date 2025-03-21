@@ -1,4 +1,4 @@
-import { useLogin } from './useLogin';
+import { useLogin } from './useLogin.js';
 
 type AllowListType = 'arbitrum' | 'rwa' | 'none';
 export function useAllowList():

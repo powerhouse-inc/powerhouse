@@ -2,41 +2,53 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/utils.ts"
 force: true
 ---
-import { DocumentModelUtils, utils as base } from 'document-model/document';
-import { <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState } from './types';
-import { reducer } from './reducer';
+import { 
+    type DocumentModelUtils,
+    baseCreateDocument,
+    baseCreateExtendedState,
+    baseSaveToFile,
+    baseSaveToFileHandle,
+    baseLoadFromFile,
+    baseLoadFromInput
+ } from 'document-model';
+import { 
+  <%= 'type ' + h.changeCase.pascal(documentType) %>Document,
+  <%= 'type ' + h.changeCase.pascal(documentType) %>State,
+  <%= 'type ' + h.changeCase.pascal(documentType) %>LocalState
+} from './types.js';
+import { reducer } from './reducer.js';
 
 export const initialGlobalState: <%= h.changeCase.pascal(documentType) %>State = <%- initialGlobalState %>;
 export const initialLocalState: <%= h.changeCase.pascal(documentType) %>LocalState = <%- initialLocalState %>;
 
-const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>Action, <%= h.changeCase.pascal(documentType) %>LocalState> = {
+const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document> = {
     fileExtension: '<%- fileExtension %>',
     createState(state) {
         return { global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },
     createExtendedState(extendedState) {
-        return base.createExtendedState(
+        return baseCreateExtendedState(
             { ...extendedState, documentType: '<%- documentTypeId %>' },
             utils.createState
         );
     },
     createDocument(state) {
-        return base.createDocument(
+        return baseCreateDocument(
             utils.createExtendedState(state),
             utils.createState
         );
     },
     saveToFile(document, path, name) {
-        return base.saveToFile(document, path, '<%- fileExtension %>', name);
+        return baseSaveToFile(document, path, '<%- fileExtension %>', name);
     },
     saveToFileHandle(document, input) {
-        return base.saveToFileHandle(document, input);
+        return baseSaveToFileHandle(document, input);
     },
     loadFromFile(path) {
-        return base.loadFromFile(path, reducer);
+        return baseLoadFromFile(path, reducer);
     },
     loadFromInput(input) {
-        return base.loadFromInput(input, reducer);
+        return baseLoadFromInput(input, reducer);
     },
 };
 

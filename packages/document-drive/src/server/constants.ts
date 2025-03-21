@@ -1,1 +1,1 @@
-export const PULL_DRIVE_INTERVAL = 5000;
+export const PULL_DRIVE_INTERVAL = 1500;

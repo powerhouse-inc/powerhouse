@@ -1,6 +1,6 @@
 import {
-  MutableRefObject,
-  RefObject,
+  type MutableRefObject,
+  type RefObject,
   useCallback,
   useEffect,
   useState,

@@ -1,7 +1,6 @@
 import { groupOperationsByScope } from "document-model";
 import { describe, expect, it } from "vitest";
-import { buildOperations } from "../utils.js";
-import { InputOperation } from "./utils.js";
+import { buildOperations, InputOperation } from "./utils.js";
 
 describe("groupOperationsByScope", () => {
   const scenarios = [

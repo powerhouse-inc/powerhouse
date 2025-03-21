@@ -1,7 +1,6 @@
-import { CLOUD, PUBLIC } from "@/connect/constants";
-import { UiDriveNode } from "@/connect/types/nodes.js";
-import { Icon } from "@/powerhouse/components/icon/icon.js";
-import { cn } from "@/scalars";
+import { CLOUD, PUBLIC, type UiDriveNode } from "#connect";
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
 import { capitalCase } from "change-case";
 import { useState } from "react";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";

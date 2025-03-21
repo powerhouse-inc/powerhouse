@@ -1,7 +1,7 @@
-import { Icon } from "@/powerhouse";
-import { Meta, StoryObj } from "@storybook/react";
-import { Footer } from "./footer";
-import { FooterLink } from "./footer-link";
+import { Icon } from "#powerhouse";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { Footer } from "./footer.js";
+import { FooterLink } from "./footer-link.js";
 
 const meta = {
   title: "Connect/Components/Footer",

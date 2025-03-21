@@ -28,4 +28,4 @@
 
 // splits app code into separate chunk to avoid circular dependencies
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-import('./index');
+import('./index.js');

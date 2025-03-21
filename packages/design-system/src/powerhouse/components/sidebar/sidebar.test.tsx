@@ -1,6 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { it } from "vitest";
-import { Sidebar, SidebarFooter, SidebarHeader, SidebarPanel } from ".";
+import {
+  Sidebar,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarPanel,
+} from "./index.js";
 
 describe("Sidebar Component", () => {
   it("should match snapshot", () => {

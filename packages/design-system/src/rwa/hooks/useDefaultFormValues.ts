@@ -1,19 +1,19 @@
 import { useMemo } from "react";
-import { allGroupTransactionTypes, tableNames } from "../constants";
+import { allGroupTransactionTypes, tableNames } from "../constants/index.js";
 import {
-  Account,
-  AccountFormInputs,
-  AssetFormInputs,
-  FixedIncomeType,
-  FixedIncomeTypeFormInputs,
-  GroupTransactionFormInputs,
-  ServiceProviderFeeTypeFormInputs,
-  SPV,
-  SPVFormInputs,
-  TableItemType,
-  TableName,
-} from "../types";
-import { isoDateStringToDateInput } from "../utils";
+  type Account,
+  type AccountFormInputs,
+  type AssetFormInputs,
+  type FixedIncomeType,
+  type FixedIncomeTypeFormInputs,
+  type GroupTransactionFormInputs,
+  type ServiceProviderFeeTypeFormInputs,
+  type SPV,
+  type SPVFormInputs,
+  type TableItemType,
+  type TableName,
+} from "../types/index.js";
+import { isoDateStringToDateInput } from "../utils/index.js";
 
 export function useDefaultFormValues(args: {
   tableName: TableName;

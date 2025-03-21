@@ -1,6 +1,6 @@
-import { Button } from "@/powerhouse/components/button";
-import { Form, NumberField, StringField } from "../../../components";
-import { IdField } from "@/scalars/components/id-field";
+import { Button } from "#powerhouse";
+import { IdField } from "#scalars";
+import { Form, NumberField, StringField } from "../../../components/index.js";
 
 const FormWithResetOnSuccessfulSubmit = () => {
   return (

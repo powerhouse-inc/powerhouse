@@ -1,5 +1,5 @@
 import type { DocumentModelDocument } from "document-model";
-import { EditorModule } from "document-model";
+import { type EditorModule } from "document-model";
 import { DocumentModelEditor } from "./editor.js";
 
 export const documentModelEditorModule: EditorModule<DocumentModelDocument> = {

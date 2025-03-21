@@ -7,10 +7,16 @@ import {
 } from "#document-model/custom/utils.js";
 import { setStateSchema } from "#document-model/gen/creators.js";
 import { reducer } from "#document-model/gen/reducer.js";
-import { Module, Operation } from "#document-model/gen/schema/types.js";
-import { DocumentModelDocument } from "#document-model/gen/types.js";
+import {
+  type Module,
+  type Operation,
+} from "#document-model/gen/schema/types.js";
+import { type DocumentModelDocument } from "#document-model/gen/types.js";
 import { createDocument } from "#document-model/gen/utils.js";
-import { ExtendedStateFromDocument, ValidationError } from "#document/types.js";
+import {
+  type ExtendedStateFromDocument,
+  type ValidationError,
+} from "#document/types.js";
 
 describe("DocumentModel Validation Error", () => {
   const documentName = "testDocument";
@@ -190,7 +196,7 @@ describe("DocumentModel Validation Error", () => {
       errors = [
         ...errors,
         ...validateStateSchemaName(
-          doc.state.global.specifications[0].state.local.schema,
+          newDoc2.state.global.specifications[0].state.local.schema,
           documentName,
           "local",
         ),

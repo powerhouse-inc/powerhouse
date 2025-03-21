@@ -1,5 +1,5 @@
-import { Button } from "@/powerhouse/components/button";
-import { Input } from "@/scalars/components/fragments/input";
+import { Button } from "#powerhouse";
+import { Input } from "#scalars";
 import { useCallback, useState } from "react";
 
 export type PackageManagerInputProps = {

@@ -4,7 +4,7 @@ import {
   IntegrityIssueSubType,
   IntegrityIssueType,
 } from "../../../document-model/src/document/utils/document-helpers.js";
-import { buildOperations } from "../utils.js";
+import { buildOperations } from "./utils.js";
 
 describe("checkCleanedOperationsIntegrity", () => {
   const validScenarios = [

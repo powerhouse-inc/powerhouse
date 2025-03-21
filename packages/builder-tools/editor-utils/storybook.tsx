@@ -1,16 +1,16 @@
 import { useDocumentReducer } from "#editor-utils/reducer";
 import { useArgs, useChannel } from "@storybook/preview-api";
-import { Decorator, Meta, StoryObj } from "@storybook/react";
+import { type Decorator, type Meta, type StoryObj } from "@storybook/react";
 import {
-  ActionContext,
-  ActionFromDocument,
-  EditorProps,
-  ExtendedState,
-  GlobalStateFromDocument,
-  LocalStateFromDocument,
-  PHDocument,
-  PartialState,
-  Reducer,
+  type ActionContext,
+  type ActionFromDocument,
+  type EditorProps,
+  type ExtendedState,
+  type GlobalStateFromDocument,
+  type LocalStateFromDocument,
+  type PHDocument,
+  type PartialState,
+  type Reducer,
   baseCreateDocument,
 } from "document-model";
 import React, { useState } from "react";

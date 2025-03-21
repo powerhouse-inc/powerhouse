@@ -1,7 +1,7 @@
 import fs from "node:fs";
-import { join } from "node:path";
+import path, { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PluginOption, ViteDevServer } from "vite";
+import { type PluginOption, type ViteDevServer } from "vite";
 import {
   externalIds,
   getStudioConfig,
@@ -96,6 +96,7 @@ export function viteConnectDevStudioPlugin(
         "react",
         "react-dom",
         "@powerhousedao/reactor-browser",
+        ...externalIds,
       ]),
     localDocumentModelsPath
       ? viteReplaceImports({
@@ -150,6 +151,19 @@ export function viteConnectDevStudioPlugin(
           localDocumentModelsPath,
           localDocumentEditorsPath,
         );
+      },
+      transformIndexHtml(html) {
+        if (!enabled || html.includes("editors/style.css")) return;
+        return [
+          {
+            tag: "link",
+            attrs: {
+              type: "text/css",
+              rel: "stylesheet",
+              href: path.join(connectPath, "../../editors/style.css"),
+            },
+          },
+        ];
       },
     },
   ];

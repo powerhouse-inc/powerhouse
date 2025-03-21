@@ -1,30 +1,29 @@
-import { drivesToHash } from '#hooks/useDocumentDrives';
-import { useUserPermissions } from '#hooks/useUserPermissions';
+import { drivesToHash, useUserPermissions } from '#hooks';
 import {
-    DocumentModelNotFoundError,
-    IDocumentDriveServer,
-    IReadModeDriveServer,
+    type DocumentModelNotFoundError,
+    type IDocumentDriveServer,
+    type IReadModeDriveServer,
     logger,
-    ReadDocumentNotFoundError,
-    ReadDrive,
-    ReadDriveContext,
+    type ReadDocumentNotFoundError,
+    type ReadDrive,
+    type ReadDriveContext,
     ReadDriveNotFoundError,
-    ReadDrivesListener,
-    ReadDrivesListenerUnsubscribe,
-    ReadDriveSlugNotFoundError,
-    RemoteDriveOptions,
+    type ReadDrivesListener,
+    type ReadDrivesListenerUnsubscribe,
+    type ReadDriveSlugNotFoundError,
+    type RemoteDriveOptions,
 } from 'document-drive';
-import { PHDocument } from 'document-model';
+import { type PHDocument } from 'document-model';
 import {
     createContext,
-    FC,
-    ReactNode,
+    type FC,
+    type ReactNode,
     useContext,
     useEffect,
     useMemo,
     useState,
 } from 'react';
-import { useAsyncReactor } from '../store/reactor';
+import { useAsyncReactor } from '../store/reactor.js';
 
 export interface IReadModeContext extends IReadModeDriveServer {
     readDrives: ReadDrive[];

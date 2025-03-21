@@ -3,8 +3,8 @@ import {
     baseLoadFromInput,
     baseSaveToFileHandle,
     createZip,
-    DocumentModelModule,
-    PHDocument,
+    type DocumentModelModule,
+    type PHDocument,
 } from 'document-model';
 
 const downloadFile = async (document: PHDocument) => {

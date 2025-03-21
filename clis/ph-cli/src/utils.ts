@@ -1,4 +1,4 @@
-import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import path, { dirname } from "node:path";
@@ -150,7 +150,16 @@ export function updateConfigFile(
   const updatedConfig: PowerhouseConfig = {
     ...config,
     packages: isInstall
-      ? [...(config.packages || []), ...mappedPackages]
+      ? [
+          // replace existing packages if they were already listed on the config file
+          ...(config.packages?.filter(
+            (packages) =>
+              !config.packages?.find(
+                (p) => p.packageName === packages.packageName,
+              ),
+          ) || []),
+          ...mappedPackages,
+        ]
       : [...(config.packages || [])].filter(
           (pkg) => !dependencies.includes(pkg.packageName),
         ),

@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { FormInput } from "@/connect";
+import { FormInput } from "#connect";
 import { EthereumAddress as EthereumAddressScalar } from "@powerhousedao/scalars";
+import { useState } from "react";
 
 export interface EthereumAddressProps {
   onChange?: (address: string, isValidAddress: boolean) => void;

@@ -1,6 +1,6 @@
-import { Command } from "commander";
+import { type Command } from "commander";
 import { createProject, parseVersion } from "@powerhousedao/codegen";
-import { CommandActionType } from "../types.js";
+import { type CommandActionType } from "../types.js";
 
 export const init: CommandActionType<
   [

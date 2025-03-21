@@ -4,12 +4,12 @@ import {
   FormInput,
   Label,
   LOCAL,
-  SharingType,
+  type SharingType,
   SharingTypeFormInput,
-} from "@/connect";
-import { Button } from "@/powerhouse";
-import { App } from "document-model";
-import { SubmitHandler, useForm } from "react-hook-form";
+} from "#connect";
+import { Button } from "#powerhouse";
+import { type App } from "document-model";
+import { type SubmitHandler, useForm } from "react-hook-form";
 
 export type AddLocalDriveInput = {
   name: string;
