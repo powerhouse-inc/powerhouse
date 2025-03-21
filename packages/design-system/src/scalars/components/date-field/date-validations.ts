@@ -12,28 +12,6 @@ import {
   normalizeMonthFormat,
 } from "../date-time-field/utils.js";
 
-/**
- * Creates a validator function for date fields that checks various date constraints
- *
- * @param options - Configuration options for date validation
- * @param {string} [options.dateFormat] - Expected format for date input
- * @param {Date | string} [options.minDate] - Minimum allowed date
- * @param {Date | string} [options.maxDate] - Maximum allowed date
- * @param {boolean} [options.disablePastDates] - If true, dates before today are invalid
- * @param {boolean} [options.disableFutureDates] - If true, dates after today are invalid
- *
- * @returns A validation function that accepts a date value and returns either:
- *  - true: if the date is valid and meets all constraints
- *  - string: error message if the date is invalid or violates any constraints
- *
- * @example
- * const validator = validateDatePicker({
- *   minDate: '2024-01-01',
- *   disableFutureDates: true
- * });
- *
- * const result = validator('2024-02-15'); // returns true or error message
- */
 export const validateDatePicker =
   ({
     dateFormat,
