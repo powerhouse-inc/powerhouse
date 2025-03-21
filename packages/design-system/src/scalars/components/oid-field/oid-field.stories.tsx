@@ -1,4 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import {
+  fetchOptions,
+  fetchSelectedOption,
+  mockedOptions,
+} from "../../../ui/components/data-entry/oid-input/mocks.js";
 import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
@@ -6,7 +11,6 @@ import {
   PrebuiltArgTypes,
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
-import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
 import { OIDField } from "./oid-field.js";
 
 const meta: Meta<typeof OIDField> = {

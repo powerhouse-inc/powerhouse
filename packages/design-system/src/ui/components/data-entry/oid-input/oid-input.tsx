@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useCallback, useId } from "react";
-import { IdAutocompleteListOption } from "../fragments/id-autocomplete/id-autocomplete-list-option.js";
-import { IdAutocomplete } from "../fragments/id-autocomplete/index.js";
+import { IdAutocompleteListOption } from "../../../../scalars/components/fragments/id-autocomplete/id-autocomplete-list-option.js";
+import { IdAutocomplete } from "../../../../scalars/components/fragments/id-autocomplete/index.js";
 import type { OIDInputProps, OIDOption } from "./types.js";
 
 const OIDInput = React.forwardRef<HTMLInputElement, OIDInputProps>(

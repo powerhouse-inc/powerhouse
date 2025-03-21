@@ -1,5 +1,5 @@
+import { OIDInput } from "../../../ui/components/data-entry/oid-input/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
-import { OIDInput } from "./oid-input.js";
 import type { OIDFieldProps } from "./types.js";
 
 const OIDField = withFieldValidation<OIDFieldProps>(OIDInput, {
