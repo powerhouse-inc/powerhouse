@@ -16,6 +16,7 @@ export default defineConfig({
       "#connect": path.join(srcPath, "connect"),
       "#powerhouse": path.join(srcPath, "powerhouse"),
       "#scalars": path.join(srcPath, "scalars"),
+      "#ui": path.join(srcPath, "ui"),
       "#rwa": path.join(srcPath, "rwa"),
       "#services": path.join(srcPath, "services"),
     },

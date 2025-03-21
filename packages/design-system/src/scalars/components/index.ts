@@ -106,3 +106,10 @@ export {
    */
   type InputProps,
 } from "../../ui/components/index.js";
+
+export {
+  /**
+   * @deprecated Use `BooleanField` instead. This component is deprecated and will be removed in a future version.
+   */
+  CheckboxField,
+} from "./fragments/checkbox-field/index.js";

@@ -57,7 +57,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "A boolean field component that can be used as a [checkbox](?path=/docs/document-engineering-fragments-checkbox-field--readme) or [toggle](?path=/docs/document-engineering-fragments-toggle-field--readme) depending on the `isToggle` prop.",
+          "A boolean field component that can be used as a [checkbox](?path=/docs/document-engineering-data-entry-checkbox--readme) or [toggle](?path=/docs/document-engineering-fragments-toggle-field--readme) depending on the `isToggle` prop.",
       },
     },
   },
