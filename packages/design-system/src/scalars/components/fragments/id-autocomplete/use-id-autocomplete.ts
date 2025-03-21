@@ -3,7 +3,7 @@ import { useDebounceCallback } from "usehooks-ts";
 import { useIdAutocompleteContext } from "./id-autocomplete-context.js";
 import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";
 
-interface UseIdAutocompleteFieldParams {
+interface UseIdAutocompleteParams {
   autoComplete: IdAutocompleteProps["autoComplete"];
   defaultValue?: string;
   value?: string;
@@ -15,7 +15,7 @@ interface UseIdAutocompleteFieldParams {
   fetchSelectedOption: IdAutocompleteProps["fetchSelectedOptionCallback"];
 }
 
-export function useIdAutocompleteField({
+export function useIdAutocomplete({
   autoComplete,
   defaultValue,
   value,
@@ -25,7 +25,7 @@ export function useIdAutocompleteField({
   onBlur,
   fetchOptions,
   fetchSelectedOption,
-}: UseIdAutocompleteFieldParams) {
+}: UseIdAutocompleteParams) {
   const context = useIdAutocompleteContext();
   const shouldFetchOptions = useRef(false);
   const isInternalChange = useRef(false);

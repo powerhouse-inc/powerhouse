@@ -1,12 +1,14 @@
 import type { IconName } from "#powerhouse";
+import type React from "react";
+import type { InputBaseProps } from "../../types.js";
 
-interface IdAutocompleteBaseProps {
+interface IdAutocompleteBaseConfigProps {
   onChange?: (value: string) => void;
   placeholder?: string;
   maxLength?: number;
 }
 
-export type IdAutocompleteProps = IdAutocompleteBaseProps &
+type IdAutocompleteConfigProps = IdAutocompleteBaseConfigProps &
   (
     | {
         autoComplete: false;
@@ -49,6 +51,13 @@ export type IdAutocompleteProps = IdAutocompleteBaseProps &
       }
   );
 
+type IdAutocompleteProps = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  keyof InputBaseProps<string> | keyof IdAutocompleteConfigProps | "pattern"
+> &
+  InputBaseProps<string> &
+  IdAutocompleteConfigProps;
+
 interface IdAutocompleteBaseOption {
   icon?: IconName | React.ReactElement;
   title?: string;
@@ -60,6 +69,8 @@ interface IdAutocompleteBaseOption {
   description?: string;
 }
 
-export type IdAutocompleteOption<
+type IdAutocompleteOption<
   T extends Record<string, unknown> = Record<never, unknown>,
 > = IdAutocompleteBaseOption & T;
+
+export type { IdAutocompleteOption, IdAutocompleteProps };

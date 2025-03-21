@@ -1,10 +1,9 @@
-import { screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithForm } from "../../../lib/testing.js";
-import { IdAutocompleteField } from "./id-autocomplete-field.js";
+import { IdAutocomplete } from "./id-autocomplete.js";
 
-describe("IdAutocompleteField Component", () => {
+describe("IdAutocomplete Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   window.Element.prototype.scrollTo = vi.fn();
   window.matchMedia = vi.fn().mockImplementation((query) => ({
@@ -47,8 +46,8 @@ describe("IdAutocompleteField Component", () => {
     });
 
   it("should match snapshot", () => {
-    const { asFragment } = renderWithForm(
-      <IdAutocompleteField
+    const { asFragment } = render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Id Autocomplete Field"
         placeholder="Search..."
@@ -60,8 +59,8 @@ describe("IdAutocompleteField Component", () => {
   });
 
   it("should render with label", () => {
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         fetchOptionsCallback={defaultGetOptions}
@@ -72,8 +71,8 @@ describe("IdAutocompleteField Component", () => {
   });
 
   it("should render with description", () => {
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         description="Test Description"
@@ -85,8 +84,8 @@ describe("IdAutocompleteField Component", () => {
   });
 
   it("should handle disabled state", () => {
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         disabled
@@ -98,8 +97,8 @@ describe("IdAutocompleteField Component", () => {
   });
 
   it("should display error messages", async () => {
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         errors={["Invalid format"]}
@@ -113,8 +112,8 @@ describe("IdAutocompleteField Component", () => {
   });
 
   it("should display warning messages", () => {
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         warnings={["Option may be deprecated"]}
@@ -130,8 +129,8 @@ describe("IdAutocompleteField Component", () => {
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
 
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         variant="withValueTitleAndDescription"
@@ -159,8 +158,8 @@ describe("IdAutocompleteField Component", () => {
   });
 
   it("should have correct ARIA attributes", async () => {
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         required
@@ -177,8 +176,8 @@ describe("IdAutocompleteField Component", () => {
   });
 
   it("should show correct placeholders for different variants", () => {
-    const { rerender } = renderWithForm(
-      <IdAutocompleteField
+    const { rerender } = render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         variant="withValueTitleAndDescription"
@@ -192,7 +191,7 @@ describe("IdAutocompleteField Component", () => {
     expect(screen.getByText("Description not available")).toBeInTheDocument();
 
     rerender(
-      <IdAutocompleteField
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         variant="withValueAndTitle"
@@ -208,7 +207,7 @@ describe("IdAutocompleteField Component", () => {
     ).not.toBeInTheDocument();
 
     rerender(
-      <IdAutocompleteField
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         variant="withValue"
@@ -225,8 +224,8 @@ describe("IdAutocompleteField Component", () => {
   });
 
   it("should handle autoComplete disabled", () => {
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         autoComplete={false}
@@ -242,8 +241,8 @@ describe("IdAutocompleteField Component", () => {
     const originalRandom = Math.random;
     Math.random = vi.fn().mockReturnValue(1);
 
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         variant="withValueTitleAndDescription"
@@ -273,8 +272,8 @@ describe("IdAutocompleteField Component", () => {
 
   it("should not invoke onChange on mount when it has a defaultValue", () => {
     const onChange = vi.fn();
-    renderWithForm(
-      <IdAutocompleteField
+    render(
+      <IdAutocomplete
         name="id-autocomplete"
         label="Test Label"
         defaultValue={mockedOptions[0].value}

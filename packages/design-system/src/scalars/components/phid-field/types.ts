@@ -1,4 +1,4 @@
-import type { IdAutocompleteProps } from "../fragments/id-autocomplete-field/types.js";
+import type { IdAutocompleteProps } from "../fragments/id-autocomplete/types.js";
 
 export type PHIDProps = Omit<IdAutocompleteProps, "renderOption"> &
   (

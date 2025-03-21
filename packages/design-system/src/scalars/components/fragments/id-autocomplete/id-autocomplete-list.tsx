@@ -29,7 +29,7 @@ interface IdAutocompleteListProps {
   ) => React.ReactNode;
 }
 
-export const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
+const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
   variant,
   commandListRef,
   selectedValue,
@@ -100,3 +100,5 @@ export const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
     </CommandList>
   );
 };
+
+export { IdAutocompleteList, type IdAutocompleteListProps };

@@ -72,7 +72,7 @@ const ReloadButton: React.FC<{
   </div>
 );
 
-export type IdAutocompleteListOptionProps = {
+type IdAutocompleteListOptionProps = {
   variant: IdAutocompleteProps["variant"];
   asPlaceholder?: boolean;
   showValue?: boolean;
@@ -83,9 +83,7 @@ export type IdAutocompleteListOptionProps = {
   placeholderIcon?: IconName | React.ReactElement;
 } & IdAutocompleteOption<Record<string, unknown>>;
 
-export const IdAutocompleteListOption: React.FC<
-  IdAutocompleteListOptionProps
-> = ({
+const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
   variant = "withValue",
   icon,
   title = "Title not available",
@@ -230,3 +228,5 @@ export const IdAutocompleteListOption: React.FC<
     </div>
   );
 };
+
+export { IdAutocompleteListOption, type IdAutocompleteListOptionProps };
