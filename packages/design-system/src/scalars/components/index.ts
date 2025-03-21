@@ -113,3 +113,10 @@ export {
    */
   CheckboxField,
 } from "./fragments/checkbox-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `BooleanField` instead. This component is deprecated and will be removed in a future version.
+   */
+  ToggleField,
+} from "./fragments/toggle-field/index.js";
