@@ -55,7 +55,7 @@ export const validateDatePicker =
       }
     }
 
-    // Obtener la fecha más restrictiva entre maxDate y disableFutureDates
+    // Get the most restrictive date between maxDate and disableFutureDates
     let effectiveMaxDate: Date | null = null;
     if (maxDate) {
       const maxDateValue = new Date(maxDate);
@@ -81,11 +81,6 @@ export const validateDatePicker =
         validDateStartOfDay < effectiveMinDate ||
         validDateStartOfDay > effectiveMaxDate
       ) {
-        console.log({
-          validDateStartOfDay,
-          effectiveMinDate,
-          effectiveMaxDate,
-        });
         const formattedMinDate = format(effectiveMinDate, "dd/MM/yyyy");
         const formattedMaxDate = format(effectiveMaxDate, "dd/MM/yyyy");
         return `Date should be between ${formattedMinDate} - ${formattedMaxDate}`;

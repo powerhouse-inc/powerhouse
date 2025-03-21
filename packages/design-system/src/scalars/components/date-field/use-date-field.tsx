@@ -89,17 +89,17 @@ export const useDatePickerField = ({
     let beforeDate: Date | undefined;
     let afterDate: Date | undefined;
 
-    // Convertir minDate y maxDate a objetos Date si existen
+    // Convert minDate and maxDate to Date objects if they exist
     const minDateObj = minDate ? startOfDay(new Date(minDate)) : undefined;
     const maxDateObj = maxDate ? startOfDay(new Date(maxDate)) : undefined;
     const todayDate = startOfDay(today);
 
-    // Si tenemos disablePastDates y disableFutureDates, solo today es válido
+    // If we have both disablePastDates and disableFutureDates, only today is valid
     if (disablePastDates && disableFutureDates) {
       beforeDate = todayDate;
       afterDate = todayDate;
     } else {
-      // Determinar beforeDate (fecha mínima permitida)
+      // Determine beforeDate (minimum allowed date)
       if (minDateObj && disablePastDates) {
         beforeDate = minDateObj > todayDate ? minDateObj : todayDate;
       } else if (minDateObj) {
@@ -108,7 +108,7 @@ export const useDatePickerField = ({
         beforeDate = todayDate;
       }
 
-      // Determinar afterDate (fecha máxima permitida)
+      // Determine afterDate (maximum allowed date)
       if (maxDateObj && disableFutureDates) {
         afterDate = maxDateObj < todayDate ? maxDateObj : todayDate;
       } else if (maxDateObj) {
@@ -118,9 +118,9 @@ export const useDatePickerField = ({
       }
     }
 
-    // Si beforeDate es mayor que afterDate, deshabilitar todas las fechas
+    // If beforeDate is greater than afterDate, disable all dates
     if (beforeDate && afterDate && beforeDate > afterDate) {
-      // Usar una fecha en el pasado como before y after para deshabilitar todo
+      // Use a date in the past as before and after to disable everything
       const disableAllDates = new Date(0); // 1970-01-01
       return { before: disableAllDates, after: disableAllDates };
     }
