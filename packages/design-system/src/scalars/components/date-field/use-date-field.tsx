@@ -85,37 +85,56 @@ export const useDatePickerField = ({
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
-  const disabledDates = useMemo(
-    () =>
-      disablePastDates && disableFutureDates
-        ? {
-            before: today,
-            after: today,
-          }
-        : disablePastDates
-          ? {
-              before: today,
-            }
-          : disableFutureDates
-            ? {
-                after: today,
-              }
-            : minDate && maxDate
-              ? {
-                  before: minDate as unknown as Date,
-                  after: maxDate as unknown as Date,
-                }
-              : minDate
-                ? {
-                    before: minDate as unknown as Date,
-                  }
-                : maxDate
-                  ? {
-                      after: maxDate as unknown as Date,
-                    }
-                  : undefined,
-    [disablePastDates, disableFutureDates, today, minDate, maxDate],
-  );
+  const disabledDates = useMemo(() => {
+    let beforeDate: Date | undefined;
+    let afterDate: Date | undefined;
+
+    // Convertir minDate y maxDate a objetos Date si existen
+    const minDateObj = minDate ? startOfDay(new Date(minDate)) : undefined;
+    const maxDateObj = maxDate ? startOfDay(new Date(maxDate)) : undefined;
+    const todayDate = startOfDay(today);
+
+    // Si tenemos disablePastDates y disableFutureDates, solo today es válido
+    if (disablePastDates && disableFutureDates) {
+      beforeDate = todayDate;
+      afterDate = todayDate;
+    } else {
+      // Determinar beforeDate (fecha mínima permitida)
+      if (minDateObj && disablePastDates) {
+        beforeDate = minDateObj > todayDate ? minDateObj : todayDate;
+      } else if (minDateObj) {
+        beforeDate = minDateObj;
+      } else if (disablePastDates) {
+        beforeDate = todayDate;
+      }
+
+      // Determinar afterDate (fecha máxima permitida)
+      if (maxDateObj && disableFutureDates) {
+        afterDate = maxDateObj < todayDate ? maxDateObj : todayDate;
+      } else if (maxDateObj) {
+        afterDate = maxDateObj;
+      } else if (disableFutureDates) {
+        afterDate = todayDate;
+      }
+    }
+
+    // Si beforeDate es mayor que afterDate, deshabilitar todas las fechas
+    if (beforeDate && afterDate && beforeDate > afterDate) {
+      // Usar una fecha en el pasado como before y after para deshabilitar todo
+      const disableAllDates = new Date(0); // 1970-01-01
+      return { before: disableAllDates, after: disableAllDates };
+    }
+
+    if (beforeDate && afterDate) {
+      return { before: beforeDate, after: afterDate };
+    } else if (beforeDate) {
+      return { before: beforeDate };
+    } else if (afterDate) {
+      return { after: afterDate };
+    }
+
+    return undefined;
+  }, [disablePastDates, disableFutureDates, today, minDate, maxDate]);
   const weekStartDay = useMemo(() => {
     const days = [
       "sunday",

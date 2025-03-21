@@ -87,6 +87,7 @@ export const transformInputTime = (
   input: string,
   is12HourFormat: boolean,
   interval = 1,
+  periodToCheck?: TimePeriod,
 ): { hour: string; minute: string; period?: TimePeriod } => {
   if (!input) return { hour: "", minute: "", period: undefined };
   input = input.trim();
@@ -126,6 +127,9 @@ export const transformInputTime = (
     // If still no period assigned, determine based on hour
     if (!period) {
       period = hourNum >= 8 && hourNum <= 11 ? "AM" : "PM";
+    }
+    if (periodToCheck) {
+      period = periodToCheck;
     }
   } else {
     // Convert any AM/PM designator to 24h
@@ -347,23 +351,33 @@ export const convert12hTo24h = (input: string) => {
 };
 
 /**
- * Formats a time input string into a standardized display format
- * @param input - The input time string. Can be in various formats:
- *   - 24-hour format (e.g., "14:30", "08:00")
- *   - 12-hour format (e.g., "2:30 PM", "8:00 AM")
- *   - Short format (e.g., "1430", "0800")
- * @param is12HourFormat - If true, outputs in 12-hour format with AM/PM
- *                        If false, outputs in 24-hour format
- * @param timeIntervals - Optional interval in minutes to round the time to
- *                       (e.g., 15 would round to nearest quarter hour)
- * @returns Formatted time string
- *   - 12-hour format: "hh:mm AM/PM" (e.g., "02:30 PM")
- *   - 24-hour format: "HH:mm" (e.g., "14:30")
+ * Formatea una cadena de entrada de tiempo en un formato de visualización estandarizado
+ * @param input - La cadena de tiempo de entrada. Puede estar en varios formatos:
+ *   - Formato 24 horas (ej., "14:30", "08:00")
+ *   - Formato 12 horas (ej., "2:30 PM", "8:00 AM")
+ *   - Formato corto (ej., "1430", "0800")
+ * @param is12HourFormat - Si es true, devuelve en formato 12 horas con AM/PM
+ *                        Si es false, devuelve en formato 24 horas
+ * @param timeIntervals - Intervalo opcional en minutos para redondear el tiempo
+ *                       (ej., 15 redondeará al cuarto de hora más cercano)
+ * @param periodToCheck - Período específico (AM/PM) para forzar en la salida,
+ *                       evitando la conversión automática del período
+ * @returns Cadena de tiempo formateada
+ *   - Formato 12 horas: "hh:mm AM/PM" (ej., "02:30 PM")
+ *   - Formato 24 horas: "HH:mm" (ej., "14:30")
+ * @example
+ * // Con formato 12 horas
+ * formatInputToDisplayValid("14:30", true) // Retorna "02:30 PM"
+ * formatInputToDisplayValid("14:30", true, undefined, "AM") // Retorna "02:30 AM"
+ *
+ * // Con formato 24 horas
+ * formatInputToDisplayValid("2:30 PM", false) // Retorna "14:30"
  */
 export const formatInputToDisplayValid = (
   input: string,
   is12HourFormat: boolean,
   timeIntervals?: number,
+  periodToCheck?: TimePeriod,
 ) => {
   const { hour, minute, period } = transformInputTime(
     input,
@@ -373,7 +387,7 @@ export const formatInputToDisplayValid = (
   if (!hour && !minute) return "";
 
   return is12HourFormat
-    ? `${hour}:${minute} ${period ?? ""}`
+    ? `${hour}:${minute} ${periodToCheck ? periodToCheck : (period ?? "")}`
     : `${hour}:${minute}`;
 };
 
