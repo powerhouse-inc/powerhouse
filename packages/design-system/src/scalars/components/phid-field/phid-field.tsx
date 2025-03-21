@@ -1,10 +1,10 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import type { FieldErrorHandling, InputBaseProps } from "#scalars";
 import React, { useCallback, useId, useMemo } from "react";
-import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
-import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
-import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
-import type { IdAutocompleteOption } from "../fragments/id-autocomplete-field/types.js";
+import { IdAutocompleteContext } from "../fragments/id-autocomplete/id-autocomplete-context.js";
+import { IdAutocompleteListOption } from "../fragments/id-autocomplete/id-autocomplete-list-option.js";
+import { IdAutocomplete } from "../fragments/id-autocomplete/index.js";
+import type { IdAutocompleteOption } from "../fragments/id-autocomplete/types.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
 import type { PHIDProps } from "./types.js";
 
@@ -96,7 +96,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
     return (
       <IdAutocompleteContext.Provider value={contextValue}>
         {autoComplete && fetchOptionsCallback ? (
-          <IdAutocompleteFieldRaw
+          <IdAutocomplete
             id={id}
             name={name}
             className={className}
@@ -125,7 +125,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             ref={ref}
           />
         ) : (
-          <IdAutocompleteFieldRaw
+          <IdAutocomplete
             id={id}
             name={name}
             className={className}

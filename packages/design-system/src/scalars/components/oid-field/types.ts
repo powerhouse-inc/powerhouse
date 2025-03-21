@@ -1,9 +1,11 @@
+import type React from "react";
 import type {
   IdAutocompleteOption,
   IdAutocompleteProps,
-} from "../fragments/id-autocomplete-field/types.js";
+} from "../fragments/id-autocomplete/types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 
-export type OIDOption = IdAutocompleteOption;
+type OIDOption = IdAutocompleteOption;
 
 type OIDBaseProps = Omit<
   IdAutocompleteProps,
@@ -13,7 +15,7 @@ type OIDBaseProps = Omit<
   | "renderOption"
 >;
 
-export type OIDProps = OIDBaseProps &
+type OIDProps = OIDBaseProps &
   (
     | {
         autoComplete: false;
@@ -31,3 +33,31 @@ export type OIDProps = OIDBaseProps &
         ) => Promise<OIDOption | undefined> | OIDOption | undefined;
       }
   );
+
+type OIDInputBaseProps = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
+  | keyof OIDProps
+  | "pattern"
+>;
+
+type OIDInputProps = OIDInputBaseProps &
+  InputBaseProps<string> &
+  FieldErrorHandling &
+  OIDProps;
+
+type OIDFieldBaseProps = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
+  | keyof OIDProps
+  | "pattern"
+>;
+
+type OIDFieldProps = OIDFieldBaseProps &
+  InputBaseProps<string> &
+  FieldErrorHandling &
+  OIDProps;
+
+export type { OIDFieldProps, OIDInputProps, OIDOption };

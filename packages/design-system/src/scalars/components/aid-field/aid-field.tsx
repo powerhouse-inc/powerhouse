@@ -1,9 +1,9 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useCallback, useId, useMemo } from "react";
 import { isAddress } from "viem";
-import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
-import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
-import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
+import { IdAutocompleteContext } from "../fragments/id-autocomplete/id-autocomplete-context.js";
+import { IdAutocompleteListOption } from "../fragments/id-autocomplete/id-autocomplete-list-option.js";
+import { IdAutocomplete } from "../fragments/id-autocomplete/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import type { AIDOption, AIDProps } from "./types.js";
@@ -101,7 +101,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
     return (
       <IdAutocompleteContext.Provider value={contextValue}>
         {autoComplete && fetchOptionsCallback ? (
-          <IdAutocompleteFieldRaw
+          <IdAutocomplete
             id={id}
             name={name}
             className={className}
@@ -130,7 +130,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
             ref={ref}
           />
         ) : (
-          <IdAutocompleteFieldRaw
+          <IdAutocomplete
             id={id}
             name={name}
             className={className}

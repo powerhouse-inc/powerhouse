@@ -10,20 +10,16 @@ import {
   TooltipProvider,
 } from "../../../../ui/components/tooltip/tooltip.js";
 import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
+import type { InputBaseProps } from "../../types.js";
 import ValueTransformer, {
   type TransformerType,
 } from "../value-transformer/value-transformer.js";
 import type { IdAutocompleteOption } from "./types.js";
 
-// TODO: can we use generic InputProps here?
-interface IdAutocompleteInputContainerProps {
-  id: string;
-  name?: string;
-  value: string;
-  className?: string;
+interface IdAutocompleteInputContainerProps
+  extends Omit<InputBaseProps<string>, "defaultValue" | "errors" | "warnings"> {
   isLoading: boolean;
   haveFetchError: boolean;
-  disabled?: boolean;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onClick?: (e: React.MouseEvent<HTMLInputElement>) => void;
@@ -34,15 +30,13 @@ interface IdAutocompleteInputContainerProps {
   onMouseDown?: (e: React.MouseEvent<HTMLInputElement>) => void;
   placeholder?: string;
   hasError: boolean;
-  label: React.ReactNode;
-  required?: boolean;
   isPopoverOpen: boolean;
   maxLength?: number;
   handlePaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>) => void;
 }
 
-export const IdAutocompleteInputContainer = React.forwardRef<
+const IdAutocompleteInputContainer = React.forwardRef<
   HTMLInputElement,
   IdAutocompleteInputContainerProps
 >(
@@ -144,7 +138,7 @@ export const IdAutocompleteInputContainer = React.forwardRef<
               }}
               placeholder={placeholder}
               aria-invalid={hasError}
-              aria-label={!label ? "Id Autocomplete field" : undefined}
+              aria-label={!label ? "Id Autocomplete" : undefined}
               aria-required={required}
               aria-expanded={isPopoverOpen}
               maxLength={maxLength}
@@ -212,3 +206,5 @@ export const IdAutocompleteInputContainer = React.forwardRef<
     );
   },
 );
+
+export { IdAutocompleteInputContainer, type IdAutocompleteInputContainerProps };

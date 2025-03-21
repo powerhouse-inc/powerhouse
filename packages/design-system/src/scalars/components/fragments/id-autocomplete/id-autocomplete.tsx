@@ -5,7 +5,6 @@ import React, { useId, useMemo, useRef } from "react";
 import { Input } from "../../../../ui/components/data-entry/index.js";
 import { sharedValueTransformers } from "../../../lib/shared-value-transformers.js";
 import { cn } from "../../../lib/utils.js";
-import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Command } from "../command/command.js";
 import { FormDescription } from "../form-description/form-description.js";
 import { FormGroup } from "../form-group/form-group.js";
@@ -15,30 +14,13 @@ import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
 import ValueTransformer, {
   type TransformerType,
 } from "../value-transformer/value-transformer.js";
-import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 import { IdAutocompleteInputContainer } from "./id-autocomplete-input-container.js";
 import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
 import { IdAutocompleteList } from "./id-autocomplete-list.js";
 import type { IdAutocompleteProps } from "./types.js";
-import { useIdAutocompleteField } from "./use-id-autocomplete-field.js";
+import { useIdAutocomplete } from "./use-id-autocomplete.js";
 
-type IdAutocompleteFieldBaseProps = Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  | keyof InputBaseProps<string>
-  | keyof FieldErrorHandling
-  | keyof IdAutocompleteProps
-  | "pattern"
->;
-
-export type IdAutocompleteFieldProps = IdAutocompleteFieldBaseProps &
-  InputBaseProps<string> &
-  FieldErrorHandling &
-  IdAutocompleteProps;
-
-export const IdAutocompleteFieldRaw = React.forwardRef<
-  HTMLInputElement,
-  IdAutocompleteFieldProps
->(
+const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
   (
     {
       id: idProp,
@@ -104,7 +86,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
       handleCommandValue,
       handleFetchSelectedOption,
       handlePaste,
-    } = useIdAutocompleteField({
+    } = useIdAutocomplete({
       autoComplete,
       defaultValue,
       value,
@@ -257,7 +239,7 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
               onMouseDown={onMouseDown}
               placeholder={placeholder}
               aria-invalid={hasError}
-              aria-label={!label ? "Id Autocomplete field" : undefined}
+              aria-label={!label ? "Id Autocomplete" : undefined}
               aria-required={required}
               maxLength={maxLength}
               {...props}
@@ -273,7 +255,6 @@ export const IdAutocompleteFieldRaw = React.forwardRef<
   },
 );
 
-export const IdAutocompleteField =
-  withFieldValidation<IdAutocompleteFieldProps>(IdAutocompleteFieldRaw);
+IdAutocomplete.displayName = "IdAutocomplete";
 
-IdAutocompleteField.displayName = "IdAutocompleteField";
+export { IdAutocomplete };
