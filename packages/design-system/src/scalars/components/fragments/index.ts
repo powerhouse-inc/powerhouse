@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 export * from "./character-counter/index.js";
 export * from "./checkbox-field/index.js";
 export * from "./form-description/index.js";

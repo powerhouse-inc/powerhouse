@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 export * from "./aid-field/index.js";
 export * from "./amount-field/index.js";
 export * from "./boolean-field/index.js";
