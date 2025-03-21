@@ -1,4 +1,7 @@
 // add docs
+
+import { type AllowedTypes } from "./types.js";
+
 /**
  * Get the fiat currencies
  * @returns {Currency[]} The fiat currencies
@@ -28,4 +31,15 @@ export const cryptoCurrencies = () => [
  */
 export const currencies = () => {
   return [...fiatCurrencies(), ...cryptoCurrencies()];
+};
+
+export const getCurrencies = (allowedTypes: AllowedTypes = "Both") => {
+  switch (allowedTypes) {
+    case "Fiat":
+      return fiatCurrencies();
+    case "Crypto":
+      return cryptoCurrencies();
+    case "Both":
+      return currencies();
+  }
 };
