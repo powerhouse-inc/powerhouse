@@ -41,6 +41,10 @@ const meta = {
         type: { summary: "Currency[]" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
+      if: {
+        arg: "type",
+        neq: "AmountPercentage",
+      },
     },
     includeCurrencySymbols: {
       control: "boolean",
@@ -48,6 +52,10 @@ const meta = {
       table: {
         defaultValue: { summary: "true" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: {
+        arg: "type",
+        neq: "AmountPercentage",
       },
     },
     symbolPosition: {
@@ -57,6 +65,10 @@ const meta = {
       table: {
         type: { summary: "string" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: {
+        arg: "type",
+        neq: "AmountPercentage",
       },
     },
     step: {
@@ -77,6 +89,10 @@ const meta = {
         defaultValue: { summary: "right" },
         type: { summary: "string" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: {
+        arg: "type",
+        neq: "AmountPercentage",
       },
     },
 
@@ -185,8 +201,8 @@ export const Default: Story = {
     placeholderSelect: "CUR",
     type: "Amount",
     value: {
-      amount: 234,
-      unit: "EUR",
+      amount: undefined,
+      unit: "",
     },
   },
 };
@@ -270,7 +286,6 @@ export const WithValuePercent: Story = {
     },
   },
   args: {
-    units: mappedCryptoCurrencies,
     label: "Enter Percentage ",
     placeholder: "Enter Amount",
     type: "AmountPercentage",

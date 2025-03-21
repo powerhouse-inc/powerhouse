@@ -1,6 +1,6 @@
 import { type Currency } from "../currency-code-field/types.js";
 export type Amount = {
-  amount: number;
+  amount?: number;
   unit?: CurrencyTicker;
 };
 export type AmountPercentage = number | undefined;
@@ -36,6 +36,7 @@ export type AmountFieldPropsGeneric =
       type: "AmountPercentage";
       value?: AmountPercentage;
       trailingZeros?: boolean;
+      units?: never;
     }
   | {
       type: "AmountCrypto";
