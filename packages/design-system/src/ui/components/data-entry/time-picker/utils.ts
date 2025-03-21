@@ -1,4 +1,4 @@
-import { getOffset } from "../date-time-field/utils.js";
+import { getOffset } from "../../../../scalars/components/date-time-field/utils.js";
 import { type TimePeriod } from "./type.js";
 
 export const createChangeEvent = (

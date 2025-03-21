@@ -1,10 +1,10 @@
-import { type TimeFieldProps } from "./time-field.js";
+import { type TimeFieldProps } from "#scalars";
 import {
   convert24hTo12h,
   getTime,
   isFormatTimeAllowed,
   TIME_PATTERNS,
-} from "./utils.js";
+} from "../../../ui/components/data-entry/time-picker/utils.js";
 
 export const validateTimePicker =
   ({ timeFormat }: TimeFieldProps) =>

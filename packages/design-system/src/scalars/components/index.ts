@@ -12,7 +12,7 @@ export * from "./id-field/index.js";
 export * from "./number-field/index.js";
 export * from "./phid-field/index.js";
 export * from "./string-field/index.js";
-export * from "./time-field/index.js";
+export * from "./time-picker-field/index.js";
 export * from "./types.js";
 export * from "./url-field/index.js";
 
@@ -47,7 +47,7 @@ export {
    * @deprecated Use the `DropdownTrigger` component from the `@powerhousedao/design-system/ui` package instead.
    * This component is deprecated and will be removed in a future version.
    */
-  DropdownTrigger,
+  DropdownTrigger
 } from "../../ui/components/dropdown/index.js";
 
 export {
@@ -90,7 +90,7 @@ export {
    * @deprecated Use the `SidebarProps` type from the `@powerhousedao/design-system/ui` package instead.
    * This type is deprecated and will be removed in a future version.
    */
-  type SidebarProps,
+  type SidebarProps
 } from "../../ui/components/sidebar/index.js";
 
 // deprecated fragments
@@ -104,5 +104,6 @@ export {
    * @deprecated Use the `InputProps` type from the `@powerhousedao/design-system/ui` package instead.
    * This type is deprecated and will be removed in a future version.
    */
-  type InputProps,
+  type InputProps
 } from "../../ui/components/index.js";
+

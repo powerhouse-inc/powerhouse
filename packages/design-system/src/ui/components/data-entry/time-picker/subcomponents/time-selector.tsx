@@ -1,7 +1,8 @@
 import * as React from "react";
 import { useRef } from "react";
-import { cn } from "../../../lib/utils.js";
-import { Button } from "../../fragments/button/index.js";
+
+import { cn } from "#scalars";
+import { Button } from "../../../../../scalars/components/fragments/button/button.js";
 import { type TimeSelectorProps } from "../type.js";
 import { useTimeSelector } from "./use-time-selector.js";
 

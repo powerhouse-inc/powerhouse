@@ -1,34 +1,34 @@
-import { cn } from "#scalars";
-import { forwardRef } from "react";
-import { type InputProps } from "../../../ui/components/index.js";
-import { BasePickerField } from "../date-time-field/base-picker-field.js";
+/* eslint-disable prettier/prettier */
 import {
+  cn,
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
-  type SelectFieldProps,
-} from "../fragments/index.js";
-import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
-import type { InputNumberProps } from "../number-field/types.js";
-import type { FieldErrorHandling, InputBaseProps } from "../types.js";
+  type InputBaseProps,
+  type SelectFieldProps
+} from "#scalars";
+import { forwardRef } from "react";
+import { BasePickerField } from "../../../../scalars/components/date-time-field/base-picker-field.js";
+import { type InputNumberProps } from "../../../../scalars/components/number-field/types.js";
 import TimePickerContent from "./subcomponents/time-picker-content.js";
-import { validateTimePicker } from "./time-validations.js";
 import { type TimeFieldValue } from "./type.js";
 import { useTimePickerField } from "./use-time-field.js";
 import { handleKeyDown } from "./utils.js";
 
-export interface TimeFieldProps
+interface TimePickerProps
   extends InputBaseProps<TimeFieldValue>,
-    InputNumberProps,
-    FieldErrorHandling {
+    Omit<InputNumberProps, 'value' | 'defaultValue'> {
   label?: string;
   id?: string;
   name: string;
   value?: TimeFieldValue;
   defaultValue?: TimeFieldValue;
   placeholder?: string;
-  inputProps?: Omit<InputProps, "name" | "onChange" | "value" | "defaultValue">;
+  inputProps?: Omit<
+    InputBaseProps<string>,
+    "name" | "onChange" | "value" | "defaultValue"
+  >;
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
   timeFormat?: string;
   timeIntervals?: number;
@@ -37,7 +37,7 @@ export interface TimeFieldProps
   includeContinent?: boolean;
 }
 
-const TimeRaw = forwardRef<HTMLInputElement, TimeFieldProps>(
+const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(
   (
     {
       label,
@@ -46,9 +46,9 @@ const TimeRaw = forwardRef<HTMLInputElement, TimeFieldProps>(
       name,
       placeholder,
       value,
+      defaultValue,
       onChange,
       onBlur,
-      defaultValue,
       description,
       warnings,
       required,
@@ -155,9 +155,6 @@ const TimeRaw = forwardRef<HTMLInputElement, TimeFieldProps>(
   },
 );
 
-export const TimeField = withFieldValidation<TimeFieldProps>(TimeRaw, {
-  validations: {
-    _timePickerType: validateTimePicker,
-  },
-});
-TimeField.displayName = "TimePField";
+TimePicker.displayName = "TimePicker";
+
+export { TimePicker, type TimePickerProps };

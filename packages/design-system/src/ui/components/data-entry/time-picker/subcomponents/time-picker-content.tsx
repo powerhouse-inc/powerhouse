@@ -1,11 +1,11 @@
 import type * as React from "react";
 
-import { type SelectBaseProps } from "../../enum-field/types.js";
-import { Button } from "../../fragments/button/index.js";
 import {
-  type SelectFieldProps,
   SelectFieldRaw,
-} from "../../fragments/select-field/index.js";
+  type SelectBaseProps,
+  type SelectFieldProps,
+} from "#scalars";
+import { Button } from "../../../../../scalars/components/fragments/button/button.js";
 import { type TimePeriod } from "../type.js";
 import TimePeriodSelector from "./time-period-selector.js";
 import TimeSelector from "./time-selector.js";

@@ -5,11 +5,11 @@ import {
   getValidationArgTypes,
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
-import { TimeField } from "./time-field.js";
+import { TimePickerField } from "./time-picker-field.js";
 
-const meta: Meta<typeof TimeField> = {
-  title: "Document Engineering/Scalars/Time Field",
-  component: TimeField,
+const meta: Meta<typeof TimePickerField> = {
+  title: "Document Engineering/Fragments/TimePickerField",
+  component: TimePickerField,
   parameters: {
     layout: "centered",
     form: {
