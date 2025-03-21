@@ -120,3 +120,10 @@ export {
    */
   ToggleField,
 } from "./fragments/toggle-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `StringField` instead. This component is deprecated and will be removed in a future version.
+   */
+  TextField,
+} from "./fragments/text-field/index.js";
