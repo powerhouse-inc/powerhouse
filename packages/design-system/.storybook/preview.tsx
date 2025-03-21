@@ -18,7 +18,9 @@ const preview: Preview = {
           "RWA",
           "Document Engineering",
           [
+            "Getting started",
             "Scalars",
+            ["Forms", "Examples"],
             "Data Entry",
             "Data Display",
             "Navigation",

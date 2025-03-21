@@ -9,7 +9,7 @@ import ValueTransformer, {
 } from "../../../../scalars/components/fragments/value-transformer/value-transformer.js";
 import type { InputBaseProps } from "../../../../scalars/components/types.js";
 import { sharedValueTransformers } from "../../../../scalars/lib/shared-value-transformers.js";
-import { Input } from "../index.js";
+import { Input } from "../input/index.js";
 import type { CommonTextProps } from "./types.js";
 
 interface TextInputProps
