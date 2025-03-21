@@ -63,7 +63,6 @@ describe("AmountField Component", () => {
         type="AmountPercentage"
         value={345}
         step={0}
-        units={commonCryptoCurrencies}
       />,
     );
     expect(screen.getByText("%")).toBeInTheDocument();
