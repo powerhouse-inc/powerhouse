@@ -127,3 +127,10 @@ export {
    */
   TextField,
 } from "./fragments/text-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `StringField` instead. This component is deprecated and will be removed in a future version.
+   */
+  TextareaField,
+} from "./fragments/textarea-field/index.js";
