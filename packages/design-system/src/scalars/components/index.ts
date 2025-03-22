@@ -106,3 +106,31 @@ export {
    */
   type InputProps,
 } from "../../ui/components/index.js";
+
+export {
+  /**
+   * @deprecated Use `BooleanField` instead. This component is deprecated and will be removed in a future version.
+   */
+  CheckboxField,
+} from "./fragments/checkbox-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `BooleanField` instead. This component is deprecated and will be removed in a future version.
+   */
+  ToggleField,
+} from "./fragments/toggle-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `StringField` instead. This component is deprecated and will be removed in a future version.
+   */
+  TextField,
+} from "./fragments/text-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `StringField` instead. This component is deprecated and will be removed in a future version.
+   */
+  TextareaField,
+} from "./fragments/textarea-field/index.js";

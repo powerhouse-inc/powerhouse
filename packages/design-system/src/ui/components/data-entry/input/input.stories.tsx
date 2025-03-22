@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Input } from "./input.js";
 
+/**
+ * The `Input` component is a basic HTML `input` component that allows users to enter text.
+ * It has the standard `input` HTML element attributes and design system styles.
+ */
 const meta = {
   title: "Document Engineering/Data Entry/Input",
   component: Input,
