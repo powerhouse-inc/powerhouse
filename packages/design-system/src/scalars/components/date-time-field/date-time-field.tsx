@@ -1,10 +1,9 @@
-
 import { type TimeFieldProps } from "../time-picker-field/time-picker-field.js";
 
 import React from "react";
-import { DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
+import { type DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
 import { type TimeFieldValue } from "../../../ui/components/data-entry/time-picker/type.js";
-import { DatePickerFieldProps } from "../date-field-picker/date-picker-field.js";
+import { type DatePickerFieldProps } from "../date-field-picker/date-picker-field.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import { DateTimeField as DateTimeRaw } from "./date-time.js";
 

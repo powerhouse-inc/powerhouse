@@ -1,8 +1,11 @@
 import { format } from "date-fns";
 import React, { useState } from "react";
-import { DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
+import { type DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
 import { useDatePickerField } from "../../../ui/components/data-entry/date-picker/use-date-picker.js";
-import { getDateFromValue, getTimeFromValue } from "../../../ui/components/data-entry/date-picker/utils.js";
+import {
+  getDateFromValue,
+  getTimeFromValue,
+} from "../../../ui/components/data-entry/date-picker/utils.js";
 import type {
   TimeFieldValue,
   TimePeriod,

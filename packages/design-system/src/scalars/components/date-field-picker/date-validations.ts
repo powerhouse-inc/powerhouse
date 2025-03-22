@@ -10,7 +10,7 @@ import {
   isDateFormatAllowed,
   normalizeMonthFormat,
 } from "../date-time-field/utils.js";
-import { DatePickerFieldProps } from "./date-picker-field.js";
+import { type DatePickerFieldProps } from "./date-picker-field.js";
 
 export const validateDatePicker =
   ({

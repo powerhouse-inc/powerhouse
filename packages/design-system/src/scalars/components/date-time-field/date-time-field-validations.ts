@@ -1,11 +1,11 @@
 import { format } from "date-fns";
-import { DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
+import { type DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
 import {
   formatDateToValidCalendarDateFormat,
   getDateFromValue,
   splitIso8601DateTime,
 } from "../../../ui/components/data-entry/date-picker/utils.js";
-import { DateTimeFieldProps } from "./date-time-field.js";
+import { type DateTimeFieldProps } from "./date-time-field.js";
 import {
   getDateFormat,
   isDateFormatAllowed,

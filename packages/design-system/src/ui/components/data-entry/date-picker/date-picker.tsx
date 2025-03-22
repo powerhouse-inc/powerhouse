@@ -1,12 +1,18 @@
-import { cn, FormDescription, FormGroup, FormLabel, FormMessageList, InputBaseProps } from "#scalars";
+import {
+  cn,
+  FormDescription,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
+  type InputBaseProps,
+} from "#scalars";
 import { forwardRef } from "react";
 import { BasePickerField } from "../../../../scalars/components/date-time-field/base-picker-field.js";
 import { Calendar } from "./subcomponents/calendar/calendar.js";
 import type { DateFieldValue } from "./types.js";
 import { useDatePickerField } from "./use-date-picker.js";
 
- interface DatePickerProps
-  extends InputBaseProps<DateFieldValue>{
+interface DatePickerProps extends InputBaseProps<DateFieldValue> {
   label?: string;
   id?: string;
   name: string;
@@ -190,7 +196,6 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     );
   },
 );
-
 
 DatePicker.displayName = "DatePicker";
 

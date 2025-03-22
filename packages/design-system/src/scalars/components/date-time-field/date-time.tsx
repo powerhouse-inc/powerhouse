@@ -1,7 +1,7 @@
 import { cn } from "#scalars";
 import type React from "react";
 import { forwardRef } from "react";
-import { DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
+import { type DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
 import {
   FormDescription,
   FormGroup,
