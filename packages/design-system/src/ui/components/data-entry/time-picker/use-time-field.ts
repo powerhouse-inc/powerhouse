@@ -1,6 +1,9 @@
 import type React from "react";
 import { useMemo, useState } from "react";
-import { createBlurEvent, getOffset } from "../date-time-field/utils.js";
+import {
+  createBlurEvent,
+  getOffset,
+} from "../../../../scalars/components/date-time-field/utils.js";
 import { type TimeFieldValue, type TimePeriod } from "./type.js";
 import {
   cleanTime,

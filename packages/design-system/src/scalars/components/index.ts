@@ -12,7 +12,7 @@ export * from "./id-field/index.js";
 export * from "./number-field/index.js";
 export * from "./phid-field/index.js";
 export * from "./string-field/index.js";
-export * from "./time-field/index.js";
+export * from "./time-picker-field/index.js";
 export * from "./types.js";
 export * from "./url-field/index.js";
 
