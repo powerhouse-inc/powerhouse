@@ -1,11 +1,11 @@
 import { parse, startOfDay } from "date-fns";
 import React, { useCallback, useMemo } from "react";
-import { createChangeEvent } from "../../../ui/components/data-entry/time-picker/utils.js";
 import {
   getDateFormat,
   normalizeMonthFormat,
   parseInputString,
-} from "../date-time-field/utils.js";
+} from "../../../../scalars/components/date-time-field/utils.js";
+import { createChangeEvent } from "../time-picker/utils.js";
 import type { DateFieldValue, WeekStartDayNumber } from "./types.js";
 import {
   formatDateToValue,

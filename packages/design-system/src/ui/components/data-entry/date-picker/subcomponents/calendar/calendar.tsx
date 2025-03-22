@@ -5,7 +5,7 @@ import { cn } from "#scalars";
 import { format } from "date-fns";
 import * as React from "react";
 import { DayPicker, useDayPicker, type DayPickerProps } from "react-day-picker";
-import { buttonVariants } from "../../../fragments/button/button.js";
+import { buttonVariants } from "../../../../../../scalars/components/fragments/button/index.js";
 import type { DatePickerView } from "../../types.js";
 import CalendarDateHeader from "../calendar-date-header/calendar-date-header.js";
 import NavCalendar from "../calendar-nav/calendar-nav.js";

@@ -1,11 +1,11 @@
 import { format } from "date-fns";
-import { type DateFieldProps } from "../date-field/date-field.js";
-import { type DateFieldValue } from "../date-field/types.js";
+import { type DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
 import {
   formatDateToValidCalendarDateFormat,
   getDateFromValue,
   splitIso8601DateTime,
-} from "../date-field/utils.js";
+} from "../../../ui/components/data-entry/date-picker/utils.js";
+import { type DateTimeFieldProps } from "./date-time-field.js";
 import {
   getDateFormat,
   isDateFormatAllowed,
@@ -20,7 +20,7 @@ export const dateTimeFieldValidations =
     maxDate,
     disablePastDates,
     disableFutureDates,
-  }: DateFieldProps) =>
+  }: DateTimeFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;

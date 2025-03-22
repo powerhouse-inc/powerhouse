@@ -4,7 +4,7 @@ import { differenceInCalendarDays } from "date-fns";
 
 import { useCallback, useMemo } from "react";
 import { useDayPicker } from "react-day-picker";
-import { Button } from "../../../fragments/button/button.js";
+import { Button } from "../../../../../../scalars/components/fragments/button/index.js";
 import { type DatePickerView } from "../../types.js";
 
 interface NavProps {

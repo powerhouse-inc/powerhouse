@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { renderWithForm } from "../../lib/testing.js";
-import { DateField } from "./date-field.js";
+import { DatePickerField } from "./date-picker-field.js";
 
 vi.mock("#powerhouse", () => ({
   Icon: ({ name, className }: { name: string; className?: string }) => (
@@ -13,7 +13,7 @@ vi.mock("#powerhouse", () => ({
 describe("DatePickerField", () => {
   it("should match the snapshot", () => {
     const { container } = renderWithForm(
-      <DateField
+      <DatePickerField
         label="Test Label"
         name="test-date"
         value="2025-01-01"
@@ -24,17 +24,19 @@ describe("DatePickerField", () => {
   });
   it("should display the label when provided", () => {
     const labelText = "Test Label";
-    renderWithForm(<DateField name="test-date" label={labelText} />);
+    renderWithForm(<DatePickerField name="test-date" label={labelText} />);
     expect(screen.getByText(labelText)).toBeInTheDocument();
   });
 
   it("should not render the label when label prop is not provided", () => {
-    renderWithForm(<DateField name="test-date" />);
+    renderWithForm(<DatePickerField name="test-date" />);
     expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
   });
 
   it("should mark the label as required when required prop is true", () => {
-    renderWithForm(<DateField name="test-date" label="Test Label" required />);
+    renderWithForm(
+      <DatePickerField name="test-date" label="Test Label" required />,
+    );
     const label = screen.getByText("Test Label");
     const asterisk = screen.getByText("*");
     expect(label).toBeInTheDocument();
@@ -42,7 +44,9 @@ describe("DatePickerField", () => {
   });
 
   it("should mark the label as disabled when disabled prop is true", () => {
-    renderWithForm(<DateField name="test-date" label="Test Label" disabled />);
+    renderWithForm(
+      <DatePickerField name="test-date" label="Test Label" disabled />,
+    );
     const label = screen.getByText("Test Label");
     expect(label).toHaveClass("cursor-not-allowed");
     expect(label).toHaveClass("text-gray-700");
@@ -50,7 +54,11 @@ describe("DatePickerField", () => {
 
   it("should disable dates before minDate", async () => {
     renderWithForm(
-      <DateField label="Test Label" name="test-date" minDate="2025-01-16" />,
+      <DatePickerField
+        label="Test Label"
+        name="test-date"
+        minDate="2025-01-16"
+      />,
     );
 
     // 1. Find and click the calendar button to open it
@@ -80,7 +88,11 @@ describe("DatePickerField", () => {
 
   it("should disable dates after maxDate", async () => {
     renderWithForm(
-      <DateField label="Test Label" name="test-date" maxDate="2025-01-16" />,
+      <DatePickerField
+        label="Test Label"
+        name="test-date"
+        maxDate="2025-01-16"
+      />,
     );
     // 1. Find and click the calendar button to open it
     const calendarTrigger = screen.getByTestId("mock-icon-CalendarTime");
@@ -110,7 +122,7 @@ describe("DatePickerField", () => {
   // Validate minDate when user add value in the input
   it("should disable dates after minDate when user adds a value in the input", async () => {
     renderWithForm(
-      <DateField
+      <DatePickerField
         label="Test Label"
         name="test-date"
         minDate="2025-01-16"
@@ -128,7 +140,7 @@ describe("DatePickerField", () => {
 // Validate maxDate when user add value in the input
 it("should disable dates after minDate when user adds a value in the input", async () => {
   renderWithForm(
-    <DateField
+    <DatePickerField
       label="Test Label"
       name="test-date"
       maxDate="2025-01-16"
