@@ -1,9 +1,10 @@
-import React from "react";
-import { type DateFieldProps } from "../date-field/date-field.js";
-import type { DateFieldValue } from "../date-field/types.js";
+
 import { type TimeFieldProps } from "../time-picker-field/time-picker-field.js";
 
+import React from "react";
+import { DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
 import { type TimeFieldValue } from "../../../ui/components/data-entry/time-picker/type.js";
+import { DatePickerFieldProps } from "../date-field-picker/date-picker-field.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import { DateTimeField as DateTimeRaw } from "./date-time.js";
 
@@ -17,7 +18,7 @@ type CommonOmittedProps =
   | "placeholder";
 
 interface DateTimeFieldPropsDate
-  extends Omit<DateFieldProps, CommonOmittedProps> {
+  extends Omit<DatePickerFieldProps, CommonOmittedProps> {
   value?: DateFieldValue;
   defaultValue?: DateFieldValue;
 }
@@ -28,7 +29,7 @@ interface DateTimeFieldPropsTime
   defaultValue?: TimeFieldValue;
 }
 
-interface DateTimeFieldProps
+export interface DateTimeFieldProps
   extends Omit<InputBaseProps<any>, "value" | "defaultValue">,
     FieldErrorHandling {
   name: string;

@@ -1,6 +1,6 @@
 import { format, parse } from "date-fns";
+import { getDateFromValue } from "../../ui/components/data-entry/date-picker/utils.js";
 import { type AmountValue } from "../components/amount-field/types.js";
-import { getDateFromValue } from "../components/date-field/utils.js";
 import {
   getDateFormat,
   normalizeMonthFormat,

@@ -1,5 +1,8 @@
 import { format } from "date-fns";
 import React, { useState } from "react";
+import { DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
+import { useDatePickerField } from "../../../ui/components/data-entry/date-picker/use-date-picker.js";
+import { getDateFromValue, getTimeFromValue } from "../../../ui/components/data-entry/date-picker/utils.js";
 import type {
   TimeFieldValue,
   TimePeriod,
@@ -18,9 +21,6 @@ import {
   getInputValue,
   isValidTimeInput,
 } from "../../../ui/components/data-entry/time-picker/utils.js";
-import type { DateFieldValue } from "../date-field/types.js";
-import { useDatePickerField } from "../date-field/use-date-field.js";
-import { getDateFromValue, getTimeFromValue } from "../date-field/utils.js";
 import {
   createBlurEvent,
   getDateFormat,

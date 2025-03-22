@@ -3,7 +3,7 @@ export * from "./amount-field/index.js";
 export * from "./boolean-field/index.js";
 export * from "./country-code-field/index.js";
 export * from "./currency-code-field/index.js";
-export * from "./date-field/index.js";
+export * from "./date-field-picker/index.js";
 export * from "./date-time-field/index.js";
 export * from "./enum-field/index.js";
 export * from "./form/index.js";

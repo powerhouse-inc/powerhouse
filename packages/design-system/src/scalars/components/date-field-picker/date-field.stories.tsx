@@ -6,11 +6,11 @@ import {
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { FORMAT_MAPPING } from "../date-time-field/utils.js";
-import { DateField } from "./date-field.js";
+import { DatePickerField } from "./date-picker-field.js";
 
-const meta: Meta<typeof DateField> = {
+const meta: Meta<typeof DatePickerField> = {
   title: "Document Engineering/Scalars/Date Field",
-  component: DateField,
+  component: DatePickerField,
   parameters: {
     layout: "centered",
     form: {
