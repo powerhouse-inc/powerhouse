@@ -42,7 +42,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
   (
     {
       placeholder,
-      currencies,
+      currencies=[],
       favoriteCurrencies = [],
       includeCurrencySymbols = true,
       symbolPosition = "right",
@@ -56,13 +56,16 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
     },
     ref,
   ) => {
-    const defaultCurrencies = currencies ?? getCurrencies(allowedTypes);
+    const defaultCurrencies =
+      currencies && currencies.length > 0
+        ? currencies
+        : getCurrencies(allowedTypes);
     const options: SelectOption[] = useMemo(() => {
       const favoriteTickers = new Set(favoriteCurrencies);
 
       return (
         (defaultCurrencies
-          .map((currency) => {
+          ?.map((currency) => {
             if (favoriteTickers.has(currency.ticker)) {
               return null;
             }
