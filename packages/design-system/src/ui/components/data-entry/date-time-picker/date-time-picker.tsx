@@ -1,19 +1,17 @@
-import { cn } from "#scalars";
-import type React from "react";
-import { forwardRef } from "react";
-import { type DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
 import {
+  cn,
   FormDescription,
   FormGroup,
   FormLabel,
   FormMessageList,
-} from "../fragments/index.js";
-import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
-import { type InputBaseProps } from "../types.js";
-import { BasePickerField } from "./base-picker-field.js";
-import DateTimePickerContent from "./date-time-contet.js";
-import { dateTimeFieldValidations } from "./date-time-field-validations.js";
-import { useDateTime } from "./use-date-time.js";
+  type InputBaseProps,
+} from "#scalars";
+import type React from "react";
+import { forwardRef } from "react";
+import { type DateFieldValue } from "../date-picker/types.js";
+import { BasePickerField } from "./base-picker.js";
+import DateTimePickerContent from "./date-time-picker-content.js";
+import { useDateTimePicker } from "./use-date-time-picker.js";
 
 interface DateTimePickerProps extends InputBaseProps<DateFieldValue> {
   name: string;
@@ -40,7 +38,7 @@ interface DateTimePickerProps extends InputBaseProps<DateFieldValue> {
   onChangeDate?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlurDate?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
-const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
+const DateTimePicker = forwardRef<HTMLInputElement, DateTimePickerProps>(
   (
     {
       name,
@@ -111,7 +109,7 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
       is12HourFormat,
       setSelectedTimeZone,
       isDisableSelect,
-    } = useDateTime({
+    } = useDateTimePicker({
       value,
       defaultValue,
       onChange,
@@ -203,13 +201,6 @@ const DateTimeRaw = forwardRef<HTMLInputElement, DateTimePickerProps>(
   },
 );
 
-export const DateTimeField = withFieldValidation<DateTimePickerProps>(
-  DateTimeRaw,
-  {
-    validations: {
-      _datePickerType: dateTimeFieldValidations,
-    },
-  },
-);
+DateTimePicker.displayName = "DateTimePicker";
 
-DateTimeField.displayName = "DateTimeField";
+export { DateTimePicker, type DateTimePickerProps };

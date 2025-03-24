@@ -1,4 +1,4 @@
-import { getOffset } from "../../../../scalars/components/date-time-field/utils.js";
+import { getOffset } from "../date-time-picker/utils.js";
 import { type TimePeriod } from "./type.js";
 
 export const createChangeEvent = (
@@ -327,6 +327,7 @@ export const formatInputsToValueFormat = (
   minutes: string,
   timezoneOffset: string,
 ): string => {
+  if (!hours && !minutes) return "";
   const datetime = `${cleanTime(hours)}:${cleanTime(minutes)}:00.000${timezoneOffset}`;
   return datetime;
 };
@@ -337,6 +338,7 @@ export const formatInputsToValueFormat = (
  * @returns The time in 24-hour format like 14:35
  */
 export const convert12hTo24h = (input: string) => {
+  if (!input) return "";
   // convert from 12 format to 24 format
   const [hours, minutes] = input.split(":");
   const period =
@@ -406,6 +408,8 @@ export const formatInputToDisplayValid = (
  * - `getHoursAndMinutes("1430")` returns `{ hours: "14", minutes: "30" }`.
  */
 export const getHoursAndMinutes = (input: string) => {
+  if (!input) return { hours: "", minutes: "", period: undefined };
+
   const [hours, minutes] = input.split(":");
   const period =
     input.includes("AM") || input.includes("PM") ? input.slice(-2) : undefined;

@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { FORMAT_MAPPING } from "../../../ui/components/data-entry/date-time-picker/utils.js";
 import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
-import { DateTimeField } from "./date-time-field.js";
-import { FORMAT_MAPPING } from "./utils.js";
+import { DateTimePickerField } from "./date-time-picker-field.js";
 
-const meta: Meta<typeof DateTimeField> = {
+const meta: Meta<typeof DateTimePickerField> = {
   title: "Document Engineering/Scalars/Date Time Field",
-  component: DateTimeField,
+  component: DateTimePickerField,
   decorators: [withForm],
   tags: ["autodocs"],
   argTypes: {
@@ -169,7 +169,7 @@ const meta: Meta<typeof DateTimeField> = {
   },
 
   args: {
-    name: "date-picker-field",
+    name: "date-time-picker-field",
   },
   parameters: {
     layout: "centered",

@@ -8,11 +8,11 @@ import {
   type SelectFieldProps,
 } from "#scalars";
 import { forwardRef } from "react";
-import { BasePickerField } from "../../../../scalars/components/date-time-field/base-picker-field.js";
 import { type InputNumberProps } from "../../../../scalars/components/number-field/types.js";
+import { BasePickerField } from "../date-time-picker/base-picker.js";
 import TimePickerContent from "./subcomponents/time-picker-content.js";
 import { type TimeFieldValue } from "./type.js";
-import { useTimePickerField } from "./use-time-field.js";
+import { useTimePicker } from "./use-time-picker.js";
 import { handleKeyDown } from "./utils.js";
 
 interface TimePickerProps
@@ -25,8 +25,10 @@ interface TimePickerProps
   defaultValue?: TimeFieldValue;
   placeholder?: string;
   inputProps?: Omit<
-    InputBaseProps<string>,
-    "name" | "onChange" | "value" | "defaultValue"
+    InputBaseProps<string> & {
+      onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+    },
+    "name" | "onChange" | "value" | "defaultValue" | "onBlur"
   >;
   selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
   timeFormat?: string;
@@ -83,7 +85,7 @@ const TimePicker = forwardRef<HTMLInputElement, TimePickerProps>(
       selectedTimeZone,
       setSelectedTimeZone,
       isDisableSelect,
-    } = useTimePickerField({
+    } = useTimePicker({
       value,
       defaultValue,
       onChange,

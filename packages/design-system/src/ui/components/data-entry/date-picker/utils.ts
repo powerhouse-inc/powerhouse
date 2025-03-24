@@ -2,7 +2,7 @@ import { format, isValid, parse } from "date-fns";
 import {
   ALLOWED_FORMATS,
   dateFormatRegexes,
-} from "../../../../scalars/components/date-time-field/utils.js";
+} from "../date-time-picker/utils.js";
 import type { DateFieldValue } from "./types.js";
 
 export const splitIso8601DateTime = (isoString: string) => {
