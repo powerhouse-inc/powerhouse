@@ -1706,7 +1706,6 @@ export class BaseDocumentDriveServer
             [
               {
                 syncId: "0",
-                driveId: driveId,
                 documentId: "",
                 scope: "global",
                 branch: "main",

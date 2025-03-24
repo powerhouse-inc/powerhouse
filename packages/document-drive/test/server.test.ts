@@ -84,10 +84,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     } else if (storageName === "BrowserStorage") {
       return (await buildStorage()).clearStorage?.();
     } else if (storageName === "PrismaStorage") {
-      await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
-      await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
-      await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
-      await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
+      //await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
+      //await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
+      //await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
+      //await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
     }
   });
 
@@ -832,7 +832,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(syncUnits).toStrictEqual([
       {
         driveId: "1",
-        documentId: "",
+        documentId: drive.state.global.id,
         documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",

@@ -83,4 +83,14 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const result = await storage.exists("test");
     expect(result).toBe(true);
   });
+
+  it("should allow getting a document", async ({ expect }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    await storage.create("test", document);
+
+    const result = await storage.get("test");
+    expect(result).toEqual(document);
+  });
 });

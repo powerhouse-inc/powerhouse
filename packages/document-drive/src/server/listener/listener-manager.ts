@@ -248,7 +248,7 @@ export class ListenerManager implements IListenerManager {
             return;
           } else {
             this.logger.verbose(
-              `Listener out-of-date for sync unit (${syncUnit.driveId}, ${syncUnit.scope}, ${syncUnit.documentId}): ${unitState?.listenerRev} < ${syncUnit.revision}`,
+              `Listener out-of-date for sync unit (${syncUnit.scope}, ${syncUnit.documentId}): ${unitState?.listenerRev} < ${syncUnit.revision}`,
             );
           }
 
@@ -532,7 +532,7 @@ export class ListenerManager implements IListenerManager {
         return;
       }
 
-      const { documentId, driveId, scope, branch } = syncUnit;
+      const { documentId, scope, branch } = syncUnit;
       try {
         const operations = await this.syncManager.getOperationData(
           // DEAL WITH INVALID SYNC ID ERROR
