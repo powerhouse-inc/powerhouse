@@ -1,3 +1,13 @@
+## 1.25.0 (2025-03-24)
+
+### 🚀 Features
+
+- **config:** export loglevel type ([f65f5a9ee](https://github.com/powerhouse-inc/powerhouse/commit/f65f5a9ee))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.24.1 (2025-03-19)
 
 ### 🩹 Fixes

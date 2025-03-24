@@ -1,3 +1,13 @@
+## 2.27.2 (2025-03-24)
+
+### 🩹 Fixes
+
+- **document-model:** trigger release ([1f2a88fdf](https://github.com/powerhouse-inc/powerhouse/commit/1f2a88fdf))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.27.1 (2025-03-19)
 
 ### 🩹 Fixes
