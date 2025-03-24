@@ -1,14 +1,8 @@
 import { Icon, type IconName } from "#powerhouse";
-import { cn } from "#scalars";
+import { cn, FieldErrorHandling, Input, InputBaseProps } from "#scalars";
 import React, { type PropsWithChildren } from "react";
-import { Input, type InputProps } from "../../../ui/components/index.js";
-import { Button } from "../fragments/button/button.js";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../fragments/popover/popover.js";
-import type { FieldErrorHandling, InputBaseProps } from "../types.js";
+import { Button } from "../../../../scalars/components/fragments/button/index.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../../scalars/components/fragments/popover/index.js";
 
 export interface BasePickerFieldProps
   extends InputBaseProps<string>,
@@ -26,7 +20,9 @@ export interface BasePickerFieldProps
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
   inputProps?: Omit<
-    InputProps,
+    InputBaseProps<string> & {
+      onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+    },
     "name" | "onChange" | "value" | "defaultValue" | "onBlur"
   >;
   className?: string;

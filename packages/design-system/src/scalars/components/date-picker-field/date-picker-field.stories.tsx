@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { FORMAT_MAPPING } from "../../../ui/components/data-entry/date-time-picker/utils.js";
 import { withForm, withTimestampsAsISOStrings } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
-import { FORMAT_MAPPING } from "../date-time-field/utils.js";
 import { DatePickerField } from "./date-picker-field.js";
 
 const meta: Meta<typeof DatePickerField> = {

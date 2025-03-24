@@ -1,47 +1,55 @@
 import { format } from "date-fns";
 import { type DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
-
 import {
   formatDateToValidCalendarDateFormat,
   getDateFromValue,
+  splitIso8601DateTime,
 } from "../../../ui/components/data-entry/date-picker/utils.js";
 import {
   getDateFormat,
   isDateFormatAllowed,
+  isValidTime,
   normalizeMonthFormat,
-} from "../date-time-field/utils.js";
-import { type DatePickerFieldProps } from "./date-picker-field.js";
+} from "../../../ui/components/data-entry/date-time-picker/utils.js";
+import { DateTimePickerFieldProps } from "./date-time-picker-field.js";
 
-export const validateDatePicker =
+export const dateTimeFieldValidations =
   ({
     dateFormat,
     minDate,
     maxDate,
     disablePastDates,
     disableFutureDates,
-  }: DatePickerFieldProps) =>
+  }: DateTimePickerFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;
     }
-
     const internalFormat = getDateFormat(dateFormat ?? "");
+
+    // 1. Validate that it has date and time separated by space
+    const { date, time } = splitIso8601DateTime(value as string);
+
+    if (!date || !time) {
+      return "Invalid format. Use Date and Time separated by a space.";
+    }
+
     const stringDate = normalizeMonthFormat(
       getDateFromValue(value as DateFieldValue),
     );
+    const isValidFormat = isDateFormatAllowed(stringDate, internalFormat);
 
-    const isValid = isDateFormatAllowed(stringDate, internalFormat);
+    if (!isValidFormat) {
+      return `Invalid date format. Use ${internalFormat?.toUpperCase()}`;
+    }
 
-    if (!isValid) {
-      return `Invalid date format. Please use a valid format`;
+    if (!isValidTime(time)) {
+      return "Invalid format. Use Date and Time separated by a space.";
     }
     const isoDate = formatDateToValidCalendarDateFormat(stringDate);
-    // Split the date and time parts
     const [datePart] = isoDate.split("T");
-    // Create a valid date object with the date part and set the time to 00:00:00
     const validDateStartOfDay = new Date(`${datePart}T00:00:00`);
 
-    // Get the most restrictive date between minDate and disablePastDates
     let effectiveMinDate: Date | null = null;
     if (minDate) {
       const minDateValue = new Date(minDate);

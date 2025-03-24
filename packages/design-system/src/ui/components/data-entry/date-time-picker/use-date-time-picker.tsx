@@ -1,19 +1,13 @@
 import { format } from "date-fns";
 import React, { useState } from "react";
-import { type DateFieldValue } from "../../../ui/components/data-entry/date-picker/types.js";
-import { useDatePickerField } from "../../../ui/components/data-entry/date-picker/use-date-picker.js";
-import {
-  getDateFromValue,
-  getTimeFromValue,
-} from "../../../ui/components/data-entry/date-picker/utils.js";
-import type {
-  TimeFieldValue,
-  TimePeriod,
-} from "../../../ui/components/data-entry/time-picker/type.js";
+import { DateFieldValue } from "../date-picker/types.js";
+import { useDatePickerField } from "../date-picker/use-date-picker.js";
+import { getDateFromValue, getTimeFromValue } from "../date-picker/utils.js";
+import { TimeFieldValue, TimePeriod } from "../time-picker/type.js";
 import {
   convertTimeFrom24To12Hours,
-  useTimePickerField,
-} from "../../../ui/components/data-entry/time-picker/use-time-picker-field.js";
+  useTimePicker,
+} from "../time-picker/use-time-picker.js";
 import {
   cleanTime,
   convert12hTo24h,
@@ -23,11 +17,12 @@ import {
   getHoursAndMinutes,
   getInputValue,
   isValidTimeInput,
-} from "../../../ui/components/data-entry/time-picker/utils.js";
+} from "../time-picker/utils.js";
 import {
   createBlurEvent,
   getDateFormat,
   getOffset,
+  isDateFormatAllowed,
   parseInputString,
   splitDateTimeStringFromInput,
 } from "./utils.js";
@@ -82,8 +77,8 @@ const todayInIsoFormat = () => {
 const todayTimeInput = () => {
   return format(new Date(), "HH:mm:ss");
 };
-const todayDateInput = () => {
-  return format(new Date(), "yyyy-MM-dd");
+const todayDateInput = (dateFormat?: string) => {
+  return format(new Date(), dateFormat ?? "yyyy-MM-dd");
 };
 
 const parseDateTimeValueToInput = (
@@ -131,6 +126,7 @@ const putTimeInValue = (value: DateFieldValue, time: TimeFieldValue) => {
 const putDateInValue = (value: DateFieldValue, date: DateFieldValue) => {
   let timePart = getTimeFromValue(value);
 
+  // if dont have timePart add default time today
   if (!timePart) {
     const today = todayInIsoFormat();
     timePart = getTimeFromValue(today);
@@ -143,7 +139,7 @@ const putDateInValue = (value: DateFieldValue, date: DateFieldValue) => {
   return formattedTime;
 };
 
-export const useDateTime = ({
+export const useDateTimePicker = ({
   value,
   defaultValue,
   onChange,
@@ -175,7 +171,7 @@ export const useDateTime = ({
       internalFormat ?? "",
     ),
   );
-  // formatInputsToValueFormat
+
   const onChangeDate = (e: React.ChangeEvent<HTMLInputElement>) => {
     // TODO: parse date and time to correct format
     const date = e.target.value;
@@ -202,6 +198,8 @@ export const useDateTime = ({
 
     setDateTimeToDisplay(inputDisplay);
     onChange?.(createChangeEvent(newValue));
+    // Add onBlur event to update the value when select a date from calendar
+    onBlur?.(createBlurEvent(newValue));
   };
 
   const {
@@ -245,12 +243,12 @@ export const useDateTime = ({
       onBlur?.(createBlurEvent(""));
       return;
     }
-    // Get the time and tran
-    const timeValue = inputValue.split(" ")[1];
+    // Get the time and transform to 24 hours format and avoid undefined
+    const timeValue = inputValue.split(" ")[1] ??  "";
     // Get period from input if exists
     const periodInput = inputValue.split(" ")[2] as TimePeriod;
 
-    if (!isValidTimeInput(timeValue)) {
+    if (!isValidTimeInput(timeValue)) { 
       if (inputValue === "") {
         setDateTimeToDisplay(inputValue);
         onChange?.(createChangeEvent(""));
@@ -258,10 +256,9 @@ export const useDateTime = ({
         return;
       }
 
-      // Create an empty but valid time value that matches the format expected by the value prop
-      const inValid = formatInputsToValueFormat("", "", "+00:00");
+      // If the time is not valid, made the onChage and onBlur with the inputValue  
       setDateTimeToDisplay(inputValue);
-      onChange?.(createChangeEvent(inValid));
+      onChange?.(createChangeEvent(inputValue));
       onBlur?.(createBlurEvent(inputValue));
       return;
     }
@@ -273,7 +270,7 @@ export const useDateTime = ({
       periodInput,
     );
     const validValue = convert12hTo24h(datetimeFormatted);
-    const offsetUTC = getOffset(timeZone);
+    const offsetUTC = getOffset(timeZone ?? (selectedTimeZone as string));
     const { minutes, hours, period } = getHoursAndMinutes(validValue);
 
     const clearMinutes = cleanTime(minutes);
@@ -286,6 +283,16 @@ export const useDateTime = ({
     const timeFormat = formatInputsToValueFormat(hours, minutes, offsetUTC);
     const newValue = putTimeInValue(value ?? defaultValue ?? "", timeFormat);
     const newVInput = newValue.split("T")[0];
+
+    // Check if the date is empty when split the value by T
+    const valueEmptyDate = (value as string)?.split("T")[0] === ""
+    if(valueEmptyDate) {
+      setDateTimeToDisplay(inputValue);
+      onChange?.(createChangeEvent(inputValue));
+      onBlur?.(createBlurEvent(inputValue));
+      return;
+    }
+
     const valueFormatted = `${newVInput} ${datetimeFormatted}`;
     setDateTimeToDisplay(valueFormatted);
     onChange?.(createChangeEvent(newValue));
@@ -306,7 +313,7 @@ export const useDateTime = ({
     is12HourFormat,
     setSelectedTimeZone,
     isDisableSelect,
-  } = useTimePickerField({
+  } = useTimePicker({
     value: timeInput,
     defaultValue: timeInput,
     onChange: onChangeTime,
@@ -322,7 +329,7 @@ export const useDateTime = ({
     const inputValue = e.target.value;
     setDateTimeToDisplay(inputValue);
     const { date, time } = splitDateTimeStringFromInput(inputValue);
-    const offset = getOffset(timeZone);
+    const offset = getOffset(timeZone ?? (selectedTimeZone as string));
     let formattedDateTime = formatToISODateTimeWithOffset(date, time, offset);
     if (!time && !date) {
       formattedDateTime = inputValue;
@@ -392,16 +399,22 @@ export const useDateTime = ({
       : `${hourToUse}:${selectedMinute}`;
 
     const newValue = putTimeInValue(value ?? defaultValue ?? "", newValueTime);
-    const valueDate = parseDateTimeValueToInput(newValue, internalFormat).split(
+    let valueDate = parseDateTimeValueToInput(newValue, internalFormat).split(
       " ",
     )[0];
+    // Check if the date is valid if not add today date to the value
+    const isValid = isDateFormatAllowed(valueDate, internalFormat);
+    if(!isValid) {
+       valueDate = todayDateInput(internalFormat);
+    }
     // Convert to uppercase for the value and for the input display
-    const upperValueDate = valueDate.toUpperCase();
+    const upperValueDate = valueDate.toUpperCase() ;
 
     const valueWithFormat = putDateInValue(newValue, upperValueDate);
     const inputDisplay = `${upperValueDate} ${timeToDisplay}`;
     setDateTimeToDisplay(inputDisplay);
     onChange?.(createChangeEvent(valueWithFormat));
+    onBlur?.(createBlurEvent(valueWithFormat));
   };
 
   return {

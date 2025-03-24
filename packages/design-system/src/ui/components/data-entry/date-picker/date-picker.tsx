@@ -7,7 +7,7 @@ import {
   type InputBaseProps,
 } from "#scalars";
 import { forwardRef } from "react";
-import { BasePickerField } from "../../../../scalars/components/date-time-field/base-picker-field.js";
+import { BasePickerField } from "../date-time-picker/base-picker.js";
 import { Calendar } from "./subcomponents/calendar/calendar.js";
 import type { DateFieldValue } from "./types.js";
 import { useDatePickerField } from "./use-date-picker.js";

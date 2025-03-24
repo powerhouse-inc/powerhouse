@@ -4,7 +4,7 @@ import {
 } from "../../../ui/components/data-entry/date-picker/date-picker.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import { type FieldErrorHandling } from "../types.js";
-import { validateDatePicker } from "./date-validations.js";
+import { validateDatePicker } from "./date-picker-validations.js";
 
 interface DatePickerFieldProps extends DatePickerProps, FieldErrorHandling {}
 
