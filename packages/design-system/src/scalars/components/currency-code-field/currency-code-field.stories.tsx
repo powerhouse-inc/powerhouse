@@ -90,6 +90,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     label: "Currency",
+    onChange: () => {},
     allowedTypes: "Both",
   },
 };
@@ -99,6 +100,7 @@ export const Disabled: Story = {
     label: "Currency",
     value: "EUR",
     disabled: true,
+    onChange: () => {},
     allowedTypes: "Fiat",
   },
 };
@@ -106,6 +108,7 @@ export const Disabled: Story = {
 export const WithFavorites: Story = {
   args: {
     label: "Currency",
+    onChange: () => {},
     currencies: [
       {
         ticker: "BTC",
