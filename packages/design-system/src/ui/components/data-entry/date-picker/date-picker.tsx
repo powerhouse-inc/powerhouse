@@ -161,7 +161,7 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
               "dark:border-gray-900 dark:text-gray-300",
             )}
             buttonNextClassName={cn(
-              "border border-gray-200 ",
+              "border border-gray-200",
               // hover
               "hover:border-gray-300  hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900",
               // dark
