@@ -23,18 +23,14 @@ describe("OIDField Component", () => {
     {
       icon: "Braces",
       title: "Object A",
-      path: {
-        text: "rwa-portfolio-a",
-      },
+      path: "rwa-portfolio-a",
       value: "baefc2a4-f9a0-4950-8161-fd8d8cc7dea7",
       description: "Object A description",
     },
     {
       icon: "Braces",
       title: "Object B",
-      path: {
-        text: "rwa-portfolio-b",
-      },
+      path: "rwa-portfolio-b",
       value: "baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8",
       description: "Object B description",
     },
@@ -298,7 +294,7 @@ describe("OIDField Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText(mockedOptions[0].title)).toBeInTheDocument();
-      expect(screen.getByText(mockedOptions[0].path.text)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].path)).toBeInTheDocument();
       expect(
         screen.getByText(mockedOptions[0].description),
       ).toBeInTheDocument();

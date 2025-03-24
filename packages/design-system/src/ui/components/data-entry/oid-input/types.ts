@@ -21,6 +21,7 @@ type OIDProps = OIDBaseProps &
         autoComplete: false;
         fetchOptionsCallback?: never;
         fetchSelectedOptionCallback?: never;
+        previewPlaceholder?: never;
       }
     | {
         autoComplete?: true;
@@ -31,6 +32,7 @@ type OIDProps = OIDBaseProps &
         fetchSelectedOptionCallback?: (
           value: string,
         ) => Promise<OIDOption | undefined> | OIDOption | undefined;
+        previewPlaceholder?: OIDOption;
       }
   );
 

@@ -49,6 +49,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
       fetchSelectedOptionCallback,
       isOpenByDefault, // to be used only in stories
       initialOptions, // to be used only in stories
+      previewPlaceholder,
       ...props
     },
     ref,
@@ -80,17 +81,20 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
           title={option.title}
           path={
             displayProps?.asPlaceholder
-              ? { text: "Type not available" }
+              ? previewPlaceholder?.path || "Type not available"
               : option.path
           }
           value={
-            displayProps?.asPlaceholder ? "phid not available" : option.value
+            displayProps?.asPlaceholder
+              ? previewPlaceholder?.value || "phid not available"
+              : option.value
           }
           description={option.description}
+          placeholderIcon={previewPlaceholder?.icon || undefined}
           {...displayProps}
         />
       ),
-      [variant],
+      [variant, previewPlaceholder],
     );
 
     return (
@@ -121,6 +125,7 @@ const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
             isOpenByDefault={isOpenByDefault}
             initialOptions={initialOptions}
             renderOption={renderOption}
+            previewPlaceholder={previewPlaceholder}
             {...props}
             ref={ref}
           />
