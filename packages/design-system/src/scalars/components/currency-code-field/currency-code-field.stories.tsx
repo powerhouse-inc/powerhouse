@@ -56,6 +56,16 @@ const meta: Meta<typeof CurrencyCodeField> = {
         eq: true,
       },
     },
+    allowedTypes: {
+      control: "select",
+      description:
+        "Allowed types of currencies to display when no currencies are provided",
+      options: ["Fiat", "Crypto", "Both"],
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     searchable: {
       control: "boolean",
       description: "Whether the dropdown is searchable",
@@ -70,6 +80,7 @@ const meta: Meta<typeof CurrencyCodeField> = {
     name: "currency-code-field",
     placeholder: "Select a currency",
     favoriteCurrencies: [],
+    currencies: [],
   },
 };
 
@@ -79,7 +90,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     label: "Currency",
-    allowedTypes: "Crypto",
+    allowedTypes: "Both",
   },
 };
 
