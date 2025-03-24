@@ -27,7 +27,9 @@ describe("DateTimePickerField", () => {
 
   it("should display the label when provided", () => {
     const labelText = "Test Label";
-    renderWithForm(<DateTimePickerField name="test-datetime" label={labelText} />);
+    renderWithForm(
+      <DateTimePickerField name="test-datetime" label={labelText} />,
+    );
     expect(screen.getByText(labelText)).toBeInTheDocument();
   });
 
@@ -211,11 +213,15 @@ describe("DateTimePickerField", () => {
     await userEvent.click(timeTab);
 
     // Check if minutes are in 15-minute intervals
-    const minuteSelect = screen.getByRole("combobox", { name: /minute/i }) as HTMLSelectElement;
-    const minuteOptions = Array.from(minuteSelect.options).map(opt => opt.value);
+    const minuteSelect = screen.getByRole("combobox", {
+      name: /minute/i,
+    }) as HTMLSelectElement;
+    const minuteOptions = Array.from(minuteSelect.options).map(
+      (opt) => opt.value,
+    );
     expect(minuteOptions).toContain("00");
     expect(minuteOptions).toContain("15");
     expect(minuteOptions).toContain("30");
     expect(minuteOptions).toContain("45");
   });
-}); 
+});
