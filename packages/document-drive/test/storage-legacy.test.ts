@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { existsSync, rmdirSync } from "fs";
 import path from "path";
-import { afterAll, beforeAll, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { createDocument as createDriveDocument } from "../../document-drive/src/drive-document-model/gen/utils";
 import {
   createDocument,
@@ -68,12 +68,20 @@ const storageImplementations: [
 ] as unknown as [string, () => Promise<IStorage & IDriveStorage>][];
 
 describe.each(storageImplementations)("%s", async (_, buildStorage) => {
-  beforeAll(() => {
-    vi.useFakeTimers();
+  beforeEach(() => {
+    try {
+      vi.useFakeTimers();
+    } catch (e) {
+      //
+    }
   });
 
-  afterAll(() => {
-    vi.useRealTimers();
+  afterEach(() => {
+    try {
+      vi.useRealTimers();
+    } catch (e) {
+      //
+    }
   });
 
   it("should correctly check for non-existent document", async ({ expect }) => {
