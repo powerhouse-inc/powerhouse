@@ -63,22 +63,19 @@ model Operation {
   context     Json?
   resultingState Bytes?
 
-  SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
+  SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId], references: [id], onDelete: Cascade)
 
-  @@unique([driveId, documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
+  @@unique([documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
 }
 
 model SyncronizationUnit {
-  id         String
-  driveId    String
+  id         String       @id
   documentId String
 
-  Document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  Document   Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
   scope      String
   branch     String
   operations Operation[]
-
-  @@id([id, driveId])
 }
 
 model Attachment {

@@ -17,13 +17,10 @@ type DriveManifest = {
 
 export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   private documents: Record<string, PHDocument>;
-  private drives: Record<string, DocumentDriveDocument>;
   private driveManifests: Record<string, DriveManifest>;
-  private slugToDriveId: Record<string, string> = {};
 
   constructor() {
     this.documents = {};
-    this.drives = {};
     this.driveManifests = {};
   }
 
@@ -32,7 +29,9 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   ////////////////////////////////
 
   exists(documentId: string): Promise<boolean> {
-    return Promise.resolve(!!this.documents[documentId]);
+    return Promise.resolve(
+      !!this.documents[documentId] || !!this.documents[`drive/${documentId}`],
+    );
   }
 
   create(documentId: string, document: PHDocument) {
@@ -44,6 +43,11 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   get<TDocument extends PHDocument>(documentId: string): Promise<TDocument> {
     const document = this.documents[documentId];
     if (!document) {
+      const drive = this.documents[`drive/${documentId}`];
+      if (drive) {
+        return Promise.resolve(drive as TDocument);
+      }
+
       throw new Error(`Document with id ${documentId} not found`);
     }
 
@@ -70,20 +74,9 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(id);
   }
 
-  async saveDocument(drive: string, id: string, document: PHDocument) {
-    this.documents[id] = document;
-
-    // Update the drive manifest
-    const manifest = this.getDriveManifest(drive);
-    manifest.documentIds.add(id);
-    this.updateDriveManifest(drive, manifest);
-  }
-
   async clearStorage(): Promise<void> {
     this.documents = {};
-    this.drives = {};
     this.driveManifests = {};
-    this.slugToDriveId = {};
   }
 
   async createDocument(drive: string, id: string, document: PHDocument) {
@@ -130,11 +123,11 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDrives() {
-    return Object.keys(this.drives);
+    return Object.keys(this.driveManifests);
   }
 
   async getDrive(id: string) {
-    const drive = this.drives[id];
+    const drive = this.documents[`drive/${id}`] as DocumentDriveDocument;
     if (!drive) {
       throw new DriveNotFoundError(id);
     }
@@ -142,23 +135,35 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDriveBySlug(slug: string) {
-    const driveId = this.slugToDriveId[slug];
-    if (!driveId) {
-      throw new Error(`Drive with slug ${slug} not found`);
+    for (const driveId of Object.keys(this.driveManifests)) {
+      const drive = this.documents[`drive/${driveId}`] as DocumentDriveDocument;
+      if (drive.initialState.state.global.slug === slug) {
+        return drive;
+      }
     }
-    return this.getDrive(driveId);
+
+    throw new Error(`Drive with slug ${slug} not found`);
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
-    this.drives[id] = drive;
+    // check if a drive with the same slug already exists
+    const slug = drive.initialState.state.global.slug;
+    if (slug) {
+      let existingDrive;
+      try {
+        existingDrive = await this.getDriveBySlug(slug);
+      } catch {
+        // do nothing
+      }
+      if (existingDrive) {
+        throw new Error(`Drive with slug ${slug} already exists`);
+      }
+    }
+
+    await this.create(`drive/${id}`, drive);
 
     // Initialize an empty manifest for the new drive
     this.updateDriveManifest(id, { documentIds: new Set() });
-
-    const { slug } = drive.initialState.state.global;
-    if (slug) {
-      this.slugToDriveId[slug] = id;
-    }
   }
 
   async addDriveOperations(
@@ -172,7 +177,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
       operations,
     );
 
-    this.drives[id] = {
+    this.documents[`drive/${id}`] = {
       ...drive,
       ...header,
       operations: mergedOperations,
@@ -204,21 +209,13 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
 
     // Delete the drive manifest and the drive itself
     delete this.driveManifests[id];
-    delete this.drives[id];
-
-    // Clean up slug mapping if needed
-    for (const [slug, driveId] of Object.entries(this.slugToDriveId)) {
-      if (driveId === id) {
-        delete this.slugToDriveId[slug];
-      }
-    }
+    delete this.documents[id];
   }
 
   async getSynchronizationUnitsRevision(
     units: SynchronizationUnitQuery[],
   ): Promise<
     {
-      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -229,9 +226,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     const results = await Promise.allSettled(
       units.map(async (unit) => {
         try {
-          const document = await (unit.documentId
-            ? this.getDocument(unit.driveId, unit.documentId)
-            : this.getDrive(unit.driveId));
+          const document = await this.get<PHDocument>(unit.documentId);
           if (!document) {
             return undefined;
           }
@@ -239,7 +234,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
             document.operations[unit.scope as OperationScope].at(-1);
           if (operation) {
             return {
-              driveId: unit.driveId,
               documentId: unit.documentId,
               scope: unit.scope,
               branch: unit.branch,
@@ -254,7 +248,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     );
     return results.reduce<
       {
-        driveId: string;
         documentId: string;
         scope: string;
         branch: string;

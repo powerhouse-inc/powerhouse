@@ -81,7 +81,6 @@ export type DriveOperationResult = IOperationResult<DocumentDriveDocument>;
 
 export type SynchronizationUnit = {
   syncId: string;
-  driveId: string;
   documentId: string;
   documentType: string;
   scope: string;

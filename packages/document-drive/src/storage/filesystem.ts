@@ -175,19 +175,17 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     const files = await fs.readdir(this.basePath, { withFileTypes: true });
     return (
       files
-        .filter((file) => file.name.startsWith("drive-"))
-        // remove drive- prefix and extension
-        .map((file) => file.name.replace("drive-", "").replace(".json", ""))
+        .filter((file) => file.name.startsWith("manifest-"))
+        // remove manifest- prefix and extension
+        .map((file) => file.name.replace("manifest-", "").replace(".json", ""))
     );
   }
 
   async getDrive(id: string): Promise<DocumentDriveDocument> {
     try {
-      const content = readFileSync(this._buildDrivePath(id), {
-        encoding: "utf-8",
-      });
-      return JSON.parse(content) as DocumentDriveDocument;
+      return await this.get<DocumentDriveDocument>(id);
     } catch (error) {
+      // preserve throwing a specialized error for drives
       throw new DriveNotFoundError(id);
     }
   }
@@ -212,10 +210,21 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
-    const drivePath = this._buildDrivePath(id);
-    writeFileSync(drivePath, stringify(drive), {
-      encoding: "utf-8",
-    });
+    // check if a drive with the same slug already exists
+    const slug = drive.initialState.state.global.slug;
+    if (slug) {
+      let existingDrive;
+      try {
+        existingDrive = await this.getDriveBySlug(slug);
+      } catch {
+        // do nothing
+      }
+      if (existingDrive) {
+        throw new Error(`Drive with slug ${slug} already exists`);
+      }
+    }
+
+    await this.create(id, drive);
 
     // Initialize an empty manifest for the new drive
     await this.updateDriveManifest(id, { documentIds: [] });
@@ -229,10 +238,8 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     await Promise.all(documents.map((doc) => this.deleteDocument(id, doc)));
 
     // Delete the drive manifest and the drive itself
-    await fs.rm(this._buildManifestPath(id)).catch(() => {
-      /* ignore error if manifest doesn't exist */
-    });
-    await fs.rm(this._buildDrivePath(id));
+    await fs.rm(this._buildManifestPath(id));
+    await fs.rm(this._buildDocumentPath(id));
   }
 
   async addDriveOperations(
@@ -246,7 +253,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
       operations,
     );
 
-    const drivePath = this._buildDrivePath(id);
+    const drivePath = this._buildDocumentPath(id);
     writeFileSync(
       drivePath,
       stringify({
@@ -264,7 +271,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     units: SynchronizationUnitQuery[],
   ): Promise<
     {
-      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -275,9 +281,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     const results = await Promise.allSettled(
       units.map(async (unit) => {
         try {
-          const document = await (unit.documentId
-            ? this.getDocument(unit.driveId, unit.documentId)
-            : this.getDrive(unit.driveId));
+          const document = await this.get<PHDocument>(unit.documentId);
           if (!document) {
             return undefined;
           }
@@ -285,7 +289,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
             document.operations[unit.scope as OperationScope].at(-1);
           if (operation) {
             return {
-              driveId: unit.driveId,
               documentId: unit.documentId,
               scope: unit.scope,
               branch: unit.branch,
@@ -300,7 +303,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     );
     return results.reduce<
       {
-        driveId: string;
         documentId: string;
         scope: string;
         branch: string;
@@ -321,10 +323,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
   private _buildDocumentPath(documentId: string) {
     return `${this.basePath}/document-${documentId}.json`;
-  }
-
-  private _buildDrivePath(driveId: string) {
-    return `${this.basePath}/drive-${driveId}.json`;
   }
 
   private _buildManifestPath(driveId: string) {

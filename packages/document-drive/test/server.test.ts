@@ -84,10 +84,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     } else if (storageName === "BrowserStorage") {
       return (await buildStorage()).clearStorage?.();
     } else if (storageName === "PrismaStorage") {
-      await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
-      await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
-      await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
-      await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
+      //await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
+      //await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
+      //await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
+      //await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
     }
   });
 
@@ -729,11 +729,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await addDrive("2", "slug2");
     await addDrive("3", "slug3");
 
-    // add drive with the same slug as the first drive, which should overwrite it
-    await addDrive("4", "slug1");
+    // add drive with the same slug as the first drive, which should throw an error
+    await expect(addDrive("4", "slug1")).rejects.toThrowError(
+      "Drive with slug slug1 already exists",
+    );
 
     let drive = await server.getDriveBySlug("slug1");
-    expect(drive.state.global.id).toBe("4");
+    expect(drive.state.global.id).toBe("1");
 
     drive = await server.getDriveBySlug("slug2");
     expect(drive.state.global.id).toBe("2");
@@ -832,7 +834,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(syncUnits).toStrictEqual([
       {
         driveId: "1",
-        documentId: "",
+        documentId: drive.state.global.id,
         documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
