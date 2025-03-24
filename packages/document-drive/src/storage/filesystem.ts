@@ -45,11 +45,25 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(documentExists);
   }
 
-  async create(documentId: string, document: PHDocument) {
+  create(documentId: string, document: PHDocument) {
     const documentPath = this._buildDocumentPath(documentId);
     writeFileSync(documentPath, stringify(document), {
       encoding: "utf-8",
     });
+
+    return Promise.resolve();
+  }
+
+  get<TDocument extends PHDocument>(documentId: string): Promise<TDocument> {
+    try {
+      const content = readFileSync(this._buildDocumentPath(documentId), {
+        encoding: "utf-8",
+      });
+
+      return Promise.resolve(JSON.parse(content) as TDocument);
+    } catch (error) {
+      throw new Error(`Document with id ${documentId} not found`);
+    }
   }
 
   ////////////////////////////////
@@ -69,14 +83,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     drive: string,
     id: string,
   ): Promise<TDocument> {
-    try {
-      const content = readFileSync(this._buildDocumentPath(id), {
-        encoding: "utf-8",
-      });
-      return JSON.parse(content) as TDocument;
-    } catch (error) {
-      throw new Error(`Document with id ${id} not found`);
-    }
+    return this.get<TDocument>(id);
   }
 
   async createDocument(drive: string, id: string, document: PHDocument) {

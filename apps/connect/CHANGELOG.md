@@ -1,3 +1,18 @@
+## 1.0.0-dev.243 (2025-03-24)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.6-dev.0 (2025-03-24)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.22.5-dev.0
+- Updated document-drive to 1.29.0-dev.0
+- Updated @powerhousedao/builder-tools to 0.9.5-dev.0
+- Updated @powerhousedao/builder-tools to 0.9.5-dev.0
+- Updated @powerhousedao/design-system to 1.39.1-dev.0
+- Updated @powerhousedao/common to 1.10.5-dev.0
+
 ## 1.0.0-dev.242 (2025-03-20)
 
 ### 🚀 Features
