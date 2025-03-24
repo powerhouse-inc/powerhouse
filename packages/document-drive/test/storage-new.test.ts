@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { existsSync, rmSync } from "fs";
 import { createHelia } from "helia";
 import path from "path";
 import { describe, it } from "vitest";
@@ -26,10 +27,16 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
   ["Memory Storage", () => Promise.resolve(new MemoryStorage())],
   [
     "File System Storage",
-    () =>
-      Promise.resolve(
-        new FilesystemStorage(path.join(__dirname, "test-storage")),
-      ),
+    () => {
+      const basePath = path.join(__dirname, "test-storage");
+
+      // delete the base path
+      if (existsSync(basePath)) {
+        rmSync(basePath, { recursive: true, force: true });
+      }
+
+      return Promise.resolve(new FilesystemStorage(basePath));
+    },
   ],
   /*[
     "Sequelize Storage",
