@@ -1,11 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { existsSync, rmdirSync } from "fs";
 import path from "path";
-import { describe, it } from "vitest";
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { createDocument as createDriveDocument } from "../../document-drive/src/drive-document-model/gen/utils";
 import {
   createDocument,
   DocumentModelModule,
+  PHDocument,
 } from "../../document-model/index";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
@@ -67,6 +68,14 @@ const storageImplementations: [
 ] as unknown as [string, () => Promise<IStorage & IDriveStorage>][];
 
 describe.each(storageImplementations)("%s", async (_, buildStorage) => {
+  beforeAll(() => {
+    vi.useFakeTimers();
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   it("should correctly check for non-existent document", async ({ expect }) => {
     const storage = await buildStorage();
 
@@ -82,5 +91,33 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const result = await storage.checkDocumentExists("foo", "bar");
     expect(result).toBe(true);
+  });
+
+  it("should allow getting a document", async ({ expect }) => {
+    const driveId = "foo";
+    const documentId = "bar";
+    const storage = await buildStorage();
+
+    await storage.createDrive(driveId, createDriveDocument());
+
+    const document = createDocument();
+    await storage.createDocument(driveId, documentId, document);
+
+    const result = await storage.getDocument<PHDocument>(driveId, documentId);
+
+    // NOTE: Why aren't we testing the state?
+    // Prisma storage always returns an undefined state, but all other storage
+    // implementations return the state. The storage layers have always been
+    // tested through the drive server, and the drive server (base-server.ts)
+    // replays the operations to get the state, if it doesn't exist.
+    expect(result.name).toEqual(document.name);
+    expect(result.documentType).toEqual(document.documentType);
+    expect(result.initialState).toEqual(document.initialState);
+    expect(result.lastModified).toEqual(document.lastModified);
+    expect(result.operations).toEqual(document.operations);
+    expect(result.clipboard).toEqual(document.clipboard);
+    expect(result.revision).toEqual(document.revision);
+    expect(result.meta).toEqual(document.meta);
+    expect(result.attachments).toEqual(document.attachments);
   });
 });
