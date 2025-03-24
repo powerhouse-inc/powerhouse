@@ -57,6 +57,21 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     await db.setItem(this.buildDocumentKey(documentId), document);
   }
 
+  async get<TDocument extends PHDocument>(
+    documentId: string,
+  ): Promise<TDocument> {
+    const db = await this.db;
+    const document = await db.getItem<TDocument>(
+      this.buildDocumentKey(documentId),
+    );
+
+    if (!document) {
+      throw new Error(`Document with id ${documentId} not found`);
+    }
+
+    return document;
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
@@ -90,13 +105,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     driveId: string,
     id: string,
   ): Promise<TDocument> {
-    const document = await (
-      await this.db
-    ).getItem<TDocument>(this.buildDocumentKey(id));
-    if (!document) {
-      throw new Error(`Document with id ${id} not found`);
-    }
-    return document;
+    return this.get<TDocument>(id);
   }
 
   async createDocument(drive: string, id: string, document: PHDocument) {
