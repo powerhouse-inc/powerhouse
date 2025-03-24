@@ -80,6 +80,7 @@ export const Default: Story = {
   args: {
     label: "Currency",
     allowedTypes: "Crypto",
+    onChange: () => {},
   },
 };
 
@@ -88,13 +89,15 @@ export const Disabled: Story = {
     label: "Currency",
     value: "EUR",
     disabled: true,
-    allowedTypes: "Fiat",
+    onChange: () => {},
+      allowedTypes: "Fiat",
   },
 };
 
 export const WithFavorites: Story = {
   args: {
     label: "Currency",
+    onChange: () => {},
     currencies: [
       {
         ticker: "BTC",
