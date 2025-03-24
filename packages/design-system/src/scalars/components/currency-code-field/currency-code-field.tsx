@@ -42,7 +42,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
   (
     {
       placeholder,
-      currencies=[],
+      currencies = [],
       favoriteCurrencies = [],
       includeCurrencySymbols = true,
       symbolPosition = "right",
