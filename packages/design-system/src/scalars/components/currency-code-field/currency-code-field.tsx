@@ -2,8 +2,7 @@ import React, { useMemo } from "react";
 import type { SelectOption } from "../enum-field/types.js";
 import {
   FormGroup,
-  FormMessageList,
-  SelectFieldRaw,
+  SelectFieldRaw
 } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
@@ -49,8 +48,6 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
       searchable = false,
       contentClassName,
       contentAlign = "start",
-      warnings,
-      errors,
       allowedTypes = "Both",
       ...props
     },
@@ -140,8 +137,6 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
           favoriteOptions={favoriteOptions}
           {...props}
         />
-        {warnings && <FormMessageList messages={warnings} type="warning" />}
-        {errors && <FormMessageList messages={errors} type="error" />}
       </FormGroup>
     );
   },
