@@ -1,8 +1,13 @@
 import { Icon, type IconName } from "#powerhouse";
-import { cn, FieldErrorHandling, Input, InputBaseProps } from "#scalars";
+import { cn, type FieldErrorHandling, type InputBaseProps } from "#scalars";
 import React, { type PropsWithChildren } from "react";
 import { Button } from "../../../../scalars/components/fragments/button/index.js";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../../scalars/components/fragments/popover/index.js";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../../../scalars/components/fragments/popover/index.js";
+import { Input } from "../../../components/data-entry/input/input.js";
 
 export interface BasePickerFieldProps
   extends InputBaseProps<string>,

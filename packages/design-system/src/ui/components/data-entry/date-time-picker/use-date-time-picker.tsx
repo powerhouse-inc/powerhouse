@@ -1,9 +1,9 @@
 import { format } from "date-fns";
 import React, { useState } from "react";
-import { DateFieldValue } from "../date-picker/types.js";
+import { type DateFieldValue } from "../date-picker/types.js";
 import { useDatePickerField } from "../date-picker/use-date-picker.js";
 import { getDateFromValue, getTimeFromValue } from "../date-picker/utils.js";
-import { TimeFieldValue, TimePeriod } from "../time-picker/type.js";
+import { type TimeFieldValue, type TimePeriod } from "../time-picker/type.js";
 import {
   convertTimeFrom24To12Hours,
   useTimePicker,
@@ -244,11 +244,11 @@ export const useDateTimePicker = ({
       return;
     }
     // Get the time and transform to 24 hours format and avoid undefined
-    const timeValue = inputValue.split(" ")[1] ??  "";
+    const timeValue = inputValue.split(" ")[1] ?? "";
     // Get period from input if exists
     const periodInput = inputValue.split(" ")[2] as TimePeriod;
 
-    if (!isValidTimeInput(timeValue)) { 
+    if (!isValidTimeInput(timeValue)) {
       if (inputValue === "") {
         setDateTimeToDisplay(inputValue);
         onChange?.(createChangeEvent(""));
@@ -256,7 +256,7 @@ export const useDateTimePicker = ({
         return;
       }
 
-      // If the time is not valid, made the onChage and onBlur with the inputValue  
+      // If the time is not valid, made the onChage and onBlur with the inputValue
       setDateTimeToDisplay(inputValue);
       onChange?.(createChangeEvent(inputValue));
       onBlur?.(createBlurEvent(inputValue));
@@ -285,8 +285,8 @@ export const useDateTimePicker = ({
     const newVInput = newValue.split("T")[0];
 
     // Check if the date is empty when split the value by T
-    const valueEmptyDate = (value as string)?.split("T")[0] === ""
-    if(valueEmptyDate) {
+    const valueEmptyDate = (value as string)?.split("T")[0] === "";
+    if (valueEmptyDate) {
       setDateTimeToDisplay(inputValue);
       onChange?.(createChangeEvent(inputValue));
       onBlur?.(createBlurEvent(inputValue));
@@ -404,11 +404,11 @@ export const useDateTimePicker = ({
     )[0];
     // Check if the date is valid if not add today date to the value
     const isValid = isDateFormatAllowed(valueDate, internalFormat);
-    if(!isValid) {
-       valueDate = todayDateInput(internalFormat);
+    if (!isValid) {
+      valueDate = todayDateInput(internalFormat);
     }
     // Convert to uppercase for the value and for the input display
-    const upperValueDate = valueDate.toUpperCase() ;
+    const upperValueDate = valueDate.toUpperCase();
 
     const valueWithFormat = putDateInValue(newValue, upperValueDate);
     const inputDisplay = `${upperValueDate} ${timeToDisplay}`;

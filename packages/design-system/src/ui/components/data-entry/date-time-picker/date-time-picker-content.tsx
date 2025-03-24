@@ -1,9 +1,9 @@
 import { Icon } from "#powerhouse";
-import { cn, SelectBaseProps, SelectFieldProps } from "#scalars";
+import { cn, type SelectBaseProps, type SelectFieldProps } from "#scalars";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import { type Matcher } from "react-day-picker";
 import { Calendar } from "../date-picker/subcomponents/calendar/calendar.js";
-import { WeekStartDayNumber } from "../date-picker/types.js";
+import { type WeekStartDayNumber } from "../date-picker/types.js";
 import TimePickerContent from "../time-picker/subcomponents/time-picker-content.js";
 
 interface DateTimePickerContentProps {

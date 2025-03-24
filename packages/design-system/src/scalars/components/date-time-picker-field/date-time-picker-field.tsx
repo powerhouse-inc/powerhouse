@@ -1,6 +1,6 @@
 import {
   DateTimePicker,
-  DateTimePickerProps,
+  type DateTimePickerProps,
 } from "../../../ui/components/data-entry/date-time-picker/date-time-picker.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import { type FieldErrorHandling } from "../types.js";

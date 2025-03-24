@@ -11,7 +11,7 @@ import {
   isValidTime,
   normalizeMonthFormat,
 } from "../../../ui/components/data-entry/date-time-picker/utils.js";
-import { DateTimePickerFieldProps } from "./date-time-picker-field.js";
+import { type DateTimePickerFieldProps } from "./date-time-picker-field.js";
 
 export const dateTimeFieldValidations =
   ({
