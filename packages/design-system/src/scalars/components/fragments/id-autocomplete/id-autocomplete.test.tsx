@@ -21,18 +21,14 @@ describe("IdAutocomplete Component", () => {
     {
       icon: "PowerhouseLogoSmall",
       title: "Document A",
-      path: {
-        text: "projects/finance/document-a",
-      },
+      path: "projects/finance/document-a",
       value: "document-a",
       description: "Financial report for Q1 2024",
     },
     {
       icon: "PowerhouseLogoSmall",
       title: "Document B",
-      path: {
-        text: "projects/legal/document-b",
-      },
+      path: "projects/legal/document-b",
       value: "document-b",
       description: "Legal compliance documentation",
     },
@@ -261,7 +257,7 @@ describe("IdAutocomplete Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText(mockedOptions[0].title)).toBeInTheDocument();
-      expect(screen.getByText(mockedOptions[0].path.text)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].path)).toBeInTheDocument();
       expect(
         screen.getByText(mockedOptions[0].description),
       ).toBeInTheDocument();

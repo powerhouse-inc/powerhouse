@@ -87,7 +87,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
   variant = "withValue",
   icon,
   title = "Title not available",
-  path = { text: "Path not available" },
+  path = "Path not available",
   value,
   description = "Description not available",
   asPlaceholder,
@@ -132,7 +132,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
           >
             {title}
           </span>
-          {!showValue && path.url ? (
+          {!showValue && typeof path === "object" ? (
             <a
               href={path.url}
               target="_blank"
@@ -152,7 +152,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
                   : "text-gray-500 dark:text-gray-600",
               )}
             >
-              {path.text}
+              {typeof path === "object" ? path.text : path}
             </span>
           )}
         </div>

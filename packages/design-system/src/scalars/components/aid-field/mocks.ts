@@ -296,9 +296,11 @@ const filterOptions = (
       }
     }
 
+    const pathText = typeof opt.path === "object" ? opt.path.text : opt.path;
+
     return (
       opt.title?.toLowerCase().includes(normalizedInput) ||
-      opt.path?.text.toLowerCase().includes(normalizedInput) ||
+      pathText?.toLowerCase().includes(normalizedInput) ||
       opt.value.toLowerCase().includes(normalizedInput) ||
       opt.description?.toLowerCase().includes(normalizedInput)
     );

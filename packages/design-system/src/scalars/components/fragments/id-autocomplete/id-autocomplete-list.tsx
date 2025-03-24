@@ -27,6 +27,7 @@ interface IdAutocompleteListProps {
       className?: string;
     },
   ) => React.ReactNode;
+  previewPlaceholder?: IdAutocompleteOption;
 }
 
 const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
@@ -36,14 +37,13 @@ const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
   options = [],
   toggleOption,
   renderOption,
+  previewPlaceholder,
 }) => {
   const cmdkSearch = useCommandState((state) => state.search) as string;
-  const defaultOption: IdAutocompleteOption = {
+  const defaultOption: IdAutocompleteOption = previewPlaceholder || {
     value: "value not available",
     title: "Title not available",
-    path: {
-      text: "Path not available",
-    },
+    path: "Path not available",
     description: "Description not available",
   };
 
@@ -63,7 +63,11 @@ const IdAutocompleteList: React.FC<IdAutocompleteListProps> = ({
         ) : (
           <IdAutocompleteListOption
             variant={variant}
-            value="value not available"
+            icon={defaultOption.icon}
+            title={defaultOption.title}
+            path={defaultOption.path}
+            value={defaultOption.value}
+            description={defaultOption.description}
             asPlaceholder
             className={cn("pb-0")}
           />

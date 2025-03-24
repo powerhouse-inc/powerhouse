@@ -48,6 +48,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
       fetchSelectedOptionCallback,
       isOpenByDefault, // to be used only in stories
       initialOptions, // to be used only in stories
+      previewPlaceholder,
       ...props
     },
     ref,
@@ -79,23 +80,25 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
           title={option.title}
           path={
             displayProps?.asPlaceholder
-              ? { text: "URL not available" }
+              ? previewPlaceholder?.path || "URL not available"
               : option.path
           }
           value={
-            displayProps?.asPlaceholder ? "aid not available" : option.value
+            displayProps?.asPlaceholder
+              ? previewPlaceholder?.value || "aid not available"
+              : option.value
           }
           description={option.description}
           agentType={
             displayProps?.asPlaceholder
-              ? "Agent type not available"
+              ? previewPlaceholder?.agentType || "Agent type not available"
               : option.agentType
           }
-          placeholderIcon="Person"
+          placeholderIcon={previewPlaceholder?.icon || "Person"}
           {...displayProps}
         />
       ),
-      [variant],
+      [variant, previewPlaceholder],
     );
 
     return (
@@ -126,6 +129,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
             isOpenByDefault={isOpenByDefault}
             initialOptions={initialOptions}
             renderOption={renderOption}
+            previewPlaceholder={previewPlaceholder}
             {...props}
             ref={ref}
           />

@@ -57,7 +57,7 @@ const meta: Meta<typeof AIDField> = {
         "Must return a Promise that resolves to an array of objects or an array of objects with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: { text: string; url?: string; }\n\n" +
+        "path?: string | { text: string; url: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n" +
         "agentType?: string\n\n",
@@ -79,7 +79,7 @@ const meta: Meta<typeof AIDField> = {
         "Must return a Promise that resolves to an object or an object with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: { text: string; url?: string; }\n\n" +
+        "path?: string | { text: string; url: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n" +
         "agentType?: string\n\n" +
@@ -91,6 +91,24 @@ const meta: Meta<typeof AIDField> = {
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
+      },
+      if: { arg: "autoComplete", neq: false },
+    },
+
+    previewPlaceholder: {
+      control: "object",
+      description:
+        "Custom placeholder values to show when no option is selected or when there are no matching options. " +
+        "Can include custom values for:\n\n" +
+        "icon?: IconName | React.ReactElement\n\n" +
+        "title?: string\n\n" +
+        "path?: string | { text: string; url: string; }\n\n" +
+        "value: string\n\n" +
+        "description?: string\n\n" +
+        "agentType?: string\n\n",
+      table: {
+        type: { summary: "AIDOption" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "autoComplete", neq: false },
     },

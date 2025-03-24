@@ -18,6 +18,7 @@ type IdAutocompleteConfigProps = IdAutocompleteBaseConfigProps &
         fetchOptionsCallback?: never;
         fetchSelectedOptionCallback?: never;
         renderOption?: never;
+        previewPlaceholder?: never;
       }
     | {
         autoComplete?: true;
@@ -48,6 +49,7 @@ type IdAutocompleteConfigProps = IdAutocompleteBaseConfigProps &
             className?: string;
           },
         ) => React.ReactNode;
+        previewPlaceholder?: IdAutocompleteOption;
       }
   );
 
@@ -61,10 +63,12 @@ type IdAutocompleteProps = Omit<
 interface IdAutocompleteBaseOption {
   icon?: IconName | React.ReactElement;
   title?: string;
-  path?: {
-    text: string;
-    url?: string;
-  };
+  path?:
+    | string
+    | {
+        text: string;
+        url: string;
+      };
   value: string;
   description?: string;
 }

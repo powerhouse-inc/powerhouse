@@ -48,6 +48,7 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
       isOpenByDefault, // to be used only in stories
       initialOptions, // to be used only in stories
       renderOption,
+      previewPlaceholder,
       ...props
     },
     ref,
@@ -170,10 +171,14 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
               {asCard &&
                 (renderOption ? (
                   renderOption(
-                    {
-                      ...selectedOption,
-                      value: selectedOption?.value ?? "",
-                    },
+                    selectedOption === undefined && previewPlaceholder
+                      ? {
+                          ...previewPlaceholder,
+                        }
+                      : {
+                          ...selectedOption,
+                          value: selectedOption?.value ?? "",
+                        },
                     {
                       asPlaceholder: selectedOption === undefined,
                       showValue: false,
@@ -188,11 +193,16 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
                 ) : (
                   <IdAutocompleteListOption
                     variant={variant}
-                    icon={selectedOption?.icon}
-                    title={selectedOption?.title}
-                    path={selectedOption?.path}
-                    value={selectedOption?.value ?? ""}
-                    description={selectedOption?.description}
+                    icon={selectedOption?.icon ?? previewPlaceholder?.icon}
+                    title={selectedOption?.title ?? previewPlaceholder?.title}
+                    path={selectedOption?.path ?? previewPlaceholder?.path}
+                    value={
+                      selectedOption?.value ?? previewPlaceholder?.value ?? ""
+                    }
+                    description={
+                      selectedOption?.description ??
+                      previewPlaceholder?.description
+                    }
                     asPlaceholder={selectedOption === undefined}
                     showValue={false}
                     isLoadingSelectedOption={isLoadingSelectedOption}
@@ -221,6 +231,7 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
                   options={options}
                   toggleOption={handleOptionSelection}
                   renderOption={renderOption}
+                  previewPlaceholder={previewPlaceholder}
                 />
               </PopoverContent>
             </Command>
