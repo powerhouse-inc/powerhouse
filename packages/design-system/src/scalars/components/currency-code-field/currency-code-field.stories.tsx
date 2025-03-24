@@ -101,7 +101,7 @@ export const Disabled: Story = {
     value: "EUR",
     disabled: true,
     onChange: () => {},
-      allowedTypes: "Fiat",
+    allowedTypes: "Fiat",
   },
 };
 
