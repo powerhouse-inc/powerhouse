@@ -175,17 +175,19 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     const files = await fs.readdir(this.basePath, { withFileTypes: true });
     return (
       files
-        .filter((file) => file.name.startsWith("manifest-"))
-        // remove manifest- prefix and extension
-        .map((file) => file.name.replace("manifest-", "").replace(".json", ""))
+        .filter((file) => file.name.startsWith("drive-"))
+        // remove drive- prefix and extension
+        .map((file) => file.name.replace("drive-", "").replace(".json", ""))
     );
   }
 
   async getDrive(id: string): Promise<DocumentDriveDocument> {
     try {
-      return await this.get<DocumentDriveDocument>(id);
+      const content = readFileSync(this._buildDrivePath(id), {
+        encoding: "utf-8",
+      });
+      return JSON.parse(content) as DocumentDriveDocument;
     } catch (error) {
-      // preserve throwing a specialized error for drives
       throw new DriveNotFoundError(id);
     }
   }
@@ -210,7 +212,10 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
-    await this.create(id, drive);
+    const drivePath = this._buildDrivePath(id);
+    writeFileSync(drivePath, stringify(drive), {
+      encoding: "utf-8",
+    });
 
     // Initialize an empty manifest for the new drive
     await this.updateDriveManifest(id, { documentIds: [] });
@@ -224,8 +229,10 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     await Promise.all(documents.map((doc) => this.deleteDocument(id, doc)));
 
     // Delete the drive manifest and the drive itself
-    await fs.rm(this._buildManifestPath(id));
-    await fs.rm(this._buildDocumentPath(id));
+    await fs.rm(this._buildManifestPath(id)).catch(() => {
+      /* ignore error if manifest doesn't exist */
+    });
+    await fs.rm(this._buildDrivePath(id));
   }
 
   async addDriveOperations(
@@ -239,7 +246,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
       operations,
     );
 
-    const drivePath = this._buildDocumentPath(id);
+    const drivePath = this._buildDrivePath(id);
     writeFileSync(
       drivePath,
       stringify({
@@ -257,6 +264,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     units: SynchronizationUnitQuery[],
   ): Promise<
     {
+      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -267,7 +275,9 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     const results = await Promise.allSettled(
       units.map(async (unit) => {
         try {
-          const document = await this.get<PHDocument>(unit.documentId);
+          const document = await (unit.documentId
+            ? this.getDocument(unit.driveId, unit.documentId)
+            : this.getDrive(unit.driveId));
           if (!document) {
             return undefined;
           }
@@ -275,6 +285,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
             document.operations[unit.scope as OperationScope].at(-1);
           if (operation) {
             return {
+              driveId: unit.driveId,
               documentId: unit.documentId,
               scope: unit.scope,
               branch: unit.branch,
@@ -289,6 +300,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     );
     return results.reduce<
       {
+        driveId: string;
         documentId: string;
         scope: string;
         branch: string;
@@ -309,6 +321,10 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
   private _buildDocumentPath(documentId: string) {
     return `${this.basePath}/document-${documentId}.json`;
+  }
+
+  private _buildDrivePath(driveId: string) {
+    return `${this.basePath}/drive-${driveId}.json`;
   }
 
   private _buildManifestPath(driveId: string) {

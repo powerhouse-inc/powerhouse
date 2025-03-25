@@ -138,12 +138,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     });
   }
 
-  async get<TDocument extends PHDocument>(
-    documentId: string,
-  ): Promise<TDocument> {
-    throw new Error("Not implemented");
-  }
-
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
@@ -542,6 +536,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       acc[scope].push(result);
       return acc;
     }, cachedOperations) as OperationsFromDocument<TDocument>;
+
     const dbDoc = result;
     const doc = {
       created: dbDoc.created.toISOString(),
@@ -666,6 +661,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     const operation = await this.db.operation.findUnique({
       where: {
         unique_operation: {
+          driveId,
           documentId,
           index,
           scope,
@@ -695,6 +691,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     units: SynchronizationUnitQuery[],
   ): Promise<
     {
+      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -705,19 +702,26 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     // TODO add branch condition
     const whereClauses = units
       .map((_, index) => {
-        return `("documentId" = $${index * 2 + 1} AND "scope" = $${index * 2 + 2})`;
+        return `("driveId" = $${index * 3 + 1} AND "documentId" = $${index * 3 + 2} AND "scope" = $${index * 3 + 3})`;
       })
       .join(" OR ");
 
     const query = `
-            SELECT "documentId", "scope", "branch", MAX("timestamp") as "lastUpdated", MAX("index") as revision FROM "Operation"
+            SELECT "driveId", "documentId", "scope", "branch", MAX("timestamp") as "lastUpdated", MAX("index") as revision FROM "Operation"
             WHERE ${whereClauses}
-            GROUP BY "documentId", "scope", "branch"
+            GROUP BY "driveId", "documentId", "scope", "branch"
         `;
 
-    const params = units.map((unit) => [unit.documentId, unit.scope]).flat();
+    const params = units
+      .map((unit) => [
+        unit.documentId ? unit.driveId : "drives",
+        unit.documentId || unit.driveId,
+        unit.scope,
+      ])
+      .flat();
     const results = await this.db.$queryRawUnsafe<
       {
+        driveId: string;
         documentId: string;
         lastUpdated: string;
         scope: OperationScope;
@@ -727,7 +731,8 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     >(query, ...params);
     return results.map((row) => ({
       ...row,
-      documentId: row.documentId,
+      driveId: row.driveId === "drives" ? row.documentId : row.driveId,
+      documentId: row.driveId === "drives" ? "" : row.documentId,
       lastUpdated: new Date(row.lastUpdated).toISOString(),
     }));
   }

@@ -18,7 +18,6 @@ export interface IStorageDelegate {
 export interface IDocumentStorage {
   exists(documentId: string): Promise<boolean>;
   create(documentId: string, document: PHDocument): Promise<void>;
-  get<TDocument extends PHDocument>(documentId: string): Promise<TDocument>;
 }
 
 export interface IStorage {
@@ -58,6 +57,7 @@ export interface IStorage {
   setStorageDelegate?(delegate: IStorageDelegate): void;
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
+      driveId: string;
       documentId: string;
       scope: string;
       branch: string;

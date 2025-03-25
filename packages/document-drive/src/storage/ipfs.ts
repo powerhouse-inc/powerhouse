@@ -58,26 +58,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     );
   }
 
-  async get<TDocument extends PHDocument>(
-    documentId: string,
-  ): Promise<TDocument> {
-    try {
-      const documentPath = this._buildDocumentPath(documentId);
-
-      const chunks = [];
-      for await (const chunk of this.fs.cat(documentPath)) {
-        chunks.push(chunk);
-      }
-
-      const buffer = Buffer.concat(chunks);
-      const content = new TextDecoder().decode(buffer);
-
-      return JSON.parse(content) as TDocument;
-    } catch (error) {
-      throw new Error(`Document with id ${documentId} not found`);
-    }
-  }
-
   ////////////////////////////////s
   // IDriveStorage
   ////////////////////////////////
@@ -95,7 +75,21 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     drive: string,
     id: string,
   ): Promise<TDocument> {
-    return this.get<TDocument>(id);
+    try {
+      const documentPath = this._buildDocumentPath(id);
+
+      const chunks = [];
+      for await (const chunk of this.fs.cat(documentPath)) {
+        chunks.push(chunk);
+      }
+
+      const buffer = Buffer.concat(chunks);
+      const content = new TextDecoder().decode(buffer);
+
+      return JSON.parse(content) as TDocument;
+    } catch (error) {
+      throw new Error(`Document with id ${id} not found`);
+    }
   }
 
   async createDocument(
@@ -296,6 +290,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     units: SynchronizationUnitQuery[],
   ): Promise<
     {
+      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -306,7 +301,9 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     const results = await Promise.allSettled(
       units.map(async (unit) => {
         try {
-          const document = await this.get<PHDocument>(unit.documentId);
+          const document = await (unit.documentId
+            ? this.getDocument(unit.driveId, unit.documentId)
+            : this.getDrive(unit.driveId));
           if (!document) {
             return undefined;
           }
@@ -314,6 +311,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
             document.operations[unit.scope as OperationScope].at(-1);
           if (operation) {
             return {
+              driveId: unit.driveId,
               documentId: unit.documentId,
               scope: unit.scope,
               branch: unit.branch,
@@ -328,6 +326,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     );
     return results.reduce<
       {
+        driveId: string;
         documentId: string;
         scope: string;
         branch: string;

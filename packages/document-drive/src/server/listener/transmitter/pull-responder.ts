@@ -10,21 +10,21 @@ import {
   type StrandUpdate,
 } from "#server/types";
 
-import {
-  type ListenerFilter,
-  type Trigger,
-} from "#drive-document-model/gen/types";
+import { childLogger } from "#utils/logger";
+import { generateUUID } from "#utils/misc";
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
-import { childLogger } from "#utils/logger";
-import { generateUUID } from "#utils/misc";
 import { gql } from "graphql-request";
 import {
   type ITransmitter,
   type PullResponderTrigger,
   type StrandUpdateSource,
 } from "./types.js";
+import {
+  type ListenerFilter,
+  type Trigger,
+} from "#drive-document-model/gen/types";
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
   input: string;
@@ -107,6 +107,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         (s) =>
           s.scope === revision.scope &&
           s.branch === revision.branch &&
+          s.driveId === revision.driveId &&
           s.documentId == revision.documentId,
       );
       if (!syncUnit) {

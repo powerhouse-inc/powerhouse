@@ -17,11 +17,13 @@ type DriveManifest = {
 
 export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   private documents: Record<string, PHDocument>;
+  private drives: Record<string, DocumentDriveDocument>;
   private driveManifests: Record<string, DriveManifest>;
   private slugToDriveId: Record<string, string> = {};
 
   constructor() {
     this.documents = {};
+    this.drives = {};
     this.driveManifests = {};
   }
 
@@ -79,6 +81,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
 
   async clearStorage(): Promise<void> {
     this.documents = {};
+    this.drives = {};
     this.driveManifests = {};
     this.slugToDriveId = {};
   }
@@ -127,11 +130,11 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDrives() {
-    return Object.keys(this.driveManifests);
+    return Object.keys(this.drives);
   }
 
   async getDrive(id: string) {
-    const drive = this.documents[id] as DocumentDriveDocument;
+    const drive = this.drives[id];
     if (!drive) {
       throw new DriveNotFoundError(id);
     }
@@ -147,7 +150,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
-    await this.create(id, drive);
+    this.drives[id] = drive;
 
     // Initialize an empty manifest for the new drive
     this.updateDriveManifest(id, { documentIds: new Set() });
@@ -169,7 +172,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
       operations,
     );
 
-    this.documents[id] = {
+    this.drives[id] = {
       ...drive,
       ...header,
       operations: mergedOperations,
@@ -201,7 +204,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
 
     // Delete the drive manifest and the drive itself
     delete this.driveManifests[id];
-    delete this.documents[id];
+    delete this.drives[id];
 
     // Clean up slug mapping if needed
     for (const [slug, driveId] of Object.entries(this.slugToDriveId)) {
@@ -215,6 +218,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     units: SynchronizationUnitQuery[],
   ): Promise<
     {
+      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -225,7 +229,9 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     const results = await Promise.allSettled(
       units.map(async (unit) => {
         try {
-          const document = await this.get<PHDocument>(unit.documentId);
+          const document = await (unit.documentId
+            ? this.getDocument(unit.driveId, unit.documentId)
+            : this.getDrive(unit.driveId));
           if (!document) {
             return undefined;
           }
@@ -233,6 +239,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
             document.operations[unit.scope as OperationScope].at(-1);
           if (operation) {
             return {
+              driveId: unit.driveId,
               documentId: unit.documentId,
               scope: unit.scope,
               branch: unit.branch,
@@ -247,6 +254,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     );
     return results.reduce<
       {
+        driveId: string;
         documentId: string;
         scope: string;
         branch: string;
