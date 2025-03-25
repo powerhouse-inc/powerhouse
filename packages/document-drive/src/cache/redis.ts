@@ -1,4 +1,4 @@
-import { Action, type PHDocument } from "document-model";
+import { type PHDocument } from "document-model";
 import type { RedisClientType } from "redis";
 import { type ICache } from "./types.js";
 
@@ -14,11 +14,11 @@ class RedisCache implements ICache {
     this.timeoutInSeconds = timeoutInSeconds;
   }
 
-  private static _getId(drive: string, id: string) {
-    return `cache:${drive}:${id}`;
+  private static _getId(id: string) {
+    return `cache:${id}`;
   }
 
-  async setDocument(drive: string, id: string, document: PHDocument) {
+  async setDocument(id: string, document: PHDocument) {
     const global = document.operations.global.map((e) => {
       delete e.resultingState;
       return e;
@@ -28,7 +28,7 @@ class RedisCache implements ICache {
       return e;
     });
     const doc = { ...document, operations: { global, local } };
-    const redisId = RedisCache._getId(drive, id);
+    const redisId = RedisCache._getId(id);
     const result = await this.redis.set(redisId, JSON.stringify(doc), {
       EX: this.timeoutInSeconds ? this.timeoutInSeconds : undefined,
     });
@@ -41,17 +41,16 @@ class RedisCache implements ICache {
   }
 
   async getDocument<TDocument extends PHDocument>(
-    drive: string,
     id: string,
   ): Promise<TDocument | undefined> {
-    const redisId = RedisCache._getId(drive, id);
+    const redisId = RedisCache._getId(id);
     const doc = await this.redis.get(redisId);
 
     return doc ? (JSON.parse(doc) as TDocument) : undefined;
   }
 
-  async deleteDocument(drive: string, id: string) {
-    const redisId = RedisCache._getId(drive, id);
+  async deleteDocument(id: string) {
+    const redisId = RedisCache._getId(id);
     return (await this.redis.del(redisId)) > 0;
   }
 }
