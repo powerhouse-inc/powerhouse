@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { existsSync, rmSync } from "fs";
 import { createHelia } from "helia";
 import path from "path";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { describe, it } from "vitest";
 import {
   createDocument,
   DocumentModelModule,
@@ -74,14 +74,6 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
 ] as unknown as [string, () => Promise<IDocumentStorage>][];
 
 describe.each(storageImplementations)("%s", async (_, buildStorage) => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("should correctly check for non-existent document", async ({ expect }) => {
     const storage = await buildStorage();
 
@@ -106,18 +98,6 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     await storage.create("test", document);
 
     const result = await storage.get("test");
-
-    // do not compare result and document directly -- this is because the
-    // storage implementation may store _operations_ instead of state
-    // (like prisma)
-    expect(result.name).toEqual(document.name);
-    expect(result.documentType).toEqual(document.documentType);
-    expect(result.lastModified).toEqual(document.lastModified);
-    expect(result.operations).toEqual(document.operations);
-    expect(result.initialState).toEqual(document.initialState);
-    expect(result.clipboard).toEqual(document.clipboard);
-    expect(result.attachments).toEqual(document.attachments);
-    expect(result.meta).toEqual(document.meta);
-    expect(result.revision).toEqual(document.revision);
+    expect(result).toEqual(document);
   });
 });

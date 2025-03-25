@@ -140,133 +140,14 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
   async get<TDocument extends PHDocument>(
     documentId: string,
-    tx?: Transaction,
   ): Promise<TDocument> {
-    const prisma = tx ?? this.db;
-    const query: any = {
-      where: {
-        id: documentId,
-      },
-    };
-
-    const result = await prisma.document.findUnique(query);
-    if (result === null) {
-      throw new Error(`Document with id ${documentId} not found`);
-    }
-
-    const cachedOperations = (await this.delegate?.getCachedOperations(
-      documentId,
-    )) ?? {
-      global: [],
-      local: [],
-    };
-    const scopeIndex = Object.keys(cachedOperations).reduceRight<
-      Record<OperationScope, number>
-    >(
-      (acc, value) => {
-        const scope = value as OperationScope;
-        const lastIndex = cachedOperations[scope].at(-1)?.index ?? -1;
-        acc[scope] = lastIndex;
-        return acc;
-      },
-      { global: -1, local: -1 },
-    );
-
-    const conditions = Object.entries(scopeIndex).map(
-      ([scope, index]) => `("scope" = '${scope}' AND "index" > ${index})`,
-    );
-    conditions.push(
-      `("scope" NOT IN (${Object.keys(cachedOperations)
-        .map((s) => `'${s}'`)
-        .join(", ")}))`,
-    );
-
-    // retrieves operations with resulting state
-    // for the last operation of each scope
-    // TODO prevent SQL injection
-    const queryOperations = await prisma.$queryRawUnsafe<
-      Prisma.$OperationPayload["scalars"][]
-    >(
-      `WITH ranked_operations AS (
-            SELECT
-                *,
-                ROW_NUMBER() OVER (PARTITION BY scope ORDER BY index DESC) AS rn
-            FROM "Operation"
-            )
-            SELECT
-            "id",
-            "opId",
-            "scope",
-            "branch",
-            "index",
-            "skip",
-            "hash",
-            "timestamp",
-            "input",
-            "type",
-            "context",
-            CASE
-                WHEN rn = 1 THEN "resultingState"
-                ELSE NULL
-            END AS "resultingState"
-            FROM ranked_operations
-            WHERE "documentId" = $1
-            AND (${conditions.join(" OR ")})
-            ORDER BY scope, index;
-        `,
-      documentId,
-    );
-    const operationIds = queryOperations.map((o) => o.id);
-    const attachments = await prisma.attachment.findMany({
-      where: {
-        operationId: {
-          in: operationIds,
-        },
-      },
-    });
-
-    // TODO add attachments from cached operations
-    const fileRegistry: FileRegistry = {};
-
-    const operationsByScope = queryOperations.reduce((acc, operation) => {
-      const scope = operation.scope as OperationScope;
-      if (!acc[scope]) {
-        acc[scope] = [];
-      }
-      const result = storageToOperation(operation);
-      result.attachments = attachments.filter(
-        (a) => a.operationId === operation.id,
-      );
-      result.attachments.forEach(({ hash, ...file }) => {
-        fileRegistry[hash] = file;
-      });
-      acc[scope].push(result);
-      return acc;
-    }, cachedOperations) as OperationsFromDocument<TDocument>;
-    const dbDoc = result;
-    const doc = {
-      created: dbDoc.created.toISOString(),
-      name: dbDoc.name ? dbDoc.name : "",
-      documentType: dbDoc.documentType,
-      initialState: JSON.parse(
-        dbDoc.initialState,
-      ) as ExtendedStateFromDocument<TDocument>,
-      state: undefined,
-      lastModified: new Date(dbDoc.lastModified).toISOString(),
-      operations: operationsByScope,
-      clipboard: [],
-      revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
-      meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
-      attachments: {},
-    };
-    return doc as unknown as TDocument;
+    throw new Error("Not implemented");
   }
 
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
 
-  // todo: move to constructor injection
   setStorageDelegate(delegate: IStorageDelegate): void {
     this.delegate = delegate;
   }
@@ -547,7 +428,122 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     id: string,
     tx?: Transaction,
   ): Promise<TDocument> {
-    return this.get(id, tx);
+    const prisma = tx ?? this.db;
+    const query: any = {
+      where: {
+        id,
+      },
+    };
+
+    const result = await prisma.document.findUnique(query);
+    if (result === null) {
+      throw new Error(`Document with id ${id} not found`);
+    }
+
+    const cachedOperations = (await this.delegate?.getCachedOperations(id)) ?? {
+      global: [],
+      local: [],
+    };
+    const scopeIndex = Object.keys(cachedOperations).reduceRight<
+      Record<OperationScope, number>
+    >(
+      (acc, value) => {
+        const scope = value as OperationScope;
+        const lastIndex = cachedOperations[scope].at(-1)?.index ?? -1;
+        acc[scope] = lastIndex;
+        return acc;
+      },
+      { global: -1, local: -1 },
+    );
+
+    const conditions = Object.entries(scopeIndex).map(
+      ([scope, index]) => `("scope" = '${scope}' AND "index" > ${index})`,
+    );
+    conditions.push(
+      `("scope" NOT IN (${Object.keys(cachedOperations)
+        .map((s) => `'${s}'`)
+        .join(", ")}))`,
+    );
+
+    // retrieves operations with resulting state
+    // for the last operation of each scope
+    // TODO prevent SQL injection
+    const queryOperations = await prisma.$queryRawUnsafe<
+      Prisma.$OperationPayload["scalars"][]
+    >(
+      `WITH ranked_operations AS (
+            SELECT
+                *,
+                ROW_NUMBER() OVER (PARTITION BY scope ORDER BY index DESC) AS rn
+            FROM "Operation"
+            )
+            SELECT
+            "id",
+            "opId",
+            "scope",
+            "branch",
+            "index",
+            "skip",
+            "hash",
+            "timestamp",
+            "input",
+            "type",
+            "context",
+            CASE
+                WHEN rn = 1 THEN "resultingState"
+                ELSE NULL
+            END AS "resultingState"
+            FROM ranked_operations
+            WHERE "documentId" = $1
+            AND (${conditions.join(" OR ")})
+            ORDER BY scope, index;
+        `,
+      id,
+    );
+    const operationIds = queryOperations.map((o) => o.id);
+    const attachments = await prisma.attachment.findMany({
+      where: {
+        operationId: {
+          in: operationIds,
+        },
+      },
+    });
+
+    // TODO add attachments from cached operations
+    const fileRegistry: FileRegistry = {};
+
+    const operationsByScope = queryOperations.reduce((acc, operation) => {
+      const scope = operation.scope as OperationScope;
+      if (!acc[scope]) {
+        acc[scope] = [];
+      }
+      const result = storageToOperation(operation);
+      result.attachments = attachments.filter(
+        (a) => a.operationId === operation.id,
+      );
+      result.attachments.forEach(({ hash, ...file }) => {
+        fileRegistry[hash] = file;
+      });
+      acc[scope].push(result);
+      return acc;
+    }, cachedOperations) as OperationsFromDocument<TDocument>;
+    const dbDoc = result;
+    const doc = {
+      created: dbDoc.created.toISOString(),
+      name: dbDoc.name ? dbDoc.name : "",
+      documentType: dbDoc.documentType,
+      initialState: JSON.parse(
+        dbDoc.initialState,
+      ) as ExtendedStateFromDocument<TDocument>,
+      state: undefined,
+      lastModified: new Date(dbDoc.lastModified).toISOString(),
+      operations: operationsByScope,
+      clipboard: [],
+      revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
+      meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
+      attachments: {},
+    };
+    return doc as unknown as TDocument;
   }
 
   async deleteDocument(drive: string, id: string) {
