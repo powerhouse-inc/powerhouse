@@ -1,8 +1,8 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
 import { logger } from "document-drive";
-import { DocumentModelModule } from "document-model";
+import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
-import { existsSync, readFileSync, StatWatcher, watchFile } from "node:fs";
+import { existsSync, readFileSync, type StatWatcher, watchFile } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
