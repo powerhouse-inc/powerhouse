@@ -1,1 +1,1 @@
-export * from "./amount-field.js";
+export { AmountField, type AmountFieldProps } from "./amount-field.js";

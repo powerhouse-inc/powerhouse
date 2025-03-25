@@ -1,12 +1,12 @@
-import type { Currency } from "../currency-code-field/types.js";
 import {
   cryptoCurrencies,
   currencies,
+  type Currency,
   fiatCurrencies,
-} from "../currency-code-field/utils.js";
-import type { AmountFieldPropsGeneric, AmountValue } from "./types.js";
+} from "#scalars";
+import type { AmountInputPropsGeneric, AmountValue } from "./types.js";
 
-export const getDefaultUnits = (type: AmountFieldPropsGeneric["type"]) => {
+export const getDefaultUnits = (type: AmountInputPropsGeneric["type"]) => {
   switch (type) {
     case "AmountFiat":
       return fiatCurrencies();
@@ -107,7 +107,7 @@ export const createAmountValue = (inputValue: string) => {
 };
 
 export const isValidUnit = (
-  type: AmountFieldPropsGeneric["type"],
+  type: AmountInputPropsGeneric["type"],
   value: AmountValue,
   units?: Currency[],
 ) => {

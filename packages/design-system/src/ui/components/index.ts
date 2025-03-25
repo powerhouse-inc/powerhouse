@@ -26,6 +26,11 @@ export {
 } from "./data-entry/time-picker/index.js";
 export { Toggle, type ToggleProps } from "./data-entry/toggle/index.js";
 
+export {
+  AmountInput,
+  type AmountInputProps,
+} from "./data-entry/amount-input/index.js";
+
 // dropdown
 export {
   Dropdown,
