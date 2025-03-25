@@ -262,7 +262,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
   private async getDrive(driveId: string): Promise<DocumentDriveDocument> {
     try {
-      const cachedDocument = await this.cache.getDocument(driveId);
+      const cachedDocument = await this.cache.getDocument("drives", driveId);
       if (cachedDocument && isDocumentDrive(cachedDocument)) {
         return cachedDocument;
       }
@@ -282,7 +282,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
     documentId: string,
   ): Promise<PHDocument> {
     try {
-      const cachedDocument = await this.cache.getDocument(documentId);
+      const cachedDocument = await this.cache.getDocument(driveId, documentId);
       if (cachedDocument) {
         return cachedDocument;
       }

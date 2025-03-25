@@ -10,6 +10,7 @@ import type {
 
 export interface IStorageDelegate {
   getCachedOperations<TDocument extends PHDocument = PHDocument>(
+    drive: string,
     id: string,
   ): Promise<OperationsFromDocument<TDocument> | undefined>;
 }

@@ -440,7 +440,10 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    const cachedOperations = (await this.delegate?.getCachedOperations(id)) ?? {
+    const cachedOperations = (await this.delegate?.getCachedOperations(
+      driveId,
+      id,
+    )) ?? {
       global: [],
       local: [],
     };
