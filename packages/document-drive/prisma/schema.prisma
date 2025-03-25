@@ -27,7 +27,7 @@ model Document {
   initialState        String // json object with the scope as keys of the root object
   documentType        String
   meta                String?
-  synchronizationUnits SynchronizationUnit[]
+  syncronizationUnits SyncronizationUnit[]
   driveDocuments      DriveDocument[]
 }
 
@@ -46,6 +46,7 @@ model DriveDocument {
 model Operation {
   id          String       @id @default(uuid())
   opId        String?
+  driveId     String
   Document    Document?    @relation(fields: [documentId], references: [id], onDelete: Cascade)
   documentId  String
   scope       String
@@ -62,12 +63,12 @@ model Operation {
   context     Json?
   resultingState Bytes?
 
-  SynchronizationUnit SynchronizationUnit? @relation(fields: [syncId], references: [id], onDelete: Cascade)
+  SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId], references: [id], onDelete: Cascade)
 
   @@unique([documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
 }
 
-model SynchronizationUnit {
+model SyncronizationUnit {
   id         String       @id
   documentId String
 

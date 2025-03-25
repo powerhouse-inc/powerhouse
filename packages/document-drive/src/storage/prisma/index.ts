@@ -258,6 +258,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     try {
       await tx.operation.createMany({
         data: operations.map((op) => ({
+          driveId: drive,
           documentId: id,
           hash: op.hash,
           index: op.index,
@@ -435,7 +436,17 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       },
     };
 
+    if (driveId !== "drives") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      query.where.driveDocuments = {
+        some: {
+          driveId,
+        },
+      };
+    }
+
     const result = await prisma.document.findUnique(query);
+
     if (result === null) {
       throw new Error(`Document with id ${id} not found`);
     }
@@ -497,10 +508,11 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
                 ELSE NULL
             END AS "resultingState"
             FROM ranked_operations
-            WHERE "documentId" = $1
+            WHERE "driveId" = $1 AND "documentId" = $2
             AND (${conditions.join(" OR ")})
             ORDER BY scope, index;
         `,
+      driveId,
       id,
     );
     const operationIds = queryOperations.map((o) => o.id);
