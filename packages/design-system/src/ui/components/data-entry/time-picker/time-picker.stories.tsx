@@ -17,9 +17,10 @@ import { TimePicker } from "./time-picker";
  * - Configurable time intervals
  * - Timezone selection support
  * - Custom placeholder support
- * 
- *  **Note:** This component does not have built-in validation. If you need built-in validation
- *  you can use the [TimeField]
+ *
+ * > **Note:** This component does not have built-in validation. If you need built-in validation
+ * > you can use the [TimePicker](?path=/docs/document-engineering-scalars-timepickerfield--readme)
+ * > component.
  */
 
 const meta: Meta<typeof TimePicker> = {

@@ -5,12 +5,14 @@ import { DateTimePicker } from "./date-time-picker.js";
 import { FORMAT_MAPPING } from "./utils.js";
 
 /**
- * The `DateTimePicker` component provides a comprehensive date and time selection interface.
+ * The `DateTimePicker` component provides an input field for selecting both dates and times.
  * It supports multiple configuration properties like:
- * 
+ * - label
+ * - description
+ * - minDate
+ * - maxDate
  * - dateFormat
  * - timeFormat
- * - minDate/maxDate
  * - weekStart
  * - timeZone
  * - timeIntervals
@@ -18,13 +20,17 @@ import { FORMAT_MAPPING } from "./utils.js";
  * Features include:
  * - Date and time selection in a single component
  * - Customizable date and time formats
- * - Timezone support
+ * - Min/Max date restrictions
  * - Past/Future date restrictions
  * - Configurable week start day
+ * - Time zone support
+ * - Adjustable time intervals
  * - Auto-close functionality
+ * - Custom placeholder support
  * 
- * > **Note:** This component combines both date picker and time picker functionality
- * > for a complete datetime selection experience.
+ * > **Note:** This component does not have built-in validation. If you need built-in validation
+ * > you can use the [DateTimePickerField](?path=/docs/document-engineering-scalars-datetimepickerfield--readme)
+ * > component.
  */
 
 const meta: Meta<typeof DateTimePicker> = {
@@ -193,12 +199,6 @@ const meta: Meta<typeof DateTimePicker> = {
     layout: "centered",
     form: {
       resetBehavior: "unmount",
-    },
-    docs: {
-      description: {
-        component:
-          "A DateTimeField component that renders both a DatePicker and TimePicker functionality in a single component.",
-      },
     },
   },
 };

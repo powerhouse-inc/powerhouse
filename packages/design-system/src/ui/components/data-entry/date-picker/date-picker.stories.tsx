@@ -22,8 +22,9 @@ import { DatePicker } from "./date-picker.js";
  * - Configurable week start day
  * - Auto-close functionality
  * - Custom placeholder support
+ *
  * > **Note:** This component does not have built-in validation. If you need built-in validation
- * > you can use the [DateField](?path=/docs/document-engineering-scalars-date-field--readme)
+ * > you can use the [DatePicker](?path=/docs/document-engineering-scalars-date-field--readme)
  * > component.
  */
 const meta: Meta<typeof DatePicker> = {
