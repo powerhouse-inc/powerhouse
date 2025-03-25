@@ -1,25 +1,43 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { FORMAT_MAPPING } from "../../../ui/components/data-entry/date-time-picker/utils.js";
-import { withForm } from "../../index.js";
-import {
-  getDefaultArgTypes,
-  getValidationArgTypes,
-  StorybookControlCategory
-} from "../../lib/storybook-arg-types.js";
-import { DateTimePickerField } from "./date-time-picker-field.js";
+import { withTimestampsAsISOStrings } from "../../../../scalars/lib/decorators";
+import { getDefaultArgTypes, StorybookControlCategory } from "../../../../scalars/lib/storybook-arg-types";
+import { DateTimePicker } from "./date-time-picker.js";
+import { FORMAT_MAPPING } from "./utils.js";
 
-const meta: Meta<typeof DateTimePickerField> = {
-  title: "Document Engineering/Scalars/DateTimePickerField",
-  component: DateTimePickerField,
-  decorators: [withForm],
+/**
+ * The `DateTimePicker` component provides a comprehensive date and time selection interface.
+ * It supports multiple configuration properties like:
+ * 
+ * - dateFormat
+ * - timeFormat
+ * - minDate/maxDate
+ * - weekStart
+ * - timeZone
+ * - timeIntervals
+ * 
+ * Features include:
+ * - Date and time selection in a single component
+ * - Customizable date and time formats
+ * - Timezone support
+ * - Past/Future date restrictions
+ * - Configurable week start day
+ * - Auto-close functionality
+ * 
+ * > **Note:** This component combines both date picker and time picker functionality
+ * > for a complete datetime selection experience.
+ */
+
+const meta: Meta<typeof DateTimePicker> = {
+  title: "Document Engineering/Data Entry/Date Time Picker",
+  component: DateTimePicker,
   tags: ["autodocs"],
+  decorators: [withTimestampsAsISOStrings],
   argTypes: {
     ...getDefaultArgTypes({
       enabledArgTypes: {
         value: true,
       },
     }),
-    ...getValidationArgTypes({}),
 
     minDate: {
       control: "date",
@@ -169,7 +187,7 @@ const meta: Meta<typeof DateTimePickerField> = {
   },
 
   args: {
-    name: "date-time-picker-field",
+    name: "date-time-picker",
   },
   parameters: {
     layout: "centered",
@@ -188,10 +206,12 @@ const meta: Meta<typeof DateTimePickerField> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const DateTimePicker: Story = {
+export const Default: Story = {
   args: {
+    name: "date-time-picker",
     label: "Date Time Picker Field",
     description: "This is a date time picker field",
     placeholder: "2025/01/27 12:00",
+    onChange: () => {},
   },
 };
