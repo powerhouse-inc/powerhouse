@@ -122,7 +122,7 @@ const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(
             {isShowSelect && currencyPosition === "left" && (
               <CurrencyCodeFieldRaw
                 contentAlign="start"
-                contentClassName="[&]:!w-[100px] w-full"
+                contentClassName="[&]:!w-[120px] w-full"
                 disabled={disabled}
                 currencies={options ?? []}
                 onChange={handleOnChangeSelect}
@@ -189,7 +189,7 @@ const AmountInput = forwardRef<HTMLInputElement, AmountInputProps>(
           {isShowSelect && currencyPosition === "right" && (
             <CurrencyCodeFieldRaw
               contentAlign="end"
-              contentClassName="[&]:!w-[100px] w-full"
+              contentClassName="[&]:!w-[120px] w-full"
               disabled={disabled}
               includeCurrencySymbols={includeCurrencySymbols}
               currencies={options ?? []}
