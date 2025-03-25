@@ -1,4 +1,6 @@
+import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import viteReact from "@vitejs/plugin-react";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -143,6 +145,12 @@ export async function startServer(
       dedupe: ["@powerhousedao/reactor-browser"],
     },
     plugins: [
+      viteReact({
+        // includes js|jsx|ts|tsx)$/ inside projectRoot
+        include: [join(projectRoot, "**/*.(js|jsx|ts|tsx)")],
+        exclude: ["node_modules", join(studioPath, "assets/*.js")],
+      }),
+      tailwindcss(),
       viteConnectDevStudioPlugin(true, studioPath),
       viteLoadExternalPackages(options.packages, studioPath, true),
       viteEnvs({
