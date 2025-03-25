@@ -1,26 +1,43 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
-  getValidationArgTypes,
   StorybookControlCategory,
-} from "../../lib/storybook-arg-types.js";
-import { TimePickerField } from "./time-picker-field.js";
+} from "../../../../scalars/lib/storybook-arg-types.js";
+import { TimePicker } from "./time-picker";
 
-const meta: Meta<typeof TimePickerField> = {
-  title: "Document Engineering/Scalars/TimePickerField",
-  component: TimePickerField,
+/**
+ * The `TimePicker` component provides an input field for selecting times.
+ * It supports multiple configuration properties like:
+ * - label
+ * - description
+ * - timeFormat
+ * - timeIntervals
+ * - timeZone
+ * - showTimezoneSelect
+ *
+ * Features include:
+ * - Customizable time format (12/24 hour)
+ * - Configurable time intervals
+ * - Timezone selection support
+ * - Custom placeholder support
+ *
+ * > **Note:** This component does not have built-in validation. If you need built-in validation
+ * > you can use the [TimePicker](?path=/docs/document-engineering-scalars-timepickerfield--readme)
+ * > component.
+ */
+
+const meta: Meta<typeof TimePicker> = {
+  title: "Document Engineering/Data Entry/Time Picker",
+  component: TimePicker,
   parameters: {
     layout: "centered",
     form: {
       resetBehavior: "unmount",
     },
   },
-  decorators: [withForm],
   tags: ["autodocs"],
   argTypes: {
     ...getDefaultArgTypes(),
-    ...getValidationArgTypes(),
     timeFormat: {
       control: {
         type: "select",
