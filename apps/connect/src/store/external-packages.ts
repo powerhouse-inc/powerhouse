@@ -10,6 +10,7 @@ const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES === 'true';
 export type ExternalPackage = DocumentModelLib & { id: string };
 
 function loadExternalPackages() {
+    console.log('Loading external packages', LOAD_EXTERNAL_PACKAGES);
     if (!shouldLoadExternalPackages) {
         return Promise.resolve([]);
     } else {

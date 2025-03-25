@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import path, { join } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type PluginOption, type ViteDevServer } from "vite";
 import {
@@ -31,18 +31,18 @@ export function watchLocalFiles(
 
   const refreshModelsWithDebounce = debounce(() => {
     console.log(`Local document models changed, reloading Connect...`);
-    server.ws.send({
-      type: "full-reload",
-      path: "*",
-    });
+    // server.ws.send({
+    //   type: "full-reload",
+    //   path: "*",
+    // });
   });
 
   const refreshEditorsWithDebounce = debounce(() => {
     console.log(`Local document editors changed, reloading Connect...`);
-    server.ws.send({
-      type: "full-reload",
-      path: "*",
-    });
+    // server.ws.send({
+    //   type: "full-reload",
+    //   path: "*",
+    // });
   });
 
   if (documentModelsPath) {
@@ -144,26 +144,6 @@ export function viteConnectDevStudioPlugin(
             join(connectPath, ".env"),
           );
         }
-      },
-      configureServer(server) {
-        watchLocalFiles(
-          server,
-          localDocumentModelsPath,
-          localDocumentEditorsPath,
-        );
-      },
-      transformIndexHtml(html) {
-        if (!enabled || html.includes("editors/style.css")) return;
-        return [
-          {
-            tag: "link",
-            attrs: {
-              type: "text/css",
-              rel: "stylesheet",
-              href: path.join(connectPath, "../../editors/style.css"),
-            },
-          },
-        ];
       },
     },
   ];
