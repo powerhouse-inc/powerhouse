@@ -248,7 +248,6 @@ const Calendar = ({
           if (navView === "years") {
             return (
               <div className="mt-[18px] flex flex-col gap-2">
-                <CalendarDateHeader navView={navView} setNavView={setNavView} />
                 <YearGrid
                   displayYears={displayYears}
                   startMonth={startMonth}
@@ -261,13 +260,13 @@ const Calendar = ({
                     setNavView("months");
                   }}
                 />
+                <CalendarDateHeader navView={navView} setNavView={setNavView} />
               </div>
             );
           }
           if (navView === "months") {
             return (
               <div className="mt-[15px] flex flex-col gap-3">
-                <CalendarDateHeader navView={navView} setNavView={setNavView} />
                 <MonthGrid
                   actualMonth={actualMonth}
                   actualYear={actualYear}
@@ -276,6 +275,7 @@ const Calendar = ({
                     setNavView("days");
                   }}
                 />
+                <CalendarDateHeader navView={navView} setNavView={setNavView} />
               </div>
             );
           }
