@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { getDefaultArgTypes, StorybookControlCategory } from "../../../../scalars/lib/storybook-arg-types.js";
+import {
+  getDefaultArgTypes,
+  StorybookControlCategory,
+} from "../../../../scalars/lib/storybook-arg-types.js";
 import { TimePicker } from "./time-picker";
 
 /**
@@ -11,7 +14,7 @@ import { TimePicker } from "./time-picker";
  * - timeIntervals
  * - timeZone
  * - showTimezoneSelect
- * 
+ *
  * Features include:
  * - Customizable time format (12/24 hour)
  * - Configurable time intervals

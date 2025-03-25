@@ -4,7 +4,7 @@ import { withForm } from "../../index.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
-  StorybookControlCategory
+  StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { DateTimePickerField } from "./date-time-picker-field.js";
 

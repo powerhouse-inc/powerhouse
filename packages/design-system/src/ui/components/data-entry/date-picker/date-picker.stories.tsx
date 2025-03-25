@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withTimestampsAsISOStrings } from "../../../../scalars/index.js";
-import { getDefaultArgTypes, StorybookControlCategory } from "../../../../scalars/lib/storybook-arg-types.js";
+import {
+  getDefaultArgTypes,
+  StorybookControlCategory,
+} from "../../../../scalars/lib/storybook-arg-types.js";
 import { FORMAT_MAPPING } from "../date-time-picker/utils.js";
 import { DatePicker } from "./date-picker.js";
 
@@ -14,7 +17,7 @@ import { DatePicker } from "./date-picker.js";
  * - dateFormat
  * - weekStart
  * - autoClose
- * 
+ *
  * Features include:
  * - Customizable date format
  * - Min/Max date restrictions

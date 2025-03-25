@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withTimestampsAsISOStrings } from "../../../../scalars/lib/decorators";
-import { getDefaultArgTypes, StorybookControlCategory } from "../../../../scalars/lib/storybook-arg-types";
+import {
+  getDefaultArgTypes,
+  StorybookControlCategory,
+} from "../../../../scalars/lib/storybook-arg-types";
 import { DateTimePicker } from "./date-time-picker.js";
 import { FORMAT_MAPPING } from "./utils.js";
 
@@ -16,7 +19,7 @@ import { FORMAT_MAPPING } from "./utils.js";
  * - weekStart
  * - timeZone
  * - timeIntervals
- * 
+ *
  * Features include:
  * - Date and time selection in a single component
  * - Customizable date and time formats
@@ -27,7 +30,7 @@ import { FORMAT_MAPPING } from "./utils.js";
  * - Adjustable time intervals
  * - Auto-close functionality
  * - Custom placeholder support
- * 
+ *
  * > **Note:** This component does not have built-in validation. If you need built-in validation
  * > you can use the [DateTimePickerField](?path=/docs/document-engineering-scalars-datetimepickerfield--readme)
  * > component.
