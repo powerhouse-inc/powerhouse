@@ -242,7 +242,7 @@ async function loadSubgraphs(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const SubgraphClass = subgraph[name] as SubgraphClass;
       if (isSubgraphClass(SubgraphClass)) {
-        await subgraphManager.registerSubgraph(SubgraphClass, "dev");
+        await subgraphManager.registerSubgraph(SubgraphClass);
       }
     }
   } catch (e) {
