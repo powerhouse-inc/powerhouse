@@ -10,7 +10,7 @@ import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
 import { PHIDField } from "./phid-field.js";
 
 const meta: Meta<typeof PHIDField> = {
-  title: "Document Engineering/Simple Components/PHID Field",
+  title: "Document Engineering/Scalars/PHID Field",
   component: PHIDField,
   decorators: [
     withForm,

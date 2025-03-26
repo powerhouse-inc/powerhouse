@@ -8,6 +8,7 @@ import {
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import InMemoryCache from "../src/cache/memory";
 import { reducer } from "../src/drive-document-model/gen/reducer";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import * as DriveUtils from "../src/drive-document-model/src/utils";
@@ -30,11 +31,12 @@ const actions = driveDocumentModelModule.actions;
 
 const FileStorageDir = path.join(__dirname, "./file-storage");
 const prismaClient = new PrismaClient();
+const cache = new InMemoryCache();
 const storageLayers = [
   ["MemoryStorage", async () => new MemoryStorage()],
   ["FilesystemStorage", async () => new FilesystemStorage(FileStorageDir)],
   ["BrowserStorage", async () => new BrowserStorage()],
-  ["PrismaStorage", async () => new PrismaStorage(prismaClient)],
+  ["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
   /*[
     "SequelizeStorage",
     async () => {
@@ -63,6 +65,8 @@ let file: PHDocument | undefined = undefined;
 describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   beforeEach(async () => {
     vi.setSystemTime(new Date("2024-01-01"));
+
+    cache.clear();
 
     if (storageName === "FilesystemStorage") {
       return fs.rm(FileStorageDir, { recursive: true, force: true });
@@ -93,6 +97,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("adds drive to server", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -133,6 +138,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it.skipIf(!file)("adds file to server", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -197,6 +203,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect,
   }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -245,6 +252,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("deletes file from server", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -300,6 +308,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect,
   }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -354,6 +363,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect,
   }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -416,6 +426,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("deletes drive from server", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -443,6 +454,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect,
   }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -488,6 +500,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("renames drive", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -524,6 +537,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("copies document when file is copied drive", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -593,6 +607,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("adds document operation", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -650,6 +665,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("saves operation context", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
@@ -707,6 +723,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("get drives by slug", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     const addDrive = (driveId: string, slug: string) =>
@@ -747,6 +764,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   it.skipIf(!file)("import document from zip", async ({ expect }) => {
     const storage = await buildStorage();
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(storage)
       .build();
     const drive = await server.addDrive({
@@ -785,6 +803,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   it("should get synchronization units revision", async ({ expect }) => {
     const storage = await buildStorage();
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(storage)
       .build();
     await server.addDrive({
@@ -868,6 +887,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   it("should store all operation attributes", async ({ expect }) => {
     const storage = await buildStorage();
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(storage)
       .build();
     await server.addDrive({
@@ -924,6 +944,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   it("gets document at specific revision", async ({ expect }) => {
     const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({

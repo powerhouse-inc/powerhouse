@@ -62,12 +62,11 @@ const main = async () => {
         ? connectionString + "?sslmode=no-verify"
         : connectionString;
 
-    const storageFactory = new PrismaStorageFactory(dbUrl);
+    const redisCache = new RedisCache(redis);
+    const storageFactory = new PrismaStorageFactory(dbUrl, redisCache);
     const storage = storageFactory.build();
 
     const knex = getDbClient(dbUrl);
-
-    const redisCache = new RedisCache(redis);
 
     const reactor = new ReactorBuilder([
       documentModelDocumentModelModule,

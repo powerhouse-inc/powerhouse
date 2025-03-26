@@ -9,6 +9,7 @@ import {
   PHDocument,
 } from "../../document-model/index";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
+import InMemoryCache from "../src/cache/memory";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
@@ -62,7 +63,7 @@ const storageImplementations: [
       await prisma.$executeRawUnsafe('DELETE FROM "DriveDocument";');
       await prisma.$executeRawUnsafe('DELETE FROM "Drive";');
 
-      return new PrismaStorage(prisma);
+      return new PrismaStorage(prisma, new InMemoryCache());
     },
   ],
 ] as unknown as [string, () => Promise<IStorage & IDriveStorage>][];

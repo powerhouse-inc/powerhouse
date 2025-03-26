@@ -13,7 +13,7 @@ const prismaClient = new PrismaClient();
 
 const storageLayers = [
   ["BrowserStorage", () => new BrowserStorage()],
-  //["PrismaStorage", () => new PrismaStorage(prismaClient)],
+  //["PrismaStorage", () => new PrismaStorage(prismaClient, new InMemoryCache())],
 ] as const;
 
 describe("Signature migration", () => {

@@ -1,3 +1,15 @@
+## 1.26.0 (2025-03-26)
+
+### 🚀 Features
+
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente
+
 ## 1.25.0 (2025-03-24)
 
 ### 🚀 Features

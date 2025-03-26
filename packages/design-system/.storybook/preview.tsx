@@ -18,8 +18,10 @@ const preview: Preview = {
           "RWA",
           "Document Engineering",
           [
-            "Simple Components",
-            "Complex Components",
+            "Scalars",
+            "Data Entry",
+            "Data Display",
+            "Navigation",
             "Layout Components",
             "Fragments",
           ],

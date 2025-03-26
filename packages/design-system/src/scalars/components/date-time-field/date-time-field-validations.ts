@@ -14,11 +14,18 @@ import {
 } from "./utils.js";
 
 export const dateTimeFieldValidations =
-  ({ dateFormat, minDate, maxDate }: DateFieldProps) =>
+  ({
+    dateFormat,
+    minDate,
+    maxDate,
+    disablePastDates,
+    disableFutureDates,
+  }: DateFieldProps) =>
   (value: unknown) => {
     if (value === "" || value === undefined) {
       return true;
     }
+    const internalFormat = getDateFormat(dateFormat ?? "");
 
     // 1. Validate that it has date and time separated by space
     const { date, time } = splitIso8601DateTime(value as string);
@@ -27,7 +34,6 @@ export const dateTimeFieldValidations =
       return "Invalid format. Use DATE and TIME separated by a space.";
     }
 
-    const internalFormat = getDateFormat(dateFormat ?? "");
     const stringDate = normalizeMonthFormat(
       getDateFromValue(value as DateFieldValue),
     );
@@ -35,7 +41,7 @@ export const dateTimeFieldValidations =
     const isValid = isDateFormatAllowed(stringDate, internalFormat);
 
     if (!isValid) {
-      return "Invalid date format.";
+      return "Invalid format. Use DATE and TIME separated by a space.";
     }
 
     if (!isValidTime(time)) {
@@ -59,6 +65,19 @@ export const dateTimeFieldValidations =
         return `Date must be on or before ${formattedMaxDate}.`;
       }
     }
-
+    if (disablePastDates) {
+      const today = new Date();
+      if (validDate < today) {
+        const formattedToday = format(today, "dd/MM/yyyy");
+        return `Date must be on or after ${formattedToday}.`;
+      }
+    }
+    if (disableFutureDates) {
+      const today = new Date();
+      if (validDate > today) {
+        const formattedToday = format(today, "dd/MM/yyyy");
+        return `Date must be on or before ${formattedToday}.`;
+      }
+    }
     return true;
   };

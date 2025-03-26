@@ -23,7 +23,7 @@ import { logger } from "../../utils/logger.js";
 import type {
   IDocumentStorage,
   IDriveStorage,
-  IStorageDelegate,
+  IOperationsCache,
 } from "../types.js";
 
 export * from "./factory.js";
@@ -95,10 +95,16 @@ type ExtendedPrismaClient = ReturnType<
 
 export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   private db: ExtendedPrismaClient;
-  private delegate: IStorageDelegate | undefined;
+  private cache: IOperationsCache;
 
-  constructor(db: PrismaClient, options?: PrismaStorageOptions) {
+  constructor(
+    db: PrismaClient,
+    cache: IOperationsCache,
+    options?: PrismaStorageOptions,
+  ) {
     const backOffOptions = options?.transactionRetryBackoff;
+
+    this.cache = cache;
     this.db = getRetryTransactionsClient(db, {
       ...backOffOptions,
       jitter: backOffOptions?.jitter ?? "full",
@@ -147,10 +153,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
-
-  setStorageDelegate(delegate: IStorageDelegate): void {
-    this.delegate = delegate;
-  }
 
   async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
     try {
@@ -415,7 +417,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    const cachedOperations = (await this.delegate?.getCachedOperations(
+    const cachedOperations = (await this.cache.getCachedOperations(
       driveId,
       id,
     )) ?? {

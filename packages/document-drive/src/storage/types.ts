@@ -8,7 +8,7 @@ import type {
   PHDocument,
 } from "document-model";
 
-export interface IStorageDelegate {
+export interface IOperationsCache {
   getCachedOperations<TDocument extends PHDocument = PHDocument>(
     drive: string,
     id: string,
@@ -55,7 +55,6 @@ export interface IStorage {
     scope: string,
     branch: string,
   ): Promise<string | undefined>;
-  setStorageDelegate?(delegate: IStorageDelegate): void;
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
       documentId: string;

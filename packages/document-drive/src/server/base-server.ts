@@ -1,4 +1,3 @@
-import { type ICache } from "#cache/types";
 import {
   removeListener,
   removeTrigger,
@@ -35,7 +34,6 @@ import {
   type DocumentModelModule,
   type Operation,
   type OperationScope,
-  type OperationsFromDocument,
   type PHDocument,
   attachBranch,
   garbageCollect,
@@ -51,6 +49,7 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
+import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
   DriveAlreadyExistsError,
@@ -198,21 +197,6 @@ export class BaseDocumentDriveServer
       this.defaultDrivesManagerDelegate,
       options,
     );
-
-    this.storage.setStorageDelegate?.({
-      getCachedOperations: async <TDocument extends PHDocument>(
-        drive: string,
-        id: string,
-      ): Promise<OperationsFromDocument<TDocument> | undefined> => {
-        try {
-          const document = await this.cache.getDocument<TDocument>(drive, id);
-          return document?.operations;
-        } catch (error) {
-          logger.error(error);
-          return undefined;
-        }
-      },
-    });
 
     this.initializePromise = this._initialize();
   }

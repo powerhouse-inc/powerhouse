@@ -9,7 +9,7 @@ import {
 import { CountryCodeField } from "./country-code-field.js";
 
 const meta: Meta<typeof CountryCodeField> = {
-  title: "Document Engineering/Simple Components/Country Code Field",
+  title: "Document Engineering/Scalars/Country Code Field",
   component: CountryCodeField,
   decorators: [
     withForm,

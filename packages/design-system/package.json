@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.39.1",
+  "version": "1.39.1-dev.1",
   "description": "",
   "files": [
     "/dist"
@@ -19,6 +19,10 @@
       "types": "./dist/src/scalars/index.d.ts",
       "import": "./dist/src/scalars/index.js"
     },
+    "./ui": {
+      "types": "./dist/src/ui/index.d.ts",
+      "import": "./dist/src/ui/index.js"
+    },
     "./style.css": "./dist/style.css"
   },
   "imports": {
@@ -28,6 +32,7 @@
     "#powerhouse": "./dist/src/powerhouse/index.js",
     "#rwa": "./dist/src/rwa/index.js",
     "#scalars": "./dist/src/scalars/index.js",
+    "#ui": "./dist/src/ui/index.js",
     "#services": "./dist/src/services/index.js"
   },
   "scripts": {
