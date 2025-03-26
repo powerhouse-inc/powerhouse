@@ -71,7 +71,7 @@ class RedisCache implements ICache, IOperationsCache {
       EX: this.timeoutInSeconds ? this.timeoutInSeconds : undefined,
     });
 
-    if (result === "OK") {
+    if (result !== "OK") {
       throw new Error(
         `Failed to set drive ${driveId} in redis. Got '${result}'`,
       );
