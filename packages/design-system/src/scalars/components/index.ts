@@ -10,6 +10,7 @@ export * from "./form/index.js";
 export * from "./fragments/index.js";
 export * from "./id-field/index.js";
 export * from "./number-field/index.js";
+export * from "./oid-field/index.js";
 export * from "./phid-field/index.js";
 export * from "./string-field/index.js";
 export * from "./time-picker-field/index.js";
