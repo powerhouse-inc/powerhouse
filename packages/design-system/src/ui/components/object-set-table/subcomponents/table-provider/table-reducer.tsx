@@ -3,6 +3,8 @@ import type { ColumnDef, DataType } from "../../types.js";
 interface TableState<T extends DataType = DataType> {
   columns: ColumnDef[];
   data: T[];
+  allowRowSelection: boolean;
+  showRowNumbers: boolean;
 }
 
 type TableAction<T extends DataType = DataType> =

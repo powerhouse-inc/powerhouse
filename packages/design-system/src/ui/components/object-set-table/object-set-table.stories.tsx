@@ -5,8 +5,49 @@ import { ObjectSetTable } from "./object-set-table.js";
 const meta: Meta<typeof ObjectSetTable> = {
   title: "Document Engineering/Data Display/Object Set Table",
   component: ObjectSetTable,
+  tags: ["autodocs"],
   parameters: {
     layout: "centered",
+  },
+  argTypes: {
+    columns: {
+      control: "object",
+      description: "The columns to display in the table.",
+      table: {
+        type: {
+          summary: "ColumnDef[]",
+        },
+        readonly: true,
+      },
+    },
+    data: {
+      control: "object",
+      description: "The data to display in the table.",
+      table: {
+        type: {
+          summary: "DataType[]",
+        },
+        readonly: true,
+      },
+    },
+    allowRowSelection: {
+      control: "boolean",
+      description: "Whether to allow row selection.",
+      table: {
+        type: {
+          summary: "boolean",
+        },
+      },
+    },
+    showRowNumbers: {
+      control: "boolean",
+      description: "Whether to show row numbers.",
+      table: {
+        type: {
+          summary: "boolean",
+        },
+      },
+    },
   },
 };
 
