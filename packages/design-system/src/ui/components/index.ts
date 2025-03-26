@@ -16,6 +16,11 @@ export {
 } from "./data-entry/date-time-picker/index.js";
 export { Input, type InputProps } from "./data-entry/input/index.js";
 export {
+  OIDInput,
+  type OIDInputProps,
+  type OIDOption,
+} from "./data-entry/oid-input/index.js";
+export {
   TextInput,
   type TextInputProps,
 } from "./data-entry/text-input/index.js";
