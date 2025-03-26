@@ -91,6 +91,18 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return true;
   }
 
+  async removeChild(parentId: string, childId: string): Promise<boolean> {
+    const manifest = await this.getManifest(parentId);
+    const docIndex = manifest.documentIds.indexOf(childId);
+    if (docIndex !== -1) {
+      manifest.documentIds.splice(docIndex, 1);
+      await this.updateDriveManifest(parentId, manifest);
+      return true;
+    }
+
+    return false;
+  }
+
   async addChild(parentId: string, childId: string): Promise<void> {
     if (parentId === childId) {
       throw new Error("Cannot associate a document with itself");

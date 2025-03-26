@@ -14,7 +14,7 @@ export interface IDocumentStorage {
   delete(documentId: string): Promise<boolean>;
 
   addChild(parentId: string, childId: string): Promise<void>;
-  //removeChild(parentId: string, childId: string): Promise<void>;
+  removeChild(parentId: string, childId: string): Promise<boolean>;
   getChildren(parentId: string): Promise<string[]>;
   //getParent(childId: string): Promise<string | undefined>;
 }

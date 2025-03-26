@@ -365,6 +365,24 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     });
   }
 
+  async removeChild(parentId: string, childId: string) {
+    try {
+      await this.db.driveDocument.delete({
+        where: {
+          // use unique constraint so it either deletes or throws
+          driveId_documentId: {
+            driveId: parentId,
+            documentId: childId,
+          },
+        },
+      });
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   async getChildren(parentId: string): Promise<string[]> {
     const docs = await this.db.document.findMany({
       select: {

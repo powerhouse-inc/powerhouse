@@ -90,6 +90,16 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     this.updateDriveManifest(parentId, manifest);
   }
 
+  async removeChild(parentId: string, childId: string) {
+    const manifest = this.getManifest(parentId);
+    if (manifest.documentIds.delete(childId)) {
+      this.updateDriveManifest(parentId, manifest);
+      return true;
+    }
+
+    return false;
+  }
+
   async getChildren(parentId: string): Promise<string[]> {
     const manifest = this.getManifest(parentId);
     return [...manifest.documentIds];

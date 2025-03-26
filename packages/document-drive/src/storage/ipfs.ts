@@ -105,6 +105,18 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     }
   }
 
+  async removeChild(parentId: string, childId: string): Promise<boolean> {
+    const manifest = await this.getDriveManifest(parentId);
+    const docIndex = manifest.documentIds.indexOf(childId);
+    if (docIndex !== -1) {
+      manifest.documentIds.splice(docIndex, 1);
+      await this.updateDriveManifest(parentId, manifest);
+      return true;
+    }
+
+    return false;
+  }
+
   async getChildren(parentId: string): Promise<string[]> {
     const manifest = await this.getDriveManifest(parentId);
     return manifest.documentIds;
@@ -412,6 +424,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     const manifestPath = this._buildDriveManifestPath(driveId);
     const manifestContent = stringify(manifest);
     const manifestBuffer = new TextEncoder().encode(manifestContent);
-    await this.fs.writeBytes(manifestBuffer, manifestPath);
+    await this.fs.writeBytes(manifestBuffer, manifestPath, { force: true });
   }
 }

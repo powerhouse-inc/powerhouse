@@ -102,6 +102,18 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     }
   }
 
+  async removeChild(parentId: string, childId: string): Promise<boolean> {
+    const manifest = await this.getManifest(parentId);
+    const docIndex = manifest.documentIds.indexOf(childId);
+    if (docIndex !== -1) {
+      manifest.documentIds.splice(docIndex, 1);
+      await this.updateDriveManifest(parentId, manifest);
+      return true;
+    }
+
+    return false;
+  }
+
   async getChildren(parentId: string): Promise<string[]> {
     const manifest = await this.getManifest(parentId);
     return manifest.documentIds;
