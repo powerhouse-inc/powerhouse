@@ -33,4 +33,8 @@ Module: <%= h.changeCase.pascal(module.name) %>
 <% module.operations.forEach(op => { _%>
 <%- op.schema.replace('input ', 'input ' + h.changeCase.pascal(documentType) + '_') %>
 <%_ })}); %>
-`;
+
+type Query {
+    <%- h.changeCase.pascal(documentType) %>(driveId:String, docId:PHID): <%- h.changeCase.pascal(documentType) %>State
+}
+`

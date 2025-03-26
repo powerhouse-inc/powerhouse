@@ -61,6 +61,14 @@ export const getResolvers = (subgraph: Subgraph) => {
         },
 
 <%_ })}); %>
+    },
+    Query: {
+      <%- h.changeCase.pascal(documentType) %>: async (_: any, args: any) => {
+        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
+        const docId: string = args.docId || "";
+        const doc = await reactor.getDocument(driveId, docId);
+        return doc.state.global;
+      }
     }
   });
 };
