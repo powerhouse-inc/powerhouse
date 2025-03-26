@@ -1,6 +1,6 @@
-import type { IdAutocompleteOption } from "../fragments/id-autocomplete/types.js";
+import type { PHIDOption } from "./types.js";
 
-export const mockedOptions: IdAutocompleteOption[] = [
+export const mockedOptions: PHIDOption[] = [
   {
     icon: "PowerhouseLogoSmall",
     title: "Document A",
@@ -183,7 +183,7 @@ export const mockedOptions: IdAutocompleteOption[] = [
 ];
 
 const filterOptions = (
-  options: IdAutocompleteOption[],
+  options: PHIDOption[],
   userInput: string,
   context?: Record<string, unknown>,
 ) => {
@@ -222,7 +222,7 @@ const filterOptions = (
 export const fetchOptions = async (
   userInput: string,
   context?: Record<string, unknown>,
-): Promise<IdAutocompleteOption[]> => {
+): Promise<PHIDOption[]> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -236,7 +236,7 @@ export const fetchOptions = async (
 
 export const fetchSelectedOption = async (
   value: string,
-): Promise<IdAutocompleteOption | undefined> => {
+): Promise<PHIDOption | undefined> => {
   // Simulate 2s network delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
   return mockedOptions.find((option) => option.value === value);
@@ -246,12 +246,12 @@ export const fetchSelectedOption = async (
 export const fetchOptionsSync = (
   userInput: string,
   context?: Record<string, unknown>,
-): IdAutocompleteOption[] => {
+): PHIDOption[] => {
   return filterOptions(mockedOptions, userInput, context);
 };
 
 export const fetchSelectedOptionSync = (
   value: string,
-): IdAutocompleteOption | undefined => {
+): PHIDOption | undefined => {
   return mockedOptions.find((option) => option.value === value);
 };

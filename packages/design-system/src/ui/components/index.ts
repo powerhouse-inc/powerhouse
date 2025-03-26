@@ -21,6 +21,11 @@ export {
   type OIDOption,
 } from "./data-entry/oid-input/index.js";
 export {
+  PHIDInput,
+  type PHIDInputProps,
+  type PHIDOption,
+} from "./data-entry/phid-input/index.js";
+export {
   TextInput,
   type TextInputProps,
 } from "./data-entry/text-input/index.js";
