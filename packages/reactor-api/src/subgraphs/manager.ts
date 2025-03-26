@@ -109,9 +109,7 @@ export class SubgraphManager {
   }
 
   private createApolloGateway(endpoints: Record<string, ApolloServer>) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const gateway = new ApolloGateway({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       supergraphSdl: new IntrospectAndCompose({
         subgraphs: Object.keys(endpoints).map((path) => ({
           name: path.replaceAll("/", ""),
@@ -121,7 +119,6 @@ export class SubgraphManager {
     });
 
     return new ApolloServer({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       gateway,
       plugins: [
         ApolloServerPluginInlineTraceDisabled(),
@@ -161,6 +158,9 @@ export class SubgraphManager {
     });
     await subgraphInstance.onSetup();
     if (!this.subgraphs[supergraph]) {
+      if (supergraph !== "") {
+        console.log(`> Created /${supergraph} supergraph `);
+      }
       this.subgraphs[supergraph] = [];
     }
     this.subgraphs[supergraph].push(subgraphInstance);
