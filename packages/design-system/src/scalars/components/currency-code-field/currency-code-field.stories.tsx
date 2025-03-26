@@ -6,10 +6,9 @@ import {
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { CurrencyCodeField } from "./currency-code-field.js";
-import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults.js";
-
+import { cryptoCurrencies, fiatCurrencies } from "./utils.js";
 const meta: Meta<typeof CurrencyCodeField> = {
-  title: "Document Engineering/Simple Components/Currency Code Field",
+  title: "Document Engineering/Scalars/Currency Code Field",
   component: CurrencyCodeField,
   decorators: [withForm, (Story) => <div className="w-48">{Story()}</div>],
   parameters: {
@@ -33,15 +32,6 @@ const meta: Meta<typeof CurrencyCodeField> = {
       description: " Whether to display currency symbols alongside codes",
       table: {
         defaultValue: { summary: "true" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-    allowedTypes: {
-      control: "select",
-      description: "Either Crypto, Fiat or Both",
-      options: ["Fiat", "Crypto", "Both"],
-      table: {
-        defaultValue: { summary: "Both" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
@@ -80,6 +70,7 @@ const meta: Meta<typeof CurrencyCodeField> = {
   args: {
     name: "currency-code-field",
     placeholder: "Select a currency",
+    favoriteCurrencies: [],
   },
 };
 
@@ -89,14 +80,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     label: "Currency",
-    currencies: commonCryptoCurrencies,
-  },
-};
-export const FavoriteCurrencies: Story = {
-  args: {
-    label: "Currency",
-    currencies: commonCryptoCurrencies,
-    favoriteCurrencies: ["BTC", "ETH"],
+    currencies: cryptoCurrencies(),
   },
 };
 
@@ -105,6 +89,38 @@ export const Disabled: Story = {
     label: "Currency",
     value: "EUR",
     disabled: true,
-    currencies: commonFiatCurrencies,
+    currencies: fiatCurrencies(),
+  },
+};
+
+export const WithFavorites: Story = {
+  args: {
+    label: "Currency",
+    currencies: [
+      {
+        ticker: "BTC",
+        crypto: true,
+        label: "Bitcoin",
+        symbol: "₿",
+      },
+      {
+        ticker: "ETH",
+        crypto: true,
+        label: "Ether",
+        symbol: "Ξ",
+      },
+      {
+        ticker: "USDS",
+        crypto: true,
+        label: "Sky USD",
+        symbol: "USDS",
+      },
+      {
+        ticker: "USDC",
+        crypto: true,
+        icon: "Briefcase",
+      },
+    ],
+    favoriteCurrencies: ["BTC", "ETH"],
   },
 };

@@ -77,9 +77,13 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
           variant={variant}
           icon={option.icon}
           title={option.title}
-          path={option.path}
+          path={
+            displayProps?.asPlaceholder
+              ? { text: "URL not available" }
+              : option.path
+          }
           value={
-            displayProps?.asPlaceholder ? "did not available" : option.value
+            displayProps?.asPlaceholder ? "aid not available" : option.value
           }
           description={option.description}
           agentType={

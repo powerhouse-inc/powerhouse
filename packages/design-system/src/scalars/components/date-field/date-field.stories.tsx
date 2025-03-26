@@ -9,7 +9,7 @@ import { FORMAT_MAPPING } from "../date-time-field/utils.js";
 import { DateField } from "./date-field.js";
 
 const meta: Meta<typeof DateField> = {
-  title: "Document Engineering/Simple Components/Date Field",
+  title: "Document Engineering/Scalars/Date Field",
   component: DateField,
   parameters: {
     layout: "centered",
@@ -61,9 +61,10 @@ const meta: Meta<typeof DateField> = {
       control: {
         type: "select",
       },
+      description: "The format of the date in the date picker",
       options: Object.keys(FORMAT_MAPPING),
       table: {
-        defaultValue: { summary: "yyyy-MM-dd" },
+        defaultValue: { summary: "YYYY-MM-DD" },
         type: {
           summary: "string",
         },
@@ -96,6 +97,14 @@ const meta: Meta<typeof DateField> = {
         type: { summary: "boolean" },
         defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    placeholder: {
+      control: "text",
+      description: "The placeholder text for the date picker",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.DEFAULT,
       },
     },
   },

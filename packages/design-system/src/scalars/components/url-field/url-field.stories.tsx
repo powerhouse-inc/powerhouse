@@ -9,7 +9,7 @@ import {
 import { UrlField } from "./url-field.js";
 
 const meta: Meta<typeof UrlField> = {
-  title: "Document Engineering/Simple Components/Url Field",
+  title: "Document Engineering/Scalars/Url Field",
   component: UrlField,
   decorators: [withForm],
   parameters: {

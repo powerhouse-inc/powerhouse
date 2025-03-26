@@ -8,10 +8,13 @@ import {
 import { TimeField } from "./time-field.js";
 
 const meta: Meta<typeof TimeField> = {
-  title: "Document Engineering/Simple Components/Time Field",
+  title: "Document Engineering/Scalars/Time Field",
   component: TimeField,
   parameters: {
     layout: "centered",
+    form: {
+      resetBehavior: "unmount",
+    },
   },
   decorators: [withForm],
   tags: ["autodocs"],
@@ -22,6 +25,11 @@ const meta: Meta<typeof TimeField> = {
       control: {
         type: "select",
       },
+      description: "The format of the time in the time picker",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
 
       options: ["hh:mm a", "HH:mm"],
       defaultValue: { summary: "hh:mm a" },
@@ -29,43 +37,55 @@ const meta: Meta<typeof TimeField> = {
     showTimezoneSelect: {
       control: {
         type: "boolean",
-        description: "Show timezone select",
-        defaultValue: false,
-        table: {
-          category: StorybookControlCategory.COMPONENT_SPECIFIC,
-        },
       },
-      defaultValue: { summary: false },
+      description: "Show timezone select",
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        type: { summary: "boolean" },
+      },
     },
     timeIntervals: {
+      description: "The interval between each time option",
       control: {
-        description: "The interval between each time option",
         type: "number",
-        min: 1,
-        max: 60,
-        table: {
-          category: StorybookControlCategory.COMPONENT_SPECIFIC,
-        },
       },
+
+      type: "number",
+      min: 1,
+      max: 60,
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+
       defaultValue: { summary: 1 },
     },
     timeZone: {
+      description: "The timezone to display in the time picker",
       control: {
         type: "text",
-        description: "The timezone to display in the time picker",
-        table: {
-          category: StorybookControlCategory.COMPONENT_SPECIFIC,
-        },
+      },
+      table: {
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        type: { summary: "string" },
       },
     },
     includeContinent: {
+      description: "Show continent name in the timezone select",
       control: {
         type: "boolean",
-        description: "Show continent name in the timezone select",
         defaultValue: false,
       },
       table: {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+        defaultValue: { summary: "false " },
+        type: { summary: "boolean" },
+      },
+    },
+    placeholder: {
+      description: "The placeholder text for the time picker",
+      table: {
+        category: StorybookControlCategory.DEFAULT,
+        type: { summary: "string" },
       },
     },
   },
