@@ -9,7 +9,8 @@ const version = packageJson.version;
 export type ConnectOptions = ConnectStudioOptions;
 
 export async function startConnect(connectOptions: ConnectOptions) {
-  const { documentModelsDir, editorsDir, packages, studio, logLevel } = getConfig(connectOptions.configFile);
+  const { documentModelsDir, editorsDir, packages, studio, logLevel } =
+    getConfig(connectOptions.configFile);
   return await startConnectStudio({
     port: studio?.port?.toString() || undefined,
     packages,
