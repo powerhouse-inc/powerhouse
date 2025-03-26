@@ -255,4 +255,27 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       expect(retrievedDriveBySlug).toBeUndefined();
     });
   });
+
+  describe("collisions", () => {
+    it("should allow document and drives with the same id without colliding", async ({
+      expect,
+    }) => {
+      const documentId = "1";
+      const driveId = "1";
+
+      const document = createDocumentModelDocument();
+      const drive = createDriveDocument();
+
+      await cache.setDocument(documentId, document);
+      await cache.setDrive(driveId, drive);
+
+      const retrievedDocument = await cache.getDocument(documentId);
+      const retrievedDrive = await cache.getDrive(driveId);
+
+      expect(retrievedDocument).toBeDefined();
+      expect(retrievedDrive).toBeDefined();
+      expect(retrievedDocument?.documentType).toBe(document.documentType);
+      expect(retrievedDrive?.documentType).toBe(drive.documentType);
+    });
+  });
 });
