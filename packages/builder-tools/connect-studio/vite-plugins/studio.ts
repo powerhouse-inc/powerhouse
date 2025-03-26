@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { type PluginOption } from "vite";
 import { externalIds, viteIgnoreStaticImport } from "./base.js";
 
@@ -37,11 +36,6 @@ export function viteConnectDevStudioPlugin(
       },
       closeBundle() {
         if (!enabled) {
-          fs.copyFileSync(
-            fileURLToPath(import.meta.resolve("../hmr.js")),
-            join(connectPath, "hmr.js"),
-          );
-
           // Copy the .env file to the dist folder
           fs.copyFileSync(
             join(connectPath, "../.env"),
