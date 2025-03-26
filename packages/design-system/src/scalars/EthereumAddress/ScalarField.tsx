@@ -1,5 +1,5 @@
 import type { PHScalar } from "@powerhousedao/scalars";
-import { type ComponentType, useCallback, useState } from "react";
+import { type ComponentType, useCallback, useEffect, useState } from "react";
 
 export type BaseScalarFieldProps<T extends PHScalar> = {
   value: ReturnType<T["scalar"]["parseValue"]>;
@@ -23,24 +23,35 @@ export function withScalar<
   const validate = scalar.schema.safeParse.bind(scalar.schema);
 
   return (props: Props) => {
-    const [error, setError] = useState<Error | undefined>(undefined);
     const { onChange, onError } = props;
-    const onChangeScalar = useCallback(
-      (input: unknown) => {
-        const result = validate(input);
-        if (result.success) {
+
+    const [error, setError] = useState<Error | undefined>(undefined);
+    const [value, setValue] = useState<
+      ReturnType<Scalar["scalar"]["parseValue"]>
+    >(props.value);
+
+    const processValidation = useCallback(
+      (validationReslut: ReturnType<typeof validate>) => {
+        if (validationReslut.success) {
           setError(undefined);
-          onChange(
-            // TODO fix this type
-            result.data as unknown as ReturnType<
-              Scalar["scalar"]["parseValue"]
-            >,
-          );
         } else {
-          onError?.(result.error);
-          setError(result.error);
-          return error;
+          onError?.(validationReslut.error);
+          setError(validationReslut.error);
         }
+      },
+      [onError, setError],
+    );
+
+    useEffect(() => {
+      const res = validate(props.value);
+      processValidation(res);
+    }, []);
+
+    const onChangeScalar = useCallback(
+      (input: ReturnType<Scalar["scalar"]["parseValue"]>) => {
+        setValue(input);
+        const result = validate(input);
+        processValidation(result);
       },
       [onChange],
     );
@@ -49,6 +60,7 @@ export function withScalar<
       <Component
         // eslint-disable-next-line react/jsx-props-no-spreading
         {...props}
+        value={value}
         validate={validate}
         onChange={onChangeScalar}
         error={error}
