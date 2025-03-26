@@ -135,7 +135,6 @@ class RedisCache implements ICache, IOperationsCache {
   /////////////////////////////////////////////////////////////////////////////
 
   async getCachedOperations<TDocument extends PHDocument = PHDocument>(
-    driveId: string,
     documentId: string,
   ): Promise<OperationsFromDocument<TDocument> | undefined> {
     try {

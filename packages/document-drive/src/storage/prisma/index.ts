@@ -402,24 +402,23 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
   async getDocument<TDocument extends PHDocument>(
     driveId: string,
-    id: string,
+    documentId: string,
     tx?: Transaction,
   ): Promise<TDocument> {
     const prisma = tx ?? this.db;
     const query: any = {
       where: {
-        id,
+        id: documentId,
       },
     };
 
     const result = await prisma.document.findUnique(query);
     if (result === null) {
-      throw new Error(`Document with id ${id} not found`);
+      throw new Error(`Document with id ${documentId} not found`);
     }
 
     const cachedOperations = (await this.cache.getCachedOperations(
-      driveId,
-      id,
+      documentId,
     )) ?? {
       global: [],
       local: [],
@@ -478,7 +477,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
             AND (${conditions.join(" OR ")})
             ORDER BY scope, index;
         `,
-      id,
+      documentId,
     );
     const operationIds = queryOperations.map((o) => o.id);
     const attachments = await prisma.attachment.findMany({

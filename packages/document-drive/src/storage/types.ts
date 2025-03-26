@@ -10,7 +10,6 @@ import type {
 
 export interface IOperationsCache {
   getCachedOperations<TDocument extends PHDocument = PHDocument>(
-    driveId: string,
     documentId: string,
   ): Promise<OperationsFromDocument<TDocument> | undefined>;
 }
