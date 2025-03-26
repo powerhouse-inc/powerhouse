@@ -1,34 +1,34 @@
 import { type ValidatorResult } from "#scalars";
-import { isValidNumber } from "../number-field/number-field-validations.js";
-import { type AmountFieldProps } from "./amount-field.js";
 import {
   type Amount,
   type AmountCrypto,
   type AmountCurrency,
   type AmountFiat,
-  type AmountFieldPropsGeneric,
+  type AmountInputPropsGeneric,
   type AmountValue,
-} from "./types.js";
-import { isValidBigInt } from "./utils.js";
+} from "../../../ui/components/data-entry/amount-input/types.js";
+import { isValidBigInt } from "../../../ui/components/data-entry/amount-input/utils.js";
+import { isValidNumber } from "../number-field/number-field-validations.js";
+import { type AmountFieldProps } from "./amount-field.js";
 
 const isAmountCurrencyFiat = (
-  type: AmountFieldPropsGeneric["type"],
+  type: AmountInputPropsGeneric["type"],
 ): type is "AmountFiat" => type === "AmountFiat";
 
 const isAmountCurrencyCrypto = (
-  type: AmountFieldPropsGeneric["type"],
+  type: AmountInputPropsGeneric["type"],
 ): type is "AmountCrypto" => type === "AmountCrypto";
 
 const isAmountCurrencyUniversal = (
-  type: AmountFieldPropsGeneric["type"],
+  type: AmountInputPropsGeneric["type"],
 ): type is "AmountCurrency" => type === "AmountCurrency";
 
-const isAmount = (type: AmountFieldPropsGeneric["type"]): type is "Amount" =>
+const isAmount = (type: AmountInputPropsGeneric["type"]): type is "Amount" =>
   type === "Amount";
 
 const getAmount = (
   value: AmountValue,
-  type: AmountFieldPropsGeneric["type"],
+  type: AmountInputPropsGeneric["type"],
 ): number | bigint | undefined => {
   if (
     isAmountCurrencyFiat(type) ||
@@ -55,7 +55,10 @@ export const validateAmount =
     units,
   }: AmountFieldProps) =>
   (value: unknown): ValidatorResult => {
-    const amount = getAmount(value as AmountValue, type);
+    const amount = getAmount(
+      value as AmountValue,
+      type as AmountInputPropsGeneric["type"],
+    );
     if (value === "") return true;
     if (amount?.toString() === "") {
       if (required) {

@@ -1,4 +1,4 @@
-import { type Currency } from "../currency-code-field/types.js";
+import { type Currency } from "#scalars";
 export type Amount = {
   amount?: number;
   unit?: CurrencyTicker;
@@ -21,7 +21,7 @@ export interface AmountCurrency {
   unit: CurrencyTicker;
 }
 
-export type AmountFieldPropsGeneric =
+export type AmountInputPropsGeneric =
   | {
       type: "Amount";
       value?: Amount;
