@@ -1,8 +1,12 @@
-import { Action, type PHDocument } from "document-model";
+import { IOperationsCache } from "#storage/types";
+import { childLogger } from "#utils/logger";
+import { OperationsFromDocument, type PHDocument } from "document-model";
 import type { RedisClientType } from "redis";
 import { type ICache } from "./types.js";
 
-class RedisCache implements ICache {
+class RedisCache implements ICache, IOperationsCache {
+  private logger = childLogger(["RedisCache"]);
+
   private redis: RedisClientType;
   private timeoutInSeconds: number;
 
@@ -53,6 +57,19 @@ class RedisCache implements ICache {
   async deleteDocument(drive: string, id: string) {
     const redisId = RedisCache._getId(drive, id);
     return (await this.redis.del(redisId)) > 0;
+  }
+
+  async getCachedOperations<TDocument extends PHDocument = PHDocument>(
+    drive: string,
+    id: string,
+  ): Promise<OperationsFromDocument<TDocument> | undefined> {
+    try {
+      const document = await this.getDocument<TDocument>(drive, id);
+      return document?.operations;
+    } catch (error) {
+      this.logger.error(error);
+      return undefined;
+    }
   }
 }
 
