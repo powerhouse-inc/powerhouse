@@ -1,3 +1,20 @@
+## 1.33.0 (2025-03-26)
+
+### 🚀 Features
+
+- **scalars:** use zod type for scalar schema ([7f6d4ecac](https://github.com/powerhouse-inc/powerhouse/commit/7f6d4ecac))
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- **scalars:** add base scalar type definition ([4315f258b](https://github.com/powerhouse-inc/powerhouse/commit/4315f258b))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+- removed default supported units ([9bf6769a1](https://github.com/powerhouse-inc/powerhouse/commit/9bf6769a1))
+- added new amount scalars ([fd1eac1d9](https://github.com/powerhouse-inc/powerhouse/commit/fd1eac1d9))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente
+- ryanwolhuter
+
 ## 1.32.0 (2025-03-20)
 
 ### 🚀 Features
