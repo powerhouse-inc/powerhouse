@@ -5,19 +5,15 @@ import {
   Kind,
 } from "graphql";
 import { z } from "zod";
+import { type BasePHScalar } from "./types.js";
 
-export type ScalarType = {
-  input: string;
-  output: string;
-};
+const type = "string";
 
-export const type = "string";
+const typedef = "scalar Currency";
 
-export const typedef = "scalar Currency";
+const schema = z.string();
 
-export const schema = z.string();
-
-export const stringSchema = "z.string()";
+const stringSchema = "z.string()";
 
 const currencyValidation = (value: unknown): string => {
   if (typeof value !== "string") {
@@ -30,7 +26,7 @@ const currencyValidation = (value: unknown): string => {
   throw new GraphQLError(result.error.message);
 };
 
-export const config: GraphQLScalarTypeConfig<string, string> = {
+const config: GraphQLScalarTypeConfig<string, string> = {
   name: "Currency",
   description: "A custom scalar that represents a Currency Code string",
   serialize: currencyValidation,
@@ -46,4 +42,13 @@ export const config: GraphQLScalarTypeConfig<string, string> = {
   },
 };
 
-export const scalar = new GraphQLScalarType(config);
+const scalar = new GraphQLScalarType(config);
+
+export const CurrencyScalar: BasePHScalar<string> = {
+  type,
+  typedef,
+  schema,
+  stringSchema,
+  config,
+  scalar,
+} as const;

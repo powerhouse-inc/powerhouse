@@ -1,155 +1,120 @@
 // namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
-import * as Amount from "./Amount.js";
-import * as AmountCrypto from "./AmountCrypto.js";
-import * as AmountCurrency from "./AmountCurrency.js";
-import * as AmountFiat from "./AmountFiat.js";
-import * as AmountMoney from "./AmountMoney.js";
-import * as AmountPercentage from "./AmountPercentage.js";
-import * as AmountTokens from "./AmountTokens.js";
-import * as Currency from "./Currency.js";
-import * as DateScalar from "./Date.js";
-import * as DateTime from "./DateTime.js";
-import * as EmailAddress from "./EmailAddress.js";
-import * as EthereumAddress from "./EthereumAddress.js";
-import * as OID from "./OID.js";
-import * as OLabel from "./OLabel.js";
-import * as PHID from "./PHID.js";
-import * as URLScalar from "./URL.js";
-
-// export types -- DO NOT REMOVE OR EDIT THIS COMMENT
-export type { ScalarType as AmountScalarType } from "./Amount.js";
-export type { ScalarType as AmountCryptoScalarType } from "./AmountCrypto.js";
-export type { ScalarType as AmountCurrencyScalarType } from "./AmountCurrency.js";
-export type { ScalarType as AmountFiatScalarType } from "./AmountFiat.js";
-export type { ScalarType as AmountMoneyScalarType } from "./AmountMoney.js";
-export type { ScalarType as AmountPercentageScalarType } from "./AmountPercentage.js";
-export type { ScalarType as AmountTokensScalarType } from "./AmountTokens.js";
-export type { ScalarType as CurrencyScalarType } from "./Currency.js";
-export type { ScalarType as DateScalarType } from "./Date.js";
-export type { ScalarType as DateTimeScalarType } from "./DateTime.js";
-export type { ScalarType as EmailAddressScalarType } from "./EmailAddress.js";
-export type { ScalarType as EthereumAddressScalarType } from "./EthereumAddress.js";
-export type { ScalarType as OIDScalarType } from "./OID.js";
-export type { ScalarType as OLabelScalarType } from "./OLabel.js";
-export type { ScalarType as PHIDScalarType } from "./PHID.js";
-export type { ScalarType as URLScalarType } from "./URL.js";
+import { AmountScalar } from "./Amount.js";
+import { AmountCryptoScalar } from "./AmountCrypto.js";
+import { AmountCurrencyScalar } from "./AmountCurrency.js";
+import { AmountFiatScalar } from "./AmountFiat.js";
+import { AmountMoneyScalar } from "./AmountMoney.js";
+import { AmountPercentageScalar } from "./AmountPercentage.js";
+import { AmountTokensScalar } from "./AmountTokens.js";
+import { CurrencyScalar } from "./Currency.js";
+import { DateScalar } from "./Date.js";
+import { DateTimeScalar } from "./DateTime.js";
+import { EmailAddressScalar } from "./EmailAddress.js";
+import { EthereumAddressScalar } from "./EthereumAddress.js";
+import { OIDScalar } from "./OID.js";
+import { OLabelScalar } from "./OLabel.js";
+import { PHIDScalar } from "./PHID.js";
+import { URLScalar } from "./URL.js";
 
 export {
-  Amount,
-  AmountCrypto,
-  AmountCurrency,
-  AmountFiat,
-  AmountMoney,
-  AmountPercentage,
-  // export object -- DO NOT REMOVE OR EDIT THIS COMMENT
-  AmountTokens,
-  Currency,
+  AmountCryptoScalar,
+  AmountCurrencyScalar,
+  AmountFiatScalar,
+  AmountMoneyScalar,
+  AmountPercentageScalar,
+  AmountScalar,
+  AmountTokensScalar,
+  CurrencyScalar,
   DateScalar,
-  DateTime,
-  EmailAddress,
-  EthereumAddress,
-  OID,
-  OLabel,
-  PHID,
+  DateTimeScalar,
+  EmailAddressScalar,
+  EthereumAddressScalar,
+  OIDScalar,
+  OLabelScalar,
+  PHIDScalar,
   URLScalar,
 };
 
-export const scalars = {
-  Amount,
-  AmountCrypto,
-  AmountCurrency,
-  AmountFiat,
-  AmountMoney,
-  AmountPercentage,
-  // export object -- DO NOT REMOVE OR EDIT THIS COMMENT
-  AmountTokens,
-  Currency,
+export const scalars = [
+  AmountCryptoScalar,
+  AmountCurrencyScalar,
+  AmountFiatScalar,
+  AmountMoneyScalar,
+  AmountPercentageScalar,
+  AmountScalar,
+  AmountTokensScalar,
+  CurrencyScalar,
   DateScalar,
-  DateTime,
-  EmailAddress,
-  EthereumAddress,
-  OID,
-  OLabel,
-  PHID,
+  DateTimeScalar,
+  EmailAddressScalar,
+  EthereumAddressScalar,
+  OIDScalar,
+  OLabelScalar,
+  PHIDScalar,
   URLScalar,
-};
+] as const;
+
+export type PHScalars = typeof scalars;
+export type PHIDScalar = PHScalars[number];
 
 export const resolvers = {
   // export resolvers -- DO NOT REMOVE OR EDIT THIS COMMENT
-  AmountTokens: AmountTokens.scalar,
-  EthereumAddress: EthereumAddress.scalar,
-  AmountPercentage: AmountPercentage.scalar,
-  EmailAddress: EmailAddress.scalar,
+  AmountTokens: AmountTokensScalar.scalar,
+  EthereumAddress: EthereumAddressScalar.scalar,
+  AmountPercentage: AmountPercentageScalar.scalar,
+  EmailAddress: EmailAddressScalar.scalar,
+  DateTime: DateTimeScalar.scalar,
+  AmountMoney: AmountMoneyScalar.scalar,
+  OLabel: OLabelScalar.scalar,
+  Currency: CurrencyScalar.scalar,
+  PHID: PHIDScalar.scalar,
+  OID: OIDScalar.scalar,
+  AmountFiat: AmountFiatScalar.scalar,
+  AmountCurrency: AmountCurrencyScalar.scalar,
+  AmountCrypto: AmountCryptoScalar.scalar,
+  Amount: AmountScalar.scalar,
   Date: DateScalar.scalar,
-  DateTime: DateTime.scalar,
   URL: URLScalar.scalar,
-  AmountMoney: AmountMoney.scalar,
-  OLabel: OLabel.scalar,
-  Currency: Currency.scalar,
-  PHID: PHID.scalar,
-  OID: OID.scalar,
-  AmountFiat: AmountFiat.scalar,
-  AmountCurrency: AmountCurrency.scalar,
-  AmountCrypto: AmountCrypto.scalar,
-  Amount: Amount.scalar,
-};
+} as const;
 
-export const typeDefs = [
-  // export typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
-  AmountTokens.typedef,
-  EthereumAddress.typedef,
-  AmountPercentage.typedef,
-  EmailAddress.typedef,
-  DateScalar.typedef,
-  DateTime.typedef,
-  URLScalar.typedef,
-  AmountMoney.typedef,
-  OLabel.typedef,
-  Currency.typedef,
-  PHID.typedef,
-  OID.typedef,
-  AmountFiat.typedef,
-  AmountCurrency.typedef,
-  AmountCrypto.typedef,
-  Amount.typedef,
-];
+export const typeDefs = scalars.map((scalar) => scalar.typedef);
 
 export const generatorTypeDefs = {
   // export generator typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
-  [AmountTokens.config.name]: AmountTokens.type,
-  [EthereumAddress.config.name]: EthereumAddress.type,
-  [EmailAddress.config.name]: EmailAddress.type,
-  [AmountPercentage.config.name]: AmountPercentage.type,
+  [AmountTokensScalar.config.name]: AmountTokensScalar.type,
+  [EthereumAddressScalar.config.name]: EthereumAddressScalar.type,
+  [EmailAddressScalar.config.name]: EmailAddressScalar.type,
+  [AmountPercentageScalar.config.name]: AmountPercentageScalar.type,
+  [DateTimeScalar.config.name]: DateTimeScalar.type,
+  [AmountMoneyScalar.config.name]: AmountMoneyScalar.type,
+  [OLabelScalar.config.name]: OLabelScalar.type,
+  [CurrencyScalar.config.name]: CurrencyScalar.type,
+  [PHIDScalar.config.name]: PHIDScalar.type,
+  [OIDScalar.config.name]: OIDScalar.type,
+  [AmountFiatScalar.config.name]: AmountFiatScalar.type,
+  [AmountCurrencyScalar.config.name]: AmountCurrencyScalar.type,
+  [AmountCryptoScalar.config.name]: AmountCryptoScalar.type,
+  [AmountScalar.config.name]: AmountScalar.type,
   [DateScalar.config.name]: DateScalar.type,
-  [DateTime.config.name]: DateTime.type,
   [URLScalar.config.name]: URLScalar.type,
-  [AmountMoney.config.name]: AmountMoney.type,
-  [OLabel.config.name]: OLabel.type,
-  [Currency.config.name]: Currency.type,
-  [PHID.config.name]: PHID.type,
-  [OID.config.name]: OID.type,
-  [AmountFiat.config.name]: AmountFiat.type,
-  [AmountCurrency.config.name]: AmountCurrency.type,
-  [AmountCrypto.config.name]: AmountCrypto.type,
-  [Amount.config.name]: Amount.type,
 };
 
 export const validationSchema = {
   // export validation schema -- DO NOT REMOVE OR EDIT THIS COMMENT
-  [AmountTokens.config.name]: AmountTokens.stringSchema,
-  [EthereumAddress.config.name]: EthereumAddress.stringSchema,
-  [EmailAddress.config.name]: EmailAddress.stringSchema,
-  [AmountPercentage.config.name]: AmountPercentage.stringSchema,
+  [AmountTokensScalar.config.name]: AmountTokensScalar.stringSchema,
+  [EthereumAddressScalar.config.name]: EthereumAddressScalar.stringSchema,
+  [EmailAddressScalar.config.name]: EmailAddressScalar.stringSchema,
+  [AmountPercentageScalar.config.name]: AmountPercentageScalar.stringSchema,
+  [DateTimeScalar.config.name]: DateTimeScalar.stringSchema,
+  [AmountMoneyScalar.config.name]: AmountMoneyScalar.stringSchema,
+  [OLabelScalar.config.name]: OLabelScalar.stringSchema,
+  [CurrencyScalar.config.name]: CurrencyScalar.stringSchema,
+  [PHIDScalar.config.name]: PHIDScalar.stringSchema,
+  [OIDScalar.config.name]: OIDScalar.stringSchema,
+  [AmountFiatScalar.config.name]: AmountFiatScalar.stringSchema,
+  [AmountCurrencyScalar.config.name]: AmountCurrencyScalar.stringSchema,
+  [AmountCryptoScalar.config.name]: AmountCryptoScalar.stringSchema,
+  [AmountScalar.config.name]: AmountScalar.stringSchema,
   [DateScalar.config.name]: DateScalar.stringSchema,
-  [DateTime.config.name]: DateTime.stringSchema,
   [URLScalar.config.name]: URLScalar.stringSchema,
-  [AmountMoney.config.name]: AmountMoney.stringSchema,
-  [OLabel.config.name]: OLabel.stringSchema,
-  [Currency.config.name]: Currency.stringSchema,
-  [PHID.config.name]: PHID.stringSchema,
-  [OID.config.name]: OID.stringSchema,
-  [AmountFiat.config.name]: AmountFiat.stringSchema,
-  [AmountCurrency.config.name]: AmountCurrency.stringSchema,
-  [AmountCrypto.config.name]: AmountCrypto.stringSchema,
-  [Amount.config.name]: Amount.stringSchema,
 };

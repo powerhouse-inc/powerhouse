@@ -5,21 +5,17 @@ import {
   Kind,
 } from "graphql";
 import { z } from "zod";
+import { type BasePHScalar } from "./types.js";
 
-export type ScalarType = {
-  input: string;
-  output: string;
-};
+const type = "string";
 
-export const type = "string";
+const typedef = "scalar EthereumAddress";
 
-export const typedef = "scalar EthereumAddress";
-
-export const schema = z.string().regex(/^0x[a-fA-F0-9]{40}$/, {
+const schema = z.string().regex(/^0x[a-fA-F0-9]{40}$/, {
   message: "Invalid Ethereum address format",
 });
 
-export const stringSchema =
+const stringSchema =
   "z.string().regex(/^0x[a-fA-F0-9]{40}$/, { message: 'Invalid Ethereum address format' })";
 
 const addressValidation = (value: unknown): string => {
@@ -33,7 +29,7 @@ const addressValidation = (value: unknown): string => {
   throw new GraphQLError(result.error.message);
 };
 
-export const config: GraphQLScalarTypeConfig<string, string> = {
+const config: GraphQLScalarTypeConfig<string, string> = {
   name: "EthereumAddress",
   description:
     'A custom scalar representing an Ethereum address, validated as a 42-character hexadecimal string prefixed with "0x"',
@@ -48,4 +44,13 @@ export const config: GraphQLScalarTypeConfig<string, string> = {
   },
 };
 
-export const scalar = new GraphQLScalarType(config);
+const scalar = new GraphQLScalarType(config);
+
+export const EthereumAddressScalar: BasePHScalar<string> = {
+  type,
+  typedef,
+  schema,
+  stringSchema,
+  config,
+  scalar,
+} as const;

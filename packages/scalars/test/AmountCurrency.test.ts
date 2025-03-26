@@ -1,5 +1,8 @@
 import { Kind } from "graphql";
-import { scalar, type AmountCurrency } from "../src/scalars/AmountCurrency.js";
+import {
+  AmountCurrencyScalar,
+  type AmountCurrency,
+} from "../src/scalars/AmountCurrency.js";
 
 describe("AmountCurrency Scalar", () => {
   const validAmount: AmountCurrency = {
@@ -9,35 +12,45 @@ describe("AmountCurrency Scalar", () => {
 
   describe("serialization", () => {
     it("should serialize a valid AmountCurrency", () => {
-      expect(scalar.serialize(validAmount)).toEqual(validAmount);
+      expect(AmountCurrencyScalar.scalar.serialize(validAmount)).toEqual(
+        validAmount,
+      );
     });
 
     it("should throw an error if the value is not an object", () => {
-      expect(() => scalar.serialize(123)).toThrow();
+      expect(() => AmountCurrencyScalar.scalar.serialize(123)).toThrow();
     });
 
     it("should support any string currency", () => {
       expect(() =>
-        scalar.serialize({ ...validAmount, unit: "BTC" }),
+        AmountCurrencyScalar.scalar.serialize({ ...validAmount, unit: "BTC" }),
       ).not.toThrow();
     });
 
     it("should throw an error if amount is not a number", () => {
       expect(() =>
-        scalar.serialize({ ...validAmount, value: "1.5" }),
+        AmountCurrencyScalar.scalar.serialize({
+          ...validAmount,
+          value: "1.5",
+        }),
       ).toThrow();
     });
 
     it("should throw an error if amount is not finite", () => {
       expect(() =>
-        scalar.serialize({ ...validAmount, value: Infinity }),
+        AmountCurrencyScalar.scalar.serialize({
+          ...validAmount,
+          value: Infinity,
+        }),
       ).toThrow();
     });
   });
 
   describe("value parsing", () => {
     it("should parse a valid AmountCurrency", () => {
-      expect(scalar.parseValue(validAmount)).toEqual(validAmount);
+      expect(AmountCurrencyScalar.scalar.parseValue(validAmount)).toEqual(
+        validAmount,
+      );
     });
 
     it("should parse valid amounts for all currencies", () => {
@@ -53,7 +66,12 @@ describe("AmountCurrency Scalar", () => {
         "USDS",
       ];
       currencies.forEach((currency) => {
-        expect(scalar.parseValue({ unit: currency, value: 1.5 })).toEqual({
+        expect(
+          AmountCurrencyScalar.scalar.parseValue({
+            unit: currency,
+            value: 1.5,
+          }),
+        ).toEqual({
           unit: currency,
           value: 1.5,
         });
@@ -62,13 +80,19 @@ describe("AmountCurrency Scalar", () => {
 
     it("should support any string currency", () => {
       expect(() =>
-        scalar.parseValue({ ...validAmount, unit: "INVALID" }),
+        AmountCurrencyScalar.scalar.parseValue({
+          ...validAmount,
+          unit: "INVALID",
+        }),
       ).not.toThrow();
     });
 
     it("should throw an error if amount is not a number", () => {
       expect(() =>
-        scalar.parseValue({ ...validAmount, value: "1.5" }),
+        AmountCurrencyScalar.scalar.parseValue({
+          ...validAmount,
+          value: "1.5",
+        }),
       ).toThrow();
     });
   });
@@ -76,7 +100,7 @@ describe("AmountCurrency Scalar", () => {
   describe("literal parsing", () => {
     it("should parse a valid AmountCurrency from literal", () => {
       expect(
-        scalar.parseLiteral({
+        AmountCurrencyScalar.scalar.parseLiteral({
           kind: Kind.OBJECT,
           fields: [
             {
@@ -96,7 +120,7 @@ describe("AmountCurrency Scalar", () => {
 
     it("should throw an error if literal is not an object", () => {
       expect(() =>
-        scalar.parseLiteral({
+        AmountCurrencyScalar.scalar.parseLiteral({
           kind: Kind.FLOAT,
           value: "1.5",
         }),
@@ -105,7 +129,7 @@ describe("AmountCurrency Scalar", () => {
 
     it("should throw an error if currency field is missing", () => {
       expect(() =>
-        scalar.parseLiteral({
+        AmountCurrencyScalar.scalar.parseLiteral({
           kind: Kind.OBJECT,
           fields: [
             {
@@ -120,7 +144,7 @@ describe("AmountCurrency Scalar", () => {
 
     it("should throw an error if amount field is missing", () => {
       expect(() =>
-        scalar.parseLiteral({
+        AmountCurrencyScalar.scalar.parseLiteral({
           kind: Kind.OBJECT,
           fields: [
             {
@@ -135,7 +159,7 @@ describe("AmountCurrency Scalar", () => {
 
     it("should throw an error if currency is not a valid string", () => {
       expect(() =>
-        scalar.parseLiteral({
+        AmountCurrencyScalar.scalar.parseLiteral({
           kind: Kind.OBJECT,
           fields: [
             {
@@ -155,7 +179,7 @@ describe("AmountCurrency Scalar", () => {
 
     it("should throw an error if amount is not a float", () => {
       expect(() =>
-        scalar.parseLiteral({
+        AmountCurrencyScalar.scalar.parseLiteral({
           kind: Kind.OBJECT,
           fields: [
             {

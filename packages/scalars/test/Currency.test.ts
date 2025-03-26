@@ -1,36 +1,36 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/Currency.js";
+import { CurrencyScalar } from "../src/scalars/Currency.js";
 
 describe("Currency Scalar", () => {
   it("should serialize a valid Currency", () => {
     const currency = "USD";
 
-    expect(scalar.serialize(currency)).toBe(currency);
+    expect(CurrencyScalar.scalar.serialize(currency)).toBe(currency);
   });
 
   it("should throw an error if the value is not a string", () => {
     const currency = 123;
 
-    expect(() => scalar.serialize(currency)).toThrow();
+    expect(() => CurrencyScalar.scalar.serialize(currency)).toThrow();
   });
 
   it("should parse a valid Currency", () => {
     const currency = "USD";
 
-    expect(scalar.parseValue(currency)).toBe(currency);
+    expect(CurrencyScalar.scalar.parseValue(currency)).toBe(currency);
   });
 
   it("should throw an error if parse a value that is not a string", () => {
     const currency = 123;
 
-    expect(() => scalar.parseValue(currency)).toThrow();
+    expect(() => CurrencyScalar.scalar.parseValue(currency)).toThrow();
   });
 
   it("should parse a valid Currency from a literal", () => {
     const currency = "USD";
 
     expect(
-      scalar.parseLiteral({
+      CurrencyScalar.scalar.parseLiteral({
         kind: Kind.STRING,
         value: currency,
       }),
@@ -41,7 +41,7 @@ describe("Currency Scalar", () => {
     const currency = "USD";
 
     expect(() =>
-      scalar.parseLiteral({
+      CurrencyScalar.scalar.parseLiteral({
         kind: Kind.INT,
         value: currency,
       }),

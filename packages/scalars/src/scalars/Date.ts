@@ -5,19 +5,15 @@ import {
   Kind,
 } from "graphql";
 import { z } from "zod";
+import { type BasePHScalar } from "./types.js";
 
-export type ScalarType = {
-  input: string;
-  output: string;
-};
+const type = "string";
 
-export const type = "string";
+const typedef = "scalar Date";
 
-export const typedef = "scalar Date";
+const schema = z.string().datetime();
 
-export const schema = z.string().datetime();
-
-export const stringSchema = "z.string().datetime()";
+const stringSchema = "z.string().datetime()";
 
 const datetimeValidation = (value: unknown): string => {
   if (typeof value !== "string") {
@@ -30,7 +26,7 @@ const datetimeValidation = (value: unknown): string => {
   throw new GraphQLError(result.error.message);
 };
 
-export const config: GraphQLScalarTypeConfig<string, string> = {
+const config: GraphQLScalarTypeConfig<string, string> = {
   name: "Date",
   description:
     "A custom scalar that represents a datetime in ISO 8601 format (Time: 00:00:00)",
@@ -45,4 +41,13 @@ export const config: GraphQLScalarTypeConfig<string, string> = {
   },
 };
 
-export const scalar = new GraphQLScalarType(config);
+const scalar = new GraphQLScalarType(config);
+
+export const DateScalar: BasePHScalar<string> = {
+  type,
+  typedef,
+  schema,
+  stringSchema,
+  config,
+  scalar,
+} as const;

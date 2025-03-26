@@ -5,19 +5,15 @@ import {
   Kind,
 } from "graphql";
 import { z } from "zod";
+import { type BasePHScalar } from "./types.js";
 
-export type ScalarType = {
-  input: string;
-  output: string;
-};
+const type = "string";
 
-export const type = "string";
+const typedef = "scalar URL";
 
-export const typedef = "scalar URL";
+const schema = z.string().url();
 
-export const schema = z.string().url();
-
-export const stringSchema = "z.string().url()";
+const stringSchema = "z.string().url()";
 
 const urlValidation = (value: unknown): string => {
   if (typeof value !== "string") {
@@ -30,7 +26,7 @@ const urlValidation = (value: unknown): string => {
   throw new GraphQLError(result.error.message);
 };
 
-export const config: GraphQLScalarTypeConfig<string, string> = {
+const config: GraphQLScalarTypeConfig<string, string> = {
   name: "URL",
   description: "A custom scalar that represents a URL string",
   serialize: urlValidation,
@@ -44,4 +40,13 @@ export const config: GraphQLScalarTypeConfig<string, string> = {
   },
 };
 
-export const scalar = new GraphQLScalarType(config);
+const scalar = new GraphQLScalarType(config);
+
+export const URLScalar: BasePHScalar<string> = {
+  type,
+  typedef,
+  schema,
+  stringSchema,
+  config,
+  scalar,
+} as const;

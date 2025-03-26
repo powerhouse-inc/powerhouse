@@ -1,48 +1,48 @@
 import { Kind } from "graphql";
-import { scalar } from "../src/scalars/URL.js";
+import { URLScalar } from "../src/scalars/URL.js";
 
 describe("URL Scalar", () => {
   it("should serialize a valid URL address", () => {
     const url = "https://test.com";
 
-    expect(scalar.serialize(url)).toBe(url);
+    expect(URLScalar.scalar.serialize(url)).toBe(url);
   });
 
   it("should throw an error if the value is not a string", () => {
     const url = 123;
 
-    expect(() => scalar.serialize(url)).toThrow();
+    expect(() => URLScalar.scalar.serialize(url)).toThrow();
   });
 
   it("should throw an error if the value is not a valid email address", () => {
     const url = "test";
 
-    expect(() => scalar.serialize(url)).toThrow();
+    expect(() => URLScalar.scalar.serialize(url)).toThrow();
   });
 
   it("should parse a valid URL address", () => {
     const url = "https://test.com";
 
-    expect(scalar.parseValue(url)).toBe(url);
+    expect(URLScalar.scalar.parseValue(url)).toBe(url);
   });
 
   it("should throw an error if parse a value that is not a valid URL address", () => {
     const url = "test";
 
-    expect(() => scalar.parseValue(url)).toThrow();
+    expect(() => URLScalar.scalar.parseValue(url)).toThrow();
   });
 
   it("should throw an error if parse a value that is not a string", () => {
     const url = 123;
 
-    expect(() => scalar.parseValue(url)).toThrow();
+    expect(() => URLScalar.scalar.parseValue(url)).toThrow();
   });
 
   it("should parse a valid URL address from a literal", () => {
     const url = "https://test.com";
 
     expect(
-      scalar.parseLiteral({
+      URLScalar.scalar.parseLiteral({
         kind: Kind.STRING,
         value: url,
       }),
@@ -53,7 +53,7 @@ describe("URL Scalar", () => {
     const url = "test";
 
     expect(() =>
-      scalar.parseLiteral({
+      URLScalar.scalar.parseLiteral({
         kind: Kind.STRING,
         value: url,
       }),
@@ -64,7 +64,7 @@ describe("URL Scalar", () => {
     const url = "test";
 
     expect(() =>
-      scalar.parseLiteral({
+      URLScalar.scalar.parseLiteral({
         kind: Kind.INT,
         value: url,
       }),

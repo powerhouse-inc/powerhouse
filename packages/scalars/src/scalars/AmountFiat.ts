@@ -5,6 +5,7 @@ import {
   Kind,
 } from "graphql";
 import { z } from "zod";
+import { type BasePHScalar } from "./types.js";
 
 export type SupportedFiat = string;
 
@@ -13,21 +14,16 @@ export type AmountFiat = {
   value: number;
 };
 
-export type ScalarType = {
-  input: AmountFiat;
-  output: AmountFiat;
-};
+const type = "{ unit: string, value: number }";
 
-export const type = "{ unit: string, value: number }";
+const typedef = "scalar Amount_Fiat";
 
-export const typedef = "scalar Amount_Fiat";
-
-export const schema = z.object({
+const schema = z.object({
   unit: z.string(),
   value: z.number().finite(),
 });
 
-export const stringSchema =
+const stringSchema =
   "z.object({ unit: z.string(), value: z.number().finite() })";
 
 const amountFiatValidation = (value: unknown): AmountFiat => {
@@ -43,7 +39,7 @@ const amountFiatValidation = (value: unknown): AmountFiat => {
   throw new GraphQLError(result.error.message);
 };
 
-export const config: GraphQLScalarTypeConfig<AmountFiat, AmountFiat> = {
+const config: GraphQLScalarTypeConfig<AmountFiat, AmountFiat> = {
   name: "Amount_Fiat",
   description:
     "A custom scalar that represents a currency amount with its currency type",
@@ -78,4 +74,13 @@ export const config: GraphQLScalarTypeConfig<AmountFiat, AmountFiat> = {
   },
 };
 
-export const scalar = new GraphQLScalarType(config);
+const scalar = new GraphQLScalarType(config);
+
+export const AmountFiatScalar: BasePHScalar<AmountFiat> = {
+  type,
+  typedef,
+  schema,
+  stringSchema,
+  config,
+  scalar,
+} as const;

@@ -5,19 +5,15 @@ import {
   Kind,
 } from "graphql";
 import { z } from "zod";
+import { type BasePHScalar } from "./types.js";
 
-export type ScalarType = {
-  input: number;
-  output: number;
-};
+const type = "number";
 
-export const type = "number";
+const typedef = "scalar Amount_Tokens";
 
-export const typedef = "scalar Amount_Tokens";
+const schema = z.number();
 
-export const schema = z.number();
-
-export const stringSchema = "z.number()";
+const stringSchema = "z.number()";
 
 const amountTokensValidation = (value: unknown): number => {
   if (typeof value !== "number") {
@@ -34,7 +30,7 @@ const amountTokensValidation = (value: unknown): number => {
   throw new GraphQLError(result.error.message);
 };
 
-export const config: GraphQLScalarTypeConfig<number, number> = {
+const config: GraphQLScalarTypeConfig<number, number> = {
   name: "Amount_Tokens",
   description: "A custom scalar that represents an amount of tokens",
   serialize: amountTokensValidation,
@@ -50,4 +46,13 @@ export const config: GraphQLScalarTypeConfig<number, number> = {
   },
 };
 
-export const scalar = new GraphQLScalarType(config);
+const scalar = new GraphQLScalarType(config);
+
+export const AmountTokensScalar: BasePHScalar<number> = {
+  type,
+  typedef,
+  schema,
+  stringSchema,
+  config,
+  scalar,
+} as const;
