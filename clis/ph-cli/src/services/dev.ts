@@ -72,8 +72,6 @@ async function spawnConnect(
       env: {
         ...process.env,
         // TODO add studio variables?
-        LOCAL_DOCUMENT_MODELS: options?.localDocuments,
-        LOCAL_DOCUMENT_EDITORS: options?.localEditors,
         PH_CONNECT_DEFAULT_DRIVES_URL: localReactorUrl,
       },
     },

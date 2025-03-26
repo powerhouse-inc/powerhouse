@@ -1,26 +1,23 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
+import { exec } from "node:child_process";
 import fs from "node:fs";
-import { join } from "node:path";
-import { type PluginOption } from "vite";
-import { viteIgnoreStaticImport, viteReplaceImports } from "./base.js";
-
-// TODO use config path?
-const __dirname = join(process.cwd(), ".ph/");
-// import.meta.dirname || dirname(fileURLToPath(import.meta.url));
+import { dirname, join } from "node:path";
+import { type PluginOption, type ViteDevServer } from "vite";
 
 export const EXTERNAL_PACKAGES_IMPORT = "PH:EXTERNAL_PACKAGES";
 export const IMPORT_SCRIPT_FILE = "external-packages.js";
+export const LOCAL_PACKAGE_ID = "ph:local-package";
 
 function generateImportScript(
   packages: string[],
-  targetDir: string,
-  hmr: boolean,
+  targetPath: string,
+  localPackage: boolean,
 ) {
   // create file if it doesn't exist, also create path if it doesn't exist (recursive)
+  const targetDir = dirname(targetPath);
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
   }
-  const scriptPath = join(targetDir, IMPORT_SCRIPT_FILE);
   const imports: string[] = [];
   const moduleNames: string[] = [];
   let counter = 0;
@@ -40,12 +37,12 @@ function generateImportScript(
     }`,
   );
 
-  if (hmr) {
+  if (localPackage) {
     const moduleName = `module${counter}`;
     imports.push(`import * as ${moduleName} from '../../index.js';`);
     imports.push(`import '../../style.css';`);
     exports.push(`{
-      id: "local-package",
+      id: "${LOCAL_PACKAGE_ID}",
       ...${moduleName},
     }`);
   }
@@ -55,55 +52,97 @@ function generateImportScript(
     ];`;
 
   const fileContent = `${imports.join("\n")}\n\n${exportStatement}`;
-  fs.writeFileSync(scriptPath, fileContent);
+  fs.writeFileSync(targetPath, fileContent);
 
-  return scriptPath;
+  return targetPath;
 }
 
+const handleExternalPackageEvents = (server: ViteDevServer) => {
+  server.ws.on("studio:add-external-package", (data, client) => {
+    const { name } = data as { name: string };
+    const installProcess = exec(
+      `ph install ${name}`,
+      {
+        cwd: process.cwd(),
+      },
+      (error) => {
+        if (error) {
+          console.error(`\t[${name}]: ${error.message}`);
+        } else {
+          server.ws.send("studio:external-package-added", {
+            name,
+          });
+        }
+      },
+    );
+    installProcess.stdout?.on("data", (data: Buffer) => {
+      console.log(`\t[${name}]: ${data.toString().trim()}`);
+    });
+    console.log("Installing external package:", name);
+  });
+
+  server.ws.on("studio:remove-external-package", (data, client) => {
+    const { name } = data as { name: string };
+    const uninstallProcess = exec(
+      `ph uninstall ${name}`,
+      {
+        cwd: process.cwd(),
+      },
+      (error) => {
+        if (error) {
+          console.error(`\t[${name}]: ${error.message}`);
+        } else {
+          server.ws.send("studio:external-package-removed", {
+            name,
+          });
+        }
+      },
+    );
+    uninstallProcess.stdout?.on("data", (data: Buffer) => {
+      console.log(`\t[${name}]: ${data.toString().trim()}`);
+    });
+    console.log("Removing external package:", name);
+  });
+};
+
 export const viteLoadExternalPackages = (
+  localPackage: boolean,
   packages: string[] | undefined,
   targetDir: string,
-  hmr = false,
 ): PluginOption[] => {
-  console.log("Loading external packages:");
-  if (!packages?.length && !hmr) {
-    return [viteIgnoreStaticImport([EXTERNAL_PACKAGES_IMPORT])];
-  }
-
-  const importScriptPath = generateImportScript(packages ?? [], targetDir, hmr);
-
-  process.env.LOAD_EXTERNAL_PACKAGES = "true";
+  const importPath = join(targetDir, IMPORT_SCRIPT_FILE);
   return [
-    viteReplaceImports({ [EXTERNAL_PACKAGES_IMPORT]: importScriptPath }),
-    hmr && {
-      name: "vite-plugin-studio-external-packages",
+    {
+      name: "vite-plugin-ph-external-packages",
+      closeBundle() {
+        generateImportScript(packages ?? [], importPath, localPackage);
+      },
+      configureServer(server) {
+        generateImportScript(packages ?? [], importPath, localPackage);
+        handleExternalPackageEvents(server);
+      },
       handleHotUpdate({ file, server, modules, timestamp }) {
-        console.log("FILE", file);
         if (file.endsWith("powerhouse.config.json")) {
           const config = getConfig(file);
           generateImportScript(
             config.packages?.map((p) => p.packageName) ?? [],
-            targetDir,
-            hmr,
+            importPath,
+            true,
           );
 
           config.packages?.forEach((pkg) =>
             console.log("-> Loading package:", pkg.packageName),
           );
 
-          const module = server.moduleGraph.getModuleById(importScriptPath);
+          const module = server.moduleGraph.getModuleById(importPath);
 
           if (module) {
             server.moduleGraph.invalidateModule(module);
             return [module].concat(...module.importers.values());
           }
-        } else if (file === importScriptPath) {
+        } else if (file === importPath) {
           modules
-            .filter(
-              (module) =>
-                module.id === IMPORT_SCRIPT_FILE ||
-                module.id === importScriptPath,
-            )
+            .filter((module) => module.id === importPath)
             .forEach((module) => {
               server.ws.send("studio:external-packages-updated", {
                 url: module.url,
@@ -118,11 +157,10 @@ export const viteLoadExternalPackages = (
           const config = getConfig(file);
           generateImportScript(
             config.packages?.map((p) => p.packageName) ?? [],
-            targetDir,
-            hmr,
+            importPath,
+            localPackage,
           );
         }
-
         return modules;
       },
     },

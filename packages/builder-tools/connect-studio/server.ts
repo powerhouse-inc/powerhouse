@@ -18,7 +18,6 @@ import {
   removeBase64EnvValues,
 } from "./helpers.js";
 import { type StartServerOptions } from "./types.js";
-import { getStudioConfig } from "./vite-plugins/base.js";
 import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
 import { generateImportMapPlugin } from "./vite-plugins/importmap.js";
 import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
@@ -110,7 +109,6 @@ export async function startServer(
     typeof process.env.OPEN_BROWSER === "string"
       ? process.env.OPEN_BROWSER === "true"
       : false;
-  const studioConfig = getStudioConfig();
 
   // needed for viteEnvs
   if (!fs.existsSync(join(studioPath, "src"))) {
@@ -119,7 +117,7 @@ export async function startServer(
 
   process.env.PH_CONNECT_STUDIO_MODE = "true";
   process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
-  const computedEnv = { ...studioConfig, LOG_LEVEL: options.logLevel };
+  const computedEnv = { LOG_LEVEL: options.logLevel };
 
   const config: InlineConfig = {
     customLogger: logger,
@@ -145,14 +143,14 @@ export async function startServer(
       dedupe: ["@powerhousedao/reactor-browser"],
     },
     plugins: [
+      tailwindcss(),
       viteReact({
         // includes js|jsx|ts|tsx)$/ inside projectRoot
         include: [join(projectRoot, "**/*.(js|jsx|ts|tsx)")],
         exclude: ["node_modules", join(studioPath, "assets/*.js")],
       }),
-      tailwindcss(),
       viteConnectDevStudioPlugin(true, studioPath),
-      viteLoadExternalPackages(options.packages, studioPath, true),
+      viteLoadExternalPackages(true, options.packages, studioPath),
       viteEnvs({
         declarationFile: join(studioPath, ".env"),
         computedEnv,
