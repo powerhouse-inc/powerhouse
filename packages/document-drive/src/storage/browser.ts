@@ -91,6 +91,29 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return true;
   }
 
+  async addChild(parentId: string, childId: string): Promise<void> {
+    if (parentId === childId) {
+      throw new Error("Cannot associate a document with itself");
+    }
+
+    // check if the child is a parent of the parent
+    const children = await this.getChildren(childId);
+    if (children.includes(parentId)) {
+      throw new Error("Cannot associate a document with its child");
+    }
+
+    const manifest = await this.getManifest(parentId);
+    if (!manifest.documentIds.includes(childId)) {
+      manifest.documentIds.push(childId);
+      await this.updateDriveManifest(parentId, manifest);
+    }
+  }
+
+  async getChildren(parentId: string): Promise<string[]> {
+    const manifest = await this.getManifest(parentId);
+    return manifest.documentIds;
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
@@ -99,7 +122,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return this.exists(documentId);
   }
 
-  private async getDriveManifest(driveId: string): Promise<DriveManifest> {
+  private async getManifest(driveId: string): Promise<DriveManifest> {
     const db = await this.db;
     const manifest = await db.getItem<DriveManifest>(
       this.buildManifestKey(driveId),
@@ -116,7 +139,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDocuments(drive: string) {
-    const manifest = await this.getDriveManifest(drive);
+    const manifest = await this.getManifest(drive);
     return manifest.documentIds;
   }
 
@@ -131,7 +154,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     await this.create(id, document);
 
     // Update the drive manifest to include this document
-    const manifest = await this.getDriveManifest(drive);
+    const manifest = await this.getManifest(drive);
     if (!manifest.documentIds.includes(id)) {
       manifest.documentIds.push(id);
       await this.updateDriveManifest(drive, manifest);
@@ -142,7 +165,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     await (await this.db).removeItem(this.buildDocumentKey(id));
 
     // Update the drive manifest to remove this document
-    const manifest = await this.getDriveManifest(drive);
+    const manifest = await this.getManifest(drive);
     const docIndex = manifest.documentIds.indexOf(id);
     if (docIndex !== -1) {
       manifest.documentIds.splice(docIndex, 1);

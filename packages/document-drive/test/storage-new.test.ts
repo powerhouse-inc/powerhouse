@@ -9,6 +9,7 @@ import {
 } from "../../document-model/index";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
 import InMemoryCache from "../src/cache/memory";
+import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
@@ -122,5 +123,48 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const result3 = await storage.delete("test");
     expect(result3).toBe(false);
+  });
+
+  it("should allow associating a document with another document", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+    const driveId = "drive";
+    const documentId = "document";
+
+    // for now, we only allow documents to be associated with drives
+    const drive = createDriveDocument();
+    await storage.create(driveId, drive);
+
+    const document = createDocument();
+    await storage.create(documentId, document);
+
+    await storage.addChild(driveId, documentId);
+
+    const children = await storage.getChildren(driveId);
+    expect(children).toEqual([documentId]);
+  });
+
+  it("should not allow self associations", async ({ expect }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    await storage.create("test", document);
+
+    await expect(storage.addChild("test", "test")).rejects.toThrow();
+  });
+
+  it("should not allow circular associations", async ({ expect }) => {
+    const storage = await buildStorage();
+
+    const drive = createDriveDocument();
+    await storage.create("drive", drive);
+
+    const document = createDocument();
+    await storage.create("document", document);
+
+    await storage.addChild("drive", "document");
+
+    await expect(storage.addChild("document", "drive")).rejects.toThrow();
   });
 });

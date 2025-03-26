@@ -87,7 +87,29 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     }
   }
 
-  ////////////////////////////////s
+  async addChild(parentId: string, childId: string): Promise<void> {
+    if (parentId === childId) {
+      throw new Error("Cannot associate a document with itself");
+    }
+
+    // check if the child is a parent of the parent
+    const children = await this.getChildren(childId);
+    if (children.includes(parentId)) {
+      throw new Error("Cannot associate a document with its child");
+    }
+
+    const manifest = await this.getDriveManifest(parentId);
+    if (!manifest.documentIds.includes(childId)) {
+      manifest.documentIds.push(childId);
+      await this.updateDriveManifest(parentId, manifest);
+    }
+  }
+
+  async getChildren(parentId: string): Promise<string[]> {
+    const manifest = await this.getDriveManifest(parentId);
+    return manifest.documentIds;
+  }
+
   // IDriveStorage
   ////////////////////////////////
 

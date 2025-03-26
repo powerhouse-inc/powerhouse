@@ -12,6 +12,11 @@ export interface IDocumentStorage {
   create(documentId: string, document: PHDocument): Promise<void>;
   get<TDocument extends PHDocument>(documentId: string): Promise<TDocument>;
   delete(documentId: string): Promise<boolean>;
+
+  addChild(parentId: string, childId: string): Promise<void>;
+  //removeChild(parentId: string, childId: string): Promise<void>;
+  getChildren(parentId: string): Promise<string[]>;
+  //getParent(childId: string): Promise<string | undefined>;
 }
 
 export interface IStorage {

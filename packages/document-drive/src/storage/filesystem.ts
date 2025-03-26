@@ -83,12 +83,36 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(false);
   }
 
+  async addChild(parentId: string, childId: string): Promise<void> {
+    if (parentId === childId) {
+      throw new Error("Cannot associate a document with itself");
+    }
+
+    // check if the child is a parent of the parent
+    const children = await this.getChildren(childId);
+    if (children.includes(parentId)) {
+      throw new Error("Cannot associate a document with its child");
+    }
+
+    // Update the drive manifest to include this document
+    const manifest = await this.getManifest(parentId);
+    if (!manifest.documentIds.includes(childId)) {
+      manifest.documentIds.push(childId);
+      await this.updateDriveManifest(parentId, manifest);
+    }
+  }
+
+  async getChildren(parentId: string): Promise<string[]> {
+    const manifest = await this.getManifest(parentId);
+    return manifest.documentIds;
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
 
   async getDocuments(drive: string) {
-    const manifest = await this.getDriveManifest(drive);
+    const manifest = await this.getManifest(drive);
     return manifest.documentIds;
   }
 
@@ -110,7 +134,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     });
 
     // Update the drive manifest to include this document
-    const manifest = await this.getDriveManifest(drive);
+    const manifest = await this.getManifest(drive);
     if (!manifest.documentIds.includes(id)) {
       manifest.documentIds.push(id);
       await this.updateDriveManifest(drive, manifest);
@@ -136,7 +160,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
   async deleteDocument(drive: string, id: string) {
     // Update the drive manifest to remove this document
-    const manifest = await this.getDriveManifest(drive);
+    const manifest = await this.getManifest(drive);
     const docIndex = manifest.documentIds.indexOf(id);
     if (docIndex !== -1) {
       manifest.documentIds.splice(docIndex, 1);
@@ -149,7 +173,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     for (const driveId of drives) {
       if (driveId === drive) continue;
 
-      const otherManifest = await this.getDriveManifest(driveId);
+      const otherManifest = await this.getManifest(driveId);
       if (otherManifest.documentIds.includes(id)) {
         // Document still referenced by another drive, don't delete the file
         return Promise.resolve();
@@ -346,7 +370,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return `${this.basePath}/manifest-${driveId}.json`;
   }
 
-  private async getDriveManifest(driveId: string): Promise<DriveManifest> {
+  private async getManifest(driveId: string): Promise<DriveManifest> {
     const manifestPath = this._buildManifestPath(driveId);
     try {
       const content = readFileSync(manifestPath, { encoding: "utf-8" });

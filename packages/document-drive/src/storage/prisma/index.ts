@@ -139,6 +139,27 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
         id: documentId,
       },
     });
+
+    // temporary -- but we need to create drives automatically for documents
+    // of the correct type
+    if (document.documentType === "powerhouse/document-drive") {
+      const drive = document as DocumentDriveDocument;
+      try {
+        await this.db.drive.create({
+          data: {
+            id: documentId,
+            slug: drive.initialState.state.global.slug ?? documentId,
+          },
+        });
+      } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
+          throw new Error(
+            `Drive with slug ${drive.initialState.state.global.slug ?? documentId} already exists`,
+          );
+        }
+        throw e;
+      }
+    }
   }
 
   async get<TDocument extends PHDocument>(
@@ -320,6 +341,45 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
       throw e;
     }
+  }
+
+  async addChild(parentId: string, childId: string) {
+    if (parentId === childId) {
+      throw new Error("Cannot associate a document with itself");
+    }
+
+    // check if the child is a parent of the parent
+    const children = await this.getChildren(childId);
+    if (children.includes(parentId)) {
+      throw new Error("Cannot associate a document with its child");
+    }
+
+    // create the many-to-many relation
+    await this.db.document.update({
+      where: {
+        id: childId,
+      },
+      data: {
+        driveDocuments: { create: { driveId: parentId } },
+      },
+    });
+  }
+
+  async getChildren(parentId: string): Promise<string[]> {
+    const docs = await this.db.document.findMany({
+      select: {
+        id: true,
+      },
+      where: {
+        driveDocuments: {
+          some: {
+            driveId: parentId,
+          },
+        },
+      },
+    });
+
+    return docs.map((doc) => doc.id);
   }
 
   ////////////////////////////////

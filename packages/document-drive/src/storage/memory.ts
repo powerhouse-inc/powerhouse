@@ -58,7 +58,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     // delete the document from all drive manifests
     const drives = await this.getDrives();
     for (const driveId of drives) {
-      const manifest = this.getDriveManifest(driveId);
+      const manifest = this.getManifest(driveId);
       if (manifest.documentIds.has(documentId)) {
         manifest.documentIds.delete(documentId);
         this.updateDriveManifest(driveId, manifest);
@@ -74,6 +74,27 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(false);
   }
 
+  async addChild(parentId: string, childId: string) {
+    if (parentId === childId) {
+      throw new Error("Cannot associate a document with itself");
+    }
+
+    // check if the child is a parent of the parent
+    const children = await this.getChildren(childId);
+    if (children.includes(parentId)) {
+      throw new Error("Cannot associate a document with its child");
+    }
+
+    const manifest = this.getManifest(parentId);
+    manifest.documentIds.add(childId);
+    this.updateDriveManifest(parentId, manifest);
+  }
+
+  async getChildren(parentId: string): Promise<string[]> {
+    const manifest = this.getManifest(parentId);
+    return [...manifest.documentIds];
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
@@ -83,7 +104,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   getDocuments(drive: string) {
-    const manifest = this.getDriveManifest(drive);
+    const manifest = this.getManifest(drive);
     return Promise.resolve([...manifest.documentIds]);
   }
 
@@ -103,7 +124,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     await this.create(id, document);
 
     // Update the drive manifest
-    const manifest = this.getDriveManifest(drive);
+    const manifest = this.getManifest(drive);
     manifest.documentIds.add(id);
     this.updateDriveManifest(drive, manifest);
   }
@@ -196,7 +217,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
 
   async deleteDrive(id: string) {
     // Get all documents in this drive
-    const manifest = this.getDriveManifest(id);
+    const manifest = this.getManifest(id);
 
     // delete each document that belongs only to this drive
     const drives = await this.getDrives();
@@ -207,7 +228,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
             continue;
           }
 
-          const manifest = this.getDriveManifest(driveId);
+          const manifest = this.getManifest(driveId);
           if (manifest.documentIds.has(docId)) {
             return;
           }
@@ -276,7 +297,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   // Private
   ////////////////////////////////
 
-  private getDriveManifest(driveId: string): DriveManifest {
+  private getManifest(driveId: string): DriveManifest {
     if (!this.driveManifests[driveId]) {
       this.driveManifests[driveId] = { documentIds: new Set() };
     }
