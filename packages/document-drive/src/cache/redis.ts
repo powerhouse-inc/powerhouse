@@ -1,8 +1,10 @@
+import { DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { IOperationsCache } from "#storage/types";
 import { childLogger } from "#utils/logger";
 import { OperationsFromDocument, type PHDocument } from "document-model";
 import type { RedisClientType } from "redis";
 import { type ICache } from "./types.js";
+import { trimResultingState } from "./util.js";
 
 class RedisCache implements ICache, IOperationsCache {
   private logger = childLogger(["RedisCache"]);
@@ -18,53 +20,126 @@ class RedisCache implements ICache, IOperationsCache {
     this.timeoutInSeconds = timeoutInSeconds;
   }
 
-  private static _getId(drive: string, id: string) {
-    return `cache:${drive}:${id}`;
+  private static _getDocumentKey(documentId: string) {
+    return `cache:document:${documentId}`;
   }
 
-  async setDocument(drive: string, id: string, document: PHDocument) {
-    const global = document.operations.global.map((e) => {
-      delete e.resultingState;
-      return e;
-    });
-    const local = document.operations.local.map((e) => {
-      delete e.resultingState;
-      return e;
-    });
-    const doc = { ...document, operations: { global, local } };
-    const redisId = RedisCache._getId(drive, id);
+  private static _getDriveKey(driveId: string) {
+    return `cache:drive:${driveId}`;
+  }
+
+  private static _getDriveBySlugKey(slug: string) {
+    return `cache:drive:slug:${slug}`;
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // ICache
+  /////////////////////////////////////////////////////////////////////////////
+
+  async setDocument(documentId: string, document: PHDocument) {
+    const doc = trimResultingState(document);
+    const redisId = RedisCache._getDocumentKey(documentId);
     const result = await this.redis.set(redisId, JSON.stringify(doc), {
       EX: this.timeoutInSeconds ? this.timeoutInSeconds : undefined,
     });
 
-    if (result === "OK") {
-      return true;
+    if (result !== "OK") {
+      throw new Error(
+        `Failed to set document ${documentId} in redis. Got '${result}'`,
+      );
     }
-
-    return false;
   }
 
   async getDocument<TDocument extends PHDocument>(
-    drive: string,
-    id: string,
+    documentId: string,
   ): Promise<TDocument | undefined> {
-    const redisId = RedisCache._getId(drive, id);
+    const redisId = RedisCache._getDocumentKey(documentId);
     const doc = await this.redis.get(redisId);
 
     return doc ? (JSON.parse(doc) as TDocument) : undefined;
   }
 
-  async deleteDocument(drive: string, id: string) {
-    const redisId = RedisCache._getId(drive, id);
+  async deleteDocument(documentId: string) {
+    const redisId = RedisCache._getDocumentKey(documentId);
     return (await this.redis.del(redisId)) > 0;
   }
 
+  async setDrive(driveId: string, drive: DocumentDriveDocument) {
+    const doc = trimResultingState(drive);
+    const redisId = RedisCache._getDriveKey(driveId);
+    const result = await this.redis.set(redisId, JSON.stringify(doc), {
+      EX: this.timeoutInSeconds ? this.timeoutInSeconds : undefined,
+    });
+
+    if (result === "OK") {
+      throw new Error(
+        `Failed to set drive ${driveId} in redis. Got '${result}'`,
+      );
+    }
+  }
+
+  async getDrive(driveId: string): Promise<DocumentDriveDocument | undefined> {
+    const redisId = RedisCache._getDriveKey(driveId);
+    const doc = await this.redis.get(redisId);
+    return doc ? (JSON.parse(doc) as DocumentDriveDocument) : undefined;
+  }
+
+  async deleteDrive(driveId: string) {
+    const redisId = RedisCache._getDriveKey(driveId);
+    const drive = await this.getDrive(driveId);
+    if (!drive) {
+      return false;
+    }
+
+    const slug = drive.state.global.slug;
+    if (slug) {
+      const slugRedisId = RedisCache._getDriveBySlugKey(slug);
+      await this.redis.del(slugRedisId);
+    }
+
+    return (await this.redis.del(redisId)) > 0;
+  }
+
+  // We store two pices: slug -> driveId, and driveId -> drive
+  async setDriveBySlug(slug: string, drive: DocumentDriveDocument) {
+    const driveId = drive.state.global.id;
+    const redisId = RedisCache._getDriveBySlugKey(slug);
+    const result = await this.redis.set(redisId, driveId, {
+      EX: this.timeoutInSeconds ? this.timeoutInSeconds : undefined,
+    });
+
+    if (result !== "OK") {
+      throw new Error(
+        `Failed to set drive slug mapping for ${slug} -> ${driveId} in redis. Got '${result}'`,
+      );
+    }
+
+    await this.setDrive(driveId, drive);
+  }
+
+  async getDriveBySlug(
+    slug: string,
+  ): Promise<DocumentDriveDocument | undefined> {
+    const redisId = RedisCache._getDriveBySlugKey(slug);
+    const driveId = await this.redis.get(redisId);
+    return driveId ? await this.getDrive(driveId) : undefined;
+  }
+
+  async deleteDriveBySlug(slug: string) {
+    const redisId = RedisCache._getDriveBySlugKey(slug);
+    return (await this.redis.del(redisId)) > 0;
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // IOperationsCache
+  /////////////////////////////////////////////////////////////////////////////
+
   async getCachedOperations<TDocument extends PHDocument = PHDocument>(
-    drive: string,
-    id: string,
+    driveId: string,
+    documentId: string,
   ): Promise<OperationsFromDocument<TDocument> | undefined> {
     try {
-      const document = await this.getDocument<TDocument>(drive, id);
+      const document = await this.getDocument<TDocument>(documentId);
       return document?.operations;
     } catch (error) {
       this.logger.error(error);

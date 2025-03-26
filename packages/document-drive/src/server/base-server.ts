@@ -537,7 +537,7 @@ export class BaseDocumentDriveServer
     await this.storage.createDrive(id, document);
 
     if (input.global.slug) {
-      await this.cache.deleteDocument("drives-slug", input.global.slug);
+      await this.cache.deleteDriveBySlug(input.global.slug);
     }
 
     await this._initializeDrive(id);
@@ -592,7 +592,7 @@ export class BaseDocumentDriveServer
     const result = await Promise.allSettled([
       this.stopSyncRemoteDrive(driveId),
       this.listenerManager.removeDrive(driveId),
-      this.cache.deleteDocument("drives", driveId),
+      this.cache.deleteDrive(driveId),
       this.storage.deleteDrive(driveId),
     ]);
 
@@ -610,7 +610,7 @@ export class BaseDocumentDriveServer
   async getDrive(driveId: string, options?: GetDocumentOptions) {
     let document: DocumentDriveDocument | undefined;
     try {
-      const cachedDocument = await this.cache.getDocument("drives", driveId); // TODO support GetDocumentOptions
+      const cachedDocument = await this.cache.getDrive(driveId); // TODO support GetDocumentOptions
       if (cachedDocument && isDocumentDrive(cachedDocument)) {
         document = cachedDocument;
         if (isAtRevision(document, options?.revisions)) {
@@ -626,7 +626,7 @@ export class BaseDocumentDriveServer
       throw new Error(`Document with id ${driveId} is not a Document Drive`);
     } else {
       if (!options?.revisions) {
-        this.cache.setDocument("drives", driveId, result).catch(logger.error);
+        this.cache.setDrive(driveId, result).catch(logger.error);
       }
       return result;
     }
@@ -634,9 +634,9 @@ export class BaseDocumentDriveServer
 
   async getDriveBySlug(slug: string, options?: GetDocumentOptions) {
     try {
-      const document = await this.cache.getDocument("drives-slug", slug);
-      if (document && isDocumentDrive(document)) {
-        return document;
+      const drive = await this.cache.getDriveBySlug(slug);
+      if (drive) {
+        return drive;
       }
     } catch (e) {
       logger.error("Error getting drive from cache", e);
@@ -647,7 +647,7 @@ export class BaseDocumentDriveServer
     if (!isDocumentDrive(document)) {
       throw new Error(`Document with slug ${slug} is not a Document Drive`);
     } else {
-      this.cache.setDocument("drives-slug", slug, document).catch(logger.error);
+      this.cache.setDriveBySlug(slug, document).catch(logger.error);
       return document;
     }
   }
@@ -659,24 +659,23 @@ export class BaseDocumentDriveServer
   ): Promise<TDocument> {
     let cachedDocument: TDocument | undefined;
     try {
-      cachedDocument = await this.cache.getDocument<TDocument>(
-        driveId,
-        documentId,
-      ); // TODO support GetDocumentOptions
+      cachedDocument = await this.cache.getDocument<TDocument>(documentId); // TODO support GetDocumentOptions
       if (cachedDocument && isAtRevision(cachedDocument, options?.revisions)) {
         return cachedDocument;
       }
     } catch (e) {
       logger.error("Error getting document from cache", e);
     }
+
     const documentStorage =
       cachedDocument ??
       (await this.storage.getDocument<TDocument>(driveId, documentId));
     const document = this._buildDocument<TDocument>(documentStorage, options);
 
     if (!options?.revisions) {
-      this.cache.setDocument(driveId, documentId, document).catch(logger.error);
+      this.cache.setDocument(documentId, document).catch(logger.error);
     }
+
     return document;
   }
 
@@ -760,7 +759,7 @@ export class BaseDocumentDriveServer
     } catch (error) {
       logger.warn("Error deleting document", error);
     }
-    await this.cache.deleteDocument(driveId, documentId);
+    await this.cache.deleteDocument(documentId);
     return this.storage.deleteDocument(driveId, documentId);
   }
 
@@ -1350,9 +1349,7 @@ export class BaseDocumentDriveServer
       );
 
       if (document) {
-        this.cache
-          .setDocument(driveId, documentId, document)
-          .catch(logger.error);
+        this.cache.setDocument(documentId, document).catch(logger.error);
       }
 
       // gets all the different scopes and branches combinations from the operations
@@ -1654,7 +1651,7 @@ export class BaseDocumentDriveServer
         throw error ?? new Error("Invalid Document Drive document");
       }
 
-      this.cache.setDocument("drives", driveId, document).catch(logger.error);
+      this.cache.setDrive(driveId, document).catch(logger.error);
 
       // update listener cache
       const lastOperation = operationsApplied
