@@ -1,3 +1,14 @@
+## 1.0.0-dev.246 (2025-03-26)
+
+### 🚀 Features
+
+- **connect,builder-tools:** rework external packages loading ([c904877c4](https://github.com/powerhouse-inc/powerhouse/commit/c904877c4))
+- **builder-tools:** load local package from manifest ([96f4962d3](https://github.com/powerhouse-inc/powerhouse/commit/96f4962d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.245 (2025-03-26)
 
 ### 🚀 Features
