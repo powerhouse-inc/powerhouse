@@ -105,7 +105,18 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const document = createDocument();
     await storage.create("test", document);
 
-    //const result = await storage.get("test");
-    //expect(result).toEqual(document);
+    const result = await storage.get("test");
+
+    // Storage implementations are free to return documents with or without populated state + meta.
+    // Also: we give storage implementations authority to set the created timestamp (like a postgres timestamp).
+    // So we compare every field except for state, created, and meta.
+    const { state, created, meta, ...rest } = document;
+    const {
+      state: _state,
+      created: _created,
+      meta: _meta,
+      ...restResult
+    } = result;
+    expect(restResult).toEqual(rest);
   });
 });
