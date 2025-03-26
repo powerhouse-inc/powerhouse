@@ -8,6 +8,7 @@ import {
   DocumentModelModule,
 } from "../../document-model/index";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
+import InMemoryCache from "../src/cache/memory";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
@@ -50,7 +51,14 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
       return storage;
     },
   ],*/
-  ["Browser Storage", () => Promise.resolve(new BrowserStorage())],
+  [
+    "Browser Storage",
+    async () => {
+      const storage = new BrowserStorage();
+      await storage.clear();
+      return storage;
+    },
+  ],
   [
     "PrismaStorage",
     async () => {
@@ -61,7 +69,7 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
       await prisma.$executeRawUnsafe('DELETE FROM "DriveDocument";');
       await prisma.$executeRawUnsafe('DELETE FROM "Drive";');
 
-      return new PrismaStorage(prisma);
+      return new PrismaStorage(prisma, new InMemoryCache());
     },
   ],
   [

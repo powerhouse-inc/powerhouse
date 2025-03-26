@@ -12,7 +12,14 @@ import { buildOperation } from "./utils.js";
 const prismaClient = new PrismaClient();
 
 const storageLayers = [
-  ["BrowserStorage", () => new BrowserStorage()],
+  [
+    "BrowserStorage",
+    async () => {
+      const storage = new BrowserStorage();
+      await storage.clear();
+      return storage;
+    },
+  ],
   //["PrismaStorage", () => new PrismaStorage(prismaClient, new InMemoryCache())],
 ] as const;
 
@@ -83,7 +90,7 @@ describe.each(storageLayers)(
     });
 
     it("should migrate operation without context", async ({ expect }) => {
-      const storage = buildStorage();
+      const storage = await buildStorage();
       const drive = createDocument({
         state: {
           global: {
@@ -133,7 +140,7 @@ describe.each(storageLayers)(
     it("should migrate operation with empty string signature", async ({
       expect,
     }) => {
-      const storage = buildStorage();
+      const storage = await buildStorage();
       const drive = createDocument({
         state: {
           global: {
@@ -209,7 +216,7 @@ describe.each(storageLayers)(
     });
 
     it("should migrate operation with a signature", async ({ expect }) => {
-      const storage = buildStorage();
+      const storage = await buildStorage();
       const drive = createDocument({
         state: {
           global: {

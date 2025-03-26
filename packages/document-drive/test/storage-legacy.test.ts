@@ -52,7 +52,14 @@ const storageImplementations: [
       return storage;
     },
   ],*/
-  ["Browser Storage", () => Promise.resolve(new BrowserStorage())],
+  [
+    "Browser Storage",
+    async () => {
+      const storage = new BrowserStorage();
+      await storage.clear();
+      return storage;
+    },
+  ],
   [
     "PrismaStorage",
     async () => {

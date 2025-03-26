@@ -35,7 +35,14 @@ const cache = new InMemoryCache();
 const storageLayers = [
   ["MemoryStorage", async () => new MemoryStorage()],
   ["FilesystemStorage", async () => new FilesystemStorage(FileStorageDir)],
-  ["BrowserStorage", async () => new BrowserStorage()],
+  [
+    "BrowserStorage",
+    async () => {
+      const storage = new BrowserStorage();
+      await storage.clear();
+      return storage;
+    },
+  ],
   ["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
   /*[
     "SequelizeStorage",

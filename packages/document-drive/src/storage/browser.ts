@@ -38,6 +38,11 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     );
   }
 
+  async clear() {
+    const db = await this.db;
+    await db.clear();
+  }
+
   ////////////////////////////////
   // IDocumentStorage
   ////////////////////////////////
