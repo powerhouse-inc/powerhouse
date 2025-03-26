@@ -27,14 +27,6 @@ export function connectCommand(program: Command) {
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
     )
-    .option(
-      "-le, --local-editors <localEditors>",
-      "Link local document editors path",
-    )
-    .option(
-      "-ld, --local-documents <localDocuments>",
-      "Link local documents path",
-    )
     .action(async (...args: [ConnectOptions]) => {
       await connect(...args);
     });
