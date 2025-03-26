@@ -1,3 +1,32 @@
+## 0.40.7 (2025-03-26)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.245
+
+## 0.40.7-dev.1 (2025-03-26)
+
+### 🚀 Features
+
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+- **ph-cli:** add 'use' command for environment management ([0c821cbe0](https://github.com/powerhouse-inc/powerhouse/commit/0c821cbe0))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.29.0-dev.1
+- Updated document-model to 2.28.0
+- Updated @powerhousedao/builder-tools to 0.9.5-dev.1
+- Updated @powerhousedao/reactor-local to 1.27.5-dev.1
+- Updated @powerhousedao/codegen to 0.49.0
+- Updated @powerhousedao/config to 1.26.0
+- Updated @powerhousedao/connect to 1.0.18
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
 ## 0.40.9-dev.0 (2025-03-24)
 
 ### 🧱 Updated Dependencies
