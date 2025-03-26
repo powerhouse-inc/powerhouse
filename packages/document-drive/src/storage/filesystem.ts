@@ -11,7 +11,13 @@ import {
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "fs";
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
@@ -64,6 +70,17 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     } catch (error) {
       throw new Error(`Document with id ${documentId} not found`);
     }
+  }
+
+  delete(documentId: string): Promise<boolean> {
+    const documentPath = this._buildDocumentPath(documentId);
+    if (existsSync(documentPath)) {
+      unlinkSync(documentPath);
+
+      return Promise.resolve(true);
+    }
+
+    return Promise.resolve(false);
   }
 
   ////////////////////////////////

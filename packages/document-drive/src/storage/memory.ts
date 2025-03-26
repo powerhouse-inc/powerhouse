@@ -54,6 +54,26 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(document as TDocument);
   }
 
+  async delete(documentId: string): Promise<boolean> {
+    // delete the document from all drive manifests
+    const drives = await this.getDrives();
+    for (const driveId of drives) {
+      const manifest = this.getDriveManifest(driveId);
+      if (manifest.documentIds.has(documentId)) {
+        manifest.documentIds.delete(documentId);
+        this.updateDriveManifest(driveId, manifest);
+      }
+    }
+
+    if (this.documents[documentId]) {
+      delete this.documents[documentId];
+
+      return Promise.resolve(true);
+    }
+
+    return Promise.resolve(false);
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
@@ -109,17 +129,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async deleteDocument(drive: string, id: string) {
-    // delete the document from all drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      const manifest = this.getDriveManifest(driveId);
-      if (manifest.documentIds.has(id)) {
-        manifest.documentIds.delete(id);
-        this.updateDriveManifest(driveId, manifest);
-      }
-    }
-
-    delete this.documents[id];
+    this.delete(id);
   }
 
   async getDrives() {

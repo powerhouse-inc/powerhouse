@@ -78,6 +78,15 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     }
   }
 
+  async delete(documentId: string): Promise<boolean> {
+    try {
+      await this.fs.rm(this._buildDocumentPath(documentId));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   ////////////////////////////////s
   // IDriveStorage
   ////////////////////////////////

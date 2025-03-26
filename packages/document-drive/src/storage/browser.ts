@@ -76,6 +76,21 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return document;
   }
 
+  async delete(documentId: string): Promise<boolean> {
+    const db = await this.db;
+
+    const document = await db.getItem<PHDocument>(
+      this.buildDocumentKey(documentId),
+    );
+
+    if (!document) {
+      return false;
+    }
+
+    await db.removeItem(this.buildDocumentKey(documentId));
+    return true;
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////

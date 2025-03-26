@@ -18,6 +18,7 @@ export interface IDocumentStorage {
   exists(documentId: string): Promise<boolean>;
   create(documentId: string, document: PHDocument): Promise<void>;
   get<TDocument extends PHDocument>(documentId: string): Promise<TDocument>;
+  delete(documentId: string): Promise<boolean>;
 }
 
 export interface IStorage {

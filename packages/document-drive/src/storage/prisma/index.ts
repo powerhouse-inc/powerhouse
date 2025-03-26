@@ -19,7 +19,7 @@ import {
 } from "../../drive-document-model/gen/types.js";
 import { ConflictOperationError } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
-import { logger } from "../../utils/logger.js";
+import { childLogger, logger } from "../../utils/logger.js";
 import type {
   IDocumentStorage,
   IDriveStorage,
@@ -94,6 +94,8 @@ type ExtendedPrismaClient = ReturnType<
 >;
 
 export class PrismaStorage implements IDriveStorage, IDocumentStorage {
+  private logger = childLogger(["PrismaStorage"]);
+
   private db: ExtendedPrismaClient;
   private cache: IOperationsCache;
 
@@ -267,6 +269,57 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     };
 
     return doc as unknown as TDocument;
+  }
+
+  async delete(documentId: string): Promise<boolean> {
+    try {
+      // delete out of drives
+      await this.db.drive.deleteMany({
+        where: {
+          driveDocuments: {
+            none: {
+              documentId,
+            },
+          },
+        },
+      });
+    } catch (e: unknown) {
+      this.logger.error(
+        "Error deleting document from drives, could not delete DriveDocument links",
+        e,
+      );
+
+      return false;
+    }
+
+    try {
+      // delete document
+      const result = await this.db.document.deleteMany({
+        where: {
+          id: documentId,
+        },
+      });
+
+      return result.count > 0;
+    } catch (e: unknown) {
+      this.logger.error(
+        "Error deleting document from drives, could not delete Document",
+        e,
+      );
+
+      const prismaError = e as { code?: string; message?: string };
+      // Ignore Error: P2025: An operation failed because it depends on one or more records that were required but not found.
+      if (
+        (prismaError.code && prismaError.code === "P2025") ||
+        prismaError.message?.includes(
+          "An operation failed because it depends on one or more records that were required but not found.",
+        )
+      ) {
+        return false;
+      }
+
+      throw e;
+    }
   }
 
   ////////////////////////////////
@@ -528,43 +581,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async deleteDocument(drive: string, id: string) {
-    try {
-      // delete out of drives
-      await this.db.drive.deleteMany({
-        where: {
-          driveDocuments: {
-            none: {
-              documentId: id,
-            },
-          },
-        },
-      });
-
-      // delete document
-      await this.db.document.deleteMany({
-        where: {
-          driveDocuments: {
-            some: {
-              driveId: drive,
-            },
-          },
-          id,
-        },
-      });
-    } catch (e: unknown) {
-      const prismaError = e as { code?: string; message?: string };
-      // Ignore Error: P2025: An operation failed because it depends on one or more records that were required but not found.
-      if (
-        (prismaError.code && prismaError.code === "P2025") ||
-        prismaError.message?.includes(
-          "An operation failed because it depends on one or more records that were required but not found.",
-        )
-      ) {
-        return;
-      }
-
-      throw e;
-    }
+    await this.delete(id);
   }
 
   async getDrives() {

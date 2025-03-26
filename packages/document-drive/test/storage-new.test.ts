@@ -39,18 +39,6 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
       return Promise.resolve(new FilesystemStorage(basePath));
     },
   ],
-  /*[
-    "Sequelize Storage",
-    async () => {
-      const storage = new SequelizeStorage({
-        dialect: "sqlite",
-        storage: ":memory:",
-        logging: false,
-      });
-      await storage.syncModels();
-      return storage;
-    },
-  ],*/
   [
     "Browser Storage",
     async () => {
@@ -118,5 +106,21 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       ...restResult
     } = result;
     expect(restResult).toEqual(rest);
+  });
+
+  it("should allow deleting a document", async ({ expect }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    await storage.create("test", document);
+
+    const result = await storage.delete("test");
+    expect(result).toBe(true);
+
+    const result2 = await storage.exists("test");
+    expect(result2).toBe(false);
+
+    const result3 = await storage.delete("test");
+    expect(result3).toBe(false);
   });
 });
