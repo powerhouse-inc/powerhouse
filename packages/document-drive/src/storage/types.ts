@@ -4,15 +4,8 @@ import type {
   DocumentHeader,
   Operation,
   OperationFromDocument,
-  OperationsFromDocument,
   PHDocument,
 } from "document-model";
-
-export interface IOperationsCache {
-  getCachedOperations<TDocument extends PHDocument = PHDocument>(
-    documentId: string,
-  ): Promise<OperationsFromDocument<TDocument> | undefined>;
-}
 
 export interface IDocumentStorage {
   exists(documentId: string): Promise<boolean>;

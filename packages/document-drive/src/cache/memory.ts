@@ -1,11 +1,9 @@
 import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { logger } from "#utils/logger";
-import { OperationsFromDocument, type PHDocument } from "document-model";
-import { type IOperationsCache } from "../storage/types.js";
+import { type PHDocument } from "document-model";
 import { type ICache } from "./types.js";
 import { trimResultingState } from "./util.js";
 
-class InMemoryCache implements ICache, IOperationsCache {
+class InMemoryCache implements ICache {
   private idTodocument = new Map<string, PHDocument>();
   private idToDrive = new Map<string, DocumentDriveDocument>();
   private slugToDriveId = new Map<string, string>();
@@ -83,22 +81,6 @@ class InMemoryCache implements ICache, IOperationsCache {
 
     this.slugToDriveId.delete(slug);
     return this.deleteDrive(driveId);
-  }
-
-  /////////////////////////////////////////////////////////////////////////////
-  // IOperationsCache
-  /////////////////////////////////////////////////////////////////////////////
-
-  async getCachedOperations<TDocument extends PHDocument = PHDocument>(
-    documentId: string,
-  ): Promise<OperationsFromDocument<TDocument> | undefined> {
-    try {
-      const document = await this.getDocument<TDocument>(documentId);
-      return document?.operations;
-    } catch (error) {
-      logger.error(error);
-      return undefined;
-    }
   }
 }
 

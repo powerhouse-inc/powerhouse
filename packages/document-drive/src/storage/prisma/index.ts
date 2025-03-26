@@ -1,9 +1,11 @@
 import { type Prisma, type PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
+  Action,
   AttachmentInput,
   BaseStateFromDocument,
   DocumentHeader,
+  DocumentOperations,
   ExtendedStateFromDocument,
   FileRegistry,
   Operation,
@@ -13,6 +15,7 @@ import type {
   PHDocument,
 } from "document-model";
 import { type IBackOffOptions, backOff } from "exponential-backoff";
+import { ICache } from "../../cache/types.js";
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
@@ -20,11 +23,7 @@ import {
 import { ConflictOperationError } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
-import type {
-  IDocumentStorage,
-  IDriveStorage,
-  IOperationsCache,
-} from "../types.js";
+import type { IDocumentStorage, IDriveStorage } from "../types.js";
 
 export * from "./factory.js";
 
@@ -97,13 +96,9 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   private logger = childLogger(["PrismaStorage"]);
 
   private db: ExtendedPrismaClient;
-  private cache: IOperationsCache;
+  private cache: ICache;
 
-  constructor(
-    db: PrismaClient,
-    cache: IOperationsCache,
-    options?: PrismaStorageOptions,
-  ) {
+  constructor(db: PrismaClient, cache: ICache, options?: PrismaStorageOptions) {
     const backOffOptions = options?.transactionRetryBackoff;
 
     this.cache = cache;
@@ -162,12 +157,17 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       throw new Error(`Document with id ${documentId} not found`);
     }
 
-    const cachedOperations = (await this.cache.getCachedOperations(
-      documentId,
-    )) ?? {
+    let cachedOperations: DocumentOperations<
+      Action<string, unknown, OperationScope>
+    > = {
       global: [],
       local: [],
     };
+    const cachedDocument = await this.cache.getDocument<TDocument>(documentId);
+    if (cachedDocument) {
+      cachedOperations = cachedDocument.operations;
+    }
+
     const scopeIndex = Object.keys(cachedOperations).reduceRight<
       Record<OperationScope, number>
     >(

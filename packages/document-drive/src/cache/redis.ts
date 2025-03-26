@@ -1,12 +1,11 @@
 import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { IOperationsCache } from "#storage/types";
 import { childLogger } from "#utils/logger";
-import { OperationsFromDocument, type PHDocument } from "document-model";
+import { type PHDocument } from "document-model";
 import type { RedisClientType } from "redis";
 import { type ICache } from "./types.js";
 import { trimResultingState } from "./util.js";
 
-class RedisCache implements ICache, IOperationsCache {
+class RedisCache implements ICache {
   private logger = childLogger(["RedisCache"]);
 
   private redis: RedisClientType;
@@ -128,22 +127,6 @@ class RedisCache implements ICache, IOperationsCache {
   async deleteDriveBySlug(slug: string) {
     const redisId = RedisCache._getDriveBySlugKey(slug);
     return (await this.redis.del(redisId)) > 0;
-  }
-
-  /////////////////////////////////////////////////////////////////////////////
-  // IOperationsCache
-  /////////////////////////////////////////////////////////////////////////////
-
-  async getCachedOperations<TDocument extends PHDocument = PHDocument>(
-    documentId: string,
-  ): Promise<OperationsFromDocument<TDocument> | undefined> {
-    try {
-      const document = await this.getDocument<TDocument>(documentId);
-      return document?.operations;
-    } catch (error) {
-      this.logger.error(error);
-      return undefined;
-    }
   }
 }
 
