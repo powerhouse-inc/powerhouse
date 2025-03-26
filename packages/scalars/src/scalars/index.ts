@@ -51,7 +51,27 @@ export {
   OID,
   OLabel,
   PHID,
-  URLScalar
+  URLScalar,
+};
+
+export const scalars = {
+  Amount,
+  AmountCrypto,
+  AmountCurrency,
+  AmountFiat,
+  AmountMoney,
+  AmountPercentage,
+  // export object -- DO NOT REMOVE OR EDIT THIS COMMENT
+  AmountTokens,
+  Currency,
+  DateScalar,
+  DateTime,
+  EmailAddress,
+  EthereumAddress,
+  OID,
+  OLabel,
+  PHID,
+  URLScalar,
 };
 
 export const resolvers = {
