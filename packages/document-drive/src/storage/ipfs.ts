@@ -79,6 +79,22 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   }
 
   async delete(documentId: string): Promise<boolean> {
+    // delete the document from all other drive manifests
+    const drives = await this.getDrives();
+    for (const driveId of drives) {
+      if (driveId === documentId) continue;
+
+      await this.removeChild(driveId, documentId);
+    }
+
+    // delete any manifest for this document
+    try {
+      await this.fs.rm(this._buildDriveManifestPath(documentId));
+    } catch (error) {
+      // there may be no manifest for this document
+    }
+
+    // finally, delete the specified document
     try {
       await this.fs.rm(this._buildDocumentPath(documentId));
       return true;
@@ -216,11 +232,12 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
       const drives = [];
       for await (const entry of this.fs.ls("/")) {
         if (
-          entry.type === "file" &&
-          entry.name.startsWith("drive-") &&
+          entry.name.startsWith("manifest-") &&
           entry.name.endsWith(".json")
         ) {
-          const driveId = entry.name.replace("drive-", "").replace(".json", "");
+          const driveId = entry.name
+            .replace("manifest-", "")
+            .replace(".json", "");
           drives.push(driveId);
         }
       }

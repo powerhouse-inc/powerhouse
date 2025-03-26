@@ -55,15 +55,16 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async delete(documentId: string): Promise<boolean> {
-    // delete the document from all drive manifests
+    // delete the document from all other drive manifests
     const drives = await this.getDrives();
     for (const driveId of drives) {
-      const manifest = this.getManifest(driveId);
-      if (manifest.documentIds.has(documentId)) {
-        manifest.documentIds.delete(documentId);
-        this.updateDriveManifest(driveId, manifest);
-      }
+      if (driveId === documentId) continue;
+
+      await this.removeChild(driveId, documentId);
     }
+
+    // delete any manifest for this document
+    delete this.driveManifests[documentId];
 
     if (this.documents[documentId]) {
       delete this.documents[documentId];

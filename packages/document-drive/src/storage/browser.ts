@@ -87,7 +87,20 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
       return false;
     }
 
+    // delete the document from all other drive manifests
+    const drives = await this.getDrives();
+    for (const driveId of drives) {
+      if (driveId === documentId) continue;
+
+      await this.removeChild(driveId, documentId);
+    }
+
+    // delete any manifest for this document
+    await db.removeItem(this.buildManifestKey(documentId));
+
+    // finally, delete the specified document
     await db.removeItem(this.buildDocumentKey(documentId));
+
     return true;
   }
 

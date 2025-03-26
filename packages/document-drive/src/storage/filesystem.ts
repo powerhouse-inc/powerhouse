@@ -72,7 +72,23 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     }
   }
 
-  delete(documentId: string): Promise<boolean> {
+  async delete(documentId: string): Promise<boolean> {
+    // delete the document from all other drive manifests
+    const drives = await this.getDrives();
+    for (const driveId of drives) {
+      if (driveId === documentId) continue;
+
+      await this.removeChild(driveId, documentId);
+    }
+
+    // delete any manifest for this document
+    try {
+      await fs.rm(this._buildManifestPath(documentId));
+    } catch (error) {
+      // there may be no manifest for this document
+    }
+
+    // finally, delete the specified document
     const documentPath = this._buildDocumentPath(documentId);
     if (existsSync(documentPath)) {
       unlinkSync(documentPath);

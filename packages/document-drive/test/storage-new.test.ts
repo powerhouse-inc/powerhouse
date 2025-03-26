@@ -215,4 +215,42 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const result = await storage.removeChild("drive", "document");
     expect(result).toBe(false);
   });
+
+  it("parent/child relationship should be removed when the child is deleted", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const drive = createDriveDocument();
+    await storage.create("drive", drive);
+
+    const document = createDocument();
+    await storage.create("document", document);
+
+    await storage.addChild("drive", "document");
+
+    await storage.delete("document");
+
+    const children = await storage.getChildren("drive");
+    expect(children).toEqual([]);
+  });
+
+  it("parent/child relationship should be removed when the parent is deleted", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const drive = createDriveDocument();
+    await storage.create("drive", drive);
+
+    const document = createDocument();
+    await storage.create("document", document);
+
+    await storage.addChild("drive", "document");
+
+    await storage.delete("drive");
+
+    const children = await storage.getChildren("drive");
+    expect(children).toEqual([]);
+  });
 });
