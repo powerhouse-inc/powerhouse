@@ -16,30 +16,50 @@ yarn add @powerhousedao/design-system
 pnpm add @powerhousedao/design-system
 `}/>
 
-# Built-in scalars
+# Scalars
 
-## Simple Components
+Our design system includes a collection of field components that make it easy to work with 
+different data types in your forms. These fields are especially useful when working with 
+`Connect` documents and GraphQL schemas.
 
-- [BooleanField](?path=/docs/document-engineering-simple-components-boolean-field--readme): Booleans can be rendered as a checkbox field or as a toggle field
-  - [CheckboxField](?path=/docs/document-engineering-fragments-checkbox-field--readme)
-  - [ToggleField](?path=/docs/document-engineering-fragments-toggle-field--readme)
-- [EnumField](?path=/docs/document-engineering-simple-components-enum-field--readme): Enum can be rendered as a radio group or as a select/combobox
-  - [RadioGroupField](?path=/docs/document-engineering-fragments-radiogroupfield--readme)
-  - [SelectField](?path=/docs/document-engineering-fragments-selectfield--readme)
-- [NumberField](?path=/docs/document-engineering-simple-components-number-field--readme)
-- [StringField](?path=/docs/document-engineering-simple-components-string-field--readme): Strings can be rendered as single line (inputs) or multiline strings (textarea)
-  - [TextField](?path=/docs/document-engineering-fragments-textfield--readme)
-  - [TextareaField](?path=/docs/document-engineering-fragments-textareafield--readme)
-- [UrlField](?path=/docs/document-engineering-simple-components-url-field--readme)
-- [AmountField](?path=/docs/document-engineering-simple-components-amount-field--readme)
-- [CountryCodeField](?path=/docs/document-engineering-simple-components-country-code-field--readme)
-- [PHIDField](?path=/docs/document-engineering-simple-components-phid-field--readme)
-- [AIDField](?path=/docs/document-engineering-simple-components-aid-field--readme)
-- [DatePickerField](?path=/docs/document-engineering-simple-components-date-picker-field--readme)
-- [TimePickerField](?path=/docs/document-engineering-fragments-timepickerfield--readme)
-- [Dropdown](?path=/docs/document-engineering-simple-components-dropdown--readme)
-- *CurrencyCodeField (Coming soon)*
+Each Scalar Field is a React component that matches up with a specific GraphQL scalar type. 
+This makes it simple to build forms that integrate with your Connect document schema - just 
+pick the field type that matches your data.
 
-## Complex components
+The fields are powered by `react-hook-form`, which means you get built-in form validation 
+and error handling without any extra work. This helps you build reliable forms quickly 
+while keeping your code clean and maintainable.
 
-- [Sidebar](?path=/docs/document-engineering-complex-components-sidebar--readme): A hierarchical navigation component that displays content in a collapsible tree structure
+> **Important**: The Scalar Fields must be used with the `Form` component to work. If you 
+> can not use the `Form` component, you can use Scalar Fields equivalents in from the
+> `Data Entry` section.
+
+> **Note**: You can use Scalar Fields for general purpose, not only for `Connect` documents.
+
+# How to use
+
+The Scalar Fields are available in the `@powerhousedao/design-system/scalars` package.
+
+```tsx
+import { BooleanField, Form } from '@powerhousedao/design-system/scalars';
+
+// ...
+
+<Form onSubmit={handleSubmit}>
+  <BooleanField name="isActive" label="Is Active" />
+</Form>
+// ...
+```
+
+All non-scalar components are available in the `@powerhousedao/design-system/ui` package.
+
+```tsx
+import { Sidebar, SidebarProvider } from '@powerhousedao/design-system/ui';
+
+// ...
+
+<SidebarProvider nodes={/* ... */}>
+  <Sidebar />
+</SidebarProvider>
+// ...
+```
