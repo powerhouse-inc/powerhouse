@@ -4,20 +4,12 @@ import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
 
-const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
-const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES === 'true';
-
 export type ExternalPackage = DocumentModelLib & { id: string };
 
 function loadExternalPackages() {
-    console.log('Loading external packages', LOAD_EXTERNAL_PACKAGES);
-    if (!shouldLoadExternalPackages) {
-        return Promise.resolve([]);
-    } else {
-        return import('PH:EXTERNAL_PACKAGES').then(
-            module => module.default as ExternalPackage[],
-        );
-    }
+    return import('../external-packages.js')
+        .catch(e => console.error(e))
+        .then(module => (module?.default ?? []) as ExternalPackage[]);
 }
 
 const hmrAvailableAtom = atom(async () => {
