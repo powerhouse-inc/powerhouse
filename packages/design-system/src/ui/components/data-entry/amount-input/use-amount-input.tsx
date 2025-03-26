@@ -1,12 +1,12 @@
+import { type Currency } from "#scalars";
 import { useEffect, useMemo, useState } from "react";
-import { type Currency } from "../currency-code-field/types.js";
-import { isValidNumber } from "../number-field/number-field-validations.js";
+import { isValidNumber } from "../../../../scalars/components/number-field/number-field-validations.js";
 import {
   type Amount,
   type AmountCrypto,
   type AmountCurrency,
   type AmountFiat,
-  type AmountFieldPropsGeneric,
+  type AmountInputPropsGeneric,
   type AmountValue,
 } from "./types.js";
 import {
@@ -20,10 +20,10 @@ import {
   isValidNumberGreaterThanMaxSafeInteger,
 } from "./utils.js";
 
-interface UseAmountFieldProps {
+interface UseAmountInputProps {
   value?: AmountValue;
   defaultValue?: AmountValue;
-  type: AmountFieldPropsGeneric["type"];
+  type: AmountInputPropsGeneric["type"];
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   precision?: number;
@@ -32,7 +32,7 @@ interface UseAmountFieldProps {
   units?: Currency[];
 }
 
-export const useAmountField = ({
+export const useAmountInput = ({
   value,
   defaultValue,
   type,
@@ -42,7 +42,7 @@ export const useAmountField = ({
   viewPrecision,
   trailingZeros,
   units,
-}: UseAmountFieldProps) => {
+}: UseAmountInputProps) => {
   const currentValue = value ?? defaultValue;
 
   const baseValue = useMemo(() => {

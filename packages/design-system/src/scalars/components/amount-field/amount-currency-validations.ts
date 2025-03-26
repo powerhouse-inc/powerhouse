@@ -1,5 +1,5 @@
+import { type AmountCurrency } from "../../../ui/components/data-entry/amount-input/types.js";
 import { type AmountFieldProps } from "./amount-field.js";
-import { type AmountCurrency } from "./types.js";
 
 export const validateAmountCurrency =
   ({ type, units }: AmountFieldProps) =>
