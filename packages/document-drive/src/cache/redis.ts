@@ -1,4 +1,4 @@
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { childLogger } from "#utils/logger";
 import { type PHDocument } from "document-model";
 import type { RedisClientType } from "redis";

@@ -15,7 +15,7 @@ import type {
   PHDocument,
 } from "document-model";
 import { type IBackOffOptions, backOff } from "exponential-backoff";
-import { ICache } from "../../cache/types.js";
+import { type ICache } from "../../cache/types.js";
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
@@ -178,9 +178,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       throw new Error(`Document with id ${documentId} not found`);
     }
 
-    let cachedOperations: DocumentOperations<
-      Action<string, unknown, OperationScope>
-    > = {
+    let cachedOperations: DocumentOperations = {
       global: [],
       local: [],
     };

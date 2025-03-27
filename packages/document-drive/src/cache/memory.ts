@@ -1,4 +1,4 @@
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { type PHDocument } from "document-model";
 import { type ICache } from "./types.js";
 import { trimResultingState } from "./util.js";
