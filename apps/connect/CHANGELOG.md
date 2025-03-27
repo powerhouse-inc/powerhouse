@@ -1,3 +1,13 @@
+## 1.0.0-dev.247 (2025-03-27)
+
+### 🩹 Fixes
+
+- **connect:** trigger release ([2e2b8a923](https://github.com/powerhouse-inc/powerhouse/commit/2e2b8a923))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.0.0-dev.246 (2025-03-26)
 
 ### 🚀 Features
