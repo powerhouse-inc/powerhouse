@@ -1,13 +1,20 @@
 import type { ColumnDef, DataType } from "../../types.js";
 
 interface TableState<T extends DataType = DataType> {
+  dispatch?: React.Dispatch<TableAction<T>>;
+
   columns: ColumnDef[];
   data: T[];
   allowRowSelection: boolean;
   showRowNumbers: boolean;
+  selectedRowIndexes: number[];
 }
 
 type TableAction<T extends DataType = DataType> =
+  | {
+      type: "SET_DISPATCH";
+      payload: React.Dispatch<TableAction<T>>;
+    }
   | {
       type: "SET_COLUMNS";
       payload: ColumnDef[];
@@ -22,6 +29,18 @@ type TableAction<T extends DataType = DataType> =
         index: number;
         column: Partial<ColumnDef>;
       };
+    }
+  // Row selection
+  | {
+      type: "SELECT_ROW";
+      payload: number;
+    }
+  | {
+      type: "TOGGLE_SELECTED_ROW";
+      payload: number;
+    }
+  | {
+      type: "TOGGLE_SELECT_ALL_ROWS";
     };
 
 const tableReducer = <T extends DataType>(
@@ -29,6 +48,11 @@ const tableReducer = <T extends DataType>(
   action: TableAction<T>,
 ): TableState<T> => {
   switch (action.type) {
+    case "SET_DISPATCH":
+      return {
+        ...state,
+        dispatch: action.payload,
+      };
     case "SET_COLUMNS":
       return {
         ...state,
@@ -48,6 +72,30 @@ const tableReducer = <T extends DataType>(
             : column,
         ),
       };
+    case "SELECT_ROW":
+      return {
+        ...state,
+        selectedRowIndexes: [action.payload],
+      };
+    case "TOGGLE_SELECTED_ROW":
+      return {
+        ...state,
+        selectedRowIndexes: state.selectedRowIndexes.includes(action.payload)
+          ? [
+              ...state.selectedRowIndexes.filter(
+                (index) => index !== action.payload,
+              ),
+            ]
+          : [...state.selectedRowIndexes, action.payload],
+      };
+    case "TOGGLE_SELECT_ALL_ROWS":
+      return {
+        ...state,
+        selectedRowIndexes:
+          state.selectedRowIndexes.length === state.data.length
+            ? []
+            : Array.from({ length: state.data.length }, (_, index) => index),
+      };
     default:
       return state;
   }
@@ -55,3 +103,4 @@ const tableReducer = <T extends DataType>(
 
 export { tableReducer };
 export type { TableAction, TableState };
+
