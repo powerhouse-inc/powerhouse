@@ -6,10 +6,10 @@ import {
   StorybookControlCategory,
 } from "../../../../scalars/lib/storybook-arg-types.js";
 import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
-import { OIDInput } from "./oid-input.js";
+import { PHIDInput } from "./phid-input.js";
 
 /**
- * The `OIDInput` component provides an input field for Object IDs (typically UUIDs).
+ * The `PHIDInput` component provides an input field for Powerhouse IDs.
  * It supports multiple configuration properties like:
  * - label
  * - description
@@ -25,13 +25,13 @@ import { OIDInput } from "./oid-input.js";
  * - Async and sync options fetching
  *
  * > **Note:** This component does not have built-in validation. If you need built-in validation
- * > you can use the [OIDField](?path=/docs/document-engineering-scalars-oid-field--readme)
+ * > you can use the [PHIDField](?path=/docs/document-engineering-scalars-phid-field--readme)
  * > component.
  */
 
-const meta: Meta<typeof OIDInput> = {
-  title: "Document Engineering/Data Entry/OID Input",
-  component: OIDInput,
+const meta: Meta<typeof PHIDInput> = {
+  title: "Document Engineering/Data Entry/PHID Input",
+  component: PHIDInput,
   decorators: [
     (Story) => (
       <div style={{ width: "280px", margin: "1rem auto 0" }}>
@@ -56,6 +56,26 @@ const meta: Meta<typeof OIDInput> = {
       },
     }),
     ...PrebuiltArgTypes.placeholder,
+    ...PrebuiltArgTypes.maxLength,
+
+    allowUris: {
+      control: "boolean",
+      description: "Enables URI format as valid input in the field",
+      table: {
+        type: { summary: "boolean" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+
+    allowedScopes: {
+      control: "object",
+      description: "List of allowed scopes.",
+      table: {
+        type: { summary: "string[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "allowUris", eq: true },
+    },
 
     autoComplete: {
       control: "boolean",
@@ -81,7 +101,8 @@ const meta: Meta<typeof OIDInput> = {
       table: {
         type: {
           summary:
-            "(userInput: string; context?: {}) => Promise<OIDOption[]> | OIDOption[]",
+            "(userInput: string; context?: { allowUris?: boolean; " +
+            "allowedScopes?: string[]; }) => Promise<PHIDOption[]> | PHIDOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -103,7 +124,7 @@ const meta: Meta<typeof OIDInput> = {
       table: {
         type: {
           summary:
-            "(value: string) => Promise<OIDOption | undefined> | OIDOption | undefined",
+            "(value: string) => Promise<PHIDOption | undefined> | PHIDOption | undefined",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -122,7 +143,7 @@ const meta: Meta<typeof OIDInput> = {
         "value: string\n\n" +
         "description?: string\n\n",
       table: {
-        type: { summary: "OIDOption" },
+        type: { summary: "PHIDOption" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "autoComplete", neq: false },
@@ -149,18 +170,18 @@ const meta: Meta<typeof OIDInput> = {
     },
   },
   args: {
-    name: "oid-input",
+    name: "phid-input",
   },
-} satisfies Meta<typeof OIDInput>;
+} satisfies Meta<typeof PHIDInput>;
 
 export default meta;
 
-type Story = StoryObj<typeof OIDInput>;
+type Story = StoryObj<typeof PHIDInput>;
 
 export const Default: Story = {
   args: {
-    label: "OID input",
-    placeholder: "uuid",
+    label: "PHID input",
+    placeholder: "phd:",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -168,10 +189,10 @@ export const Default: Story = {
 
 export const Empty: Story = {
   args: {
-    label: "OID input",
-    placeholder: "uuid",
+    label: "PHID input",
+    placeholder: "phd:",
     isOpenByDefault: true,
-    defaultValue: "uuid",
+    defaultValue: "phd:",
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
@@ -180,12 +201,13 @@ export const Empty: Story = {
 
 export const Open: Story = {
   args: {
-    label: "OID input",
-    placeholder: "uuid",
+    label: "PHID input",
+    placeholder: "phd:",
     isOpenByDefault: true,
-    defaultValue: "uuid",
-    variant: "withValueTitleAndDescription",
+    defaultValue: "phd:",
     initialOptions: mockedOptions,
+    allowUris: true,
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -193,10 +215,11 @@ export const Open: Story = {
 
 export const Filled: Story = {
   args: {
-    label: "OID input",
-    placeholder: "uuid",
+    label: "PHID input",
+    placeholder: "phd:",
     defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
+    allowUris: true,
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
