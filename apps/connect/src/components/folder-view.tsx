@@ -5,6 +5,8 @@ import {
     FOLDER,
     FolderItem,
     useDrop,
+    type BaseFolderItem,
+    type UiFolderNode
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
@@ -18,6 +20,52 @@ export function FolderView(props: TUiNodes) {
         ...props,
         uiNode: selectedParentNode,
     });
+
+    const handleSelectNode = (node: BaseFolderItem) => {
+        props.setSelectedNode(node as unknown as UiFolderNode);
+    };
+
+    const handleRenameNode = (name: string, node: BaseFolderItem) => {
+        props.onRenameNode(name, node as unknown as UiFolderNode);
+    };
+
+    const handleDuplicateNode = (node: BaseFolderItem) => {
+        props.onDuplicateNode(node as unknown as UiFolderNode);
+    };
+
+    const handleDeleteNode = (node: BaseFolderItem) => {
+        props.onDeleteNode(node as unknown as UiFolderNode);
+    };
+
+    const handleAddFile = async (
+        file: File,
+        parentNode: BaseFolderItem | null,
+    ) => {
+        await props.onAddFile(
+            file,
+            parentNode as unknown as UiFolderNode | null,
+        );
+    };
+
+    const handleCopyNode = async (
+        node: BaseFolderItem,
+        targetNode: BaseFolderItem,
+    ) => {
+        await props.onCopyNode(
+            node as unknown as UiFolderNode,
+            targetNode as unknown as UiFolderNode,
+        );
+    };
+
+    const handleMoveNode = async (
+        node: BaseFolderItem,
+        targetNode: BaseFolderItem,
+    ) => {
+        await props.onMoveNode(
+            node as unknown as UiFolderNode,
+            targetNode as unknown as UiFolderNode,
+        );
+    };
 
     const folderNodes =
         selectedParentNode?.children
@@ -44,10 +92,15 @@ export function FolderView(props: TUiNodes) {
                 {folderNodes.length > 0 ? (
                     folderNodes.map(folderNode => (
                         <FolderItem
-                            {...props}
                             key={folderNode.id}
                             uiNode={folderNode}
-                            onSelectNode={props.setSelectedNode}
+                            onSelectNode={handleSelectNode}
+                            onRenameNode={handleRenameNode}
+                            onDuplicateNode={handleDuplicateNode}
+                            onDeleteNode={handleDeleteNode}
+                            onAddFile={handleAddFile}
+                            onCopyNode={handleCopyNode}
+                            onMoveNode={handleMoveNode}
                             isAllowedToCreateDocuments={
                                 props.isAllowedToCreateDocuments ?? false
                             }
