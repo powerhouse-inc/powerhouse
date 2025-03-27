@@ -123,8 +123,6 @@ export const update: CommandActionType<
     deps,
   );
 
-  console.log(updateCommand);
-
   const commandOptions = { cwd: projectInfo.path };
 
   execSync(updateCommand, {
@@ -152,12 +150,12 @@ export function updateCommand(program: Command) {
       "after",
       `
 Examples:
-  $ ph-cli update                          # Update dependencies based on package.json ranges
-  $ ph-cli update --force dev              # Force update to latest dev version available
-  $ ph-cli update --force prod             # Force update to latest stable version available (same as latest)
-  $ ph-cli update --force latest           # Force update to latest stable version available (same as prod)
-  $ ph-cli update --package-manager pnpm   # Specify package manager to use
-  $ ph-cli update --debug                  # Show debug information during update
+  $ ph update                          # Update dependencies based on package.json ranges
+  $ ph update --force dev              # Force update to latest dev version available
+  $ ph update --force prod             # Force update to latest stable version available (same as latest)
+  $ ph update --force latest           # Force update to latest stable version available (same as prod)
+  $ ph update --package-manager pnpm   # Specify package manager to use
+  $ ph update --debug                  # Show debug information during update
     `,
     )
     .action(update);

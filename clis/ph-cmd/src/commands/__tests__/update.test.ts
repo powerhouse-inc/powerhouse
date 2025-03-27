@@ -14,12 +14,10 @@ import { updateCommand } from "../update.js";
 // Mock dependencies
 vi.mock("node:fs");
 vi.mock("node:child_process");
-vi.mock("../install.js", () => ({
-  installDependency: vi.fn(),
-}));
 
 // Import installDependency after mocking
-import { installDependency } from "../install.js";
+import { installDependency } from "../../utils.js";
+
 vi.mock("../../utils.js", () => ({
   packageManagers: {
     pnpm: {
@@ -33,6 +31,7 @@ vi.mock("../../utils.js", () => ({
   getPackageManagerFromLockfile: vi.fn(),
   getProjectInfo: vi.fn(),
   findContainerDirectory: vi.fn(),
+  installDependency: vi.fn(),
 }));
 
 describe("updateCommand", () => {

@@ -4,9 +4,9 @@ import { type CommandActionType } from "../types.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
+  installDependency,
   type PackageManager,
 } from "../utils.js";
-import { installDependency } from "./install.js";
 
 export const ORG = "@powerhousedao";
 export const CLIS = ["ph-cli"];

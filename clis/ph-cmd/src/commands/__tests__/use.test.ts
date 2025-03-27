@@ -11,12 +11,9 @@ import { useCommand } from "../use.js";
 
 // Mock dependencies
 vi.mock("node:fs");
-vi.mock("../install.js", () => ({
-  installDependency: vi.fn(),
-}));
 
 // Import installDependency after mocking
-import { installDependency } from "../install.js";
+import { installDependency } from "../../utils.js";
 
 vi.mock("../../utils.js", () => ({
   packageManagers: {
@@ -30,6 +27,7 @@ vi.mock("../../utils.js", () => ({
   },
   getPackageManagerFromLockfile: vi.fn(),
   getProjectInfo: vi.fn(),
+  installDependency: vi.fn(),
 }));
 
 describe("useCommand", () => {
