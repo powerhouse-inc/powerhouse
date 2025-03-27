@@ -30,6 +30,7 @@ const TableProvider = <T extends DataType>({
     allowRowSelection: config.allowRowSelection ?? true,
     showRowNumbers: config.showRowNumbers ?? true,
     selectedRowIndexes: [],
+    lastSelectedRowIndex: null,
   });
 
   useEffect(() => {
