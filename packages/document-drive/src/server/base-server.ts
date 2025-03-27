@@ -60,6 +60,7 @@ import {
   type CancelPullLoop,
   PullResponderTransmitter,
 } from "./listener/transmitter/pull-responder.js";
+import { SwitchboardPushTransmitter } from "./listener/transmitter/switchboard-push.js";
 import { type StrandUpdateSource } from "./listener/transmitter/types.js";
 import {
   type AddOperationOptions,
@@ -438,6 +439,31 @@ export class BaseDocumentDriveServer
 
     if (this.shouldSyncRemoteDrive(drive)) {
       await this.startSyncRemoteDrive(driveId);
+    }
+
+    // add switchboard push listeners
+    for (const zodListener of drive.state.local.listeners) {
+      if (zodListener.callInfo?.transmitterType === "SwitchboardPush") {
+        const transmitter = new SwitchboardPushTransmitter(
+          zodListener.callInfo?.data ?? "",
+        );
+
+        this.listenerManager.setListener(driveId, {
+          block: zodListener.block,
+          driveId: drive.state.global.id,
+          filter: {
+            branch: zodListener.filter?.branch ?? [],
+            documentId: zodListener.filter?.documentId ?? [],
+            documentType: zodListener.filter?.documentType ?? [],
+            scope: zodListener.filter?.scope ?? [],
+          },
+          listenerId: zodListener.listenerId,
+          callInfo: zodListener.callInfo,
+          system: zodListener.system,
+          label: zodListener.label ?? "",
+          transmitter,
+        });
+      }
     }
   }
 
