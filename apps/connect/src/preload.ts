@@ -165,8 +165,8 @@ const electronApi = {
             ipcRenderer.off('saveFile', listener);
         };
     },
-    showTabMenu: (tab: string) => {
-        ipcRenderer.invoke('showTabMenu', tab);
+    showTabMenu: async (tab: string) => {
+        await ipcRenderer.invoke('showTabMenu', tab);
     },
     handleAddTab: (
         listener: (event: IpcRendererEvent, tab: string) => void,
