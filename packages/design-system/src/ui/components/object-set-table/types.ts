@@ -8,6 +8,20 @@ export interface ObjectSetTableConfig<T> {
    * The data to display in the table.
    */
   data: T[];
+
+  /**
+   * Whether to allow row selection.
+   *
+   * @default true
+   */
+  allowRowSelection?: boolean;
+
+  /**
+   * Whether to show row numbers.
+   *
+   * @default true
+   */
+  showRowNumbers?: boolean;
 }
 
 export interface ColumnDef {
