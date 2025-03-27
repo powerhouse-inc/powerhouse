@@ -75,7 +75,9 @@ const tableReducer = <T extends DataType>(
     case "SELECT_ROW":
       return {
         ...state,
-        selectedRowIndexes: [action.payload],
+        selectedRowIndexes: state.selectedRowIndexes.includes(action.payload)
+          ? []
+          : [action.payload],
       };
     case "TOGGLE_SELECTED_ROW":
       return {

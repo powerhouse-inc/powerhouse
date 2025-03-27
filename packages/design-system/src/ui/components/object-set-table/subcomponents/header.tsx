@@ -13,14 +13,15 @@ interface TableHeaderProps {
 
 const TableHeader: React.FC<TableHeaderProps> = ({ columns }) => {
   const {
-    config: { data },
+    config: { data, allowRowSelection },
     state: { selectedRowIndexes, dispatch },
   } = useInternalTableState();
 
   const handleSelectAllRows = useCallback(() => {
+    if (!allowRowSelection) return;
     // TODO: uncomment this once it is safe to implement it
     // dispatch?.({ type: "TOGGLE_SELECT_ALL_ROWS" });
-  }, [dispatch]);
+  }, [dispatch, allowRowSelection]);
 
   const isAllRowsSelected = selectedRowIndexes.length === data.length;
 

@@ -16,11 +16,13 @@ const TableBody = <T extends DataType>({
   columns,
 }: TableBodyProps<T>) => {
   const {
+    config: { allowRowSelection },
     state: { dispatch, selectedRowIndexes },
   } = useInternalTableState();
 
   const createSelectRowOnClickHandler = useCallback(
     (index: number) => (e: React.MouseEvent<HTMLTableCellElement>) => {
+      if (!allowRowSelection) return;
       if (e.ctrlKey) {
         e.stopPropagation();
         dispatch?.({ type: "TOGGLE_SELECTED_ROW", payload: index });
@@ -28,17 +30,18 @@ const TableBody = <T extends DataType>({
         dispatch?.({ type: "SELECT_ROW", payload: index });
       }
     },
-    [dispatch],
+    [dispatch, allowRowSelection],
   );
 
   const createAddSelectedRowHandler = useCallback(
     (index: number) => (e: React.MouseEvent<HTMLTableRowElement>) => {
+      if (!allowRowSelection) return;
       if (e.ctrlKey) {
         e.stopPropagation();
         dispatch?.({ type: "TOGGLE_SELECTED_ROW", payload: index });
       }
     },
-    [dispatch],
+    [dispatch, allowRowSelection],
   );
 
   return (
