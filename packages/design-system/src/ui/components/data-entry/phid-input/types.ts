@@ -3,18 +3,28 @@ import type {
   IdAutocompleteProps,
 } from "../../../../scalars/components/fragments/id-autocomplete/types.js";
 
-type OIDOption = IdAutocompleteOption;
+type PHIDOption = IdAutocompleteOption;
 
-type OIDInputBaseProps = Omit<
+type PHIDInputBaseProps = Omit<
   IdAutocompleteProps,
   | "autoComplete"
   | "fetchOptionsCallback"
   | "fetchSelectedOptionCallback"
   | "previewPlaceholder"
   | "renderOption"
->;
+> &
+  (
+    | {
+        allowUris: true;
+        allowedScopes?: string[];
+      }
+    | {
+        allowUris?: false;
+        allowedScopes?: never;
+      }
+  );
 
-type OIDInputProps = OIDInputBaseProps &
+type PHIDInputProps = PHIDInputBaseProps &
   (
     | {
         autoComplete: false;
@@ -27,12 +37,12 @@ type OIDInputProps = OIDInputBaseProps &
         fetchOptionsCallback: (
           userInput: string,
           context?: Record<string, unknown>,
-        ) => Promise<OIDOption[]> | OIDOption[];
+        ) => Promise<PHIDOption[]> | PHIDOption[];
         fetchSelectedOptionCallback?: (
           value: string,
-        ) => Promise<OIDOption | undefined> | OIDOption | undefined;
-        previewPlaceholder?: OIDOption;
+        ) => Promise<PHIDOption | undefined> | PHIDOption | undefined;
+        previewPlaceholder?: PHIDOption;
       }
   );
 
-export type { OIDInputProps, OIDOption };
+export type { PHIDInputProps, PHIDOption };
