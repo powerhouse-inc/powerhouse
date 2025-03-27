@@ -150,4 +150,3 @@ const tableReducer = <T extends DataType>(
 
 export { tableReducer };
 export type { TableAction, TableState };
-
