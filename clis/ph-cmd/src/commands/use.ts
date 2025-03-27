@@ -87,6 +87,8 @@ export const updatePackageJson = (
 
 export const use: CommandActionType<
   [
+    string | undefined,
+    string | undefined,
     {
       dev?: boolean;
       prod?: boolean;
@@ -96,29 +98,31 @@ export const use: CommandActionType<
       packageManager?: string;
     },
   ]
-> = (options) => {
-  const { dev, prod, latest, local, packageManager, debug } = options;
+> = (environment, localPath, options) => {
+  if (
+    !environment ||
+    (environment !== "local" && !Object.keys(ENV_MAP).includes(environment))
+  ) {
+    throw new Error(
+      "❌ Invalid environment, please use one of the following: latest, dev, prod, local",
+    );
+  }
 
-  const develop: Environment | null = dev ? "dev" : null;
-  const production: Environment | null = prod ? "prod" : null;
-  const latestEnv: Environment | null = latest ? "latest" : null;
+  if (environment === "local" && !localPath) {
+    throw new Error(
+      "❌ Local environment requires a local path, please specify the path to the local environment",
+    );
+  }
 
-  const env: Environment | null = develop || production || latestEnv;
+  const { packageManager, debug } = options;
+
+  const env = environment as Environment;
 
   if (debug) {
     console.log(">>> options", options);
   }
 
-  if (!env && !local) {
-    throw new Error("❌ Please specify an environment");
-  }
-
-  updatePackageJson(
-    env || "dev",
-    local,
-    packageManager as PackageManager,
-    debug,
-  );
+  updatePackageJson(env, localPath, packageManager as PackageManager, debug);
 };
 
 export function useCommand(program: Command) {
@@ -127,12 +131,13 @@ export function useCommand(program: Command) {
     .description(
       "Allows you to change your environment (latest, development, production, local)",
     )
-    .option("-d, --dev", "Use development environment")
-    .option("-p, --prod", "Use production environment")
-    .option("--latest", "Use latest environment")
-    .option(
-      "-l, --local <localPath>",
-      "Use local environment (you have to specify the path to the local environment)",
+    .argument(
+      "<environment>",
+      "The environment to use (latest, dev, prod, local)",
+    )
+    .argument(
+      "[localPath]",
+      "The path to the local environment (you have to specify the path to the local environment)",
     )
     .option(
       "--package-manager <packageManager>",

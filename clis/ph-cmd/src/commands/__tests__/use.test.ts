@@ -65,17 +65,13 @@ describe("useCommand", () => {
     expect(cmd).toBeDefined();
     expect(cmd?.description()).toContain("change your environment");
     const options = cmd?.options.map((opt) => opt.attributeName());
-    expect(options).toContain("dev");
-    expect(options).toContain("prod");
-    expect(options).toContain("latest");
-    expect(options).toContain("local");
     expect(options).toContain("packageManager");
     expect(options).toContain("debug");
   });
 
   it("should execute use command with dev environment", async () => {
     const cmd = program.commands.find((c) => c.name() === "use");
-    await cmd?.parseAsync(["node", "test", "--dev"]);
+    await cmd?.parseAsync(["node", "test", "dev"]);
 
     expect(installDependency).toHaveBeenCalledWith(
       "pnpm",
@@ -96,7 +92,7 @@ describe("useCommand", () => {
 
   it("should execute use command with prod environment", async () => {
     const cmd = program.commands.find((c) => c.name() === "use");
-    await cmd?.parseAsync(["node", "test", "--prod"]);
+    await cmd?.parseAsync(["node", "test", "prod"]);
 
     expect(installDependency).toHaveBeenCalledWith(
       "pnpm",
@@ -117,7 +113,7 @@ describe("useCommand", () => {
 
   it("should execute use command with local environment", async () => {
     const cmd = program.commands.find((c) => c.name() === "use");
-    await cmd?.parseAsync(["node", "test", "--local", "/path/to/local"]);
+    await cmd?.parseAsync(["node", "test", "local", "/path/to/local"]);
 
     expect(installDependency).toHaveBeenCalledWith(
       "pnpm",
@@ -139,27 +135,27 @@ describe("useCommand", () => {
   it("should handle debug flag", async () => {
     const consoleSpy = vi.spyOn(console, "log");
     const cmd = program.commands.find((c) => c.name() === "use");
-    await cmd?.parseAsync(["node", "test", "--dev", "--debug"]);
+    await cmd?.parseAsync(["node", "test", "dev", "--debug"]);
 
     expect(consoleSpy).toHaveBeenCalledWith(">>> options", expect.any(Object));
   });
 
   it("should throw error when no environment is specified", async () => {
     const cmd = program.commands.find((c) => c.name() === "use");
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit called with ${code}`);
+    });
+
     await expect(cmd?.parseAsync(["node", "test"])).rejects.toThrow(
-      "❌ Please specify an environment",
+      "process.exit called with 1",
     );
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("should use specified package manager", async () => {
     const cmd = program.commands.find((c) => c.name() === "use");
-    await cmd?.parseAsync([
-      "node",
-      "test",
-      "--dev",
-      "--package-manager",
-      "npm",
-    ]);
+    await cmd?.parseAsync(["node", "test", "dev", "--package-manager", "npm"]);
 
     expect(installDependency).toHaveBeenCalledWith(
       "npm",
