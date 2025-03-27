@@ -1,3 +1,67 @@
+## 1.33.0 (2025-03-26)
+
+### 🚀 Features
+
+- **scalars:** use zod type for scalar schema ([7f6d4ecac](https://github.com/powerhouse-inc/powerhouse/commit/7f6d4ecac))
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- **scalars:** add base scalar type definition ([4315f258b](https://github.com/powerhouse-inc/powerhouse/commit/4315f258b))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+- removed default supported units ([9bf6769a1](https://github.com/powerhouse-inc/powerhouse/commit/9bf6769a1))
+- added new amount scalars ([fd1eac1d9](https://github.com/powerhouse-inc/powerhouse/commit/fd1eac1d9))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente
+- ryanwolhuter
+
+## 1.32.0 (2025-03-20)
+
+### 🚀 Features
+
+- added new amount scalars ([#1283](https://github.com/powerhouse-inc/powerhouse/pull/1283))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 1.31.1 (2025-03-19)
+
+### 🩹 Fixes
+
+- roll back replace plugin ([6c4781da](https://github.com/powerhouse-inc/powerhouse/commit/6c4781da))
+- **codegen:** update validation plugin name ([18de5641](https://github.com/powerhouse-inc/powerhouse/commit/18de5641))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 1.31.0 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+- **monorepo:** remove migrations ([0c698b39](https://github.com/powerhouse-inc/powerhouse/commit/0c698b39))
+- **design-system:** fix storybook type errors ([75cd9dd5](https://github.com/powerhouse-inc/powerhouse/commit/75cd9dd5))
+- **monorepo:** regenerate lockfile ([10b40ad0](https://github.com/powerhouse-inc/powerhouse/commit/10b40ad0))
+- **connect:** remove accidentally added dep ([5f6ba2e4](https://github.com/powerhouse-inc/powerhouse/commit/5f6ba2e4))
+- **design-system:** simplify icons and remove dynamic loader ([1db37756](https://github.com/powerhouse-inc/powerhouse/commit/1db37756))
+
+### 🩹 Fixes
+
+- **reactor-local:** support commonjs code on local subgraphs ([c49914e2](https://github.com/powerhouse-inc/powerhouse/commit/c49914e2))
+- **document-drive:** typescript should be a dev dependency of document-drive ([b5ddc827](https://github.com/powerhouse-inc/powerhouse/commit/b5ddc827))
+- **reactor-api:** add ethers as peer dependency ([069767f8](https://github.com/powerhouse-inc/powerhouse/commit/069767f8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 1.30.0 (2025-03-17)
 
 ### 🚀 Features

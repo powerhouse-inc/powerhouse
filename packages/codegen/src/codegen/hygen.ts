@@ -204,7 +204,7 @@ export async function generateSubgraph(
     await run(
       [
         "powerhouse",
-        "generate-document-model-mutations",
+        "generate-document-model-subgraph",
         "--subgraph",
         name,
         "--document-model",

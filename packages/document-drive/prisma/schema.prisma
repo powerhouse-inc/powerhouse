@@ -11,30 +11,42 @@ datasource db {
 }
 
 model Drive {
-  slug String @id
-  id   String
+  id            String  @id
+  slug          String  @unique
+  driveDocuments DriveDocument[]
 }
 
 model Document {
-  id                  String
-  driveId             String
+  id                  String               @id
   created             DateTime             @default(now())
   lastModified        DateTime             @default(now())
+  isDrive             Boolean
   revision            String
   name                String?
   operations          Operation[]
   initialState        String // json object with the scope as keys of the root object
   documentType        String
-  syncronizationUnits SyncronizationUnit[]
+  meta                String?
+  synchronizationUnits SynchronizationUnit[]
+  driveDocuments      DriveDocument[]
+}
 
-  @@id([id, driveId])
+// Model to map the many-to-many relationship between drives and documents
+model DriveDocument {
+  driveId     String
+  documentId  String
+  drive       Drive     @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([driveId, documentId])
+  @@index([driveId])
+  @@index([documentId])
 }
 
 model Operation {
   id          String       @id @default(uuid())
   opId        String?
-  driveId     String
-  Document    Document?    @relation(fields: [driveId, documentId], references: [driveId, id], onDelete: Cascade)
+  Document    Document?    @relation(fields: [documentId], references: [id], onDelete: Cascade)
   documentId  String
   scope       String
   branch      String
@@ -50,22 +62,19 @@ model Operation {
   context     Json?
   resultingState Bytes?
 
-  SyncronizationUnit SyncronizationUnit? @relation(fields: [syncId, driveId], references: [id, driveId], onDelete: Cascade)
+  SynchronizationUnit SynchronizationUnit? @relation(fields: [syncId], references: [id], onDelete: Cascade)
 
-  @@unique([driveId, documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
+  @@unique([documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
 }
 
-model SyncronizationUnit {
-  id         String
-  driveId    String
+model SynchronizationUnit {
+  id         String       @id
   documentId String
 
-  Document   Document    @relation(fields: [documentId, driveId], references: [id, driveId], onDelete: Cascade)
+  Document   Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
   scope      String
   branch     String
   operations Operation[]
-
-  @@id([id, driveId])
 }
 
 model Attachment {
@@ -78,16 +87,4 @@ model Attachment {
   filename  String?
   extension String?
   hash      String
-}
-
-model Listener {
-  listenerId String @id @default(uuid())
-  driveId    String
-
-  label  String?
-  block  Boolean
-  system Boolean
-
-  filter   Json
-  callInfo Json
 }

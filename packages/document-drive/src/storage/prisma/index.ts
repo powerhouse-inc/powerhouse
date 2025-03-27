@@ -1,9 +1,11 @@
 import { type Prisma, type PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
+  Action,
   AttachmentInput,
   BaseStateFromDocument,
   DocumentHeader,
+  DocumentOperations,
   ExtendedStateFromDocument,
   FileRegistry,
   Operation,
@@ -13,17 +15,15 @@ import type {
   PHDocument,
 } from "document-model";
 import { type IBackOffOptions, backOff } from "exponential-backoff";
+import { type ICache } from "../../cache/types.js";
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "../../drive-document-model/gen/types.js";
-import {
-  ConflictOperationError,
-  DriveNotFoundError,
-} from "../../server/error.js";
+import { ConflictOperationError } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
-import { logger } from "../../utils/logger.js";
-import { type IDriveStorage, type IStorageDelegate } from "../types.js";
+import { childLogger, logger } from "../../utils/logger.js";
+import type { IDocumentStorage, IDriveStorage } from "../types.js";
 
 export * from "./factory.js";
 
@@ -92,38 +92,347 @@ type ExtendedPrismaClient = ReturnType<
   typeof getRetryTransactionsClient<PrismaClient>
 >;
 
-export class PrismaStorage implements IDriveStorage {
-  private db: ExtendedPrismaClient;
-  private delegate: IStorageDelegate | undefined;
+export class PrismaStorage implements IDriveStorage, IDocumentStorage {
+  private logger = childLogger(["PrismaStorage"]);
 
-  constructor(db: PrismaClient, options?: PrismaStorageOptions) {
+  private db: ExtendedPrismaClient;
+  private cache: ICache;
+
+  constructor(db: PrismaClient, cache: ICache, options?: PrismaStorageOptions) {
     const backOffOptions = options?.transactionRetryBackoff;
+
+    this.cache = cache;
     this.db = getRetryTransactionsClient(db, {
       ...backOffOptions,
       jitter: backOffOptions?.jitter ?? "full",
     });
   }
 
-  setStorageDelegate(delegate: IStorageDelegate): void {
-    this.delegate = delegate;
+  ////////////////////////////////
+  // IDocumentStorage
+  ////////////////////////////////
+
+  async exists(documentId: string) {
+    const count = await this.db.document.count({
+      where: {
+        id: documentId,
+      },
+    });
+
+    return count > 0;
   }
 
-  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    // drive for all drive documents
-    await this.createDocument("drives", id, drive);
-    await this.db.drive.upsert({
+  async create(documentId: string, document: PHDocument) {
+    await this.db.document.upsert({
       where: {
-        slug: drive.initialState.state.global.slug ?? id,
+        id: documentId,
       },
+      update: {},
       create: {
-        id: id,
-        slug: drive.initialState.state.global.slug ?? id,
+        name: document.name,
+        documentType: document.documentType,
+        isDrive: false,
+        initialState: JSON.stringify(document.initialState),
+        lastModified: document.lastModified,
+        revision: JSON.stringify(document.revision),
+        meta: document.meta ? JSON.stringify(document.meta) : undefined,
+        id: documentId,
       },
-      update: {
+    });
+
+    // temporary -- but we need to create drives automatically for documents
+    // of the correct type
+    if (document.documentType === "powerhouse/document-drive") {
+      const drive = document as DocumentDriveDocument;
+      try {
+        await this.db.drive.create({
+          data: {
+            id: documentId,
+            slug: drive.initialState.state.global.slug ?? documentId,
+          },
+        });
+      } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
+          throw new Error(
+            `Drive with slug ${drive.initialState.state.global.slug ?? documentId} already exists`,
+          );
+        }
+        throw e;
+      }
+    }
+  }
+
+  async get<TDocument extends PHDocument>(
+    documentId: string,
+    tx?: Transaction,
+  ): Promise<TDocument> {
+    const prisma = tx ?? this.db;
+    const query: any = {
+      where: {
+        id: documentId,
+      },
+    };
+
+    const result = await prisma.document.findUnique(query);
+    if (result === null) {
+      throw new Error(`Document with id ${documentId} not found`);
+    }
+
+    let cachedOperations: DocumentOperations = {
+      global: [],
+      local: [],
+    };
+    const cachedDocument = await this.cache.getDocument<TDocument>(documentId);
+    if (cachedDocument) {
+      cachedOperations = cachedDocument.operations;
+    }
+
+    const scopeIndex = Object.keys(cachedOperations).reduceRight<
+      Record<OperationScope, number>
+    >(
+      (acc, value) => {
+        const scope = value as OperationScope;
+        const lastIndex = cachedOperations[scope].at(-1)?.index ?? -1;
+        acc[scope] = lastIndex;
+        return acc;
+      },
+      { global: -1, local: -1 },
+    );
+
+    const conditions = Object.entries(scopeIndex).map(
+      ([scope, index]) => `("scope" = '${scope}' AND "index" > ${index})`,
+    );
+    conditions.push(
+      `("scope" NOT IN (${Object.keys(cachedOperations)
+        .map((s) => `'${s}'`)
+        .join(", ")}))`,
+    );
+
+    // retrieves operations with resulting state
+    // for the last operation of each scope
+    // TODO prevent SQL injection
+    const queryOperations = await prisma.$queryRawUnsafe<
+      Prisma.$OperationPayload["scalars"][]
+    >(
+      `WITH ranked_operations AS (
+              SELECT
+                  *,
+                  ROW_NUMBER() OVER (PARTITION BY scope ORDER BY index DESC) AS rn
+              FROM "Operation"
+              )
+              SELECT
+              "id",
+              "opId",
+              "scope",
+              "branch",
+              "index",
+              "skip",
+              "hash",
+              "timestamp",
+              "input",
+              "type",
+              "context",
+              CASE
+                  WHEN rn = 1 THEN "resultingState"
+                  ELSE NULL
+              END AS "resultingState"
+              FROM ranked_operations
+              WHERE "documentId" = $1
+              AND (${conditions.join(" OR ")})
+              ORDER BY scope, index;
+          `,
+      documentId,
+    );
+    const operationIds = queryOperations.map((o) => o.id);
+    const attachments = await prisma.attachment.findMany({
+      where: {
+        operationId: {
+          in: operationIds,
+        },
+      },
+    });
+
+    // TODO add attachments from cached operations
+    const fileRegistry: FileRegistry = {};
+
+    const operationsByScope = queryOperations.reduce((acc, operation) => {
+      const scope = operation.scope as OperationScope;
+      if (!acc[scope]) {
+        acc[scope] = [];
+      }
+      const result = storageToOperation(operation);
+      result.attachments = attachments.filter(
+        (a) => a.operationId === operation.id,
+      );
+      result.attachments.forEach(({ hash, ...file }) => {
+        fileRegistry[hash] = file;
+      });
+      acc[scope].push(result);
+      return acc;
+    }, cachedOperations) as OperationsFromDocument<TDocument>;
+    const dbDoc = result;
+    const doc = {
+      created: dbDoc.created.toISOString(),
+      name: dbDoc.name ? dbDoc.name : "",
+      documentType: dbDoc.documentType,
+      initialState: JSON.parse(
+        dbDoc.initialState,
+      ) as ExtendedStateFromDocument<TDocument>,
+      state: undefined,
+      lastModified: new Date(dbDoc.lastModified).toISOString(),
+      operations: operationsByScope,
+      clipboard: [],
+      revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
+      meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
+      attachments: {},
+    };
+
+    return doc as unknown as TDocument;
+  }
+
+  async delete(documentId: string): Promise<boolean> {
+    try {
+      // delete out of drives
+      await this.db.drive.deleteMany({
+        where: {
+          driveDocuments: {
+            none: {
+              documentId,
+            },
+          },
+        },
+      });
+    } catch (e: unknown) {
+      this.logger.error(
+        "Error deleting document from drives, could not delete DriveDocument links",
+        e,
+      );
+
+      return false;
+    }
+
+    try {
+      // delete document
+      const result = await this.db.document.deleteMany({
+        where: {
+          id: documentId,
+        },
+      });
+
+      return result.count > 0;
+    } catch (e: unknown) {
+      this.logger.error(
+        "Error deleting document from drives, could not delete Document",
+        e,
+      );
+
+      const prismaError = e as { code?: string; message?: string };
+      // Ignore Error: P2025: An operation failed because it depends on one or more records that were required but not found.
+      if (
+        (prismaError.code && prismaError.code === "P2025") ||
+        prismaError.message?.includes(
+          "An operation failed because it depends on one or more records that were required but not found.",
+        )
+      ) {
+        return false;
+      }
+
+      throw e;
+    }
+  }
+
+  async addChild(parentId: string, childId: string) {
+    if (parentId === childId) {
+      throw new Error("Cannot associate a document with itself");
+    }
+
+    // check if the child is a parent of the parent
+    const children = await this.getChildren(childId);
+    if (children.includes(parentId)) {
+      throw new Error("Cannot associate a document with its child");
+    }
+
+    // create the many-to-many relation
+    await this.db.document.update({
+      where: {
+        id: childId,
+      },
+      data: {
+        driveDocuments: { create: { driveId: parentId } },
+      },
+    });
+  }
+
+  async removeChild(parentId: string, childId: string) {
+    try {
+      await this.db.driveDocument.delete({
+        where: {
+          // use unique constraint so it either deletes or throws
+          driveId_documentId: {
+            driveId: parentId,
+            documentId: childId,
+          },
+        },
+      });
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async getChildren(parentId: string): Promise<string[]> {
+    const docs = await this.db.document.findMany({
+      select: {
+        id: true,
+      },
+      where: {
+        driveDocuments: {
+          some: {
+            driveId: parentId,
+          },
+        },
+      },
+    });
+
+    return docs.map((doc) => doc.id);
+  }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
+
+  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
+    try {
+      await this.db.drive.create({
+        data: {
+          id,
+          slug: drive.initialState.state.global.slug ?? id,
+        },
+      });
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
+        throw new Error(
+          `Drive with slug ${drive.initialState.state.global.slug ?? id} already exists`,
+        );
+      }
+      throw e;
+    }
+
+    await this.db.document.create({
+      data: {
+        name: drive.name,
+        documentType: drive.documentType,
+        isDrive: true,
+        initialState: JSON.stringify(drive.initialState),
+        lastModified: drive.lastModified,
+        revision: JSON.stringify(drive.revision),
+        meta: drive.meta ? JSON.stringify(drive.meta) : undefined,
         id,
       },
     });
   }
+
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
@@ -151,22 +460,15 @@ export class PrismaStorage implements IDriveStorage {
     id: string,
     document: PHDocument,
   ): Promise<void> {
-    await this.db.document.upsert({
+    await this.create(id, document);
+
+    // create the many-to-many relation
+    await this.db.document.update({
       where: {
-        id_driveId: {
-          id,
-          driveId: drive,
-        },
-      },
-      update: {},
-      create: {
-        name: document.name,
-        documentType: document.documentType,
-        driveId: drive,
-        initialState: JSON.stringify(document.initialState),
-        lastModified: document.lastModified,
-        revision: JSON.stringify(document.revision),
         id,
+      },
+      data: {
+        driveDocuments: { create: { driveId: drive } },
       },
     });
   }
@@ -181,7 +483,6 @@ export class PrismaStorage implements IDriveStorage {
     try {
       await tx.operation.createMany({
         data: operations.map((op) => ({
-          driveId: drive,
           documentId: id,
           hash: op.hash,
           index: op.index,
@@ -202,7 +503,6 @@ export class PrismaStorage implements IDriveStorage {
       await tx.document.updateMany({
         where: {
           id,
-          driveId: drive,
         },
         data: {
           lastModified: header.lastModified,
@@ -323,10 +623,9 @@ export class PrismaStorage implements IDriveStorage {
         id: true,
       },
       where: {
-        AND: {
-          driveId: drive,
-          NOT: {
-            id: "drives",
+        driveDocuments: {
+          some: {
+            driveId: drive,
           },
         },
       },
@@ -339,7 +638,11 @@ export class PrismaStorage implements IDriveStorage {
     const count = await this.db.document.count({
       where: {
         id: id,
-        driveId: driveId,
+        driveDocuments: {
+          some: {
+            driveId: driveId,
+          },
+        },
       },
     });
     return count > 0;
@@ -347,169 +650,28 @@ export class PrismaStorage implements IDriveStorage {
 
   async getDocument<TDocument extends PHDocument>(
     driveId: string,
-    id: string,
+    documentId: string,
     tx?: Transaction,
   ): Promise<TDocument> {
-    const prisma = tx ?? this.db;
-    const result = await prisma.document.findUnique({
-      where: {
-        id_driveId: {
-          driveId,
-          id,
-        },
-      },
-    });
-
-    if (result === null) {
-      throw new Error(`Document with id ${id} not found`);
-    }
-
-    const cachedOperations = (await this.delegate?.getCachedOperations(
-      driveId,
-      id,
-    )) ?? {
-      global: [],
-      local: [],
-    };
-    const scopeIndex = Object.keys(cachedOperations).reduceRight<
-      Record<OperationScope, number>
-    >(
-      (acc, value) => {
-        const scope = value as OperationScope;
-        const lastIndex = cachedOperations[scope].at(-1)?.index ?? -1;
-        acc[scope] = lastIndex;
-        return acc;
-      },
-      { global: -1, local: -1 },
-    );
-
-    const conditions = Object.entries(scopeIndex).map(
-      ([scope, index]) => `("scope" = '${scope}' AND "index" > ${index})`,
-    );
-    conditions.push(
-      `("scope" NOT IN (${Object.keys(cachedOperations)
-        .map((s) => `'${s}'`)
-        .join(", ")}))`,
-    );
-
-    // retrieves operations with resulting state
-    // for the last operation of each scope
-    // TODO prevent SQL injection
-    const queryOperations = await prisma.$queryRawUnsafe<
-      Prisma.$OperationPayload["scalars"][]
-    >(
-      `WITH ranked_operations AS (
-            SELECT
-                *,
-                ROW_NUMBER() OVER (PARTITION BY scope ORDER BY index DESC) AS rn
-            FROM "Operation"
-            )
-            SELECT
-            "id",
-            "opId",
-            "scope",
-            "branch",
-            "index",
-            "skip",
-            "hash",
-            "timestamp",
-            "input",
-            "type",
-            "context",
-            CASE
-                WHEN rn = 1 THEN "resultingState"
-                ELSE NULL
-            END AS "resultingState"
-            FROM ranked_operations
-            WHERE "driveId" = $1 AND "documentId" = $2
-            AND (${conditions.join(" OR ")})
-            ORDER BY scope, index;
-        `,
-      driveId,
-      id,
-    );
-    const operationIds = queryOperations.map((o) => o.id);
-    const attachments = await prisma.attachment.findMany({
-      where: {
-        operationId: {
-          in: operationIds,
-        },
-      },
-    });
-
-    // TODO add attachments from cached operations
-    const fileRegistry: FileRegistry = {};
-
-    const operationsByScope = queryOperations.reduce((acc, operation) => {
-      const scope = operation.scope as OperationScope;
-      if (!acc[scope]) {
-        acc[scope] = [];
-      }
-      const result = storageToOperation(operation);
-      result.attachments = attachments.filter(
-        (a) => a.operationId === operation.id,
-      );
-      result.attachments.forEach(({ hash, ...file }) => {
-        fileRegistry[hash] = file;
-      });
-      acc[scope].push(result);
-      return acc;
-    }, cachedOperations) as OperationsFromDocument<TDocument>;
-
-    const dbDoc = result;
-    const doc = {
-      created: dbDoc.created.toISOString(),
-      name: dbDoc.name ? dbDoc.name : "",
-      documentType: dbDoc.documentType,
-      initialState: JSON.parse(
-        dbDoc.initialState,
-      ) as ExtendedStateFromDocument<TDocument>,
-      state: undefined,
-      lastModified: new Date(dbDoc.lastModified).toISOString(),
-      operations: operationsByScope,
-      clipboard: [],
-      revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
-      attachments: {},
-    };
-    return doc as unknown as TDocument;
+    return this.get<TDocument>(documentId, tx);
   }
 
   async deleteDocument(drive: string, id: string) {
-    try {
-      await this.db.document.deleteMany({
-        where: {
-          driveId: drive,
-          id: id,
-        },
-      });
-    } catch (e: unknown) {
-      const prismaError = e as { code?: string; message?: string };
-      // Ignore Error: P2025: An operation failed because it depends on one or more records that were required but not found.
-      if (
-        (prismaError.code && prismaError.code === "P2025") ||
-        prismaError.message?.includes(
-          "An operation failed because it depends on one or more records that were required but not found.",
-        )
-      ) {
-        return;
-      }
-
-      throw e;
-    }
+    await this.delete(id);
   }
 
   async getDrives() {
-    return this.getDocuments("drives");
+    const drives = await this.db.drive.findMany({
+      select: {
+        id: true,
+      },
+    });
+
+    return drives.map((d) => d.id);
   }
 
   async getDrive(id: string) {
-    try {
-      const doc = await this.getDocument("drives", id);
-      return doc as DocumentDriveDocument;
-    } catch (e) {
-      logger.error(e);
-      throw new DriveNotFoundError(id);
-    }
+    return this.getDocument<DocumentDriveDocument>("drives", id);
   }
 
   async getDriveBySlug(slug: string) {
@@ -527,20 +689,28 @@ export class PrismaStorage implements IDriveStorage {
   }
 
   async deleteDrive(id: string) {
-    // delete drive and associated slug
-    await this.db.drive.deleteMany({
+    // delete drive
+    await this.db.drive.delete({
       where: {
         id,
       },
     });
 
-    // delete drive document and its operations
-    await this.deleteDocument("drives", id);
+    // delete drive document (will cascade)
+    await this.db.document.delete({
+      where: {
+        id,
+      },
+    });
 
-    // deletes all documents of the drive
+    // deletes all documents that only belong to this drive
     await this.db.document.deleteMany({
       where: {
-        driveId: id,
+        driveDocuments: {
+          none: {
+            driveId: id,
+          },
+        },
       },
     });
   }
@@ -555,7 +725,6 @@ export class PrismaStorage implements IDriveStorage {
     const operation = await this.db.operation.findUnique({
       where: {
         unique_operation: {
-          driveId,
           documentId,
           index,
           scope,
@@ -585,7 +754,6 @@ export class PrismaStorage implements IDriveStorage {
     units: SynchronizationUnitQuery[],
   ): Promise<
     {
-      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -596,26 +764,19 @@ export class PrismaStorage implements IDriveStorage {
     // TODO add branch condition
     const whereClauses = units
       .map((_, index) => {
-        return `("driveId" = $${index * 3 + 1} AND "documentId" = $${index * 3 + 2} AND "scope" = $${index * 3 + 3})`;
+        return `("documentId" = $${index * 2 + 1} AND "scope" = $${index * 2 + 2})`;
       })
       .join(" OR ");
 
     const query = `
-            SELECT "driveId", "documentId", "scope", "branch", MAX("timestamp") as "lastUpdated", MAX("index") as revision FROM "Operation"
+            SELECT "documentId", "scope", "branch", MAX("timestamp") as "lastUpdated", MAX("index") as revision FROM "Operation"
             WHERE ${whereClauses}
-            GROUP BY "driveId", "documentId", "scope", "branch"
+            GROUP BY "documentId", "scope", "branch"
         `;
 
-    const params = units
-      .map((unit) => [
-        unit.documentId ? unit.driveId : "drives",
-        unit.documentId || unit.driveId,
-        unit.scope,
-      ])
-      .flat();
+    const params = units.map((unit) => [unit.documentId, unit.scope]).flat();
     const results = await this.db.$queryRawUnsafe<
       {
-        driveId: string;
         documentId: string;
         lastUpdated: string;
         scope: OperationScope;
@@ -625,8 +786,7 @@ export class PrismaStorage implements IDriveStorage {
     >(query, ...params);
     return results.map((row) => ({
       ...row,
-      driveId: row.driveId === "drives" ? row.documentId : row.driveId,
-      documentId: row.driveId === "drives" ? "" : row.documentId,
+      documentId: row.documentId,
       lastUpdated: new Date(row.lastUpdated).toISOString(),
     }));
   }

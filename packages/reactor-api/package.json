@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "1.27.1",
+  "version": "1.29.7-dev.0",
   "description": "",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -43,6 +43,7 @@
     "tinybench": "^3.1.1"
   },
   "dependencies": {
+    "@apollo/gateway": "^2.10.0",
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.9.2",
     "@electric-sql/pglite": "^0.2.12",

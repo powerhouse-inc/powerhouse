@@ -9,10 +9,13 @@ import {
   startServer,
   type StartServerOptions,
 } from "@powerhousedao/reactor-local";
-import { IReceiver } from "document-drive";
-import { InternalTransmitter, InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { Listener } from "document-drive/server/types";
-import { DocumentModelDocument } from "document-model";
+import { type IReceiver } from "document-drive";
+import {
+  InternalTransmitter,
+  type InternalTransmitterUpdate,
+} from "document-drive/server/listener/transmitter/internal";
+import { type Listener } from "document-drive/server/types";
+import { type DocumentModelDocument } from "document-model";
 
 export type SwitchboardOptions = StartServerOptions & {
   configFile?: string;
@@ -54,7 +57,9 @@ async function addGenerateTransmitter(
   config: PowerhouseConfig,
 ) {
   const receiver: IReceiver = {
-    onStrands: async function (strands: InternalTransmitterUpdate<DocumentModelDocument>[]) {
+    onStrands: async function (
+      strands: InternalTransmitterUpdate<DocumentModelDocument>[],
+    ) {
       const documentPaths = new Set<string>();
       for (const strand of strands) {
         documentPaths.add(
@@ -91,7 +96,11 @@ async function addGenerateTransmitter(
     },
   };
 
-  const transmitter = new InternalTransmitter(listener, reactor.server, receiver);
+  const transmitter = new InternalTransmitter(
+    listener,
+    reactor.server,
+    receiver,
+  );
 
   listener.transmitter = transmitter;
 

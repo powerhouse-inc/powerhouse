@@ -12,6 +12,7 @@
     "affected:check:ci": "pnpm nx affected --target=build,build-storybook,lint:nx && pnpm nx affected --target=test --exclude=document-drive",
     "build": "pnpm nx run-many --target=build --all",
     "build:all": "pnpm nx run-many --target=build --all",
+    "build:affected": "pnpm nx affected --target=build",
     "test:all": "pnpm nx run-many --target=test --all",
     "storybook:all": "pnpm nx run-many --target=build-storybook --all",
     "check:all": "pnpm i && pnpm nx run-many --target=build,lint:nx,test --all",

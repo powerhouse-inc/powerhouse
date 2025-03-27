@@ -1,3 +1,4 @@
+import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import {
   isSubgraphClass,
   startAPI,
@@ -10,7 +11,7 @@ import {
   type DriveInput,
   type IDocumentDriveServer,
   logger,
-  ReactorBuilder
+  ReactorBuilder,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import {
@@ -203,6 +204,7 @@ async function startDevServer() {
         input: [],
       },
     },
+    plugins: [viteCommonjs()],
   });
 
   return vite;
@@ -240,7 +242,7 @@ async function loadSubgraphs(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const SubgraphClass = subgraph[name] as SubgraphClass;
       if (isSubgraphClass(SubgraphClass)) {
-        await subgraphManager.registerSubgraph(SubgraphClass);
+        await subgraphManager.registerSubgraph(SubgraphClass, "graphql");
       }
     }
   } catch (e) {

@@ -1,10 +1,10 @@
-import { Context } from "#subgraphs/types.js";
+import { type Context } from "#subgraphs/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
-import { IDocumentDriveServer } from "document-drive";
-import { DocumentNode } from "graphql";
+import { type IDocumentDriveServer } from "document-drive";
+import { type DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 
 export const createSchema = (

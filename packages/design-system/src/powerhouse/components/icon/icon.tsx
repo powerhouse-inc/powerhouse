@@ -1,8 +1,8 @@
 import {
   type IconName,
-  iconNames,
+  iconComponents,
   type Props,
-} from "../icon-components/types.js";
+} from "../icon-components/index.js";
 import { type Color, getDimensions, type Size } from "#powerhouse";
 import {
   type ComponentPropsWithoutRef,
@@ -13,33 +13,11 @@ import {
   useMemo,
 } from "react";
 
-export { iconNames, type IconName, type Props };
-
 export type IconProps = ComponentPropsWithoutRef<"svg"> & {
   readonly name: IconName;
   readonly size?: Size;
   readonly color?: Color;
 };
-
-function IconErrorFallback(props: Props) {
-  return <div style={{ width: props.width, height: props.height }} />;
-}
-
-function loadIcon(name: IconName): ElementType {
-  try {
-    return lazy<ComponentType<Props>>(
-      () => import(`../icon-components/${name}.js`),
-    );
-  } catch (e) {
-    console.error(e);
-    return IconErrorFallback;
-  }
-}
-
-export function preloadIcon(name: IconName) {
-  return loadIcon(name);
-}
-
 export function Icon({ name, size = 24, color, style, ...props }: IconProps) {
   const dimensions = getDimensions(size);
   const _style = {
@@ -48,7 +26,7 @@ export function Icon({ name, size = 24, color, style, ...props }: IconProps) {
     style,
   };
 
-  const IconComponent = useMemo(() => loadIcon(name), [name]);
+  const IconComponent = iconComponents[name];
 
   return (
     // displays div with the same size while icon

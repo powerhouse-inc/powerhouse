@@ -1,35 +1,86 @@
-import { Action, type PHDocument } from "document-model";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type PHDocument } from "document-model";
 import { type ICache } from "./types.js";
+import { trimResultingState } from "./util.js";
 
 class InMemoryCache implements ICache {
-  private cache = new Map<string, Map<string, PHDocument>>();
+  private idTodocument = new Map<string, PHDocument>();
+  private idToDrive = new Map<string, DocumentDriveDocument>();
+  private slugToDriveId = new Map<string, string>();
 
-  async setDocument(drive: string, id: string, document: PHDocument) {
-    const global = document.operations.global.map((e) => {
-      delete e.resultingState;
-      return e;
-    });
-    const local = document.operations.local.map((e) => {
-      delete e.resultingState;
-      return e;
-    });
-    const doc = { ...document, operations: { global, local } };
-    if (!this.cache.has(drive)) {
-      this.cache.set(drive, new Map());
-    }
-    this.cache.get(drive)?.set(id, doc);
-    return true;
+  clear() {
+    this.idTodocument.clear();
+    this.idToDrive.clear();
+    this.slugToDriveId.clear();
   }
 
-  async deleteDocument(drive: string, id: string) {
-    return this.cache.get(drive)?.delete(id) ?? false;
+  /////////////////////////////////////////////////////////////////////////////
+  // ICache
+  /////////////////////////////////////////////////////////////////////////////
+
+  async setDocument(documentId: string, document: PHDocument) {
+    const doc = trimResultingState(document);
+    this.idTodocument.set(documentId, doc);
   }
 
   async getDocument<TDocument extends PHDocument>(
-    drive: string,
-    id: string,
+    documentId: string,
   ): Promise<TDocument | undefined> {
-    return this.cache.get(drive)?.get(id) as TDocument | undefined;
+    return this.idTodocument.get(documentId) as TDocument | undefined;
+  }
+
+  async deleteDocument(documentId: string) {
+    return this.idTodocument.delete(documentId);
+  }
+
+  async setDrive(driveId: string, drive: DocumentDriveDocument) {
+    const doc = trimResultingState(drive);
+    this.idToDrive.set(driveId, doc);
+  }
+
+  async getDrive(driveId: string): Promise<DocumentDriveDocument | undefined> {
+    return this.idToDrive.get(driveId);
+  }
+
+  async deleteDrive(driveId: string) {
+    // look up the slug
+    const drive = this.idToDrive.get(driveId);
+    if (!drive) {
+      return false;
+    }
+
+    const slug = drive.state.global.slug;
+    if (slug) {
+      this.slugToDriveId.delete(slug);
+    }
+
+    return this.idToDrive.delete(driveId);
+  }
+
+  async setDriveBySlug(slug: string, drive: DocumentDriveDocument) {
+    const driveId = drive.state.global.id;
+    this.slugToDriveId.set(slug, driveId);
+    this.setDrive(driveId, drive);
+  }
+
+  async getDriveBySlug(
+    slug: string,
+  ): Promise<DocumentDriveDocument | undefined> {
+    const driveId = this.slugToDriveId.get(slug);
+    if (!driveId) {
+      return undefined;
+    }
+    return this.getDrive(driveId);
+  }
+
+  async deleteDriveBySlug(slug: string) {
+    const driveId = this.slugToDriveId.get(slug);
+    if (!driveId) {
+      return false;
+    }
+
+    this.slugToDriveId.delete(slug);
+    return this.deleteDrive(driveId);
   }
 }
 

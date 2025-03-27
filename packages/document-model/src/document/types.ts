@@ -383,6 +383,20 @@ export type EditorProps<TDocument extends PHDocument> = {
   documentNodeName?: string;
 };
 
+export type SubgraphModule = {
+  id: string;
+  name: string;
+  gql: string;
+  endpoint: string;
+};
+
+export type ImportScriptModule = {
+  id: string;
+  name: string;
+  gql: string;
+  endpoint: string;
+};
+
 export type EditorModule<
   TDocument extends PHDocument = PHDocument,
   TCustomProps = unknown,
@@ -423,6 +437,16 @@ export type Manifest = {
     name: string;
     documentTypes: string[];
   }[];
+  subgraphs: {
+    id: string;
+    name: string;
+  }[];
+  importScripts: {
+    id: string;
+    name: string;
+    documentTypes: string[];
+  }[];
+
   apps?: App[];
 };
 
@@ -430,6 +454,8 @@ export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
   manifest: Manifest;
   documentModels: DocumentModelModule<TDocument>[];
   editors: EditorModule<TDocument>[];
+  subgraphs: SubgraphModule[];
+  importScripts: ImportScriptModule[];
 };
 
 export type ValidationError = { message: string; details: object };
