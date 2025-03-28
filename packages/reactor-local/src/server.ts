@@ -5,15 +5,21 @@ import {
   type SubgraphClass,
   type SubgraphManager,
 } from "@powerhousedao/reactor-api";
+import Prisma from "@prisma/client";
 import {
   DriveAlreadyExistsError,
   driveDocumentModelModule,
   type DriveInput,
   type IDocumentDriveServer,
+  InMemoryCache,
   logger,
+  MemoryStorage,
   ReactorBuilder,
 } from "document-drive";
+import { ICache } from "document-drive/cache/types";
+import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
+import { PrismaStorage } from "document-drive/storage/prisma";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
@@ -23,6 +29,7 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
 import { PackagesManager } from "./packages.js";
+const PrismaClient = Prisma.PrismaClient;
 
 type FSError = {
   errno: number;
@@ -35,11 +42,17 @@ const dirname = process.cwd();
 
 dotenv.config();
 
+export type StorageOptions = {
+  type: "filesystem" | "memory" | "postgres" | "browser";
+  filesystemPath?: string;
+  postgresUrl?: string;
+};
+
 export type StartServerOptions = {
   configFile?: string;
   dev?: boolean;
   port?: string | number;
-  storagePath?: string;
+  storage?: StorageOptions;
   dbPath?: string;
   drive?: DriveInput;
   packages?: string[];
@@ -55,7 +68,10 @@ export type StartServerOptions = {
 
 export const DefaultStartServerOptions = {
   port: 4001,
-  storagePath: path.join(dirname, ".ph/file-storage"),
+  storage: {
+    type: "filesystem",
+    filesystemPath: path.join(dirname, ".ph/file-storage"),
+  },
   dbPath: path.join(dirname, ".ph/read-model.db"),
   drive: {
     global: {
@@ -84,23 +100,41 @@ const baseDocumentModelModules = [
   driveDocumentModelModule,
 ] as DocumentModelModule[];
 
+const createStorage = (options: StorageOptions, cache: ICache) => {
+  switch (options.type) {
+    case "filesystem":
+      logger.info(
+        `Initializing filesystem storage at '${options.filesystemPath}'.`,
+      );
+      return new FilesystemStorage(options.filesystemPath!);
+    case "memory":
+      logger.info("Initializing memory storage.");
+      return new MemoryStorage();
+    case "postgres":
+      logger.info(`Initializing postgres storage at '${options.postgresUrl}'.`);
+      const db = new PrismaClient({
+        datasources: {
+          db: {
+            url: options.postgresUrl!,
+          },
+        },
+      });
+      return new PrismaStorage(db, cache);
+    case "browser":
+      logger.info("Initializing browser storage.");
+      return new BrowserStorage();
+  }
+};
+
 const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   process.setMaxListeners(0);
-  const {
-    port,
-    storagePath,
-    drive,
-    dev,
-    dbPath,
-    packages,
-    configFile,
-    logLevel,
-  } = {
-    ...DefaultStartServerOptions,
-    ...options,
-  };
+  const { port, storage, drive, dev, dbPath, packages, configFile, logLevel } =
+    {
+      ...DefaultStartServerOptions,
+      ...options,
+    };
 
   process.env.LOG_LEVEL = logLevel ?? "debug";
 
@@ -133,9 +167,11 @@ const startServer = async (
   const packageDocModels = (await packagesManager.loadDocumentModels()) ?? [];
   docModels = joinDocumentModelModules(docModels, packageDocModels);
 
-  // start document drive server with all available document models & filesystem storage
+  // start document drive server with all available document models & storage
+  const cache = new InMemoryCache();
   const driveServer = new ReactorBuilder(docModels)
-    .withStorage(new FilesystemStorage(storagePath))
+    .withCache(cache)
+    .withStorage(createStorage(storage, cache))
     .build();
 
   // init drive server
@@ -162,7 +198,7 @@ const startServer = async (
   return {
     driveUrl,
     getDocumentPath: (driveId: string, documentId: string): string => {
-      return path.join(storagePath, driveId, `${documentId}.json`);
+      return path.join(storage.filesystemPath!, driveId, `${documentId}.json`);
     },
     server: driveServer,
   };
