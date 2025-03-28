@@ -53,8 +53,8 @@ const TableProvider = <T extends DataType>({
   );
 };
 
-const useInternalTableState = () => {
-  const context = useContext(TableContext);
+const useInternalTableState = <T extends DataType = any>() => {
+  const context = useContext(TableContext) as TableContextValue<T>;
   if (!context) {
     throw new Error("useTable must be used within a TableProvider");
   }

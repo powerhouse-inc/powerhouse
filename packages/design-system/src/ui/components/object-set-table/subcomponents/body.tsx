@@ -1,6 +1,5 @@
 import { useCallback } from "react";
-import type { ColumnDef, DataType } from "../types.js";
-import { getColumnValue } from "../utils.js";
+import type { CellContext, ColumnDef, DataType } from "../types.js";
 import { DefaultTableCell } from "./cells/default-cell.js";
 import { InformationCell } from "./cells/information-cell.js";
 import { RowNumberCell } from "./cells/row-number-cell.js";
@@ -9,7 +8,7 @@ import { useInternalTableState } from "./table-provider/table-provider.js";
 
 interface TableBodyProps<T extends DataType> {
   data: T[];
-  columns: ColumnDef[];
+  columns: ColumnDef<T>[];
 }
 
 const TableBody = <T extends DataType>({
@@ -17,9 +16,11 @@ const TableBody = <T extends DataType>({
   columns,
 }: TableBodyProps<T>) => {
   const {
-    config: { allowRowSelection },
+    config,
     state: { dispatch, selectedRowIndexes },
-  } = useInternalTableState();
+  } = useInternalTableState<T>();
+
+  const { allowRowSelection } = config;
 
   /**
    * Create a handler for the click event on the table numbering cell
@@ -81,6 +82,7 @@ const TableBody = <T extends DataType>({
     <tbody className="text-sm leading-5 text-gray-900">
       {data.map((rowItem, index) => (
         <TableRow
+          // TODO: replace key with unique key (maybe generated with object-hash package)
           key={index}
           index={index}
           onClick={createAddSelectedRowHandler(index)}
@@ -92,11 +94,27 @@ const TableBody = <T extends DataType>({
             selected={selectedRowIndexes.includes(index)}
           />
 
-          {columns.map((column) => (
-            <DefaultTableCell key={column.field}>
-              {getColumnValue(rowItem, column.field) as string}
-            </DefaultTableCell>
-          ))}
+          {columns.map((column) => {
+            const cellContext: CellContext<T> = {
+              row: rowItem,
+              column,
+              rowIndex: index,
+              tableConfig: config,
+            };
+
+            // get and format the cell value
+            const cellValue = column.valueFormatter?.(
+              column.valueGetter?.(rowItem, cellContext),
+              cellContext,
+            );
+
+            // render the cell
+            const cell = column.renderCell?.(cellValue, cellContext);
+
+            return (
+              <DefaultTableCell key={column.field}>{cell}</DefaultTableCell>
+            );
+          })}
 
           {/* Information cell */}
           <InformationCell />
