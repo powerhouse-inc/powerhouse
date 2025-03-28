@@ -30,6 +30,11 @@ export type PowerhouseConfig = {
           keyPath: string;
           certPath: string;
         };
+    storage?: {
+      type: "filesystem" | "memory" | "postgres" | "browser";
+      filesystemPath?: string;
+      postgresUrl?: string;
+    };
   };
   studio?: {
     port?: number;

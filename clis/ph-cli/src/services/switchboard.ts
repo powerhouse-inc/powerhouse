@@ -44,6 +44,7 @@ export async function startLocalSwitchboard(
     ...options,
     https,
     logLevel: baseConfig.logLevel,
+    storage: baseConfig.reactor?.storage || options.storage,
   });
 
   if (options.generate) {
