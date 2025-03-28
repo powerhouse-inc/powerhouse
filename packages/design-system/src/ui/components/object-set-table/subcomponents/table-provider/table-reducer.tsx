@@ -9,6 +9,11 @@ interface TableState<T extends DataType = DataType> {
   showRowNumbers: boolean;
   selectedRowIndexes: number[];
   lastSelectedRowIndex: number | null;
+
+  selectedCellIndexes: {
+    index: number;
+    column: number;
+  } | null;
 }
 
 type TableAction<T extends DataType = DataType> =
@@ -43,6 +48,14 @@ type TableAction<T extends DataType = DataType> =
       type: "SELECT_ROW_RANGE";
       // the payload is the end of the range, the start is the lastSelectedRowIndex
       payload: number;
+    }
+  // Cell selection
+  | {
+      type: "SELECT_CELL";
+      payload: {
+        index: number;
+        column: number;
+      };
     };
 
 const tableReducer = <T extends DataType>(
@@ -79,6 +92,7 @@ const tableReducer = <T extends DataType>(
         // if clear other selections is enabled, we just toggle the current row
         return {
           ...state,
+          selectedCellIndexes: null,
           lastSelectedRowIndex: action.payload.index,
           selectedRowIndexes: state.selectedRowIndexes.includes(
             action.payload.index,
@@ -92,6 +106,7 @@ const tableReducer = <T extends DataType>(
       // and keep the other rows selection as it is
       return {
         ...state,
+        selectedCellIndexes: null,
         lastSelectedRowIndex: action.payload.index,
         selectedRowIndexes: state.selectedRowIndexes.includes(
           action.payload.index,
@@ -107,6 +122,7 @@ const tableReducer = <T extends DataType>(
     case "TOGGLE_SELECT_ALL_ROWS":
       return {
         ...state,
+        selectedCellIndexes: null,
         lastSelectedRowIndex: null,
         selectedRowIndexes:
           state.selectedRowIndexes.length === state.data.length
@@ -123,6 +139,7 @@ const tableReducer = <T extends DataType>(
         // IF THERE ARE SELECTED ROWS, WE'RE NOT HANDLING IT WELL SOMEWHERE ELSE
         return {
           ...state,
+          selectedCellIndexes: null,
           selectedRowIndexes: [action.payload],
           lastSelectedRowIndex: action.payload,
         };
@@ -139,8 +156,19 @@ const tableReducer = <T extends DataType>(
 
       return {
         ...state,
+        selectedCellIndexes: null,
         selectedRowIndexes: [...selectedRowIndexesSet],
         lastSelectedRowIndex: action.payload,
+      };
+    }
+    case "SELECT_CELL": {
+      // TODO: check first if there is not other cell in edit mode
+      return {
+        ...state,
+        selectedCellIndexes: action.payload,
+        // if the user try to select a range, we're going to select from the row that has the selected cell
+        lastSelectedRowIndex: action.payload.index,
+        selectedRowIndexes: [], // clear row selection
       };
     }
     default:

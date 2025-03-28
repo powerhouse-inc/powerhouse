@@ -31,6 +31,7 @@ const TableProvider = <T extends DataType>({
     showRowNumbers: config.showRowNumbers ?? true,
     selectedRowIndexes: [],
     lastSelectedRowIndex: null,
+    selectedCellIndexes: null,
   });
 
   useEffect(() => {
@@ -40,11 +41,7 @@ const TableProvider = <T extends DataType>({
   return (
     <TableContext.Provider
       value={{
-        config: {
-          ...config,
-          allowRowSelection: config.allowRowSelection ?? true,
-          showRowNumbers: config.showRowNumbers ?? true,
-        },
+        config,
         state,
       }}
     >

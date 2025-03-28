@@ -58,10 +58,10 @@ type Story = StoryObj<typeof ObjectSetTable<MockedPerson>>;
 export const Default: Story = {
   args: {
     columns: [
-      { field: "firstName" },
-      { field: "email" },
-      { field: "walletAddress" },
-      { field: "payment", type: "number" },
+      { field: "firstName", editable: true },
+      { field: "email", editable: true },
+      { field: "walletAddress", editable: true },
+      { field: "payment", type: "number", editable: true },
       {
         field: "status",
         renderCell: (value: "active" | "inactive") => (
@@ -75,10 +75,10 @@ export const Default: Story = {
           </span>
         ),
       },
-      { field: "address.addressLine1" },
-      { field: "address.city" },
-      { field: "address.state" },
-      { field: "address.zip" },
+      { field: "address.addressLine1", editable: true },
+      { field: "address.city", editable: true },
+      { field: "address.state", editable: true },
+      { field: "address.zip", editable: true },
     ],
     data: mockData,
   },

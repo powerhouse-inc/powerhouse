@@ -17,7 +17,7 @@ const TableBody = <T extends DataType>({
 }: TableBodyProps<T>) => {
   const {
     config,
-    state: { dispatch, selectedRowIndexes },
+    state: { dispatch, selectedRowIndexes, selectedCellIndexes },
   } = useInternalTableState<T>();
 
   const { allowRowSelection } = config;
@@ -78,6 +78,23 @@ const TableBody = <T extends DataType>({
     [],
   );
 
+  const createCellClickHandler = useCallback(
+    (index: number, column: number, columnDef: ColumnDef<T>) =>
+      (e: React.MouseEvent<HTMLTableCellElement>) => {
+        if (!columnDef.editable) return;
+
+        // if shift or ctrl is pressed, the user is probably trying to select rows
+        if (!e.ctrlKey && !e.shiftKey) {
+          if (e.detail === 2) {
+            alert("double click");
+          } else {
+            dispatch?.({ type: "SELECT_CELL", payload: { index, column } });
+          }
+        }
+      },
+    [dispatch],
+  );
+
   return (
     <tbody className="text-sm leading-5 text-gray-900">
       {data.map((rowItem, index) => (
@@ -91,10 +108,13 @@ const TableBody = <T extends DataType>({
           <RowNumberCell
             index={index + 1}
             handleSelectRowOnClick={createSelectRowOnClickHandler(index)}
-            selected={selectedRowIndexes.includes(index)}
+            selected={
+              selectedRowIndexes.includes(index) ||
+              selectedCellIndexes?.index === index
+            }
           />
 
-          {columns.map((column) => {
+          {columns.map((column, columnIndex) => {
             const cellContext: CellContext<T> = {
               row: rowItem,
               column,
@@ -111,8 +131,19 @@ const TableBody = <T extends DataType>({
             // render the cell
             const cell = column.renderCell?.(cellValue, cellContext);
 
+            const isCellSelected =
+              !!selectedCellIndexes &&
+              selectedCellIndexes.index === index &&
+              selectedCellIndexes.column === columnIndex;
+
             return (
-              <DefaultTableCell key={column.field}>{cell}</DefaultTableCell>
+              <DefaultTableCell
+                key={column.field}
+                onClick={createCellClickHandler(index, columnIndex, column)}
+                isSelected={isCellSelected}
+              >
+                {cell}
+              </DefaultTableCell>
             );
           })}
 

@@ -42,7 +42,7 @@ const ObjectSetTable = <T extends DataType = DataType>({
   return (
     <TableProvider config={extendedConfig}>
       <div className="w-full overflow-hidden rounded-md border border-gray-300">
-        <table className="w-full overflow-x-auto">
+        <table className="h-px w-full overflow-x-auto">
           <TableHeader columns={extendedConfig.columns} />
           <TableBody
             data={extendedConfig.data}
