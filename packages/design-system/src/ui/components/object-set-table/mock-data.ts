@@ -31,7 +31,7 @@ export const mockData: MockedPerson[] = [
   {
     firstName: "Jane",
     walletAddress: "0x1234567890abcdef",
-    payment: 100,
+    payment: 1065460,
     email: "jane@example.com",
     status: "inactive",
     address: {
@@ -45,7 +45,7 @@ export const mockData: MockedPerson[] = [
   {
     firstName: "Jim",
     walletAddress: "0x1234567890abcdef",
-    payment: 100,
+    payment: 14522,
     email: "jim@example.com",
     status: "active",
     address: {
@@ -59,7 +59,7 @@ export const mockData: MockedPerson[] = [
   {
     firstName: "Jill",
     walletAddress: "0x1234567890abcdef",
-    payment: 100,
+    payment: 11231200,
     email: "jill@example.com",
     status: "inactive",
     address: {
@@ -73,7 +73,7 @@ export const mockData: MockedPerson[] = [
   {
     firstName: "Jack",
     walletAddress: "0x1234567890abcdef",
-    payment: 100,
+    payment: 10234234230,
     email: "jack@example.com",
     status: "active",
     address: {
@@ -87,7 +87,7 @@ export const mockData: MockedPerson[] = [
   {
     firstName: "Jill",
     walletAddress: "0x1234567890abcdef",
-    payment: 100,
+    payment: 0,
     email: "jill@example.com",
     status: "inactive",
     address: {
@@ -101,7 +101,7 @@ export const mockData: MockedPerson[] = [
   {
     firstName: "Mike",
     walletAddress: "0x1234567890abcdef",
-    payment: 100,
+    payment: 15,
     email: "mike@example.com",
     status: "inactive",
     address: {
