@@ -1,4 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import {
+  fetchOptions,
+  fetchSelectedOption,
+  mockedOptions,
+} from "../../../ui/components/data-entry/phid-input/mocks.js";
 import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
@@ -6,7 +11,6 @@ import {
   PrebuiltArgTypes,
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
-import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
 import { PHIDField } from "./phid-field.js";
 
 const meta: Meta<typeof PHIDField> = {
@@ -66,7 +70,7 @@ const meta: Meta<typeof PHIDField> = {
         "Must return a Promise that resolves to an array of objects or an array of objects with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: { text: string; url?: string; }\n\n" +
+        "path?: string | { text: string; url: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n",
       table: {
@@ -88,7 +92,7 @@ const meta: Meta<typeof PHIDField> = {
         "Must return a Promise that resolves to an object or an object with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: { text: string; url?: string; }\n\n" +
+        "path?: string | { text: string; url: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n" +
         "or undefined if the option is not found",
@@ -99,6 +103,23 @@ const meta: Meta<typeof PHIDField> = {
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
+      },
+      if: { arg: "autoComplete", neq: false },
+    },
+
+    previewPlaceholder: {
+      control: "object",
+      description:
+        "Custom placeholder values to show when no option is selected or when there are no matching options. " +
+        "Can include custom values for:\n\n" +
+        "icon?: IconName | React.ReactElement\n\n" +
+        "title?: string\n\n" +
+        "path?: string | { text: string; url: string; }\n\n" +
+        "value: string\n\n" +
+        "description?: string\n\n",
+      table: {
+        type: { summary: "PHIDOption" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "autoComplete", neq: false },
     },

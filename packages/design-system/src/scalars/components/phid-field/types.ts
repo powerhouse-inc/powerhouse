@@ -1,13 +1,6 @@
-import type { IdAutocompleteProps } from "../fragments/id-autocomplete-field/types.js";
+import type { PHIDInputProps } from "../../../ui/components/data-entry/phid-input/types.js";
+import type { FieldErrorHandling } from "../types.js";
 
-export type PHIDProps = Omit<IdAutocompleteProps, "renderOption"> &
-  (
-    | {
-        allowUris: true;
-        allowedScopes?: string[];
-      }
-    | {
-        allowUris?: false;
-        allowedScopes?: never;
-      }
-  );
+type PHIDFieldProps = PHIDInputProps & FieldErrorHandling;
+
+export type { PHIDFieldProps };

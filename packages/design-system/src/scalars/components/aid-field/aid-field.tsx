@@ -1,9 +1,9 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useCallback, useId, useMemo } from "react";
 import { isAddress } from "viem";
-import { IdAutocompleteContext } from "../fragments/id-autocomplete-field/id-autocomplete-context.js";
-import { IdAutocompleteListOption } from "../fragments/id-autocomplete-field/id-autocomplete-list-option.js";
-import { IdAutocompleteFieldRaw } from "../fragments/id-autocomplete-field/index.js";
+import { IdAutocompleteContext } from "../fragments/id-autocomplete/id-autocomplete-context.js";
+import { IdAutocompleteListOption } from "../fragments/id-autocomplete/id-autocomplete-list-option.js";
+import { IdAutocomplete } from "../fragments/id-autocomplete/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/index.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import type { AIDOption, AIDProps } from "./types.js";
@@ -48,6 +48,7 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
       fetchSelectedOptionCallback,
       isOpenByDefault, // to be used only in stories
       initialOptions, // to be used only in stories
+      previewPlaceholder,
       ...props
     },
     ref,
@@ -79,29 +80,31 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
           title={option.title}
           path={
             displayProps?.asPlaceholder
-              ? { text: "URL not available" }
+              ? previewPlaceholder?.path || "URL not available"
               : option.path
           }
           value={
-            displayProps?.asPlaceholder ? "aid not available" : option.value
+            displayProps?.asPlaceholder
+              ? previewPlaceholder?.value || "aid not available"
+              : option.value
           }
           description={option.description}
           agentType={
             displayProps?.asPlaceholder
-              ? "Agent type not available"
+              ? previewPlaceholder?.agentType || "Agent type not available"
               : option.agentType
           }
-          placeholderIcon="Person"
+          placeholderIcon={previewPlaceholder?.icon || "Person"}
           {...displayProps}
         />
       ),
-      [variant],
+      [variant, previewPlaceholder],
     );
 
     return (
       <IdAutocompleteContext.Provider value={contextValue}>
         {autoComplete && fetchOptionsCallback ? (
-          <IdAutocompleteFieldRaw
+          <IdAutocomplete
             id={id}
             name={name}
             className={className}
@@ -126,11 +129,12 @@ const AIDFieldRaw = React.forwardRef<HTMLInputElement, AIDFieldProps>(
             isOpenByDefault={isOpenByDefault}
             initialOptions={initialOptions}
             renderOption={renderOption}
+            previewPlaceholder={previewPlaceholder}
             {...props}
             ref={ref}
           />
         ) : (
-          <IdAutocompleteFieldRaw
+          <IdAutocomplete
             id={id}
             name={name}
             className={className}

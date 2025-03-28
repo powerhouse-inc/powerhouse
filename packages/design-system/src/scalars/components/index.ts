@@ -3,16 +3,17 @@ export * from "./amount-field/index.js";
 export * from "./boolean-field/index.js";
 export * from "./country-code-field/index.js";
 export * from "./currency-code-field/index.js";
-export * from "./date-field/index.js";
-export * from "./date-time-field/index.js";
+export * from "./date-picker-field/index.js";
+export * from "./date-time-picker-field/index.js";
 export * from "./enum-field/index.js";
 export * from "./form/index.js";
 export * from "./fragments/index.js";
 export * from "./id-field/index.js";
 export * from "./number-field/index.js";
+export * from "./oid-field/index.js";
 export * from "./phid-field/index.js";
 export * from "./string-field/index.js";
-export * from "./time-field/index.js";
+export * from "./time-picker-field/index.js";
 export * from "./types.js";
 export * from "./url-field/index.js";
 
@@ -105,4 +106,32 @@ export {
    * This type is deprecated and will be removed in a future version.
    */
   type InputProps,
-} from "../../ui/components/data-entry/index.js";
+} from "../../ui/components/index.js";
+
+export {
+  /**
+   * @deprecated Use `BooleanField` instead. This component is deprecated and will be removed in a future version.
+   */
+  CheckboxField,
+} from "./fragments/checkbox-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `BooleanField` instead. This component is deprecated and will be removed in a future version.
+   */
+  ToggleField,
+} from "./fragments/toggle-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `StringField` instead. This component is deprecated and will be removed in a future version.
+   */
+  TextField,
+} from "./fragments/text-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `StringField` instead. This component is deprecated and will be removed in a future version.
+   */
+  TextareaField,
+} from "./fragments/textarea-field/index.js";

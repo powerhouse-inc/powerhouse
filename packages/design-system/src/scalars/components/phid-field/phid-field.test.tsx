@@ -1,6 +1,7 @@
 import { Form } from "#scalars";
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithForm } from "../../lib/testing.js";
 import { PHIDField } from "./phid-field.js";
 
@@ -22,18 +23,14 @@ describe("PHIDField Component", () => {
     {
       icon: "PowerhouseLogoSmall",
       title: "Document A",
-      path: {
-        text: "projects/finance/document-a",
-      },
+      path: "projects/finance/document-a",
       value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea7:main:public",
       description: "Financial report for Q1 2024",
     },
     {
       icon: "PowerhouseLogoSmall",
       title: "Document B",
-      path: {
-        text: "projects/legal/document-b",
-      },
+      path: "projects/legal/document-b",
       value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8:main:public",
       description: "Legal compliance documentation",
     },
@@ -302,7 +299,7 @@ describe("PHIDField Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText(mockedOptions[0].title)).toBeInTheDocument();
-      expect(screen.getByText(mockedOptions[0].path.text)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].path)).toBeInTheDocument();
       expect(
         screen.getByText(mockedOptions[0].description),
       ).toBeInTheDocument();

@@ -1,7 +1,7 @@
 import type {
   IdAutocompleteOption,
   IdAutocompleteProps,
-} from "../fragments/id-autocomplete-field/types.js";
+} from "../fragments/id-autocomplete/types.js";
 
 export interface Network {
   chainId: string;
@@ -29,6 +29,7 @@ export type AIDProps = AIDBaseProps &
         autoComplete: false;
         fetchOptionsCallback?: never;
         fetchSelectedOptionCallback?: never;
+        previewPlaceholder?: never;
       }
     | {
         autoComplete?: true;
@@ -39,5 +40,6 @@ export type AIDProps = AIDBaseProps &
         fetchSelectedOptionCallback?: (
           value: string,
         ) => Promise<AIDOption | undefined> | AIDOption | undefined;
+        previewPlaceholder?: AIDOption;
       }
   );

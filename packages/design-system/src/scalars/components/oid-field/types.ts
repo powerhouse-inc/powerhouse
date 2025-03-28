@@ -1,33 +1,6 @@
-import type {
-  IdAutocompleteOption,
-  IdAutocompleteProps,
-} from "../fragments/id-autocomplete-field/types.js";
+import type { OIDInputProps } from "../../../ui/components/data-entry/oid-input/types.js";
+import type { FieldErrorHandling } from "../types.js";
 
-export type OIDOption = IdAutocompleteOption;
+type OIDFieldProps = OIDInputProps & FieldErrorHandling;
 
-type OIDBaseProps = Omit<
-  IdAutocompleteProps,
-  | "autoComplete"
-  | "fetchOptionsCallback"
-  | "fetchSelectedOptionCallback"
-  | "renderOption"
->;
-
-export type OIDProps = OIDBaseProps &
-  (
-    | {
-        autoComplete: false;
-        fetchOptionsCallback?: never;
-        fetchSelectedOptionCallback?: never;
-      }
-    | {
-        autoComplete?: true;
-        fetchOptionsCallback: (
-          userInput: string,
-          context?: Record<string, unknown>,
-        ) => Promise<OIDOption[]> | OIDOption[];
-        fetchSelectedOptionCallback?: (
-          value: string,
-        ) => Promise<OIDOption | undefined> | OIDOption | undefined;
-      }
-  );
+export type { OIDFieldProps };

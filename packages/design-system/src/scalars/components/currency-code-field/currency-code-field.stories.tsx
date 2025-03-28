@@ -6,7 +6,6 @@ import {
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { CurrencyCodeField } from "./currency-code-field.js";
-import { cryptoCurrencies, fiatCurrencies } from "./utils.js";
 const meta: Meta<typeof CurrencyCodeField> = {
   title: "Document Engineering/Scalars/Currency Code Field",
   component: CurrencyCodeField,
@@ -57,6 +56,16 @@ const meta: Meta<typeof CurrencyCodeField> = {
         eq: true,
       },
     },
+    allowedTypes: {
+      control: "select",
+      description:
+        "Allowed types of currencies to display when no currencies are provided",
+      options: ["Fiat", "Crypto", "Both"],
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
     searchable: {
       control: "boolean",
       description: "Whether the dropdown is searchable",
@@ -71,6 +80,7 @@ const meta: Meta<typeof CurrencyCodeField> = {
     name: "currency-code-field",
     placeholder: "Select a currency",
     favoriteCurrencies: [],
+    currencies: [],
   },
 };
 
@@ -80,7 +90,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     label: "Currency",
-    currencies: cryptoCurrencies(),
+    onChange: () => {},
+    allowedTypes: "Both",
   },
 };
 
@@ -89,13 +100,15 @@ export const Disabled: Story = {
     label: "Currency",
     value: "EUR",
     disabled: true,
-    currencies: fiatCurrencies(),
+    onChange: () => {},
+    allowedTypes: "Fiat",
   },
 };
 
 export const WithFavorites: Story = {
   args: {
     label: "Currency",
+    onChange: () => {},
     currencies: [
       {
         ticker: "BTC",
