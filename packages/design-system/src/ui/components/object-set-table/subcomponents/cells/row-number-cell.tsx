@@ -2,7 +2,19 @@ import { cn } from "#scalars";
 import { useInternalTableState } from "../table-provider/table-provider.js";
 import { TableCellBasic } from "./basic-cell.js";
 
-const RowNumberCell: React.FC<{ index: number }> = ({ index }) => {
+interface RowNumberCellProps {
+  index: number;
+  handleSelectRowOnClick?: (
+    event: React.MouseEvent<HTMLTableCellElement>,
+  ) => void;
+  selected: boolean;
+}
+
+const RowNumberCell: React.FC<RowNumberCellProps> = ({
+  index,
+  handleSelectRowOnClick,
+  selected,
+}) => {
   const {
     config: { showRowNumbers, allowRowSelection },
   } = useInternalTableState();
@@ -15,7 +27,12 @@ const RowNumberCell: React.FC<{ index: number }> = ({ index }) => {
 
   return (
     <TableCellBasic
-      className={cn("min-w-9 border-r border-gray-300 text-center")}
+      className={cn(
+        "min-w-9 border-r border-gray-300 text-center",
+        allowRowSelection && "cursor-pointer",
+        selected && "bg-blue-900 text-white",
+      )}
+      onClick={handleSelectRowOnClick}
     >
       {showRowNumbers ? index : ""}
     </TableCellBasic>
