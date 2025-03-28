@@ -1,4 +1,10 @@
-import { createContext, useContext, useReducer, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useReducer,
+  type ReactNode,
+} from "react";
 import type { DataType, ObjectSetTableConfig } from "../../types.js";
 import { tableReducer, type TableState } from "./table-reducer.js";
 
@@ -23,7 +29,13 @@ const TableProvider = <T extends DataType>({
     data: config.data,
     allowRowSelection: config.allowRowSelection ?? true,
     showRowNumbers: config.showRowNumbers ?? true,
+    selectedRowIndexes: [],
+    lastSelectedRowIndex: null,
   });
+
+  useEffect(() => {
+    dispatch({ type: "SET_DISPATCH", payload: dispatch });
+  }, [dispatch]);
 
   return (
     <TableContext.Provider
@@ -41,8 +53,8 @@ const TableProvider = <T extends DataType>({
   );
 };
 
-const useInternalTableState = () => {
-  const context = useContext(TableContext);
+const useInternalTableState = <T extends DataType = any>() => {
+  const context = useContext(TableContext) as TableContextValue<T>;
   if (!context) {
     throw new Error("useTable must be used within a TableProvider");
   }

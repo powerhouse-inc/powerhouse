@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { cn } from "../../../scalars/index.js";
 import { mockData, type MockedPerson } from "./mock-data.js";
 import { ObjectSetTable } from "./object-set-table.js";
 
@@ -60,8 +61,20 @@ export const Default: Story = {
       { field: "firstName" },
       { field: "email" },
       { field: "walletAddress" },
-      { field: "payment" },
-      { field: "status" },
+      { field: "payment", type: "number" },
+      {
+        field: "status",
+        renderCell: (value: "active" | "inactive") => (
+          <span
+            className={cn(
+              "rounded-sm p-0.5 text-gray-50",
+              value === "active" ? "bg-green-900" : "bg-red-900",
+            )}
+          >
+            {value}
+          </span>
+        ),
+      },
       { field: "address.addressLine1" },
       { field: "address.city" },
       { field: "address.state" },
