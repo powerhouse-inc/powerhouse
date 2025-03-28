@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { ColumnDef, DataType } from "../types.js";
 import { getColumnValue } from "../utils.js";
 import { DefaultTableCell } from "./cells/default-cell.js";
+import { InformationCell } from "./cells/information-cell.js";
 import { RowNumberCell } from "./cells/row-number-cell.js";
 import { TableRow } from "./rows/table-row.js";
 import { useInternalTableState } from "./table-provider/table-provider.js";
@@ -90,11 +91,15 @@ const TableBody = <T extends DataType>({
             handleSelectRowOnClick={createSelectRowOnClickHandler(index)}
             selected={selectedRowIndexes.includes(index)}
           />
+
           {columns.map((column) => (
             <DefaultTableCell key={column.field}>
               {getColumnValue(rowItem, column.field) as string}
             </DefaultTableCell>
           ))}
+
+          {/* Information cell */}
+          <InformationCell />
         </TableRow>
       ))}
     </tbody>
