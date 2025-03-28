@@ -1,4 +1,4 @@
-import type { AIDOption, Network } from "./types.js";
+import type { AIDInputProps, AIDOption } from "./types.js";
 
 export const mockedOptions: AIDOption[] = [
   {
@@ -284,8 +284,10 @@ const filterOptions = (
   context?: Record<string, unknown>,
 ) => {
   const normalizedInput = userInput.toLowerCase();
-  const supportedNetworks = Array.isArray(context?.supportedNetworks)
-    ? (context.supportedNetworks as Network[])
+  const supportedNetworks: AIDInputProps["supportedNetworks"] = Array.isArray(
+    context?.supportedNetworks,
+  )
+    ? context.supportedNetworks
     : [];
 
   return options.filter((opt) => {
