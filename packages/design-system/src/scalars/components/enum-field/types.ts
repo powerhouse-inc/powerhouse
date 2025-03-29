@@ -1,4 +1,4 @@
-import type { IconName } from "@/powerhouse/components/icon";
+import type { IconName } from "#powerhouse";
 
 export interface RadioGroupProps {
   options?: {
@@ -19,10 +19,13 @@ export interface SelectOption {
 
 export interface SelectBaseProps {
   options?: SelectOption[];
+  favoriteOptions?: SelectOption[];
   placeholder?: string;
   multiple?: boolean;
   searchable?: boolean;
   onChange?: (value: string | string[]) => void;
+  contentClassName?: string;
+  contentAlign?: "start" | "end" | "center";
 }
 
 export type SelectProps =
@@ -34,14 +37,3 @@ export type SelectProps =
       selectionIcon: "checkmark";
       selectionIconPosition?: "left" | "right";
     });
-
-export type EnumProps =
-  | ({
-      variant?: "auto";
-    } & (RadioGroupProps | SelectProps))
-  | ({
-      variant: "RadioGroup";
-    } & RadioGroupProps)
-  | ({
-      variant: "Select";
-    } & SelectProps);

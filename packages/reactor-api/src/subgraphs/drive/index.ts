@@ -1,27 +1,30 @@
 import { Subgraph } from "#subgraphs/base/index.js";
-import { Context, SubgraphArgs } from "#subgraphs/types.js";
+import { type Context, type SubgraphArgs } from "#subgraphs/types.js";
 import {
-  InternalStrandUpdate,
+  type InternalStrandUpdate,
   processAcknowledge,
   processGetStrands,
   processPushUpdate,
 } from "#sync/utils.js";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { pascalCase } from "change-case";
 import {
-  addListener,
   childLogger,
-  FileNode,
+  type FileNode,
   generateUUID,
-  Listener,
-  ListenerFilter,
-  ListenerRevision,
-  StrandUpdateGraphQL,
-  TransmitterType,
+  type ListenerFilter,
+  type ListenerRevision,
+  PullResponderTransmitter,
+  type StrandUpdateGraphQL,
 } from "document-drive";
-import { DocumentModelInput, Operation, PHDocument } from "document-model";
+import { type Listener } from "document-drive/server/types";
+import {
+  type DocumentModelInput,
+  type Operation,
+  type PHDocument,
+} from "document-model";
 import { gql } from "graphql-tag";
-import { Asset } from "./temp-hack-rwa-type-defs.js";
+import { type Asset } from "./temp-hack-rwa-type-defs.js";
 
 const driveKindTypeNames: Record<string, string> = {
   file: "DocumentDrive_FileNode",
@@ -278,38 +281,52 @@ export class DriveSubgraph extends Subgraph {
           filter,
         );
 
-        if (!ctx.driveId) throw new Error("Drive ID is required");
+        if (!ctx.driveId) {
+          throw new Error("Drive ID is required");
+        }
+
+        // Create the listener and transmitter
         const uuid = generateUUID();
         const listener: Listener = {
+          driveId: ctx.driveId,
+          listenerId: uuid,
           block: false,
+          filter,
+          system: false,
+          label: `Pullresponder #${uuid}`,
           callInfo: {
             data: "",
             name: "PullResponder",
-            transmitterType: "PullResponder" as TransmitterType,
+            transmitterType: "PullResponder",
           },
-          filter: {
-            branch: filter.branch ?? [],
-            documentId: filter.documentId ?? [],
-            documentType: filter.documentType ?? [],
-            scope: filter.scope ?? [],
-          },
-          label: `Pullresponder #${uuid}`,
-          listenerId: uuid,
-          system: false,
         };
 
-        const result = await this.reactor.queueDriveAction(
-          ctx.driveId,
-          addListener({ listener }),
+        // TODO: circular reference
+        // TODO: once we have DI, remove this and pass around
+        const listenerManager = this.reactor.listeners;
+        listener.transmitter = new PullResponderTransmitter(
+          listener,
+          listenerManager,
         );
 
-        if (result.status !== "SUCCESS" && result.error) {
-          throw new Error(
-            `Listener couldn't be registered: ${result.error.message}`,
-          );
+        // set the listener on the manager directly (bypassing operations)
+        try {
+          await listenerManager.setListener(ctx.driveId, listener);
+        } catch (error) {
+          this.logger.error(`Failed to register ephemeral listener: ${error}`);
+          throw new Error(`Listener couldn't be registered: ${error}`);
         }
 
-        return listener;
+        // for backwards compatibility: return everything but the transmitter
+        return {
+          driveId: listener.driveId,
+          listenerId: listener.listenerId,
+          label: listener.label,
+          block: listener.block,
+          system: listener.system,
+          filter: listener.filter,
+          callInfo: listener.callInfo,
+        };
       },
       pushUpdates: async (
         _: unknown,

@@ -63,10 +63,9 @@ export const processAcknowledge = async (
   listenerId: string,
   revisions: ListenerRevision[],
 ): Promise<boolean> => {
-  const transmitter = (await reactor.getTransmitter(
-    driveId,
-    listenerId,
-  )) as PullResponderTransmitter;
+  // todo: use listener manager
+  const listener = reactor.listeners.getListenerState(driveId, listenerId);
+  const transmitter = listener.listener.transmitter as PullResponderTransmitter;
   return transmitter.processAcknowledge(driveId, listenerId, revisions);
 };
 
@@ -77,9 +76,8 @@ export const processGetStrands = async (
   listenerId: string,
   since: string | undefined,
 ): Promise<StrandUpdate[]> => {
-  const transmitter = (await reactor.getTransmitter(
-    driveId,
-    listenerId,
-  )) as PullResponderTransmitter;
+  // todo: use listener manager
+  const listener = reactor.listeners.getListenerState(driveId, listenerId);
+  const transmitter = listener.listener.transmitter as PullResponderTransmitter;
   return transmitter.getStrands({ since });
 };

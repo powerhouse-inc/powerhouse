@@ -3,10 +3,13 @@ import {
   FILE,
   FOLDER,
   FolderItem,
-  UiDriveNode,
-  UiFileNode,
-  UiFolderNode,
-  UiNode,
+  type BaseUiFileNode,
+  type BaseUiFolderNode,
+  type BaseUiNode,
+  type UiDriveNode,
+  type UiFileNode,
+  type UiFolderNode,
+  type UiNode,
 } from "@powerhousedao/design-system";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
@@ -43,6 +46,43 @@ export function FolderView(props: IFolderViewProps) {
     .filter((node) => node.kind === FILE)
     .sort(sortUiNodesByName) as UiFileNode[];
 
+  // Convert UiNode callbacks to BaseUiFolderNode callbacks
+  const folderCallbacks = {
+    onSelectNode: (node: BaseUiFolderNode) =>
+      nodeProps.onSelectNode(node as UiNode),
+    onRenameNode: (name: string, node: BaseUiFolderNode) =>
+      nodeProps.onRenameNode(name, node as UiNode),
+    onDuplicateNode: (node: BaseUiFolderNode) =>
+      nodeProps.onDuplicateNode(node as UiNode),
+    onDeleteNode: (node: BaseUiFolderNode) =>
+      nodeProps.onDeleteNode(node as UiNode),
+  };
+
+  // Convert UiNode callbacks to BaseUiFileNode callbacks
+  const fileCallbacks = {
+    onSelectNode: (node: BaseUiFileNode) =>
+      nodeProps.onSelectNode(node as UiNode),
+    onRenameNode: (name: string, node: BaseUiFileNode) =>
+      nodeProps.onRenameNode(name, node as UiNode),
+    onDuplicateNode: (node: BaseUiFileNode) =>
+      nodeProps.onDuplicateNode(node as UiNode),
+    onDeleteNode: (node: BaseUiFileNode) =>
+      nodeProps.onDeleteNode(node as UiNode),
+  };
+
+  // Convert UiNode callbacks to BaseUiNode callbacks
+  const baseNodeCallbacks = {
+    onAddFile: async (file: File, parentNode: BaseUiNode | null) => {
+      await nodeProps.onAddFile(file, parentNode as UiNode | null);
+    },
+    onCopyNode: async (uiNode: BaseUiNode, targetNode: BaseUiNode) => {
+      await nodeProps.onCopyNode(uiNode as UiNode, targetNode as UiNode);
+    },
+    onMoveNode: async (uiNode: BaseUiNode, targetNode: BaseUiNode) => {
+      await nodeProps.onMoveNode(uiNode as UiNode, targetNode as UiNode);
+    },
+  };
+
   return (
     <div
       className={twMerge(
@@ -63,13 +103,8 @@ export function FolderView(props: IFolderViewProps) {
             <FolderItem
               key={folderNode.id}
               uiNode={folderNode}
-              onAddFile={nodeProps.onAddFile}
-              onCopyNode={nodeProps.onCopyNode}
-              onMoveNode={nodeProps.onMoveNode}
-              onSelectNode={nodeProps.onSelectNode}
-              onRenameNode={nodeProps.onRenameNode}
-              onDuplicateNode={nodeProps.onDuplicateNode}
-              onDeleteNode={nodeProps.onDeleteNode}
+              {...baseNodeCallbacks}
+              {...folderCallbacks}
               isAllowedToCreateDocuments={nodeProps.isAllowedToCreateDocuments}
             />
           ))
@@ -94,10 +129,7 @@ export function FolderView(props: IFolderViewProps) {
         >
           <FileContentView
             fileNodes={fileNodes}
-            onSelectNode={nodeProps.onSelectNode}
-            onRenameNode={nodeProps.onRenameNode}
-            onDuplicateNode={nodeProps.onDuplicateNode}
-            onDeleteNode={nodeProps.onDeleteNode}
+            {...fileCallbacks}
             isAllowedToCreateDocuments={nodeProps.isAllowedToCreateDocuments}
           />
         </div>

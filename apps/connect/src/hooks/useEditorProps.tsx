@@ -1,31 +1,33 @@
-import { useModal } from '#components/modal/index';
-import { useGetDocumentModelModule } from '#store/document-model';
-import { themeAtom } from '#store/theme';
-import { useUser } from '#store/user';
+import { useModal } from '#components';
+import { themeAtom, useGetDocumentModelModule, useUser } from '#store';
 import {
-    DocumentDispatch,
-    DocumentDispatchCallback,
-} from '#utils/document-model';
-import { exportFile } from '#utils/file';
-import { addActionContext, signOperation } from '#utils/signature';
-import { validateDocument } from '#utils/validate-document';
-import { UiDriveNode, UiFileNode } from '@powerhousedao/design-system';
+    addActionContext,
+    type DocumentDispatch,
+    type DocumentDispatchCallback,
+    exportFile,
+    signOperation,
+    validateDocument,
+} from '#utils';
+import {
+    type UiDriveNode,
+    type UiFileNode,
+} from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
 import {
-    Action,
-    ActionErrorCallback,
-    EditorContext,
-    Operation,
-    PHDocument,
+    type Action,
+    type ActionErrorCallback,
+    type EditorContext,
+    type Operation,
+    type PHDocument,
     redo,
     undo,
 } from 'document-model';
 import { useAtomValue } from 'jotai';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
-import { useUiNodes } from './useUiNodes';
-import { useUserPermissions } from './useUserPermissions';
+import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
+import { useUiNodes } from './useUiNodes.js';
+import { useUserPermissions } from './useUserPermissions.js';
 
 export interface EditorProps {
     context: EditorContext;

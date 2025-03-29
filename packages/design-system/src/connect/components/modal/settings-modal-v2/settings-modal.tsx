@@ -1,5 +1,7 @@
-import { Icon, Modal } from "@/powerhouse";
-import React, { ComponentProps, useState } from "react";
+import { Icon, Modal } from "#powerhouse";
+import { type ComponentProps } from "react";
+
+import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type SettingsTab = {

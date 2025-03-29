@@ -1,7 +1,7 @@
 import { dirname, isAbsolute, join } from "path";
 import { readJsonFile } from "./helpers.js";
 import { startServer } from "./server.js";
-import { ConnectStudioOptions, StartServerOptions } from "./types.js";
+import { type ConnectStudioOptions, type StartServerOptions } from "./types.js";
 
 export function startConnectStudio(options: ConnectStudioOptions) {
   const serverOptions: StartServerOptions = {};
@@ -55,14 +55,6 @@ export function startConnectStudio(options: ConnectStudioOptions) {
 
   if (options.packages && options.packages.length > 0) {
     serverOptions.packages = options.packages.map((p) => p.packageName);
-  }
-
-  if (options.localEditors) {
-    process.env.LOCAL_DOCUMENT_EDITORS = options.localEditors;
-  }
-
-  if (options.localDocuments) {
-    process.env.LOCAL_DOCUMENT_MODELS = options.localDocuments;
   }
 
   if (options.https) {

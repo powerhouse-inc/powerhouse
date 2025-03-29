@@ -1,9 +1,9 @@
 import { render, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { FormProvider, useForm } from "react-hook-form";
-import ValueTransformer from "./value-transformer";
+import ValueTransformer from "./value-transformer.js";
 import { userEvent } from "@testing-library/user-event";
-import { withFieldValidation } from "../with-field-validation";
+import { withFieldValidation } from "../with-field-validation/index.js";
 
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   const methods = useForm();

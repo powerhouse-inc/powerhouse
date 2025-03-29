@@ -1,17 +1,24 @@
-import { getReactorDefaultDrivesConfig } from '#utils/reactor';
+import { getReactorDefaultDrivesConfig } from '#utils';
 import {
     BaseQueueManager,
-    DocumentDriveAction,
-    DriveInput,
-    IDocumentDriveServer,
+    type DocumentDriveAction,
+    type DriveInput,
+    generateUUID,
+    type IDocumentDriveServer,
     InMemoryCache,
     logger,
+    PullResponderTransmitter,
     ReactorBuilder,
-    RemoteDriveOptions,
+    type RemoteDriveOptions,
 } from 'document-drive';
+import { type Listener } from 'document-drive/server/types';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
-import { Action, DocumentModelModule, Operation } from 'document-model';
-import { IpcMain, webContents } from 'electron';
+import {
+    type DocumentAction,
+    type DocumentModelModule,
+    type Operation,
+} from 'document-model';
+import { type IpcMain, webContents } from 'electron';
 import { join } from 'path';
 
 export default (
@@ -114,7 +121,7 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | Action>[],
+            operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) => documentDrive.addDriveOperations(drive, operations, { forceSync }),
     );
@@ -124,7 +131,7 @@ export default (
         (
             _e,
             drive: string,
-            operation: Operation<DocumentDriveAction | Action>,
+            operation: Operation<DocumentDriveAction | DocumentAction>,
             forceSync?: boolean,
         ) =>
             documentDrive.queueDriveOperations(drive, [operation], {
@@ -137,7 +144,7 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | Action>[],
+            operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
             documentDrive.queueDriveOperations(drive, operations, {
@@ -155,12 +162,58 @@ export default (
 
     ipcMain.handle(
         'documentDrive:registerPullResponderTrigger',
-        (
+        async (
             _e,
             drive: string,
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
-        ) => documentDrive.registerPullResponderTrigger(drive, url, options),
+        ) => {
+            const uuid = generateUUID();
+            const listener: Listener = {
+                driveId: drive,
+                listenerId: uuid,
+                block: false,
+                filter: {
+                    branch: options.pullFilter?.branch ?? [],
+                    documentId: options.pullFilter?.documentId ?? [],
+                    documentType: options.pullFilter?.documentType ?? [],
+                    scope: options.pullFilter?.scope ?? [],
+                },
+                system: false,
+                label: `Pullresponder #${uuid}`,
+                callInfo: {
+                    data: '',
+                    name: 'PullResponder',
+                    transmitterType: 'PullResponder',
+                },
+            };
+
+            // TODO: circular reference
+            // TODO: once we have DI, remove this and pass around
+            const listenerManager = documentDrive.listeners;
+            listener.transmitter = new PullResponderTransmitter(
+                listener,
+                listenerManager,
+            );
+
+            // set the listener on the manager directly (bypassing operations)
+            try {
+                await listenerManager.setListener(drive, listener);
+            } catch (error) {
+                throw new Error(`Listener couldn't be registered: ${error}`);
+            }
+
+            // for backwards compatibility: return everything but the transmitter
+            return {
+                driveId: listener.driveId,
+                listenerId: listener.listenerId,
+                label: listener.label,
+                block: listener.block,
+                system: listener.system,
+                filter: listener.filter,
+                callInfo: listener.callInfo,
+            };
+        },
     );
 
     function bindEvents(drive: IDocumentDriveServer) {

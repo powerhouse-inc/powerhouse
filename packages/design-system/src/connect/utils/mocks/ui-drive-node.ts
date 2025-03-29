@@ -10,17 +10,15 @@ import {
   LOCAL,
   PUBLIC,
   SUCCESS,
-} from "@/connect/constants";
-import {
-  DocumentDriveDocument,
-  FileNode,
-  FolderNode,
-  SharingType,
-  SyncStatus,
-  UiDriveNode,
-  UiFileNode,
-  UiFolderNode,
-} from "@/connect/types";
+  type DocumentDriveDocument,
+  type FileNode,
+  type FolderNode,
+  type SharingType,
+  type SyncStatus,
+  type UiDriveNode,
+  type UiFileNode,
+  type UiFolderNode,
+} from "#connect";
 
 const mockDriveId = "mock-drive-id";
 

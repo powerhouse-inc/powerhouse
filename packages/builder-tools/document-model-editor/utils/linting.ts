@@ -1,4 +1,4 @@
-import { Diagnostic } from "@codemirror/lint";
+import { type Diagnostic } from "@codemirror/lint";
 import { isDocumentString } from "@graphql-tools/utils";
 import { pascalCase, sentenceCase } from "change-case";
 import { parse, Kind } from "graphql";

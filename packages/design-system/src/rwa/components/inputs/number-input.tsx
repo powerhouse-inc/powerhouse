@@ -1,11 +1,11 @@
-import { RWATableTextInput } from "@/rwa";
-import { ComponentPropsWithRef } from "react";
+import { RWATableTextInput } from "#rwa";
+import { type ComponentPropsWithRef } from "react";
 import {
-  Control,
+  type Control,
   Controller,
-  ControllerProps,
-  FieldValues,
-  Path,
+  type ControllerProps,
+  type FieldValues,
+  type Path,
 } from "react-hook-form";
 import { NumericFormat } from "react-number-format";
 import { twMerge } from "tailwind-merge";

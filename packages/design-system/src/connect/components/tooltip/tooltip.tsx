@@ -3,10 +3,10 @@ import {
   Portal,
   Provider,
   Root,
-  TooltipProps,
+  type TooltipProps,
   Trigger,
 } from "@radix-ui/react-tooltip";
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 
 type Props = TooltipProps & {
@@ -37,7 +37,7 @@ export function Tooltip(props: Props) {
         <Content
           {...rest}
           className={twMerge(
-            "rounded-lg border border-gray-200 bg-white p-2 text-xs shadow-tooltip",
+            "shadow-tooltip rounded-lg border border-gray-200 bg-white p-2 text-xs",
             className,
           )}
         >

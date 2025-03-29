@@ -1,19 +1,19 @@
 import {
-  Account,
-  AccountFormInputs,
-  AssetFormInputs,
-  FixedIncome,
-  FixedIncomeType,
-  FixedIncomeTypeFormInputs,
-  GroupTransaction,
-  GroupTransactionFormInputs,
-  ServiceProviderFeeType,
-  ServiceProviderFeeTypeFormInputs,
-  SPV,
-  SPVFormInputs,
-  TableDataByTableName,
-  TableName,
-} from "@/rwa";
+  type Account,
+  type AccountFormInputs,
+  type AssetFormInputs,
+  type FixedIncome,
+  type FixedIncomeType,
+  type FixedIncomeTypeFormInputs,
+  type GroupTransaction,
+  type GroupTransactionFormInputs,
+  type ServiceProviderFeeType,
+  type ServiceProviderFeeTypeFormInputs,
+  type SPV,
+  type SPVFormInputs,
+  type TableDataByTableName,
+  type TableName,
+} from "#rwa";
 
 export type FormInputsByTableName = {
   ASSET: AssetFormInputs;

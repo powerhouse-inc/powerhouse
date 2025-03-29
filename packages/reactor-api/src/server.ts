@@ -1,19 +1,19 @@
-import { PGlite } from "@electric-sql/pglite";
+import { SubgraphManager } from "#subgraphs/manager.js";
+import { type PGlite } from "@electric-sql/pglite";
+import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
 import devcert from "devcert";
-import { IDocumentDriveServer } from "document-drive";
-import express, { Express } from "express";
+import { type IDocumentDriveServer } from "document-drive";
+import express, { type Express } from "express";
 import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
-import { TlsOptions } from "node:tls";
-import { Pool } from "pg";
-import { IAnalyticsStore, ProcessorManager } from "#processors/index.js";
-import { SubgraphManager } from "#subgraphs/manager.js";
-import { API } from "./types.js";
+import { type TlsOptions } from "node:tls";
+import { type Pool } from "pg";
+import { type API } from "./types.js";
 import { getDbClient } from "./utils/db.js";
 
 type Options = {
@@ -42,7 +42,7 @@ export async function startAPI(
   const analyticsStore = new KnexAnalyticsStore({
     executor: new KnexQueryExecutor(),
     knex: db,
-  }) as unknown as IAnalyticsStore; // TODO update @powerhousedao/analytics-engine-pg to use @powerhousedao/analytics-engine-core@0.3.2
+  }) as unknown as IAnalyticsStore;
   const subgraphManager = new SubgraphManager(
     "/",
     app,
@@ -51,7 +51,6 @@ export async function startAPI(
     analyticsStore,
   );
   await subgraphManager.init();
-  const processorManager = new ProcessorManager(reactor, db, analyticsStore);
 
   if (options.https) {
     const currentDir = process.cwd();
@@ -67,7 +66,6 @@ export async function startAPI(
       );
     } else {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const { cert, key } = (await devcert.certificateFor(
           "localhost",
         )) as TlsOptions;
@@ -84,5 +82,5 @@ export async function startAPI(
   } else {
     app.listen(port);
   }
-  return { app, subgraphManager, processorManager };
+  return { app, subgraphManager };
 }

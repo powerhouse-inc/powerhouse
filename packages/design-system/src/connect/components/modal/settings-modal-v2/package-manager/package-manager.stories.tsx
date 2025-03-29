@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { ComponentPropsWithoutRef, useState } from "react";
-import { mockPackages, mockReactorOptions } from "../mocks";
-import { PackageManager } from "./package-manager";
+import { type ComponentPropsWithoutRef, useState } from "react";
+import { mockPackages, mockReactorOptions } from "../mocks.js";
+import { PackageManager } from "./package-manager.js";
 
 const meta: Meta<typeof PackageManager> = {
   title: "Connect/Components/PackageManager",
@@ -50,6 +50,7 @@ function PackageManagerStoryWrapper(storyArgs: Partial<Props> = {}): Story {
     ...storyArgs,
   } as Props;
   return {
+    // @ts-expect-error
     render: PackageManagerWrapper,
     args: defaultArgs,
   };

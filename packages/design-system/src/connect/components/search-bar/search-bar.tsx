@@ -4,11 +4,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Icon,
-} from "@/powerhouse";
-import { cn } from "@/scalars";
-import { ChangeEvent, useMemo } from "react";
+} from "#powerhouse";
+import { cn } from "#scalars";
+import { type ChangeEvent, useMemo } from "react";
 import { twMerge } from "tailwind-merge";
-import { FilterItem, FilterItemType } from "./filter-item";
+import { FilterItem, type FilterItemType } from "./filter-item.js";
 
 export interface ConnectSearchBarProps {
   value?: string;

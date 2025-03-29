@@ -1,5 +1,5 @@
-import { OperationScope } from "document-model";
-import { Select } from "../../select";
+import { type OperationScope } from "document-model";
+import { Select } from "../../select/index.js";
 
 type Props = {
   readonly value: OperationScope;

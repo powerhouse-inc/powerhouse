@@ -1,5 +1,5 @@
 import { useFormContext } from "react-hook-form";
-import { FormMessageList } from "./message-list";
+import { FormMessageList } from "./message-list.js";
 
 export const FormServerErrorMessage = () => {
   const { formState } = useFormContext();

@@ -1,4 +1,4 @@
-import { PHReducer } from "#document/types.js";
+import { type PHReducer } from "#document/types.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   baseCreateDocument,
@@ -12,7 +12,7 @@ import {
   hex2ab,
   verifyOperationSignature,
 } from "../../src/document/utils/crypto.js";
-import { CountDocument, countReducer, increment } from "../helpers.js";
+import { type CountDocument, countReducer, increment } from "../helpers.js";
 
 describe("Crypto utils", () => {
   beforeAll(() => {

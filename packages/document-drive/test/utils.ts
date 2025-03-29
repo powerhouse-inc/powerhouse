@@ -1,16 +1,16 @@
 import { driveDocumentModelModule } from "#drive-document-model/module";
-import { BaseDocumentDriveServer } from "#server/base-server";
+import { type BaseDocumentDriveServer } from "#server/base-server";
 import {
-  Action,
-  ActionFromDocument,
+  type Action,
+  type ActionFromDocument,
   documentModelDocumentModelModule,
-  DocumentModelModule,
-  Operation,
-  OperationFromDocument,
-  PHDocument,
-  PHReducer,
+  type DocumentModelModule,
+  type Operation,
+  type OperationFromDocument,
+  type PHDocument,
+  type PHReducer,
 } from "document-model";
-import { ExpectStatic } from "vitest";
+import { type ExpectStatic } from "vitest";
 
 export const baseDocumentModels = [
   driveDocumentModelModule,
@@ -27,9 +27,9 @@ export function expectUTCTimestamp(expect: ExpectStatic): unknown {
   return expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/i);
 }
 
-export function buildOperation(
-  reducer: PHReducer,
-  document: PHDocument,
+export function buildOperation<TDocument extends PHDocument>(
+  reducer: PHReducer<TDocument>,
+  document: TDocument,
   action: Action,
   index?: number,
 ): Operation {
@@ -42,9 +42,9 @@ export function buildOperation(
   return { ...operation, index: index ?? operation.index } as Operation;
 }
 
-export function buildOperations(
-  reducer: PHReducer,
-  document: PHDocument,
+export function buildOperations<TDocument extends PHDocument>(
+  reducer: PHReducer<TDocument>,
+  document: TDocument,
   actions: Array<Action>,
 ): Operation[] {
   const operations: Operation[] = [];
@@ -81,20 +81,18 @@ export function buildOperationAndDocument<TDocument extends PHDocument>(
   };
 }
 
-export class BasicClient {
+export class BasicClient<TDocument extends PHDocument = PHDocument> {
   private unsyncedOperations: Operation[] = [];
 
   constructor(
     private server: BaseDocumentDriveServer,
     private driveId: string,
     private documentId: string,
-
-    private document: PHDocument,
-
-    private reducer: PHReducer,
+    private document: TDocument,
+    private reducer: PHReducer<TDocument>,
   ) {}
 
-  getDocument() {
+  getDocument(): TDocument {
     return this.document;
   }
 
@@ -135,7 +133,7 @@ export class BasicClient {
       remoteDocumentOperations,
     );
 
-    this.document = result.document;
+    this.document = result.document as TDocument;
     return this.document;
   }
 
@@ -144,31 +142,26 @@ export class BasicClient {
       this.reducer,
       this.document,
       action,
-    ) as {
-      document: PHDocument;
-      operation: Operation;
-    };
+    );
 
-    this.document = { ...result.document };
+    this.document = { ...result.document } as TDocument;
     this.unsyncedOperations.push({ ...result.operation });
 
     return result;
   }
 }
 
-export class DriveBasicClient {
+export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
   private unsyncedOperations: Operation[] = [];
 
   constructor(
     private server: BaseDocumentDriveServer,
     private driveId: string,
-
-    private document: PHDocument,
-
-    private reducer: PHReducer,
+    private document: TDocument,
+    private reducer: PHReducer<TDocument>,
   ) {}
 
-  getDocument() {
+  getDocument(): TDocument {
     return this.document;
   }
 
@@ -213,7 +206,7 @@ export class DriveBasicClient {
       remoteDocumentOperations,
     );
 
-    this.document = result.document;
+    this.document = result.document as TDocument;
     return this.document;
   }
 
@@ -222,12 +215,9 @@ export class DriveBasicClient {
       this.reducer,
       this.document,
       action,
-    ) as {
-      document: PHDocument;
-      operation: Operation;
-    };
+    );
 
-    this.document = { ...result.document };
+    this.document = { ...result.document } as TDocument;
     this.unsyncedOperations.push({ ...result.operation });
 
     return result;

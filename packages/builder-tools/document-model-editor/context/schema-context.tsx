@@ -2,9 +2,9 @@ import { createDefaultRules, isDocumentString } from "@graphql-tools/utils";
 import {
   buildASTSchema,
   buildSchema,
-  DefinitionNode,
-  DocumentNode,
-  GraphQLSchema,
+  type DefinitionNode,
+  type DocumentNode,
+  type GraphQLSchema,
   Kind,
   parse,
   printSchema,

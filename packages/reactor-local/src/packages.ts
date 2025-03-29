@@ -1,7 +1,8 @@
 import { getConfig } from "@powerhousedao/config/powerhouse";
-import { DocumentModelModule } from "document-model";
+import { logger } from "document-drive";
+import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
-import { existsSync, readFileSync, StatWatcher, watchFile } from "node:fs";
+import { existsSync, readFileSync, type StatWatcher, watchFile } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
@@ -64,7 +65,8 @@ async function loadPackagesDocumentModels(packages: string[]) {
         console.warn(`  ➜  No package found: ${pkg}`);
       }
     } catch (e) {
-      console.error("Error loading package", pkg, e);
+      logger.error("Error loading package", pkg);
+      logger.debug(e);
     }
   }
   return loadedPackages;
@@ -101,6 +103,16 @@ export class PackagesManager implements IPackagesManager {
       void this.loadPackages(options.packages).catch(onError);
     } else if ("configFile" in options) {
       void this.initConfigFile(options.configFile).catch(onError);
+    }
+  }
+
+  public async loadDocumentModels() {
+    if ("packages" in this.options) {
+      return await this.loadPackages(this.options.packages).catch(this.onError);
+    } else if ("configFile" in this.options) {
+      return await this.initConfigFile(this.options.configFile).catch(
+        this.onError,
+      );
     }
   }
 

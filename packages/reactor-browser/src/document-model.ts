@@ -1,6 +1,6 @@
 import {
   documentModelDocumentModelModule,
-  DocumentModelModule,
+  type DocumentModelModule,
 } from "document-model";
 
 export const baseDocumentModelsMap: Record<string, DocumentModelModule> = {

@@ -8,7 +8,7 @@ import {
 import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
 import {
   baseCountReducer,
-  CountDocument,
+  type CountDocument,
   countReducer,
   createFakeOperation,
   error,
@@ -37,7 +37,7 @@ describe("skip operations", () => {
     });
 
     it("should include skip param in base operations with provided value", () => {
-      let document = baseCreateDocument<CountDocument>();
+      let document = baseCreateDocument();
       document = wrappedEmptyReducer(document, setName("TEST_1"), undefined, {
         skip: 1,
         ignoreSkipOperations: true,

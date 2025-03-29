@@ -1,6 +1,6 @@
 import { safeStorage } from 'electron';
 import type ElectronStore from 'electron-store';
-import type { JsonWebKeyPairStorage, JwkKeyPair } from './';
+import type { JsonWebKeyPairStorage, JwkKeyPair } from './index.js';
 
 const ELECTRON_KEY_STORAGE_STORE_KEY = 'electron-key-storage';
 

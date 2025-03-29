@@ -1,5 +1,4 @@
-import React from "react";
-import { twMerge } from "tailwind-merge";
+import { cn } from "../../../lib/utils.js";
 
 export type FormMessageType = "error" | "info" | "warning";
 
@@ -32,7 +31,7 @@ export const FormMessage: <E extends React.ElementType = typeof defaultElement>(
     warning: "text-yellow-900 dark:text-yellow-900",
   };
 
-  const classes = twMerge(
+  const classes = cn(
     "mb-0 inline-flex items-center text-xs font-medium",
     typeClasses[type],
     className,

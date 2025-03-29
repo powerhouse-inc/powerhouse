@@ -1,23 +1,23 @@
-import { StrandUpdateSource } from "#server/listener/transmitter/types";
+import { OperationError } from "#server/error";
+import { type StrandUpdateSource } from "#server/listener/transmitter/types";
 import {
   DefaultListenerManagerOptions,
-  DriveUpdateErrorHandler,
-  ErrorStatus,
-  GetStrandsOptions,
-  IListenerManager,
-  ISynchronizationManager,
-  Listener,
-  ListenerManagerOptions,
-  ListenerState,
-  ListenerUpdate,
-  OperationUpdate,
-  StrandUpdate,
-  SynchronizationUnit,
-  SynchronizationUnitQuery,
+  type DriveUpdateErrorHandler,
+  type ErrorStatus,
+  type GetStrandsOptions,
+  type IListenerManager,
+  type ISynchronizationManager,
+  type Listener,
+  type ListenerManagerOptions,
+  type ListenerState,
+  type ListenerUpdate,
+  type OperationUpdate,
+  type StrandUpdate,
+  type SynchronizationUnit,
+  type SynchronizationUnitQuery,
 } from "#server/types";
-import { childLogger, ListenerFilter } from "document-drive";
-import { OperationScope } from "document-model";
-import { OperationError } from "#server/error";
+import { childLogger, type ListenerFilter } from "document-drive";
+import { type OperationScope } from "document-model";
 import { debounce } from "./util.js";
 
 const ENABLE_SYNC_DEBUG = false;
@@ -95,7 +95,7 @@ export class ListenerManager implements IListenerManager {
       syncUnits: new Map(),
     });
 
-    this.triggerUpdate(true, { type: "local" });
+    await this.triggerUpdate(true, { type: "local" });
   }
 
   async removeListener(driveId: string, listenerId: string) {
@@ -248,7 +248,7 @@ export class ListenerManager implements IListenerManager {
             return;
           } else {
             this.logger.verbose(
-              `Listener out-of-date for sync unit ${syncUnit.syncId}: ${unitState?.listenerRev} < ${syncUnit.revision}`,
+              `Listener out-of-date for sync unit (${syncUnit.scope}, ${syncUnit.documentId}): ${unitState?.listenerRev} < ${syncUnit.revision}`,
             );
           }
 
@@ -532,7 +532,7 @@ export class ListenerManager implements IListenerManager {
         return;
       }
 
-      const { documentId, driveId, scope, branch } = syncUnit;
+      const { documentId, scope, branch } = syncUnit;
       try {
         const operations = await this.syncManager.getOperationData(
           // DEAL WITH INVALID SYNC ID ERROR

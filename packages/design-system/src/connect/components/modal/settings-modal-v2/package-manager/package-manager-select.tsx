@@ -1,5 +1,4 @@
-import { SelectOption } from "@/scalars/components/enum-field/types";
-import { SelectFieldRaw } from "@/scalars/components/fragments/select-field";
+import { SelectFieldRaw, type SelectOption } from "#scalars";
 import { useCallback } from "react";
 
 export type PackageManagerReactorSelectProps = {

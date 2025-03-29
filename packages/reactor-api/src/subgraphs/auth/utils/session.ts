@@ -1,15 +1,15 @@
+import { type Context } from "#subgraphs/types.js";
+import { type Db } from "#types.js";
 import { GraphQLError } from "graphql";
 import ms from "ms";
-import { SiweMessage } from "siwe";
-import { Context } from "#subgraphs/types.js";
-import { Db } from "#types.js";
+import { type SiweMessage } from "siwe";
 import { JWT_EXPIRATION_PERIOD } from "../env/index.js";
+import { type Session } from "../types.js";
 import {
   generateTokenAndSession,
   validateOriginAgainstAllowed,
   verifyToken,
 } from "./helpers.js";
-import { Session } from "../types.js";
 
 export const createAuthenticationSession = async (
   db: Db,

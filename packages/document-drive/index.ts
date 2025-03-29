@@ -76,6 +76,7 @@ export type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
   DriveInput,
+  GetDocumentOptions,
   IDocumentDriveServer,
   ListenerRevision,
   RemoteDriveOptions,

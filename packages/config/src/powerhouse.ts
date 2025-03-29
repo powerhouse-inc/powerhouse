@@ -1,5 +1,13 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
+export type LogLevel =
+  | "verbose"
+  | "debug"
+  | "info"
+  | "warn"
+  | "error"
+  | "silent";
+
 export type PowerhousePackage = {
   packageName: string;
 };
@@ -22,6 +30,11 @@ export type PowerhouseConfig = {
           keyPath: string;
           certPath: string;
         };
+    storage?: {
+      type: "filesystem" | "memory" | "postgres" | "browser";
+      filesystemPath?: string;
+      postgresUrl?: string;
+    };
   };
   studio?: {
     port?: number;
@@ -30,7 +43,7 @@ export type PowerhouseConfig = {
     openBrowser?: boolean;
   };
   packages?: PowerhousePackage[];
-  logLevel: "verbose" | "debug" | "info" | "warn" | "error" | "silent";
+  logLevel: LogLevel;
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";

@@ -1,40 +1,38 @@
 import {
-  DocumentDriveAction,
-  DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-  ListenerCallInfo,
-  ListenerFilter,
-  Trigger,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
+  type DocumentDriveLocalState,
+  type DocumentDriveState,
+  type ListenerCallInfo,
+  type ListenerFilter,
+  type Trigger,
 } from "#drive-document-model/gen/types";
-import { IReadModeDriveServer } from "#read-mode/types";
-import { IDefaultDrivesManager } from "#utils/default-drives-manager";
-import { DriveInfo } from "#utils/graphql";
-import { RunAsap } from "#utils/run-asap";
+import { type IReadModeDriveServer } from "#read-mode/types";
+import { type IDefaultDrivesManager } from "#utils/default-drives-manager";
+import { type DriveInfo } from "#utils/graphql";
+import { type RunAsap } from "#utils/run-asap";
 import {
-  Action,
-  ActionContext,
-  BaseState,
-  CreateChildDocumentInput,
-  DocumentModelModule,
-  Operation,
-  OperationFromDocument,
-  OperationScope,
-  PHDocument,
-  ReducerOptions,
-  Signal,
+  type Action,
+  type ActionContext,
+  type BaseState,
+  type CreateChildDocumentInput,
+  type DocumentModelModule,
+  type Operation,
+  type OperationFromDocument,
+  type OperationScope,
+  type PHDocument,
+  type ReducerOptions,
+  type Signal,
 } from "document-model";
-import { Unsubscribe } from "nanoevents";
-import { BaseDocumentDriveServer } from "./base-server.js";
-import { OperationError, SynchronizationUnitNotFoundError } from "./error.js";
+import { type Unsubscribe } from "nanoevents";
+import { type BaseDocumentDriveServer } from "./base-server.js";
 import {
-  IInternalTransmitter,
-  IReceiver,
-} from "./listener/transmitter/internal.js";
+  type OperationError,
+  type SynchronizationUnitNotFoundError,
+} from "./error.js";
 import {
-  ITransmitter,
-  PullResponderTrigger,
-  StrandUpdateSource,
+  type ITransmitter,
+  type StrandUpdateSource,
 } from "./listener/transmitter/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
@@ -83,7 +81,6 @@ export type DriveOperationResult = IOperationResult<DocumentDriveDocument>;
 
 export type SynchronizationUnit = {
   syncId: string;
-  driveId: string;
   documentId: string;
   documentType: string;
   scope: string;
@@ -334,6 +331,10 @@ type PublicPart<T> = Pick<T, PublicKeys<T>>;
 
 export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
+
+  // todo: remove this once we have DI
+  get listeners(): IListenerManager;
+
   setDocumentModelModules(models: DocumentModelModule[]): void;
   getDrives(): Promise<string[]>;
   addDrive(
@@ -406,6 +407,7 @@ export interface IBaseDocumentDriveServer {
     operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
+
   addDriveOperations(
     driveId: string,
     operations: Operation<DocumentDriveAction>[],
@@ -464,17 +466,6 @@ export interface IBaseDocumentDriveServer {
     syncUnitId: string,
   ): SyncStatus | SynchronizationUnitNotFoundError;
 
-  addInternalListener(
-    driveId: string,
-    receiver: IReceiver,
-    options: {
-      listenerId: string;
-      label: string;
-      block: boolean;
-      filter: ListenerFilter;
-    },
-  ): Promise<IInternalTransmitter>;
-
   /** Synchronization methods */
   getSynchronizationUnits(
     driveId: string,
@@ -507,18 +498,7 @@ export interface IBaseDocumentDriveServer {
   /** Internal methods **/
   getDocumentModelModules(): DocumentModelModule[];
 
-  getTransmitter(
-    driveId: string,
-    listenerId: string,
-  ): Promise<ITransmitter | undefined>;
-
   clearStorage(): Promise<void>;
-
-  registerPullResponderTrigger(
-    id: string,
-    url: string,
-    options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
-  ): Promise<PullResponderTrigger>;
 
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
 }
@@ -614,6 +594,7 @@ export interface IEventEmitter {
 }
 
 export interface ISynchronizationManager {
+  setDocumentModelModules(arg0: DocumentModelModule[]): void;
   getSynchronizationUnits(
     driveId: string,
     documentId?: string[],

@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { Combobox } from "./combobox";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { Combobox } from "./combobox.js";
 
 const meta = {
   title: "Connect/Components/Combobox",

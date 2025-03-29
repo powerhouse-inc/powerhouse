@@ -1,6 +1,6 @@
 import { Subgraph } from "#subgraphs/index.js";
 import { Db } from "#types.js";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
+import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { generateUUID } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";

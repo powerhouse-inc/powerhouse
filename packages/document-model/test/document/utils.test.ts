@@ -16,7 +16,7 @@ import {
 } from "../../src/document/utils/node.js";
 import { validateOperations } from "../../src/document/utils/validation.js";
 import {
-  CountDocument,
+  type CountDocument,
   countReducer,
   increment,
   mutableCountReducer,
@@ -170,6 +170,7 @@ describe("Base utils", () => {
       newDocument.operations,
       countReducer,
       undefined,
+      newDocument,
     );
 
     expect(newDocument.state).toStrictEqual(replayedDocument.state);

@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai';
-import { atomWithStorageCallback } from './utils';
+import { atomWithStorageCallback } from './utils.js';
 
 const THEMES = ['light', 'dark'] as const;
 

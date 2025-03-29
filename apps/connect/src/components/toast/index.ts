@@ -1,1 +1,1 @@
-export * from './reload-connect-toast';
+export * from './reload-connect-toast.js';

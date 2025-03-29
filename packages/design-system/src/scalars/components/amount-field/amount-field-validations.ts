@@ -1,53 +1,64 @@
-import { AmountFieldProps } from "./amount-field";
+import { type ValidatorResult } from "#scalars";
 import {
-  AmountCurrencyFiat,
-  AmountFieldPropsGeneric,
-  AmountCurrencyCrypto,
-  AmountCurrencyUniversal,
-  AmountValue,
-} from "./types";
-import { isValidNumber } from "../number-field/number-field-validations";
-import { ValidatorResult } from "@/scalars";
-import { isValidBigInt } from "./utils";
+  type Amount,
+  type AmountCrypto,
+  type AmountCurrency,
+  type AmountFiat,
+  type AmountInputPropsGeneric,
+  type AmountValue,
+} from "../../../ui/components/data-entry/amount-input/types.js";
+import { isValidBigInt } from "../../../ui/components/data-entry/amount-input/utils.js";
+import { isValidNumber } from "../number-field/number-field-validations.js";
+import { type AmountFieldProps } from "./amount-field.js";
 
 const isAmountCurrencyFiat = (
-  type: AmountFieldPropsGeneric["type"],
-): type is "AmountCurrencyFiat" => type === "AmountCurrencyFiat";
+  type: AmountInputPropsGeneric["type"],
+): type is "AmountFiat" => type === "AmountFiat";
 
 const isAmountCurrencyCrypto = (
-  type: AmountFieldPropsGeneric["type"],
-): type is "AmountCurrencyCrypto" => type === "AmountCurrencyCrypto";
+  type: AmountInputPropsGeneric["type"],
+): type is "AmountCrypto" => type === "AmountCrypto";
 
 const isAmountCurrencyUniversal = (
-  type: AmountFieldPropsGeneric["type"],
-): type is "AmountCurrencyUniversal" => type === "AmountCurrencyUniversal";
+  type: AmountInputPropsGeneric["type"],
+): type is "AmountCurrency" => type === "AmountCurrency";
+
+const isAmount = (type: AmountInputPropsGeneric["type"]): type is "Amount" =>
+  type === "Amount";
 
 const getAmount = (
   value: AmountValue,
-  type: AmountFieldPropsGeneric["type"],
+  type: AmountInputPropsGeneric["type"],
 ): number | bigint | undefined => {
   if (
     isAmountCurrencyFiat(type) ||
     isAmountCurrencyCrypto(type) ||
-    isAmountCurrencyUniversal(type)
+    isAmountCurrencyUniversal(type) ||
+    isAmount(type)
   ) {
     if (!value) return undefined;
     return (
-      (
-        value as
-          | AmountCurrencyFiat
-          | AmountCurrencyCrypto
-          | AmountCurrencyUniversal
-      ).amount ?? undefined
+      (value as AmountFiat | AmountCrypto | AmountCurrency | Amount).amount ??
+      undefined
     );
   }
   return value as number;
 };
 
 export const validateAmount =
-  ({ type, required, minValue, maxValue, allowNegative }: AmountFieldProps) =>
+  ({
+    type,
+    required,
+    minValue,
+    maxValue,
+    allowNegative,
+    units,
+  }: AmountFieldProps) =>
   (value: unknown): ValidatorResult => {
-    const amount = getAmount(value as AmountValue, type);
+    const amount = getAmount(
+      value as AmountValue,
+      type as AmountInputPropsGeneric["type"],
+    );
     if (value === "") return true;
     if (amount?.toString() === "") {
       if (required) {
@@ -55,25 +66,26 @@ export const validateAmount =
       }
       return true;
     }
+
     if (amount === undefined) {
       if (required) {
         return "This field is required";
       }
       return true;
     }
-    if (!isValidNumber(amount) && type !== "AmountCurrencyUniversal") {
+    if (!isValidNumber(amount) && type !== "AmountCurrency") {
       return "Value is not a valid number";
     }
     if (!allowNegative && amount < 0) {
       return "Value must be positive";
     }
-    if (type === "AmountCurrencyCrypto") {
+    if (type === "AmountCrypto") {
       if (!isValidBigInt(amount.toString())) {
         return "Value is not an bigint";
       }
       return true;
     }
-    if (type === "AmountCurrencyUniversal") {
+    if (type === "AmountCurrency") {
       if (!isValidNumber(amount)) {
         return "Value is not a valid number";
       }
@@ -98,7 +110,7 @@ export const validateAmount =
     }
     if (
       Math.abs(Number(amount)) > Number.MAX_SAFE_INTEGER &&
-      (type === "AmountCurrencyFiat" ||
+      (type === "AmountFiat" ||
         type === "AmountPercentage" ||
         type === "Amount")
     ) {

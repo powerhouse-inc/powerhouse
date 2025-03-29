@@ -6,12 +6,12 @@ import type {
     DriveInput,
     RemoteDriveOptions,
 } from 'document-drive';
-import { Action, Operation, PHDocument } from 'document-model';
-import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
-import { platformInfo } from './app/detect-platform';
-import type { IConnectCrypto } from './services/crypto';
-import type { IRenown, User } from './services/renown/types';
-import type { Theme } from './store';
+import { type Action, type Operation, type PHDocument } from 'document-model';
+import { type IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
+import { platformInfo } from './app/detect-platform.js';
+import type { IConnectCrypto } from './services/crypto/index.js';
+import type { IRenown, User } from './services/renown/types.js';
+import type { Theme } from './store/index.js';
 
 const connectCrypto: IConnectCrypto = {
     regenerateDid: (): Promise<void> =>
@@ -165,8 +165,8 @@ const electronApi = {
             ipcRenderer.off('saveFile', listener);
         };
     },
-    showTabMenu: (tab: string) => {
-        ipcRenderer.invoke('showTabMenu', tab);
+    showTabMenu: async (tab: string) => {
+        await ipcRenderer.invoke('showTabMenu', tab);
     },
     handleAddTab: (
         listener: (event: IpcRendererEvent, tab: string) => void,

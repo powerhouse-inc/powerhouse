@@ -1,9 +1,9 @@
 import {
-  DocumentOperations,
-  Operation,
-  OperationScope,
-  PHDocument,
-  Signature,
+  type DocumentOperations,
+  type Operation,
+  type OperationScope,
+  type PHDocument,
+  type Signature,
 } from "document-model";
 
 export function migrateDocumentOperationSignatures(

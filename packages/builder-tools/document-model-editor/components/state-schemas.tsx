@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { typeDefsDoc } from "../constants/documents.js";
 import { useSchemaContext } from "../context/schema-context.js";
-import { Scope } from "../types/documents.js";
+import { type Scope } from "../types/documents.js";
 import {
   makeMinimalObjectFromSDL,
   makeInitialSchemaDoc,

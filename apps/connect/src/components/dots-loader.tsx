@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const DotsLoader = () => {
+export const DotsLoader = () => {
     const [dots, setDots] = useState(0);
 
     useEffect(() => {
@@ -14,5 +14,3 @@ const DotsLoader = () => {
 
     return <span>{new Array(dots).fill('.').join('')}</span>;
 };
-
-export default DotsLoader;

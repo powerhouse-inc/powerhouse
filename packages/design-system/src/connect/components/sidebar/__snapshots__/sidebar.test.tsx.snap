@@ -38,7 +38,7 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
       />
     </div>
     <div
-      class="shrink-0 border-t border-gray-300 flex flex-col gap-2 py-4 px-2"
+      class="shrink-0 flex flex-col gap-2 border-t border-gray-300 px-2 py-4"
     >
       <div
         class=""
@@ -47,13 +47,13 @@ exports[`Connect Sidebar Component > should match snapshot 1`] = `
           class="flex items-center justify-center rounded-sm"
         >
           <div
-            class="flex-none animate-pulse rounded-full bg-gray-400 fade-out"
+            class="fade-out flex-none animate-pulse rounded-full bg-gray-400"
             style="width: 40px; height: 40px;"
           />
         </div>
       </div>
       <button
-        class="mt-3 flex w-full items-center justify-center flex cursor-pointer outline-none"
+        class="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
       >
         <svg
           class="text-gray-600"

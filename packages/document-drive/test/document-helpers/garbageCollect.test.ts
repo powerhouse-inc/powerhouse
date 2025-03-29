@@ -1,6 +1,6 @@
 import { garbageCollect, Operation } from "document-model";
 import { describe, expect, it } from "vitest";
-import { buildOperation, buildOperations } from "../utils.js";
+import { buildOperation, buildOperations } from "./utils.js";
 
 describe("garbageCollect", () => {
   it("should return the same list of operations if there is no issues or removals", () => {
