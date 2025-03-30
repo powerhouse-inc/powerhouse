@@ -5,7 +5,7 @@ import {
   getDateFormat,
   normalizeMonthFormat,
   parseDateValue,
-  parseInputString
+  parseInputString,
 } from "../date-time-picker/utils.js";
 import { createChangeEvent } from "../time-picker/utils.js";
 import type { DateFieldValue, WeekStartDayNumber } from "./types.js";

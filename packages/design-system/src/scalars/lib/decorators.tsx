@@ -142,19 +142,22 @@ export const withTimestampsAsISOStrings: DecoratorFunction<any> = (
     // Iterate through all args properties
     Object.keys(newArgs).forEach((key) => {
       const value = newArgs[key] as unknown;
-      if ((key === 'minDate' || key === 'maxDate') && typeof value === "string") {
-        console.log("entre")
+      if (
+        (key === "minDate" || key === "maxDate") &&
+        typeof value === "string"
+      ) {
         const timestamp = new Date(value).getTime();
         if (!isNaN(timestamp)) {
           const date = new Date(timestamp);
           date.setHours(12, 0, 0, 0);
-          newArgs[key] = format(date, 'dd-MMM-yyyy'); // Formato que Storybook acepta: "22-Mar-2025"
+          // Format that Storybook accepts: "22-Mar-2025"
+          newArgs[key] = format(date, "dd-MMM-yyyy");
         }
-      } 
+      }
       if (typeof value === "number" && value > 1609459200000) {
         const date = new Date(value);
         date.setHours(12, 0, 0, 0);
-        newArgs[key] = format(date, 'dd-MMM-yyyy');
+        newArgs[key] = format(date, "dd-MMM-yyyy");
       }
     });
 
