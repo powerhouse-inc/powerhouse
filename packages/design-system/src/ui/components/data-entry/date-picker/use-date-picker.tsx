@@ -4,7 +4,8 @@ import React, { useCallback, useMemo } from "react";
 import {
   getDateFormat,
   normalizeMonthFormat,
-  parseInputString,
+  parseDateValue,
+  parseInputString
 } from "../date-time-picker/utils.js";
 import { createChangeEvent } from "../time-picker/utils.js";
 import type { DateFieldValue, WeekStartDayNumber } from "./types.js";
@@ -89,12 +90,9 @@ export const useDatePickerField = ({
   const disabledDates = useMemo(() => {
     let beforeDate: Date | undefined;
     let afterDate: Date | undefined;
-
-    // Convert minDate and maxDate to Date objects if they exist
-    const minDateObj = minDate ? startOfDay(new Date(minDate)) : undefined;
-    const maxDateObj = maxDate ? startOfDay(new Date(maxDate)) : undefined;
+    const minDateObj = parseDateValue(minDate);
+    const maxDateObj = parseDateValue(maxDate);
     const todayDate = startOfDay(today);
-
     // If we have both disablePastDates and disableFutureDates, only today is valid
     if (disablePastDates && disableFutureDates) {
       beforeDate = todayDate;
@@ -172,6 +170,7 @@ export const useDatePickerField = ({
 
     return fechaUTC;
   }, [value, internalFormat]);
+
   return {
     date,
     inputValue: inputDisplay,
