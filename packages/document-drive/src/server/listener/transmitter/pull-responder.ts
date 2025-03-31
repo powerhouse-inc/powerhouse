@@ -72,14 +72,28 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]> {
     this.logger.verbose(
-      `getStrands(drive: ${this.listener.driveId}, listener: ${this.listener.listenerId})`,
+      `[SYNC DEBUG] PullResponderTransmitter.getStrands called for drive: ${this.listener.driveId}, listener: ${this.listener.listenerId}, options: ${JSON.stringify(options || {})}`,
     );
 
-    return this.manager.getStrands(
-      this.listener.driveId,
-      this.listener.listenerId,
-      options,
-    );
+    return this.manager
+      .getStrands(this.listener.driveId, this.listener.listenerId, options)
+      .then((strands) => {
+        this.logger.verbose(
+          `[SYNC DEBUG] PullResponderTransmitter.getStrands returning ${strands.length} strands for drive: ${this.listener.driveId}, listener: ${this.listener.listenerId}`,
+        );
+        if (strands.length === 0) {
+          this.logger.verbose(
+            `[SYNC DEBUG] No strands returned for drive: ${this.listener.driveId}, listener: ${this.listener.listenerId}`,
+          );
+        } else {
+          for (const strand of strands) {
+            this.logger.verbose(
+              `[SYNC DEBUG] Strand for drive: ${strand.driveId}, document: ${strand.documentId}, scope: ${strand.scope}, operations: ${strand.operations.length}`,
+            );
+          }
+        }
+        return strands;
+      });
   }
 
   disconnect(): Promise<void> {
@@ -172,7 +186,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     options?: GetStrandsOptions, // TODO add support for since
   ): Promise<StrandUpdate[]> {
     this.staticLogger.verbose(
-      `pullStrands(url: ${url}, listener: ${listenerId})`,
+      `[SYNC DEBUG] PullResponderTransmitter.pullStrands called for drive: ${driveId}, url: ${url}, listener: ${listenerId}, options: ${JSON.stringify(options || {})}`,
     );
 
     const result = await requestGraphql<PullStrandsGraphQL>(
@@ -219,20 +233,38 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
     const error = result.errors?.at(0);
     if (error) {
+      this.staticLogger.verbose(
+        `[SYNC DEBUG] Error pulling strands for drive: ${driveId}, listener: ${listenerId}, error: ${JSON.stringify(error)}`,
+      );
       throw error;
     }
 
     if (!result.system) {
+      this.staticLogger.verbose(
+        `[SYNC DEBUG] No system data returned when pulling strands for drive: ${driveId}, listener: ${listenerId}`,
+      );
       return [];
     }
 
-    return result.system.sync.strands.map((s) => ({
+    const strands = result.system.sync.strands.map((s) => ({
       ...s,
       operations: s.operations.map((o) => ({
         ...o,
         input: JSON.parse(o.input) as object,
       })),
     }));
+
+    this.staticLogger.verbose(
+      `[SYNC DEBUG] PullResponderTransmitter.pullStrands returning ${strands.length} strands for drive: ${driveId}, listener: ${listenerId}`,
+    );
+
+    if (strands.length > 0) {
+      this.staticLogger.verbose(
+        `[SYNC DEBUG] Strands being returned: ${strands.map((s) => `${s.documentId}:${s.scope}`).join(", ")}`,
+      );
+    }
+
+    return strands;
   }
 
   static async acknowledgeStrands(
@@ -291,6 +323,14 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }
   }
 
+  /**
+   * This function will only throw if `onError` throws an error (or there is
+   * an unintentionally unhandled error in the pull loop).
+   *
+   * All other errors are caught, logged, and passed to `onError`.
+   *
+   * Because of this, `onError` _may be called multiple times_.
+   */
   private static async executePull(
     driveId: string,
     trigger: PullResponderTrigger,
@@ -307,98 +347,207 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       trigger,
     );
 
+    this.staticLogger.info(
+      `[SYNC DEBUG] PullResponderTransmitter.executePull starting for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+    );
+
+    const { url } = trigger.data;
+
+    let strands: StrandUpdate[] | undefined;
+    let error: Error | undefined;
     try {
-      const { url, listenerId } = trigger.data;
-      const strands = await PullResponderTransmitter.pullStrands(
+      strands = await PullResponderTransmitter.pullStrands(
         driveId,
         url,
-        listenerId,
+        trigger.data.listenerId,
         // since ?
       );
+    } catch (e) {
+      error = e as Error;
 
-      this.staticLogger.verbose("Pulled strands...");
+      const errors = (error as any).response.errors;
+      for (const error of errors) {
+        if (error.message === "Listener not found") {
+          this.staticLogger.verbose(
+            `[SYNC DEBUG] Auto-registering pull responder for drive: ${driveId}`,
+          );
 
-      // if there are no new strands then do nothing
-      if (!strands.length) {
-        onRevisions?.([]);
+          // register a new pull responder
+          const listenerId =
+            await PullResponderTransmitter.registerPullResponder(
+              trigger.driveId,
+              url,
+              trigger.filter,
+            );
 
-        this.staticLogger.verbose("No new strands, skipping...");
-        return;
-      }
+          // update the trigger with the new listenerId
+          trigger.data.listenerId = listenerId;
 
-      const listenerRevisions: ListenerRevisionWithError[] = [];
+          // try again
+          try {
+            strands = await PullResponderTransmitter.pullStrands(
+              driveId,
+              url,
+              listenerId,
+              // since ?
+            );
 
-      for (const strand of strands) {
-        const operations = strand.operations.map((op) => ({
-          ...op,
-          scope: strand.scope,
-          branch: strand.branch,
-        }));
+            this.staticLogger.verbose(
+              `Successfully auto-registerd and pulled strands for drive: ${driveId}, listenerId: ${listenerId}`,
+            );
+          } catch (error) {
+            this.staticLogger.error(
+              `Could not resolve 'Listener not found' error by registering a new pull responder for drive: ${driveId}, listenerId: ${listenerId}: ${error}`,
+            );
 
-        this.staticLogger.verbose("Processing strand...");
-
-        let error: Error | undefined = undefined;
-        try {
-          const result = await onStrandUpdate(strand, {
-            type: "trigger",
-            trigger,
-          });
-          if (result.error) {
-            throw result.error;
+            onError(error as Error);
+            return;
           }
-        } catch (e) {
-          error = e as Error;
-          onError(error);
+
+          break;
         }
-
-        listenerRevisions.push({
-          branch: strand.branch,
-          documentId: strand.documentId || "",
-          driveId: strand.driveId,
-          revision: operations.pop()?.index ?? -1,
-          scope: strand.scope,
-          status: error
-            ? error instanceof OperationError
-              ? error.status
-              : "ERROR"
-            : "SUCCESS",
-          error,
-        });
       }
+    }
 
-      this.staticLogger.verbose("Processed strands...");
+    if (!strands) {
+      this.staticLogger.error(
+        `Error pulling strands for drive, and could not auto-register: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
+      );
 
-      onRevisions?.(listenerRevisions);
+      onError(error!);
+      return;
+    }
 
-      this.staticLogger.verbose("Acknowledging strands...");
+    // if there are no new strands then do nothing
+    if (!strands.length) {
+      this.staticLogger.verbose(
+        `[SYNC DEBUG] No strands returned in pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+      );
 
-      let success = false;
       try {
-        await PullResponderTransmitter.acknowledgeStrands(
-          url,
-          listenerId,
-          listenerRevisions.map((revision) => {
-            const { error, ...rest } = revision;
-            return rest;
-          }),
+        onRevisions?.([]);
+      } catch (error) {
+        this.staticLogger.error(
+          `Error calling onRevisions for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
         );
 
-        success = true;
-      } catch (error) {
-        this.staticLogger.error("ACK error", error);
+        // pass the error to the caller
+        onError(error as Error);
       }
 
-      if (success) {
-        this.staticLogger.verbose("Acknowledged strands successfully.");
-      } else {
-        this.staticLogger.error("Failed to acknowledge strands");
+      return;
+    }
+
+    this.staticLogger.verbose(
+      `[SYNC DEBUG] Processing ${strands.length} strands in pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+    );
+
+    const listenerRevisions: ListenerRevisionWithError[] = [];
+
+    // todo: evaluate whether or not we can process strands in parallel
+    for (const strand of strands) {
+      const operations = strand.operations.map((op) => ({
+        ...op,
+        scope: strand.scope,
+        branch: strand.branch,
+      }));
+
+      this.staticLogger.verbose(
+        `[SYNC DEBUG] Processing strand for drive: ${strand.driveId}, document: ${strand.documentId}, scope: ${strand.scope}, with ${operations.length} operations`,
+      );
+
+      let error: Error | undefined = undefined;
+      try {
+        const result = await onStrandUpdate(strand, {
+          type: "trigger",
+          trigger,
+        });
+
+        if (result.error) {
+          throw result.error;
+        }
+      } catch (e) {
+        this.staticLogger.error(
+          `Error processing strand for drive: ${strand.driveId}, document: ${strand.documentId}, scope: ${strand.scope}, with ${operations.length} operations: ${e}`,
+        );
+
+        error = e as Error;
+        onError(error);
+
+        // continue
       }
 
-      // let this throw separately
+      listenerRevisions.push({
+        branch: strand.branch,
+        documentId: strand.documentId || "",
+        driveId: strand.driveId,
+        revision: operations.pop()?.index ?? -1,
+        scope: strand.scope,
+        status: error
+          ? error instanceof OperationError
+            ? error.status
+            : "ERROR"
+          : "SUCCESS",
+        error,
+      });
+    }
+
+    this.staticLogger.verbose("Processed strands...");
+
+    // do not let a listener kill the pull loop
+    try {
+      onRevisions?.(listenerRevisions);
+    } catch (error) {
+      this.staticLogger.error(
+        `Error calling onRevisions for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
+      );
+
+      // pass the error to the caller
+      onError(error as Error);
+    }
+
+    this.staticLogger.verbose(
+      `[SYNC DEBUG] Acknowledging ${listenerRevisions.length} strands for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+    );
+
+    let success = false;
+    try {
+      await PullResponderTransmitter.acknowledgeStrands(
+        url,
+        trigger.data.listenerId,
+        listenerRevisions.map((revision) => {
+          const { error, ...rest } = revision;
+          return rest;
+        }),
+      );
+
+      success = true;
+    } catch (error) {
+      this.staticLogger.error(
+        `Error acknowledging strands for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
+      );
+
+      // pass the error to the caller
+      onError(error as Error);
+    }
+
+    if (success) {
+      this.staticLogger.verbose(
+        `[SYNC DEBUG] Successfully acknowledged strands for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+      );
+    } else {
+      this.staticLogger.error("Failed to acknowledge strands");
+    }
+
+    // let this throw separately
+    try {
       onAcknowledge?.(success);
     } catch (error) {
-      this.staticLogger.error("Pull error", error);
+      this.staticLogger.error(
+        `Error calling onAcknowledge for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
+      );
 
+      // pass the error to the caller
       onError(error as Error);
     }
   }
@@ -415,8 +564,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onAcknowledge?: (success: boolean) => void,
   ): CancelPullLoop {
     this.staticLogger.verbose(
-      `setupPull(drive: ${driveId}), trigger:`,
-      trigger,
+      `[SYNC DEBUG] PullResponderTransmitter.setupPull initiated for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
     );
 
     const { interval } = trigger.data;
@@ -432,12 +580,19 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       }
     }
 
+    this.staticLogger.verbose(
+      `[SYNC DEBUG] Pull interval set to ${loopInterval}ms for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+    );
+
     let isCancelled = false;
     let timeout: number | undefined;
 
     const executeLoop = async () => {
       while (!isCancelled) {
-        this.staticLogger.verbose("Execute loop...");
+        this.staticLogger.verbose(
+          `[SYNC DEBUG] Starting pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+        );
+
         await this.executePull(
           driveId,
           trigger,
@@ -446,6 +601,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           onRevisions,
           onAcknowledge,
         );
+
+        this.staticLogger.verbose(
+          `[SYNC DEBUG] Completed pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}, waiting ${loopInterval}ms for next cycle`,
+        );
+
         await new Promise((resolve) => {
           this.staticLogger.verbose(
             `Scheduling next pull in ${loopInterval} ms`,
@@ -455,9 +615,16 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       }
     };
 
-    executeLoop().catch(this.staticLogger.error);
+    executeLoop().catch((error) => {
+      this.staticLogger.error(
+        `Error in executeLoop for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
+      );
+    });
 
     return () => {
+      this.staticLogger.verbose(
+        `[SYNC DEBUG] Cancelling pull loop for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+      );
       isCancelled = true;
       if (timeout !== undefined) {
         clearTimeout(timeout);
@@ -475,20 +642,23 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     );
 
     const { pullFilter, pullInterval } = options;
+    const filter = pullFilter ?? {
+      documentId: ["*"],
+      documentType: ["*"],
+      branch: ["*"],
+      scope: ["*"],
+    };
     const listenerId = await PullResponderTransmitter.registerPullResponder(
       driveId,
       url,
-      pullFilter ?? {
-        documentId: ["*"],
-        documentType: ["*"],
-        branch: ["*"],
-        scope: ["*"],
-      },
+      filter,
     );
 
     const pullTrigger: PullResponderTrigger = {
       id: generateUUID(),
       type: "PullResponder",
+      driveId,
+      filter,
       data: {
         url,
         listenerId,

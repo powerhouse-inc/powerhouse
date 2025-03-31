@@ -435,34 +435,62 @@ export class BaseDocumentDriveServer
 
   private async _initializeDrive(driveId: string) {
     const drive = await this.getDrive(driveId);
+
+    logger.verbose(
+      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.state.global.slug}"`,
+    );
+
     await this.synchronizationManager.initializeDriveSyncStatus(driveId, drive);
 
     if (this.shouldSyncRemoteDrive(drive)) {
+      logger.verbose(`[SYNC DEBUG] Starting sync for remote drive ${driveId}`);
       await this.startSyncRemoteDrive(driveId);
     }
 
     // add switchboard push listeners
+    logger.verbose(
+      `[SYNC DEBUG] Processing ${drive.state.local.listeners.length} listeners for drive ${driveId}`,
+    );
+
     for (const zodListener of drive.state.local.listeners) {
       if (zodListener.callInfo?.transmitterType === "SwitchboardPush") {
+        logger.verbose(
+          `[SYNC DEBUG] Setting up SwitchboardPush listener ${zodListener.listenerId} for drive ${driveId}`,
+        );
+
         const transmitter = new SwitchboardPushTransmitter(
           zodListener.callInfo?.data ?? "",
         );
 
-        this.listenerManager.setListener(driveId, {
-          block: zodListener.block,
-          driveId: drive.state.global.id,
-          filter: {
-            branch: zodListener.filter?.branch ?? [],
-            documentId: zodListener.filter?.documentId ?? [],
-            documentType: zodListener.filter?.documentType ?? [],
-            scope: zodListener.filter?.scope ?? [],
-          },
-          listenerId: zodListener.listenerId,
-          callInfo: zodListener.callInfo,
-          system: zodListener.system,
-          label: zodListener.label ?? "",
-          transmitter,
-        });
+        logger.verbose(
+          `[SYNC DEBUG] Created SwitchboardPush transmitter with URL: ${zodListener.callInfo?.data || "none"}`,
+        );
+
+        await this.listenerManager
+          .setListener(driveId, {
+            block: zodListener.block,
+            driveId: drive.state.global.id,
+            filter: {
+              branch: zodListener.filter?.branch ?? [],
+              documentId: zodListener.filter?.documentId ?? [],
+              documentType: zodListener.filter?.documentType ?? [],
+              scope: zodListener.filter?.scope ?? [],
+            },
+            listenerId: zodListener.listenerId,
+            callInfo: zodListener.callInfo,
+            system: zodListener.system,
+            label: zodListener.label ?? "",
+            transmitter,
+          })
+          .then(() => {
+            logger.verbose(
+              `[SYNC DEBUG] Successfully set up listener ${zodListener.listenerId} for drive ${driveId}`,
+            );
+          });
+      } else {
+        logger.error(
+          `Skipping listener ${zodListener.listenerId} with unsupported type ${zodListener.callInfo?.transmitterType || "unknown"}`,
+        );
       }
     }
   }

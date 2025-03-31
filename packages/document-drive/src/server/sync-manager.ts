@@ -53,6 +53,10 @@ export default class SynchronizationManager implements ISynchronizationManager {
       documentType,
     );
 
+    this.logger.verbose(
+      `getSynchronizationUnits query: ${JSON.stringify(synchronizationUnitsQuery)}`,
+    );
+
     return this.getSynchronizationUnitsRevision(
       driveId,
       synchronizationUnitsQuery,
@@ -67,6 +71,10 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
     const revisions =
       await this.storage.getSynchronizationUnitsRevision(syncUnitsQuery);
+
+    this.logger.verbose(
+      `getSynchronizationUnitsRevision: ${JSON.stringify(revisions)}`,
+    );
 
     return syncUnitsQuery.map((s) => ({
       ...s,
@@ -218,22 +226,41 @@ export default class SynchronizationManager implements ISynchronizationManager {
     syncId: string,
     filter: GetStrandsOptions,
   ): Promise<OperationUpdate[]> {
+    this.logger.verbose(
+      `[SYNC DEBUG] SynchronizationManager.getOperationData called for drive: ${driveId}, syncId: ${syncId}, filter: ${JSON.stringify(filter)}`,
+    );
+
     const syncUnit =
       syncId === "0"
         ? { documentId: "", scope: "global" }
         : await this.getSynchronizationUnitIdInfo(driveId, syncId);
 
     if (!syncUnit) {
+      this.logger.error(
+        `SYNC DEBUG] Invalid Sync Id ${syncId} in drive ${driveId}`,
+      );
       throw new Error(`Invalid Sync Id ${syncId} in drive ${driveId}`);
     }
+
+    this.logger.verbose(
+      `[SYNC DEBUG] Found sync unit: documentId: ${syncUnit.documentId}, scope: ${syncUnit.scope}`,
+    );
 
     const document =
       syncId === "0"
         ? await this.getDrive(driveId)
         : await this.getDocument(driveId, syncUnit.documentId); // TODO replace with getDocumentOperations
 
+    this.logger.verbose(
+      `[SYNC DEBUG] Retrieved document ${syncUnit.documentId} with type: ${document.documentType}`,
+    );
+
     const operations =
       document.operations[syncUnit.scope as OperationScope] ?? []; // TODO filter by branch also
+
+    this.logger.verbose(
+      `[SYNC DEBUG] Found ${operations.length} total operations in scope ${syncUnit.scope}`,
+    );
 
     const filteredOperations = operations.filter(
       (operation) =>
@@ -244,9 +271,31 @@ export default class SynchronizationManager implements ISynchronizationManager {
             operation.index > filter.fromRevision)),
     );
 
+    this.logger.verbose(
+      `[SYNC DEBUG] Filtered to ${filteredOperations.length} operations based on filter criteria` +
+        (filter.fromRevision !== undefined
+          ? ` (fromRevision: ${filter.fromRevision})`
+          : ""),
+    );
+
     const limitedOperations = filter.limit
       ? filteredOperations.slice(0, filter.limit)
       : filteredOperations;
+
+    this.logger.verbose(
+      `[SYNC DEBUG] Returning ${limitedOperations.length} operations after applying limit`,
+    );
+
+    if (limitedOperations.length > 0) {
+      const firstOp = limitedOperations[0];
+      const lastOp = limitedOperations[limitedOperations.length - 1];
+      this.logger.verbose(
+        `[SYNC DEBUG] First operation: index=${firstOp.index}, type=${firstOp.type}`,
+      );
+      this.logger.verbose(
+        `[SYNC DEBUG] Last operation: index=${lastOp.index}, type=${lastOp.type}`,
+      );
+    }
 
     return limitedOperations.map((operation) => ({
       hash: operation.hash,
