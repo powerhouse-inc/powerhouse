@@ -5,8 +5,9 @@ import {
     FOLDER,
     FolderItem,
     useDrop,
-    type BaseFolderItem,
-    type UiFolderNode
+    type BaseUiFolderNode,
+    type BaseUiNode,
+    type UiFolderNode,
 } from '@powerhousedao/design-system';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
@@ -21,46 +22,37 @@ export function FolderView(props: TUiNodes) {
         uiNode: selectedParentNode,
     });
 
-    const handleSelectNode = (node: BaseFolderItem) => {
+    const handleSelectNode = (node: BaseUiFolderNode) => {
         props.setSelectedNode(node as unknown as UiFolderNode);
     };
 
-    const handleRenameNode = (name: string, node: BaseFolderItem) => {
+    const handleRenameNode = (name: string, node: BaseUiFolderNode) => {
         props.onRenameNode(name, node as unknown as UiFolderNode);
     };
 
-    const handleDuplicateNode = (node: BaseFolderItem) => {
+    const handleDuplicateNode = (node: BaseUiFolderNode) => {
         props.onDuplicateNode(node as unknown as UiFolderNode);
     };
 
-    const handleDeleteNode = (node: BaseFolderItem) => {
+    const handleDeleteNode = (node: BaseUiFolderNode) => {
         props.onDeleteNode(node as unknown as UiFolderNode);
     };
 
-    const handleAddFile = async (
-        file: File,
-        parentNode: BaseFolderItem | null,
-    ) => {
+    const handleAddFile = async (file: File, parentNode: BaseUiNode | null) => {
         await props.onAddFile(
             file,
             parentNode as unknown as UiFolderNode | null,
         );
     };
 
-    const handleCopyNode = async (
-        node: BaseFolderItem,
-        targetNode: BaseFolderItem,
-    ) => {
+    const handleCopyNode = async (node: BaseUiNode, targetNode: BaseUiNode) => {
         await props.onCopyNode(
             node as unknown as UiFolderNode,
             targetNode as unknown as UiFolderNode,
         );
     };
 
-    const handleMoveNode = async (
-        node: BaseFolderItem,
-        targetNode: BaseFolderItem,
-    ) => {
+    const handleMoveNode = async (node: BaseUiNode, targetNode: BaseUiNode) => {
         await props.onMoveNode(
             node as unknown as UiFolderNode,
             targetNode as unknown as UiFolderNode,

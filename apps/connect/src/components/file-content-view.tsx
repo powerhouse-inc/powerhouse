@@ -1,7 +1,7 @@
 import { useWindowSize, type TUiNodes } from '#hooks';
 import {
     FileItem,
-    type BaseFileItem,
+    type BaseUiFileNode,
     type UiFileNode,
     type UiNode,
 } from '@powerhousedao/design-system';
@@ -26,31 +26,37 @@ export function FileContentView(props: Props) {
     const { fileNodes } = props;
     const availableWidth = windowSize.innerWidth - USED_SPACE;
 
-    const handleSelectNode = (node: BaseFileItem) => {
+    const handleSelectNode = (node: BaseUiFileNode) => {
         props.setSelectedNode(node as unknown as UiFileNode);
     };
 
-    const handleRenameNode = (name: string, node: BaseFileItem) => {
+    const handleRenameNode = (name: string, node: BaseUiFileNode) => {
         props.onRenameNode(name, node as unknown as UiFileNode);
     };
 
-    const handleDuplicateNode = (node: BaseFileItem) => {
+    const handleDuplicateNode = (node: BaseUiFileNode) => {
         props.onDuplicateNode(node as unknown as UiFileNode);
     };
 
-    const handleDeleteNode = (node: BaseFileItem) => {
+    const handleDeleteNode = (node: BaseUiFileNode) => {
         props.onDeleteNode(node as unknown as UiFileNode);
     };
 
-    const handleAddFile = (file: File, parentNode: BaseFileItem | null) => {
+    const handleAddFile = (file: File, parentNode: BaseUiFileNode | null) => {
         props.onAddFile(file, parentNode as UiNode | null);
     };
 
-    const handleCopyNode = (node: BaseFileItem, targetNode: BaseFileItem) => {
+    const handleCopyNode = (
+        node: BaseUiFileNode,
+        targetNode: BaseUiFileNode,
+    ) => {
         props.onCopyNode(node as UiNode, targetNode as UiNode);
     };
 
-    const handleMoveNode = (node: BaseFileItem, targetNode: BaseFileItem) => {
+    const handleMoveNode = (
+        node: BaseUiFileNode,
+        targetNode: BaseUiFileNode,
+    ) => {
         props.onMoveNode(node as UiNode, targetNode as UiNode);
     };
 
