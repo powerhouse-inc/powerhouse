@@ -40,7 +40,7 @@ export const validateTimePicker =
     }
 
     // Validar formato 12-hour (hh:mm a)
-    if (timeFormat === "hh:mm a") {
+    if (timeFormat === "hh:mm a" || timeFormat === "hh:mm A") {
       const parse12HorsFormat = convert24hTo12h(time);
 
       // Additional validation for real hours/minutes

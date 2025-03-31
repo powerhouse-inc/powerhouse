@@ -172,11 +172,13 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
               "bg-gray-100",
               // dark
               "dark:bg-gray-900 dark:text-gray-50",
+              // When selected, apply these styles with !important to ensure priority
+              "aria-selected:!bg-gray-900 aria-selected:!text-white",
             )}
             selectedClassName={cn(
               "rounded-[4px]",
               "bg-gray-900 text-white",
-              "hover:bg-gray-900 hover:text-white",
+              "hover:bg-gray-900",
               // dark
               "dark:bg-gray-50 dark:text-gray-900",
               "dark:hover:bg-gray-50 dark:hover:text-gray-900",
