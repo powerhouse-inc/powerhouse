@@ -1,6 +1,7 @@
 import { Button } from "#powerhouse";
 import { type Decorator } from "@storybook/react";
 import { type Args, type DecoratorFunction } from "@storybook/types";
+import { format } from "date-fns";
 import { useCallback, useId, useRef, useState } from "react";
 import { type UseFormReturn } from "react-hook-form";
 import { Checkbox } from "../../ui/components/data-entry/checkbox/checkbox.js";
@@ -141,16 +142,27 @@ export const withTimestampsAsISOStrings: DecoratorFunction<any> = (
     // Iterate through all args properties
     Object.keys(newArgs).forEach((key) => {
       const value = newArgs[key] as unknown;
-
-      // If the value is a number and looks like a timestamp (milliseconds since 1970)
+      if (
+        (key === "minDate" || key === "maxDate") &&
+        typeof value === "string"
+      ) {
+        const timestamp = new Date(value).getTime();
+        if (!isNaN(timestamp)) {
+          const date = new Date(timestamp);
+          date.setHours(12, 0, 0, 0);
+          // Format that Storybook accepts: "22-Mar-2025"
+          newArgs[key] = format(date, "dd-MMM-yyyy");
+        }
+      }
       if (typeof value === "number" && value > 1609459200000) {
-        newArgs[key] = new Date(value).toISOString();
+        const date = new Date(value);
+        date.setHours(12, 0, 0, 0);
+        newArgs[key] = format(date, "dd-MMM-yyyy");
       }
     });
 
     return newArgs;
   };
   const convertedArgs = convertTimestampsToDates(args);
-
   return <Story {...context} args={convertedArgs} />;
 };
