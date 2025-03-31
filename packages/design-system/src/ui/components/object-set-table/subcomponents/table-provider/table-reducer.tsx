@@ -14,6 +14,7 @@ interface TableState<T extends DataType = DataType> {
     index: number;
     column: number;
   } | null;
+  isCellEditMode: boolean;
 }
 
 type TableAction<T extends DataType = DataType> =
@@ -52,6 +53,13 @@ type TableAction<T extends DataType = DataType> =
   // Cell selection
   | {
       type: "SELECT_CELL";
+      payload: {
+        index: number;
+        column: number;
+      };
+    }
+  | {
+      type: "ENTER_CELL_EDIT_MODE";
       payload: {
         index: number;
         column: number;
@@ -169,6 +177,14 @@ const tableReducer = <T extends DataType>(
         // if the user try to select a range, we're going to select from the row that has the selected cell
         lastSelectedRowIndex: action.payload.index,
         selectedRowIndexes: [], // clear row selection
+        isCellEditMode: false,
+      };
+    }
+    case "ENTER_CELL_EDIT_MODE": {
+      return {
+        ...state,
+        selectedCellIndexes: action.payload,
+        isCellEditMode: true,
       };
     }
     default:

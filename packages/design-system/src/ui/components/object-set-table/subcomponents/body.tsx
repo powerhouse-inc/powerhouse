@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { Input } from "../../data-entry/input/index.js";
 import type { CellContext, ColumnDef, DataType } from "../types.js";
 import { DefaultTableCell } from "./cells/default-cell.js";
 import { InformationCell } from "./cells/information-cell.js";
@@ -17,7 +18,12 @@ const TableBody = <T extends DataType>({
 }: TableBodyProps<T>) => {
   const {
     config,
-    state: { dispatch, selectedRowIndexes, selectedCellIndexes },
+    state: {
+      dispatch,
+      selectedRowIndexes,
+      selectedCellIndexes,
+      isCellEditMode,
+    },
   } = useInternalTableState<T>();
 
   const { allowRowSelection } = config;
@@ -83,16 +89,28 @@ const TableBody = <T extends DataType>({
       (e: React.MouseEvent<HTMLTableCellElement>) => {
         if (!columnDef.editable) return;
 
+        // if the cell is being edited, ignore clicking on it
+        if (
+          isCellEditMode &&
+          selectedCellIndexes?.index === index &&
+          selectedCellIndexes.column === column
+        ) {
+          return;
+        }
+
         // if shift or ctrl is pressed, the user is probably trying to select rows
         if (!e.ctrlKey && !e.shiftKey) {
           if (e.detail === 2) {
-            alert("double click");
+            dispatch?.({
+              type: "ENTER_CELL_EDIT_MODE",
+              payload: { index, column },
+            });
           } else {
             dispatch?.({ type: "SELECT_CELL", payload: { index, column } });
           }
         }
       },
-    [dispatch],
+    [dispatch, isCellEditMode],
   );
 
   return (
@@ -130,6 +148,11 @@ const TableBody = <T extends DataType>({
 
             // render the cell
             const cell = column.renderCell?.(cellValue, cellContext);
+            const isThisCellEditMode =
+              isCellEditMode &&
+              !!selectedCellIndexes &&
+              selectedCellIndexes.index === index &&
+              selectedCellIndexes.column === columnIndex;
 
             const isCellSelected =
               !!selectedCellIndexes &&
@@ -142,7 +165,15 @@ const TableBody = <T extends DataType>({
                 onClick={createCellClickHandler(index, columnIndex, column)}
                 isSelected={isCellSelected}
               >
-                {cell}
+                {isThisCellEditMode ? (
+                  <Input
+                    className="max-w-full"
+                    autoFocus
+                    value={column.valueGetter?.(rowItem, cellContext) as string}
+                  />
+                ) : (
+                  cell
+                )}
               </DefaultTableCell>
             );
           })}

@@ -13,7 +13,7 @@ const DefaultTableCell: React.FC<DefaultTableCellProps> = ({
   ...props
 }) => {
   return (
-    <TableCellBasic {...props} className={cn(className, "py-0")}>
+    <TableCellBasic tabIndex={0} {...props} className={cn(className, "py-0")}>
       <div
         className={cn(
           "flex h-full items-center border border-transparent py-2",
