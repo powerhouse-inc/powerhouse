@@ -2,6 +2,11 @@
 
 // data entry
 export {
+  AIDInput,
+  type AIDInputProps,
+  type AIDOption,
+} from "./data-entry/aid-input/index.js";
+export {
   Checkbox,
   type CheckboxProps,
   type CheckboxValue,
