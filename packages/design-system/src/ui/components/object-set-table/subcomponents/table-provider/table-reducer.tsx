@@ -1,4 +1,4 @@
-import type { ColumnDef, DataType } from "../../types.js";
+import type { ColumnDef, DataType, TableCellIndex } from "../../types.js";
 
 interface TableState<T extends DataType = DataType> {
   dispatch?: React.Dispatch<TableAction<T>>;
@@ -10,10 +10,7 @@ interface TableState<T extends DataType = DataType> {
   selectedRowIndexes: number[];
   lastSelectedRowIndex: number | null;
 
-  selectedCellIndexes: {
-    index: number;
-    column: number;
-  } | null;
+  selectedCellIndex: TableCellIndex | null;
   isCellEditMode: boolean;
 }
 
@@ -53,17 +50,11 @@ type TableAction<T extends DataType = DataType> =
   // Cell selection
   | {
       type: "SELECT_CELL";
-      payload: {
-        index: number;
-        column: number;
-      };
+      payload: TableCellIndex | null;
     }
   | {
       type: "ENTER_CELL_EDIT_MODE";
-      payload: {
-        index: number;
-        column: number;
-      };
+      payload: TableCellIndex;
     };
 
 const tableReducer = <T extends DataType>(
@@ -100,7 +91,7 @@ const tableReducer = <T extends DataType>(
         // if clear other selections is enabled, we just toggle the current row
         return {
           ...state,
-          selectedCellIndexes: null,
+          selectedCellIndex: null,
           lastSelectedRowIndex: action.payload.index,
           selectedRowIndexes: state.selectedRowIndexes.includes(
             action.payload.index,
@@ -114,7 +105,7 @@ const tableReducer = <T extends DataType>(
       // and keep the other rows selection as it is
       return {
         ...state,
-        selectedCellIndexes: null,
+        selectedCellIndex: null,
         lastSelectedRowIndex: action.payload.index,
         selectedRowIndexes: state.selectedRowIndexes.includes(
           action.payload.index,
@@ -130,7 +121,7 @@ const tableReducer = <T extends DataType>(
     case "TOGGLE_SELECT_ALL_ROWS":
       return {
         ...state,
-        selectedCellIndexes: null,
+        selectedCellIndex: null,
         lastSelectedRowIndex: null,
         selectedRowIndexes:
           state.selectedRowIndexes.length === state.data.length
@@ -147,7 +138,7 @@ const tableReducer = <T extends DataType>(
         // IF THERE ARE SELECTED ROWS, WE'RE NOT HANDLING IT WELL SOMEWHERE ELSE
         return {
           ...state,
-          selectedCellIndexes: null,
+          selectedCellIndex: null,
           selectedRowIndexes: [action.payload],
           lastSelectedRowIndex: action.payload,
         };
@@ -164,7 +155,7 @@ const tableReducer = <T extends DataType>(
 
       return {
         ...state,
-        selectedCellIndexes: null,
+        selectedCellIndex: null,
         selectedRowIndexes: [...selectedRowIndexesSet],
         lastSelectedRowIndex: action.payload,
       };
@@ -173,17 +164,20 @@ const tableReducer = <T extends DataType>(
       // TODO: check first if there is not other cell in edit mode
       return {
         ...state,
-        selectedCellIndexes: action.payload,
+        selectedCellIndex: action.payload,
         // if the user try to select a range, we're going to select from the row that has the selected cell
-        lastSelectedRowIndex: action.payload.index,
+        lastSelectedRowIndex: action.payload?.row ?? null,
         selectedRowIndexes: [], // clear row selection
         isCellEditMode: false,
       };
     }
     case "ENTER_CELL_EDIT_MODE": {
+      if (!state.columns[action.payload.column].editable) {
+        throw new Error("Cell is not editable");
+      }
       return {
         ...state,
-        selectedCellIndexes: action.payload,
+        selectedCellIndex: action.payload,
         isCellEditMode: true,
       };
     }

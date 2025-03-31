@@ -242,3 +242,8 @@ export interface ColumnDef<T = any> {
 }
 
 export type DataType = any;
+
+export type TableCellIndex = {
+  row: number;
+  column: number;
+};

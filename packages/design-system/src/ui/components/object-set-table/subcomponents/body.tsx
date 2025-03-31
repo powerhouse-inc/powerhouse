@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { Input } from "../../data-entry/input/index.js";
 import type { CellContext, ColumnDef, DataType } from "../types.js";
+import { isCellEqual } from "../utils.js";
 import { DefaultTableCell } from "./cells/default-cell.js";
 import { InformationCell } from "./cells/information-cell.js";
 import { RowNumberCell } from "./cells/row-number-cell.js";
@@ -18,12 +19,7 @@ const TableBody = <T extends DataType>({
 }: TableBodyProps<T>) => {
   const {
     config,
-    state: {
-      dispatch,
-      selectedRowIndexes,
-      selectedCellIndexes,
-      isCellEditMode,
-    },
+    state: { dispatch, selectedRowIndexes, selectedCellIndex, isCellEditMode },
   } = useInternalTableState<T>();
 
   const { allowRowSelection } = config;
@@ -87,26 +83,27 @@ const TableBody = <T extends DataType>({
   const createCellClickHandler = useCallback(
     (index: number, column: number, columnDef: ColumnDef<T>) =>
       (e: React.MouseEvent<HTMLTableCellElement>) => {
-        if (!columnDef.editable) return;
-
         // if the cell is being edited, ignore clicking on it
         if (
           isCellEditMode &&
-          selectedCellIndexes?.index === index &&
-          selectedCellIndexes.column === column
+          selectedCellIndex?.row === index &&
+          selectedCellIndex.column === column
         ) {
           return;
         }
 
         // if shift or ctrl is pressed, the user is probably trying to select rows
         if (!e.ctrlKey && !e.shiftKey) {
-          if (e.detail === 2) {
+          if (e.detail === 2 && columnDef.editable) {
             dispatch?.({
               type: "ENTER_CELL_EDIT_MODE",
-              payload: { index, column },
+              payload: { row: index, column },
             });
           } else {
-            dispatch?.({ type: "SELECT_CELL", payload: { index, column } });
+            dispatch?.({
+              type: "SELECT_CELL",
+              payload: { row: index, column },
+            });
           }
         }
       },
@@ -128,7 +125,7 @@ const TableBody = <T extends DataType>({
             handleSelectRowOnClick={createSelectRowOnClickHandler(index)}
             selected={
               selectedRowIndexes.includes(index) ||
-              selectedCellIndexes?.index === index
+              selectedCellIndex?.row === index
             }
           />
 
@@ -148,22 +145,24 @@ const TableBody = <T extends DataType>({
 
             // render the cell
             const cell = column.renderCell?.(cellValue, cellContext);
-            const isThisCellEditMode =
-              isCellEditMode &&
-              !!selectedCellIndexes &&
-              selectedCellIndexes.index === index &&
-              selectedCellIndexes.column === columnIndex;
 
-            const isCellSelected =
-              !!selectedCellIndexes &&
-              selectedCellIndexes.index === index &&
-              selectedCellIndexes.column === columnIndex;
+            const currentCellIndex = {
+              row: index,
+              column: columnIndex,
+            };
+            const isCellSelected = isCellEqual(
+              selectedCellIndex,
+              currentCellIndex,
+            );
+
+            const isThisCellEditMode = isCellEditMode && isCellSelected;
 
             return (
               <DefaultTableCell
                 key={column.field}
                 onClick={createCellClickHandler(index, columnIndex, column)}
                 isSelected={isCellSelected}
+                isEditable={column.editable ?? false}
               >
                 {isThisCellEditMode ? (
                   <Input

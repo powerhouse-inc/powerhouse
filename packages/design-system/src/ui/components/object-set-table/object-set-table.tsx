@@ -1,10 +1,11 @@
 /* eslint-disable react/jsx-max-depth */
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { TableBody } from "./subcomponents/body.js";
 import { getRenderFn } from "./subcomponents/default-cell-renderers/get-render-fn.js";
 import { defaultValueFormatter } from "./subcomponents/default-fns/default-cell-value-formatter.js";
 import { defaultValueGetter } from "./subcomponents/default-fns/default-cell-value-getter.js";
 import { TableHeader } from "./subcomponents/header.js";
+import { TableFocusTrap } from "./subcomponents/table-focus-trap.js";
 import { TableProvider } from "./subcomponents/table-provider/table-provider.js";
 import type { DataType, ObjectSetTableConfig } from "./types.js";
 
@@ -39,17 +40,21 @@ const ObjectSetTable = <T extends DataType = DataType>({
     return _config;
   }, [config]);
 
+  const tableRef = useRef<HTMLTableElement>(null);
+
   return (
-    <TableProvider config={extendedConfig}>
-      <div className="w-full overflow-hidden rounded-md border border-gray-300">
-        <table className="h-px w-full overflow-x-auto">
-          <TableHeader columns={extendedConfig.columns} />
-          <TableBody
-            data={extendedConfig.data}
-            columns={extendedConfig.columns}
-          />
-        </table>
-      </div>
+    <TableProvider config={extendedConfig} tableRef={tableRef}>
+      <TableFocusTrap>
+        <div className="w-full overflow-hidden rounded-md border border-gray-300">
+          <table ref={tableRef} className="h-px w-full overflow-x-auto">
+            <TableHeader columns={extendedConfig.columns} />
+            <TableBody
+              data={extendedConfig.data}
+              columns={extendedConfig.columns}
+            />
+          </table>
+        </div>
+      </TableFocusTrap>
     </TableProvider>
   );
 };

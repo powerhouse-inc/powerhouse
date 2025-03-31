@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import type { DataType, ObjectSetTableConfig } from "../../types.js";
+import { getDirectionFromKey, getNextSelectedCell } from "../../utils.js";
 import { tableReducer, type TableState } from "./table-reducer.js";
 
 interface TableContextValue<T extends DataType = DataType> {
@@ -18,12 +19,20 @@ const TableContext = createContext<TableContextValue | null>(null);
 
 interface TableProviderProps<T extends DataType = DataType> {
   children: ReactNode;
+  /**
+   * Augmented table config adding default values for missing properties
+   */
   config: ObjectSetTableConfig<T>;
+  /**
+   * Ref to the table element
+   */
+  tableRef: React.RefObject<HTMLTableElement>;
 }
 
 const TableProvider = <T extends DataType>({
   children,
   config,
+  tableRef,
 }: TableProviderProps<T>) => {
   const [state, dispatch] = useReducer(tableReducer, {
     columns: config.columns,
@@ -32,7 +41,7 @@ const TableProvider = <T extends DataType>({
     showRowNumbers: config.showRowNumbers ?? true,
     selectedRowIndexes: [],
     lastSelectedRowIndex: null,
-    selectedCellIndexes: null,
+    selectedCellIndex: null,
     isCellEditMode: false,
   });
 
@@ -51,10 +60,10 @@ const TableProvider = <T extends DataType>({
     direction: "right" | "left" | "down" | "up",
     moveToNextRow = false, // TODO: implement this
   ) => {
-    const currentSelectedCell = stateRef.current.selectedCellIndexes;
+    const currentSelectedCell = stateRef.current.selectedCellIndex;
     if (currentSelectedCell === null) {
       // if no cell is selected, select the first cell
-      dispatch({ type: "SELECT_CELL", payload: { index: 0, column: 0 } });
+      dispatch({ type: "SELECT_CELL", payload: { row: 0, column: 0 } });
       return;
     }
 
@@ -63,11 +72,11 @@ const TableProvider = <T extends DataType>({
 
     // move to next row
     const nextRowIndex =
-      direction === "up" && currentSelectedCell.index > 0
-        ? currentSelectedCell.index - 1
-        : direction === "down" && currentSelectedCell.index < rowCount - 1
-          ? currentSelectedCell.index + 1
-          : currentSelectedCell.index;
+      direction === "up" && currentSelectedCell.row > 0
+        ? currentSelectedCell.row - 1
+        : direction === "down" && currentSelectedCell.row < rowCount - 1
+          ? currentSelectedCell.row + 1
+          : currentSelectedCell.row;
 
     // move horizontally
     const canMoveHorizontally =
@@ -75,7 +84,7 @@ const TableProvider = <T extends DataType>({
       (direction === "left" && currentSelectedCell.column - 1 >= 0);
 
     const nextCell = {
-      index: nextRowIndex,
+      row: nextRowIndex,
       column: canMoveHorizontally
         ? currentSelectedCell.column + (direction === "right" ? 1 : -1)
         : currentSelectedCell.column,
@@ -86,42 +95,49 @@ const TableProvider = <T extends DataType>({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isEditing = stateRef.current.isCellEditMode;
-      const selectedCell = stateRef.current.selectedCellIndexes;
+      const selectedCell = stateRef.current.selectedCellIndex;
 
       if (isEditing) {
         if (e.key === "Enter") {
           alert("save");
         }
         if (e.key === "Escape") {
-          dispatch({ type: "SELECT_CELL", payload: selectedCell! });
+          dispatch({ type: "SELECT_CELL", payload: selectedCell });
         }
       } else {
-        if (e.key === "Enter" && !!selectedCell) {
+        if (
+          e.key === "Enter" &&
+          !!selectedCell &&
+          configRef.current.columns[selectedCell.column].editable
+        ) {
           dispatch({ type: "ENTER_CELL_EDIT_MODE", payload: selectedCell });
         }
 
         // arrow keys
-        if (e.key === "ArrowRight") {
-          moveSelectedCell("right");
-        }
-        if (e.key === "ArrowLeft") {
-          moveSelectedCell("left");
-        }
-        if (e.key === "ArrowDown") {
-          moveSelectedCell("down");
-        }
-        if (e.key === "ArrowUp") {
-          moveSelectedCell("up");
-        }
-        if (e.key === "Tab") {
-          moveSelectedCell("right", true);
+        if (
+          ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Tab"].includes(
+            e.key,
+          )
+        ) {
+          const direction = getDirectionFromKey(e.key);
+          const nextCell = getNextSelectedCell({
+            direction,
+            currentCell: stateRef.current.selectedCellIndex,
+            rowCount: configRef.current.data.length,
+            columnCount: configRef.current.columns.length,
+            moveToNextRow: e.key === "Tab",
+          });
+          if (e.key === "Tab") {
+            e.preventDefault();
+          }
+          dispatch({ type: "SELECT_CELL", payload: nextCell });
         }
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    tableRef.current?.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      tableRef.current?.removeEventListener("keydown", handleKeyDown);
     };
   }, [dispatch]);
 
