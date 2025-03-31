@@ -1,3 +1,20 @@
+## 1.33.1-dev.0 (2025-03-31)
+
+### 🚀 Features
+
+- **builder-tools:** load local package from manifest ([96f4962d3](https://github.com/powerhouse-inc/powerhouse/commit/96f4962d3))
+
+### 🩹 Fixes
+
+- **scalars:** restore scrollbar styles ([b450e57b6](https://github.com/powerhouse-inc/powerhouse/commit/b450e57b6))
+- **scalars:** fix the modify files in the package ([e4c7cddaf](https://github.com/powerhouse-inc/powerhouse/commit/e4c7cddaf))
+
+### ❤️ Thank You
+
+- acaldas
+- alejandrocabriales
+- nesdc88
+
 ## 1.33.0 (2025-03-26)
 
 ### 🚀 Features

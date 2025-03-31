@@ -1,3 +1,20 @@
+## 1.27.0-dev.0 (2025-03-31)
+
+### 🚀 Features
+
+- **config:** allow ph config to specify storage layer of reactor ([6305f7f3b](https://github.com/powerhouse-inc/powerhouse/commit/6305f7f3b))
+- **builder-tools:** load local package from manifest ([96f4962d3](https://github.com/powerhouse-inc/powerhouse/commit/96f4962d3))
+
+### 🩹 Fixes
+
+- **scalars:** restore scrollbar styles ([b450e57b6](https://github.com/powerhouse-inc/powerhouse/commit/b450e57b6))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- nesdc88
+
 ## 1.26.0 (2025-03-26)
 
 ### 🚀 Features
