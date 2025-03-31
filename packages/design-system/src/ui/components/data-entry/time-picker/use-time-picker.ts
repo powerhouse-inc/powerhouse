@@ -87,35 +87,23 @@ export const useTimePicker = ({
     // Get the period from the input if exists to avoid use the default period
     const inputPeriod = input.split(" ")[1] as TimePeriod;
 
-    if (!isValidTimeInput(input)) {
-      if (input === "") {
-        setInputValue(input);
-        onChange?.(createChangeEvent(""));
-        onBlur?.(createBlurEvent(""));
-        return;
-      }
-      // Create an empty but valid time value that matches the format expected by the value prop
-      const inValid = formatInputsToValueFormat("", "", "±00:00");
-      setInputValue(input);
-      onChange?.(createChangeEvent(inValid));
-      onBlur?.(createBlurEvent(input));
-      return;
-    }
+    // if (input === "") {
+    //   setInputValue(input);
+    //   onChange?.(createChangeEvent(""));
+    //   onBlur?.(createBlurEvent(""));
+    //   return;
+    // }
+
     const validDisplay = formatInputToDisplayValid(
       input,
       is12HourFormat,
       timeIntervals,
       inputPeriod,
     );
-    // Check if the validDisplay is empty and if it is, set the inputValue to an empty string
-    if (!validDisplay) {
-      setInputValue("");
-      onChange?.(createChangeEvent(""));
-      onBlur?.(createBlurEvent(""));
-      return;
-    }
 
-    setInputValue(validDisplay);
+    const valueForInput = isValidTimeInput(input) ? validDisplay : input;
+
+    setInputValue(valueForInput);
 
     const validValue = convert12hTo24h(validDisplay);
 
