@@ -100,16 +100,18 @@ export class SubgraphManager {
       }
 
       if (Object.keys(supergraphEndpoints).length > 0) {
-        const supergraphServer = this.createApolloGateway(supergraphEndpoints);
-        if (!supergraphServer) continue;
-        await supergraphServer.start();
-        const path = `/${supergraph}`;
-        this.setupApolloExpressMiddleware(supergraphServer, router, path);
+        const supergraphServer =
+          await this.createApolloGateway(supergraphEndpoints);
+        if (supergraphServer) {
+          const path = `/${supergraph}`;
+          this.setupApolloExpressMiddleware(supergraphServer, router, path);
+          console.log(`> Updated Apollo Gateway at ${path}`);
+        }
       }
     }
   }
 
-  private createApolloGateway(endpoints: Record<string, ApolloServer>) {
+  private async createApolloGateway(endpoints: Record<string, ApolloServer>) {
     try {
       const gateway = new ApolloGateway({
         supergraphSdl: new IntrospectAndCompose({
@@ -120,15 +122,22 @@ export class SubgraphManager {
         }),
       });
 
-      return new ApolloServer({
+      const server = new ApolloServer({
         gateway,
         plugins: [
           ApolloServerPluginInlineTraceDisabled(),
           ApolloServerPluginLandingPageLocalDefault(),
         ],
       });
+
+      await server.start();
+      return server;
     } catch (e) {
-      console.error("Could not create Apollo Gateway", e);
+      if (e instanceof Error) {
+        console.error("> " + e.message);
+      } else {
+        console.error("> Could not create Apollo Gateway");
+      }
     }
   }
 
