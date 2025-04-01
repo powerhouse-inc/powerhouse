@@ -103,15 +103,15 @@ const meta: Meta<typeof DateTimePickerField> = {
       },
       description: "The format of the time in the time picker",
       table: {
-        defaultValue: { summary: "hh:mm a" },
+        defaultValue: { summary: "hh:mm A" },
         type: {
           summary: "string",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
 
-      options: ["hh:mm a", "HH:mm"],
-      defaultValue: { summary: "hh:mm a" },
+      options: ["hh:mm A", "HH:mm"],
+      defaultValue: { summary: "hh:mm A" },
     },
     showTimezoneSelect: {
       control: {
