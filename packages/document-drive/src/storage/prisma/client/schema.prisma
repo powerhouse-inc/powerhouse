@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/storage/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Drive {
+  id             String          @id
+  slug           String          @unique
+  driveDocuments DriveDocument[]
+}
+
+model Document {
+  id                   String                @id
+  created              DateTime              @default(now())
+  lastModified         DateTime              @default(now())
+  isDrive              Boolean
+  revision             String
+  name                 String?
+  operations           Operation[]
+  initialState         String // json object with the scope as keys of the root object
+  documentType         String
+  meta                 String?
+  synchronizationUnits SynchronizationUnit[]
+  driveDocuments       DriveDocument[]
+}
+
+// Model to map the many-to-many relationship between drives and documents
+model DriveDocument {
+  driveId    String
+  documentId String
+  drive      Drive    @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([driveId, documentId])
+  @@index([driveId])
+  @@index([documentId])
+}
+
+model Operation {
+  id             String       @id @default(uuid())
+  opId           String?
+  Document       Document?    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId     String
+  scope          String
+  branch         String
+  index          Int
+  skip           Int
+  hash           String
+  timestamp      DateTime
+  input          String
+  type           String
+  attachments    Attachment[]
+  syncId         String?
+  clipboard      Boolean?     @default(false)
+  context        Json?
+  resultingState Bytes?
+
+  SynchronizationUnit SynchronizationUnit? @relation(fields: [syncId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
+}
+
+model SynchronizationUnit {
+  id         String @id
+  documentId String
+
+  Document   Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  scope      String
+  branch     String
+  operations Operation[]
+}
+
+model Attachment {
+  id          String    @id @default(uuid())
+  operationId String
+  Operation   Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  mimeType  String
+  data      String
+  filename  String?
+  extension String?
+  hash      String
+}
