@@ -9,4 +9,5 @@ startServer({
   configFile: path.join(process.cwd(), "./powerhouse.config.json"),
   dev: true,
   ...config.reactor,
+  logLevel: "verbose",
 });
