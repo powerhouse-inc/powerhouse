@@ -98,7 +98,7 @@ export const useTimePicker = ({
 
     setInputValue(valueForInput);
 
-    const validValue = convert12hTo24h(validDisplay);
+    const validValue = convert12hTo24h(valueForInput);
 
     const { minutes, hours, period } = getHoursAndMinutes(validValue);
 
