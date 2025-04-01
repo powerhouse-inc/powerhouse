@@ -68,27 +68,17 @@ export default class SynchronizationManager implements ISynchronizationManager {
     const revisions =
       await this.storage.getSynchronizationUnitsRevision(syncUnitsQuery);
 
-    const synchronizationUnits: SynchronizationUnit[] = syncUnitsQuery.map(
-      (s) => ({
-        ...s,
-        lastUpdated: drive.created,
-        revision: -1,
-      }),
-    );
-    for (const revision of revisions) {
-      const syncUnit = synchronizationUnits.find(
-        (s) =>
-          revision.driveId === s.driveId &&
-          revision.documentId === s.documentId &&
-          revision.scope === s.scope &&
-          revision.branch === s.branch,
-      );
-      if (syncUnit) {
-        syncUnit.revision = revision.revision;
-        syncUnit.lastUpdated = revision.lastUpdated;
-      }
-    }
-    return synchronizationUnits;
+    return syncUnitsQuery.map((s) => ({
+      ...s,
+      lastUpdated: drive.created,
+      revision:
+        revisions.find(
+          (r) =>
+            r.documentId === s.documentId &&
+            r.scope === s.scope &&
+            r.branch === s.branch,
+        )?.revision ?? -1,
+    }));
   }
 
   async getSynchronizationUnitsIds(
@@ -118,7 +108,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
         documentType.includes("*"))
     ) {
       nodes.unshift({
-        id: "",
+        id: drive.state.global.id,
         documentType: "powerhouse/document-drive",
         synchronizationUnits: [
           {
@@ -190,7 +180,6 @@ export default class SynchronizationManager implements ISynchronizationManager {
       syncId,
       scope: syncUnit.scope,
       branch: syncUnit.branch,
-      driveId,
       documentId: node.id,
       documentType: node.documentType,
     };
@@ -217,7 +206,6 @@ export default class SynchronizationManager implements ISynchronizationManager {
       syncId,
       scope,
       branch,
-      driveId,
       documentId,
       documentType,
       lastUpdated: lastOperation.timestamp ?? document.lastModified,
@@ -274,7 +262,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
   private async getDrive(driveId: string): Promise<DocumentDriveDocument> {
     try {
-      const cachedDocument = await this.cache.getDocument("drives", driveId);
+      const cachedDocument = await this.cache.getDrive(driveId);
       if (cachedDocument && isDocumentDrive(cachedDocument)) {
         return cachedDocument;
       }
@@ -294,7 +282,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
     documentId: string,
   ): Promise<PHDocument> {
     try {
-      const cachedDocument = await this.cache.getDocument(driveId, documentId);
+      const cachedDocument = await this.cache.getDocument(documentId);
       if (cachedDocument) {
         return cachedDocument;
       }

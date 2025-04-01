@@ -1,4 +1,4 @@
-import { CookieBanner, ModalManager } from '#components';
+import { CookieBanner } from '#components';
 import { ReadModeContextProvider, RootProvider } from '#context';
 import { atoms, atomStore } from '#store';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
@@ -30,11 +30,9 @@ const App = () => (
                         <ReadModeContextProvider>
                             <UiNodesContextProvider>
                                 <ToastContainer position="bottom-right" />
-                                <ModalManager>
-                                    <Router />
-                                    <CookieBanner />
-                                    <Analytics />
-                                </ModalManager>
+                                <Router />
+                                <CookieBanner />
+                                <Analytics />
                             </UiNodesContextProvider>
                         </ReadModeContextProvider>
                     </RootProvider>

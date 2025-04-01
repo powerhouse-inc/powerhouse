@@ -51,7 +51,7 @@ export {
   OID,
   OLabel,
   PHID,
-  URLScalar
+  URLScalar,
 };
 
 export const resolvers = {

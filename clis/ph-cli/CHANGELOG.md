@@ -1,3 +1,234 @@
+## 0.40.7 (2025-03-26)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.245
+
+## 0.40.7-dev.1 (2025-03-26)
+
+### 🚀 Features
+
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+- **ph-cli:** add 'use' command for environment management ([0c821cbe0](https://github.com/powerhouse-inc/powerhouse/commit/0c821cbe0))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.29.0-dev.1
+- Updated document-model to 2.28.0
+- Updated @powerhousedao/builder-tools to 0.9.5-dev.1
+- Updated @powerhousedao/reactor-local to 1.27.5-dev.1
+- Updated @powerhousedao/codegen to 0.49.0
+- Updated @powerhousedao/config to 1.26.0
+- Updated @powerhousedao/connect to 1.0.18
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
+## 0.40.9-dev.0 (2025-03-24)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.244
+
+## 0.40.8-dev.0 (2025-03-24)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.243
+
+## 0.40.7-dev.0 (2025-03-20)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.242
+
+## 0.40.6 (2025-03-20)
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.28.4
+- Updated @powerhousedao/builder-tools to 0.9.4
+- Updated @powerhousedao/reactor-local to 1.27.4
+- Updated @powerhousedao/codegen to 0.48.0
+- Updated @powerhousedao/connect to 1.0.6
+
+## 0.40.6-dev.0 (2025-03-20)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.241
+
+## 0.40.5 (2025-03-20)
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.28.3
+- Updated @powerhousedao/builder-tools to 0.9.3
+- Updated @powerhousedao/reactor-local to 1.27.3
+- Updated @powerhousedao/codegen to 0.47.0
+- Updated @powerhousedao/connect to 1.0.7
+
+## 0.40.5-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.240
+
+## 0.40.4 (2025-03-19)
+
+### 🩹 Fixes
+
+- **ph-cli:** trigger new release ([69fca6e3](https://github.com/powerhouse-inc/powerhouse/commit/69fca6e3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 0.40.4-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.236
+
+## 0.40.3-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.235
+
+## 0.40.2-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.234
+
+## 0.40.1-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.233
+
+## 0.40.0 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.28.0
+- Updated document-model to 2.27.0
+- Updated @powerhousedao/builder-tools to 0.9.0
+- Updated @powerhousedao/reactor-local to 1.27.0
+- Updated @powerhousedao/codegen to 0.46.0
+- Updated @powerhousedao/config to 1.24.0
+- Updated @powerhousedao/connect to 1.0.9
+
+### ❤️ Thank You
+
+- Frank
+
+## 0.39.7-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.232
+
+## 0.39.6 (2025-03-19)
+
+### 🚀 Features
+
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.27.2
+- Updated @powerhousedao/builder-tools to 0.8.2
+- Updated @powerhousedao/reactor-local to 1.26.4
+- Updated @powerhousedao/codegen to 0.45.0
+- Updated @powerhousedao/connect to 1.0.6
+
+### ❤️ Thank You
+
+- Frank
+- ryanwolhuter @ryanwolhuter
+
+## 0.39.6-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.231
+
+## 0.39.5 (2025-03-19)
+
+### 🩹 Fixes
+
+- **reactor-local:** support commonjs code on local subgraphs ([c49914e2](https://github.com/powerhouse-inc/powerhouse/commit/c49914e2))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-local to 1.26.3
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 0.39.5-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.230
+
+## 0.39.4 (2025-03-19)
+
+### 🚀 Features
+
+- **monorepo:** remove migrations ([0c698b39](https://github.com/powerhouse-inc/powerhouse/commit/0c698b39))
+- **design-system:** fix storybook type errors ([75cd9dd5](https://github.com/powerhouse-inc/powerhouse/commit/75cd9dd5))
+- **monorepo:** regenerate lockfile ([10b40ad0](https://github.com/powerhouse-inc/powerhouse/commit/10b40ad0))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/builder-tools to 0.8.1
+- Updated @powerhousedao/connect to 1.0.3
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 0.39.4-dev.0 (2025-03-19)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/connect to 1.0.0-dev.229
+
+## 0.39.3 (2025-03-19)
+
+### 🚀 Features
+
+- **connect:** remove accidentally added dep ([5f6ba2e4](https://github.com/powerhouse-inc/powerhouse/commit/5f6ba2e4))
+- **design-system:** simplify icons and remove dynamic loader ([1db37756](https://github.com/powerhouse-inc/powerhouse/commit/1db37756))
+
+### 🩹 Fixes
+
+- **document-drive:** typescript should be a dev dependency of document-drive ([b5ddc827](https://github.com/powerhouse-inc/powerhouse/commit/b5ddc827))
+
+### 🧱 Updated Dependencies
+
+- Updated document-drive to 1.27.1
+- Updated @powerhousedao/builder-tools to 0.8.0
+- Updated @powerhousedao/reactor-local to 1.26.2
+- Updated @powerhousedao/connect to 1.0.5
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- ryanwolhuter
+
 ## 0.39.3-dev.0 (2025-03-17)
 
 ### 🧱 Updated Dependencies

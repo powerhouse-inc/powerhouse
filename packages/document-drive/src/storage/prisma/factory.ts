@@ -1,21 +1,24 @@
+import { type ICache } from "#cache/types";
 import { PrismaStorage } from "#storage/prisma/index";
-import Prisma from "@prisma/client";
+import Prisma from "./client/index.js";
 const PrismaClient = Prisma.PrismaClient;
 
 export class PrismaStorageFactory {
-  private prisma: InstanceType<typeof PrismaClient>;
+  private readonly prisma: InstanceType<typeof PrismaClient>;
+  private readonly cache: ICache;
 
-  constructor(private readonly dbUrl: string) {
+  constructor(dbUrl: string, cache: ICache) {
+    this.cache = cache;
     this.prisma = new PrismaClient({
       datasources: {
         db: {
-          url: this.dbUrl,
+          url: dbUrl,
         },
       },
     });
   }
 
   build() {
-    return new PrismaStorage(this.prisma);
+    return new PrismaStorage(this.prisma, this.cache);
   }
 }

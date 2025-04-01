@@ -1,8 +1,7 @@
-import { type ICache } from "#cache/types";
 import {
   removeListener,
   removeTrigger,
-  setSharingType
+  setSharingType,
 } from "#drive-document-model/gen/creators";
 import { createDocument } from "#drive-document-model/gen/utils";
 import {
@@ -14,7 +13,7 @@ import {
   isOperationJob,
 } from "#queue/types";
 import { ReadModeServer } from "#read-mode/server";
-import { type IDriveStorage } from "#storage/types";
+import { type IDocumentStorage, type IDriveStorage } from "#storage/types";
 import {
   DefaultDrivesManager,
   type IDefaultDrivesManager,
@@ -27,7 +26,7 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type DocumentDriveState,
-  type Trigger
+  type Trigger,
 } from "document-drive";
 import {
   type Action,
@@ -35,7 +34,6 @@ import {
   type DocumentModelModule,
   type Operation,
   type OperationScope,
-  type OperationsFromDocument,
   type PHDocument,
   attachBranch,
   garbageCollect,
@@ -51,6 +49,7 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
+import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
   DriveAlreadyExistsError,
@@ -61,9 +60,8 @@ import {
   type CancelPullLoop,
   PullResponderTransmitter,
 } from "./listener/transmitter/pull-responder.js";
-import {
-  type StrandUpdateSource
-} from "./listener/transmitter/types.js";
+import { SwitchboardPushTransmitter } from "./listener/transmitter/switchboard-push.js";
+import { type StrandUpdateSource } from "./listener/transmitter/types.js";
 import {
   type AddOperationOptions,
   type Constructor,
@@ -90,7 +88,7 @@ import {
   type SyncStatus,
   type SyncUnitStatusObject,
   type SynchronizationUnit,
-  type SynchronizationUnitQuery
+  type SynchronizationUnitQuery,
 } from "./types.js";
 import { filterOperationsByRevision, isAtRevision } from "./utils.js";
 
@@ -100,6 +98,7 @@ export class BaseDocumentDriveServer
   // external dependencies
   private documentModelModules: DocumentModelModule[];
   private storage: IDriveStorage;
+  private documentStorage: IDocumentStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
   private eventEmitter: IEventEmitter;
@@ -109,6 +108,46 @@ export class BaseDocumentDriveServer
 
   // internal dependencies
   private defaultDrivesManager: DefaultDrivesManager;
+
+  private defaultDrivesManagerDelegate = {
+    detachDrive: this.detachDrive.bind(this),
+    emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) =>
+      this.eventEmitter.emit("defaultRemoteDrive", ...args),
+  };
+
+  private queueDelegate = {
+    checkDocumentExists: (documentId: string): Promise<boolean> =>
+      this.documentStorage.exists(documentId),
+    processOperationJob: async ({
+      driveId,
+      documentId,
+      operations,
+      options,
+    }: OperationJob) => {
+      return documentId
+        ? this.addOperations(driveId, documentId, operations, options)
+        : this.addDriveOperations(driveId, operations, options);
+    },
+    processActionJob: async ({
+      driveId,
+      documentId,
+      actions,
+      options,
+    }: ActionJob) => {
+      return documentId
+        ? this.addActions(driveId, documentId, actions, options)
+        : this.addDriveActions(driveId, actions, options);
+    },
+    processJob: async (job: Job) => {
+      if (isOperationJob(job)) {
+        return this.queueDelegate.processOperationJob(job);
+      } else if (isActionJob(job)) {
+        return this.queueDelegate.processActionJob(job);
+      } else {
+        throw new Error("Unknown job type", job);
+      }
+    },
+  };
 
   // internal state
   private triggerMap = new Map<
@@ -120,6 +159,7 @@ export class BaseDocumentDriveServer
   constructor(
     documentModelModules: DocumentModelModule[],
     storage: IDriveStorage,
+    documentStorage: IDocumentStorage,
     cache: ICache,
     queueManager: IQueueManager,
     eventEmitter: IEventEmitter,
@@ -130,6 +170,7 @@ export class BaseDocumentDriveServer
   ) {
     this.documentModelModules = documentModelModules;
     this.storage = storage;
+    this.documentStorage = documentStorage;
     this.cache = cache;
     this.queueManager = queueManager;
     this.eventEmitter = eventEmitter;
@@ -158,27 +199,12 @@ export class BaseDocumentDriveServer
       options,
     );
 
-    this.storage.setStorageDelegate?.({
-      getCachedOperations: async <TDocument extends PHDocument>(
-        drive: string,
-        id: string,
-      ): Promise<OperationsFromDocument<TDocument> | undefined> => {
-        try {
-          const document = await this.cache.getDocument<TDocument>(drive, id);
-          return document?.operations;
-        } catch (error) {
-          logger.error(error);
-          return undefined;
-        }
-      },
-    });
-
     this.initializePromise = this._initialize();
   }
 
   // workaround for testing the ephemeral listeners -- we don't have DI in place yet
   // todo: remove this once we have DI
-  get listeners():IListenerManager {
+  get listeners(): IListenerManager {
     return this.listenerManager;
   }
 
@@ -407,55 +433,37 @@ export class BaseDocumentDriveServer
     return this.triggerMap.delete(driveId);
   }
 
-  private defaultDrivesManagerDelegate = {
-    detachDrive: this.detachDrive.bind(this),
-    emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) =>
-      this.eventEmitter.emit("defaultRemoteDrive", ...args),
-  };
-
-  private queueDelegate = {
-    checkDocumentExists: (
-      driveId: string,
-      documentId: string,
-    ): Promise<boolean> =>
-      this.storage.checkDocumentExists(driveId, documentId),
-    processOperationJob: async ({
-      driveId,
-      documentId,
-      operations,
-      options,
-    }: OperationJob) => {
-      return documentId
-        ? this.addOperations(driveId, documentId, operations, options)
-        : this.addDriveOperations(driveId, operations, options);
-    },
-    processActionJob: async ({
-      driveId,
-      documentId,
-      actions,
-      options,
-    }: ActionJob) => {
-      return documentId
-        ? this.addActions(driveId, documentId, actions, options)
-        : this.addDriveActions(driveId, actions, options);
-    },
-    processJob: async (job: Job) => {
-      if (isOperationJob(job)) {
-        return this.queueDelegate.processOperationJob(job);
-      } else if (isActionJob(job)) {
-        return this.queueDelegate.processActionJob(job);
-      } else {
-        throw new Error("Unknown job type", job);
-      }
-    },
-  };
-
   private async _initializeDrive(driveId: string) {
     const drive = await this.getDrive(driveId);
     await this.synchronizationManager.initializeDriveSyncStatus(driveId, drive);
 
     if (this.shouldSyncRemoteDrive(drive)) {
       await this.startSyncRemoteDrive(driveId);
+    }
+
+    // add switchboard push listeners
+    for (const zodListener of drive.state.local.listeners) {
+      if (zodListener.callInfo?.transmitterType === "SwitchboardPush") {
+        const transmitter = new SwitchboardPushTransmitter(
+          zodListener.callInfo?.data ?? "",
+        );
+
+        this.listenerManager.setListener(driveId, {
+          block: zodListener.block,
+          driveId: drive.state.global.id,
+          filter: {
+            branch: zodListener.filter?.branch ?? [],
+            documentId: zodListener.filter?.documentId ?? [],
+            documentType: zodListener.filter?.documentType ?? [],
+            scope: zodListener.filter?.scope ?? [],
+          },
+          listenerId: zodListener.listenerId,
+          callInfo: zodListener.callInfo,
+          system: zodListener.system,
+          label: zodListener.label ?? "",
+          transmitter,
+        });
+      }
     }
   }
 
@@ -555,7 +563,7 @@ export class BaseDocumentDriveServer
     await this.storage.createDrive(id, document);
 
     if (input.global.slug) {
-      await this.cache.deleteDocument("drives-slug", input.global.slug);
+      await this.cache.deleteDriveBySlug(input.global.slug);
     }
 
     await this._initializeDrive(id);
@@ -610,7 +618,7 @@ export class BaseDocumentDriveServer
     const result = await Promise.allSettled([
       this.stopSyncRemoteDrive(driveId),
       this.listenerManager.removeDrive(driveId),
-      this.cache.deleteDocument("drives", driveId),
+      this.cache.deleteDrive(driveId),
       this.storage.deleteDrive(driveId),
     ]);
 
@@ -628,7 +636,7 @@ export class BaseDocumentDriveServer
   async getDrive(driveId: string, options?: GetDocumentOptions) {
     let document: DocumentDriveDocument | undefined;
     try {
-      const cachedDocument = await this.cache.getDocument("drives", driveId); // TODO support GetDocumentOptions
+      const cachedDocument = await this.cache.getDrive(driveId); // TODO support GetDocumentOptions
       if (cachedDocument && isDocumentDrive(cachedDocument)) {
         document = cachedDocument;
         if (isAtRevision(document, options?.revisions)) {
@@ -644,7 +652,7 @@ export class BaseDocumentDriveServer
       throw new Error(`Document with id ${driveId} is not a Document Drive`);
     } else {
       if (!options?.revisions) {
-        this.cache.setDocument("drives", driveId, result).catch(logger.error);
+        this.cache.setDrive(driveId, result).catch(logger.error);
       }
       return result;
     }
@@ -652,9 +660,9 @@ export class BaseDocumentDriveServer
 
   async getDriveBySlug(slug: string, options?: GetDocumentOptions) {
     try {
-      const document = await this.cache.getDocument("drives-slug", slug);
-      if (document && isDocumentDrive(document)) {
-        return document;
+      const drive = await this.cache.getDriveBySlug(slug);
+      if (drive) {
+        return drive;
       }
     } catch (e) {
       logger.error("Error getting drive from cache", e);
@@ -665,7 +673,7 @@ export class BaseDocumentDriveServer
     if (!isDocumentDrive(document)) {
       throw new Error(`Document with slug ${slug} is not a Document Drive`);
     } else {
-      this.cache.setDocument("drives-slug", slug, document).catch(logger.error);
+      this.cache.setDriveBySlug(slug, document).catch(logger.error);
       return document;
     }
   }
@@ -677,24 +685,23 @@ export class BaseDocumentDriveServer
   ): Promise<TDocument> {
     let cachedDocument: TDocument | undefined;
     try {
-      cachedDocument = await this.cache.getDocument<TDocument>(
-        driveId,
-        documentId,
-      ); // TODO support GetDocumentOptions
+      cachedDocument = await this.cache.getDocument<TDocument>(documentId); // TODO support GetDocumentOptions
       if (cachedDocument && isAtRevision(cachedDocument, options?.revisions)) {
         return cachedDocument;
       }
     } catch (e) {
       logger.error("Error getting document from cache", e);
     }
+
     const documentStorage =
       cachedDocument ??
       (await this.storage.getDocument<TDocument>(driveId, documentId));
     const document = this._buildDocument<TDocument>(documentStorage, options);
 
     if (!options?.revisions) {
-      this.cache.setDocument(driveId, documentId, document).catch(logger.error);
+      this.cache.setDocument(documentId, document).catch(logger.error);
     }
+
     return document;
   }
 
@@ -778,7 +785,7 @@ export class BaseDocumentDriveServer
     } catch (error) {
       logger.warn("Error deleting document", error);
     }
-    await this.cache.deleteDocument(driveId, documentId);
+    await this.cache.deleteDocument(documentId);
     return this.storage.deleteDocument(driveId, documentId);
   }
 
@@ -1368,9 +1375,7 @@ export class BaseDocumentDriveServer
       );
 
       if (document) {
-        this.cache
-          .setDocument(driveId, documentId, document)
-          .catch(logger.error);
+        this.cache.setDocument(documentId, document).catch(logger.error);
       }
 
       // gets all the different scopes and branches combinations from the operations
@@ -1672,7 +1677,7 @@ export class BaseDocumentDriveServer
         throw error ?? new Error("Invalid Document Drive document");
       }
 
-      this.cache.setDocument("drives", driveId, document).catch(logger.error);
+      this.cache.setDrive(driveId, document).catch(logger.error);
 
       // update listener cache
       const lastOperation = operationsApplied
@@ -1708,7 +1713,6 @@ export class BaseDocumentDriveServer
             [
               {
                 syncId: "0",
-                driveId: driveId,
                 documentId: "",
                 scope: "global",
                 branch: "main",

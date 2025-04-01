@@ -1,3 +1,89 @@
+## 1.27.0-dev.1 (2025-04-01)
+
+### 🚀 Features
+
+- **design-system:** add autocomplete option to package manager ([2bc7396d1](https://github.com/powerhouse-inc/powerhouse/commit/2bc7396d1))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 1.27.0-dev.0 (2025-03-31)
+
+### 🚀 Features
+
+- **config:** allow ph config to specify storage layer of reactor ([6305f7f3b](https://github.com/powerhouse-inc/powerhouse/commit/6305f7f3b))
+- **builder-tools:** load local package from manifest ([96f4962d3](https://github.com/powerhouse-inc/powerhouse/commit/96f4962d3))
+
+### 🩹 Fixes
+
+- **scalars:** restore scrollbar styles ([b450e57b6](https://github.com/powerhouse-inc/powerhouse/commit/b450e57b6))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- nesdc88
+
+## 1.26.0 (2025-03-26)
+
+### 🚀 Features
+
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente
+
+## 1.25.0 (2025-03-24)
+
+### 🚀 Features
+
+- **config:** export loglevel type ([f65f5a9ee](https://github.com/powerhouse-inc/powerhouse/commit/f65f5a9ee))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 1.24.1 (2025-03-19)
+
+### 🩹 Fixes
+
+- roll back replace plugin ([6c4781da](https://github.com/powerhouse-inc/powerhouse/commit/6c4781da))
+- **codegen:** update validation plugin name ([18de5641](https://github.com/powerhouse-inc/powerhouse/commit/18de5641))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 1.24.0 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+- **monorepo:** remove migrations ([0c698b39](https://github.com/powerhouse-inc/powerhouse/commit/0c698b39))
+- **design-system:** fix storybook type errors ([75cd9dd5](https://github.com/powerhouse-inc/powerhouse/commit/75cd9dd5))
+- **monorepo:** regenerate lockfile ([10b40ad0](https://github.com/powerhouse-inc/powerhouse/commit/10b40ad0))
+- **connect:** remove accidentally added dep ([5f6ba2e4](https://github.com/powerhouse-inc/powerhouse/commit/5f6ba2e4))
+- **design-system:** simplify icons and remove dynamic loader ([1db37756](https://github.com/powerhouse-inc/powerhouse/commit/1db37756))
+
+### 🩹 Fixes
+
+- **reactor-local:** support commonjs code on local subgraphs ([c49914e2](https://github.com/powerhouse-inc/powerhouse/commit/c49914e2))
+- **document-drive:** typescript should be a dev dependency of document-drive ([b5ddc827](https://github.com/powerhouse-inc/powerhouse/commit/b5ddc827))
+- **reactor-api:** add ethers as peer dependency ([069767f8](https://github.com/powerhouse-inc/powerhouse/commit/069767f8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 1.23.0 (2025-03-17)
 
 ### 🚀 Features

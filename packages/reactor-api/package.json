@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "1.27.1",
+  "version": "1.29.11-dev.0",
   "description": "",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -43,6 +43,7 @@
     "tinybench": "^3.1.1"
   },
   "dependencies": {
+    "@apollo/gateway": "^2.10.0",
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.9.2",
     "@electric-sql/pglite": "^0.2.12",
@@ -60,6 +61,7 @@
     "express": "^4.21.1",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
+    "graphql-type-json": "^0.3.2",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
     "knex-pglite": "^0.10.0",

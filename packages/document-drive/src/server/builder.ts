@@ -4,7 +4,7 @@ import { type ICache } from "../cache/types.js";
 import { BaseQueueManager } from "../queue/base.js";
 import { type IQueueManager } from "../queue/types.js";
 import { MemoryStorage } from "../storage/memory.js";
-import { type IDriveStorage } from "../storage/types.js";
+import { type IDocumentStorage, type IDriveStorage } from "../storage/types.js";
 import { DocumentDriveServer } from "./base-server.js";
 import { DefaultEventEmitter } from "./event-emitter.js";
 import { ListenerManager } from "./listener/listener-manager.js";
@@ -12,7 +12,7 @@ import TransmitterFactory from "./listener/transmitter/factory.js";
 import SynchronizationManager from "./sync-manager.js";
 import {
   DefaultListenerManagerOptions,
-  IDocumentDriveServer,
+  type IDocumentDriveServer,
   type DocumentDriveServerOptions,
   type IEventEmitter,
   type IListenerManager,
@@ -130,6 +130,8 @@ export class ReactorBuilder {
     return new DocumentDriveServer(
       this.documentModelModules,
       this.storage,
+      // as we refactor, we're secretly making all the IStorage implementations also implement IDocumentStorage
+      this.storage as unknown as IDocumentStorage,
       this.cache,
       this.queueManager,
       this.eventEmitter,

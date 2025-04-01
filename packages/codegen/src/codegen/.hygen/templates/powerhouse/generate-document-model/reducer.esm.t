@@ -2,11 +2,11 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/reducer.ts"
 force: true
 ---
-import { StateReducer, isDocumentAction, createReducer } from "document-model";
-import { <%= h.changeCase.pascal(documentType) %>Document, z } from './types';
+import { type StateReducer, isDocumentAction, createReducer } from "document-model";
+import { <%= 'type ' + h.changeCase.pascal(documentType) %>Document, z } from './types.js';
 
 <% modules.forEach(m => { _%>
-import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../src/reducers/<%= h.changeCase.param(m.name) %>';
+import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../src/reducers/<%= h.changeCase.param(m.name) %>.js';
 <%_ }); %>
 
 const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>Document> =
