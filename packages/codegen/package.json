@@ -27,7 +27,8 @@
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
-    "clean:node_modules": "rimraf node_modules"
+    "clean:node_modules": "rimraf node_modules",
+    "test": "vitest run"
   },
   "dependencies": {
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",

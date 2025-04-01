@@ -275,3 +275,15 @@ export async function generateImportScript(
     { skipFormat },
   );
 }
+
+export async function generateDriveEditor(
+  name: string,
+  dir: string,
+  { skipFormat = false } = {},
+) {
+  // Generate the drive editor files
+  await run(
+    ["powerhouse", "generate-drive-editor", "--name", name, "--root-dir", dir],
+    { skipFormat },
+  );
+}
