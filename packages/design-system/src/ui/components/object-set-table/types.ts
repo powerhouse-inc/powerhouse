@@ -43,6 +43,11 @@ export interface CellContext<T = any> {
   rowIndex: number;
 
   /**
+   * The index of the column.
+   */
+  columnIndex: number;
+
+  /**
    * The table configuration.
    */
   tableConfig: ObjectSetTableConfig<T>;
@@ -96,6 +101,19 @@ export type RenderCellFn<T, V = unknown> = (
   value: V,
   context: CellContext<T>,
 ) => React.ReactNode;
+
+/**
+ * A function that is called when a cell is saved.
+ *
+ * @param newValue The new value of the cell.
+ * @param context The cell context.
+ *
+ * @returns Whether the value was saved.
+ */
+export type OnCellSaveFn<TData, TCellValue> = (
+  newValue: TCellValue,
+  context: CellContext<TData>,
+) => boolean;
 
 export interface ColumnDef<T = any> {
   /**
@@ -211,6 +229,16 @@ export interface ColumnDef<T = any> {
    * @default false
    */
   editable?: boolean;
+
+  /**
+   * A function that is called when a cell is saved.
+   *
+   * @param newValue The new value of the cell.
+   * @param context The cell context.
+   *
+   * @returns Whether the value was saved.
+   */
+  onSave?: OnCellSaveFn<T, any>;
 
   /**
    * The width of the column. It accepts any valid CSS width value.

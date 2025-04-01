@@ -5,12 +5,13 @@ import { useInternalTableState } from "./table-provider/table-provider.js";
 
 const TableFocusTrap = ({ children }: { children: React.ReactNode }) => {
   const {
-    state: { dispatch, selectedCellIndex },
+    state: { selectedCellIndex },
+    api,
   } = useInternalTableState();
   const ref = useRef<HTMLTableElement>(null);
 
   useOnClickOutside(ref, () => {
-    dispatch?.({ type: "SELECT_CELL", payload: null });
+    api.selection.clear();
   });
 
   //   return children;

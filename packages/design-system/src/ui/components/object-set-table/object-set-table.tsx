@@ -32,6 +32,18 @@ const ObjectSetTable = <T extends DataType = DataType>({
         valueGetter: column.valueGetter ?? defaultValueGetter,
         valueFormatter: column.valueFormatter ?? defaultValueFormatter,
         renderCell: column.renderCell ?? getRenderFn(column.type),
+        editable: column.editable ?? false,
+        // TODO: move the default onSave to a utility function
+        onSave:
+          column.onSave ??
+          ((value, context) => {
+            // TODO: fix this
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            config.data[context.rowIndex][context.column.field] = value;
+            return true;
+          }),
       })),
       allowRowSelection: config.allowRowSelection ?? true,
       showRowNumbers: config.showRowNumbers ?? true,
