@@ -5,7 +5,6 @@ import {
   type SubgraphClass,
   type SubgraphManager,
 } from "@powerhousedao/reactor-api";
-import Prisma from "@prisma/client";
 import {
   DriveAlreadyExistsError,
   driveDocumentModelModule,
@@ -16,10 +15,10 @@ import {
   MemoryStorage,
   ReactorBuilder,
 } from "document-drive";
-import { ICache } from "document-drive/cache/types";
+import type { ICache } from "document-drive/cache/types";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
-import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
@@ -29,7 +28,6 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
 import { PackagesManager } from "./packages.js";
-const PrismaClient = Prisma.PrismaClient;
 
 type FSError = {
   errno: number;
@@ -110,16 +108,19 @@ const createStorage = (options: StorageOptions, cache: ICache) => {
     case "memory":
       logger.info("Initializing memory storage.");
       return new MemoryStorage();
-    case "postgres":
+    case "postgres": {
+      if (!options.postgresUrl) {
+        throw new Error("Postgres url is required");
+      }
+
       logger.info(`Initializing postgres storage at '${options.postgresUrl}'.`);
-      const db = new PrismaClient({
-        datasources: {
-          db: {
-            url: options.postgresUrl!,
-          },
-        },
-      });
-      return new PrismaStorage(db, cache);
+      const storageFactory = new PrismaStorageFactory(
+        options.postgresUrl,
+        cache,
+      );
+      const storage = storageFactory.build();
+      return storage;
+    }
     case "browser":
       logger.info("Initializing browser storage.");
       return new BrowserStorage();
