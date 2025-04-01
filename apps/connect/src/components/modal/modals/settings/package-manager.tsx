@@ -1,6 +1,7 @@
 import { useDocumentDrives } from '#hooks';
 import { addExternalPackage, removeExternalPackage } from '#services';
 import { useExternalPackages, useMutableExternalPackages } from '#store';
+import { PH_PACKAGES } from '@powerhousedao/config/packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
 import { type Manifest } from 'document-model';
 import type React from 'react';
@@ -125,6 +126,7 @@ export const PackageManager: React.FC = () => {
             onReactorChange={handleReactorChange}
             onInstall={handleInstall}
             onUninstall={handleUninstall}
+            packageOptions={PH_PACKAGES}
         />
     );
 };

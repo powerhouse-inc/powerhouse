@@ -107,7 +107,7 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
           />
         ) : (
           // eslint-disable-next-line react/jsx-props-no-spreading
-          <IdAutocomplete {...autoCompleteOptions} />
+          <IdAutocomplete {...autoCompleteOptions} onChange={setValue} />
         )}
         <Button
           className="h-9 rounded-md text-sm"

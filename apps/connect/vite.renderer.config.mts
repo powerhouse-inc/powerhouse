@@ -171,6 +171,7 @@ export default defineConfig(({ mode }) => {
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),
             __REQUIRES_HARD_REFRESH__: JSON.stringify(REQUIRES_HARD_REFRESH),
+            'import.meta.hot': 'import.meta.hot',
         },
     };
 });
