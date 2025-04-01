@@ -256,6 +256,7 @@ export class DriveSubgraph extends Subgraph {
           id,
           revision: document.revision.global,
           state: document.state.global,
+          stateJSON: JSON.stringify(document.state.global),
           operations: document.operations.global.map((op: Operation) => ({
             ...op,
             inputText:

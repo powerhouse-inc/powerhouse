@@ -29,7 +29,7 @@ export const getResolvers = (subgraph: Subgraph) => {
           id: docId,
           ...doc,
           state: doc.state.global,
-          stateJson: JSON.stringify(doc.state.global),
+          stateJSON: doc.state.global,
           __typename: typeName,
         };
 
