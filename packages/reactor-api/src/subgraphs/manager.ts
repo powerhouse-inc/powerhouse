@@ -101,6 +101,7 @@ export class SubgraphManager {
 
       if (Object.keys(supergraphEndpoints).length > 0) {
         const supergraphServer = this.createApolloGateway(supergraphEndpoints);
+        if (!supergraphServer) continue;
         await supergraphServer.start();
         const path = `/${supergraph}`;
         this.setupApolloExpressMiddleware(supergraphServer, router, path);
@@ -109,22 +110,26 @@ export class SubgraphManager {
   }
 
   private createApolloGateway(endpoints: Record<string, ApolloServer>) {
-    const gateway = new ApolloGateway({
-      supergraphSdl: new IntrospectAndCompose({
-        subgraphs: Object.keys(endpoints).map((path) => ({
-          name: path.replaceAll("/", ""),
-          url: `http://localhost:${process.env.PORT ?? 4001}${path}`,
-        })),
-      }),
-    });
+    try {
+      const gateway = new ApolloGateway({
+        supergraphSdl: new IntrospectAndCompose({
+          subgraphs: Object.keys(endpoints).map((path) => ({
+            name: path.replaceAll("/", ""),
+            url: `http://localhost:${process.env.PORT ?? 4001}${path}`,
+          })),
+        }),
+      });
 
-    return new ApolloServer({
-      gateway,
-      plugins: [
-        ApolloServerPluginInlineTraceDisabled(),
-        ApolloServerPluginLandingPageLocalDefault(),
-      ],
-    });
+      return new ApolloServer({
+        gateway,
+        plugins: [
+          ApolloServerPluginInlineTraceDisabled(),
+          ApolloServerPluginLandingPageLocalDefault(),
+        ],
+      });
+    } catch (e) {
+      console.error("Could not create Apollo Gateway", e);
+    }
   }
 
   private setupApolloExpressMiddleware(
