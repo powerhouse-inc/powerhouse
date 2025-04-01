@@ -1,7 +1,5 @@
-import { type Prisma, type PrismaClient } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
-  Action,
   AttachmentInput,
   BaseStateFromDocument,
   DocumentHeader,
@@ -24,6 +22,7 @@ import { ConflictOperationError } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
 import type { IDocumentStorage, IDriveStorage } from "../types.js";
+import { type Prisma, type PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
 
