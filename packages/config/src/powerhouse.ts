@@ -8,8 +8,13 @@ export type LogLevel =
   | "error"
   | "silent";
 
+export type PHPackageProvider = "npm" | "github" | "local";
+
 export type PowerhousePackage = {
   packageName: string;
+  version?: string;
+  provider?: PHPackageProvider;
+  url?: string;
 };
 
 export type PowerhouseConfig = {

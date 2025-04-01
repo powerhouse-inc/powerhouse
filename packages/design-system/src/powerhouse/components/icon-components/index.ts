@@ -70,6 +70,7 @@ import Lock from "./Lock.js";
 import M from "./M.js";
 import Modified from "./Modified.js";
 import Moved from "./Moved.js";
+import Npm from "./Npm.js";
 import PackageManager from "./PackageManager.js";
 import Pencil from "./Pencil.js";
 import PeopleFill from "./PeopleFill.js";
@@ -182,6 +183,7 @@ export const iconNames = [
   "M",
   "Modified",
   "Moved",
+  "Npm",
   "PackageManager",
   "Pencil",
   "PeopleFill",
@@ -298,6 +300,7 @@ export const iconComponents: Record<
   M,
   Modified,
   Moved,
+  Npm,
   PackageManager,
   Pencil,
   PeopleFill,

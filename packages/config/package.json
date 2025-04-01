@@ -7,7 +7,9 @@
   "type": "module",
   "module": "./dist/src/index.js",
   "exports": {
-    "./powerhouse": "./dist/src/powerhouse.js"
+    ".": "./dist/src/index.js",
+    "./powerhouse": "./dist/src/powerhouse.js",
+    "./packages": "./dist/src/packages.js"
   },
   "publishConfig": {
     "access": "public"
