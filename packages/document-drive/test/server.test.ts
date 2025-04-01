@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import {
   ActionContext,
   DocumentModelDocument,
@@ -18,6 +17,7 @@ import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
 import { PrismaStorage } from "../src/storage/prisma";
+import { PrismaClient } from "../src/storage/prisma/client";
 import { IDriveStorage } from "../src/storage/types";
 import { generateUUID } from "../src/utils/misc";
 import { baseDocumentModels, expectUUID } from "./utils";

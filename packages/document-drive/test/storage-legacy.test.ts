@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import { existsSync, rmdirSync } from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -15,6 +14,7 @@ import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
 import { PrismaStorage } from "../src/storage/prisma";
+import { PrismaClient } from "../src/storage/prisma/client";
 import { IDriveStorage, IStorage } from "../src/storage/types";
 
 const PG_URL = process.env.PG_URL || "postgresql://localhost:5444/postgres";

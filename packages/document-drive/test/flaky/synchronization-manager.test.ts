@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import { DocumentModelModule, Operation } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -9,6 +8,7 @@ import {
 import InMemoryCache from "../../src/cache/memory";
 import { MemoryStorage } from "../../src/storage/memory";
 import { PrismaStorage } from "../../src/storage/prisma";
+import { PrismaClient } from "../../src/storage/prisma/client";
 import {
   buildOperation,
   buildOperations,

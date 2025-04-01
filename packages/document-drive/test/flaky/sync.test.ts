@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import {
   DocumentModelDocument,
   DocumentModelModule,
@@ -31,6 +30,7 @@ import { reducer } from "../../src/drive-document-model/gen/reducer.js";
 import { Trigger } from "../../src/drive-document-model/gen/types.js";
 import { ConflictOperationError } from "../../src/server/error.js";
 import { StrandUpdateGraphQL } from "../../src/server/listener/transmitter/pull-responder.js";
+import { PrismaClient } from "../../src/storage/prisma/client";
 
 describe("Document Drive Server with %s", () => {
   const documentModels = [

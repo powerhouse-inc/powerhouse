@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import { existsSync, rmSync } from "fs";
 import { createHelia } from "helia";
 import path from "path";
@@ -16,6 +15,7 @@ import { FilesystemStorage } from "../src/storage/filesystem";
 import { IPFSStorage } from "../src/storage/ipfs";
 import { MemoryStorage } from "../src/storage/memory";
 import { PrismaStorage } from "../src/storage/prisma";
+import { PrismaClient } from "../src/storage/prisma/client";
 import { IDocumentStorage } from "../src/storage/types";
 
 const PG_URL = process.env.PG_URL || "postgresql://localhost:5432/postgres";
