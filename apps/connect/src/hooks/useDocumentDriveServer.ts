@@ -757,6 +757,8 @@ export function useDocumentDriveServer() {
 
             // for backwards compatibility: return everything but the transmitter
             return {
+                driveId,
+                filter: listener.filter,
                 data: {
                     interval: `${options.pullInterval}` || '1000',
                     listenerId: uuid,
