@@ -4,7 +4,7 @@ import Prisma from "@prisma/client";
 const PrismaClient = Prisma.PrismaClient;
 
 export class PrismaStorageFactory {
-  private readonly prisma: InstanceType<typeof PrismaClient>;
+  private readonly prisma: any;
   private readonly cache: ICache;
 
   constructor(dbUrl: string, cache: ICache) {
