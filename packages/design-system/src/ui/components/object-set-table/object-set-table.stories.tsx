@@ -60,15 +60,7 @@ export const Default: Story = {
     columns: [
       { field: "firstName", editable: true },
       { field: "email", editable: true },
-      {
-        field: "walletAddress",
-        editable: true,
-        renderCell: (value) => (
-          <div>
-            {value} <button tabIndex={0}>😶‍🌫️</button>
-          </div>
-        ),
-      },
+      { field: "walletAddress", editable: true },
       { field: "payment", type: "number", editable: true },
       {
         field: "status",

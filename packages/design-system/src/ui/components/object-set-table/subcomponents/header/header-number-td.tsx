@@ -25,7 +25,7 @@ const HeaderNumberTd: React.FC<HeaderNumberTdProps> = ({
   return (
     <HeaderCell
       className={cn(
-        "min-w-9 border-r border-gray-300 text-center",
+        "min-w-9 select-none border-r border-gray-300 text-center",
         allowRowSelection && "cursor-pointer",
         isAllRowsSelected && "bg-blue-900 text-white",
         className,

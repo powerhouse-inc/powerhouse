@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { Input } from "../../data-entry/input/index.js";
+import { useGlobalTableKeyEvents } from "../hooks/useGlobalTableKeyEvents.js";
 import type { CellContext, ColumnDef, DataType } from "../types.js";
 import { isCellEqual } from "../utils.js";
 import { DefaultTableCell } from "./cells/default-cell.js";
@@ -20,7 +21,11 @@ const TableBody = <T extends DataType>({
   const {
     config,
     state: { dispatch, selectedRowIndexes, selectedCellIndex, isCellEditMode },
+    api,
   } = useInternalTableState<T>();
+
+  // add global key events to the table
+  useGlobalTableKeyEvents();
 
   const { allowRowSelection } = config;
 
@@ -34,17 +39,14 @@ const TableBody = <T extends DataType>({
       if (!allowRowSelection) return;
       if (e.ctrlKey) {
         e.stopPropagation();
-        dispatch?.({ type: "TOGGLE_SELECTED_ROW", payload: { index } });
+        api.selection.toggleRow(index);
       } else if (e.shiftKey) {
         return; // just let the row handle it
       } else {
-        dispatch?.({
-          type: "TOGGLE_SELECTED_ROW",
-          payload: { index, clearOtherSelections: true },
-        });
+        api.selection.selectRow(index);
       }
     },
-    [dispatch, allowRowSelection],
+    [allowRowSelection],
   );
 
   /**
@@ -56,15 +58,16 @@ const TableBody = <T extends DataType>({
   const createAddSelectedRowHandler = useCallback(
     (index: number) => (e: React.MouseEvent<HTMLTableRowElement>) => {
       if (!allowRowSelection) return;
+
       if (e.ctrlKey) {
-        dispatch?.({ type: "TOGGLE_SELECTED_ROW", payload: { index } });
+        api.selection.toggleRow(index);
       } else if (e.shiftKey) {
         // Prevent text selection when shift key is pressed
         document.getSelection()?.removeAllRanges();
-        dispatch?.({ type: "SELECT_ROW_RANGE", payload: index });
+        api.selection.selectFromLastActiveRow(index);
       }
     },
-    [dispatch, allowRowSelection],
+    [allowRowSelection],
   );
 
   /**
@@ -100,10 +103,7 @@ const TableBody = <T extends DataType>({
               payload: { row: index, column },
             });
           } else {
-            dispatch?.({
-              type: "SELECT_CELL",
-              payload: { row: index, column },
-            });
+            api.selection.selectCell(index, column);
           }
         }
       },
@@ -134,6 +134,7 @@ const TableBody = <T extends DataType>({
               row: rowItem,
               column,
               rowIndex: index,
+              columnIndex,
               tableConfig: config,
             };
 
@@ -168,7 +169,16 @@ const TableBody = <T extends DataType>({
                   <Input
                     className="max-w-full"
                     autoFocus
-                    value={column.valueGetter?.(rowItem, cellContext) as string}
+                    defaultValue={
+                      column.valueGetter?.(rowItem, cellContext) as string
+                    }
+                    // eslint-disable-next-line react/jsx-no-bind
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const newValue = (e.target as HTMLInputElement).value;
+                        column.onSave?.(newValue, cellContext);
+                      }
+                    }}
                   />
                 ) : (
                   cell
