@@ -23,7 +23,7 @@ export const isFormatTimeAllowed = (format: string): boolean => {
 };
 export const TIME_PATTERNS = {
   /** Matches times in 24-hour format (HH:mm) like: 0:00, 09:30, 23:59 */
-  HOURS_24: /^([0-9]|0[0-9]|1[0-9]|2[0-3]):([0-5][0-9])$/,
+  HOURS_24: /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/,
   /** Matches times in 12-hour format (h:mm a) like: 1:00 AM, 12:59 PM */
   HOURS_12: /^(0?[1-9]|1[0-2]):([0-5][0-9])\s(AM|PM|am|pm)$/,
 } as const;
@@ -162,9 +162,29 @@ export const isValidTimeInput = (input: string): boolean => {
   input = input.trim();
   // Allow change the format and convert the time
   if (input.includes(":")) {
-    return (
-      TIME_PATTERNS.HOURS_12.test(input) || TIME_PATTERNS.HOURS_24.test(input)
-    );
+    // Must be exactly 5 characters for 24h format
+    if (input.length !== 5) {
+      return false;
+    }
+
+    // Split into hours and minutes
+    const [hours, minutes] = input.split(":");
+
+    // Hours and minutes must be numbers
+    const hoursNum = parseInt(hours, 10);
+    const minutesNum = parseInt(minutes, 10);
+    if (isNaN(hoursNum) || isNaN(minutesNum)) return false;
+
+    // Hours must be between 0 and 23
+    if (hoursNum < 0 || hoursNum > 23) return false;
+
+    // Minutes must be between 0 and 59
+    if (minutesNum < 0 || minutesNum > 59) return false;
+
+    // Minutes must be exactly 2 digits
+    if (minutes.length !== 2) return false;
+
+    return true;
   } else {
     // "For digits, expect 3 or 4 characters and validate they're in range".
     if (input.length !== 3 && input.length !== 4) {
@@ -410,10 +430,31 @@ export const formatInputToDisplayValid = (
 export const getHoursAndMinutes = (input: string) => {
   if (!input) return { hours: "", minutes: "", period: undefined };
 
-  const [hours, minutes] = input.split(":");
-  const period =
-    input.includes("AM") || input.includes("PM") ? input.slice(-2) : undefined;
-  return { hours, minutes, period };
+  if (input.includes(":")) {
+    const [hours, minutes] = input.split(":");
+    const period =
+      input.includes("AM") || input.includes("PM")
+        ? input.slice(-2)
+        : undefined;
+    return { hours, minutes, period };
+  } else {
+    // Handle short format (e.g., "1430" -> "14:30")
+    if (input.length === 3) {
+      return {
+        hours: input.slice(0, 1),
+        minutes: input.slice(1, 3),
+        period: undefined,
+      };
+    } else if (input.length === 4) {
+      return {
+        hours: input.slice(0, 2),
+        minutes: input.slice(2, 4),
+        period: undefined,
+      };
+    }
+    // Return and invalid value as cannot be a value time
+    return { hours: "", minutes: "", period: undefined };
+  }
 };
 
 export const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -447,4 +488,26 @@ export const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
   }
 
   e.preventDefault();
+};
+
+/**
+ * Validates if a string has the hh:mm format and represents a valid time.
+ * @param {string} timeString - The string to validate.
+ * @returns {boolean} - Returns true if the string is valid, false otherwise.
+ */
+export const isValidTimeFromValue = (timeString: string) => {
+  // Regular expression to validate the hh:mm format
+  const regex = /^([01]?\d|2[0-3]):[0-5]\d$/;
+  return regex.test(timeString);
+};
+
+/**
+ * Extracts hours and minutes from a time string value.
+ * @param {string} timeString - The time string to process.
+ * @returns {string} - Returns the time in hh:mm format if valid, empty string otherwise.
+ */
+export const getHoursAndMinutesFromValue = (timeString: string) => {
+  // Captures everything up to the second ':' regardless of the number of digits in the hour
+  const match = /^([^:]+:\d{2,})/.exec(timeString);
+  return match ? match[1] : "";
 };
