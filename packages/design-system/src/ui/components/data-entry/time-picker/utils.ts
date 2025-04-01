@@ -508,6 +508,6 @@ export const isValidTimeFromValue = (timeString: string) => {
  */
 export const getHoursAndMinutesFromValue = (timeString: string) => {
   // Captures everything up to the second ':' regardless of the number of digits in the hour
-  const match = timeString.match(/^([^:]+:\d{2,})/);
+  const match = /^([^:]+:\d{2,})/.exec(timeString);
   return match ? match[1] : "";
 };
