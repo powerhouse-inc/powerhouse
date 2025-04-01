@@ -75,6 +75,17 @@ export class SubgraphManager {
     });
   }
 
+  private async waitForServer(server: ApolloServer) {
+    return new Promise((resolve) => {
+      try {
+        server.assertStarted("waitForServer");
+        resolve(true);
+      } catch (e) {
+        setTimeout(() => this.waitForServer(server), 100);
+      }
+    });
+  }
+
   private async setupSubgraphs(router: IRouter) {
     for (const supergraph of Object.keys(this.subgraphs)) {
       const supergraphEndpoints: Record<string, ApolloServer> = {};
@@ -89,10 +100,9 @@ export class SubgraphManager {
         );
         // create and start apollo server
         const server = this.createApolloServer(schema);
-        await server.start();
-
         const path = `/${subgraphConfig.name}`;
-
+        await server.start();
+        await this.waitForServer(server);
         this.setupApolloExpressMiddleware(server, router, path);
         if (supergraph !== "") {
           supergraphEndpoints[path] = server;
