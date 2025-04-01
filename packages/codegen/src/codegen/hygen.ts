@@ -210,6 +210,8 @@ export async function generateSubgraph(
         dir,
         "--name",
         name,
+        "--pascalName",
+        pascalCase(name),
       ],
       { skipFormat },
     );

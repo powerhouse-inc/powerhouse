@@ -6,6 +6,7 @@ force: true
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { type Subgraph } from "@powerhousedao/reactor-api";
+import { toPascalCase } from "document-drive/utils/misc";
 
 const DEFAULT_DRIVE_ID = "powerhouse";
 
@@ -21,9 +22,19 @@ export const getResolvers = (subgraph: Subgraph) => {
         if (!doc) {
           throw new Error("Document not found");
         }
+        const parts = doc.documentType.split("/");
+        const typeName = toPascalCase(parts[parts.length - 1]);
 
-        return { ...doc, state: doc.state.global };
-      }
-    }
+        const response = {
+          id: docId,
+          ...doc,
+          state: doc.state.global,
+          stateJson: JSON.stringify(doc.state.global),
+          __typename: typeName,
+        };
+
+        return response;
+      },
+    },
   });
 };
