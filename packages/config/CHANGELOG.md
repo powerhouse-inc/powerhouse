@@ -1,3 +1,13 @@
+## 1.27.0-dev.1 (2025-04-01)
+
+### 🚀 Features
+
+- **design-system:** add autocomplete option to package manager ([2bc7396d1](https://github.com/powerhouse-inc/powerhouse/commit/2bc7396d1))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 1.27.0-dev.0 (2025-03-31)
 
 ### 🚀 Features
