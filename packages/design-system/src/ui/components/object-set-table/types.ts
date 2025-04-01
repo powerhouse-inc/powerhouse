@@ -79,14 +79,6 @@ export type ValueFormatterFn<T> = (
   context: CellContext<T>,
 ) => string;
 
-type FieldType<T, P extends string> = P extends keyof T
-  ? T[P]
-  : P extends `${infer A}.${infer B}`
-    ? A extends keyof T
-      ? FieldType<T[A], B>
-      : unknown
-    : unknown;
-
 /**
  * A function that renders a cell.
  *
@@ -214,6 +206,13 @@ export interface ColumnDef<T = any> {
   renderCell?: RenderCellFn<T, any>;
 
   /**
+   * Whether the column is editable.
+   *
+   * @default false
+   */
+  editable?: boolean;
+
+  /**
    * The width of the column. It accepts any valid CSS width value.
    *
    * @default "auto"
@@ -243,3 +242,8 @@ export interface ColumnDef<T = any> {
 }
 
 export type DataType = any;
+
+export type TableCellIndex = {
+  row: number;
+  column: number;
+};
