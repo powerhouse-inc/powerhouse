@@ -1398,9 +1398,6 @@ importers:
       '@powerhousedao/scalars':
         specifier: workspace:*
         version: link:../scalars
-      '@prisma/client':
-        specifier: 5.17.0
-        version: 5.17.0(prisma@5.17.0)
       change-case:
         specifier: ^5.4.4
         version: 5.4.4
@@ -21604,6 +21601,7 @@ snapshots:
   '@prisma/client@5.17.0(prisma@5.17.0)':
     optionalDependencies:
       prisma: 5.17.0
+    optional: true
 
   '@prisma/debug@5.17.0': {}
 
