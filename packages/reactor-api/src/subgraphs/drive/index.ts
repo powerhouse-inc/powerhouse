@@ -63,6 +63,7 @@ export class DriveSubgraph extends Subgraph {
     type Mutation {
       registerPullResponderListener(
         filter: InputListenerFilter!
+        listenerId: String
       ): DocumentDrive_Listener
       pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
       acknowledge(
@@ -274,7 +275,7 @@ export class DriveSubgraph extends Subgraph {
     Mutation: {
       registerPullResponderListener: async (
         _: unknown,
-        { filter }: { filter: ListenerFilter },
+        { filter, listenerId }: { filter: ListenerFilter; listenerId?: string },
         ctx: Context,
       ) => {
         this.logger.verbose(
@@ -287,7 +288,7 @@ export class DriveSubgraph extends Subgraph {
         }
 
         // Create the listener and transmitter
-        const uuid = generateUUID();
+        const uuid = listenerId ?? generateUUID();
         const listener: Listener = {
           driveId: ctx.driveId,
           listenerId: uuid,

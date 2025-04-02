@@ -20,8 +20,6 @@ import { childLogger, type ListenerFilter } from "document-drive";
 import { type OperationScope } from "document-model";
 import { debounce } from "./util.js";
 
-const ENABLE_SYNC_DEBUG = false;
-
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
 
@@ -223,12 +221,12 @@ export class ListenerManager implements IListenerManager {
 
     const listenerUpdates: ListenerUpdate[] = [];
 
-    for (const [driveId, drive] of this.listenerStateByDriveId) {
-      for (const [listenerId, listenerState] of drive) {
+    for (const [driveId, listenerStateById] of this.listenerStateByDriveId) {
+      for (const [listenerId, listenerState] of listenerStateById) {
         const transmitter = listenerState.listener.transmitter;
 
         if (!transmitter?.transmit) {
-          this.logger.verbose(`Transmitter not set on listener: ${listenerId}`);
+          // transmit is optional, so we can skip listeners that don't have a transmitter
           continue;
         }
 

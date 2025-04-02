@@ -17,7 +17,7 @@ import {
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
-import { childLogger } from "#utils/logger";
+import { childLogger, ILogger } from "#utils/logger";
 import { generateUUID } from "#utils/misc";
 import { gql } from "graphql-request";
 import {
@@ -59,12 +59,18 @@ interface GraphQLError {
   };
 }
 
-export class PullResponderTransmitter implements IPullResponderTransmitter {
-  private static staticLogger = childLogger([
-    "PullResponderTransmitter",
-    "static",
-  ]);
+// lazily create the static logger so the logging system has time to read
+// configuration values for setting log level
+let _staticLogger: ILogger | undefined;
+const staticLogger = () => {
+  if (!_staticLogger) {
+    _staticLogger = childLogger(["PullResponderTransmitter", "static"]);
+  }
 
+  return _staticLogger;
+};
+
+export class PullResponderTransmitter implements IPullResponderTransmitter {
   private logger = childLogger([
     "PullResponderTransmitter",
     Math.floor(Math.random() * 999).toString(),
@@ -76,6 +82,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
   constructor(listener: Listener, manager: IListenerManager) {
     this.listener = listener;
     this.manager = manager;
+
     this.logger.verbose(`constructor(listener: ${listener.listenerId})`);
   }
 
@@ -153,11 +160,9 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     driveId: string,
     url: string,
     filter: ListenerFilter,
+    listenerId?: string,
   ): Promise<Listener["listenerId"]> {
-    PullResponderTransmitter.staticLogger.verbose(
-      `registerPullResponder(url: ${url})`,
-      filter,
-    );
+    staticLogger().verbose(`registerPullResponder(url: ${url})`, filter);
 
     // graphql request to switchboard
     const result = await requestGraphql<{
@@ -167,13 +172,19 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }>(
       url,
       gql`
-        mutation registerPullResponderListener($filter: InputListenerFilter!) {
-          registerPullResponderListener(filter: $filter) {
+        mutation registerPullResponderListener(
+          $filter: InputListenerFilter!
+          $listenerId: String
+        ) {
+          registerPullResponderListener(
+            filter: $filter
+            listenerId: $listenerId
+          ) {
             listenerId
           }
         }
       `,
-      { filter },
+      { filter, listenerId },
     );
 
     const error = result.errors?.at(0);
@@ -194,7 +205,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     options?: GetStrandsOptions, // TODO add support for since
   ): Promise<StrandUpdate[]> {
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `[SYNC DEBUG] PullResponderTransmitter.pullStrands called for drive: ${driveId}, url: ${url}, listener: ${listenerId}, options: ${JSON.stringify(options || {})}`,
     );
 
@@ -242,14 +253,14 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
     const error = result.errors?.at(0);
     if (error) {
-      this.staticLogger.verbose(
+      staticLogger().verbose(
         `[SYNC DEBUG] Error pulling strands for drive: ${driveId}, listener: ${listenerId}, error: ${JSON.stringify(error)}`,
       );
       throw error;
     }
 
     if (!result.system) {
-      this.staticLogger.verbose(
+      staticLogger().verbose(
         `[SYNC DEBUG] No system data returned when pulling strands for drive: ${driveId}, listener: ${listenerId}`,
       );
       return [];
@@ -263,12 +274,12 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       })),
     }));
 
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `[SYNC DEBUG] PullResponderTransmitter.pullStrands returning ${strands.length} strands for drive: ${driveId}, listener: ${listenerId}`,
     );
 
     if (strands.length > 0) {
-      this.staticLogger.verbose(
+      staticLogger().verbose(
         `[SYNC DEBUG] Strands being returned: ${strands.map((s) => `${s.documentId}:${s.scope}`).join(", ")}`,
       );
     }
@@ -281,7 +292,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     listenerId: string,
     revisions: ListenerRevision[],
   ): Promise<void> {
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `acknowledgeStrands(url: ${url}, listener: ${listenerId})`,
       revisions,
     );
@@ -293,7 +304,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }
 
     if (chunks.length > 1) {
-      this.staticLogger.verbose(
+      staticLogger().verbose(
         `Breaking strand acknowledgement into ${chunks.length} chunks...`,
       );
     }
@@ -351,12 +362,12 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
   ) {
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `executePull(driveId: ${driveId}), trigger:`,
       trigger,
     );
 
-    this.staticLogger.info(
+    staticLogger().info(
       `[SYNC DEBUG] PullResponderTransmitter.executePull starting for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
     );
 
@@ -364,11 +375,12 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
     let strands: StrandUpdate[] | undefined;
     let error: Error | undefined;
+    const listenerId = trigger.data.listenerId;
     try {
       strands = await PullResponderTransmitter.pullStrands(
         driveId,
         url,
-        trigger.data.listenerId,
+        listenerId,
         // since ?
       );
     } catch (e) {
@@ -379,20 +391,17 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
       for (const err of errors) {
         if (err.message === "Listener not found") {
-          this.staticLogger.verbose(
+          staticLogger().verbose(
             `[SYNC DEBUG] Auto-registering pull responder for drive: ${driveId}`,
           );
 
-          // register a new pull responder
-          const listenerId =
-            await PullResponderTransmitter.registerPullResponder(
-              trigger.driveId,
-              url,
-              trigger.filter,
-            );
-
-          // update the trigger with the new listenerId
-          trigger.data.listenerId = listenerId;
+          // register a new pull responder with this id
+          await PullResponderTransmitter.registerPullResponder(
+            trigger.driveId,
+            url,
+            trigger.filter,
+            listenerId,
+          );
 
           // try again
           try {
@@ -403,11 +412,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
               // since ?
             );
 
-            this.staticLogger.verbose(
-              `Successfully auto-registerd and pulled strands for drive: ${driveId}, listenerId: ${listenerId}`,
+            staticLogger().verbose(
+              `Successfully auto-registered and pulled strands for drive: ${driveId}, listenerId: ${listenerId}`,
             );
           } catch (error) {
-            this.staticLogger.error(
+            staticLogger().error(
               `Could not resolve 'Listener not found' error by registering a new pull responder for drive: ${driveId}, listenerId: ${listenerId}: ${error}`,
             );
 
@@ -421,7 +430,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }
 
     if (!strands) {
-      this.staticLogger.error(
+      staticLogger().error(
         `Error pulling strands for drive, and could not auto-register: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
       );
 
@@ -431,14 +440,14 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
     // if there are no new strands then do nothing
     if (!strands.length) {
-      this.staticLogger.verbose(
+      staticLogger().verbose(
         `[SYNC DEBUG] No strands returned in pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
       );
 
       try {
         onRevisions?.([]);
       } catch (error) {
-        this.staticLogger.error(
+        staticLogger().error(
           `Error calling onRevisions for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
         );
 
@@ -449,7 +458,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       return;
     }
 
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `[SYNC DEBUG] Processing ${strands.length} strands in pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
     );
 
@@ -463,7 +472,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         branch: strand.branch,
       }));
 
-      this.staticLogger.verbose(
+      staticLogger().verbose(
         `[SYNC DEBUG] Processing strand for drive: ${strand.driveId}, document: ${strand.documentId}, scope: ${strand.scope}, with ${operations.length} operations`,
       );
 
@@ -478,7 +487,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           throw result.error;
         }
       } catch (e) {
-        this.staticLogger.error(
+        staticLogger().error(
           `Error processing strand for drive: ${strand.driveId}, document: ${strand.documentId}, scope: ${strand.scope}, with ${operations.length} operations: ${e}`,
         );
 
@@ -503,13 +512,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       });
     }
 
-    this.staticLogger.verbose("Processed strands...");
+    staticLogger().verbose("Processed strands...");
 
     // do not let a listener kill the pull loop
     try {
       onRevisions?.(listenerRevisions);
     } catch (error) {
-      this.staticLogger.error(
+      staticLogger().error(
         `Error calling onRevisions for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
       );
 
@@ -517,7 +526,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       onError(error as Error);
     }
 
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `[SYNC DEBUG] Acknowledging ${listenerRevisions.length} strands for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
     );
 
@@ -534,7 +543,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
       success = true;
     } catch (error) {
-      this.staticLogger.error(
+      staticLogger().error(
         `Error acknowledging strands for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
       );
 
@@ -543,18 +552,18 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     }
 
     if (success) {
-      this.staticLogger.verbose(
+      staticLogger().verbose(
         `[SYNC DEBUG] Successfully acknowledged strands for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
       );
     } else {
-      this.staticLogger.error("Failed to acknowledge strands");
+      staticLogger().error("Failed to acknowledge strands");
     }
 
     // let this throw separately
     try {
       onAcknowledge?.(success);
     } catch (error) {
-      this.staticLogger.error(
+      staticLogger().error(
         `Error calling onAcknowledge for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
       );
 
@@ -574,7 +583,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
   ): CancelPullLoop {
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `[SYNC DEBUG] PullResponderTransmitter.setupPull initiated for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
     );
 
@@ -591,7 +600,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       }
     }
 
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `[SYNC DEBUG] Pull interval set to ${loopInterval}ms for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
     );
 
@@ -600,7 +609,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
 
     const executeLoop = async () => {
       while (!isCancelled) {
-        this.staticLogger.verbose(
+        staticLogger().verbose(
           `[SYNC DEBUG] Starting pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
         );
 
@@ -613,27 +622,25 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           onAcknowledge,
         );
 
-        this.staticLogger.verbose(
+        staticLogger().verbose(
           `[SYNC DEBUG] Completed pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}, waiting ${loopInterval}ms for next cycle`,
         );
 
         await new Promise((resolve) => {
-          this.staticLogger.verbose(
-            `Scheduling next pull in ${loopInterval} ms`,
-          );
+          staticLogger().verbose(`Scheduling next pull in ${loopInterval} ms`);
           timeout = setTimeout(resolve, loopInterval) as unknown as number;
         });
       }
     };
 
     executeLoop().catch((error) => {
-      this.staticLogger.error(
+      staticLogger().error(
         `Error in executeLoop for drive: ${driveId}, listenerId: ${trigger.data.listenerId}: ${error}`,
       );
     });
 
     return () => {
-      this.staticLogger.verbose(
+      staticLogger().verbose(
         `[SYNC DEBUG] Cancelling pull loop for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
       );
       isCancelled = true;
@@ -648,7 +655,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     options: Pick<RemoteDriveOptions, "pullInterval" | "pullFilter">,
   ): Promise<PullResponderTrigger> {
-    this.staticLogger.verbose(
+    staticLogger().verbose(
       `createPullResponderTrigger(drive: ${driveId}, url: ${url})`,
     );
 
@@ -659,6 +666,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       branch: ["*"],
       scope: ["*"],
     };
+
     const listenerId = await PullResponderTransmitter.registerPullResponder(
       driveId,
       url,
@@ -676,6 +684,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         interval: pullInterval?.toString() ?? "",
       },
     };
+
     return pullTrigger;
   }
 
