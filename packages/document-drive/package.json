@@ -31,7 +31,7 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "migrate": "prisma generate && prisma db push",
-    "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*.js' dist/",
+    "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prebuild:tsc": "prisma generate --no-hints",
     "prebuild": "prisma generate --no-hints",
     "prelint:nx": "prisma generate --no-hints"
