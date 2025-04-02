@@ -64,7 +64,7 @@ jobs:
             ${{ runner.os }}-modules-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline --no-audit
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Detect affected targets
         run: |
