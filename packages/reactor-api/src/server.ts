@@ -72,6 +72,7 @@ export async function startAPI(
     reactor,
     db,
     analyticsStore,
+    result?.subgraphs ? result.subgraphs : undefined,
   );
   await subgraphManager.init();
 
@@ -84,7 +85,7 @@ export async function startAPI(
   });
 
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
-    for (const [supergraph, subgraphs] of Object.entries(packagedSubgraphs)) {
+    for (const [supergraph, subgraphs] of packagedSubgraphs) {
       subgraphManager.setSupergraph(supergraph, subgraphs);
     }
   });

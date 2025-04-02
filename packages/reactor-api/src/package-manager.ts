@@ -109,16 +109,6 @@ export function getUniqueDocumentModels(
   return Array.from(uniqueModels.values());
 }
 
-function getUniqueSubgraphs(subgraphs: Subgraph[][]): Subgraph[] {
-  const uniqueSubgraphs = new Map<string, Subgraph>();
-  for (const subgraphss of subgraphs) {
-    for (const subgraph of subgraphss) {
-      uniqueSubgraphs.set(subgraph.name, subgraph);
-    }
-  }
-  return Array.from(uniqueSubgraphs.values());
-}
-
 export class PackagesManager implements IPackagesManager {
   private docModelsMap = new Map<string, DocumentModelModule[]>();
   private subgraphsMap = new Map<string, Subgraph[]>();
@@ -126,7 +116,7 @@ export class PackagesManager implements IPackagesManager {
   private configWatcher: StatWatcher | undefined;
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
-    subgraphsChange: [Record<string, Subgraph[]>];
+    subgraphsChange: [Map<string, Subgraph[]>];
     listenersChange: [Record<string, Listener[]>];
   }>();
 
@@ -164,7 +154,7 @@ export class PackagesManager implements IPackagesManager {
       documentModels: getUniqueDocumentModels(
         ...Array.from(packagesMap.values()),
       ),
-      subgraphs: getUniqueSubgraphs(Array.from(subgraphsMap.values())),
+      subgraphs: subgraphsMap,
       listeners: this.getUniqueListeners(Array.from(listenersMap.values())),
     };
   }
@@ -230,7 +220,7 @@ export class PackagesManager implements IPackagesManager {
         console.log("> Removed Subgraphs from:", pkg);
       });
     this.subgraphsMap = subgraphsMap;
-    this.eventEmitter.emit("subgraphsChange", Object.fromEntries(subgraphsMap));
+    this.eventEmitter.emit("subgraphsChange", subgraphsMap);
   }
 
   private updateListenersMap(listenersMap: Map<string, Listener[]>) {
@@ -262,7 +252,7 @@ export class PackagesManager implements IPackagesManager {
   }
 
   onSubgraphsChange(
-    handler: (subgraphs: Record<string, Subgraph[]>) => void,
+    handler: (subgraphs: Map<string, Subgraph[]>) => void,
   ): void {
     this.eventEmitter.on("subgraphsChange", handler);
   }
