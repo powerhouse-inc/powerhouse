@@ -49,7 +49,7 @@ export class DriveSubgraph extends Subgraph {
       preferredEditor: String
     }
 
-    extend type DocumentDriveState {
+    extend type DocumentDrive_DocumentDriveState {
       meta: DriveMeta
     }
 
