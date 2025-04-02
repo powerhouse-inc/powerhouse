@@ -223,3 +223,39 @@ export const normalizeMonthFormat = (dateString: string): string => {
     },
   );
 };
+
+export const parseDateValue = (dateValue: string | number | undefined) => {
+  if (dateValue === undefined) return undefined;
+
+  // if timestamp from storybook
+  if (typeof dateValue === "number") {
+    const date = new Date(dateValue);
+    date.setUTCHours(12, 0, 0, 0); // Use UTC noon
+    return date;
+  }
+
+  // try to parse the date using the different formats
+  for (const format of Object.values(FORMAT_MAPPING)) {
+    try {
+      const parsedDate = parse(dateValue, format, new Date());
+      if (isValid(parsedDate)) {
+        // Create the date in UTC
+        const utcDate = new Date(
+          Date.UTC(
+            parsedDate.getFullYear(),
+            parsedDate.getMonth(),
+            parsedDate.getDate(),
+            12, // Set to noon UTC
+            0,
+            0,
+          ),
+        );
+        return utcDate;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+
+  return undefined;
+};

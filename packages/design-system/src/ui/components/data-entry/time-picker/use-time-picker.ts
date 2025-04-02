@@ -49,7 +49,7 @@ export const useTimePicker = ({
   includeContinent = false,
 }: TimePickerFieldProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const is12HourFormat = timeFormat.includes("a");
+  const is12HourFormat = timeFormat.includes("a") || timeFormat.includes("A");
   const [inputValue, setInputValue] = useState(
     getInputValue(value ?? defaultValue),
   );

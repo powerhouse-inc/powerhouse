@@ -138,7 +138,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                "truncate text-xs leading-5 text-gray-500 hover:underline dark:text-gray-600",
+                "truncate text-xs leading-5 text-blue-900 hover:underline",
               )}
             >
               {path.text}

@@ -1,35 +1,60 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import {
-  fetchOptions,
-  fetchSelectedOption,
-  mockedOptions,
-} from "../../../ui/components/data-entry/aid-input/mocks.js";
-import { withForm } from "../../lib/decorators.js";
-import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "../../lib/storybook-arg-types.js";
-import { AIDField } from "./aid-field.js";
+} from "../../../../scalars/lib/storybook-arg-types.js";
+import { AIDInput } from "./aid-input.js";
+import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
 
-const meta: Meta<typeof AIDField> = {
-  title: "Document Engineering/Scalars/AID Field",
-  component: AIDField,
+/**
+ * The `AIDInput` component provides an input field for Agent IDs (typically DIDs).
+ * It supports multiple configuration properties like:
+ * - label
+ * - description
+ * - autoComplete
+ * - fetchOptionsCallback
+ * - fetchSelectedOptionCallback
+ * - previewPlaceholder
+ * - variant
+ *
+ * Features include:
+ * - Multiple display variants for autocomplete options
+ * - Copy paste support
+ * - Async and sync options fetching
+ *
+ * > **Note:** This component does not have built-in validation. If you need built-in validation
+ * > you can use the [AIDField](?path=/docs/document-engineering-scalars-aid-field--readme)
+ * > component.
+ */
+
+const meta: Meta<typeof AIDInput> = {
+  title: "Document Engineering/Data Entry/AID Input",
+  component: AIDInput,
   decorators: [
-    withForm,
     (Story) => (
-      <div style={{ maxWidth: "280px", margin: "1rem auto 0" }}>
+      <div style={{ width: "280px", margin: "1rem auto 0" }}>
         <Story />
       </div>
     ),
   ],
   parameters: {
     layout: "padded",
+    chromatic: {
+      disableSnapshot: true,
+    },
   },
   tags: ["autodocs"],
   argTypes: {
     ...getDefaultArgTypes(),
+    ...getValidationArgTypes({
+      enabledArgTypes: {
+        validators: false,
+        showErrorOnBlur: false,
+        showErrorOnChange: false,
+      },
+    }),
     ...PrebuiltArgTypes.placeholder,
     ...PrebuiltArgTypes.maxLength,
 
@@ -136,21 +161,19 @@ const meta: Meta<typeof AIDField> = {
       },
       if: { arg: "autoComplete", neq: false },
     },
-
-    ...getValidationArgTypes(),
   },
   args: {
-    name: "aid-field",
+    name: "aid-input",
   },
-} satisfies Meta<typeof AIDField>;
+} satisfies Meta<typeof AIDInput>;
 
 export default meta;
 
-type Story = StoryObj<typeof AIDField>;
+type Story = StoryObj<typeof AIDInput>;
 
 export const Default: Story = {
   args: {
-    label: "AID field",
+    label: "AID input",
     placeholder: "did:ethr:",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
@@ -159,7 +182,7 @@ export const Default: Story = {
 
 export const Empty: Story = {
   args: {
-    label: "AID field",
+    label: "AID input",
     placeholder: "did:ethr:",
     isOpenByDefault: true,
     defaultValue: "did:ethr:",
@@ -171,7 +194,7 @@ export const Empty: Story = {
 
 export const Open: Story = {
   args: {
-    label: "AID field",
+    label: "AID input",
     placeholder: "did:ethr:",
     isOpenByDefault: true,
     defaultValue: "did:ethr:",
@@ -184,7 +207,7 @@ export const Open: Story = {
 
 export const Filled: Story = {
   args: {
-    label: "AID field",
+    label: "AID input",
     placeholder: "did:ethr:",
     defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
