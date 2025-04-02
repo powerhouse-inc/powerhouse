@@ -1,5 +1,5 @@
 import {
-  ListenerFilter,
+  type ListenerFilter,
   type PullResponderTriggerData,
   type Trigger,
 } from "#drive-document-model/gen/types";

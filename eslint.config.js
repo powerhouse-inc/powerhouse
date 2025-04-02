@@ -48,6 +48,7 @@ export default tseslint.config(
       "apps/connect/src/vite-env.d.ts",
       "**/*.config.*",
       "clis/ph-cli/.ph/",
+      "packages/document-drive/src/storage/prisma/client/",
     ],
   },
   {

@@ -50,6 +50,15 @@ export interface IPullResponderTransmitter extends ITransmitter {
 
 const MAX_REVISIONS_PER_ACK = 100;
 
+interface GraphQLError {
+  message: string;
+  response?: {
+    errors?: Array<{
+      message: string;
+    }>;
+  };
+}
+
 export class PullResponderTransmitter implements IPullResponderTransmitter {
   private static staticLogger = childLogger([
     "PullResponderTransmitter",
@@ -365,9 +374,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     } catch (e) {
       error = e as Error;
 
-      const errors = (error as any).response.errors;
-      for (const error of errors) {
-        if (error.message === "Listener not found") {
+      const graphqlError = error as GraphQLError;
+      const errors = graphqlError.response?.errors ?? [];
+
+      for (const err of errors) {
+        if (err.message === "Listener not found") {
           this.staticLogger.verbose(
             `[SYNC DEBUG] Auto-registering pull responder for drive: ${driveId}`,
           );
