@@ -114,6 +114,17 @@ jobs:
             echo "affected=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - uses: actions/cache@v4
         if: steps.skipcheck.outputs.affected == 'true'
         with:
@@ -134,7 +145,7 @@ jobs:
         if: failure() && steps.skipcheck.outputs.affected == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: failed-targets
+          name: failed-targets-${{ matrix.target }}
           path: failed-targets.txt
           if-no-files-found: ignore
 
@@ -147,7 +158,6 @@ jobs:
       - name: Download failure data
         uses: actions/download-artifact@v4
         with:
-          name: failed-targets
           path: ./failure-data
         continue-on-error: true
 
@@ -163,15 +173,12 @@ jobs:
             MENTION_STRING="<@${DISCORD_USER}> "
           fi
 
-          FAILED_JOBS_STRING=$(cat ./failure-data/failed-targets.txt 2>/dev/null | paste -sd ', ' -)
-          if [ -z "$FAILED_JOBS_STRING" ]; then
-            FAILED_JOBS_STRING="Unknown (artifact not found)"
-          fi
+          FAILED_TARGETS=$(cat failure-data/* 2>/dev/null | sort | uniq | paste -sd ', ' -)
 
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
               "title": "⚠️ Job Failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed targets:** [`'"$FAILED_JOBS_STRING"'`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed targets:** [`'"$FAILED_TARGETS"'`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
           }'
