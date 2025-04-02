@@ -1,0 +1,153 @@
+name: Check Commit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - "packages/document-drive/**"
+
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize]
+    paths-ignore:
+      - "packages/document-drive/**"
+
+env:
+  NX_ISOLATE_PLUGINS: false
+  PNPM_VERSION: 9
+  NODE_VERSION: 22
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      cache-key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Nx SHAs
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Install Pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache node_modules
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+  .job-template: &job-template
+    runs-on: ubuntu-24.04
+    needs: setup
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+
+  build:
+    <<: *job-template
+    name: Build
+    steps:
+      - *job-template
+      - name: Build affected
+        run: pnpm nx affected --target=build --exclude=document-drive
+
+  storybook:
+    <<: *job-template
+    name: Storybook
+    steps:
+      - *job-template
+      - name: Build Storybook
+        run: pnpm nx affected --target=build-storybook --exclude=document-drive
+
+  lint:
+    <<: *job-template
+    name: Lint
+    steps:
+      - *job-template
+      - name: Lint
+        run: pnpm nx affected --target=lint:nx --exclude=document-drive
+
+  test:
+    <<: *job-template
+    name: Test
+    steps:
+      - *job-template
+      - name: Test
+        run: pnpm nx affected --target=test --exclude=document-drive
+
+  notify-discord:
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [build, storybook, lint, test]
+    steps:
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
+        run: |
+          DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
+
+          MENTION_STRING=""
+          if [ ! -z "$DISCORD_USER" ]; then
+            MENTION_STRING="<@${DISCORD_USER}> "
+          fi
+
+          # Get all failed jobs
+          FAILED_JOBS=()
+          if [ "${{ needs.build.result }}" == "failure" ]; then
+            FAILED_JOBS+=("Build")
+          fi
+          if [ "${{ needs.storybook.result }}" == "failure" ]; then
+            FAILED_JOBS+=("Storybook")
+          fi
+          if [ "${{ needs.lint.result }}" == "failure" ]; then
+            FAILED_JOBS+=("Lint")
+          fi
+          if [ "${{ needs.test.result }}" == "failure" ]; then
+            FAILED_JOBS+=("Test")
+          fi
+
+          # Join failed jobs with commas
+          FAILED_JOBS_STRING=$(IFS=", "; echo "${FAILED_JOBS[*]}")
+
+          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
+            "embeds": [{
+              "title": "⚠️ Jobs Failed: '"$FAILED_JOBS_STRING"'",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed jobs:** [`'"$FAILED_JOBS_STRING"'`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 16711680
+            }]
+          }'
