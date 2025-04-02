@@ -11,7 +11,7 @@ export const readManifest = () => {
 };
 
 import { getConfig } from "@powerhousedao/config";
-import { type Subgraph } from "@powerhousedao/reactor-api";
+import { type SubgraphClass } from "@powerhousedao/reactor-api";
 import { type Listener } from "document-drive/server/types";
 import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
@@ -68,12 +68,19 @@ async function loadPackagesDocumentModels(packages: string[]) {
 }
 
 async function loadPackagesSubgraphs(packages: string[]) {
-  const loadedPackages = new Map<string, Subgraph[]>();
+  const loadedPackages = new Map<string, SubgraphClass[]>();
   for (const pkg of packages) {
-    const pkgModule = (await loadDependency(pkg, "subgraphs")) as Subgraph[];
+    const pkgModule = (await loadDependency(pkg, "subgraphs")) as Record<
+      string,
+      Record<string, SubgraphClass>
+    >;
+
+    const subgraphs = Object.values(pkgModule).map((subgraph) => {
+      return Object.values(subgraph);
+    });
     if (pkgModule) {
       console.log(`  ➜  Loaded Subgraphs from: ${pkg}`);
-      loadedPackages.set(pkg.replaceAll("@", ""), pkgModule);
+      loadedPackages.set(pkg.replaceAll("@", ""), subgraphs.flat());
     } else {
       console.warn(`  ➜  No Subgraphs found: ${pkg}`);
     }
@@ -111,12 +118,12 @@ export function getUniqueDocumentModels(
 
 export class PackagesManager implements IPackagesManager {
   private docModelsMap = new Map<string, DocumentModelModule[]>();
-  private subgraphsMap = new Map<string, Subgraph[]>();
+  private subgraphsMap = new Map<string, SubgraphClass[]>();
   private listenerMap = new Map<string, Listener[]>();
   private configWatcher: StatWatcher | undefined;
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
-    subgraphsChange: [Map<string, Subgraph[]>];
+    subgraphsChange: [Map<string, SubgraphClass[]>];
     listenersChange: [Record<string, Listener[]>];
   }>();
 
@@ -211,7 +218,7 @@ export class PackagesManager implements IPackagesManager {
     );
   }
 
-  private updateSubgraphsMap(subgraphsMap: Map<string, Subgraph[]>) {
+  private updateSubgraphsMap(subgraphsMap: Map<string, SubgraphClass[]>) {
     const oldPackages = Array.from(this.subgraphsMap.keys());
     const newPackages = Array.from(subgraphsMap.keys());
     oldPackages
@@ -252,7 +259,7 @@ export class PackagesManager implements IPackagesManager {
   }
 
   onSubgraphsChange(
-    handler: (subgraphs: Map<string, Subgraph[]>) => void,
+    handler: (subgraphs: Map<string, SubgraphClass[]>) => void,
   ): void {
     this.eventEmitter.on("subgraphsChange", handler);
   }

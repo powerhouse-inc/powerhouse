@@ -17,7 +17,7 @@ import { AuthSubgraph } from "./auth/index.js";
 import { DriveSubgraph } from "./drive/index.js";
 import { type Subgraph, type SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
-import { type Context, type ISubgraph } from "./types.js";
+import { type Context } from "./types.js";
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
@@ -208,9 +208,9 @@ export class SubgraphManager {
     this.reactorRouter = router;
   }
 
-  #getLocalSubgraphConfig(subgraphName: string): ISubgraph | undefined {
+  #getLocalSubgraphConfig(subgraphName: string): Subgraph | undefined {
     for (const [_, subgraphs] of this.subgraphs) {
-      const entry = subgraphs.find((it: ISubgraph) => it.name === subgraphName);
+      const entry = subgraphs.find((it) => it.name === subgraphName);
       if (entry) return entry;
     }
     return undefined;

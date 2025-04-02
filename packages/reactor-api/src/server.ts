@@ -72,9 +72,16 @@ export async function startAPI(
     reactor,
     db,
     analyticsStore,
-    result?.subgraphs ? result.subgraphs : undefined,
   );
   await subgraphManager.init();
+
+  if (result?.subgraphs) {
+    for (const [supergraph, subgraphs] of result.subgraphs) {
+      for (const subgraph of subgraphs) {
+        subgraphManager.registerSubgraph(subgraph, supergraph);
+      }
+    }
+  }
 
   pkgManager.onDocumentModelsChange((documentModels) => {
     const uniqueModels = getUniqueDocumentModels(
@@ -86,7 +93,9 @@ export async function startAPI(
 
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
     for (const [supergraph, subgraphs] of packagedSubgraphs) {
-      subgraphManager.setSupergraph(supergraph, subgraphs);
+      for (const subgraph of subgraphs) {
+        subgraphManager.registerSubgraph(subgraph, supergraph);
+      }
     }
   });
 
