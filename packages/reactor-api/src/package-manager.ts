@@ -33,12 +33,22 @@ interface PowerhouseConfig {
   packages?: PackageConfig[];
 }
 
-export async function loadDependency(packageName: string, subPath: string) {
+export async function loadDependency(
+  packageName: string,
+  subPath: string,
+): Promise<unknown> {
   try {
-    const module = (await import(
-      /* @vite-ignore */ `${packageName}/${subPath}`
-    )) as unknown;
-    return module;
+    // First try to import the package directly
+    const module = (await import(packageName)) as Record<string, unknown>;
+
+    // If subPath exists in the module, return it
+    if (subPath in module) {
+      return module[subPath];
+    }
+
+    // If not, try importing with the subpath
+    const fullPath = `${packageName}/${subPath}`;
+    return await import(fullPath);
   } catch (e) {
     console.error("Error loading dependency", packageName, subPath, e);
     return null;
