@@ -27,7 +27,6 @@ import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
-import { PackagesManager } from "./packages.js";
 
 type FSError = {
   errno: number;
@@ -157,17 +156,6 @@ const startServer = async (
     );
   }
 
-  // Load packages from package manager
-  const packagesManager = new PackagesManager(
-    packages?.length
-      ? { packages }
-      : configFile
-        ? { configFile }
-        : { packages: [] },
-  );
-  const packageDocModels = (await packagesManager.loadDocumentModels()) ?? [];
-  docModels = joinDocumentModelModules(docModels, packageDocModels);
-
   // start document drive server with all available document models & storage
   const cache = new InMemoryCache();
   const driveServer = new ReactorBuilder(docModels)
@@ -178,12 +166,17 @@ const startServer = async (
   // init drive server
   await driveServer.initialize();
   const driveUrl = await addDefaultDrive(driveServer, drive, serverPort);
-
   // start api
+  const packageOptions = packages?.length
+    ? { packages }
+    : configFile
+      ? { configFile }
+      : { packages: [] };
   const api = await startAPI(driveServer, {
     port: serverPort,
     dbPath,
     https: options?.https,
+    ...packageOptions,
   });
 
   if (vite) {
