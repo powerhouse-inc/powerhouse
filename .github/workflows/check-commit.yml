@@ -79,6 +79,7 @@ jobs:
           if [ -f targets.txt ]; then
             jq -R . targets.txt | jq -s . > targets.json
           fi
+        run: cat targets.json
 
       - name: Upload affected targets list
         uses: actions/upload-artifact@v4
@@ -107,10 +108,11 @@ jobs:
       - name: Check if ${{ matrix.target }} is affected
         id: skipcheck
         run: |
-          if jq -e 'index("${{ matrix.target }}")' targets.json > /dev/null; then
+          TARGET="${{ matrix.target }}"
+          if jq -e --arg target "$TARGET" 'index($target)' targets.json > /dev/null; then
             echo "affected=true" >> "$GITHUB_OUTPUT"
           else
-            echo "❌ No changes for ${{ matrix.target }}, skipping."
+            echo "❌ No changes for $TARGET, skipping."
             echo "affected=false" >> "$GITHUB_OUTPUT"
           fi
 
