@@ -38,15 +38,6 @@ export async function loadDependency(
   subPath: string,
 ): Promise<unknown> {
   try {
-    // First try to import the package directly
-    const module = (await import(packageName)) as Record<string, unknown>;
-
-    // If subPath exists in the module, return it
-    if (subPath in module) {
-      return module[subPath];
-    }
-
-    // If not, try importing with the subpath
     const fullPath = `${packageName}/${subPath}`;
     return await import(fullPath);
   } catch (e) {
