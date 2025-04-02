@@ -70,7 +70,7 @@ jobs:
         run: |
           echo "[]" > targets.json
           for target in build lint:nx test build-storybook; do
-            affected=$(pnpm nx print-affected --target=$target --select=projects)
+            affected=$(pnpm nx show projects --affected --target=$target)
             if [ -n "$affected" ]; then
               echo "$target" >> targets.txt
             fi
