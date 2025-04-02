@@ -1,13 +1,5 @@
 #!/usr/bin/env node
-import {
-  KnexAnalyticsStore,
-  KnexQueryExecutor,
-} from "@powerhousedao/analytics-engine-knex";
-import {
-  type Subgraph,
-  SubgraphManager,
-  getDbClient,
-} from "@powerhousedao/reactor-api";
+import { startAPI } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
@@ -66,8 +58,6 @@ const main = async () => {
     const storageFactory = new PrismaStorageFactory(dbUrl, redisCache);
     const storage = storageFactory.build();
 
-    const knex = getDbClient(dbUrl);
-
     const reactor = new ReactorBuilder([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
@@ -79,36 +69,14 @@ const main = async () => {
 
     // init drive server
     await reactor.initialize();
-    const analyticsStore = new KnexAnalyticsStore({
-      executor: new KnexQueryExecutor(),
-      knex,
+
+    // Start the API with the reactor and options
+    await startAPI(reactor, {
+      express: app,
+      port: serverPort,
+      dbPath: dbUrl,
+      packages,
     });
-    const subgraphManager = new SubgraphManager(
-      process.env.BASE_PATH || "/",
-      app,
-      reactor,
-      knex,
-      // @ts-expect-error todo update analytics store to use IAnalyticsStore
-      analyticsStore,
-    );
-    // init router
-    await subgraphManager.init();
-
-    for (const subgraph of subgraphs) {
-      await subgraphManager.registerSubgraph(
-        subgraph as unknown as typeof Subgraph,
-      );
-    }
-
-    // // load switchboard-gui
-    // app.use(
-    //   express.static(
-    //     path.join(
-    //       __dirname,
-    //       "../node_modules/@powerhousedao/switchboard-gui/dist",
-    //     ),
-    //   ),
-    // );
 
     // start http server
     httpServer.listen({ port: serverPort }, () => {
