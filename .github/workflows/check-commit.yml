@@ -79,7 +79,7 @@ jobs:
           if [ -f targets.txt ]; then
             jq -R . targets.txt | jq -s . > targets.json
           fi
-        run: cat targets.json
+          cat targets.json
 
       - name: Upload affected targets list
         uses: actions/upload-artifact@v4
