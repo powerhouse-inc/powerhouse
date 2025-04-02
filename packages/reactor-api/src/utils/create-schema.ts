@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { type Context } from "#subgraphs/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";

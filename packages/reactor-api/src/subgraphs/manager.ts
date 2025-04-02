@@ -56,15 +56,50 @@ export class SubgraphManager {
     );
   }
 
+  async registerSubgraph(subgraph: SubgraphClass, supergraph = "", path = "") {
+    const subgraphInstance = new subgraph({
+      operationalStore: this.operationalStore,
+      analyticsStore: this.analyticsStore,
+      reactor: this.reactor,
+      subgraphManager: this,
+      path,
+    });
+    await subgraphInstance.onSetup();
+    if (!this.subgraphs[supergraph]) {
+      if (supergraph !== "") {
+        console.log(`> Created /${supergraph} supergraph `);
+      }
+      this.subgraphs[supergraph] = [];
+    }
+    this.subgraphs[supergraph].push(subgraphInstance);
+    console.log(
+      `> Registered ${supergraph ? "/" + supergraph : ""}${this.path.endsWith("/") ? this.path : this.path + "/"}${subgraphInstance.name} subgraph.`,
+    );
+    await this.updateRouter();
+  }
+
   async updateRouter() {
     const newRouter = Router();
     newRouter.use(cors());
     newRouter.use(bodyParser.json());
-    await this.setupSubgraphs(newRouter);
+    await this.#setupSubgraphs(newRouter);
     this.reactorRouter = newRouter;
   }
 
-  private createApolloServer(schema: GraphQLSchema) {
+  getAdditionalContextFields = () => {
+    return this.contextFields;
+  };
+
+  setAdditionalContextFields(fields: Record<string, any>) {
+    this.contextFields = { ...this.contextFields, ...fields };
+  }
+
+  setSupergraph(supergraph: string, subgraphs: Subgraph[]) {
+    this.subgraphs[supergraph] = subgraphs;
+    this.updateRouter();
+  }
+
+  #createApolloServer(schema: GraphQLSchema) {
     return new ApolloServer({
       schema,
       introspection: true,
@@ -75,18 +110,18 @@ export class SubgraphManager {
     });
   }
 
-  private async waitForServer(server: ApolloServer) {
+  async #waitForServer(server: ApolloServer) {
     return new Promise((resolve) => {
       try {
         server.assertStarted("waitForServer");
         resolve(true);
       } catch (e) {
-        setTimeout(() => this.waitForServer(server), 100);
+        setTimeout(() => this.#waitForServer(server), 100);
       }
     });
   }
 
-  private async setupSubgraphs(router: IRouter) {
+  async #setupSubgraphs(router: IRouter) {
     for (const supergraph of Object.keys(this.subgraphs)) {
       const supergraphEndpoints: Record<string, ApolloServer> = {};
       for (const subgraph of this.subgraphs[supergraph]) {
@@ -99,11 +134,11 @@ export class SubgraphManager {
           subgraphConfig.typeDefs,
         );
         // create and start apollo server
-        const server = this.createApolloServer(schema);
-        const path = `/${subgraphConfig.name}`;
+        const server = this.#createApolloServer(schema);
+        const path = `${subgraph.path ? "/" + subgraph.path : ""}/${subgraphConfig.name}`;
         await server.start();
-        await this.waitForServer(server);
-        this.setupApolloExpressMiddleware(server, router, path);
+        await this.#waitForServer(server);
+        this.#setupApolloExpressMiddleware(server, router, path);
         if (supergraph !== "") {
           supergraphEndpoints[path] = server;
         }
@@ -111,17 +146,17 @@ export class SubgraphManager {
 
       if (Object.keys(supergraphEndpoints).length > 0) {
         const supergraphServer =
-          await this.createApolloGateway(supergraphEndpoints);
+          await this.#createApolloGateway(supergraphEndpoints);
         if (supergraphServer) {
           const path = `/${supergraph}`;
-          this.setupApolloExpressMiddleware(supergraphServer, router, path);
+          this.#setupApolloExpressMiddleware(supergraphServer, router, path);
           console.log(`> Updated Apollo Gateway at ${path}`);
         }
       }
     }
   }
 
-  private async createApolloGateway(endpoints: Record<string, ApolloServer>) {
+  async #createApolloGateway(endpoints: Record<string, ApolloServer>) {
     try {
       const gateway = new ApolloGateway({
         supergraphSdl: new IntrospectAndCompose({
@@ -151,7 +186,7 @@ export class SubgraphManager {
     }
   }
 
-  private setupApolloExpressMiddleware(
+  #setupApolloExpressMiddleware(
     server: ApolloServer,
     router: IRouter,
     path: string,
@@ -173,27 +208,6 @@ export class SubgraphManager {
     this.reactorRouter = router;
   }
 
-  async registerSubgraph(subgraph: SubgraphClass, supergraph = "") {
-    const subgraphInstance = new subgraph({
-      operationalStore: this.operationalStore,
-      analyticsStore: this.analyticsStore,
-      reactor: this.reactor,
-      subgraphManager: this,
-    });
-    await subgraphInstance.onSetup();
-    if (!this.subgraphs[supergraph]) {
-      if (supergraph !== "") {
-        console.log(`> Created /${supergraph} supergraph `);
-      }
-      this.subgraphs[supergraph] = [];
-    }
-    this.subgraphs[supergraph].push(subgraphInstance);
-    console.log(
-      `> Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${subgraphInstance.name} subgraph.`,
-    );
-    await this.updateRouter();
-  }
-
   #getLocalSubgraphConfig(subgraphName: string) {
     let entry;
     for (const supergraph of Object.keys(this.subgraphs)) {
@@ -201,13 +215,5 @@ export class SubgraphManager {
       if (entry) break;
     }
     return entry;
-  }
-
-  getAdditionalContextFields = () => {
-    return this.contextFields;
-  };
-
-  setAdditionalContextFields(fields: Record<string, any>) {
-    this.contextFields = { ...this.contextFields, ...fields };
   }
 }

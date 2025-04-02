@@ -1,3 +1,4 @@
+import { getUniqueDocumentModels, PackagesManager } from "#package-manager.js";
 import { SubgraphManager } from "#subgraphs/manager.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
@@ -21,6 +22,8 @@ type Options = {
   port?: number;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
+  configFile?: string;
+  packages?: string[];
   https?:
     | {
         keyPath: string;
@@ -43,6 +46,26 @@ export async function startAPI(
     executor: new KnexQueryExecutor(),
     knex: db,
   }) as unknown as IAnalyticsStore;
+
+  const pkgManager = new PackagesManager(
+    options.configFile
+      ? {
+          configFile: options.configFile,
+        }
+      : {
+          packages: options.packages ?? [],
+        },
+  );
+  const result = await pkgManager.init();
+  const documentModels = result?.documentModels ?? [];
+
+  reactor.setDocumentModelModules(
+    getUniqueDocumentModels([
+      ...reactor.getDocumentModelModules(),
+      ...documentModels,
+    ]),
+  );
+
   const subgraphManager = new SubgraphManager(
     "/",
     app,
@@ -51,6 +74,41 @@ export async function startAPI(
     analyticsStore,
   );
   await subgraphManager.init();
+
+  pkgManager.onDocumentModelsChange((documentModels) => {
+    const uniqueModels = getUniqueDocumentModels(
+      Object.values(documentModels).flat(),
+    );
+    reactor.setDocumentModelModules(uniqueModels);
+    subgraphManager.updateRouter();
+  });
+
+  pkgManager.onSubgraphsChange((packagedSubgraphs) => {
+    for (const [supergraph, subgraphs] of Object.entries(packagedSubgraphs)) {
+      subgraphManager.setSupergraph(supergraph, subgraphs);
+    }
+  });
+
+  pkgManager.onListenersChange((listeners) => {
+    Object.entries(listeners).forEach(([packageName, packageListeners]) => {
+      packageListeners.forEach((listener) => {
+        if (!listener.driveId) {
+          console.warn(
+            `Skipping listener ${listener.listenerId} from package ${packageName} - missing driveId`,
+          );
+          return;
+        }
+        reactor.listeners
+          .setListener(listener.driveId, listener)
+          .catch((error) => {
+            console.error(
+              `Failed to set listener ${listener.listenerId} for drive ${listener.driveId}:`,
+              error,
+            );
+          });
+      });
+    });
+  });
 
   if (options.https) {
     const currentDir = process.cwd();
