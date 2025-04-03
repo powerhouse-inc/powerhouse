@@ -11,7 +11,8 @@
     "ph": "dist/src/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    ".npmrc"
   ],
   "scripts": {
     "build": "tsc --build",
