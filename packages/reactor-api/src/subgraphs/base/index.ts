@@ -1,12 +1,13 @@
-import { SubgraphManager } from "#subgraphs/manager.js";
-import { ISubgraph, SubgraphArgs } from "#subgraphs/types.js";
-import { Db } from "#types.js";
-import { IDocumentDriveServer } from "document-drive";
-import { DocumentNode } from "graphql";
+import { type SubgraphManager } from "#subgraphs/manager.js";
+import { type ISubgraph, type SubgraphArgs } from "#subgraphs/types.js";
+import { type Db } from "#types.js";
+import { type IDocumentDriveServer } from "document-drive";
+import { type DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 
 export class Subgraph implements ISubgraph {
   name = "example";
+  path = "";
   resolvers: Record<string, any> = {
     Query: {
       hello: () => this.name,

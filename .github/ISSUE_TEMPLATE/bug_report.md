@@ -17,6 +17,9 @@ Steps to reproduce the behavior:
 3. Scroll down to '....'
 4. See error
 
+**Resulting behavior**
+A clear and concise description of what happens, the bug itself. 
+
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 

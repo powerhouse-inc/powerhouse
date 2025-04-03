@@ -1,26 +1,30 @@
 import { Subgraph } from "#subgraphs/base/index.js";
-import { Context, SubgraphArgs } from "#subgraphs/types.js";
+import { type Context, type SubgraphArgs } from "#subgraphs/types.js";
 import {
-  InternalStrandUpdate,
+  type InternalStrandUpdate,
   processAcknowledge,
   processGetStrands,
   processPushUpdate,
 } from "#sync/utils.js";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { pascalCase } from "change-case";
 import {
   childLogger,
-  FileNode,
+  type FileNode,
   generateUUID,
-  ListenerFilter,
-  ListenerRevision,
+  type ListenerFilter,
+  type ListenerRevision,
   PullResponderTransmitter,
-  StrandUpdateGraphQL
+  type StrandUpdateGraphQL,
 } from "document-drive";
-import { Listener } from "document-drive/server/types";
-import { DocumentModelInput, Operation, PHDocument } from "document-model";
+import { type Listener } from "document-drive/server/types";
+import {
+  type DocumentModelInput,
+  type Operation,
+  type PHDocument,
+} from "document-model";
 import { gql } from "graphql-tag";
-import { Asset } from "./temp-hack-rwa-type-defs.js";
+import { type Asset } from "./temp-hack-rwa-type-defs.js";
 
 const driveKindTypeNames: Record<string, string> = {
   file: "DocumentDrive_FileNode",
@@ -59,6 +63,7 @@ export class DriveSubgraph extends Subgraph {
     type Mutation {
       registerPullResponderListener(
         filter: InputListenerFilter!
+        listenerId: String
       ): DocumentDrive_Listener
       pushUpdates(strands: [InputStrandUpdate!]): [ListenerRevision!]!
       acknowledge(
@@ -252,6 +257,7 @@ export class DriveSubgraph extends Subgraph {
           id,
           revision: document.revision.global,
           state: document.state.global,
+          stateJSON: JSON.stringify(document.state.global),
           operations: document.operations.global.map((op: Operation) => ({
             ...op,
             inputText:
@@ -269,7 +275,7 @@ export class DriveSubgraph extends Subgraph {
     Mutation: {
       registerPullResponderListener: async (
         _: unknown,
-        { filter }: { filter: ListenerFilter },
+        { filter, listenerId }: { filter: ListenerFilter; listenerId?: string },
         ctx: Context,
       ) => {
         this.logger.verbose(
@@ -282,8 +288,8 @@ export class DriveSubgraph extends Subgraph {
         }
 
         // Create the listener and transmitter
-        const uuid = generateUUID();
-        const listener:Listener = {
+        const uuid = listenerId ?? generateUUID();
+        const listener: Listener = {
           driveId: ctx.driveId,
           listenerId: uuid,
           block: false,
@@ -296,11 +302,14 @@ export class DriveSubgraph extends Subgraph {
             transmitterType: "PullResponder",
           },
         };
-        
+
         // TODO: circular reference
         // TODO: once we have DI, remove this and pass around
         const listenerManager = this.reactor.listeners;
-        listener.transmitter = new PullResponderTransmitter(listener, listenerManager);
+        listener.transmitter = new PullResponderTransmitter(
+          listener,
+          listenerManager,
+        );
 
         // set the listener on the manager directly (bypassing operations)
         try {
@@ -309,7 +318,7 @@ export class DriveSubgraph extends Subgraph {
           this.logger.error(`Failed to register ephemeral listener: ${error}`);
           throw new Error(`Listener couldn't be registered: ${error}`);
         }
-        
+
         // for backwards compatibility: return everything but the transmitter
         return {
           driveId: listener.driveId,

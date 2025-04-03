@@ -8,9 +8,10 @@ async function startInspect(packageName: string, options: InspectOptions) {
   return startInspect(packageName, options);
 }
 
-export const inspect: CommandActionType<
-  [string, InspectOptions]
-> = async (packageName, options) => {
+export const inspect: CommandActionType<[string, InspectOptions]> = async (
+  packageName,
+  options,
+) => {
   return startInspect(packageName, options);
 };
 

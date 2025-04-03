@@ -11,7 +11,7 @@ import {
     ReactorBuilder,
     type RemoteDriveOptions,
 } from 'document-drive';
-import { Listener } from 'document-drive/server/types';
+import { type Listener } from 'document-drive/server/types';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import {
     type DocumentAction,

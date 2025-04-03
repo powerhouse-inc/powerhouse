@@ -1,22 +1,27 @@
-import { PrismaClient } from "@prisma/client";
 import { DocumentModelModule } from "document-model";
 import { beforeAll, describe, it } from "vitest";
-import type { IDocumentDriveServer } from "../../src/server/base.js";
 import { ReactorBuilder } from "../../src";
+import InMemoryCache from "../../src/cache/memory.js";
+import type { IDocumentDriveServer } from "../../src/server/base.js";
 import { PrismaStorage } from "../../src/storage/prisma.js";
+import { PrismaClient } from "../src/storage/prisma/client";
 
 const prismaClient = new PrismaClient();
+const cache = new InMemoryCache();
 
 describe("Document operations", () => {
   const documentModels = [
     ...Object.values(DocumentModelsLibs),
   ] as DocumentModelModule[];
 
-  const storage = new PrismaStorage(prismaClient);
+  const storage = new PrismaStorage(prismaClient, cache);
   let server: IDocumentDriveServer;
 
   beforeAll(async () => {
-    server = new ReactorBuilder(documentModels).withStorage(storage).build();
+    server = new ReactorBuilder(documentModels)
+      .withStorage(storage)
+      .withCache(cache)
+      .build();
     await server.initialize();
     if ((await server.getDrives()).includes("test")) {
       await server.deleteDrive("test");

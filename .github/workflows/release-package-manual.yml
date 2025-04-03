@@ -11,6 +11,7 @@ on:
 
 env:
   NX_ISOLATE_PLUGINS: false
+  PREID: ${{ inputs.tag != 'latest' && inputs.tag ||  ''  }}
 
 jobs:
   test:
@@ -44,7 +45,7 @@ jobs:
         shell: bash
 
       - name: Build packages and studio
-        run: pnpm nx run-many --target='build' --all
+        run: pnpm nx run-many --target='build' --all --no-cloud
         shell: bash
 
       - name: Print Environment Info
@@ -58,15 +59,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: pnpm nx release --projects='packages/*,clis/*' --skip-publish --verbose
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
-
-      - name: Update pkg version for Connect
-        run: pnpm nx release --projects='apps/connect' --skip-publish
+        run: pnpm nx release --projects='packages/*,apps/connect,clis/*' --skip-publish --preid=${{ env.PREID }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
