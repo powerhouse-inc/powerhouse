@@ -5,7 +5,10 @@ export type InspectOptions = {
   debug?: boolean;
 };
 
-export async function startInspect(packageName: string, options: InspectOptions) {
+export async function startInspect(
+  packageName: string,
+  options: InspectOptions,
+) {
   if (options.debug) {
     console.log(">>> command arguments", { options });
   }

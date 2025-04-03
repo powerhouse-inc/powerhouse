@@ -4,8 +4,8 @@ force: true
 ---
 import { Subgraph } from "@powerhousedao/reactor-api";
 <% if (loadFromFile) { %>
-import schema from "./schema.graphql";
-import { getResolvers } from "./resolvers";
+import { schema } from "./schema.js";
+import { getResolvers } from "./resolvers.js";
 <% } else { %>
 import { gql } from "graphql-tag";
 <% } %>

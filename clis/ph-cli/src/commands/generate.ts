@@ -35,5 +35,9 @@ export function generateCommand(program: Command) {
     .option("-is, --import-script <type>", "Import Script Name")
     .option("-sf, --skip-format", "Skip formatting the generated code")
     .option("-w, --watch", "Watch the generated code")
+    .option(
+      "-d, --drive-editor <name>",
+      "Generate a drive editor with the specified name",
+    )
     .action(generate);
 }

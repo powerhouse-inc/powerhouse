@@ -11,7 +11,7 @@ exports[`Command Component > should match snapshot 1`] = `
       cmdk-label=""
       for="radix-:r2:"
       id="radix-:r1:"
-      style="position: absolute; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border-width: 0px;"
+      style="position: absolute; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0px;"
     />
   </div>
 </DocumentFragment>

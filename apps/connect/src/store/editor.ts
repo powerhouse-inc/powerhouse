@@ -5,8 +5,6 @@ import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
 import { externalPackagesAtom } from './external-packages.js';
 
-export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
-
 async function loadBaseEditors() {
     const documentModelEditor = await import(
         '@powerhousedao/builder-tools/document-model-editor'
@@ -22,32 +20,14 @@ function getEditorsFromModules(modules: DocumentModelLib[]) {
         .reduce((acc, val) => acc.concat(val), []);
 }
 
-async function loadDynamicEditors() {
-    if (!LOCAL_DOCUMENT_EDITORS) {
-        return [];
-    }
-    try {
-        const localEditors = (await import(
-            'LOCAL_DOCUMENT_EDITORS'
-        )) as unknown as Record<string, EditorModule>;
-        console.log('Loaded local document editors:', localEditors);
-        return Object.values(localEditors);
-    } catch (e) {
-        console.error('Error loading local document editors', e);
-        return [];
-    }
-}
-
 const baseEditorsAtom = atomWithLazy(loadBaseEditors);
-const dynamicEditorsAtom = atomWithLazy(loadDynamicEditors);
 
 export const editorsAtom = atom(async get => {
     const baseEditors = await get(baseEditorsAtom);
-    const dynamicEditors = await get(dynamicEditorsAtom);
     const externalModules = await get(externalPackagesAtom);
     const externalEditors = getEditorsFromModules(externalModules);
 
-    return dynamicEditors.concat(externalEditors, baseEditors);
+    return externalEditors.concat(baseEditors);
 });
 
 const unwrappedEditorsAtom = unwrap(editorsAtom);

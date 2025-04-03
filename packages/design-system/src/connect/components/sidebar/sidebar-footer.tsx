@@ -7,6 +7,8 @@ export interface ConnectSidebarFooterProps extends SidebarFooterProps {
   address: `0x${string}` | undefined;
   onClickSettings?: () => void;
   onLogin: () => void;
+  etherscanUrl?: string;
+  onDisconnect: () => void;
 }
 
 export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
@@ -14,6 +16,8 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   className,
   onLogin,
   onClickSettings,
+  onDisconnect,
+  etherscanUrl = "",
   ...props
 }) => {
   return (
@@ -26,12 +30,17 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     >
       <div className="">
         {address ? (
-          <SidebarUser address={address} />
+          <SidebarUser
+            address={address}
+            onDisconnect={onDisconnect}
+            etherscanUrl={etherscanUrl}
+          />
         ) : (
           <SidebarLogin onLogin={onLogin} />
         )}
       </div>
       <button
+        type="button"
         className="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
         onClick={onClickSettings}
       >

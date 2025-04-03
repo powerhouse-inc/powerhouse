@@ -143,7 +143,7 @@ export const setLogLevel = (level: LogLevel | "env") => {
   loggerInstance.level = level;
 };
 
-export const childLogger = (tags: string[]) => {
+export const childLogger = (tags: string[]): ILogger => {
   const logger = new ConsoleLogger(tags);
   logger.level = logLevel;
   logger.errorHandler = errorHandler;

@@ -204,7 +204,7 @@ export async function generateSubgraph(
     await run(
       [
         "powerhouse",
-        "generate-document-model-mutations",
+        "generate-document-model-subgraph",
         "--subgraph",
         name,
         "--document-model",
@@ -234,6 +234,18 @@ export async function generateImportScript(
       "--root-dir",
       dir,
     ],
+    { skipFormat },
+  );
+}
+
+export async function generateDriveEditor(
+  name: string,
+  dir: string,
+  { skipFormat = false } = {},
+) {
+  // Generate the drive editor files
+  await run(
+    ["powerhouse", "generate-drive-editor", "--name", name, "--root-dir", dir],
     { skipFormat },
   );
 }

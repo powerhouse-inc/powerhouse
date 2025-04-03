@@ -1,4 +1,4 @@
-import type { Props } from "./types.js";
+import type { Props } from "./index.js";
 export default function Braces(props: Props) {
   return (
     <svg

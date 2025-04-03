@@ -2,7 +2,8 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/utils.ts"
 force: true
 ---
-import { DocumentModelUtils,
+import { 
+    type DocumentModelUtils,
     baseCreateDocument,
     baseCreateExtendedState,
     baseSaveToFile,
@@ -10,8 +11,12 @@ import { DocumentModelUtils,
     baseLoadFromFile,
     baseLoadFromInput
  } from 'document-model';
-import { <%= h.changeCase.pascal(documentType) %>Document, <%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState} from './types';
-import { reducer } from './reducer';
+import { 
+  <%= 'type ' + h.changeCase.pascal(documentType) %>Document,
+  <%= 'type ' + h.changeCase.pascal(documentType) %>State,
+  <%= 'type ' + h.changeCase.pascal(documentType) %>LocalState
+} from './types.js';
+import { reducer } from './reducer.js';
 
 export const initialGlobalState: <%= h.changeCase.pascal(documentType) %>State = <%- initialGlobalState %>;
 export const initialLocalState: <%= h.changeCase.pascal(documentType) %>LocalState = <%- initialLocalState %>;

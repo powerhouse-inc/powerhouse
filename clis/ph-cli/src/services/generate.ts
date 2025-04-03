@@ -1,5 +1,6 @@
 import {
   generate as generateCode,
+  generateDriveEditor,
   generateEditor,
   generateFromFile,
   generateImportScript,
@@ -22,6 +23,7 @@ export type GenerateOptions = {
   subgraph?: string;
   importScript?: string;
   file?: string;
+  driveEditor?: string;
 };
 
 export async function startGenerate(
@@ -55,9 +57,16 @@ export async function startGenerate(
     subgraphName: options.subgraph,
     importScript: !!options.importScript,
     importScriptName: options.importScript,
+    driveEditor: !!options.driveEditor,
+    driveEditorName: options.driveEditor,
   };
 
-  if (command.editor) {
+  if (command.driveEditor) {
+    if (!command.driveEditorName) {
+      throw new Error("Drive editor name is required (--drive-editor or -d)");
+    }
+    await generateDriveEditor(command.driveEditorName, config);
+  } else if (command.editor) {
     if (!command.editorName) {
       throw new Error("Editor name is required (--editor or -e)");
     }

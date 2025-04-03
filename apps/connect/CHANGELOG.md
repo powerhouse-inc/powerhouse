@@ -1,3 +1,233 @@
+## 1.0.0-dev.247 (2025-03-27)
+
+### 🩹 Fixes
+
+- **connect:** trigger release ([2e2b8a923](https://github.com/powerhouse-inc/powerhouse/commit/2e2b8a923))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 1.0.0-dev.246 (2025-03-26)
+
+### 🚀 Features
+
+- **connect,builder-tools:** rework external packages loading ([c904877c4](https://github.com/powerhouse-inc/powerhouse/commit/c904877c4))
+- **builder-tools:** load local package from manifest ([96f4962d3](https://github.com/powerhouse-inc/powerhouse/commit/96f4962d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 1.0.0-dev.245 (2025-03-26)
+
+### 🚀 Features
+
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente
+
+## 1.0.18 (2025-03-26)
+
+### 🚀 Features
+
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.22.5-dev.1
+- Updated document-drive to 1.29.0-dev.1
+- Updated document-model to 2.28.0
+- Updated @powerhousedao/builder-tools to 0.9.5-dev.1
+- Updated @powerhousedao/builder-tools to 0.9.5-dev.1
+- Updated @powerhousedao/design-system to 1.39.1-dev.1
+- Updated @powerhousedao/scalars to 1.33.0
+- Updated @powerhousedao/common to 1.10.5-dev.1
+- Updated @powerhousedao/config to 1.26.0
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
+## 1.0.0-dev.244 (2025-03-24)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.243 (2025-03-24)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.6-dev.0 (2025-03-24)
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.22.5-dev.0
+- Updated document-drive to 1.29.0-dev.0
+- Updated @powerhousedao/builder-tools to 0.9.5-dev.0
+- Updated @powerhousedao/builder-tools to 0.9.5-dev.0
+- Updated @powerhousedao/design-system to 1.39.1-dev.0
+- Updated @powerhousedao/common to 1.10.5-dev.0
+
+## 1.0.0-dev.242 (2025-03-20)
+
+### 🚀 Features
+
+- added account popover ([#1335](https://github.com/powerhouse-inc/powerhouse/pull/1335))
+
+### 🩹 Fixes
+
+- remove horizontal scrollbar ([7d4412013](https://github.com/powerhouse-inc/powerhouse/commit/7d4412013))
+- **connect:** set dark mode with class ([094db0b34](https://github.com/powerhouse-inc/powerhouse/commit/094db0b34))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Guillermo Puente Sandoval
+
+## 1.0.0-dev.241 (2025-03-20)
+
+### 🩹 Fixes
+
+- return to homescreen after deleting a drive ([4fca25055](https://github.com/powerhouse-inc/powerhouse/commit/4fca25055))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
+## 1.0.7 (2025-03-20)
+
+### 🩹 Fixes
+
+- return to homescreen after deleting a drive ([4fca25055](https://github.com/powerhouse-inc/powerhouse/commit/4fca25055))
+
+### 🧱 Updated Dependencies
+
+- Updated @powerhousedao/reactor-browser to 1.22.3
+- Updated document-drive to 1.28.3
+- Updated @powerhousedao/builder-tools to 0.9.3
+- Updated @powerhousedao/builder-tools to 0.9.3
+- Updated @powerhousedao/design-system to 1.38.0
+- Updated @powerhousedao/scalars to 1.32.0
+- Updated @powerhousedao/common to 1.10.3
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 1.0.0-dev.240 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.239 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.238 (2025-03-19)
+
+### 🩹 Fixes
+
+- roll back replace plugin ([6c4781da](https://github.com/powerhouse-inc/powerhouse/commit/6c4781da))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 1.0.0-dev.237 (2025-03-19)
+
+### 🩹 Fixes
+
+- **codegen:** update validation plugin name ([18de5641](https://github.com/powerhouse-inc/powerhouse/commit/18de5641))
+
+### ❤️ Thank You
+
+- ryanwolhuter
+
+## 1.0.0-dev.236 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.235 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.234 (2025-03-19)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 1.0.0-dev.233 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+
+### ❤️ Thank You
+
+- Frank
+
+## 1.0.0-dev.232 (2025-03-19)
+
+### 🚀 Features
+
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+
+### 🩹 Fixes
+
+- **connect:** relative favicon path ([1db65a85](https://github.com/powerhouse-inc/powerhouse/commit/1db65a85))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- ryanwolhuter @ryanwolhuter
+
+## 1.0.0-dev.231 (2025-03-19)
+
+### 🩹 Fixes
+
+- **reactor-local:** support commonjs code on local subgraphs ([c49914e2](https://github.com/powerhouse-inc/powerhouse/commit/c49914e2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 1.0.0-dev.230 (2025-03-19)
+
+### 🚀 Features
+
+- **monorepo:** remove migrations ([0c698b39](https://github.com/powerhouse-inc/powerhouse/commit/0c698b39))
+- **design-system:** fix storybook type errors ([75cd9dd5](https://github.com/powerhouse-inc/powerhouse/commit/75cd9dd5))
+- **monorepo:** regenerate lockfile ([10b40ad0](https://github.com/powerhouse-inc/powerhouse/commit/10b40ad0))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 1.0.0-dev.229 (2025-03-19)
+
+### 🚀 Features
+
+- **connect:** remove accidentally added dep ([5f6ba2e4](https://github.com/powerhouse-inc/powerhouse/commit/5f6ba2e4))
+- **design-system:** simplify icons and remove dynamic loader ([1db37756](https://github.com/powerhouse-inc/powerhouse/commit/1db37756))
+- **connect:** load packages styles ([5521c363](https://github.com/powerhouse-inc/powerhouse/commit/5521c363))
+
+### 🩹 Fixes
+
+- **document-drive:** typescript should be a dev dependency of document-drive ([b5ddc827](https://github.com/powerhouse-inc/powerhouse/commit/b5ddc827))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- ryanwolhuter
+
 ## 1.0.0-dev.228 (2025-03-17)
 
 ### 🩹 Fixes

@@ -64,7 +64,6 @@ export function calculateCashBalanceChange(
 
   const sign = cashTransactionSignByTransactionType[transactionType];
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const feeAmounts = (fees?.map((fee) => fee.amount).filter(Boolean) ??
     []) as number[];
 

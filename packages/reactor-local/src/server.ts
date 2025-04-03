@@ -1,3 +1,4 @@
+import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import {
   isSubgraphClass,
   startAPI,
@@ -9,10 +10,15 @@ import {
   driveDocumentModelModule,
   type DriveInput,
   type IDocumentDriveServer,
+  InMemoryCache,
   logger,
-  ReactorBuilder
+  MemoryStorage,
+  ReactorBuilder,
 } from "document-drive";
+import type { ICache } from "document-drive/cache/types";
+import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
+import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
@@ -21,7 +27,6 @@ import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
-import { PackagesManager } from "./packages.js";
 
 type FSError = {
   errno: number;
@@ -34,11 +39,17 @@ const dirname = process.cwd();
 
 dotenv.config();
 
+export type StorageOptions = {
+  type: "filesystem" | "memory" | "postgres" | "browser";
+  filesystemPath?: string;
+  postgresUrl?: string;
+};
+
 export type StartServerOptions = {
   configFile?: string;
   dev?: boolean;
   port?: string | number;
-  storagePath?: string;
+  storage?: StorageOptions;
   dbPath?: string;
   drive?: DriveInput;
   packages?: string[];
@@ -54,7 +65,10 @@ export type StartServerOptions = {
 
 export const DefaultStartServerOptions = {
   port: 4001,
-  storagePath: path.join(dirname, ".ph/file-storage"),
+  storage: {
+    type: "filesystem",
+    filesystemPath: path.join(dirname, ".ph/file-storage"),
+  },
   dbPath: path.join(dirname, ".ph/read-model.db"),
   drive: {
     global: {
@@ -83,23 +97,44 @@ const baseDocumentModelModules = [
   driveDocumentModelModule,
 ] as DocumentModelModule[];
 
+const createStorage = (options: StorageOptions, cache: ICache) => {
+  switch (options.type) {
+    case "filesystem":
+      logger.info(
+        `Initializing filesystem storage at '${options.filesystemPath}'.`,
+      );
+      return new FilesystemStorage(options.filesystemPath!);
+    case "memory":
+      logger.info("Initializing memory storage.");
+      return new MemoryStorage();
+    case "postgres": {
+      if (!options.postgresUrl) {
+        throw new Error("Postgres url is required");
+      }
+
+      logger.info(`Initializing postgres storage at '${options.postgresUrl}'.`);
+      const storageFactory = new PrismaStorageFactory(
+        options.postgresUrl,
+        cache,
+      );
+      const storage = storageFactory.build();
+      return storage;
+    }
+    case "browser":
+      logger.info("Initializing browser storage.");
+      return new BrowserStorage();
+  }
+};
+
 const startServer = async (
   options?: StartServerOptions,
 ): Promise<LocalReactor> => {
   process.setMaxListeners(0);
-  const {
-    port,
-    storagePath,
-    drive,
-    dev,
-    dbPath,
-    packages,
-    configFile,
-    logLevel,
-  } = {
-    ...DefaultStartServerOptions,
-    ...options,
-  };
+  const { port, storage, drive, dev, dbPath, packages, configFile, logLevel } =
+    {
+      ...DefaultStartServerOptions,
+      ...options,
+    };
 
   process.env.LOG_LEVEL = logLevel ?? "debug";
 
@@ -121,31 +156,27 @@ const startServer = async (
     );
   }
 
-  // Load packages from package manager
-  const packagesManager = new PackagesManager(
-    packages?.length
-      ? { packages }
-      : configFile
-        ? { configFile }
-        : { packages: [] },
-  );
-  const packageDocModels = (await packagesManager.loadDocumentModels()) ?? [];
-  docModels = joinDocumentModelModules(docModels, packageDocModels);
-
-  // start document drive server with all available document models & filesystem storage
+  // start document drive server with all available document models & storage
+  const cache = new InMemoryCache();
   const driveServer = new ReactorBuilder(docModels)
-    .withStorage(new FilesystemStorage(storagePath))
+    .withCache(cache)
+    .withStorage(createStorage(storage, cache))
     .build();
 
   // init drive server
   await driveServer.initialize();
   const driveUrl = await addDefaultDrive(driveServer, drive, serverPort);
-
   // start api
+  const packageOptions = packages?.length
+    ? { packages }
+    : configFile
+      ? { configFile }
+      : { packages: [] };
   const api = await startAPI(driveServer, {
     port: serverPort,
     dbPath,
     https: options?.https,
+    ...packageOptions,
   });
 
   if (vite) {
@@ -161,7 +192,7 @@ const startServer = async (
   return {
     driveUrl,
     getDocumentPath: (driveId: string, documentId: string): string => {
-      return path.join(storagePath, driveId, `${documentId}.json`);
+      return path.join(storage.filesystemPath!, driveId, `${documentId}.json`);
     },
     server: driveServer,
   };
@@ -203,6 +234,7 @@ async function startDevServer() {
         input: [],
       },
     },
+    plugins: [viteCommonjs()],
   });
 
   return vite;
@@ -240,7 +272,7 @@ async function loadSubgraphs(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const SubgraphClass = subgraph[name] as SubgraphClass;
       if (isSubgraphClass(SubgraphClass)) {
-        await subgraphManager.registerSubgraph(SubgraphClass);
+        await subgraphManager.registerSubgraph(SubgraphClass, "graphql");
       }
     }
   } catch (e) {

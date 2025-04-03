@@ -57,14 +57,6 @@ export function startConnectStudio(options: ConnectStudioOptions) {
     serverOptions.packages = options.packages.map((p) => p.packageName);
   }
 
-  if (options.localEditors) {
-    process.env.LOCAL_DOCUMENT_EDITORS = options.localEditors;
-  }
-
-  if (options.localDocuments) {
-    process.env.LOCAL_DOCUMENT_MODELS = options.localDocuments;
-  }
-
   if (options.https) {
     serverOptions.https = options.https;
   }

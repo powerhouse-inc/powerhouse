@@ -1,3 +1,4 @@
+src/storage/prisma/client
 node_modules/
 coverage/
 .env

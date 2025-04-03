@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";
 import {
   PackageManagerInput,
@@ -26,8 +27,17 @@ export const PackageManager: React.FC<Props> = (props) => {
     packages,
     onUninstall,
     mutable,
+    packageOptions,
     ...rest
   } = props;
+
+  const packageOptionsSet = useMemo(
+    () =>
+      packageOptions?.filter(
+        (o) => !packages.find((p) => p.name === o.packageName),
+      ),
+    [packages, packageOptions],
+  );
   return (
     <div
       {...rest}
@@ -42,7 +52,12 @@ export const PackageManager: React.FC<Props> = (props) => {
         onReactorChange={onReactorChange}
         className="mb-4"
       />
-      {mutable && <PackageManagerInput onInstall={onInstall} />}
+      {mutable && (
+        <PackageManagerInput
+          onInstall={onInstall}
+          packageOptions={packageOptionsSet}
+        />
+      )}
       <PackageManagerList
         packages={packages}
         onUninstall={onUninstall}

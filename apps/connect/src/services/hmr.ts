@@ -12,13 +12,10 @@ export async function getHMRModule(): Promise<ViteHotContext | undefined> {
     }
 
     try {
-        const module = await import(
-            '@powerhousedao/builder-tools/connect-studio/hmr'
-        );
+        const module = await import('../hmr.js');
         const hmr = module.hmr;
         return hmr;
-    } catch (error) {
-        console.error(error);
+    } catch (e) {
         return undefined;
     }
 }

@@ -50,8 +50,8 @@ jobs:
             --build-arg NX_SOCKET_DIR=${{ vars.NX_SOCKET_DIR }}
             --build-arg BASE_PATH=${{ vars.CONNECT_BASE_PATH }}
             --build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}
-            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
-            --build-arg PH_CONNECT_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
+            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.CONNECT_SENTRY_DSN }}
+            --build-arg PH_CONNECT_SENTRY_ENV=${{ inputs.environment }}
             --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
             --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}

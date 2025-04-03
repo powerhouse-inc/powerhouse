@@ -8,18 +8,16 @@ unless_exists: true
  */
 
 import { generateMock } from '@powerhousedao/codegen';
-import { utils as documentModelUtils } from 'document-model';
-
-import utils from '../../gen/utils';
+import utils from '../../gen/utils.js';
 import {
     z,
 <% actions.forEach(action => { _%>
-    <%= h.changeCase.pascal(action.name) %>Input,
+    <%= 'type ' + h.changeCase.pascal(action.name) %>Input,
 <% }); _%> 
-} from '../../gen/schema';
-import { reducer } from '../../gen/reducer';
-import * as creators from '../../gen/<%= module %>/creators';
-import { <%= h.changeCase.pascal(documentType) %>Document } from '../../gen/types';
+} from '../../gen/schema/index.js';
+import { reducer } from '../../gen/reducer.js';
+import * as creators from '../../gen/<%= module %>/creators.js';
+import type { <%= h.changeCase.pascal(documentType) %>Document } from '../../gen/types.js';
 
 describe('<%= h.changeCase.pascal(module) %> Operations', () => {
     let document: <%= h.changeCase.pascal(documentType) %>Document;

@@ -100,6 +100,9 @@ export const Primary: Story = {
     ),
   ],
   render: function Wrapper(args) {
-    return <SettingsModal {...args} />;
+    return (
+      // @ts-expect-error
+      <SettingsModal {...args} />
+    );
   },
 };

@@ -8,11 +8,9 @@ import {
 } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
-import { atomWithLazy, unwrap } from 'jotai/utils';
+import { unwrap } from 'jotai/utils';
 import { externalPackagesAtom } from './external-packages.js';
 import { atomStore } from './index.js';
-
-export const LOCAL_DOCUMENT_MODELS = import.meta.env.LOCAL_DOCUMENT_MODELS;
 
 export const baseDocumentModels = [
     driveDocumentModelModule,
@@ -38,26 +36,7 @@ function getDocumentModelsFromModules(modules: DocumentModelLib[]) {
         .reduce((acc, val) => acc.concat(val), []);
 }
 
-async function loadDynamicModels() {
-    if (!LOCAL_DOCUMENT_MODELS) {
-        return [];
-    }
-    try {
-        const localModules = (await import(
-            'LOCAL_DOCUMENT_MODELS'
-        )) as unknown as Record<string, DocumentModelModule>;
-        console.log('Loaded local document models:', localModules);
-        return Object.values(localModules);
-    } catch (e) {
-        console.error('Error loading local document models', e);
-        return [];
-    }
-}
-
-const dynamicDocumentModelsAtom = atomWithLazy(loadDynamicModels);
-
 export const documentModelsAtom = atom(async get => {
-    const dynamicDocumentModels = await get(dynamicDocumentModelsAtom);
     const externalModules = (await get(
         externalPackagesAtom,
     )) as DocumentModelLib[];
@@ -67,7 +46,6 @@ export const documentModelsAtom = atom(async get => {
     const result = getUniqueDocumentModels(
         ...baseDocumentModels,
         ...externalDocumentModels,
-        ...dynamicDocumentModels,
     );
     return result;
 });

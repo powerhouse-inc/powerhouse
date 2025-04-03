@@ -7,7 +7,7 @@ import {
 } from "document-model";
 
 import {
-  IDocumentDriveServer,
+  type IDocumentDriveServer,
   type GetDocumentOptions,
   type IBaseDocumentDriveServer,
   type Listener,
@@ -48,7 +48,11 @@ export class InternalTransmitter implements ITransmitter {
   protected listener: Listener;
   protected receiver: IReceiver;
 
-  constructor(listener: Listener, drive: IDocumentDriveServer, receiver: IReceiver) {
+  constructor(
+    listener: Listener,
+    drive: IDocumentDriveServer,
+    receiver: IReceiver,
+  ) {
     this.listener = listener;
     this.drive = drive;
     this.receiver = receiver;
@@ -114,7 +118,7 @@ export class InternalTransmitter implements ITransmitter {
         state,
       });
     }
-    
+
     try {
       await this.receiver.onStrands(updates);
       return strands.map(({ operations, ...s }) => ({

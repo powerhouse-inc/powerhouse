@@ -10,7 +10,8 @@ import { BrowserStorage } from 'document-drive/storage/browser';
 import { type DocumentModelModule } from 'document-model';
 
 const DEFAULT_DRIVES_URL =
-    import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
+    (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
+    undefined;
 const defaultDrivesUrl = DEFAULT_DRIVES_URL
     ? DEFAULT_DRIVES_URL.split(',')
     : [];

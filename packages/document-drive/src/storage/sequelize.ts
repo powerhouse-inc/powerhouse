@@ -1,3 +1,4 @@
+/*
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
@@ -6,7 +7,6 @@ import {
 } from "#drive-document-model/gen/types";
 import { type SynchronizationUnitQuery } from "#server/types";
 import {
-  Action,
   type AttachmentInput,
   type DocumentHeader,
   type ExtendedState,
@@ -15,13 +15,35 @@ import {
   type PHDocument,
 } from "document-model";
 import { DataTypes, type Options, Sequelize } from "sequelize";
-import { type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveStorage } from "./types.js";
 
-export class SequelizeStorage implements IDriveStorage {
+export class SequelizeStorage implements IDriveStorage, IDocumentStorage {
   private db: Sequelize;
 
   constructor(options: Options) {
     this.db = new Sequelize(options);
+  }
+
+  async exists(id: string): Promise<boolean> {
+    const Document = this.db.models.document;
+    if (!Document) {
+      throw new Error("Document model not found");
+    }
+    const count = await Document.count({
+      where: {
+        id: id,
+      },
+    });
+
+    return count > 0;
+  }
+
+  async create(id: string, drive: DocumentDriveDocument): Promise<void> {
+    const Drive = this.db.models.drive;
+    if (!Drive) {
+      throw new Error("Drive model not found");
+    }
+    await Drive.create({ id, slug: drive.initialState.state.global.slug });
   }
 
   public syncModels() {
@@ -285,19 +307,8 @@ export class SequelizeStorage implements IDriveStorage {
     return ids;
   }
 
-  async checkDocumentExists(driveId: string, id: string): Promise<boolean> {
-    const Document = this.db.models.document;
-    if (!Document) {
-      throw new Error("Document model not found");
-    }
-    const count = await Document.count({
-      where: {
-        id: id,
-        driveId: driveId,
-      },
-    });
-
-    return count > 0;
+  async checkDocumentExists(drive: string, id: string): Promise<boolean> {
+    return this.exists(id);
   }
 
   async getDocument<TDocument extends PHDocument>(
@@ -502,3 +513,4 @@ export class SequelizeStorage implements IDriveStorage {
     }, []);
   }
 }
+*/

@@ -18,7 +18,6 @@ export class SystemSubgraph extends Subgraph {
         global: DocumentDriveStateInput!
         preferredEditor: String
       ): DocumentDrive_DocumentDriveState
-      deleteDrive(id: ID!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
       setDriveName(id: String!, name: String!): Boolean
     }

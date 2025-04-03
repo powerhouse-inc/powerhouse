@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { FORMAT_MAPPING } from "../../../ui/components/data-entry/date-time-picker/utils.js";
-import { withForm } from "../../index.js";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,

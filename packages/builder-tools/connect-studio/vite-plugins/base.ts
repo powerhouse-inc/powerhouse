@@ -1,14 +1,13 @@
 import fs from "fs/promises";
 import MagicString from "magic-string";
 import { createRequire } from "node:module";
-import path, { basename, dirname } from "node:path";
+import { basename, dirname } from "node:path";
 import type { Package } from "resolve.exports";
 import {
   type Alias,
   type AliasOptions,
   type Plugin,
   type PluginOption,
-  normalizePath,
 } from "vite";
 
 // matches @powerhousedao/connect, react, react-dom and all their sub-imports like react-dom/client
@@ -17,53 +16,6 @@ export const externalIds = [
   /^@powerhousedao\/reactor-browser(\/.*)?$/,
   /^node:.*$/,
 ];
-
-export const LOCAL_DOCUMENT_MODELS_IMPORT = "LOCAL_DOCUMENT_MODELS";
-export const LOCAL_DOCUMENT_EDITORS_IMPORT = "LOCAL_DOCUMENT_EDITORS";
-export const HMR_MODULE_IMPORT =
-  "@powerhousedao/builder-tools/connect-studio/hmr";
-
-export const STUDIO_IMPORTS = [
-  LOCAL_DOCUMENT_MODELS_IMPORT,
-  LOCAL_DOCUMENT_EDITORS_IMPORT,
-  HMR_MODULE_IMPORT,
-] as const;
-
-export function getStudioConfig(env?: Record<string, string>): {
-  [LOCAL_DOCUMENT_MODELS_IMPORT]?: string;
-  [LOCAL_DOCUMENT_EDITORS_IMPORT]?: string;
-  LOAD_EXTERNAL_PACKAGES?: string;
-} {
-  const config: Record<string, string> = {};
-
-  const LOCAL_DOCUMENT_MODELS =
-    process.env.LOCAL_DOCUMENT_MODELS ?? env?.LOCAL_DOCUMENT_MODELS;
-  const LOCAL_DOCUMENT_EDITORS =
-    process.env.LOCAL_DOCUMENT_EDITORS ?? env?.LOCAL_DOCUMENT_EDITORS;
-
-  const LOCAL_DOCUMENT_MODELS_PATH = LOCAL_DOCUMENT_MODELS
-    ? path.resolve(process.cwd(), LOCAL_DOCUMENT_MODELS)
-    : undefined;
-  const LOCAL_DOCUMENT_EDITORS_PATH = LOCAL_DOCUMENT_EDITORS
-    ? path.resolve(process.cwd(), LOCAL_DOCUMENT_EDITORS)
-    : undefined;
-
-  if (LOCAL_DOCUMENT_MODELS_PATH) {
-    config[LOCAL_DOCUMENT_MODELS_IMPORT] = normalizePath(
-      LOCAL_DOCUMENT_MODELS_PATH,
-    );
-  }
-  if (LOCAL_DOCUMENT_EDITORS_PATH) {
-    config[LOCAL_DOCUMENT_EDITORS_IMPORT] = normalizePath(
-      LOCAL_DOCUMENT_EDITORS_PATH,
-    );
-  }
-  if (typeof process.env.LOAD_EXTERNAL_PACKAGES !== "undefined") {
-    config.LOAD_EXTERNAL_PACKAGES = process.env.LOAD_EXTERNAL_PACKAGES;
-  }
-
-  return config;
-}
 
 // https://github.com/vitejs/vite/issues/6393#issuecomment-1006819717
 // vite dev server doesn't support setting dependencies as external

@@ -46,7 +46,7 @@ describe("Internal Listener", () => {
 
     // Create the listener and transmitter
     const uuid = generateUUID();
-    const listener:Listener = {
+    const listener: Listener = {
       driveId,
       listenerId: uuid,
       block: false,
@@ -64,7 +64,7 @@ describe("Internal Listener", () => {
         transmitterType: "Internal",
       },
     };
-    
+
     // TODO: circular reference
     listener.transmitter = new InternalTransmitter(listener, server, receiver);
 
@@ -102,7 +102,7 @@ describe("Internal Listener", () => {
 
     const update: InternalTransmitterUpdate<DocumentDriveDocument> = {
       branch: "main",
-      documentId: "",
+      documentId: "drive",
       driveId: "drive",
       operations: [
         {

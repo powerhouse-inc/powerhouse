@@ -37,9 +37,11 @@ const Template: Story = {
     const uiNodesContext = useUiNodesContext();
     const { setDriveNodes } = uiNodesContext;
     useEffect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       setDriveNodes(args.driveNodes);
     }, []);
     return (
+      // @ts-expect-error - mock
       <DriveView {...args} {...uiNodesContext} nodeOptions={mockNodeOptions} />
     );
   },

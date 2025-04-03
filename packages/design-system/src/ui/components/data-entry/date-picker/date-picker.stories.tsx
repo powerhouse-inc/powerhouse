@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withTimestampsAsISOStrings } from "../../../../scalars/index.js";
+import { withTimestampsAsISOStrings } from "../../../../scalars/lib/decorators.js";
 import {
   getDefaultArgTypes,
   StorybookControlCategory,
