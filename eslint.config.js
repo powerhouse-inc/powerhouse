@@ -36,6 +36,7 @@ export default tseslint.config(
       "**/postcss.config.mjs",
       "**/create-require.js",
       ".nx/",
+      "packages/codegen/**/__tests__",
       "packages/document-drive/**/*.test.ts",
       "packages/document-drive/**/*.bench.ts",
       "packages/reactor-api/**/*.test.ts",
