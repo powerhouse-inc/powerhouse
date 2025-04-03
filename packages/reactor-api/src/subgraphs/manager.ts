@@ -122,9 +122,9 @@ export class SubgraphManager {
   }
 
   async #setupSubgraphs(router: IRouter) {
-    for (const supergraph of Object.keys(this.subgraphs)) {
+    for (const [supergraph, subgraphs] of this.subgraphs.entries()) {
       const supergraphEndpoints: Record<string, ApolloServer> = {};
-      for (const subgraph of this.subgraphs.get(supergraph) ?? []) {
+      for (const subgraph of subgraphs) {
         const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
         if (!subgraphConfig) continue;
         // create subgraph schema
@@ -135,7 +135,7 @@ export class SubgraphManager {
         );
         // create and start apollo server
         const server = this.#createApolloServer(schema);
-        const path = `${subgraph.path ? "/" + subgraph.path : ""}/${subgraphConfig.name}`;
+        const path = `${subgraph.path ? "/" + subgraph.path : ""}${supergraph !== "" ? "/" + supergraph : ""}/${subgraphConfig.name}`;
         await server.start();
         await this.#waitForServer(server);
         this.#setupApolloExpressMiddleware(server, router, path);
