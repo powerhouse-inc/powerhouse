@@ -134,12 +134,6 @@ export class PackagesManager implements IPackagesManager {
     protected onError?: (e: unknown) => void,
   ) {
     this.eventEmitter.setMaxListeners(0);
-
-    if ("packages" in options) {
-      void this.loadPackages(options.packages).catch(onError);
-    } else if ("configFile" in options) {
-      void this.initConfigFile(options.configFile).catch(onError);
-    }
   }
 
   public async init() {
