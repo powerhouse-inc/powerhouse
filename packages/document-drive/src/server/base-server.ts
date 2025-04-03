@@ -753,8 +753,7 @@ export class BaseDocumentDriveServer
     }
 
     const documentStorage =
-      cachedDocument ??
-      (await this.storage.getDocument<TDocument>(driveId, documentId));
+      cachedDocument ?? (await this.documentStorage.get<TDocument>(documentId));
     const document = this._buildDocument<TDocument>(documentStorage, options);
 
     if (!options?.revisions) {
@@ -1162,10 +1161,8 @@ export class BaseDocumentDriveServer
     }>,
   ) {
     if (!this.storage.addDocumentOperationsWithTransaction) {
-      const documentStorage = await this.storage.getDocument(
-        driveId,
-        documentId,
-      );
+      const documentStorage =
+        await this.documentStorage.get<PHDocument>(documentId);
       const result = await callback(documentStorage);
       // saves the applied operations to storage
       if (result.operations.length > 0) {

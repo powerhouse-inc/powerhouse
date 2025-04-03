@@ -119,13 +119,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve([...manifest.documentIds]);
   }
 
-  getDocument<TDocument extends PHDocument>(
-    driveId: string,
-    id: string,
-  ): Promise<TDocument> {
-    return this.get<TDocument>(id);
-  }
-
   async clearStorage(): Promise<void> {
     this.documents = {};
     this.driveManifests = {};
@@ -146,7 +139,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
-    const document = await this.getDocument(drive, id);
+    const document = await this.get(id);
     if (!document) {
       throw new Error(`Document with id ${id} not found`);
     }

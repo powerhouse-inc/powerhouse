@@ -148,13 +148,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return this.exists(id);
   }
 
-  async getDocument<TDocument extends PHDocument>(
-    drive: string,
-    id: string,
-  ): Promise<TDocument> {
-    return this.get<TDocument>(id);
-  }
-
   async createDocument(drive: string, id: string, document: PHDocument) {
     const documentPath = this._buildDocumentPath(id);
     writeFileSync(documentPath, stringify(document), {
@@ -218,7 +211,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     operations: Operation[],
     header: DocumentHeader,
   ) {
-    const document = await this.getDocument(drive, id);
+    const document = await this.get(id);
     if (!document) {
       throw new Error(`Document with id ${id} not found`);
     }

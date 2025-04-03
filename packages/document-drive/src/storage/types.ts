@@ -22,10 +22,6 @@ export interface IDocumentStorage {
 export interface IStorage {
   checkDocumentExists(drive: string, id: string): Promise<boolean>;
   getDocuments: (drive: string) => Promise<string[]>;
-  getDocument<TDocument extends PHDocument>(
-    drive: string,
-    id: string,
-  ): Promise<TDocument>;
   createDocument(
     drive: string,
     id: string,

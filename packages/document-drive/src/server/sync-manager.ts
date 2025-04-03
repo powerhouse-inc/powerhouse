@@ -4,7 +4,7 @@ import {
   type FileNode,
 } from "#drive-document-model/gen/types";
 import { isFileNode } from "#drive-document-model/src/utils";
-import { type IDriveStorage } from "#storage/types";
+import { IDocumentStorage, type IDriveStorage } from "#storage/types";
 import { childLogger } from "#utils/logger";
 import { isBefore, isDocumentDrive } from "#utils/misc";
 import {
@@ -33,6 +33,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
   constructor(
     private readonly storage: IDriveStorage,
+    private readonly documentStorage: IDocumentStorage,
     private readonly cache: ICache,
     private documentModelModules: DocumentModelModule[],
     private readonly eventEmitter?: IEventEmitter,
@@ -351,7 +352,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
     } catch (e) {
       this.logger.error("Error getting document from cache", e);
     }
-    const documentStorage = await this.storage.getDocument(driveId, documentId);
+    const documentStorage = await this.documentStorage.get(documentId);
     return this._buildDocument(documentStorage);
   }
 

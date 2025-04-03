@@ -12,8 +12,8 @@ import TransmitterFactory from "./listener/transmitter/factory.js";
 import SynchronizationManager from "./sync-manager.js";
 import {
   DefaultListenerManagerOptions,
-  type IDocumentDriveServer,
   type DocumentDriveServerOptions,
+  type IDocumentDriveServer,
   type IEventEmitter,
   type IListenerManager,
   type ISynchronizationManager,
@@ -105,6 +105,8 @@ export class ReactorBuilder {
     if (!this.synchronizationManager) {
       this.synchronizationManager = new SynchronizationManager(
         this.storage,
+        // as we refactor, we're secretly making all the IStorage implementations also implement IDocumentStorage
+        this.storage as unknown as IDocumentStorage,
         this.cache,
         this.documentModelModules,
         this.eventEmitter,

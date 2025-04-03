@@ -587,7 +587,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
     await this.db.$transaction(
       async (tx) => {
-        const document = await this.getDocument<TDocument>(drive, id, tx);
+        const document = await this.get<TDocument>(id, tx);
         if (!document) {
           throw new Error(`Document with id ${id} not found`);
         }
@@ -647,14 +647,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return count > 0;
   }
 
-  async getDocument<TDocument extends PHDocument>(
-    driveId: string,
-    documentId: string,
-    tx?: Transaction,
-  ): Promise<TDocument> {
-    return this.get<TDocument>(documentId, tx);
-  }
-
   async deleteDocument(drive: string, id: string) {
     await this.delete(id);
   }
@@ -670,7 +662,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDrive(id: string) {
-    return this.getDocument<DocumentDriveDocument>("drives", id);
+    return this.get<DocumentDriveDocument>(id);
   }
 
   async getDriveBySlug(slug: string) {

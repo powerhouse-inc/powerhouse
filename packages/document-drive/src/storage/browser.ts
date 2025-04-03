@@ -168,13 +168,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
-  async getDocument<TDocument extends PHDocument>(
-    driveId: string,
-    id: string,
-  ): Promise<TDocument> {
-    return this.get<TDocument>(id);
-  }
-
   async createDocument(drive: string, id: string, document: PHDocument) {
     await this.create(id, document);
 
@@ -208,7 +201,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
-    const document = await this.getDocument(drive, id);
+    const document = await this.get(id);
     if (!document) {
       throw new Error(`Document with id ${id} not found`);
     }
@@ -385,7 +378,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   }
 
   private async migrateDocument(drive: string, id: string) {
-    const document = await this.getDocument(drive, id);
+    const document = await this.get(id);
     const migratedDocument = migrateDocumentOperationSignatures(document);
     if (migratedDocument !== document) {
       return (await this.db).setItem(

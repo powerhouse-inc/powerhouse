@@ -150,13 +150,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
-  async getDocument<TDocument extends PHDocument>(
-    drive: string,
-    id: string,
-  ): Promise<TDocument> {
-    return this.get<TDocument>(id);
-  }
-
   async createDocument(
     drive: string,
     id: string,
@@ -212,7 +205,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
-    const document = await this.getDocument(drive, id);
+    const document = await this.get<TDocument>(id);
     if (!document) {
       throw new Error(`Document with id ${id} not found`);
     }

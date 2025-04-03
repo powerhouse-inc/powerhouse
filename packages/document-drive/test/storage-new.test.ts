@@ -97,6 +97,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const result = await storage.get("test");
 
     // Storage implementations are free to return documents with or without populated state + meta.
+    // Prisma storage always returns an undefined state, but other storage
+    // implementations return the state. The storage layers have always been
+    // tested through the drive server, and the drive server (base-server.ts)
+    // replays the operations to get the state, if it doesn't exist.
+    //
     // Also: we give storage implementations authority to set the created timestamp (like a postgres timestamp).
     // So we compare every field except for state, created, and meta.
     const { state, created, meta, ...rest } = document;
