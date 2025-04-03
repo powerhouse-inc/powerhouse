@@ -428,25 +428,24 @@ export type Manifest = {
     name: string;
     url: string;
   };
-  documentModels: {
+  documentModels?: {
     id: string;
     name: string;
   }[];
-  editors: {
-    id: string;
-    name: string;
-    documentTypes: string[];
-  }[];
-  subgraphs: {
-    id: string;
-    name: string;
-  }[];
-  importScripts: {
+  editors?: {
     id: string;
     name: string;
     documentTypes: string[];
   }[];
-
+  subgraphs?: {
+    id: string;
+    name: string;
+  }[];
+  importScripts?: {
+    id: string;
+    name: string;
+    documentTypes: string[];
+  }[];
   apps?: App[];
 };
 
