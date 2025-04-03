@@ -1,0 +1,67 @@
+name: Run Nx Target
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      exclude:
+        required: false
+        type: string
+
+jobs:
+  run-nx:
+    name: Nx ${{ inputs.target }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Nx SHAs
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Install Pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-modules-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Cache Nx
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.cache/nx
+          key: ${{ runner.os }}-nx-${{ hashFiles('**/project.json', '**/nx.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nx-
+
+      - name: Run Nx Target
+        run: |
+          if [ -n "${{ inputs.exclude }}" ]; then
+            pnpm nx run-many --target=${{ inputs.target }} --exclude=${{ inputs.exclude }} --all
+          else
+            pnpm nx run-many --target=${{ inputs.target }} --all
+          fi

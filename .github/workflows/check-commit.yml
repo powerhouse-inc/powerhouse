@@ -1,5 +1,9 @@
 name: Check Commit
 
+concurrency:
+  group: check-commit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
@@ -16,169 +20,68 @@ env:
   NX_ISOLATE_PLUGINS: false
   PNPM_VERSION: 9
   NODE_VERSION: 22
+  EXCLUDE: document-drive
 
 permissions:
   contents: read
   actions: read
 
 jobs:
-  setup:
-    name: Setup
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    outputs:
-      cache-key: ${{ steps.set-cache-key.outputs.key }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  lint:
+    uses: ./.github/workflows/run-nx-target.yml
+    with:
+      target: lint:nx
 
-      - name: Set up Nx SHAs
-        uses: nrwl/nx-set-shas@v4
+  test:
+    uses: ./.github/workflows/run-nx-target.yml
+    with:
+      target: test
+      exclude: document-drive
 
-      - name: Set cache key
-        id: set-cache-key
-        run: echo "key=${{ runner.os }}-modules-${{ hashFiles('**/pnpm-lock.yaml') }}" >> "$GITHUB_OUTPUT"
+  build:
+    uses: ./.github/workflows/run-nx-target.yml
+    with:
+      target: build
 
-      - name: Install Pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Restore node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ steps.set-cache-key.outputs.key }}
-          restore-keys: |
-            ${{ runner.os }}-modules-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Detect affected targets
-        run: |
-          echo "[]" > targets.json
-          for target in build lint:nx test build-storybook; do
-            affected=$(pnpm nx show projects --affected --target=$target)
-            if [ -n "$affected" ]; then
-              echo "$target" >> targets.txt
-            fi
-          done
-
-          if [ -f targets.txt ]; then
-            jq -R . targets.txt | jq -s . > targets.json
-          fi
-          cat targets.json
-
-      - name: Upload affected targets list
-        uses: actions/upload-artifact@v4
-        with:
-          name: affected-targets
-          path: targets.json
-
-  ci:
-    name: Nx Affected (${{ matrix.target }})
-    runs-on: ubuntu-24.04
-    needs: setup
-    timeout-minutes: 15
-    strategy:
-      matrix:
-        target: [build, lint:nx, test, build-storybook]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: affected-targets
-          path: .
-
-      - name: Check if ${{ matrix.target }} is affected
-        id: skipcheck
-        run: |
-          TARGET="${{ matrix.target }}"
-          if jq -e --arg target "$TARGET" 'index($target)' targets.json > /dev/null; then
-            echo "affected=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "❌ No changes for $TARGET, skipping."
-            echo "affected=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Install Pnpm
-        if: steps.skipcheck.outputs.affected == 'true'
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Install Node.js
-        if: steps.skipcheck.outputs.affected == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - uses: actions/cache@v4
-        if: steps.skipcheck.outputs.affected == 'true'
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
-
-      - name: Run Nx ${{ matrix.target }}
-        if: steps.skipcheck.outputs.affected == 'true'
-        run: pnpm nx affected --target=${{ matrix.target }} --exclude=document-drive
-
-      - name: Mark target as failed
-        if: failure() && steps.skipcheck.outputs.affected == 'true'
-        run: echo "${{ matrix.target }}" >> failed-targets.txt
-
-      - name: Upload failure info
-        if: failure() && steps.skipcheck.outputs.affected == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: failed-targets-${{ matrix.target }}
-          path: failed-targets.txt
-          if-no-files-found: ignore
+  storybook:
+    uses: ./.github/workflows/run-nx-target.yml
+    with:
+      target: build-storybook
 
   notify-discord:
-    if: failure() && github.event_name != 'pull_request'
+    if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    needs: [ci]
+    needs: [lint, test, build, storybook]
     steps:
-      - name: Download failure data
-        uses: actions/download-artifact@v4
-        with:
-          path: ./failure-data
-        continue-on-error: true
+      - name: Collect failed jobs from needs
+        id: collect-failures
+        run: |
+          FAILED_TARGETS=""
+          for job in $(jq -r 'keys[]' <<< '${{ toJson(needs) }}'); do
+            result=$(jq -r --arg job "$job" '.[$job].result' <<< '${{ toJson(needs) }}')
+            if [[ "$result" == "failure" ]]; then
+              FAILED_TARGETS+="$job, "
+            fi
+          done
+          FAILED_TARGETS="${FAILED_TARGETS%, }"
+          echo "failed=$FAILED_TARGETS" >> $GITHUB_OUTPUT
 
       - name: Prepare and send Discord notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
         run: |
-          DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
+          FAILED_TARGETS="${{ steps.collect-failures.outputs.failed }}"
+          if [ -z "$FAILED_TARGETS" ]; then
+            echo "No failed targets, skipping notification."
+            exit 0
+          fi
 
+          DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
           MENTION_STRING=""
           if [ ! -z "$DISCORD_USER" ]; then
             MENTION_STRING="<@${DISCORD_USER}> "
           fi
-
-          FAILED_TARGETS=$(cat failure-data/* 2>/dev/null | sort | uniq | paste -sd ', ' -)
 
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
