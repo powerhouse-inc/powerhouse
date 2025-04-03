@@ -1,5 +1,4 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { DriveNotFoundError } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -29,9 +28,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   ////////////////////////////////
 
   exists(documentId: string): Promise<boolean> {
-    return Promise.resolve(
-      !!this.documents[documentId] || !!this.documents[`drive/${documentId}`],
-    );
+    return Promise.resolve(!!this.documents[documentId]);
   }
 
   create(documentId: string, document: PHDocument) {
@@ -43,11 +40,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   get<TDocument extends PHDocument>(documentId: string): Promise<TDocument> {
     const document = this.documents[documentId];
     if (!document) {
-      const drive = this.documents[`drive/${documentId}`];
-      if (drive) {
-        return Promise.resolve(drive as TDocument);
-      }
-
       throw new Error(`Document with id ${documentId} not found`);
     }
 
@@ -161,17 +153,9 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return Object.keys(this.driveManifests);
   }
 
-  async getDrive(id: string) {
-    const drive = this.documents[`drive/${id}`] as DocumentDriveDocument;
-    if (!drive) {
-      throw new DriveNotFoundError(id);
-    }
-    return drive;
-  }
-
   async getDriveBySlug(slug: string) {
     for (const driveId of Object.keys(this.driveManifests)) {
-      const drive = this.documents[`drive/${driveId}`] as DocumentDriveDocument;
+      const drive = this.documents[driveId] as DocumentDriveDocument;
       if (drive.initialState.state.global.slug === slug) {
         return drive;
       }
@@ -195,7 +179,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
       }
     }
 
-    await this.create(`drive/${id}`, drive);
+    await this.create(id, drive);
 
     // Initialize an empty manifest for the new drive
     this.updateDriveManifest(id, { documentIds: new Set() });
@@ -206,13 +190,13 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     operations: OperationFromDocument<DocumentDriveDocument>[],
     header: DocumentHeader,
   ): Promise<void> {
-    const drive = await this.getDrive(id);
+    const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
       drive.operations,
       operations,
     );
 
-    this.documents[`drive/${id}`] = {
+    this.documents[id] = {
       ...drive,
       ...header,
       operations: mergedOperations,

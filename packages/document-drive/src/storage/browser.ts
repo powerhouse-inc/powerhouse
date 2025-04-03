@@ -2,7 +2,6 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { DriveNotFoundError } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations } from "#utils/misc";
@@ -228,25 +227,13 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
       );
   }
 
-  async getDrive(id: string) {
-    let drive;
-    try {
-      drive = await this.get<DocumentDriveDocument>(id);
-    } catch {
-      // preserve throwing a specialized error for drives
-      throw new DriveNotFoundError(id);
-    }
-
-    return drive;
-  }
-
   async getDriveBySlug(slug: string) {
     // get oldes drives first
     const drives = (await this.getDrives()).reverse();
     for (const drive of drives) {
-      const driveData = await this.getDrive(drive);
+      const driveData = await this.get<DocumentDriveDocument>(drive);
       if (driveData.initialState.state.global.slug === slug) {
-        return this.getDrive(drive);
+        return driveData;
       }
     }
 
@@ -292,7 +279,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
-    const drive = await this.getDrive(id);
+    const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations(drive.operations, operations);
     const db = await this.db;
 
@@ -367,7 +354,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   }
 
   private async migrateDrive(driveId: string) {
-    const drive = await this.getDrive(driveId);
+    const drive = await this.get<DocumentDriveDocument>(driveId);
     const migratedDrive = migrateDocumentOperationSignatures(drive);
     if (migratedDrive !== drive) {
       return (await this.db).setItem(

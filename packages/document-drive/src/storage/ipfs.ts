@@ -2,7 +2,6 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { DriveNotFoundError } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import { mfs, type MFS } from "@helia/mfs";
@@ -251,7 +250,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
       const content = new TextDecoder().decode(buffer);
       return JSON.parse(content) as DocumentDriveDocument;
     } catch {
-      throw new DriveNotFoundError(id);
+      throw new Error(`Drive with id ${id} not found`);
     }
   }
 

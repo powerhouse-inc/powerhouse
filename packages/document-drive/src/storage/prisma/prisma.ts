@@ -661,10 +661,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return drives.map((d) => d.id);
   }
 
-  async getDrive(id: string) {
-    return this.get<DocumentDriveDocument>(id);
-  }
-
   async getDriveBySlug(slug: string) {
     const driveEntity = await this.db.drive.findFirst({
       where: {
@@ -676,7 +672,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       throw new Error(`Drive with slug ${slug} not found`);
     }
 
-    return this.getDrive(driveEntity.id);
+    return this.get<DocumentDriveDocument>(driveEntity.id);
   }
 
   async deleteDrive(id: string) {

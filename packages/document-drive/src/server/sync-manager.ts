@@ -332,7 +332,8 @@ export default class SynchronizationManager implements ISynchronizationManager {
     } catch (e) {
       this.logger.error("Error getting drive from cache", e);
     }
-    const driveStorage = await this.storage.getDrive(driveId);
+    const driveStorage =
+      await this.documentStorage.get<DocumentDriveDocument>(driveId);
     const result = this._buildDocument(driveStorage);
     if (!isDocumentDrive(result)) {
       throw new Error(`Document with id ${driveId} is not a Document Drive`);

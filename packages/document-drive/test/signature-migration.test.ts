@@ -123,10 +123,10 @@ describe.each(storageLayers)(
 
       await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-      const storedDrive = await storage.getDrive(driveId);
+      const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       await storage.migrateOperationSignatures();
-      const migratedDrive = await storage.getDrive(driveId);
+      const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       expect(storedDrive.operations.global.length).toEqual(
         migratedDrive.operations.global.length,
@@ -186,10 +186,10 @@ describe.each(storageLayers)(
 
       await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-      const storedDrive = await storage.getDrive(driveId);
+      const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       await storage.migrateOperationSignatures();
-      const migratedDrive = await storage.getDrive(driveId);
+      const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       expect(storedDrive.operations.global.length).toEqual(
         migratedDrive.operations.global.length,
@@ -262,10 +262,10 @@ describe.each(storageLayers)(
 
       await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-      const storedDrive = await storage.getDrive(driveId);
+      const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       await storage.migrateOperationSignatures();
-      const migratedDrive = await storage.getDrive(driveId);
+      const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       expect(storedDrive.operations.global.length).toEqual(
         migratedDrive.operations.global.length,

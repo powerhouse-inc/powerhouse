@@ -705,8 +705,7 @@ export class BaseDocumentDriveServer
     } catch (e) {
       this.logger.error("Error getting drive from cache", e);
     }
-    const driveStorage =
-      document ?? (await this.legacyStorage.getDrive(driveId));
+    const driveStorage = document ?? (await this.documentStorage.get(driveId));
     const result = this._buildDocument(driveStorage, options);
     if (!isDocumentDrive(result)) {
       throw new Error(`Document with id ${driveId} is not a Document Drive`);
@@ -1596,7 +1595,8 @@ export class BaseDocumentDriveServer
     }>,
   ) {
     if (!this.legacyStorage.addDriveOperationsWithTransaction) {
-      const documentStorage = await this.legacyStorage.getDrive(driveId);
+      const documentStorage =
+        await this.documentStorage.get<DocumentDriveDocument>(driveId);
       const result = await callback(documentStorage);
       // saves the applied operations to storage
       if (result.operations.length > 0) {

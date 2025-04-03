@@ -41,7 +41,7 @@ describe("processOperations", () => {
     await server.initialize();
   });
 
-  const driveId = "1";
+  const driveId = "drive/1";
   const documentId = "1";
 
   async function buildFile(initialOperations: Action[] = []) {

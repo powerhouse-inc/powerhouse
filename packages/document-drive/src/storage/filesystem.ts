@@ -2,7 +2,6 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { DriveNotFoundError } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -243,15 +242,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     );
   }
 
-  async getDrive(id: string): Promise<DocumentDriveDocument> {
-    try {
-      return await this.get<DocumentDriveDocument>(id);
-    } catch (error) {
-      // preserve throwing a specialized error for drives
-      throw new DriveNotFoundError(id);
-    }
-  }
-
   async getDriveBySlug(slug: string) {
     // get oldest drives first
     const drives = (await this.getDrives()).reverse();
@@ -262,9 +252,9 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
             global: { slug: driveSlug },
           },
         },
-      } = await this.getDrive(drive);
+      } = await this.get<DocumentDriveDocument>(drive);
       if (driveSlug === slug) {
-        return this.getDrive(drive);
+        return this.get<DocumentDriveDocument>(drive);
       }
     }
 
@@ -309,7 +299,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
-    const drive = await this.getDrive(id);
+    const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
       drive.operations,
       operations,

@@ -1,6 +1,8 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { type PHDocument } from "document-model";
 
+export interface IDocumentCache {}
+
 export interface ICache {
   // When setting a document, the resulting state is pulled off of the last operation
   // and slapped onto the document state before cache.
