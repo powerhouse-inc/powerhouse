@@ -61,7 +61,7 @@ jobs:
       - name: Run Nx Target
         run: |
           if [ -n "${{ inputs.exclude }}" ]; then
-            pnpm nx run-many --target=${{ inputs.target }} --exclude=${{ inputs.exclude }} --all
+            pnpm nx affected --target=${{ inputs.target }} --exclude=${{ inputs.exclude }}
           else
-            pnpm nx run-many --target=${{ inputs.target }} --all
+            pnpm nx affected --target=${{ inputs.target }}
           fi
