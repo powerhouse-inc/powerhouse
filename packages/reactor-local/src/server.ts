@@ -18,7 +18,7 @@ import {
 import type { ICache } from "document-drive/cache/types";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
-import { PrismaStorageFactory } from "document-drive/storage/prisma";
+import { PrismaStorageFactory } from "document-drive/storage/prisma/factory";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
