@@ -11,17 +11,17 @@ const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';
 
 function manifestToDetails(manifest: Manifest, id: string, removable: boolean) {
-    const documentModels = manifest.documentModels.map(
-        dm => `Document Model: ${dm.name}`,
-    );
-    const editors = manifest.editors.map(editor => `Editor: ${editor.name}`);
-    const apps = manifest.apps?.map(app => `App: ${app.name}`);
+    const documentModels =
+        manifest.documentModels?.map(dm => `Document Model: ${dm.name}`) ?? [];
+    const editors =
+        manifest.editors?.map(editor => `Editor: ${editor.name}`) ?? [];
+    const apps = manifest.apps?.map(app => `App: ${app.name}`) ?? [];
     return {
         id,
         ...manifest,
         publisher: manifest.publisher.name,
         publisherUrl: manifest.publisher.url,
-        modules: documentModels.concat(editors).concat(apps ?? []),
+        modules: documentModels.concat(editors).concat(apps),
         removable,
     };
 }
