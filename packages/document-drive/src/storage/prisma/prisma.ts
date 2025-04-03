@@ -410,7 +410,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
         },
       });
     } catch (e) {
-      if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
+      if ((e as PrismaClientKnownRequestError)?.code === "P2002") {
         throw new Error(
           `Drive with slug ${drive.initialState.state.global.slug ?? id} already exists`,
         );
