@@ -13,8 +13,8 @@ import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
-import { PrismaStorage } from "../src/storage/prisma";
 import { PrismaClient } from "../src/storage/prisma/client";
+import { PrismaStorage } from "../src/storage/prisma/prisma";
 import { IDriveStorage, IStorage } from "../src/storage/types";
 
 const PG_URL = process.env.PG_URL || "postgresql://localhost:5444/postgres";
