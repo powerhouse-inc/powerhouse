@@ -100,7 +100,7 @@ export class BaseDocumentDriveServer
 
   // external dependencies
   private documentModelModules: DocumentModelModule[];
-  private storage: IDriveStorage;
+  private legacyStorage: IDriveStorage;
   private documentStorage: IDocumentStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
@@ -172,7 +172,7 @@ export class BaseDocumentDriveServer
     options?: DocumentDriveServerOptions,
   ) {
     this.documentModelModules = documentModelModules;
-    this.storage = storage;
+    this.legacyStorage = storage;
     this.documentStorage = documentStorage;
     this.cache = cache;
     this.queueManager = queueManager;
@@ -606,7 +606,7 @@ export class BaseDocumentDriveServer
       throw new Error("Invalid Drive Id");
     }
 
-    const drives = await this.storage.getDrives();
+    const drives = await this.legacyStorage.getDrives();
     if (drives.includes(id)) {
       throw new DriveAlreadyExistsError(id);
     }
@@ -619,7 +619,7 @@ export class BaseDocumentDriveServer
       preferredEditor: preferredEditor,
     };
 
-    await this.storage.createDrive(id, document);
+    await this.legacyStorage.createDrive(id, document);
 
     if (input.global.slug) {
       await this.cache.deleteDriveBySlug(input.global.slug);
@@ -678,7 +678,7 @@ export class BaseDocumentDriveServer
       this.stopSyncRemoteDrive(driveId),
       this.listenerManager.removeDrive(driveId),
       this.cache.deleteDrive(driveId),
-      this.storage.deleteDrive(driveId),
+      this.legacyStorage.deleteDrive(driveId),
     ]);
 
     result.forEach((r) => {
@@ -689,7 +689,7 @@ export class BaseDocumentDriveServer
   }
 
   getDrives() {
-    return this.storage.getDrives();
+    return this.legacyStorage.getDrives();
   }
 
   async getDrive(driveId: string, options?: GetDocumentOptions) {
@@ -705,7 +705,8 @@ export class BaseDocumentDriveServer
     } catch (e) {
       this.logger.error("Error getting drive from cache", e);
     }
-    const driveStorage = document ?? (await this.storage.getDrive(driveId));
+    const driveStorage =
+      document ?? (await this.legacyStorage.getDrive(driveId));
     const result = this._buildDocument(driveStorage, options);
     if (!isDocumentDrive(result)) {
       throw new Error(`Document with id ${driveId} is not a Document Drive`);
@@ -727,7 +728,7 @@ export class BaseDocumentDriveServer
       this.logger.error("Error getting drive from cache", e);
     }
 
-    const driveStorage = await this.storage.getDriveBySlug(slug);
+    const driveStorage = await this.legacyStorage.getDriveBySlug(slug);
     const document = this._buildDocument(driveStorage, options);
     if (!isDocumentDrive(document)) {
       throw new Error(`Document with slug ${slug} is not a Document Drive`);
@@ -764,7 +765,7 @@ export class BaseDocumentDriveServer
   }
 
   getDocuments(driveId: string) {
-    return this.storage.getDocuments(driveId);
+    return this.legacyStorage.getDocuments(driveId);
   }
 
   protected async createDocument<TDocument extends PHDocument>(
@@ -798,7 +799,7 @@ export class BaseDocumentDriveServer
       clipboard: [],
       state: state ?? document.state,
     };
-    await this.storage.createDocument(driveId, input.id, documentStorage);
+    await this.legacyStorage.createDocument(driveId, input.id, documentStorage);
 
     // set initial state for new syncUnits
     for (const syncUnit of input.synchronizationUnits) {
@@ -815,9 +816,13 @@ export class BaseDocumentDriveServer
     const operations = Object.values(document.operations).flat();
     if (operations.length) {
       if (isDocumentDrive(document)) {
-        await this.storage.addDriveOperations(driveId, operations, document);
+        await this.legacyStorage.addDriveOperations(
+          driveId,
+          operations,
+          document,
+        );
       } else {
-        await this.storage.addDocumentOperations(
+        await this.legacyStorage.addDocumentOperations(
           driveId,
           input.id,
           operations,
@@ -844,7 +849,7 @@ export class BaseDocumentDriveServer
       this.logger.warn("Error deleting document", error);
     }
     await this.cache.deleteDocument(documentId);
-    return this.storage.deleteDocument(driveId, documentId);
+    return this.legacyStorage.deleteDocument(driveId, documentId);
   }
 
   async _processOperations(
@@ -974,14 +979,14 @@ export class BaseDocumentDriveServer
       // to retrieve it from the db to avoid rerunning all the operations
       if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
         lastRemainingOperation.resultingState = await (documentId
-          ? this.storage.getOperationResultingState?.(
+          ? this.legacyStorage.getOperationResultingState?.(
               driveId,
               documentId,
               lastRemainingOperation.index,
               lastRemainingOperation.scope,
               "main",
             )
-          : this.storage.getDriveOperationResultingState?.(
+          : this.legacyStorage.getDriveOperationResultingState?.(
               driveId,
               lastRemainingOperation.index,
               lastRemainingOperation.scope,
@@ -1061,14 +1066,14 @@ export class BaseDocumentDriveServer
     // to retrieve it from the db to avoid rerunning all the operations
     if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
       lastRemainingOperation.resultingState = await (documentId
-        ? this.storage.getOperationResultingState?.(
+        ? this.legacyStorage.getOperationResultingState?.(
             driveId,
             documentId,
             lastRemainingOperation.index,
             lastRemainingOperation.scope,
             "main",
           )
-        : this.storage.getDriveOperationResultingState?.(
+        : this.legacyStorage.getDriveOperationResultingState?.(
             driveId,
             lastRemainingOperation.index,
             lastRemainingOperation.scope,
@@ -1160,13 +1165,13 @@ export class BaseDocumentDriveServer
       header: DocumentHeader;
     }>,
   ) {
-    if (!this.storage.addDocumentOperationsWithTransaction) {
+    if (!this.legacyStorage.addDocumentOperationsWithTransaction) {
       const documentStorage =
         await this.documentStorage.get<PHDocument>(documentId);
       const result = await callback(documentStorage);
       // saves the applied operations to storage
       if (result.operations.length > 0) {
-        await this.storage.addDocumentOperations(
+        await this.legacyStorage.addDocumentOperations(
           driveId,
           documentId,
           result.operations,
@@ -1174,7 +1179,7 @@ export class BaseDocumentDriveServer
         );
       }
     } else {
-      await this.storage.addDocumentOperationsWithTransaction(
+      await this.legacyStorage.addDocumentOperationsWithTransaction(
         driveId,
         documentId,
         callback,
@@ -1580,7 +1585,7 @@ export class BaseDocumentDriveServer
       await this.deleteDrive(drive);
     }
 
-    await this.storage.clearStorage?.();
+    await this.legacyStorage.clearStorage?.();
   }
 
   private async _addDriveOperations(
@@ -1590,12 +1595,12 @@ export class BaseDocumentDriveServer
       header: DocumentHeader;
     }>,
   ) {
-    if (!this.storage.addDriveOperationsWithTransaction) {
-      const documentStorage = await this.storage.getDrive(driveId);
+    if (!this.legacyStorage.addDriveOperationsWithTransaction) {
+      const documentStorage = await this.legacyStorage.getDrive(driveId);
       const result = await callback(documentStorage);
       // saves the applied operations to storage
       if (result.operations.length > 0) {
-        await this.storage.addDriveOperations(
+        await this.legacyStorage.addDriveOperations(
           driveId,
           result.operations,
           result.header,
@@ -1603,7 +1608,10 @@ export class BaseDocumentDriveServer
       }
       return result;
     } else {
-      return this.storage.addDriveOperationsWithTransaction(driveId, callback);
+      return this.legacyStorage.addDriveOperationsWithTransaction(
+        driveId,
+        callback,
+      );
     }
   }
 
