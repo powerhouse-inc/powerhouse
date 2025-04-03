@@ -175,50 +175,12 @@ export async function generateProcessor(
   );
 }
 
-async function generateDocumentSubgraph(
-  name: string,
-  documentModel: DocumentModelState,
-  dir: string,
-  { skipFormat = false } = {},
-) {
-  const params = [
-    "powerhouse",
-    `generate-documents-subgraph`,
-    "--name",
-    name,
-    "--pascalName",
-    pascalCase(name),
-    "--root-dir",
-    dir,
-  ];
-}
-
 export async function generateSubgraph(
   name: string,
   documentModel: DocumentModelState | null,
   dir: string,
   { skipFormat = false } = {},
 ) {
-  if (name === "document") {
-    await run(
-      [
-        "powerhouse",
-        "generate-documents-subgraph",
-        "--subgraph",
-        name,
-        "--root-dir",
-        dir,
-        "--name",
-        name,
-        "--pascalName",
-        pascalCase(name),
-      ],
-      { skipFormat },
-    );
-
-    return;
-  }
-
   const params = [
     "powerhouse",
     `generate-subgraph`,

@@ -13,6 +13,19 @@ Subgraph definition for <%= h.changeCase.pascal(documentType) %> (<%- documentTy
 <%- schema %> 
 
 """
+Queries: <%= h.changeCase.pascal(documentType) %>
+"""
+
+type <%- h.changeCase.pascal(documentType) %>Queries {
+    getDocument(driveId: String, docId: PHID): <%- h.changeCase.pascal(documentType) %>
+    getDocuments: [<%- h.changeCase.pascal(documentType) %>!]
+}
+
+type Query {
+    <%- h.changeCase.pascal(documentType) %>: <%- h.changeCase.pascal(documentType) %>Queries
+}
+
+"""
 Mutations: <%= h.changeCase.pascal(documentType) %>
 """
 type Mutation {
@@ -31,10 +44,6 @@ type Mutation {
 Module: <%= h.changeCase.pascal(module.name) %>
 """
 <% module.operations.forEach(op => { _%>
-<%- op.schema.replace('input ', 'input ' + h.changeCase.pascal(documentType) + '_') %>
+<%- op.schema.replace('input ', 'input ' + h.changeCase.pascal(documentType) + '_').replace('type ', 'type ' + h.changeCase.pascal(documentType) + '_') %>
 <%_ })}); %>
-
-type Query {
-    <%- h.changeCase.pascal(documentType) %>(driveId:String, docId:PHID): <%- h.changeCase.pascal(documentType) %>State
-}
 `
