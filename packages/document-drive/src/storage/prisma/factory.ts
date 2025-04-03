@@ -1,5 +1,5 @@
 import { type ICache } from "#cache/types";
-import { PrismaStorage } from "#storage/prisma/index";
+import { PrismaStorage } from "#storage/prisma/prisma";
 import { PrismaClient } from "./client/index.js";
 
 export class PrismaStorageFactory {
