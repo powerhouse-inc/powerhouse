@@ -70,19 +70,21 @@ async function loadPackagesDocumentModels(packages: string[]) {
 async function loadPackagesSubgraphs(packages: string[]) {
   const loadedPackages = new Map<string, SubgraphClass[]>();
   for (const pkg of packages) {
-    const pkgModule = (await loadDependency(pkg, "subgraphs")) as Record<
-      string,
-      Record<string, SubgraphClass>
-    >;
+    const pkgModule = (await loadDependency(pkg, "subgraphs")) as
+      | undefined
+      | Record<string, Record<string, SubgraphClass>>;
 
-    const subgraphs = Object.values(pkgModule).map((subgraph) => {
-      return Object.values(subgraph);
-    });
-    if (pkgModule) {
+    const subgraphs = pkgModule
+      ? Object.values(pkgModule).map((subgraph) => {
+          return Object.values(subgraph);
+        })
+      : undefined;
+
+    if (!pkgModule || !subgraphs?.length) {
+      console.warn(`  ➜  No Subgraphs found: ${pkg}`);
+    } else {
       console.log(`  ➜  Loaded Subgraphs from: ${pkg}`);
       loadedPackages.set(pkg.replaceAll("@", ""), subgraphs.flat());
-    } else {
-      console.warn(`  ➜  No Subgraphs found: ${pkg}`);
     }
   }
   return loadedPackages;
