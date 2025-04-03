@@ -11,13 +11,13 @@ import cors from "cors";
 import { type IDocumentDriveServer } from "document-drive";
 import type express from "express";
 import { Router, type IRouter } from "express";
-import { type DocumentNode, type GraphQLSchema } from "graphql";
+import { type GraphQLSchema } from "graphql";
 import { AnalyticsSubgraph } from "./analytics/index.js";
 import { AuthSubgraph } from "./auth/index.js";
 import { DriveSubgraph } from "./drive/index.js";
 import { type Subgraph, type SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
-import { type Context, type ISubgraph } from "./types.js";
+import { type Context } from "./types.js";
 export class SubgraphManager {
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
@@ -95,43 +95,7 @@ export class SubgraphManager {
   }
 
   setSupergraph(supergraph: string, subgraphs: Subgraph[]) {
-    // Set the supergraph with its subgraphs
     this.subgraphs.set(supergraph, subgraphs);
-
-    // Also register this supergraph as a subgraph of the /graphql supergraph
-    if (supergraph !== "" && supergraph !== "graphql") {
-      // Create a virtual subgraph for the supergraph
-      const supergraphSubgraph: ISubgraph = {
-        name: "supergraph",
-        path: `/${supergraph}`,
-        // These are required by the ISubgraph interface
-        resolvers: {},
-        typeDefs: {} as DocumentNode, // Cast empty object to DocumentNode
-        reactor: this.reactor,
-        operationalStore: this.operationalStore,
-        onSetup: async () => {},
-      };
-
-      // Add it to the /graphql supergraph
-      if (!this.subgraphs.has("graphql")) {
-        this.subgraphs.set("graphql", []);
-        console.log(`> Created /graphql supergraph`);
-      }
-
-      // Check if the supergraph is already registered as a subgraph
-      const existingSubgraph = this.subgraphs
-        .get("graphql")
-        ?.find((s) => s.name === supergraph);
-
-      if (!existingSubgraph) {
-        // We need to cast the ISubgraph to Subgraph since the Map expects Subgraph[]
-        this.subgraphs
-          .get("graphql")
-          ?.push(supergraphSubgraph as unknown as Subgraph);
-        console.log(`> Registered /${supergraph} as a subgraph of /graphql`);
-      }
-    }
-
     this.updateRouter();
   }
 
@@ -159,12 +123,8 @@ export class SubgraphManager {
 
   async #setupSubgraphs(router: IRouter) {
     for (const [supergraph, subgraphs] of this.subgraphs.entries()) {
-      const supergraphEndpoints: Record<string, ApolloServer | undefined> = {};
+      const supergraphEndpoints: Record<string, ApolloServer> = {};
       for (const subgraph of subgraphs) {
-        if (subgraph.name === "supergraph") {
-          supergraphEndpoints[subgraph.path] = undefined;
-          continue;
-        }
         const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
         if (!subgraphConfig) continue;
         // create subgraph schema
@@ -190,15 +150,12 @@ export class SubgraphManager {
         if (supergraphServer) {
           const path = `/${supergraph}`;
           this.#setupApolloExpressMiddleware(supergraphServer, router, path);
-          console.log(`> Updated Apollo Gateway at ${path}`);
         }
       }
     }
   }
 
-  async #createApolloGateway(
-    endpoints: Record<string, ApolloServer | undefined>,
-  ) {
+  async #createApolloGateway(endpoints: Record<string, ApolloServer>) {
     try {
       const gateway = new ApolloGateway({
         supergraphSdl: new IntrospectAndCompose({
