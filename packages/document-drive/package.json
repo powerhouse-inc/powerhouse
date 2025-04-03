@@ -6,7 +6,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
-    "./storage/prisma": "./dist/src/storage/prisma/index.js",
+    "./storage/prisma": "./dist/src/storage/prisma/prisma.js",
     "./*": "./dist/src/*.js"
   },
   "imports": {
