@@ -215,7 +215,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
   return (
     <div
       className={cn(
-        "max-w-full rounded-md bg-transparent px-3 pb-2",
+        "w-full max-w-full rounded-md bg-transparent px-3 pb-2",
         variant === "withValue" ? "pt-2" : "pt-3",
         className,
       )}
