@@ -140,6 +140,7 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
 
   await generateSchema(name, config.documentModelsDir, config);
   await generateDocumentModel(documentModel, config.documentModelsDir, config);
+  await generateSubgraph(name, path, config);
 }
 
 export async function generateEditor(
