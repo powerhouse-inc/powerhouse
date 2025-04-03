@@ -24,9 +24,11 @@
       "dependsOn": ["^build"]
     },
     "lint": {
+      "cache": true,
       "dependsOn": ["^build"]
     },
     "lint:nx": {
+      "cache": true,
       "dependsOn": ["^build"]
     },
     "generate": {
@@ -36,6 +38,7 @@
       "dependsOn": ["^build"]
     },
     "test": {
+      "cache": true,
       "dependsOn": ["^build"]
     },
     "build": {
