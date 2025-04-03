@@ -20,7 +20,7 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "lint:fix": "eslint --fix",
-    "postinstall": "npx --no-silent shx test -f ./.skippostinstall || ph setup-globals",
+    "postinstall": "npx shx test -f ./.skippostinstall || ph setup-globals",
     "test": "vitest run",
     "test:watch": "vitest watch"
   },

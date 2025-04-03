@@ -27,13 +27,13 @@ export const setupGlobals: CommandActionType<
   const globalProjectExists = fs.existsSync(POWERHOUSE_GLOBAL_DIR);
 
   if (globalProjectExists) {
-    console.log(
+    console.error(
       `📦 Global project already exists at: ${POWERHOUSE_GLOBAL_DIR}`,
     );
     return;
   }
 
-  console.log("📦 Initializing global project...");
+  console.error("📦 Initializing global project...");
   process.chdir(HOME_DIR);
 
   try {
@@ -45,7 +45,7 @@ export const setupGlobals: CommandActionType<
         options.packageManager ?? getPackageManagerFromPath(PH_BIN_PATH),
     });
 
-    console.log(
+    console.error(
       `🚀 Global project initialized successfully: ${POWERHOUSE_GLOBAL_DIR}`,
     );
   } catch (error) {
