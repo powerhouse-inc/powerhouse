@@ -24,7 +24,9 @@
     "build": "npm run build:css && npm run build:tsc",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "peerDependencies": {
     "@powerhousedao/reactor-browser": "workspace:*",

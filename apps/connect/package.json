@@ -45,7 +45,9 @@
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
         "cy:open": "cypress open",
-        "build:service-worker": "tsc --build ./tsconfig.sw.json"
+        "build:service-worker": "tsc --build ./tsconfig.sw.json",
+        "clean": "rimraf dist",
+        "clean:node_modules": "rimraf node_modules"
     },
     "devDependencies": {
         "@electron-forge/cli": "^6.1.1",

@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "preview": "vite preview",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "dependencies": {
     "@apollo/client": "^3.11.8",

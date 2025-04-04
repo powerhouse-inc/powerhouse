@@ -15,7 +15,9 @@
     "lint:nx": "eslint . --fix --quiet",
     "install-packages": "node dist/src/install-packages.js",
     "postbuild": "pnpm run install-packages",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "author": "",
   "license": "ISC",

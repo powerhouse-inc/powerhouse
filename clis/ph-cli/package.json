@@ -19,7 +19,9 @@
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix"
+    "lint:fix": "eslint --fix",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "keywords": [],
   "author": "",

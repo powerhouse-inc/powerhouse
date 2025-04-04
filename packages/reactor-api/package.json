@@ -19,7 +19,9 @@
     "build:tsc": "tsc --build",
     "test": "vitest run",
     "lint": "eslint",
-    "bench": "vitest bench"
+    "bench": "vitest bench",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "publishConfig": {
     "access": "public"
