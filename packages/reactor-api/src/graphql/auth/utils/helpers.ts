@@ -1,8 +1,5 @@
-import {
-  JWT_EXPIRATION_PERIOD,
-  JWT_SECRET,
-} from "#subgraphs/auth/env/index.js";
-import { Session, SessionInput } from "#subgraphs/auth/types.js";
+import { JWT_EXPIRATION_PERIOD, JWT_SECRET } from "#graphql/auth/env/index.js";
+import { Session, SessionInput } from "#graphql/auth/types.js";
 import { Db } from "#utils/db.js";
 import { randomUUID } from "crypto";
 import { GraphQLError } from "graphql";

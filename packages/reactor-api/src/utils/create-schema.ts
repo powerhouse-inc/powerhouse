@@ -1,4 +1,4 @@
-import { type Context } from "#subgraphs/types.js";
+import { type Context } from "#graphql/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";

@@ -1,4 +1,4 @@
-import { Subgraph } from "#subgraphs/base/index.js";
+import { Subgraph } from "#graphql/base/index.js";
 import { type DriveInput } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";

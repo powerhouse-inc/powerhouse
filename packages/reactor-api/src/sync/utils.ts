@@ -1,11 +1,11 @@
 import {
-  DocumentDriveAction,
-  IDocumentDriveServer,
-  ListenerRevision,
-  PullResponderTransmitter,
-  StrandUpdate,
+  type DocumentDriveAction,
+  type IDocumentDriveServer,
+  type ListenerRevision,
+  type PullResponderTransmitter,
+  type StrandUpdate,
 } from "document-drive";
-import { Operation, OperationScope } from "document-model";
+import { type Operation, type OperationScope } from "document-model";
 
 // define types
 export type InternalStrandUpdate = {

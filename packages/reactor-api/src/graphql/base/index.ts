@@ -1,5 +1,5 @@
-import { type SubgraphManager } from "#subgraphs/manager.js";
-import { type ISubgraph, type SubgraphArgs } from "#subgraphs/types.js";
+import { type SubgraphManager } from "#graphql/manager.js";
+import { type ISubgraph, type SubgraphArgs } from "#graphql/types.js";
 import { type Db } from "#types.js";
 import { type IDocumentDriveServer } from "document-drive";
 import { type DocumentNode } from "graphql";

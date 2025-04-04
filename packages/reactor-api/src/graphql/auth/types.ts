@@ -1,4 +1,4 @@
-import { Context } from "#subgraphs/types.js";
+import { Context } from "#graphql/types.js";
 
 export interface SessionInput {
   name: string;

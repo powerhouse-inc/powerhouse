@@ -1,5 +1,5 @@
-import { Subgraph } from "#subgraphs/base/index.js";
-import { type Context, type SubgraphArgs } from "#subgraphs/types.js";
+import { Subgraph } from "#graphql/base/index.js";
+import { type Context, type SubgraphArgs } from "#graphql/types.js";
 import {
   type InternalStrandUpdate,
   processAcknowledge,

@@ -1,4 +1,4 @@
-import { type Context } from "#subgraphs/types.js";
+import { type Context } from "#graphql/types.js";
 import { type Db } from "#types.js";
 import { GraphQLError } from "graphql";
 import ms from "ms";

@@ -1,5 +1,5 @@
 import { Express } from "express";
-import { SubgraphManager } from "./subgraphs/manager.js";
+import { SubgraphManager } from "./graphql/manager.js";
 
 export type { Db } from "./utils/db.js";
 
