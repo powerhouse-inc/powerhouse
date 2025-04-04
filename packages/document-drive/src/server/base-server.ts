@@ -127,9 +127,9 @@ export class BaseDocumentDriveServer
       operations,
       options,
     }: OperationJob) => {
-      return documentId
-        ? this.addOperations(driveId, documentId, operations, options)
-        : this.addDriveOperations(driveId, operations, options);
+      return !documentId || driveId === documentId
+        ? this.addDriveOperations(driveId, operations, options)
+        : this.addOperations(driveId, documentId, operations, options);
     },
     processActionJob: async ({
       driveId,
