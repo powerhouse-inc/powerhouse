@@ -31,6 +31,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(!!this.documents[documentId]);
   }
 
+  // TODO: this should throw an error if the document already exists.
   create(documentId: string, document: PHDocument) {
     this.documents[documentId] = document;
 

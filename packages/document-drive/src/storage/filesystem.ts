@@ -50,6 +50,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(documentExists);
   }
 
+  // TODO: this should throw an error if the document already exists.
   create(documentId: string, document: PHDocument) {
     const documentPath = this._buildDocumentPath(documentId);
     writeFileSync(documentPath, stringify(document), {

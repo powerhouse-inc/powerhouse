@@ -55,6 +55,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return !!document;
   }
 
+  // TODO: this should throw an error if the document already exists.
   async create(documentId: string, document: PHDocument): Promise<void> {
     const db = await this.db;
     await db.setItem(this.buildDocumentKey(documentId), document);

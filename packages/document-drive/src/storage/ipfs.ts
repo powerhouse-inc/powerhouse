@@ -50,6 +50,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return false;
   }
 
+  // TODO: this should throw an error if the document already exists.
   async create(documentId: string, document: PHDocument): Promise<void> {
     await this.fs.writeBytes(
       new TextEncoder().encode(stringify(document)),

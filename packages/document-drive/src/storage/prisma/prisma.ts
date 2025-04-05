@@ -121,6 +121,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return count > 0;
   }
 
+  // TODO: this should throw an error if the document already exists.
   async create(documentId: string, document: PHDocument) {
     await this.db.document.upsert({
       where: {
