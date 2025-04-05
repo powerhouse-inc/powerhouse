@@ -142,10 +142,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   // IDriveStorage
   ////////////////////////////////
 
-  checkDocumentExists(drive: string, documentId: string): Promise<boolean> {
-    return this.exists(documentId);
-  }
-
   private async getManifest(driveId: string): Promise<DriveManifest> {
     const db = await this.db;
     const manifest = await db.getItem<DriveManifest>(

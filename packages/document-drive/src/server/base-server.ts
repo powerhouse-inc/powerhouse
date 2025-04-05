@@ -119,7 +119,7 @@ export class BaseDocumentDriveServer
   };
 
   private queueDelegate = {
-    checkDocumentExists: (documentId: string): Promise<boolean> =>
+    exists: (documentId: string): Promise<boolean> =>
       this.documentStorage.exists(documentId),
     processOperationJob: async ({
       driveId,

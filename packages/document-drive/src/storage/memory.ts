@@ -102,10 +102,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   // IDriveStorage
   ////////////////////////////////
 
-  checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    return this.exists(id);
-  }
-
   getDocuments(drive: string) {
     const manifest = this.getManifest(drive);
     return Promise.resolve([...manifest.documentIds]);

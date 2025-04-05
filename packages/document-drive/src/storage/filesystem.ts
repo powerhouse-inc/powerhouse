@@ -143,10 +143,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
-  checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    return this.exists(id);
-  }
-
   async createDocument(drive: string, id: string, document: PHDocument) {
     const documentPath = this._buildDocumentPath(id);
     writeFileSync(documentPath, stringify(document), {

@@ -28,7 +28,7 @@ export interface QueueEvents {
 }
 
 export interface IServerDelegate {
-  checkDocumentExists: (documentId: string) => Promise<boolean>;
+  exists: (documentId: string) => Promise<boolean>;
   processJob: (job: Job) => Promise<IOperationResult>;
 }
 

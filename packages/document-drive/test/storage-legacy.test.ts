@@ -1,11 +1,7 @@
 import { existsSync, rmdirSync } from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { createDocument as createDriveDocument } from "../../document-drive/src/drive-document-model/gen/utils";
-import {
-  createDocument,
-  DocumentModelModule,
-} from "../../document-model/index";
+import { DocumentModelModule } from "../../document-model/index";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
 import InMemoryCache from "../src/cache/memory";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
@@ -91,20 +87,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     }
   });
 
-  it("should correctly check for non-existent document", async ({ expect }) => {
-    const storage = await buildStorage();
-
-    const result = await storage.checkDocumentExists("test", "test");
-    expect(result).toBe(false);
-  });
-
-  it("should correctly check for existent document", async ({ expect }) => {
-    const storage = await buildStorage();
-
-    const drive = await storage.createDrive("foo", createDriveDocument());
-    await storage.createDocument("foo", "bar", createDocument());
-
-    const result = await storage.checkDocumentExists("foo", "bar");
-    expect(result).toBe(true);
+  it("should compile", () => {
+    //
   });
 });

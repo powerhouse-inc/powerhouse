@@ -140,10 +140,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   // IDriveStorage
   ////////////////////////////////
 
-  async checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    return this.exists(id);
-  }
-
   async getDocuments(drive: string): Promise<string[]> {
     const manifest = await this.getDriveManifest(drive);
     return manifest.documentIds;
