@@ -800,7 +800,24 @@ export class BaseDocumentDriveServer
     };
 
     await this.documentStorage.create(input.id, documentStorage);
-    await this.documentStorage.addChild(driveId, input.id);
+
+    try {
+      await this.documentStorage.addChild(driveId, input.id);
+    } catch (e) {
+      this.logger.error("Error adding child document", e);
+
+      // revert the document creation
+      try {
+        await this.documentStorage.delete(input.id);
+      } catch (e) {
+        this.logger.error(
+          "FATAL: Could not revert document creation. This means that we created a document but failed to add it to the drive..",
+          e,
+        );
+      }
+
+      throw e;
+    }
 
     // set initial state for new syncUnits
     for (const syncUnit of input.synchronizationUnits) {
