@@ -159,8 +159,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDocuments(drive: string) {
-    const manifest = await this.getManifest(drive);
-    return manifest.documentIds;
+    return this.getChildren(drive);
   }
 
   async clearStorage(): Promise<void> {

@@ -103,8 +103,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   ////////////////////////////////
 
   getDocuments(drive: string) {
-    const manifest = this.getManifest(drive);
-    return Promise.resolve([...manifest.documentIds]);
+    return this.getChildren(drive);
   }
 
   async clearStorage(): Promise<void> {

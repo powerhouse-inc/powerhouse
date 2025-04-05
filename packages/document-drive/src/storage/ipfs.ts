@@ -141,8 +141,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   ////////////////////////////////
 
   async getDocuments(drive: string): Promise<string[]> {
-    const manifest = await this.getDriveManifest(drive);
-    return manifest.documentIds;
+    return this.getChildren(drive);
   }
 
   async addDocumentOperations<TDocument extends PHDocument>(
