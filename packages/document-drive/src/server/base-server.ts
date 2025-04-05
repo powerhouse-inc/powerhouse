@@ -764,7 +764,7 @@ export class BaseDocumentDriveServer
   }
 
   getDocuments(driveId: string) {
-    return this.legacyStorage.getDocuments(driveId);
+    return this.documentStorage.getChildren(driveId);
   }
 
   protected async createDocument<TDocument extends PHDocument>(

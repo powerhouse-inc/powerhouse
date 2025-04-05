@@ -138,10 +138,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   // IDriveStorage
   ////////////////////////////////
 
-  async getDocuments(drive: string) {
-    return this.getChildren(drive);
-  }
-
   async clearStorage() {
     // delete content of basePath
     const files = (
@@ -237,7 +233,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
   async deleteDrive(id: string) {
     // First get all documents in this drive
-    const documents = await this.getDocuments(id);
+    const documents = await this.getChildren(id);
 
     // Delete each document from this drive (may not actually delete the file if shared with other drives)
     await Promise.all(documents.map((doc) => this.delete(doc)));
