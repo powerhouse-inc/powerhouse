@@ -130,6 +130,32 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     expect(result3).toBe(false);
   });
 
+  it("should delete documents from all drives when deleted", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    await storage.create("test", document);
+
+    const driveA = createDriveDocument();
+    await storage.create("driveA", driveA);
+    await storage.addChild("driveA", "test");
+
+    const driveB = createDriveDocument();
+    await storage.create("driveB", driveB);
+    await storage.addChild("driveB", "test");
+
+    const result = await storage.delete("test");
+    expect(result).toBe(true);
+
+    const childrenA = await storage.getChildren("driveA");
+    expect(childrenA).toEqual([]);
+
+    const childrenB = await storage.getChildren("driveB");
+    expect(childrenB).toEqual([]);
+  });
+
   it("should allow associating a document with another document", async ({
     expect,
   }) => {

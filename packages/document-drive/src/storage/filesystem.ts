@@ -159,29 +159,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async deleteDocument(drive: string, id: string) {
-    // Update the drive manifest to remove this document
-    const manifest = await this.getManifest(drive);
-    const docIndex = manifest.documentIds.indexOf(id);
-    if (docIndex !== -1) {
-      manifest.documentIds.splice(docIndex, 1);
-      await this.updateDriveManifest(drive, manifest);
-    }
-
-    // Check if this document exists in other drive manifests
-    // Only delete the actual file if no other drive references it
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === drive) continue;
-
-      const otherManifest = await this.getManifest(driveId);
-      if (otherManifest.documentIds.includes(id)) {
-        // Document still referenced by another drive, don't delete the file
-        return Promise.resolve();
-      }
-    }
-
-    // If we got here, no other drive references this document, so we can delete it
-    return fs.rm(this._buildDocumentPath(id));
+    await this.delete(id);
   }
 
   async addDocumentOperations(
