@@ -163,17 +163,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
-  async createDocument(drive: string, id: string, document: PHDocument) {
-    await this.create(id, document);
-
-    // Update the drive manifest to include this document
-    const manifest = await this.getManifest(drive);
-    if (!manifest.documentIds.includes(id)) {
-      manifest.documentIds.push(id);
-      await this.updateDriveManifest(drive, manifest);
-    }
-  }
-
   async deleteDocument(drive: string, id: string) {
     await (await this.db).removeItem(this.buildDocumentKey(id));
 

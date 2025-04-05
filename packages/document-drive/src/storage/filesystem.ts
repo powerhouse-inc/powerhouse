@@ -143,22 +143,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
-  async createDocument(drive: string, id: string, document: PHDocument) {
-    const documentPath = this._buildDocumentPath(id);
-    writeFileSync(documentPath, stringify(document), {
-      encoding: "utf-8",
-    });
-
-    // Update the drive manifest to include this document
-    const manifest = await this.getManifest(drive);
-    if (!manifest.documentIds.includes(id)) {
-      manifest.documentIds.push(id);
-      await this.updateDriveManifest(drive, manifest);
-    }
-
-    return Promise.resolve();
-  }
-
   async clearStorage() {
     // delete content of basePath
     const files = (

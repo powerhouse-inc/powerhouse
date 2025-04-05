@@ -145,23 +145,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
-  async createDocument(
-    drive: string,
-    id: string,
-    document: PHDocument,
-  ): Promise<void> {
-    await this.create(id, document);
-
-    // Update the drive manifest to include this document
-    const manifest = await this.getDriveManifest(drive);
-    if (!manifest.documentIds.includes(id)) {
-      manifest.documentIds.push(id);
-      await this.updateDriveManifest(drive, manifest);
-    }
-
-    return Promise.resolve();
-  }
-
   async deleteDocument(drive: string, id: string): Promise<void> {
     // Update the drive manifest to remove this document
     const manifest = await this.getDriveManifest(drive);
@@ -207,11 +190,12 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
 
     const mergedOperations = mergeOperations(document.operations, operations);
 
-    await this.createDocument(drive, id, {
+    await this.create(id, {
       ...document,
       ...header,
       operations: mergedOperations,
     });
+    await this.addChild(drive, id);
   }
 
   async getDrives(): Promise<string[]> {

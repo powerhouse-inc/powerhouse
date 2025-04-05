@@ -454,24 +454,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     );
   }
 
-  async createDocument(
-    drive: string,
-    id: string,
-    document: PHDocument,
-  ): Promise<void> {
-    await this.create(id, document);
-
-    // create the many-to-many relation
-    await this.db.document.update({
-      where: {
-        id,
-      },
-      data: {
-        driveDocuments: { create: { driveId: drive } },
-      },
-    });
-  }
-
   private async _addDocumentOperations(
     tx: Transaction,
     drive: string,

@@ -21,11 +21,6 @@ export interface IDocumentStorage {
 
 export interface IStorage {
   getDocuments: (drive: string) => Promise<string[]>;
-  createDocument(
-    drive: string,
-    id: string,
-    document: PHDocument,
-  ): Promise<void>;
   addDocumentOperations<TDocument extends PHDocument>(
     drive: string,
     id: string,

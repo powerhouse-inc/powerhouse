@@ -112,15 +112,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     this.driveManifests = {};
   }
 
-  async createDocument(drive: string, id: string, document: PHDocument) {
-    await this.create(id, document);
-
-    // Update the drive manifest
-    const manifest = this.getManifest(drive);
-    manifest.documentIds.add(id);
-    this.updateDriveManifest(drive, manifest);
-  }
-
   async addDocumentOperations(
     drive: string,
     id: string,

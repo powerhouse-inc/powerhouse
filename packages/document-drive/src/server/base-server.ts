@@ -798,7 +798,9 @@ export class BaseDocumentDriveServer
       clipboard: [],
       state: state ?? document.state,
     };
-    await this.legacyStorage.createDocument(driveId, input.id, documentStorage);
+
+    await this.documentStorage.create(input.id, documentStorage);
+    await this.documentStorage.addChild(driveId, input.id);
 
     // set initial state for new syncUnits
     for (const syncUnit of input.synchronizationUnits) {
