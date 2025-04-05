@@ -1,6 +1,7 @@
-import { ConnectDropdownMenu } from "@/connect/components/dropdown-menu";
-import { Icon } from "@/powerhouse/components/icon";
-import React, { ReactNode, useCallback, useState } from "react";
+import { ConnectDropdownMenu } from "#connect";
+import { Icon } from "#powerhouse";
+
+import { useCallback, useState, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type PackageDetails = {
@@ -138,7 +139,7 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
     <div
       {...rest}
       className={twMerge(
-        "flex flex-col items-stretch overflow-hidden",
+        "flex max-h-[370px] flex-col items-stretch overflow-hidden",
         className,
       )}
     >

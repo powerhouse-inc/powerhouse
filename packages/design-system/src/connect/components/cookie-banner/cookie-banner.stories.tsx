@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { CookieBanner } from "./cookie-banner";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { CookieBanner } from "./cookie-banner.js";
 
 const meta = {
   title: "Connect/Components/CookieBanner",

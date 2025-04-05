@@ -1,6 +1,7 @@
+import { commonCryptoCurrencies } from "#scalars";
 import { screen, waitFor } from "@testing-library/react";
-import { AmountField } from "./amount-field";
-import { renderWithForm } from "@/scalars/lib/testing";
+import { renderWithForm } from "../../lib/testing.js";
+import { AmountField } from "./amount-field.js";
 
 describe("AmountField Component", () => {
   it("should match snapshot", () => {
@@ -9,7 +10,10 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
+        units={commonCryptoCurrencies}
       />,
     );
     expect(container).toMatchSnapshot();
@@ -21,7 +25,10 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
+        units={commonCryptoCurrencies}
       />,
     );
     expect(screen.getByLabelText("Amount Label")).toBeInTheDocument();
@@ -33,9 +40,12 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
         errors={["Error 1", "Error 2"]}
         validators={() => "Error 3"}
+        units={commonCryptoCurrencies}
       />,
     );
     await waitFor(() => {
@@ -64,7 +74,10 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
+        units={commonCryptoCurrencies}
         disabled
       />,
     );
@@ -79,8 +92,11 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
         required
+        units={commonCryptoCurrencies}
       />,
     );
     expect(screen.getByRole("spinbutton")).toHaveAttribute("required");
@@ -92,7 +108,10 @@ describe("AmountField Component", () => {
         label="Amount Label"
         name="amount"
         type="Amount"
-        value={345}
+        value={{
+          amount: 345,
+        }}
+        units={commonCryptoCurrencies}
         disabled
         description="This is a description"
       />,

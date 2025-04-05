@@ -26,6 +26,8 @@ import {
 import { reducer } from "./reducer.js";
 import { DocumentModelDocument } from "./types.js";
 
+export { fileExtension } from "./constants.js";
+
 export const createState: CreateState<DocumentModelDocument> = (state) => {
   return {
     global: { ...documentModelState, ...state?.global },

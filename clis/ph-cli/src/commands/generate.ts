@@ -1,104 +1,20 @@
-import {
-  generate as generateCode,
-  generateEditor,
-  generateFromFile,
-  generateImportScript,
-  generateProcessor,
-  generateSubgraph,
-} from "@powerhousedao/codegen";
-import { getConfig } from "@powerhousedao/config/powerhouse";
-import { Command } from "commander";
-import { CommandActionType } from "../types.js";
+import { type Command } from "commander";
+import { type GenerateOptions } from "../services/generate.js";
+import { type CommandActionType } from "../types.js";
+
+async function startGenerate(
+  filePath: string | undefined,
+  options: GenerateOptions,
+) {
+  const Generate = await import("../services/generate.js");
+  const { startGenerate } = Generate;
+  return startGenerate(filePath, options);
+}
 
 export const generate: CommandActionType<
-  [
-    string | undefined,
-    {
-      interactive?: boolean;
-      editors?: string;
-      processors?: string;
-      documentModels?: string;
-      skipFormat?: boolean;
-      watch?: boolean;
-      editor?: string;
-      processor?: string;
-      documentTypes?: string;
-      processorType?: "analytics" | "operational";
-      subgraph?: string;
-      importScript?: string;
-    },
-  ]
+  [string | undefined, GenerateOptions]
 > = async (filePath, options) => {
-  const baseConfig = getConfig();
-
-  const config = {
-    ...baseConfig,
-    ...{
-      ...(options.editors && { editorsDir: options.editors }),
-      ...(options.processors && { processorsDir: options.processors }),
-      ...(options.documentModels && {
-        documentModelsDir: options.documentModels,
-      }),
-      ...(options.skipFormat && { skipFormat: options.skipFormat }),
-      ...(options.interactive && { interactive: options.interactive }),
-      ...(options.watch && { watch: options.watch }),
-    },
-  };
-
-  const command = {
-    editor: !!options.editor,
-    editorName: options.editor,
-    documentTypes: options.documentTypes,
-    processor: !!options.processor,
-    processorName: options.processor,
-    processorType: options.processorType,
-    subgraph: !!options.subgraph,
-    subgraphName: options.subgraph,
-    importScript: !!options.importScript,
-    importScriptName: options.importScript,
-  };
-
-  if (command.editor) {
-    if (!command.editorName) {
-      throw new Error("Editor name is required (--editor or -e)");
-    }
-    await generateEditor(
-      command.editorName,
-      command.documentTypes?.split(/[|,;]/g) ?? [],
-      config,
-    );
-
-    return;
-  }
-
-  if (command.processor && options.processor) {
-    const processorType =
-      options.processorType === "operational" ? "operational" : "analytics";
-    await generateProcessor(
-      options.processor,
-      processorType,
-      options.documentTypes?.split(",") ?? [],
-      config,
-    );
-    return;
-  }
-
-  if (command.subgraph && command.subgraphName) {
-    await generateSubgraph(command.subgraphName, null, config);
-    return;
-  }
-
-  if (command.importScript && command.importScriptName) {
-    await generateImportScript(command.importScriptName, config);
-    return;
-  }
-
-  if (filePath) {
-    await generateFromFile(filePath, config);
-    return;
-  }
-
-  await generateCode(config);
+  return startGenerate(filePath, options);
 };
 
 export function generateCommand(program: Command) {
@@ -109,6 +25,7 @@ export function generateCommand(program: Command) {
     .option("-i, --interactive", "Run the command in interactive mode")
     .option("--editors <type>", "Path to the editors directory")
     .option("-e, --editor <type>", "Editor Name")
+    .option("--file <path>", "File path to document model")
     .option("--processors <type>", "Path to the processors directory")
     .option("-p, --processor <type>", "Processor Name")
     .option("--processor-type <type>", "Processor Type")
@@ -118,5 +35,9 @@ export function generateCommand(program: Command) {
     .option("-is, --import-script <type>", "Import Script Name")
     .option("-sf, --skip-format", "Skip formatting the generated code")
     .option("-w, --watch", "Watch the generated code")
+    .option(
+      "-d, --drive-editor <name>",
+      "Generate a drive editor with the specified name",
+    )
     .action(generate);
 }

@@ -1,6 +1,6 @@
 import { sortOperations } from "document-model";
 import { describe, expect, it } from "vitest";
-import { buildOperations } from "../utils.js";
+import { buildOperations } from "./utils.js";
 
 describe("sortOperations", () => {
   const scenarios = [

@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { StringField } from "./string-field";
-import { renderWithForm } from "@/scalars/lib/testing";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../lib/testing.js";
+import { StringField } from "./string-field.js";
 
 describe("StringField", () => {
   it("should match snapshot with minimal props", () => {

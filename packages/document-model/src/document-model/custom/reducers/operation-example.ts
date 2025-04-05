@@ -1,5 +1,5 @@
-import { DocumentModelOperationExampleOperations } from "../../gen/operation-example/operations.js";
-import { CodeExample } from "../../gen/schema/types.js";
+import { type DocumentModelOperationExampleOperations } from "../../gen/operation-example/operations.js";
+import { type CodeExample } from "../../gen/schema/types.js";
 
 const exampleSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};

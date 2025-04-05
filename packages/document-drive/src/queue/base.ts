@@ -1,19 +1,19 @@
-import { DeleteNodeAction } from "#drive-document-model/gen/actions";
-import { AddFileInput } from "#drive-document-model/gen/types";
+import { type DeleteNodeAction } from "#drive-document-model/gen/actions";
+import { type AddFileInput } from "#drive-document-model/gen/types";
 import { logger } from "#utils/logger";
 import { generateUUID, runAsap } from "#utils/misc";
-import { Action } from "document-model";
-import { createNanoEvents, Unsubscribe } from "nanoevents";
+import { type Action } from "document-model";
+import { createNanoEvents, type Unsubscribe } from "nanoevents";
 import {
-  IJob,
-  IJobQueue,
-  IQueue,
-  IQueueManager,
-  IServerDelegate,
+  type IJob,
+  type IJobQueue,
+  type IQueue,
+  type IQueueManager,
+  type IServerDelegate,
   isOperationJob,
-  Job,
-  JobId,
-  QueueEvents,
+  type Job,
+  type JobId,
+  type QueueEvents,
 } from "./types.js";
 
 export class MemoryQueue<T> implements IQueue<T> {
@@ -125,8 +125,7 @@ export class BaseQueueManager implements IQueueManager {
 
     // checks if the job is for a document that doesn't exist in storage yet
     const newDocument =
-      job.documentId &&
-      !(await this.delegate.checkDocumentExists(job.driveId, job.documentId));
+      job.documentId && !(await this.delegate.exists(job.documentId));
     // if it is a new document and queue is not yet blocked then
     // blocks it so the jobs are not processed until it's ready
     if (newDocument && !(await queue.isBlocked())) {

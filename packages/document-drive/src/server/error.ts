@@ -1,5 +1,5 @@
 import type { Operation } from "document-model";
-import { ErrorStatus } from "./types.js";
+import { type ErrorStatus } from "./types.js";
 
 export class DocumentModelNotFoundError extends Error {
   constructor(
@@ -51,12 +51,12 @@ export class DriveAlreadyExistsError extends Error {
   }
 }
 
-export class DriveNotFoundError extends Error {
-  driveId: string;
+export class DocumentNotFoundError extends Error {
+  documentId: string;
 
-  constructor(driveId: string) {
-    super(`Drive with id ${driveId} not found`);
-    this.driveId = driveId;
+  constructor(documentId: string) {
+    super(`Document with id ${documentId} not found`);
+    this.documentId = documentId;
   }
 }
 

@@ -1,32 +1,26 @@
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { SynchronizationUnitQuery } from "#server/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type SynchronizationUnitQuery } from "#server/types";
 import type {
   DocumentHeader,
   Operation,
   OperationFromDocument,
-  OperationsFromDocument,
   PHDocument,
 } from "document-model";
 
-export interface IStorageDelegate {
-  getCachedOperations<TDocument extends PHDocument = PHDocument>(
-    drive: string,
-    id: string,
-  ): Promise<OperationsFromDocument<TDocument> | undefined>;
+export interface IDocumentStorage {
+  exists(documentId: string): Promise<boolean>;
+  create(documentId: string, document: PHDocument): Promise<void>;
+  get<TDocument extends PHDocument>(documentId: string): Promise<TDocument>;
+  delete(documentId: string): Promise<boolean>;
+
+  addChild(parentId: string, childId: string): Promise<void>;
+  removeChild(parentId: string, childId: string): Promise<boolean>;
+  getChildren(parentId: string): Promise<string[]>;
+  //getParent(childId: string): Promise<string | undefined>;
 }
 
 export interface IStorage {
-  checkDocumentExists(drive: string, id: string): Promise<boolean>;
   getDocuments: (drive: string) => Promise<string[]>;
-  getDocument<TDocument extends PHDocument>(
-    drive: string,
-    id: string,
-  ): Promise<TDocument>;
-  createDocument(
-    drive: string,
-    id: string,
-    document: PHDocument,
-  ): Promise<void>;
   addDocumentOperations<TDocument extends PHDocument>(
     drive: string,
     id: string,
@@ -49,10 +43,8 @@ export interface IStorage {
     scope: string,
     branch: string,
   ): Promise<string | undefined>;
-  setStorageDelegate?(delegate: IStorageDelegate): void;
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
-      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -61,9 +53,9 @@ export interface IStorage {
     }[]
   >;
 }
+
 export interface IDriveStorage extends IStorage {
   getDrives(): Promise<string[]>;
-  getDrive(id: string): Promise<DocumentDriveDocument>;
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
   createDrive(id: string, drive: DocumentDriveDocument): Promise<void>;
   deleteDrive(id: string): Promise<void>;

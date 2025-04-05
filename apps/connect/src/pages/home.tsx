@@ -1,12 +1,11 @@
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { useUiNodes } from '#hooks/useUiNodes';
-import { useGetAppNameForEditorId } from '#store/external-packages';
+import { useDocumentDriveServer, useUiNodes } from '#hooks';
+import { useGetAppNameForEditorId } from '#store';
 import {
     HomeScreen,
     HomeScreenAddDriveItem,
     HomeScreenItem,
     Icon,
-    UiDriveNode,
+    type UiDriveNode,
 } from '@powerhousedao/design-system';
 import { useCallback } from 'react';
 

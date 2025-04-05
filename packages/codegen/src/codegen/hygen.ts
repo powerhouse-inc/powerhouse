@@ -1,11 +1,11 @@
 import { pascalCase } from "change-case";
-import { DocumentModelState } from "document-model";
+import { type DocumentModelState } from "document-model";
 import { Logger, runner } from "hygen";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DocumentTypesMap } from "./index.js";
+import { type DocumentTypesMap } from "./index.js";
 import { loadDocumentModel } from "./utils.js";
 
 const require = createRequire(import.meta.url);
@@ -204,7 +204,7 @@ export async function generateSubgraph(
     await run(
       [
         "powerhouse",
-        "generate-document-model-mutations",
+        "generate-document-model-subgraph",
         "--subgraph",
         name,
         "--document-model",
@@ -234,6 +234,18 @@ export async function generateImportScript(
       "--root-dir",
       dir,
     ],
+    { skipFormat },
+  );
+}
+
+export async function generateDriveEditor(
+  name: string,
+  dir: string,
+  { skipFormat = false } = {},
+) {
+  // Generate the drive editor files
+  await run(
+    ["powerhouse", "generate-drive-editor", "--name", name, "--root-dir", dir],
     { skipFormat },
   );
 }

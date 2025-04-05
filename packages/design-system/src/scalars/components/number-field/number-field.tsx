@@ -1,16 +1,16 @@
+import { Icon } from "#powerhouse";
+import { cn } from "#scalars";
 import { forwardRef, useId } from "react";
-import { Input } from "../fragments/input";
-import { FormLabel } from "../fragments/form-label";
-import { FormMessageList } from "../fragments/form-message";
-import { FormGroup } from "../fragments/form-group";
-import { FormDescription } from "../fragments/form-description";
-import { cn } from "@/scalars/lib";
-import { withFieldValidation } from "../fragments/with-field-validation";
-import { validateNumericType } from "./number-field-validations";
-import { Icon } from "@/powerhouse/components/icon";
-import { regex } from "./utils";
-import { InputNumberProps } from "./types";
-import { useNumberField } from "./use-number-field";
+import { Input } from "../../../ui/components/index.js";
+import { FormDescription } from "../fragments/form-description/index.js";
+import { FormGroup } from "../fragments/form-group/index.js";
+import { FormLabel } from "../fragments/form-label/index.js";
+import { FormMessageList } from "../fragments/form-message/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/index.js";
+import { validateNumericType } from "./number-field-validations.js";
+import type { InputNumberProps } from "./types.js";
+import { useNumberField } from "./use-number-field.js";
+import { regex } from "./utils.js";
 
 export interface NumberFieldProps extends InputNumberProps {
   name: string;
@@ -154,7 +154,7 @@ export const NumberFieldRaw = forwardRef<HTMLInputElement, NumberFieldProps>(
                   size={10}
                   name="ChevronDown"
                   className={cn(
-                    " items-center justify-center text-gray-700 dark:text-gray-300",
+                    "items-center justify-center text-gray-700 dark:text-gray-300",
                     canDecrement && "cursor-not-allowed",
                   )}
                 />

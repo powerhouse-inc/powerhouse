@@ -1,0 +1,25 @@
+import type { Props } from "./index.js";
+export default function DescendenceModified(props: Props) {
+  return (
+    <svg
+      {...props}
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect
+        x="1.5"
+        y="1.5"
+        width="13"
+        height="13"
+        rx="3.5"
+        stroke="currentcolor"
+      />
+      <rect x="4" y="7" width="2" height="2" rx="1" fill="currentcolor" />
+      <rect x="7" y="7" width="2" height="2" rx="1" fill="currentcolor" />
+      <rect x="10" y="7" width="2" height="2" rx="1" fill="currentcolor" />
+    </svg>
+  );
+}

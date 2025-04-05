@@ -1,10 +1,9 @@
-import React from "react";
+import { Button } from "#powerhouse";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { NumberField } from "./number-field";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { Form } from "../form/form";
-import { Button } from "@/powerhouse/components/button";
+import { userEvent } from "@testing-library/user-event";
+import { renderWithForm } from "../../lib/testing.js";
+import { Form } from "../form/form.js";
+import { NumberField } from "./number-field.js";
 
 describe("NumberField", () => {
   const mockOnChange = vi.fn();

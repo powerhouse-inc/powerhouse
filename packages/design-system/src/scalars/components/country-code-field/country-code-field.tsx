@@ -1,16 +1,24 @@
+import { SelectFieldRaw } from "#scalars";
 import React from "react";
-import { SelectFieldRaw } from "@/scalars/components/fragments/select-field";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import countries from "world-countries";
 import { CircleFlag } from "react-circle-flags";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { CountryCodeProps } from "./types";
+import countries, { type Countries } from "world-countries";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
+import type { CountryCodeProps } from "./types.js";
 
-export type CountryCodeFieldProps = FieldCommonProps<string> &
-  ErrorHandling &
+type CountryCodeFieldBaseProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
+  | keyof CountryCodeProps
+>;
+
+export type CountryCodeFieldProps = CountryCodeFieldBaseProps &
+  InputBaseProps<string> &
+  FieldErrorHandling &
   CountryCodeProps;
 
-const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
+const CountryCodeFieldRaw = React.forwardRef<
   HTMLButtonElement,
   CountryCodeFieldProps
 >(
@@ -28,7 +36,7 @@ const CountryCodeFieldRaw: React.FC<CountryCodeFieldProps> = React.forwardRef<
     },
     ref,
   ) => {
-    const defaultOptions = countries
+    const defaultOptions = (countries as unknown as Countries)
       .filter(
         (country) =>
           (includeDependentAreas ? true : country.independent) &&
@@ -89,7 +97,7 @@ export const CountryCodeField = withFieldValidation<CountryCodeFieldProps>(
             return true;
           }
 
-          const validCountries = countries
+          const validCountries = (countries as unknown as Countries)
             .filter(
               (country) =>
                 (includeDependentAreas ? true : country.independent) &&

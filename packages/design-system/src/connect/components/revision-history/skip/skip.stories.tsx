@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { Skip } from "./skip";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { Skip } from "./skip.js";
 
 const meta = {
   title: "Connect/Components/Revision History/Skip",

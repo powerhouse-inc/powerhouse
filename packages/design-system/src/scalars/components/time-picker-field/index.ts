@@ -1,1 +1,1 @@
-export * from "./time-picker-field";
+export { TimePickerField, type TimeFieldProps } from "./time-picker-field.js";

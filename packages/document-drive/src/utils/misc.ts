@@ -1,15 +1,14 @@
 import {
-  DocumentOperations,
-  Operation,
-  OperationFromDocument,
-  OperationScope,
-  OperationsFromDocument,
-  PHDocument,
+  type Operation,
+  type OperationFromDocument,
+  type OperationScope,
+  type OperationsFromDocument,
+  type PHDocument,
   generateId,
 } from "document-model";
 
 import { driveDocumentType } from "#drive-document-model/constants";
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { OperationError } from "#server/error";
 import { RunAsap } from "./run-asap.js";
 
@@ -78,4 +77,27 @@ export function isNoopUpdate(
 // return true if dateA is before dateB
 export function isBefore(dateA: Date | string, dateB: Date | string) {
   return new Date(dateA) < new Date(dateB);
+}
+
+/**
+ * Converts a string to PascalCase
+ * @param {string} str - The input string to convert
+ * @returns {string} The string in PascalCase format
+ *
+ * Examples:
+ * "hello world" -> "HelloWorld"
+ * "hello-world" -> "HelloWorld"
+ * "hello_world" -> "HelloWorld"
+ * "helloWorld" -> "HelloWorld"
+ */
+export function toPascalCase(str: string) {
+  return (
+    str
+      // Split by common separators (space, hyphen, underscore)
+      .split(/[\s-_]+/)
+      // Capitalize first letter of each word
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      // Join words together
+      .join("")
+  );
 }

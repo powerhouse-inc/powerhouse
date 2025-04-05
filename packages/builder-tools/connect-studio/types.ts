@@ -4,8 +4,6 @@ export type ConnectStudioOptions = {
   host?: boolean;
   https?: boolean;
   configFile?: string;
-  localEditors?: string;
-  localDocuments?: string;
   open?: boolean;
   packages?: { packageName: string }[];
   phCliVersion?: string;

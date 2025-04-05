@@ -1,23 +1,30 @@
-import { Context } from "#subgraphs/types.js";
+import { type Context } from "#graphql/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
-import { IDocumentDriveServer } from "document-drive";
-import { DocumentNode } from "graphql";
+import { type IDocumentDriveServer } from "document-drive";
+import { type DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
+import { GraphQLJSONObject } from "graphql-type-json";
 
 export const createSchema = (
   documentDriveServer: IDocumentDriveServer,
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
-) =>
-  buildSubgraphSchema([
+) => {
+  const newResolvers = {
+    ...resolvers,
+    JSONObject: GraphQLJSONObject,
+  };
+
+  return buildSubgraphSchema([
     {
       typeDefs: getDocumentModelTypeDefs(documentDriveServer, typeDefs),
-      resolvers,
+      resolvers: newResolvers,
     },
   ]);
+};
 
 export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
@@ -103,11 +110,13 @@ export const getDocumentModelTypeDefs = (
               lastModified: DateTime!
               ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
+              stateJSON: JSONObject
           }\n`;
   });
 
   // add the mutation and query types
   const schema = gql`
+    scalar JSONObject
     ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
 
     type PHOperationContext {
@@ -150,6 +159,7 @@ export const getDocumentModelTypeDefs = (
       created: DateTime!
       lastModified: DateTime!
       operations(first: Int, skip: Int): [Operation!]!
+      stateJSON: JSONObject
     }
     ${dmSchema.replaceAll(";", "")}
 

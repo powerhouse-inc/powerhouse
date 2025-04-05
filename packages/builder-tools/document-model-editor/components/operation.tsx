@@ -5,7 +5,7 @@ import { OperationErrors } from "./operation-errors.js";
 import { OperationForm } from "./operation-form.js";
 import { ensureValidOperationSchemaInputName } from "../utils/linting.js";
 import { useCallback } from "react";
-import { DocumentActionHandlers } from "../types/documents.js";
+import { type DocumentActionHandlers } from "../types/documents.js";
 
 export type WrappedHandlers = DocumentActionHandlers & {
   addOperationAndInitialSchema: (

@@ -33,27 +33,43 @@ export const POWERHOUSE_GLOBAL_DIR = path.join(
 
 export const packageManagers = {
   bun: {
+    installCommand: "bun add {{dependency}}",
     execCommand: `bun ${PH_BIN} {{arguments}}`,
     execScript: `bun {{arguments}}`,
     lockfile: "bun.lock",
     globalPathRegexp: /[\\/].bun[\\/]/,
+    updateCommand: "bun update {{dependency}}",
+    buildAffected: "bun run build:affected",
+    workspaceOption: "",
   },
   pnpm: {
+    installCommand: "pnpm add {{dependency}}",
     execCommand: `pnpm exec ${PH_BIN} {{arguments}}`,
     execScript: `pnpm {{arguments}}`,
     lockfile: "pnpm-lock.yaml",
     globalPathRegexp: /[\\/]pnpm[\\/]/,
+    updateCommand: "pnpm update {{dependency}}",
+    buildAffected: "pnpm run build:affected",
+    workspaceOption: "--workspace-root",
   },
   yarn: {
+    installCommand: "yarn add {{dependency}}",
     execCommand: `yarn ${PH_BIN} {{arguments}}`,
     execScript: `yarn {{arguments}}`,
     lockfile: "yarn.lock",
     globalPathRegexp: /[\\/]yarn[\\/]/,
+    updateCommand: "yarn upgrade {{dependency}}",
+    buildAffected: "yarn run build:affected",
+    workspaceOption: "-W",
   },
   npm: {
+    installCommand: "npm install {{dependency}}",
     execCommand: `npx ${PH_BIN} {{arguments}}`,
     execScript: `npm run {{arguments}}`,
     lockfile: "package-lock.json",
+    updateCommand: "npm update {{dependency}} --save",
+    buildAffected: "npm run build:affected",
+    workspaceOption: "",
   },
 } as const;
 
@@ -163,6 +179,71 @@ export function forwardPHCommand(
   }
 
   execSync(execCommand, {
+    stdio: "inherit",
+    ...commandOptions,
+  });
+}
+
+/**
+ * Recursively searches for a specific file by traversing up the directory tree.
+ * Starting from the given path, it checks each parent directory until it finds
+ * the target file or reaches the root directory.
+ *
+ * @param startPath - The absolute path of the directory to start searching from
+ * @param targetFile - The name of the file to search for (e.g., 'package.json', 'pnpm-workspace.yaml')
+ * @returns The absolute path of the directory containing the target file, or null if not found
+ *
+ * @example
+ * // Find the workspace root directory
+ * const workspaceRoot = findContainerDirectory('/path/to/project/src', 'pnpm-workspace.yaml');
+ *
+ * // Find the nearest package.json
+ * const packageDir = findContainerDirectory('/path/to/project/src/components', 'package.json');
+ */
+export const findContainerDirectory = (
+  startPath: string,
+  targetFile: string,
+): string | null => {
+  const filePath = path.join(startPath, targetFile);
+
+  if (fs.existsSync(filePath)) {
+    return startPath;
+  }
+
+  const parentDir = path.dirname(startPath);
+
+  //reached the root directory and haven't found the file
+  if (parentDir === startPath) {
+    return null;
+  }
+
+  return findContainerDirectory(parentDir, targetFile);
+};
+
+export function installDependency(
+  packageManager: PackageManager,
+  dependencies: string[],
+  projectPath: string,
+  workspace?: boolean,
+) {
+  if (!fs.existsSync(projectPath)) {
+    throw new Error(`Project path not found: ${projectPath}`);
+  }
+
+  const manager = packageManagers[packageManager];
+
+  let installCommand = manager.installCommand.replace(
+    "{{dependency}}",
+    dependencies.join(" "),
+  );
+
+  if (workspace) {
+    installCommand += ` ${manager.workspaceOption}`;
+  }
+
+  const commandOptions = { cwd: projectPath };
+
+  execSync(installCommand, {
     stdio: "inherit",
     ...commandOptions,
   });

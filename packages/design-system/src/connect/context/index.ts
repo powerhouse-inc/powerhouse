@@ -1,1 +1,1 @@
-export * from "./WagmiContext";
+export * from "./WagmiContext.js";

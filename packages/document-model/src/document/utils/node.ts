@@ -1,6 +1,6 @@
 import {
-  BinaryLike,
-  RandomUUIDOptions,
+  type BinaryLike,
+  type RandomUUIDOptions,
   createHash,
   randomUUID,
 } from "node:crypto";

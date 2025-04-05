@@ -1,5 +1,5 @@
-import { Icon, PageItem, UsePaginationBaseResult } from "@/powerhouse";
-import { PaginationButton } from "./pagination-button";
+import { Icon, type PageItem, type UsePaginationBaseResult } from "#powerhouse";
+import { PaginationButton } from "./pagination-button.js";
 
 export type PaginationEvent = {
   event: "first" | "previous" | "next" | "last";

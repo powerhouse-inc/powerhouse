@@ -1,5 +1,5 @@
-import type { SelectOption } from "@/scalars/components/enum-field/types.js";
-import { SelectFieldRaw } from "@/scalars/components/fragments/select-field/select-field.js";
+import type { SelectOption } from "#scalars";
+import { SelectFieldRaw } from "#scalars";
 import { twMerge } from "tailwind-merge";
 
 type Props = {

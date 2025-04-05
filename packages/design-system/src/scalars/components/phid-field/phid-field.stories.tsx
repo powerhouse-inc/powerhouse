@@ -1,16 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
-import { PHIDField } from "./phid-field";
-import { mockedOptions, fetchOptions, fetchSelectedOption } from "./utils";
+import {
+  fetchOptions,
+  fetchSelectedOption,
+  mockedOptions,
+} from "../../../ui/components/data-entry/phid-input/mocks.js";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { PHIDField } from "./phid-field.js";
 
 const meta: Meta<typeof PHIDField> = {
-  title: "Document Engineering/Simple Components/PHID Field",
+  title: "Document Engineering/Scalars/PHID Field",
   component: PHIDField,
   decorators: [
     withForm,
@@ -29,15 +33,6 @@ const meta: Meta<typeof PHIDField> = {
     ...PrebuiltArgTypes.placeholder,
     ...PrebuiltArgTypes.maxLength,
 
-    allowedScopes: {
-      control: "object",
-      description: "List of allowed scopes.",
-      table: {
-        type: { summary: "string[]" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
-
     allowUris: {
       control: "boolean",
       description: "Enables URI format as valid input in the field",
@@ -47,10 +42,20 @@ const meta: Meta<typeof PHIDField> = {
       },
     },
 
+    allowedScopes: {
+      control: "object",
+      description: "List of allowed scopes.",
+      table: {
+        type: { summary: "string[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "allowUris", eq: true },
+    },
+
     autoComplete: {
       control: "boolean",
       description:
-        "Enables autocomplete functionality to suggest PHIDs while typing",
+        "Enables autocomplete functionality to suggest options while typing",
       table: {
         type: { summary: "boolean" },
         defaultValue: { summary: "true" },
@@ -61,15 +66,19 @@ const meta: Meta<typeof PHIDField> = {
     fetchOptionsCallback: {
       control: "object",
       description:
-        "Function to fetch options based on user input. " +
-        "Can return an array of PHIDItem with:\n\n" +
+        "Function to fetch options based on user input and context. " +
+        "Must return a Promise that resolves to an array of objects or an array of objects with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: string\n\n" +
-        "phid: string\n\n" +
-        "description?: string",
+        "path?: string | { text: string; url: string; }\n\n" +
+        "value: string\n\n" +
+        "description?: string\n\n",
       table: {
-        type: { summary: "(phidFragment: string) => Promise<PHIDItem[]>" },
+        type: {
+          summary:
+            "(userInput: string; context?: { allowUris?: boolean; " +
+            "allowedScopes?: string[]; }) => Promise<PHIDOption[]> | PHIDOption[]",
+        },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
       },
@@ -79,42 +88,57 @@ const meta: Meta<typeof PHIDField> = {
     fetchSelectedOptionCallback: {
       control: "object",
       description:
-        "Function to fetch details for a selected PHID. " +
-        "Can return a PHIDItem with:\n\n" +
+        "Function to fetch details for a selected option. " +
+        "Must return a Promise that resolves to an object or an object with the following properties:\n\n" +
         "icon?: IconName | React.ReactElement\n\n" +
         "title?: string\n\n" +
-        "path?: string\n\n" +
-        "phid: string\n\n" +
+        "path?: string | { text: string; url: string; }\n\n" +
+        "value: string\n\n" +
         "description?: string\n\n" +
-        "or undefined if the PHID is not found",
+        "or undefined if the option is not found",
       table: {
-        type: { summary: "(phid: string) => Promise<PHIDItem | undefined>" },
+        type: {
+          summary:
+            "(value: string) => Promise<PHIDOption | undefined> | PHIDOption | undefined",
+        },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
       },
       if: { arg: "autoComplete", neq: false },
     },
 
-    allowDataObjectReference: {
-      control: "boolean",
-      description: "Allows direct referencing of data objects in the field",
+    previewPlaceholder: {
+      control: "object",
+      description:
+        "Custom placeholder values to show when no option is selected or when there are no matching options. " +
+        "Can include custom values for:\n\n" +
+        "icon?: IconName | React.ReactElement\n\n" +
+        "title?: string\n\n" +
+        "path?: string | { text: string; url: string; }\n\n" +
+        "value: string\n\n" +
+        "description?: string\n\n",
       table: {
-        type: { summary: "boolean" },
-        defaultValue: { summary: "false" },
+        type: { summary: "PHIDOption" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
+      if: { arg: "autoComplete", neq: false },
     },
 
     variant: {
       control: "radio",
-      options: ["withId", "withIdAndTitle", "withIdTitleAndDescription"],
+      options: [
+        "withValue",
+        "withValueAndTitle",
+        "withValueTitleAndDescription",
+      ],
       description:
-        "Controls the amount of information displayed for each PHID: ID only, ID with title, or ID with title and description",
+        "Controls the amount of information displayed for each option: value only, value with title, or value with title and description",
       table: {
         type: {
-          summary: '"withId" | "withIdAndTitle" | "withIdTitleAndDescription"',
+          summary:
+            '"withValue" | "withValueAndTitle" | "withValueTitleAndDescription"',
         },
-        defaultValue: { summary: "withId" },
+        defaultValue: { summary: "withValue" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "autoComplete", neq: false },
@@ -144,9 +168,9 @@ export const Empty: Story = {
   args: {
     label: "PHID field",
     placeholder: "phd:",
-    variant: "withIdTitleAndDescription",
     isOpenByDefault: true,
     defaultValue: "phd:",
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -156,10 +180,11 @@ export const Open: Story = {
   args: {
     label: "PHID field",
     placeholder: "phd:",
-    variant: "withIdTitleAndDescription",
     isOpenByDefault: true,
     defaultValue: "phd:",
     initialOptions: mockedOptions,
+    allowUris: true,
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -169,9 +194,10 @@ export const Filled: Story = {
   args: {
     label: "PHID field",
     placeholder: "phd:",
-    variant: "withIdTitleAndDescription",
-    defaultValue: mockedOptions[0].phid,
+    defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
+    allowUris: true,
+    variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },

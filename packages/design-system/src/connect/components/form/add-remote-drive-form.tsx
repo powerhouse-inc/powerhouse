@@ -6,10 +6,10 @@ import {
   FormInput,
   LocationInfo,
   PUBLIC,
-  SharingType,
+  type SharingType,
   SWITCHBOARD,
-} from "@/connect";
-import { Button } from "@/powerhouse";
+} from "#connect";
+import { Button } from "#powerhouse";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useDebounceValue } from "usehooks-ts";

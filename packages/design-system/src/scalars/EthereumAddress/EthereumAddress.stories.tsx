@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { EthereumAddress } from "./EthereumAddress";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { EthereumAddress } from "./EthereumAddress.js";
 
 const meta = {
   title: "Scalars/EthereumAddress",

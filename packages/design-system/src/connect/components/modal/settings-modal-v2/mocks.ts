@@ -40,6 +40,21 @@ export const mockPackages = [
     ],
     removable: true,
   },
+  {
+    id: "@powerhousedao/builder-tools2",
+    name: "Builder Tooling",
+    description:
+      "The real world assets portfolio reporting package for the sky ecosystem.",
+    category: "Finance",
+    publisher: "@powerhousedao",
+    publisherUrl: "https://www.powerhouse.inc/",
+    modules: [
+      "Analytics Processor (Switchboard)",
+      "RWA Portfolio Report Document Model (Connect)",
+      "RWA Portfolio Report Editor (Connect)",
+    ],
+    removable: true,
+  },
 ];
 
 export const mockDocumentModelEditorOptions = [

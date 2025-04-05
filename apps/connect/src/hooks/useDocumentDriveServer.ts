@@ -1,25 +1,32 @@
-import { useGetDocumentModelModule } from '#store/document-model';
-import { useUnwrappedReactor } from '#store/reactor';
-import { useUser } from '#store/user';
-import { uploadDocumentOperations } from '#utils/document-model';
-import { loadFile } from '#utils/file';
-import { addActionContext, signOperation } from '#utils/signature';
+import {
+    useGetDocumentModelModule,
+    useUnwrappedReactor,
+    useUser,
+} from '#store';
+import {
+    addActionContext,
+    loadFile,
+    signOperation,
+    uploadDocumentOperations,
+} from '#utils';
 import {
     ERROR,
     FILE,
     LOCAL,
-    SharingType,
-    UiNode,
+    type SharingType,
+    type UiNode,
 } from '@powerhousedao/design-system';
 import {
-    DocumentDriveAction,
-    DocumentDriveDocument,
-    DriveInput,
-    RemoteDriveOptions,
-    StrandUpdate,
-    SyncStatus,
+    type DocumentDriveAction,
+    type DocumentDriveDocument,
+    type DriveInput,
+    PullResponderTransmitter,
+    type PullResponderTrigger,
+    type RemoteDriveOptions,
+    type StrandUpdate,
+    type SyncStatus,
     SynchronizationUnitNotFoundError,
-    Trigger,
+    type Trigger,
     addFolder,
     addTrigger,
     childLogger,
@@ -29,6 +36,7 @@ import {
     documentDriveReducer,
     generateAddNodeAction,
     generateNodesCopy,
+    generateUUID,
     isDocumentDrive,
     isFileNode,
     isFolderNode,
@@ -40,11 +48,12 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { Operation, PHDocument, hashKey } from 'document-model';
+import { type Listener } from 'document-drive/server/types';
+import { type Operation, type PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
-import { useConnectCrypto, useConnectDid } from './useConnectCrypto';
-import { useDocumentDrives } from './useDocumentDrives';
-import { useUserPermissions } from './useUserPermissions';
+import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
+import { useDocumentDrives } from './useDocumentDrives.js';
+import { useUserPermissions } from './useUserPermissions.js';
 
 // TODO this should be added to the document model
 export interface SortOptions {
@@ -84,6 +93,18 @@ export function useDocumentDriveServer() {
                 );
             }
             return document;
+        },
+        [reactor],
+    );
+
+    const getDocumentsIds = useCallback(
+        async (driveId: string) => {
+            if (!reactor) {
+                throw new Error('Reactor is not loaded');
+            }
+
+            const ids = await reactor.getDocuments(driveId);
+            return ids;
         },
         [reactor],
     );
@@ -694,18 +715,58 @@ export function useDocumentDriveServer() {
             driveId: string,
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
-        ) => {
+        ): Promise<PullResponderTrigger> => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
-            const pullResponderTrigger =
-                await reactor.registerPullResponderTrigger(
-                    driveId,
-                    url,
-                    options,
-                );
 
-            return pullResponderTrigger;
+            const uuid = generateUUID();
+            const listener: Listener = {
+                driveId,
+                listenerId: uuid,
+                block: false,
+                filter: {
+                    branch: options.pullFilter?.branch ?? [],
+                    documentId: options.pullFilter?.documentId ?? [],
+                    documentType: options.pullFilter?.documentType ?? [],
+                    scope: options.pullFilter?.scope ?? [],
+                },
+                system: false,
+                label: `Pullresponder #${uuid}`,
+                callInfo: {
+                    data: '',
+                    name: 'PullResponder',
+                    transmitterType: 'PullResponder',
+                },
+            };
+
+            // TODO: circular reference
+            // TODO: once we have DI, remove this and pass around
+            const listenerManager = reactor.listeners;
+            listener.transmitter = new PullResponderTransmitter(
+                listener,
+                listenerManager,
+            );
+
+            // set the listener on the manager directly (bypassing operations)
+            try {
+                await listenerManager.setListener(driveId, listener);
+            } catch (error) {
+                throw new Error(`Listener couldn't be registered: ${error}`);
+            }
+
+            // for backwards compatibility: return everything but the transmitter
+            return {
+                driveId,
+                filter: listener.filter,
+                data: {
+                    interval: `${options.pullInterval}` || '1000',
+                    listenerId: uuid,
+                    url,
+                },
+                id: uuid,
+                type: 'PullResponder',
+            };
         },
         [reactor],
     );
@@ -759,6 +820,7 @@ export function useDocumentDriveServer() {
             removeTrigger: handleRemoveTrigger,
             addTrigger: handleAddTrigger,
             registerNewPullResponderTrigger,
+            getDocumentsIds,
         }),
         [
             addDocument,
@@ -788,6 +850,7 @@ export function useDocumentDriveServer() {
             setDriveAvailableOffline,
             setDriveSharingType,
             handleUpdateFile,
+            getDocumentsIds,
         ],
     );
 }

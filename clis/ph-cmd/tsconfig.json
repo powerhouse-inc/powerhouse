@@ -1,12 +1,8 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./dist"
   },
   "include": ["**/*"],
-  "references": [
-    { "path": "../../packages/builder-tools" },
-    { "path": "../../packages/codegen" },
-    { "path": "../../packages/scalars" },
-  ]
+  "references": [{ "path": "../../packages/codegen" }]
 }

@@ -1,4 +1,4 @@
-import { Icon } from "@/powerhouse";
+import { Icon } from "#powerhouse";
 import { format } from "date-fns";
 
 export function Day(props: { readonly timestamp: string }) {

@@ -1,75 +1,82 @@
-import {
-  KnexAnalyticsStore,
-  KnexQueryExecutor,
-} from "@powerhousedao/analytics-engine-knex";
-import { SubgraphManager, getDbClient } from "@powerhousedao/reactor-api";
-import { PrismaClient } from "@prisma/client";
-import { ReactorBuilder } from "document-drive";
+#!/usr/bin/env node
+import { startAPI } from "@powerhousedao/reactor-api";
+import * as Sentry from "@sentry/node";
+import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
-import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
-  DocumentModelModule,
+  type DocumentModelModule,
   documentModelDocumentModelModule,
 } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
 import http from "http";
-import path from "path";
 import { initRedis } from "./clients/redis.js";
+import { PackagesManager } from "./utils/package-manager.js";
+
 dotenv.config();
 
-// start document drive server with all available document models
-
 // Create a monolith express app for all subgraphs
+
 const app = express();
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+  });
+
+  Sentry.setupExpressErrorHandler(app);
+
+  app.get("/debug-sentry", function mainHandler(req, res) {
+    throw new Error("My first Sentry error!");
+  });
+}
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 const httpServer = http.createServer(app);
 const main = async () => {
   try {
+    const packages =
+      process.env.PH_PACKAGES && process.env.PH_PACKAGES !== ""
+        ? process.env.PH_PACKAGES.split(",")
+        : [];
+    const pkgManager = new PackagesManager({
+      packages,
+    });
+    const { documentModels, subgraphs } = await pkgManager.init();
     const redis = await initRedis();
-    const prismaClient: PrismaClient = new PrismaClient();
     const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("Please set env var DATABASE_URL");
+    }
     const dbUrl =
-      connectionString?.includes("amazonaws") &&
+      connectionString.includes("amazonaws") &&
       !connectionString.includes("sslmode=no-verify")
         ? connectionString + "?sslmode=no-verify"
         : connectionString;
-    const knex = getDbClient(dbUrl);
+
     const redisCache = new RedisCache(redis);
-    const storage = new PrismaStorage(prismaClient);
-    const driveServer = new ReactorBuilder([
+    const storageFactory = new PrismaStorageFactory(dbUrl, redisCache);
+    const storage = storageFactory.build();
+
+    const reactor = new ReactorBuilder([
       documentModelDocumentModelModule,
+      driveDocumentModelModule,
+      ...documentModels,
     ] as DocumentModelModule[])
       .withStorage(storage)
       .withCache(redisCache)
       .build();
 
     // init drive server
-    await driveServer.initialize();
-    const analyticsStore = new KnexAnalyticsStore({
-      executor: new KnexQueryExecutor(),
-      knex,
-    });
-    const subgraphManager = new SubgraphManager(
-      process.env.BASE_PATH || "/",
-      app,
-      driveServer,
-      knex,
-      // @ts-expect-error todo update analytics store to use IAnalyticsStore
-      analyticsStore,
-    );
-    // init router
-    await subgraphManager.init();
+    await reactor.initialize();
 
-    // load switchboard-gui
-    app.use(
-      express.static(
-        path.join(
-          __dirname,
-          "../node_modules/@powerhousedao/switchboard-gui/dist",
-        ),
-      ),
-    );
+    // Start the API with the reactor and options
+    await startAPI(reactor, {
+      express: app,
+      port: serverPort,
+      dbPath: dbUrl,
+      packages,
+    });
 
     // start http server
     httpServer.listen({ port: serverPort }, () => {

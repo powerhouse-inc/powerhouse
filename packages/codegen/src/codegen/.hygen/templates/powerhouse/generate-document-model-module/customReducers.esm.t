@@ -8,7 +8,7 @@ unless_exists: true
 * - delete the file and run the code generator again to have it reset
 */
 
-import { <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations } from '../../gen/<%= module %>/operations';
+import type { <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations } from '../../gen/<%= module %>/operations.js';
 
 export const reducer: <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Operations = {
 <% actions.forEach(action => { _%>

@@ -1,5 +1,5 @@
-import type { ArgTypes } from "@storybook/react";
 import type { Control } from "@storybook/blocks";
+import type { ArgTypes } from "@storybook/react";
 
 export enum StorybookControlCategory {
   DEFAULT = "Default",

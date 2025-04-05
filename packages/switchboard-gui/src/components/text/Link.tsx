@@ -1,5 +1,3 @@
-import React from "react";
-
 interface SwitchboardLinkProps {
   href: string;
   children: React.ReactNode;

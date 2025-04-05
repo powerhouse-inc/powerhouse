@@ -1,5 +1,5 @@
 "use client";
 
-export * from "./components";
-export * from "./lib";
-export * from "./EthereumAddress";
+export * from "./lib/index.js";
+export * from "./components/index.js";
+export * from "./EthereumAddress/index.js";

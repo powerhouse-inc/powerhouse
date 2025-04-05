@@ -1,7 +1,7 @@
-import type { ElectronAPI } from './preload';
-import type { IConnectCrypto } from './services/crypto';
-import type { IRenown } from './services/renown/types';
-import type { DocumentEditorDebugTools } from './utils/document-editor-debug-tools';
+import type { ElectronAPI } from './preload.js';
+import type { IConnectCrypto } from './services/crypto/index.js';
+import type { IRenown } from './services/renown/types.js';
+import type { DocumentEditorDebugTools } from './utils/document-editor-debug-tools.js';
 export {};
 
 declare global {

@@ -1,14 +1,10 @@
-import {
-    RENOWN_CHAIN_ID,
-    RENOWN_NETWORK_ID,
-    RENOWN_URL,
-} from '#services/renown/constants';
-import { useUser } from '#store/user';
+import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from '#services';
+import { useUser } from '#store';
 import { logger } from 'document-drive';
 import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
-import { useConnectCrypto } from './useConnectCrypto';
-import { useRenown } from './useRenown';
+import { useConnectCrypto } from './useConnectCrypto.js';
+import { useRenown } from './useRenown.js';
 
 type LoginStatus = 'initial' | 'checking' | 'not-authorized' | 'authorized';
 

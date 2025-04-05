@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 
 async function renderApp(element: HTMLElement) {
-    const AppLoader = await import('./components/app-loader');
+    const AppLoader = await import('./components/app-loader.js');
     createRoot(element).render(AppLoader.default);
 }
 

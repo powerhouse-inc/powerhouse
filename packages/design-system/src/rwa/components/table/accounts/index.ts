@@ -1,1 +1,1 @@
-export * from "./accounts-table";
+export * from "./accounts-table.js";

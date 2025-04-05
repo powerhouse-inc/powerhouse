@@ -1,14 +1,14 @@
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { makeNodeSlugFromNodeName } from '#utils/slug';
+import { useDocumentDriveServer } from '#hooks';
+import { makeNodeSlugFromNodeName } from '#utils';
 import {
     CreateDocumentModal as ConnectCreateDocumentModal,
     FILE,
-    TDocumentType,
-    UiDriveNode,
-    UiFolderNode,
-    UiNode,
+    type TDocumentType,
+    type UiDriveNode,
+    type UiFolderNode,
+    type UiNode,
 } from '@powerhousedao/design-system';
-import { DocumentModelModule } from 'document-model';
+import { type DocumentModelModule } from 'document-model';
 
 export interface CreateDocumentModalProps {
     open: boolean;
@@ -64,7 +64,7 @@ export const CreateDocumentModal: React.FC<
         <ConnectCreateDocumentModal
             open={open}
             onContinue={onCreateDocument}
-            onOpenChange={status => {
+            onOpenChange={(status: boolean) => {
                 if (!status) return onClose();
             }}
         />

@@ -1,1 +1,1 @@
-export * from "./editor-undo-redo-buttons";
+export * from "./editor-undo-redo-buttons.js";

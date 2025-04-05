@@ -1,8 +1,9 @@
 import {
-  PullResponderTriggerData,
-  Trigger,
+  type ListenerFilter,
+  type PullResponderTriggerData,
+  type Trigger,
 } from "#drive-document-model/gen/types";
-import { ListenerRevision, StrandUpdate } from "#server/types";
+import { type ListenerRevision, type StrandUpdate } from "#server/types";
 
 export type StrandUpdateSource =
   | {
@@ -22,6 +23,8 @@ export interface InternalTransmitterService extends ITransmitter {
 }
 
 export type PullResponderTrigger = Omit<Trigger, "data" | "type"> & {
+  driveId: string;
+  filter: ListenerFilter;
   data: PullResponderTriggerData;
   type: "PullResponder";
 };

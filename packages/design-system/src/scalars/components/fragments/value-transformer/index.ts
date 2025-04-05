@@ -1,2 +1,2 @@
-export * from "./value-transformer";
-export { default } from "./value-transformer";
+export * from "./value-transformer.js";
+export { default } from "./value-transformer.js";

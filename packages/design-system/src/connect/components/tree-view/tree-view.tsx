@@ -12,26 +12,26 @@ import {
   LOCAL,
   NEW_FOLDER,
   NodeInput,
-  NodeOption,
-  NodeProps,
+  type NodeOption,
+  type NodeProps,
   PUBLIC,
   READ,
   REMOVE_TRIGGER,
   RENAME,
   SETTINGS,
-  UiDriveNode,
-  UiNode,
+  type UiDriveNode,
+  type UiNode,
   WRITE,
   getDocumentIconSrc,
   nodeOptionsMap,
   useDrag,
   useDrop,
-} from "@/connect";
-import { Icon } from "@/powerhouse";
-import { TUiNodesContext } from "@powerhousedao/reactor-browser";
-import { MouseEventHandler, useState } from "react";
+} from "#connect";
+import { Icon } from "#powerhouse";
+import { type TUiNodesContext } from "@powerhousedao/reactor-browser";
+import { type MouseEventHandler, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { DropIndicator } from "./drop-indicator";
+import { DropIndicator } from "./drop-indicator.js";
 
 export type ConnectTreeViewProps = TUiNodesContext &
   NodeProps & {

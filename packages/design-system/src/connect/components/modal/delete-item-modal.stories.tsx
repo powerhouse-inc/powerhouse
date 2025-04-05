@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ConnectDeleteItemModal } from "./delete-item-modal";
+import { ConnectDeleteItemModal } from "./delete-item-modal.js";
 
 const meta: Meta<typeof ConnectDeleteItemModal> = {
   title: "Connect/Components/Modal/DeleteItemModal",
