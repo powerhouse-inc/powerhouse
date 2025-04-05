@@ -615,10 +615,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return docs.map((doc) => doc.id);
   }
 
-  async deleteDocument(drive: string, id: string) {
-    await this.delete(id);
-  }
-
   async getDrives() {
     const drives = await this.db.drive.findMany({
       select: {

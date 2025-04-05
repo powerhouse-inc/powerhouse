@@ -867,7 +867,7 @@ export class BaseDocumentDriveServer
       this.logger.warn("Error deleting document", error);
     }
     await this.cache.deleteDocument(documentId);
-    return this.legacyStorage.deleteDocument(driveId, documentId);
+    return this.documentStorage.delete(documentId);
   }
 
   async _processOperations(

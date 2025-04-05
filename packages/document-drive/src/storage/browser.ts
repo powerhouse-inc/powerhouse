@@ -163,10 +163,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
-  async deleteDocument(drive: string, id: string) {
-    await this.delete(id);
-  }
-
   async clearStorage(): Promise<void> {
     return (await this.db).clear();
   }
@@ -243,7 +239,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     const documents = await this.getDocuments(id);
 
     // Delete each document (this already updates the manifest)
-    await Promise.all(documents.map((doc) => this.deleteDocument(id, doc)));
+    await Promise.all(documents.map((doc) => this.delete(doc)));
 
     // Delete the drive and its manifest
     const db = await this.db;

@@ -132,10 +132,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     };
   }
 
-  async deleteDocument(drive: string, id: string) {
-    this.delete(id);
-  }
-
   async getDrives() {
     return Object.keys(this.driveManifests);
   }

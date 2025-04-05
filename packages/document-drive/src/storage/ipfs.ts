@@ -145,10 +145,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
-  async deleteDocument(drive: string, id: string): Promise<void> {
-    await this.delete(id);
-  }
-
   async addDocumentOperations<TDocument extends PHDocument>(
     drive: string,
     id: string,
@@ -244,9 +240,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     const documents = manifest.documentIds;
 
     // Delete each document from this drive (may not actually delete files if shared with other drives)
-    await Promise.all(
-      documents.map((document) => this.deleteDocument(id, document)),
-    );
+    await Promise.all(documents.map((document) => this.delete(document)));
 
     // Delete the drive manifest
     try {

@@ -35,7 +35,6 @@ export interface IStorage {
       header: DocumentHeader;
     }>,
   ): Promise<void>;
-  deleteDocument(drive: string, id: string): Promise<void>;
   getOperationResultingState?(
     drive: string,
     id: string,
