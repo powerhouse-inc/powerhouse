@@ -2,35 +2,21 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
-import { generateId } from "document-model";
-import type {
-    AnalyticsProcessor,
-    ProcessorOptions,
-    ProcessorUpdate,
-    AnalyticsPath
-  } from "@powerhousedao/reactor-api";
+import type { PHDocument } from "document-model";
+import { AnalyticsPath, IAnalyticsStore, IProcessor } from "@powerhousedao/reactor-api";
+import { InternalTransmitterUpdate } from "document-drive";
+
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
 %><% }); _%>
-<% if(documentTypes.length === 0) { %>import type { PHDocument } from "document-model";<% } %>
-type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
-export class <%= pascalName %>Processor extends AnalyticsProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
+export class <%= pascalName %>Processor implements IProcessor {
 
-    protected processorOptions: ProcessorOptions = {
-    listenerId: generateId(),
-    filter: {
-      branch: ["main"],
-      documentId: ["*"],
-      documentType: [<% if(documentTypes.length) { %><%- documentTypes.map(type => `"${type}"`).join(", ") %><% } else { %>"*"<% }   %>],
-      scope: ["global"],
-    },
-    block: false,
-    label: "<%= name %>",
-    system: true,
-  };
+  constructor(private readonly analyticsStore: IAnalyticsStore) {
+    //
+  }
 
-  async onStrands(strands: ProcessorUpdate<DocumentType>[]): Promise<void> {
+  async onStrands<TDocument extends PHDocument>(strands: InternalTransmitterUpdate<TDocument>[]): Promise<void> {
     if (strands.length === 0) {
       return;
     }
