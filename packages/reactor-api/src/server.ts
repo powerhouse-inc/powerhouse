@@ -1,5 +1,5 @@
+import { GraphQLManager } from "#graphql/graphql-manager.js";
 import { type SubgraphClass } from "#graphql/index.js";
-import { SubgraphManager } from "#graphql/manager.js";
 import { renderGraphqlPlayground } from "#graphql/playground.js";
 import { getUniqueDocumentModels, PackagesManager } from "#package-manager.js";
 import { type PGlite } from "@electric-sql/pglite";
@@ -102,14 +102,14 @@ async function initializePackageManager(
 /**
  * Sets up the subgraph manager and registers subgraphs
  */
-async function setupSubgraphManager(
+async function setupGraphQLManager(
   app: Express,
   reactor: IDocumentDriveServer,
   db: Knex,
   analyticsStore: IAnalyticsStore,
   result: PackageManagerResult,
-): Promise<SubgraphManager> {
-  const subgraphManager = new SubgraphManager(
+): Promise<GraphQLManager> {
+  const graphqlManager = new GraphQLManager(
     "/",
     app,
     reactor,
@@ -117,17 +117,17 @@ async function setupSubgraphManager(
     analyticsStore,
   );
 
-  await subgraphManager.init();
+  await graphqlManager.init();
 
   if (result.subgraphs) {
     for (const [supergraph, subgraphs] of result.subgraphs.entries()) {
       for (const subgraph of subgraphs) {
-        subgraphManager.registerSubgraph(subgraph, supergraph);
+        graphqlManager.registerSubgraph(subgraph, supergraph);
       }
     }
   }
 
-  return subgraphManager;
+  return graphqlManager;
 }
 
 /**
@@ -136,20 +136,20 @@ async function setupSubgraphManager(
 function setupEventListeners(
   pkgManager: PackagesManager,
   reactor: IDocumentDriveServer,
-  subgraphManager: SubgraphManager,
+  graphqlManager: GraphQLManager,
 ): void {
   pkgManager.onDocumentModelsChange((documentModels) => {
     const uniqueModels = getUniqueDocumentModels(
       Object.values(documentModels).flat(),
     );
     reactor.setDocumentModelModules(uniqueModels);
-    subgraphManager.updateRouter();
+    graphqlManager.updateRouter();
   });
 
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
     for (const [supergraph, subgraphs] of packagedSubgraphs) {
       for (const subgraph of subgraphs) {
-        subgraphManager.registerSubgraph(subgraph, supergraph);
+        graphqlManager.registerSubgraph(subgraph, supergraph);
       }
     }
   });
@@ -242,7 +242,7 @@ export async function startAPI(
   );
 
   // Set up subgraph manager
-  const subgraphManager = await setupSubgraphManager(
+  const graphqlManager = await setupGraphQLManager(
     app,
     reactor,
     db,
@@ -251,10 +251,10 @@ export async function startAPI(
   );
 
   // Set up event listeners
-  setupEventListeners(pkgManager, reactor, subgraphManager);
+  setupEventListeners(pkgManager, reactor, graphqlManager);
 
   // Start the server
   await startServer(app, port, options.https);
 
-  return { app, subgraphManager };
+  return { app, graphqlManager };
 }

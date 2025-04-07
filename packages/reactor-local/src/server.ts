@@ -1,9 +1,9 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import {
+  type GraphQLManager,
   isSubgraphClass,
   startAPI,
   type SubgraphClass,
-  type SubgraphManager,
 } from "@powerhousedao/reactor-api";
 import {
   DriveAlreadyExistsError,
@@ -184,7 +184,7 @@ const startServer = async (
 
     // load local subgraphs
     const subgraphsPath = path.join(process.cwd(), "./subgraphs"); // TODO get path from powerhouse config
-    await loadSubgraphs(subgraphsPath, vite, api.subgraphManager);
+    await loadSubgraphs(subgraphsPath, vite, api.graphqlManager);
   }
 
   console.log(`  ➜  Reactor:   ${driveUrl}`);
@@ -262,7 +262,7 @@ async function loadDocumentModels(path: string, vite: ViteDevServer) {
 async function loadSubgraphs(
   path: string,
   vite: ViteDevServer,
-  subgraphManager: SubgraphManager,
+  graphqlManager: GraphQLManager,
 ) {
   try {
     console.log("> Loading subgraphs from", path);
@@ -272,7 +272,7 @@ async function loadSubgraphs(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const SubgraphClass = subgraph[name] as SubgraphClass;
       if (isSubgraphClass(SubgraphClass)) {
-        await subgraphManager.registerSubgraph(SubgraphClass, "graphql");
+        await graphqlManager.registerSubgraph(SubgraphClass, "graphql");
       }
     }
   } catch (e) {

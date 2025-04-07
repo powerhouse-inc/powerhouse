@@ -1,9 +1,9 @@
-import { Express } from "express";
-import { SubgraphManager } from "./graphql/manager.js";
+import { type Express } from "express";
+import { type GraphQLManager } from "./graphql/graphql-manager.js";
 
 export type { Db } from "./utils/db.js";
 
 export type API = {
   app: Express;
-  subgraphManager: SubgraphManager;
+  graphqlManager: GraphQLManager;
 };

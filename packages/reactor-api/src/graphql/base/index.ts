@@ -1,4 +1,4 @@
-import { type SubgraphManager } from "#graphql/manager.js";
+import { type GraphQLManager } from "#graphql/graphql-manager.js";
 import { type ISubgraph, type SubgraphArgs } from "#graphql/types.js";
 import { type Db } from "#types.js";
 import { type IDocumentDriveServer } from "document-drive";
@@ -19,11 +19,11 @@ export class Subgraph implements ISubgraph {
     }
   `;
   reactor: IDocumentDriveServer;
-  subgraphManager: SubgraphManager;
+  graphqlManager: GraphQLManager;
   operationalStore: Db;
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
-    this.subgraphManager = args.subgraphManager;
+    this.graphqlManager = args.graphqlManager;
     this.operationalStore = args.operationalStore;
   }
   async onSetup() {

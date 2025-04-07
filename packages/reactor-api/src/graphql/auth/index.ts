@@ -1,12 +1,17 @@
 import { Subgraph } from "#graphql/index.js";
-import { Db } from "#types.js";
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { type Db } from "#types.js";
+import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { generateUUID } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { SiweMessage } from "siwe";
-import { Context } from "../types.js";
-import { AuthContext, Challenge, Session, SessionInput } from "./types.js";
+import { type Context } from "../types.js";
+import {
+  type AuthContext,
+  type Challenge,
+  type Session,
+  type SessionInput,
+} from "./types.js";
 import { generateTokenAndSession } from "./utils/helpers.js";
 import {
   authenticate,
@@ -248,7 +253,7 @@ export class AuthSubgraph extends Subgraph {
   async onSetup() {
     await super.onSetup();
     await this.#createTables();
-    this.subgraphManager.setAdditionalContextFields({
+    this.graphqlManager.setAdditionalContextFields({
       session: async (ctx: Context) => {
         const bearerToken = ctx.headers.authorization?.split(" ")[1];
         if (!bearerToken) {

@@ -31,7 +31,7 @@ export class AnalyticsSubgraph extends Subgraph {
       new AnalyticsQueryEngine(this.analyticsStore),
     );
 
-    args.subgraphManager.setAdditionalContextFields({
+    args.graphqlManager.setAdditionalContextFields({
       dataSources: {
         db: {
           Analytics: this.analyticsModel,

@@ -62,7 +62,7 @@ export class SystemSubgraph extends Subgraph {
 
   async onSetup() {
     await super.onSetup();
-    this.subgraphManager.setAdditionalContextFields({
+    this.graphqlManager.setAdditionalContextFields({
       isAdmin: (ctx: SystemContext) => {
         const adminUsers =
           process.env.ADMIN_USERS?.split(",")

@@ -18,7 +18,7 @@ import { DriveSubgraph } from "./drive/index.js";
 import { type Subgraph, type SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
 import { type Context } from "./types.js";
-export class SubgraphManager {
+export class GraphQLManager {
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
 
@@ -61,7 +61,7 @@ export class SubgraphManager {
       operationalStore: this.operationalStore,
       analyticsStore: this.analyticsStore,
       reactor: this.reactor,
-      subgraphManager: this,
+      graphqlManager: this,
       path,
     });
     await subgraphInstance.onSetup();
@@ -96,6 +96,12 @@ export class SubgraphManager {
 
   setSupergraph(supergraph: string, subgraphs: Subgraph[]) {
     this.subgraphs.set(supergraph, subgraphs);
+    const globalSubgraphs = this.subgraphs.get("graphql");
+    if (globalSubgraphs) {
+      this.subgraphs.set("graphql", [...globalSubgraphs, ...subgraphs]);
+    } else {
+      this.subgraphs.set("graphql", subgraphs);
+    }
     this.updateRouter();
   }
 
