@@ -2,6 +2,11 @@
 
 // data entry
 export {
+  AIDInput,
+  type AIDInputProps,
+  type AIDOption,
+} from "./data-entry/aid-input/index.js";
+export {
   Checkbox,
   type CheckboxProps,
   type CheckboxValue,
@@ -20,6 +25,11 @@ export {
   type OIDInputProps,
   type OIDOption,
 } from "./data-entry/oid-input/index.js";
+export {
+  PHIDInput,
+  type PHIDInputProps,
+  type PHIDOption,
+} from "./data-entry/phid-input/index.js";
 export {
   TextInput,
   type TextInputProps,

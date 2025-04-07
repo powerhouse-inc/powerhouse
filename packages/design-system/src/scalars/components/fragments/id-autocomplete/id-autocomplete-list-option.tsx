@@ -138,7 +138,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                "truncate text-xs leading-5 text-gray-500 hover:underline dark:text-gray-600",
+                "truncate text-xs leading-5 text-blue-900 hover:underline focus-visible:outline-none",
               )}
             >
               {path.text}
@@ -215,7 +215,7 @@ const IdAutocompleteListOption: React.FC<IdAutocompleteListOptionProps> = ({
   return (
     <div
       className={cn(
-        "max-w-full rounded-md bg-transparent px-3 pb-2",
+        "w-full max-w-full rounded-md bg-transparent px-3 pb-2",
         variant === "withValue" ? "pt-2" : "pt-3",
         className,
       )}

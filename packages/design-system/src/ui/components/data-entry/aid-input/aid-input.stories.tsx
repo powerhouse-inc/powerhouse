@@ -5,11 +5,11 @@ import {
   PrebuiltArgTypes,
   StorybookControlCategory,
 } from "../../../../scalars/lib/storybook-arg-types.js";
+import { AIDInput } from "./aid-input.js";
 import { fetchOptions, fetchSelectedOption, mockedOptions } from "./mocks.js";
-import { OIDInput } from "./oid-input.js";
 
 /**
- * The `OIDInput` component provides an input field for Object IDs (typically UUIDs).
+ * The `AIDInput` component provides an input field for Agent IDs (typically DIDs).
  * It supports multiple configuration properties like:
  * - label
  * - description
@@ -25,13 +25,13 @@ import { OIDInput } from "./oid-input.js";
  * - Async and sync options fetching
  *
  * > **Note:** This component does not have built-in validation. If you need built-in validation
- * > you can use the [OIDField](?path=/docs/document-engineering-scalars-oid-field--readme)
+ * > you can use the [AIDField](?path=/docs/document-engineering-scalars-aid-field--readme)
  * > component.
  */
 
-const meta: Meta<typeof OIDInput> = {
-  title: "Document Engineering/Data Entry/OID Input",
-  component: OIDInput,
+const meta: Meta<typeof AIDInput> = {
+  title: "Document Engineering/Data Entry/AID Input",
+  component: AIDInput,
   decorators: [
     (Story) => (
       <div style={{ width: "280px", margin: "1rem auto 0" }}>
@@ -56,6 +56,17 @@ const meta: Meta<typeof OIDInput> = {
       },
     }),
     ...PrebuiltArgTypes.placeholder,
+    ...PrebuiltArgTypes.maxLength,
+
+    supportedNetworks: {
+      control: "object",
+      description:
+        "List of supported networks for DID validation. Network interface: { chainId: string; name?: string; }",
+      table: {
+        type: { summary: "Network[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
 
     autoComplete: {
       control: "boolean",
@@ -77,11 +88,12 @@ const meta: Meta<typeof OIDInput> = {
         "title?: string\n\n" +
         "path?: string | { text: string; url: string; }\n\n" +
         "value: string\n\n" +
-        "description?: string\n\n",
+        "description?: string\n\n" +
+        "agentType?: string\n\n",
       table: {
         type: {
           summary:
-            "(userInput: string; context?: {}) => Promise<OIDOption[]> | OIDOption[]",
+            "(userInput: string; context?: { supportedNetworks?: Network[]; }) => Promise<AIDOption[]> | AIDOption[]",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -99,11 +111,12 @@ const meta: Meta<typeof OIDInput> = {
         "path?: string | { text: string; url: string; }\n\n" +
         "value: string\n\n" +
         "description?: string\n\n" +
+        "agentType?: string\n\n" +
         "or undefined if the option is not found",
       table: {
         type: {
           summary:
-            "(value: string) => Promise<OIDOption | undefined> | OIDOption | undefined",
+            "(value: string) => Promise<AIDOption | undefined> | AIDOption | undefined",
         },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
         readonly: true,
@@ -120,9 +133,10 @@ const meta: Meta<typeof OIDInput> = {
         "title?: string\n\n" +
         "path?: string | { text: string; url: string; }\n\n" +
         "value: string\n\n" +
-        "description?: string\n\n",
+        "description?: string\n\n" +
+        "agentType?: string\n\n",
       table: {
-        type: { summary: "OIDOption" },
+        type: { summary: "AIDOption" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "autoComplete", neq: false },
@@ -149,18 +163,18 @@ const meta: Meta<typeof OIDInput> = {
     },
   },
   args: {
-    name: "oid-input",
+    name: "aid-input",
   },
-} satisfies Meta<typeof OIDInput>;
+} satisfies Meta<typeof AIDInput>;
 
 export default meta;
 
-type Story = StoryObj<typeof OIDInput>;
+type Story = StoryObj<typeof AIDInput>;
 
 export const Default: Story = {
   args: {
-    label: "OID input",
-    placeholder: "uuid",
+    label: "AID input",
+    placeholder: "did:ethr:",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
   },
@@ -168,10 +182,10 @@ export const Default: Story = {
 
 export const Empty: Story = {
   args: {
-    label: "OID input",
-    placeholder: "uuid",
+    label: "AID input",
+    placeholder: "did:ethr:",
     isOpenByDefault: true,
-    defaultValue: "uuid",
+    defaultValue: "did:ethr:",
     variant: "withValueTitleAndDescription",
     fetchOptionsCallback: fetchOptions,
     fetchSelectedOptionCallback: fetchSelectedOption,
@@ -180,10 +194,10 @@ export const Empty: Story = {
 
 export const Open: Story = {
   args: {
-    label: "OID input",
-    placeholder: "uuid",
+    label: "AID input",
+    placeholder: "did:ethr:",
     isOpenByDefault: true,
-    defaultValue: "uuid",
+    defaultValue: "did:ethr:",
     variant: "withValueTitleAndDescription",
     initialOptions: mockedOptions,
     fetchOptionsCallback: fetchOptions,
@@ -193,8 +207,8 @@ export const Open: Story = {
 
 export const Filled: Story = {
   args: {
-    label: "OID input",
-    placeholder: "uuid",
+    label: "AID input",
+    placeholder: "did:ethr:",
     defaultValue: mockedOptions[0].value,
     initialOptions: mockedOptions,
     variant: "withValueTitleAndDescription",

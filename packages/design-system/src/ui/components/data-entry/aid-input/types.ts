@@ -3,18 +3,29 @@ import type {
   IdAutocompleteProps,
 } from "../../../../scalars/components/fragments/id-autocomplete/types.js";
 
-type OIDOption = IdAutocompleteOption;
+interface Network {
+  chainId: string;
+  name?: string;
+}
 
-type OIDInputBaseProps = Omit<
+type AIDOptionProps = {
+  agentType?: string;
+};
+
+type AIDOption = IdAutocompleteOption<AIDOptionProps>;
+
+type AIDInputBaseProps = Omit<
   IdAutocompleteProps,
   | "autoComplete"
   | "fetchOptionsCallback"
   | "fetchSelectedOptionCallback"
   | "previewPlaceholder"
   | "renderOption"
->;
+> & {
+  supportedNetworks?: Network[];
+};
 
-type OIDInputProps = OIDInputBaseProps &
+type AIDInputProps = AIDInputBaseProps &
   (
     | {
         autoComplete: false;
@@ -27,12 +38,12 @@ type OIDInputProps = OIDInputBaseProps &
         fetchOptionsCallback: (
           userInput: string,
           context?: Record<string, unknown>,
-        ) => Promise<OIDOption[]> | OIDOption[];
+        ) => Promise<AIDOption[]> | AIDOption[];
         fetchSelectedOptionCallback?: (
           value: string,
-        ) => Promise<OIDOption | undefined> | OIDOption | undefined;
-        previewPlaceholder?: OIDOption;
+        ) => Promise<AIDOption | undefined> | AIDOption | undefined;
+        previewPlaceholder?: AIDOption;
       }
   );
 
-export type { OIDInputProps, OIDOption };
+export type { AIDInputProps, AIDOption };
