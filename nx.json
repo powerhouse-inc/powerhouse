@@ -92,6 +92,5 @@
     "@nx/js": {
       "projectsAffectedByDependencyUpdates": "auto"
     }
-  },
-  "nxCloudId": "67ee6b2457af7105bd50db9c"
+  }
 }
