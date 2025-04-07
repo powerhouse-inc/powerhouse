@@ -1,5 +1,5 @@
 import { type ExternalPackage } from '#store';
-import type { ViteHotContext } from 'vite/types/hot.js';
+import type { ViteHotContext } from 'vite-envs/types/hot';
 export type PackagesUpdate = {
     url: string;
     timestamp: string;
@@ -8,7 +8,7 @@ export type PackagesUpdate = {
 export async function getHMRModule(): Promise<ViteHotContext | undefined> {
     // if running connect in dev mode then use its hmr
     if (import.meta.hot) {
-        return import.meta.hot as ViteHotContext;
+        return import.meta.hot;
     }
 
     try {
