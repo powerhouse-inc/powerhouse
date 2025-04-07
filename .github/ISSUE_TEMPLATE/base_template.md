@@ -2,7 +2,7 @@
 
 > Describe the context and motivation for this issue. Why is it being created? Link to any related discussions, documents, Slack threads, or demo scenarios.
 
-## 🎯 Goals / What We Want to Achieve
+## Goals / What We Want to Achieve
 
 > A clear list of what this issue aims to accomplish.
 - [ ] Goal 1: What success looks like
@@ -11,9 +11,9 @@
 ## Scope
 
 - **In Scope**:
-  - ✅ Specific features, components, workflows, or use cases this issue covers.
+  - Specific features, components, workflows, or use cases this issue covers.
 - **Out of Scope**:
-  - 🚫 Things explicitly not covered by this issue.
+  - Things explicitly not covered by this issue.
 
 ## Proposed Solution / Implementation Plan
 
