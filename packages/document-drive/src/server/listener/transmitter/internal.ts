@@ -7,10 +7,9 @@ import {
 } from "document-model";
 
 import {
-  type IDocumentDriveServer,
   type GetDocumentOptions,
   type IBaseDocumentDriveServer,
-  type Listener,
+  type IDocumentDriveServer,
   type ListenerRevision,
   type StrandUpdate,
 } from "#server/types";
@@ -45,15 +44,9 @@ export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
-  protected listener: Listener;
   protected receiver: IReceiver;
 
-  constructor(
-    listener: Listener,
-    drive: IDocumentDriveServer,
-    receiver: IReceiver,
-  ) {
-    this.listener = listener;
+  constructor(drive: IDocumentDriveServer, receiver: IReceiver) {
     this.drive = drive;
     this.receiver = receiver;
   }

@@ -11,8 +11,10 @@ export const readManifest = () => {
 };
 
 import { getConfig } from "@powerhousedao/config";
-import { type SubgraphClass } from "@powerhousedao/reactor-api";
-import { type Listener } from "document-drive/server/types";
+import {
+  ProcessorFactory,
+  type SubgraphClass,
+} from "@powerhousedao/reactor-api";
 import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
@@ -90,15 +92,18 @@ async function loadPackagesSubgraphs(packages: string[]) {
   return loadedPackages;
 }
 
-async function loadPackagesListeners(packages: string[]) {
-  const loadedPackages = new Map<string, Listener[]>();
+async function loadPackagesProcessors(packages: string[]) {
+  const loadedPackages = new Map<string, ProcessorFactory>();
   for (const pkg of packages) {
-    const pkgModule = (await loadDependency(pkg, "processors")) as Listener[];
+    const pkgModule = (await loadDependency(
+      pkg,
+      "processors",
+    )) as ProcessorFactory;
     if (pkgModule) {
-      console.log(`  ➜  Loaded Listeners from: ${pkg}`);
+      console.log(`  ➜  Loaded Processor Factory from: ${pkg}`);
       loadedPackages.set(pkg, pkgModule);
     } else {
-      console.warn(`  ➜  No Listeners found: ${pkg}`);
+      console.warn(`  ➜  No Processor Factory found: ${pkg}`);
     }
   }
 
@@ -118,15 +123,21 @@ export function getUniqueDocumentModels(
   return Array.from(uniqueModels.values());
 }
 
+export type PackageManagerResult = {
+  documentModels?: DocumentModelModule[];
+  subgraphs?: Map<string, SubgraphClass[]>;
+  processors?: Map<string, ProcessorFactory>;
+};
+
 export class PackagesManager implements IPackagesManager {
   private docModelsMap = new Map<string, DocumentModelModule[]>();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
-  private listenerMap = new Map<string, Listener[]>();
+  private processorMap = new Map<string, ProcessorFactory>();
   private configWatcher: StatWatcher | undefined;
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
     subgraphsChange: [Map<string, SubgraphClass[]>];
-    listenersChange: [Record<string, Listener[]>];
+    processorsChange: [Map<string, ProcessorFactory>];
   }>();
 
   constructor(
@@ -136,29 +147,38 @@ export class PackagesManager implements IPackagesManager {
     this.eventEmitter.setMaxListeners(0);
   }
 
-  public async init() {
+  public async init(): Promise<PackageManagerResult> {
     if ("packages" in this.options) {
       return await this.loadPackages(this.options.packages);
     } else if ("configFile" in this.options) {
       return await this.initConfigFile(this.options.configFile);
     }
+
+    return {
+      documentModels: [],
+      subgraphs: new Map(),
+      processors: new Map(),
+    };
   }
 
-  private async loadPackages(packages: string[]) {
+  private async loadPackages(
+    packages: string[],
+  ): Promise<PackageManagerResult> {
     // install packages
     const packagesMap = await loadPackagesDocumentModels(packages);
     const subgraphsMap = await loadPackagesSubgraphs(packages);
-    const listenersMap = await loadPackagesListeners(packages);
+    const processorsMap = await loadPackagesProcessors(packages);
+
     this.updatePackagesMap(packagesMap);
     this.updateSubgraphsMap(subgraphsMap);
-    this.updateListenersMap(listenersMap);
+    this.updateProcessorsMap(processorsMap);
 
     return {
       documentModels: getUniqueDocumentModels(
         ...Array.from(packagesMap.values()),
       ),
       subgraphs: subgraphsMap,
-      listeners: this.getUniqueListeners(Array.from(listenersMap.values())),
+      processors: processorsMap,
     };
   }
 
@@ -180,7 +200,7 @@ export class PackagesManager implements IPackagesManager {
     }
   }
 
-  private initConfigFile(configFile: string) {
+  private initConfigFile(configFile: string): Promise<PackageManagerResult> {
     const result = this.loadFromConfigFile(configFile);
 
     if (!this.configWatcher) {
@@ -226,26 +246,17 @@ export class PackagesManager implements IPackagesManager {
     this.eventEmitter.emit("subgraphsChange", subgraphsMap);
   }
 
-  private updateListenersMap(listenersMap: Map<string, Listener[]>) {
-    const oldPackages = Array.from(this.listenerMap.keys());
-    const newPackages = Array.from(listenersMap.keys());
+  private updateProcessorsMap(processorsMap: Map<string, ProcessorFactory>) {
+    const oldPackages = Array.from(this.processorMap.keys());
+    const newPackages = Array.from(processorsMap.keys());
     oldPackages
       .filter((pkg) => !newPackages.includes(pkg))
       .forEach((pkg) => {
-        console.log("> Removed Listeners from:", pkg);
+        console.log("> Removed Processor Factories from:", pkg);
       });
-    this.listenerMap = listenersMap;
-    this.eventEmitter.emit("listenersChange", Object.fromEntries(listenersMap));
-  }
 
-  private getUniqueListeners(listeners: Listener[][]): Listener[] {
-    const uniqueListeners = new Map<string, Listener>();
-    for (const packageListeners of listeners) {
-      for (const listener of packageListeners) {
-        uniqueListeners.set(listener.listenerId, listener);
-      }
-    }
-    return Array.from(uniqueListeners.values());
+    this.processorMap = processorsMap;
+    this.eventEmitter.emit("processorsChange", processorsMap);
   }
 
   onDocumentModelsChange(
@@ -260,9 +271,9 @@ export class PackagesManager implements IPackagesManager {
     this.eventEmitter.on("subgraphsChange", handler);
   }
 
-  onListenersChange(
-    handler: (listeners: Record<string, Listener[]>) => void,
+  onProcessorsChange(
+    handler: (processors: Map<string, ProcessorFactory>) => void,
   ): void {
-    this.eventEmitter.on("listenersChange", handler);
+    this.eventEmitter.on("processorsChange", handler);
   }
 }

@@ -97,11 +97,7 @@ async function addGenerateTransmitter(
     },
   };
 
-  const transmitter = new InternalTransmitter(
-    listener,
-    reactor.server,
-    receiver,
-  );
+  const transmitter = new InternalTransmitter(reactor.server, receiver);
 
   listener.transmitter = transmitter;
 

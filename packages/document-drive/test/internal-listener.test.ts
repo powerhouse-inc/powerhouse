@@ -66,7 +66,7 @@ describe("Internal Listener", () => {
     };
 
     // TODO: circular reference
-    listener.transmitter = new InternalTransmitter(listener, server, receiver);
+    listener.transmitter = new InternalTransmitter(server, receiver);
 
     await listenerManager?.setListener(driveId, listener);
 

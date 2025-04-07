@@ -1,7 +1,11 @@
 import { GraphQLManager } from "#graphql/graphql-manager.js";
-import { type SubgraphClass } from "#graphql/index.js";
 import { renderGraphqlPlayground } from "#graphql/playground.js";
-import { getUniqueDocumentModels, PackagesManager } from "#package-manager.js";
+import {
+  getUniqueDocumentModels,
+  PackageManagerResult,
+  PackagesManager,
+} from "#package-manager.js";
+import { IProcessorManager, ProcessorManager } from "#processor-manager.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
@@ -10,7 +14,6 @@ import {
 } from "@powerhousedao/analytics-engine-knex";
 import devcert from "devcert";
 import { type IDocumentDriveServer } from "document-drive";
-import { type DocumentModelModule } from "document-model";
 import express, { type Express } from "express";
 import { type Knex } from "knex";
 import fs from "node:fs";
@@ -18,7 +21,7 @@ import https from "node:https";
 import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
-import { type API } from "./types.js";
+import { ProcessorFactory, type API } from "./types.js";
 import { getDbClient } from "./utils/db.js";
 
 type Options = {
@@ -35,11 +38,6 @@ type Options = {
       }
     | boolean
     | undefined;
-};
-
-type PackageManagerResult = {
-  documentModels?: DocumentModelModule[];
-  subgraphs?: Map<string, SubgraphClass[]>;
 };
 
 const DEFAULT_PORT = 4000;
@@ -137,6 +135,7 @@ function setupEventListeners(
   pkgManager: PackagesManager,
   reactor: IDocumentDriveServer,
   graphqlManager: GraphQLManager,
+  processorManager: IProcessorManager,
 ): void {
   pkgManager.onDocumentModelsChange((documentModels) => {
     const uniqueModels = getUniqueDocumentModels(
@@ -154,25 +153,11 @@ function setupEventListeners(
     }
   });
 
-  pkgManager.onListenersChange((listeners) => {
-    Object.entries(listeners).forEach(([packageName, packageListeners]) => {
-      packageListeners.forEach((listener) => {
-        if (!listener.driveId) {
-          console.warn(
-            `Skipping listener ${listener.listenerId} from package ${packageName} - missing driveId`,
-          );
-          return;
-        }
-        reactor.listeners
-          .setListener(listener.driveId, listener)
-          .catch((error) => {
-            console.error(
-              `Failed to set listener ${listener.listenerId} for drive ${listener.driveId}:`,
-              error,
-            );
-          });
-      });
-    });
+  pkgManager.onProcessorsChange(async (processors) => {
+    for (const [packageName, factory] of processors) {
+      await processorManager.unregisterFactory(packageName);
+      await processorManager.registerFactory(packageName, factory);
+    }
   });
 }
 
@@ -233,6 +218,20 @@ export async function startAPI(
   const { pkgManager, result } = await initializePackageManager(options);
   const documentModels = result.documentModels ?? [];
 
+  // initialize processors
+  const processorManager = new ProcessorManager(
+    reactor.listeners,
+    reactor,
+    db,
+    analyticsStore,
+  );
+
+  const packageToProcessorFactory =
+    result.processors ?? new Map<string, ProcessorFactory>();
+  for (const [packageName, factory] of packageToProcessorFactory) {
+    processorManager.registerFactory(packageName, factory);
+  }
+
   // Set document model modules
   reactor.setDocumentModelModules(
     getUniqueDocumentModels([
@@ -251,10 +250,10 @@ export async function startAPI(
   );
 
   // Set up event listeners
-  setupEventListeners(pkgManager, reactor, graphqlManager);
+  setupEventListeners(pkgManager, reactor, graphqlManager, processorManager);
 
   // Start the server
   await startServer(app, port, options.https);
 
-  return { app, graphqlManager };
+  return { app, graphqlManager, processorManager };
 }
