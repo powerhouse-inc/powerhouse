@@ -1,6 +1,8 @@
 import {
   createDocumentStory,
   type DocumentStory,
+  type DriveDocumentStory,
+  type DriveEditorStoryComponent,
   type EditorStoryArgs,
   type EditorStoryComponent,
   type EditorStoryProps,
@@ -144,7 +146,7 @@ export function createDriveStory(
 }
 
 export function createDriveStoryWithUINodes(
-  Editor: EditorStoryComponent<DocumentDriveDocument>,
+  Editor: DriveEditorStoryComponent<DocumentDriveDocument>,
   initialState?: ExtendedState<
     PartialState<DocumentDriveState>,
     PartialState<DocumentDriveLocalState>
@@ -153,10 +155,10 @@ export function createDriveStoryWithUINodes(
   decorators?: Decorator<EditorStoryProps<DocumentDriveDocument>>[],
 ): {
   meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory<DocumentDriveDocument>;
+  CreateDocumentStory: DriveDocumentStory<DocumentDriveDocument>;
 } {
-  return createDocumentStory(
-    Editor,
+  const { meta, CreateDocumentStory } = createDocumentStory(
+    Editor as EditorStoryComponent<DocumentDriveDocument>,
     driveDocumentModelModule.reducer,
     initialState ??
       driveDocumentModelModule.utils.createExtendedState({
@@ -165,4 +167,10 @@ export function createDriveStoryWithUINodes(
     additionalStoryArgs,
     [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
   );
+
+  return {
+    meta: meta as Meta<typeof Editor>,
+    CreateDocumentStory:
+      CreateDocumentStory as DriveDocumentStory<DocumentDriveDocument>,
+  };
 }

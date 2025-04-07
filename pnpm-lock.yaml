@@ -537,6 +537,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../reactor-browser
       '@powerhousedao/scalars':
         specifier: workspace:*
         version: link:../scalars
