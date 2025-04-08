@@ -249,7 +249,7 @@ export function useIdAutocomplete({
   useEffect(() => {
     if (!isInternalChange.current) {
       shouldFetchOptions.current = false;
-      setSelectedValue(value ?? "");
+      setSelectedValue(value ?? defaultValue ?? "");
       setSelectedOption(undefined);
     }
     isInternalChange.current = false;
