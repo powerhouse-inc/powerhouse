@@ -138,6 +138,7 @@ export const Content: React.FC<ContentProps> = ({
           <CommandItemList
             options={favoriteOptions}
             selectedValues={selectedValues}
+            multiple={multiple}
             selectionIcon={selectionIcon}
             selectionIconPosition={selectionIconPosition}
             hasAnyIcon={hasAnyIcon}
@@ -150,6 +151,7 @@ export const Content: React.FC<ContentProps> = ({
           <CommandItemList
             options={options}
             selectedValues={selectedValues}
+            multiple={multiple}
             selectionIcon={selectionIcon}
             selectionIconPosition={selectionIconPosition}
             hasAnyIcon={hasAnyIcon}
