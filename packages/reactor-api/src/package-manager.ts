@@ -11,10 +11,8 @@ export const readManifest = () => {
 };
 
 import { getConfig } from "@powerhousedao/config";
-import {
-  ProcessorFactory,
-  type SubgraphClass,
-} from "@powerhousedao/reactor-api";
+import { type SubgraphClass } from "@powerhousedao/reactor-api";
+import { ProcessorFactory } from "document-drive/processors/types";
 import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
@@ -93,12 +91,11 @@ async function loadPackagesSubgraphs(packages: string[]) {
 }
 
 async function loadPackagesProcessors(packages: string[]) {
-  const loadedPackages = new Map<string, ProcessorFactory>();
+  const loadedPackages = new Map<string, (module: any) => ProcessorFactory>();
   for (const pkg of packages) {
-    const pkgModule = (await loadDependency(
-      pkg,
-      "processors",
-    )) as ProcessorFactory;
+    const pkgModule = (await loadDependency(pkg, "processors")) as (
+      module: any,
+    ) => ProcessorFactory;
     if (pkgModule) {
       console.log(`  ➜  Loaded Processor Factory from: ${pkg}`);
       loadedPackages.set(pkg, pkgModule);
@@ -126,18 +123,18 @@ export function getUniqueDocumentModels(
 export type PackageManagerResult = {
   documentModels?: DocumentModelModule[];
   subgraphs?: Map<string, SubgraphClass[]>;
-  processors?: Map<string, ProcessorFactory>;
+  processors?: Map<string, (module: any) => ProcessorFactory>;
 };
 
 export class PackagesManager implements IPackagesManager {
   private docModelsMap = new Map<string, DocumentModelModule[]>();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
-  private processorMap = new Map<string, ProcessorFactory>();
+  private processorMap = new Map<string, (module: any) => ProcessorFactory>();
   private configWatcher: StatWatcher | undefined;
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
     subgraphsChange: [Map<string, SubgraphClass[]>];
-    processorsChange: [Map<string, ProcessorFactory>];
+    processorsChange: [Map<string, (module: any) => ProcessorFactory>];
   }>();
 
   constructor(
@@ -246,7 +243,9 @@ export class PackagesManager implements IPackagesManager {
     this.eventEmitter.emit("subgraphsChange", subgraphsMap);
   }
 
-  private updateProcessorsMap(processorsMap: Map<string, ProcessorFactory>) {
+  private updateProcessorsMap(
+    processorsMap: Map<string, (module: any) => ProcessorFactory>,
+  ) {
     const oldPackages = Array.from(this.processorMap.keys());
     const newPackages = Array.from(processorsMap.keys());
     oldPackages
@@ -272,7 +271,9 @@ export class PackagesManager implements IPackagesManager {
   }
 
   onProcessorsChange(
-    handler: (processors: Map<string, ProcessorFactory>) => void,
+    handler: (
+      processors: Map<string, (module: any) => ProcessorFactory>,
+    ) => void,
   ): void {
     this.eventEmitter.on("processorsChange", handler);
   }

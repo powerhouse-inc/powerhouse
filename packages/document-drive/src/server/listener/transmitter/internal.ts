@@ -6,6 +6,7 @@ import {
   type PHDocument,
 } from "document-model";
 
+import { IProcessor } from "#processors/types";
 import {
   type GetDocumentOptions,
   type IBaseDocumentDriveServer,
@@ -15,13 +16,6 @@ import {
 } from "#server/types";
 import { logger } from "#utils/logger";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
-
-export interface IProcessor {
-  onStrands: <TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ) => Promise<void>;
-  onDisconnect: () => Promise<void>;
-}
 
 export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
   OperationFromDocument<TDocument>,

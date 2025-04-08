@@ -9,9 +9,9 @@ import {
   type LocalReactor,
   type StartServerOptions,
 } from "@powerhousedao/reactor-local";
+import { IProcessor } from "document-drive/processors/types";
 import {
   InternalTransmitter,
-  IProcessor,
   type InternalTransmitterUpdate,
 } from "document-drive/server/listener/transmitter/internal";
 import { type Listener } from "document-drive/server/types";
@@ -53,6 +53,7 @@ export async function startLocalSwitchboard(
   return reactor;
 }
 
+// TODO: instead of doing this by hand, we should use the processor manager
 async function addGenerateTransmitter(
   reactor: LocalReactor,
   config: PowerhouseConfig,

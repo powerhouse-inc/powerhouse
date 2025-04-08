@@ -1,10 +1,8 @@
-import { IProcessorManager } from "#processor-manager.js";
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { IProcessor, ListenerFilter } from "document-drive";
+import { IProcessorManager } from "document-drive/processors/types";
 import { type Express } from "express";
 import { type GraphQLManager } from "./graphql/graphql-manager.js";
 import { Db } from "./utils/db.js";
-
 export type { Db } from "./utils/db.js";
 
 export type API = {
@@ -13,17 +11,7 @@ export type API = {
   processorManager: IProcessorManager;
 };
 
-export type ProcessorRecord = {
-  processor: IProcessor;
-  filter: ListenerFilter;
-};
-
 export type ReactorModule = {
   analyticsStore: IAnalyticsStore;
   operationalStore: Db;
 };
-
-export type ProcessorFactory = (
-  driveId: string,
-  module: ReactorModule,
-) => ProcessorRecord[];

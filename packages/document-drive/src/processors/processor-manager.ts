@@ -1,4 +1,7 @@
-import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import {
+  IProcessorManager,
+  ProcessorFactory,
+} from "document-drive/processors/types";
 import { InternalTransmitter } from "document-drive/server/listener/transmitter/internal";
 import {
   IDocumentDriveServer,
@@ -6,34 +9,6 @@ import {
   Listener,
 } from "document-drive/server/types";
 import { generateId } from "document-model";
-import { Db, ProcessorFactory } from "../index.js";
-
-export interface IProcessorManager {
-  /**
-   * Registers a processor factory for a given identifier. This will create
-   * processors for all drives that have already been registered.
-   *
-   * @param identifier Any identifier to associate with the factory.
-   * @param factory The factory to register.
-   */
-  registerFactory(identifier: string, factory: ProcessorFactory): Promise<void>;
-
-  /**
-   * Unregisters a processor factory for a given identifier. This will remove
-   * all listeners that were created by the factory.
-   *
-   * @param identifier The identifier to unregister.
-   */
-  unregisterFactory(identifier: string): Promise<void>;
-
-  /**
-   * Registers a drive with the processor manager. This will create processors
-   * for the drive for all factories that have already been registered.
-   *
-   * @param driveId The drive to register.
-   */
-  registerDrive(driveId: string): Promise<void>;
-}
 
 export class ProcessorManager implements IProcessorManager {
   private idToFactory = new Map<string, ProcessorFactory>();
@@ -42,8 +17,6 @@ export class ProcessorManager implements IProcessorManager {
   constructor(
     private listeners: IListenerManager,
     private drive: IDocumentDriveServer,
-    private operationalStore: Db,
-    private analyticsStore: IAnalyticsStore,
   ) {
     //
   }
@@ -76,11 +49,6 @@ export class ProcessorManager implements IProcessorManager {
   }
 
   async registerDrive(driveId: string) {
-    const module = {
-      operationalStore: this.operationalStore,
-      analyticsStore: this.analyticsStore,
-    };
-
     // iterate over all factories and create listeners
     await Promise.all(
       Object.entries(this.idToFactory).map(([identifier, factory]) => {
@@ -90,7 +58,7 @@ export class ProcessorManager implements IProcessorManager {
           this.identifierToListeners.set(identifier, listeners);
         }
 
-        const processors = factory(driveId, module);
+        const processors = factory(driveId);
 
         for (const { filter, processor } of processors) {
           const id = generateId();

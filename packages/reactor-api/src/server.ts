@@ -5,7 +5,6 @@ import {
   PackageManagerResult,
   PackagesManager,
 } from "#package-manager.js";
-import { IProcessorManager, ProcessorManager } from "#processor-manager.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
@@ -14,6 +13,11 @@ import {
 } from "@powerhousedao/analytics-engine-knex";
 import devcert from "devcert";
 import { type IDocumentDriveServer } from "document-drive";
+import { ProcessorManager } from "document-drive/processors/processor-manager";
+import {
+  IProcessorManager,
+  ProcessorFactory,
+} from "document-drive/processors/types";
 import express, { type Express } from "express";
 import { type Knex } from "knex";
 import fs from "node:fs";
@@ -21,7 +25,7 @@ import https from "node:https";
 import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
-import { ProcessorFactory, type API } from "./types.js";
+import { type API } from "./types.js";
 import { getDbClient } from "./utils/db.js";
 
 type Options = {
@@ -136,6 +140,7 @@ function setupEventListeners(
   reactor: IDocumentDriveServer,
   graphqlManager: GraphQLManager,
   processorManager: IProcessorManager,
+  module: { db: Knex; analyticsStore: IAnalyticsStore },
 ): void {
   pkgManager.onDocumentModelsChange((documentModels) => {
     const uniqueModels = getUniqueDocumentModels(
@@ -154,8 +159,10 @@ function setupEventListeners(
   });
 
   pkgManager.onProcessorsChange(async (processors) => {
-    for (const [packageName, factory] of processors) {
+    for (const [packageName, fn] of processors) {
       await processorManager.unregisterFactory(packageName);
+
+      const factory = fn(module);
       await processorManager.registerFactory(packageName, factory);
     }
   });
@@ -213,22 +220,19 @@ export async function startAPI(
 
   // Initialize database and analytics store
   const { db, analyticsStore } = initializeDatabaseAndAnalytics(options.dbPath);
+  const module = { db, analyticsStore };
 
   // Initialize package manager
   const { pkgManager, result } = await initializePackageManager(options);
   const documentModels = result.documentModels ?? [];
 
   // initialize processors
-  const processorManager = new ProcessorManager(
-    reactor.listeners,
-    reactor,
-    db,
-    analyticsStore,
-  );
+  const processorManager = new ProcessorManager(reactor.listeners, reactor);
 
   const packageToProcessorFactory =
-    result.processors ?? new Map<string, ProcessorFactory>();
-  for (const [packageName, factory] of packageToProcessorFactory) {
+    result.processors ?? new Map<string, (module: any) => ProcessorFactory>();
+  for (const [packageName, fn] of packageToProcessorFactory) {
+    const factory = fn(module);
     processorManager.registerFactory(packageName, factory);
   }
 
@@ -250,7 +254,13 @@ export async function startAPI(
   );
 
   // Set up event listeners
-  setupEventListeners(pkgManager, reactor, graphqlManager, processorManager);
+  setupEventListeners(
+    pkgManager,
+    reactor,
+    graphqlManager,
+    processorManager,
+    module,
+  );
 
   // Start the server
   await startServer(app, port, options.https);
