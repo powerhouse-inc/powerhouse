@@ -3,8 +3,8 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import type { PHDocument } from "document-model";
-import { AnalyticsPath, IAnalyticsStore, IProcessor } from "@powerhousedao/reactor-api";
-import { InternalTransmitterUpdate } from "document-drive";
+import { AnalyticsPath, IAnalyticsStore } from "@powerhousedao/reactor-api";
+import { InternalTransmitterUpdate, IProcessor } from "document-drive";
 
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";

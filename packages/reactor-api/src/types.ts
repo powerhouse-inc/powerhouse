@@ -1,6 +1,6 @@
 import { IProcessorManager } from "#processor-manager.js";
 import { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { IReceiver, ListenerFilter } from "document-drive";
+import { IProcessor, ListenerFilter } from "document-drive";
 import { type Express } from "express";
 import { type GraphQLManager } from "./graphql/graphql-manager.js";
 import { Db } from "./utils/db.js";
@@ -12,10 +12,6 @@ export type API = {
   graphqlManager: GraphQLManager;
   processorManager: IProcessorManager;
 };
-
-export interface IProcessor extends IReceiver {
-  //
-}
 
 export type ProcessorRecord = {
   processor: IProcessor;

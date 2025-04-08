@@ -67,7 +67,7 @@ export {
 export { InternalTransmitter } from "#server/listener/transmitter/internal";
 export type {
   InternalTransmitterUpdate,
-  IReceiver,
+  IProcessor,
 } from "#server/listener/transmitter/internal";
 export { PullResponderTransmitter } from "#server/listener/transmitter/pull-responder";
 export type { StrandUpdateGraphQL } from "#server/listener/transmitter/pull-responder";

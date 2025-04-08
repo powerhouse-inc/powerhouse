@@ -5,13 +5,13 @@ import {
 } from "@powerhousedao/config/powerhouse";
 import {
   DefaultStartServerOptions,
-  type LocalReactor,
   startServer,
+  type LocalReactor,
   type StartServerOptions,
 } from "@powerhousedao/reactor-local";
-import { type IReceiver } from "document-drive";
 import {
   InternalTransmitter,
+  IProcessor,
   type InternalTransmitterUpdate,
 } from "document-drive/server/listener/transmitter/internal";
 import { type Listener } from "document-drive/server/types";
@@ -57,7 +57,7 @@ async function addGenerateTransmitter(
   reactor: LocalReactor,
   config: PowerhouseConfig,
 ) {
-  const receiver: IReceiver = {
+  const processor: IProcessor = {
     onStrands: async function (
       strands: InternalTransmitterUpdate<DocumentModelDocument>[],
     ) {
@@ -97,7 +97,7 @@ async function addGenerateTransmitter(
     },
   };
 
-  const transmitter = new InternalTransmitter(reactor.server, receiver);
+  const transmitter = new InternalTransmitter(reactor.server, processor);
 
   listener.transmitter = transmitter;
 

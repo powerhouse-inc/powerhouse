@@ -16,7 +16,7 @@ import {
 import { logger } from "#utils/logger";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
-export interface IReceiver {
+export interface IProcessor {
   onStrands: <TDocument extends PHDocument>(
     strands: InternalTransmitterUpdate<TDocument>[],
   ) => Promise<void>;
@@ -44,11 +44,11 @@ export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
-  protected receiver: IReceiver;
+  protected processor: IProcessor;
 
-  constructor(drive: IDocumentDriveServer, receiver: IReceiver) {
+  constructor(drive: IDocumentDriveServer, processor: IProcessor) {
     this.drive = drive;
-    this.receiver = receiver;
+    this.processor = processor;
   }
 
   async #buildInternalOperationUpdate<TDocument extends PHDocument>(
@@ -113,7 +113,7 @@ export class InternalTransmitter implements ITransmitter {
     }
 
     try {
-      await this.receiver.onStrands(updates);
+      await this.processor.onStrands(updates);
       return strands.map(({ operations, ...s }) => ({
         ...s,
         status: "SUCCESS",
@@ -131,6 +131,6 @@ export class InternalTransmitter implements ITransmitter {
   }
 
   async disconnect(): Promise<void> {
-    await this.receiver?.onDisconnect();
+    await this.processor?.onDisconnect();
   }
 }
