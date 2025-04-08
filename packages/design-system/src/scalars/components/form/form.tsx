@@ -6,7 +6,12 @@ import {
   useId,
   useImperativeHandle,
 } from "react";
-import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
+import {
+  FormProvider,
+  useForm,
+  type UseFormProps,
+  type UseFormReturn,
+} from "react-hook-form";
 import { FormServerErrorMessage } from "../fragments/form-message/form-server-error-message.js";
 import { defaultOnError } from "./utils.js";
 
@@ -67,6 +72,13 @@ interface FormProps {
    * @default false The errors will be rendered automatically on top of the form.
    */
   renderSubmitErrorsManually?: boolean;
+
+  /**
+   * Additional props to pass to the form config from react-hook-form.
+   *
+   * Note: this could affect the form behavior, use with caution.
+   */
+  extraFormProps?: UseFormProps;
 
   /**
    * Callback to match a submission error with one or more form fields or form level errors.
@@ -136,6 +148,7 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
       renderSubmitErrorsManually = false,
       submissionErrorMatcher = defaultOnError,
       className,
+      extraFormProps,
     },
     ref,
   ) => {
@@ -143,6 +156,7 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
     const methods = useForm({
       defaultValues,
       criteriaMode: "all", // display all errors at once
+      ...extraFormProps,
     });
     useImperativeHandle(ref, () => methods, [methods]);
 
