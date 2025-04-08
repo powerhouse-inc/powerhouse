@@ -6,7 +6,7 @@ import {
   type PHDocument,
 } from "document-model";
 
-import { IProcessor } from "#processors/types";
+import { type IProcessor } from "#processors/types";
 import {
   type GetDocumentOptions,
   type IBaseDocumentDriveServer,

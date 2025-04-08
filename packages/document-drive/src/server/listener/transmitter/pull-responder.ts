@@ -17,7 +17,7 @@ import {
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
-import { childLogger, ILogger } from "#utils/logger";
+import { childLogger, type ILogger } from "#utils/logger";
 import { generateUUID } from "#utils/misc";
 import { gql } from "graphql-request";
 import {

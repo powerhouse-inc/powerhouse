@@ -1,6 +1,6 @@
-import { ListenerFilter } from "#drive-document-model/gen/schema/types";
-import { InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
-import { PHDocument } from "document-model";
+import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
+import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
+import { type PHDocument } from "document-model";
 
 /**
  * Describes an object that can process strands.

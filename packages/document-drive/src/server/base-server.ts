@@ -78,7 +78,7 @@ import {
   type IListenerManager,
   type IOperationResult,
   type ISynchronizationManager,
-  Listener,
+  type Listener,
   type ListenerState,
   type Mixin,
   type OperationUpdate,

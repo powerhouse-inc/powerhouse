@@ -4,7 +4,7 @@ import {
   type FileNode,
 } from "#drive-document-model/gen/types";
 import { isFileNode } from "#drive-document-model/src/utils";
-import { IDocumentStorage, type IDriveStorage } from "#storage/types";
+import { type IDocumentStorage, type IDriveStorage } from "#storage/types";
 import { childLogger } from "#utils/logger";
 import { isBefore, isDocumentDrive } from "#utils/misc";
 import {
