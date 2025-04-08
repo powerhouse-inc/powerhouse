@@ -1,3 +1,29 @@
+## 0.25.0-dev.0 (2025-04-08)
+
+### 🚀 Features
+
+- removed DriveContextProvider dep from connect DriveEditorContainer ([ea926fc30](https://github.com/powerhouse-inc/powerhouse/commit/ea926fc30))
+- **nx-cloud:** setup nx cloud workspace ([3048ba71d](https://github.com/powerhouse-inc/powerhouse/commit/3048ba71d))
+- **switchboard:** use reactor api package manager ([e5b5722fe](https://github.com/powerhouse-inc/powerhouse/commit/e5b5722fe))
+- **reactor:** added vscode launch config and cli for debugging react-local ([610b33f50](https://github.com/powerhouse-inc/powerhouse/commit/610b33f50))
+- **reactor-api:** added JSON scalar ([d3f8b4193](https://github.com/powerhouse-inc/powerhouse/commit/d3f8b4193))
+- **ui:** improve cell navigation ([eaaa8b995](https://github.com/powerhouse-inc/powerhouse/commit/eaaa8b995))
+- **builder-tools:** load local package from manifest ([96f4962d3](https://github.com/powerhouse-inc/powerhouse/commit/96f4962d3))
+
+### 🩹 Fixes
+
+- **document-drive:** linting issues ([de8e4472e](https://github.com/powerhouse-inc/powerhouse/commit/de8e4472e))
+- **scalars:** restore scrollbar styles ([b450e57b6](https://github.com/powerhouse-inc/powerhouse/commit/b450e57b6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- nesdc88
+- Yasiel Cabrera @YasielCabrera
+
 ## 0.24.0 (2025-03-26)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 2.28.1-dev.1 (2025-04-08)
+
+### 🚀 Features
+
+- removed DriveContextProvider dep from connect DriveEditorContainer ([ea926fc30](https://github.com/powerhouse-inc/powerhouse/commit/ea926fc30))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 2.28.1-dev.0 (2025-04-03)
 
 ### 🚀 Features
