@@ -2,21 +2,33 @@ import AtlasIcon from '#assets/icons/Atlas-Logomark.svg?react';
 import RefreshIcon from '#assets/icons/refresh.svg?react';
 import { useDocumentDriveServer } from '#hooks';
 import { useUnwrappedReactor } from '#store';
-import { Button } from '@powerhousedao/design-system';
+import { Button, toast } from '@powerhousedao/design-system';
 import { gql, request } from 'graphql-request';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 const REACTOR_URL = 'https://apps.powerhouse.io/sky-atlas/switchboard/';
 const MIN_LOADING_TIME = 2000;
 
-async function forkAtlas(docId: string): Promise<{ ForkAtlas: string }> {
+function useReactorUrl() {
+    const { search } = useLocation();
+    return useMemo(() => {
+        const params = new URLSearchParams(search);
+        const url = params.get('reactorUrl') ?? REACTOR_URL;
+        return url.endsWith('/') ? url : `${url}/`;
+    }, [search]);
+}
+
+async function forkAtlas(
+    docId: string,
+    reactorUrl: string,
+): Promise<{ ForkAtlas: string }> {
     const document = gql`
         mutation ForkAtlas($docId: PHID) {
             ForkAtlas(docId: $docId)
         }
     `;
-    return await request(`${REACTOR_URL}fork`, document, { docId });
+    return await request(`${reactorUrl}fork`, document, { docId });
 }
 
 export function AtlasImport() {
@@ -25,14 +37,23 @@ export function AtlasImport() {
     >('initial');
     const reactor = useUnwrappedReactor();
     const { documentId } = useParams();
+    const reactorUrl = useReactorUrl();
     const navigate = useNavigate();
     const { addRemoteDrive } = useDocumentDriveServer();
     const [driveId, setDriveId] = useState<string | undefined>(undefined);
     const [error, setError] = useState<unknown>(undefined);
     const [loading, setLoading] = useState(true);
+    const hasError = status.current === 'error';
+
+    useEffect(() => {
+        if (error) {
+            console.error('Error forking Atlas:', error);
+            toast('Error forking Atlas', { type: 'error' });
+        }
+    }, [error]);
 
     async function forkAtlasDocument(documentId: string) {
-        const result = await forkAtlas(documentId);
+        const result = await forkAtlas(documentId, reactorUrl);
         const driveId = result.ForkAtlas;
         status.current = 'forked';
         setDriveId(driveId);
@@ -47,7 +68,7 @@ export function AtlasImport() {
     const addForkDrive = useCallback(
         async (driveId: string) => {
             console.log('Adding remote drive:', driveId);
-            const driveUrl = `${REACTOR_URL}d/${driveId}`;
+            const driveUrl = `${reactorUrl}d/${driveId}`;
             try {
                 const addedDrive = await addRemoteDrive(driveUrl, {
                     sharingType: 'PUBLIC',
@@ -84,7 +105,7 @@ export function AtlasImport() {
                 setError(error);
             }
         },
-        [addRemoteDrive, navigate],
+        [addRemoteDrive, navigate, reactorUrl],
     );
 
     useEffect(() => {
@@ -103,7 +124,10 @@ export function AtlasImport() {
             setTimeout(resolve, 500);
         })
             .then(() => addForkDrive(driveId))
-            .catch(setError);
+            .catch(error => {
+                status.current = 'error';
+                setError(error);
+            });
     }, [driveId, reactor, status]);
 
     return (
@@ -117,17 +141,30 @@ export function AtlasImport() {
                         <div>
                             <AtlasIcon />
                         </div>
-                        <div className="text-sm text-gray-500 mt-3">
-                            Forking Atlas scope...
-                        </div>
-
+                        {hasError ? (
+                            <div className="text-sm text-gray-800 mt-3">
+                                Error forking Atlas scope. Please try again.
+                            </div>
+                        ) : (
+                            <div className="text-sm text-gray-500 mt-3">
+                                Forking Atlas scope...
+                            </div>
+                        )}
                         <Button
-                            onClick={redirectToDrive}
+                            onClick={
+                                hasError
+                                    ? window.location.reload.bind(
+                                          window.location,
+                                      )
+                                    : redirectToDrive
+                            }
                             size="small"
                             color="light"
                             className="bg-white border border-gray-200 h-9 px-3 mt-4 text-gray-600"
                         >
-                            {loading ? (
+                            {hasError ? (
+                                'Retry'
+                            ) : loading ? (
                                 <>
                                     <RefreshIcon className="animate-spin" />
                                     Loading
