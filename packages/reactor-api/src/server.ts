@@ -1,10 +1,15 @@
 import { GraphQLManager } from "#graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "#graphql/playground.js";
 import {
+  DocumentModelLoader,
+  ProcessorLoader,
+  SubgraphLoader,
+} from "#packages/loaders.js";
+import {
   getUniqueDocumentModels,
-  PackageManagerResult,
   PackagesManager,
-} from "#package-manager.js";
+} from "#packages/package-manager.js";
+import { PackageManagerResult } from "#packages/types.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
@@ -87,7 +92,12 @@ function initializeDatabaseAndAnalytics(dbPath: string | undefined): {
 async function initializePackageManager(
   options: Options,
 ): Promise<{ pkgManager: PackagesManager; result: PackageManagerResult }> {
+  // todo: swap out loaders
+
   const pkgManager = new PackagesManager(
+    new DocumentModelLoader(),
+    new SubgraphLoader(),
+    new ProcessorLoader(),
     options.configFile
       ? {
           configFile: options.configFile,
@@ -97,7 +107,7 @@ async function initializePackageManager(
         },
   );
 
-  const result = (await pkgManager.init()) as unknown as PackageManagerResult;
+  const result = await pkgManager.init();
   return { pkgManager, result };
 }
 
@@ -265,5 +275,5 @@ export async function startAPI(
   // Start the server
   await startServer(app, port, options.https);
 
-  return { app, graphqlManager, processorManager };
+  return { app, graphqlManager, processorManager, packages: pkgManager };
 }

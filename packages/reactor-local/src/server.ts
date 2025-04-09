@@ -166,6 +166,7 @@ const startServer = async (
   // init drive server
   await driveServer.initialize();
   const driveUrl = await addDefaultDrive(driveServer, drive, serverPort);
+
   // start api
   const packageOptions = packages?.length
     ? { packages }

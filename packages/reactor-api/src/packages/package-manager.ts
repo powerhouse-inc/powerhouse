@@ -1,111 +1,18 @@
-import { execSync } from "node:child_process";
-export const installPackages = async (packages: string[]) => {
-  for (const packageName of packages) {
-    execSync(`ph install ${packageName}`);
-  }
-};
-
-export const readManifest = () => {
-  const manifest = execSync(`ph manifest`).toString();
-  return manifest;
-};
-
-import { getConfig } from "@powerhousedao/config";
+import { getConfig, PowerhouseConfig } from "@powerhousedao/config";
 import { type SubgraphClass } from "@powerhousedao/reactor-api";
 import { ProcessorFactory } from "document-drive/processors/types";
 import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
+import {
+  IDocumentModelLoader,
+  IPackagesManager,
+  IPackagesManagerOptions,
+  IProcessorLoader,
+  ISubgraphLoader,
+  PackageManagerResult,
+} from "./types.js";
 
-interface IPackagesManager {
-  onDocumentModelsChange(
-    handler: (documentModels: Record<string, DocumentModelModule[]>) => void,
-  ): void;
-}
-
-type IPackagesManagerOptions = { packages: string[] } | { configFile: string };
-
-interface PackageConfig {
-  packageName: string;
-}
-
-interface PowerhouseConfig {
-  packages?: PackageConfig[];
-}
-
-export async function loadDependency(
-  packageName: string,
-  subPath: string,
-): Promise<unknown> {
-  try {
-    const fullPath = `${packageName}/${subPath}`;
-    return await import(fullPath);
-  } catch (e) {
-    console.error("Error loading dependency", packageName, subPath, e);
-    return null;
-  }
-}
-
-async function loadPackagesDocumentModels(packages: string[]) {
-  const loadedPackages = new Map<string, DocumentModelModule[]>();
-  for (const pkg of packages) {
-    try {
-      console.log("> Loading package:", pkg);
-      const pkgModule = (await loadDependency(pkg, "document-models")) as {
-        [key: string]: DocumentModelModule;
-      };
-      if (pkgModule) {
-        console.log(`  ➜  Loaded Document Models from: ${pkg}`);
-        loadedPackages.set(pkg, Object.values(pkgModule));
-      } else {
-        console.warn(`  ➜  No Document Models found: ${pkg}`);
-      }
-    } catch (e) {
-      console.error("Error loading Document Models from", pkg, e);
-    }
-  }
-  return loadedPackages;
-}
-
-async function loadPackagesSubgraphs(packages: string[]) {
-  const loadedPackages = new Map<string, SubgraphClass[]>();
-  for (const pkg of packages) {
-    const pkgModule = (await loadDependency(pkg, "subgraphs")) as
-      | undefined
-      | Record<string, Record<string, SubgraphClass>>;
-
-    const subgraphs = pkgModule
-      ? Object.values(pkgModule).map((subgraph) => {
-          return Object.values(subgraph);
-        })
-      : undefined;
-
-    if (!pkgModule || !subgraphs?.length) {
-      console.warn(`  ➜  No Subgraphs found: ${pkg}`);
-    } else {
-      console.log(`  ➜  Loaded Subgraphs from: ${pkg}`);
-      loadedPackages.set(pkg.replaceAll("@", ""), subgraphs.flat());
-    }
-  }
-  return loadedPackages;
-}
-
-async function loadPackagesProcessors(packages: string[]) {
-  const loadedPackages = new Map<string, (module: any) => ProcessorFactory>();
-  for (const pkg of packages) {
-    const pkgModule = (await loadDependency(pkg, "processors")) as (
-      module: any,
-    ) => ProcessorFactory;
-    if (pkgModule) {
-      console.log(`  ➜  Loaded Processor Factory from: ${pkg}`);
-      loadedPackages.set(pkg, pkgModule);
-    } else {
-      console.warn(`  ➜  No Processor Factory found: ${pkg}`);
-    }
-  }
-
-  return loadedPackages;
-}
 export function getUniqueDocumentModels(
   ...documentModels: DocumentModelModule[][]
 ): DocumentModelModule[] {
@@ -120,13 +27,11 @@ export function getUniqueDocumentModels(
   return Array.from(uniqueModels.values());
 }
 
-export type PackageManagerResult = {
-  documentModels?: DocumentModelModule[];
-  subgraphs?: Map<string, SubgraphClass[]>;
-  processors?: Map<string, (module: any) => ProcessorFactory>;
-};
-
 export class PackagesManager implements IPackagesManager {
+  private documentModelLoader: IDocumentModelLoader;
+  private subgraphLoader: ISubgraphLoader;
+  private processorLoader: IProcessorLoader;
+
   private docModelsMap = new Map<string, DocumentModelModule[]>();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
   private processorMap = new Map<string, (module: any) => ProcessorFactory>();
@@ -138,9 +43,16 @@ export class PackagesManager implements IPackagesManager {
   }>();
 
   constructor(
+    documentModelLoader: IDocumentModelLoader,
+    subgraphLoader: ISubgraphLoader,
+    processorLoader: IProcessorLoader,
     protected options: IPackagesManagerOptions,
     protected onError?: (e: unknown) => void,
   ) {
+    this.documentModelLoader = documentModelLoader;
+    this.subgraphLoader = subgraphLoader;
+    this.processorLoader = processorLoader;
+
     this.eventEmitter.setMaxListeners(0);
   }
 
@@ -161,10 +73,19 @@ export class PackagesManager implements IPackagesManager {
   private async loadPackages(
     packages: string[],
   ): Promise<PackageManagerResult> {
-    // install packages
-    const packagesMap = await loadPackagesDocumentModels(packages);
-    const subgraphsMap = await loadPackagesSubgraphs(packages);
-    const processorsMap = await loadPackagesProcessors(packages);
+    const packagesMap = new Map<string, DocumentModelModule[]>();
+    const subgraphsMap = new Map<string, SubgraphClass[]>();
+    const processorsMap = new Map<string, (module: any) => ProcessorFactory>();
+
+    for (const pkg of packages) {
+      const documentModels = await this.documentModelLoader.load(pkg);
+      const subgraphs = await this.subgraphLoader.load(pkg);
+      const processors = await this.processorLoader.load(pkg);
+
+      packagesMap.set(pkg, documentModels);
+      subgraphsMap.set(pkg, subgraphs);
+      processorsMap.set(pkg, processors);
+    }
 
     this.updatePackagesMap(packagesMap);
     this.updateSubgraphsMap(subgraphsMap);
