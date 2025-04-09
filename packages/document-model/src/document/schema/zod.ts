@@ -1,18 +1,18 @@
 import { z } from "zod";
-import { OperationScope } from "../types.js";
+import { type OperationScope } from "../types.js";
 import {
-  Action,
-  DocumentFile,
-  LoadStateAction,
-  LoadStateActionInput,
-  LoadStateActionStateInput,
-  Operation,
-  PruneAction,
-  PruneActionInput,
-  RedoAction,
-  SetNameAction,
-  SetNameOperation,
-  UndoAction,
+  type Action,
+  type DocumentFile,
+  type LoadStateAction,
+  type LoadStateActionInput,
+  type LoadStateActionStateInput,
+  type Operation,
+  type PruneAction,
+  type PruneActionInput,
+  type RedoAction,
+  type SetNameAction,
+  type SetNameOperation,
+  type UndoAction,
 } from "./types.js";
 
 type Properties<T> = Required<{

@@ -1,16 +1,23 @@
-import { useConnectCrypto, useConnectDid } from '#hooks/useConnectCrypto';
-import { useUndoRedoShortcuts } from '#hooks/useUndoRedoShortcuts';
-import { useUserPermissions } from '#hooks/useUserPermissions';
-import { FileNodeDocument, isSameDocument } from '#store/document-drive';
-import { useGetDocumentModelModule } from '#store/document-model';
-import { useGetEditor } from '#store/editor';
-import { themeAtom } from '#store/theme';
-import { useUser } from '#store/user';
 import {
-    DocumentDispatchCallback,
+    useConnectCrypto,
+    useConnectDid,
+    useUndoRedoShortcuts,
+    useUserPermissions,
+} from '#hooks';
+import {
+    type FileNodeDocument,
+    isSameDocument,
+    themeAtom,
+    useGetDocumentModelModule,
+    useGetEditor,
+    useUser,
+} from '#store';
+import {
+    addActionContext,
+    type DocumentDispatchCallback,
+    signOperation,
     useDocumentDispatch,
-} from '#utils/document-model';
-import { addActionContext, signOperation } from '#utils/signature';
+} from '#utils';
 import {
     Button,
     DocumentToolbar,
@@ -18,11 +25,11 @@ import {
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
 import {
-    Action,
-    ActionErrorCallback,
-    EditorContext,
-    Operation,
-    PHDocument,
+    type Action,
+    type ActionErrorCallback,
+    type EditorContext,
+    type Operation,
+    type PHDocument,
     redo,
     undo,
 } from 'document-model';
@@ -35,10 +42,10 @@ import {
     useRef,
     useState,
 } from 'react';
-import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
+import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
-import { EditorLoader } from './editor-loader';
-import { useModal } from './modal';
+import { EditorLoader } from './editor-loader.js';
+import { useModal } from './modal/index.js';
 
 export type EditorProps<TDocument extends PHDocument = PHDocument> = {
     fileNodeDocument: FileNodeDocument;

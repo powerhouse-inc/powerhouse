@@ -1,6 +1,5 @@
-import { getByLabelText, getByText } from "@testing-library/react";
-import { BooleanField } from "./boolean-field";
-import { renderWithForm } from "@/scalars/lib/testing";
+import { renderWithForm } from "../../lib/testing.js";
+import { BooleanField } from "./boolean-field.js";
 
 describe("BooleanField", () => {
   const commonProps = {

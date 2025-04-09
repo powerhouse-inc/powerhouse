@@ -1,12 +1,11 @@
-import { IReadModeContext } from '#context/read-mode';
-import { documentToHash } from '#hooks/useDocumentDrives';
-import { TDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import { TUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import { type IReadModeContext } from '#context';
+import { documentToHash, type TDocumentDriveServer } from '#hooks';
+import { type TUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { logger } from 'document-drive';
 import {
     hashDocumentStateForScope,
-    Operation,
-    PHDocument,
+    type Operation,
+    type PHDocument,
 } from 'document-model';
 import { atom, useAtom, useSetAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';

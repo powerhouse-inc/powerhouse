@@ -1,31 +1,32 @@
 import {
+  type BaseUiFileNode,
   ConnectDropdownMenu,
   defaultFileOptions,
   DELETE,
   DUPLICATE,
   getDocumentIconSrc,
   NodeInput,
-  NodeOption,
+  type NodeOption,
   nodeOptionsMap,
   READ,
   RENAME,
-  UiFileNode,
+  type UiFileNode,
   useDrag,
   WRITE,
-} from "@/connect";
-import { Icon } from "@/powerhouse";
+} from "#connect";
+import { Icon } from "#powerhouse";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { SyncStatusIcon } from "../status-icon";
+import { SyncStatusIcon } from "../status-icon/index.js";
 
 export type FileItemProps = {
-  uiNode: UiFileNode;
+  uiNode: BaseUiFileNode;
   customDocumentIconSrc?: string;
   className?: string;
-  onSelectNode: (uiNode: UiFileNode) => void;
-  onRenameNode: (name: string, uiNode: UiFileNode) => void;
-  onDuplicateNode: (uiNode: UiFileNode) => void;
-  onDeleteNode: (uiNode: UiFileNode) => void;
+  onSelectNode: (uiNode: BaseUiFileNode) => void;
+  onRenameNode: (name: string, uiNode: BaseUiFileNode) => void;
+  onDuplicateNode: (uiNode: BaseUiFileNode) => void;
+  onDeleteNode: (uiNode: BaseUiFileNode) => void;
   isAllowedToCreateDocuments: boolean;
 };
 
@@ -42,7 +43,7 @@ export function FileItem(props: FileItemProps) {
   } = props;
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag({ uiNode });
+  const { dragProps } = useDrag({ uiNode: uiNode as UiFileNode });
 
   const isReadMode = mode === READ;
 

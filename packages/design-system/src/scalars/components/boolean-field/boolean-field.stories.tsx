@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { BooleanField } from "./boolean-field";
-import { withForm } from "@/scalars/lib/decorators";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { BooleanField } from "./boolean-field.js";
 
 const meta = {
-  title: "Document Engineering/Simple Components/Boolean Field",
+  title: "Document Engineering/Scalars/Boolean Field",
   component: BooleanField,
   decorators: [withForm],
   argTypes: {
@@ -57,7 +57,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "A boolean field component that can be used as a [checkbox](?path=/docs/document-engineering-fragments-checkbox-field--readme) or [toggle](?path=/docs/document-engineering-fragments-toggle-field--readme) depending on the `isToggle` prop.",
+          "A boolean field component that can be used as a [checkbox](?path=/docs/document-engineering-data-entry-checkbox--readme) or [toggle](?path=/docs/document-engineering-data-entry-toggle--readme) depending on the `isToggle` prop.",
       },
     },
   },

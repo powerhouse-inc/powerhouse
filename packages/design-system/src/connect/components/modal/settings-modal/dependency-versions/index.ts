@@ -1,1 +1,1 @@
-export * from "./dependency-versions";
+export * from "./dependency-versions.js";

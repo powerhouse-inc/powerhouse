@@ -1,61 +1,143 @@
 import React, { useMemo } from "react";
-import { ErrorHandling, FieldCommonProps } from "../types";
-import { SelectFieldRaw, withFieldValidation } from "../fragments";
-import type { SelectOption } from "../enum-field/types";
-import type { Currency, CurrencyType } from "./types";
+import type { SelectOption } from "../enum-field/types.js";
+import { FormGroup, SelectFieldRaw } from "../fragments/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
+import type { AllowedTypes, Currency } from "./types.js";
+import { getCurrencies } from "./utils.js";
+
+type CurrencyCodeFieldBaseProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  | keyof InputBaseProps<string | string[]>
+  | keyof FieldErrorHandling
+  | "onChange"
+  | "onBlur"
+>;
+
 export interface CurrencyCodeFieldProps
-  extends FieldCommonProps<string | string[]>,
-    ErrorHandling {
+  extends CurrencyCodeFieldBaseProps,
+    InputBaseProps<string | string[]>,
+    FieldErrorHandling {
   placeholder?: string;
   onChange?: (value: string | string[]) => void;
   onBlur?: () => void;
   currencies?: Currency[];
   includeCurrencySymbols?: boolean;
-  allowedTypes?: CurrencyType | "Both";
   favoriteCurrencies?: string[];
+  symbolPosition?: "left" | "right";
+  searchable?: boolean;
+  contentClassName?: string;
+  contentAlign?: "start" | "end" | "center";
+  allowedTypes?: AllowedTypes;
 }
 
-const CurrencyCodeFieldRaw = React.forwardRef<
+export const CurrencyCodeFieldRaw = React.forwardRef<
   HTMLButtonElement,
   CurrencyCodeFieldProps
 >(
   (
     {
       placeholder,
-      currencies,
+      currencies = [],
+      favoriteCurrencies = [],
       includeCurrencySymbols = true,
-      // TODO: implement following props
-      // allowedTypes = "Both",
-      // favoriteCurrencies,
+      symbolPosition = "right",
+      searchable = false,
+      contentClassName,
+      contentAlign = "start",
+      allowedTypes = "Both",
       ...props
     },
     ref,
   ) => {
+    const defaultCurrencies =
+      currencies && currencies.length > 0
+        ? currencies
+        : getCurrencies(allowedTypes);
     const options: SelectOption[] = useMemo(() => {
+      const favoriteTickers = new Set(favoriteCurrencies);
+
       return (
-        currencies?.map((currency) => {
-          let label = currency.label ?? currency.ticker;
-          if (includeCurrencySymbols && currency.symbol) {
-            label = `${label} (${currency.symbol})`;
-          }
-          return {
-            label,
-            value: currency.ticker,
-          };
-        }) ?? []
+        (defaultCurrencies
+          ?.map((currency) => {
+            if (favoriteTickers.has(currency.ticker)) {
+              return null;
+            }
+
+            let label = currency.label ?? currency.ticker;
+            if (includeCurrencySymbols && currency.symbol) {
+              label =
+                symbolPosition === "right"
+                  ? `${label} (${currency.symbol})`
+                  : `(${currency.symbol}) ${label}`;
+            }
+            const option: SelectOption = {
+              label,
+              value: currency.ticker,
+            };
+
+            if ("icon" in currency) {
+              option.icon = currency.icon;
+            }
+
+            return option;
+          })
+          .filter(Boolean) as SelectOption[]) ?? []
       );
-    }, [currencies, includeCurrencySymbols]);
+    }, [
+      defaultCurrencies,
+      includeCurrencySymbols,
+      symbolPosition,
+      favoriteCurrencies,
+    ]);
+
+    const favoriteOptions: SelectOption[] = useMemo(() => {
+      const favoriteTickers = new Set(favoriteCurrencies);
+      return (
+        defaultCurrencies
+          .filter((currency) => favoriteTickers.has(currency.ticker))
+          .map((currency) => {
+            let label = currency.label ?? currency.ticker;
+            if (includeCurrencySymbols && currency.symbol) {
+              label =
+                symbolPosition === "right"
+                  ? `${label} (${currency.symbol})`
+                  : `(${currency.symbol}) ${label}`;
+            }
+            const option: SelectOption = {
+              label,
+              value: currency.ticker,
+            };
+
+            if ("icon" in currency) {
+              option.icon = currency.icon;
+            }
+
+            return option;
+          }) ?? []
+      );
+    }, [
+      defaultCurrencies,
+      favoriteCurrencies,
+      includeCurrencySymbols,
+      symbolPosition,
+    ]);
 
     return (
-      <SelectFieldRaw
-        ref={ref}
-        options={options}
-        selectionIcon="checkmark"
-        searchable
-        multiple={false}
-        placeholder={placeholder}
-        {...props}
-      />
+      <FormGroup>
+        <SelectFieldRaw
+          ref={ref}
+          options={options}
+          selectionIcon="checkmark"
+          searchable={searchable}
+          multiple={false}
+          placeholder={placeholder}
+          contentAlign={contentAlign}
+          contentClassName={contentClassName}
+          favoriteOptions={favoriteOptions}
+          {...props}
+        />
+      </FormGroup>
     );
   },
 );

@@ -1,5 +1,5 @@
-import { Icon, fixedForwardRef } from "@/powerhouse";
-import { CSSProperties, ForwardedRef, useState } from "react";
+import { Icon, fixedForwardRef } from "#powerhouse";
+import { type CSSProperties, type ForwardedRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 export type SelectItem<TValue extends string> = {

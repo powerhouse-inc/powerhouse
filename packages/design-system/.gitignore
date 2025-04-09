@@ -3,8 +3,6 @@ dist
 *.local
 storybook-static
 
-src/assets/icon-components
-
 # Logs
 logs
 *.log

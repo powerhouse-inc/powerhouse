@@ -1,4 +1,4 @@
-import PeopleFill from "@/assets/icon-components/PeopleFill";
+import { Icon } from "#powerhouse";
 import { twMerge } from "tailwind-merge";
 
 type HomeScreenItemProps = {
@@ -23,9 +23,9 @@ export const HomeScreenItem = function HomeScreenItem(
       )}
       onClick={onClick}
     >
-      <div className="mx-auto pb-4">
+      <div className="mx-auto pb-2">
         {icon || (
-          <div className="size-8 items-center justify-center rounded-lg bg-black pt-1 ">
+          <div className="size-8 items-center justify-center rounded-lg bg-black pt-1">
             <span className="text-6 w-6 text-white">
               {title.slice(0, 1).toUpperCase()}
             </span>
@@ -37,10 +37,8 @@ export const HomeScreenItem = function HomeScreenItem(
         {description && <p className="text-gray-500">{description}</p>}
       </div>
       {shareable && (
-        <div className="mb-4 flex w-full justify-start">
-          <div className="absolute left-8 top-8 ">
-            <PeopleFill width={12} height={12} />
-          </div>
+        <div className="absolute left-2 top-0 mb-2">
+          <Icon name="PeopleFill" width={12} height={12} />
         </div>
       )}
     </div>

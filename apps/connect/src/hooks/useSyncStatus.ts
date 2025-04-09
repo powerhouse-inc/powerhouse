@@ -1,7 +1,7 @@
-import { SharingType } from '@powerhousedao/design-system';
-import { SyncStatus } from 'document-drive';
+import { type SharingType } from '@powerhousedao/design-system';
+import { type SyncStatus } from 'document-drive';
 import { useSyncExternalStore } from 'react';
-import { useDocumentDriveServer } from './useDocumentDriveServer';
+import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 
 export function useSyncStatus(
     driveId: string,

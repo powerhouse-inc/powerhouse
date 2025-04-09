@@ -1,14 +1,14 @@
-import { TooltipProvider } from "@/connect";
-import { Pagination, usePagination } from "@/powerhouse";
+import { TooltipProvider } from "#connect";
+import { Pagination, usePagination } from "#powerhouse";
 import {
   garbageCollect,
-  Operation,
-  OperationScope,
+  type Operation,
+  type OperationScope,
   sortOperations,
 } from "document-model";
 import { useMemo, useState } from "react";
-import { Header } from "./header";
-import { Timeline } from "./timeline";
+import { Header } from "./header/index.js";
+import { Timeline } from "./timeline/index.js";
 
 type Props = {
   readonly documentTitle: string;

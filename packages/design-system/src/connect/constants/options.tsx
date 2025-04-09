@@ -1,13 +1,13 @@
 import {
   CLOUD,
-  DebugNodeOption,
+  type DebugNodeOption,
   LOCAL,
-  NodeOption,
-  NormalNodeOption,
-  OptionMetadata,
+  type NodeOption,
+  type NormalNodeOption,
+  type OptionMetadata,
   PUBLIC,
-} from "@/connect";
-import { Icon } from "@/powerhouse";
+} from "#connect";
+import { Icon } from "#powerhouse";
 
 export const NEW = "NEW";
 export const DUPLICATE = "DUPLICATE";

@@ -38,9 +38,6 @@
       "path": "./clis/ph-cmd"
     },
     {
-      "path": "./tools/scalar-generator"
-    },
-    {
       "path": "./packages/builder-tools"
     },
     {

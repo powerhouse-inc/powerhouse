@@ -41,21 +41,17 @@ export {
 export { applyMixins, BaseDocumentClass } from "#document/object.js";
 export type {
   Action,
-  ActionFromDocument,
-  GlobalStateFromDocument,
-  LocalStateFromDocument,
-  OperationFromDocument,
-  OperationsFromDocument,
-  BaseStateFromDocument,
-  ExtendedStateFromDocument,
   ActionContext,
   ActionErrorCallback,
+  ActionFromDocument,
   ActionSigner,
+  App,
   AttachmentInput,
   BaseAction,
   BaseActionWithAttachment,
   BaseDocument,
   BaseState,
+  BaseStateFromDocument,
   CreateChildDocumentInput,
   CreateDocument,
   CreateExtendedState,
@@ -67,24 +63,29 @@ export type {
   DocumentModelModule,
   DocumentModelUtils,
   DocumentOperations,
+  EditorDispatch,
   EditorModule,
   EditorProps,
-  EditorDispatch,
   ExtendedState,
+  ExtendedStateFromDocument,
   FileRegistry,
+  GlobalStateFromDocument,
   InputMaybe,
   LoadFromFile,
   LoadFromInput,
+  LocalStateFromDocument,
   Manifest,
   Maybe,
   NOOPAction,
   Operation,
+  OperationFromDocument,
   OperationScope,
+  OperationsFromDocument,
   OperationSignatureContext,
   PartialState,
   PHDocument,
-  Reducer,
   PHReducer,
+  Reducer,
   ReducerOptions,
   SaveToFile,
   SaveToFileHandle,
@@ -95,7 +96,6 @@ export type {
   SynchronizationUnitInput,
   User,
   ValidationError,
-  App,
 } from "#document/types.js";
 export {
   baseCreateDocument,
@@ -129,8 +129,17 @@ export {
   validateStateSchemaName,
 } from "#document-model/custom/utils.js";
 export type { OperationError as DocumentModelOperationError } from "#document-model/gen/schema/types.js";
+export { createDocument, createState } from "#document-model/gen/utils.js";
 export { documentModelDocumentModelModule } from "#document-model/module.js";
-export { redo, undo } from "#document/actions/creators.js";
+export {
+  actions,
+  loadState,
+  noop,
+  prune,
+  redo,
+  setName,
+  undo,
+} from "#document/actions/creators.js";
 export type { EditorContext } from "#document/types.js";
 export {
   attachBranch,

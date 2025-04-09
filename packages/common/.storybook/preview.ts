@@ -1,6 +1,5 @@
-import "@powerhousedao/design-system/style.css";
 import type { Preview } from "@storybook/react";
-import { mockDateDecorator } from "storybook-mock-date-decorator";
+import "../editors/styles.css";
 
 const preview: Preview = {
   parameters: {
@@ -10,10 +9,7 @@ const preview: Preview = {
         date: /Date$/,
       },
     },
-    date: new Date("March 10, 2021 10:00:00"),
   },
 };
-
-export const decorators = [mockDateDecorator];
 
 export default preview;

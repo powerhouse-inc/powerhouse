@@ -15,16 +15,20 @@
       "!{projectRoot}/e2e/**/*",
       "!{projectRoot}/coverage/**/*",
       "!{projectRoot}/test/**/*"
-    ]
+    ],
+    "sharedGlobals": ["{workspaceRoot}/.github/workflows/check-commit-nx.yml"],
+    "default": ["sharedGlobals"]
   },
   "targetDefaults": {
     "build-storybook": {
       "dependsOn": ["^build"]
     },
     "lint": {
+      "cache": true,
       "dependsOn": ["^build"]
     },
     "lint:nx": {
+      "cache": true,
       "dependsOn": ["^build"]
     },
     "generate": {
@@ -34,6 +38,7 @@
       "dependsOn": ["^build"]
     },
     "test": {
+      "cache": true,
       "dependsOn": ["^build"]
     },
     "build": {
@@ -57,11 +62,12 @@
     }
   },
   "release": {
-    "projects": ["packages/*", "clis/*", "apps/connect"],
+    "projects": ["packages/*", "clis/*", "apps/*"],
     "projectsRelationship": "independent",
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
+        "skipLockFileUpdate": true,
         "updateDependents": "auto",
         "fallbackCurrentVersionResolver": "disk",
         "preserveLocalDependencyProtocols": true

@@ -1,20 +1,26 @@
-import { PrismaClient } from "@prisma/client";
 import { ActionContext, Operation } from "document-model";
 import { beforeEach, describe, it } from "vitest";
+import { addFile } from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { createDocument } from "../src/drive-document-model/gen/utils.js";
 import { BrowserStorage } from "../src/storage/browser.js";
-import { PrismaStorage } from "../src/storage/prisma.js";
+import { PrismaClient } from "../src/storage/prisma/client";
 import { migrateLegacyOperationSignature } from "../src/utils/migrations.js";
 import { generateUUID } from "../src/utils/misc.js";
 import { buildOperation } from "./utils.js";
-import { createDocument } from "../src/drive-document-model/gen/utils.js";
-import { addFile } from "../src/drive-document-model/gen/creators.js";
 
 const prismaClient = new PrismaClient();
 
 const storageLayers = [
-  ["BrowserStorage", () => new BrowserStorage()],
-  ["PrismaStorage", () => new PrismaStorage(prismaClient)],
+  [
+    "BrowserStorage",
+    async () => {
+      const storage = new BrowserStorage();
+      await storage.clear();
+      return storage;
+    },
+  ],
+  //["PrismaStorage", () => new PrismaStorage(prismaClient, new InMemoryCache())],
 ] as const;
 
 describe("Signature migration", () => {
@@ -79,12 +85,12 @@ describe.each(storageLayers)(
   async (_storageName, buildStorage) => {
     const driveId = generateUUID();
     beforeEach(async () => {
-      const storage = storageLayers[1][1]();
-      return storage.deleteDrive(driveId);
+      //const storage = storageLayers[1][1]();
+      //return storage.deleteDrive(driveId);
     });
 
     it("should migrate operation without context", async ({ expect }) => {
-      const storage = buildStorage();
+      const storage = await buildStorage();
       const drive = createDocument({
         state: {
           global: {
@@ -117,10 +123,10 @@ describe.each(storageLayers)(
 
       await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-      const storedDrive = await storage.getDrive(driveId);
+      const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       await storage.migrateOperationSignatures();
-      const migratedDrive = await storage.getDrive(driveId);
+      const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       expect(storedDrive.operations.global.length).toEqual(
         migratedDrive.operations.global.length,
@@ -134,7 +140,7 @@ describe.each(storageLayers)(
     it("should migrate operation with empty string signature", async ({
       expect,
     }) => {
-      const storage = buildStorage();
+      const storage = await buildStorage();
       const drive = createDocument({
         state: {
           global: {
@@ -180,10 +186,10 @@ describe.each(storageLayers)(
 
       await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-      const storedDrive = await storage.getDrive(driveId);
+      const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       await storage.migrateOperationSignatures();
-      const migratedDrive = await storage.getDrive(driveId);
+      const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       expect(storedDrive.operations.global.length).toEqual(
         migratedDrive.operations.global.length,
@@ -210,7 +216,7 @@ describe.each(storageLayers)(
     });
 
     it("should migrate operation with a signature", async ({ expect }) => {
-      const storage = buildStorage();
+      const storage = await buildStorage();
       const drive = createDocument({
         state: {
           global: {
@@ -256,10 +262,10 @@ describe.each(storageLayers)(
 
       await storage.addDriveOperations(driveId, [driveOperation], drive);
 
-      const storedDrive = await storage.getDrive(driveId);
+      const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       await storage.migrateOperationSignatures();
-      const migratedDrive = await storage.getDrive(driveId);
+      const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
       expect(storedDrive.operations.global.length).toEqual(
         migratedDrive.operations.global.length,

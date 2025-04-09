@@ -38,10 +38,10 @@ cp .env.example .env
 
 #### Testing
 
-Many of our tests require Postgres to run. This is why we've included a `docker-compose.test.yml`. Spin it up:
+Many of our tests require Postgres and Redis to run. This is why we've included a `docker-compose.test.yml`. Spin it up:
 
 ```
-docker compose -f docker-compose.test.yml -d
+docker compose -f docker-compose.test.yml up -d
 ```
 
 Then ensure that the db schema is up to date with:

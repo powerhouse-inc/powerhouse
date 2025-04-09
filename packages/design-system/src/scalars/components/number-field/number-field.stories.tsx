@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import { NumberField } from "./number-field";
+} from "../../lib/storybook-arg-types.js";
+import { NumberField } from "./number-field.js";
 
 const meta = {
-  title: "Document Engineering/Simple Components/Number Field",
+  title: "Document Engineering/Scalars/Number Field",
   component: NumberField,
   parameters: {
     layout: "centered",

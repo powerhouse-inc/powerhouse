@@ -1,8 +1,8 @@
-import { renderWithForm } from "@/scalars/lib/testing";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { RadioGroupField } from "./radio-group-field";
+import { renderWithForm } from "../../../lib/testing.js";
+import { RadioGroupField } from "./radio-group-field.js";
 
 describe("RadioGroupField Component", () => {
   it("should match snapshot", () => {

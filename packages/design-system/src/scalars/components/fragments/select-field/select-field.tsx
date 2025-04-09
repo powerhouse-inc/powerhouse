@@ -1,36 +1,37 @@
 /* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { useId, useCallback } from "react";
-import { Command } from "@/scalars/components/fragments/command";
-import { Button } from "@/scalars/components/fragments/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/scalars/components/fragments/popover";
-import { FormGroup } from "@/scalars/components/fragments/form-group";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { cn } from "@/scalars/lib/utils";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { SelectProps } from "@/scalars/components/enum-field/types";
-import { useSelectField } from "./use-select-field";
-import { SelectedContent } from "./selected-content";
-import { Content } from "./content";
+  cn,
+  FormDescription,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
+  type SelectProps,
+} from "#scalars";
+import React, { useCallback, useId } from "react";
+import { type SelectOption } from "../../enum-field/types.js";
+import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
+import { Button } from "../button/button.js";
+import { Command } from "../command/command.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../popover/popover.js";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
+import { Content } from "./content.js";
+import { SelectedContent } from "./selected-content.js";
+import { useSelectField } from "./use-select-field.js";
 
 type SelectFieldBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
-  | keyof FieldCommonProps<string | string[]>
-  | keyof ErrorHandling
+  | keyof InputBaseProps<string | string[]>
+  | keyof FieldErrorHandling
   | keyof SelectProps
 >;
 
 export type SelectFieldProps = SelectFieldBaseProps &
-  FieldCommonProps<string | string[]> &
-  ErrorHandling &
-  SelectProps;
+  InputBaseProps<string | string[]> &
+  FieldErrorHandling & {
+    options?: SelectOption[];
+    favoriteOptions?: SelectOption[];
+  } & Omit<SelectProps, "options" | "favoriteOptions">;
 
 export const SelectFieldRaw = React.forwardRef<
   HTMLButtonElement,
@@ -40,6 +41,7 @@ export const SelectFieldRaw = React.forwardRef<
     {
       // core functionality props
       options = [],
+      favoriteOptions = [],
       defaultValue,
       value,
       onChange,
@@ -66,6 +68,8 @@ export const SelectFieldRaw = React.forwardRef<
       description,
       placeholder,
       className,
+      contentClassName,
+      contentAlign = "start",
 
       ...props
     },
@@ -88,15 +92,14 @@ export const SelectFieldRaw = React.forwardRef<
       defaultValue,
       value,
       onChange,
-      onBlur,
     });
 
     const onTriggerBlur = useCallback(
-      (event: any) => {
+      (e: React.FocusEvent<HTMLButtonElement>) => {
         if (!isPopoverOpen) {
           // trigger the blur event when the trigger loses focus but the popover is not open,
           // because when the popover is open, the trigger loses focus but the select as a component still has the focus
-          onBlur?.(event as React.FocusEvent<HTMLButtonElement>);
+          onBlur?.(e);
         }
       },
       [onBlur, isPopoverOpen],
@@ -119,7 +122,16 @@ export const SelectFieldRaw = React.forwardRef<
             {label}
           </FormLabel>
         )}
-        <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
+        <Popover
+          open={isPopoverOpen}
+          onOpenChange={(open) => {
+            handleOpenChange(open);
+            // if the popover is closing and it was not by the trigger button
+            if (!open && document.activeElement?.id !== id) {
+              onBlur?.({ target: {} } as React.FocusEvent<HTMLButtonElement>);
+            }
+          }}
+        >
           <PopoverTrigger asChild={true}>
             {/* TODO: create a trigger component */}
             <Button
@@ -143,8 +155,8 @@ export const SelectFieldRaw = React.forwardRef<
                 "dark:focus:ring-charcoal-300 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:ring-offset-0",
                 "dark:focus-visible:ring-charcoal-300 focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0",
                 disabled && [
-                  "!pointer-events-auto cursor-not-allowed",
-                  "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900 hover:border-gray-300 hover:bg-white",
+                  "!pointer-events-auto cursor-not-allowed bg-gray-50",
+                  "dark:hover:border-charcoal-700 dark:hover:bg-charcoal-900 hover:border-gray-300 hover:bg-gray-50",
                 ],
                 className,
               )}
@@ -153,7 +165,7 @@ export const SelectFieldRaw = React.forwardRef<
             >
               <SelectedContent
                 selectedValues={selectedValues}
-                options={options}
+                options={[...favoriteOptions, ...options]}
                 multiple={multiple}
                 searchable={searchable}
                 placeholder={placeholder}
@@ -161,7 +173,14 @@ export const SelectFieldRaw = React.forwardRef<
               />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start">
+          <PopoverContent
+            align={contentAlign}
+            onEscapeKeyDown={(e) => {
+              e.preventDefault();
+              handleOpenChange(false);
+            }}
+            className={contentClassName}
+          >
             <Command
               defaultValue={
                 !multiple && selectedValues[0]
@@ -171,6 +190,7 @@ export const SelectFieldRaw = React.forwardRef<
               }
             >
               <Content
+                favoriteOptions={favoriteOptions}
                 searchable={searchable}
                 commandListRef={commandListRef}
                 multiple={multiple}

@@ -3,7 +3,7 @@ import { Command } from "commander";
 
 import { forwardCommand } from "./commands/forward.js";
 import registerCommands from "./commands/index.js";
-import { CommandActionType } from "./types.js";
+import { type CommandActionType } from "./types.js";
 
 const program = new Command();
 

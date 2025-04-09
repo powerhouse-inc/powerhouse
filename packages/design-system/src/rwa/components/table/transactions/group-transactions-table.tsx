@@ -1,5 +1,5 @@
-import { Combobox } from "@/connect";
-import { Pagination, usePagination } from "@/powerhouse";
+import { Combobox } from "#connect";
+import { Pagination, usePagination } from "#powerhouse";
 import {
   allGroupTransactionTypes,
   groupTransactionTypeLabels,
@@ -9,7 +9,7 @@ import {
   tableNames,
   useEditorContext,
   useTableData,
-} from "@/rwa";
+} from "#rwa";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function GroupTransactionsTable() {

@@ -1,10 +1,10 @@
 import {
   makeTableData,
-  TableItemType,
-  TableName,
+  type TableItemType,
+  type TableName,
   useEditorContext,
   useSortTableItems,
-} from "@/rwa";
+} from "#rwa";
 import { useMemo } from "react";
 
 export function useTableData<TTableName extends TableName>(

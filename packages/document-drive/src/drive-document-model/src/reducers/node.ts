@@ -4,9 +4,9 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { PHDocument, SynchronizationUnitInput } from "document-model";
-import { DocumentDriveNodeOperations } from "../../gen/node/operations.js";
-import { FileNode } from "../../gen/types.js";
+import { type PHDocument, type SynchronizationUnitInput } from "document-model";
+import { type DocumentDriveNodeOperations } from "../../gen/node/operations.js";
+import { type FileNode } from "../../gen/types.js";
 import {
   getDescendants,
   handleTargetNameCollisions,

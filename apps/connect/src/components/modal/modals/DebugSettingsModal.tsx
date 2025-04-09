@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { useConnectConfig } from '#hooks/useConnectConfig';
-import { useDocumentDriveServer } from '#hooks/useDocumentDriveServer';
-import serviceWorkerManager from '#utils/registerServiceWorker';
+import { useConnectConfig, useDocumentDriveServer } from '#hooks';
+import { serviceWorkerManager } from '#utils';
 import {
     Button,
     Combobox,
@@ -29,9 +28,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
 
     console.log('autoRegisterPullResponder', autoRegisterPullResponder);
 
-    const [appVersion, setAppVersion] = useState(
-        connectConfig.appVersion as string,
-    );
+    const [appVersion, setAppVersion] = useState(connectConfig.appVersion);
     const [serviceWorkerDebugMode, setServiceWorkerDebugMode] = useState({
         label: serviceWorkerManager.debug ? 'Enabled' : 'Disabled',
         value: serviceWorkerManager.debug,

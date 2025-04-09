@@ -1,3 +1,4 @@
-export { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults";
-export { CurrencyCodeField } from "./currency-code-field";
-export type { Currency, CurrencyType } from "./types";
+export { CurrencyCodeField } from "./currency-code-field.js";
+export { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults.js";
+export type { AllowedTypes, Currency } from "./types.js";
+export { cryptoCurrencies, currencies, fiatCurrencies } from "./utils.js";

@@ -1,14 +1,15 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist"
+    "composite": true
   },
-  "include": ["**/*"],
-  "exclude": ["**/.hygen/**/*", "dist/"],
+  "files": [],
   "references": [
-    { "path": "../document-model" },
-    { "path": "../scalars" },
-    { "path": "../config" },
-    { "path": "./tsconfig.hygen.json" }
+    {
+      "path": "tsconfig.lib.json"
+    },
+    {
+      "path": "tsconfig.test.json"
+    }
   ]
 }

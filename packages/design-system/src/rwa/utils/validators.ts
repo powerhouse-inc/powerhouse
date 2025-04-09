@@ -1,11 +1,11 @@
 import {
-  Asset,
+  type Asset,
   assetGroupTransactions,
-  AssetGroupTransactionType,
-  CashAsset,
-  FixedIncome,
-  GroupTransactionType,
-} from "@/rwa";
+  type AssetGroupTransactionType,
+  type CashAsset,
+  type FixedIncome,
+  type GroupTransactionType,
+} from "#rwa";
 
 export function isAssetGroupTransactionType(
   type: GroupTransactionType,

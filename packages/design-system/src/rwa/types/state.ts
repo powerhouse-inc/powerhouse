@@ -1,5 +1,8 @@
-import { allGroupTransactionTypes, assetGroupTransactions } from "@/rwa";
-import { Maybe, Scalars } from "document-model";
+import {
+  type allGroupTransactionTypes,
+  type assetGroupTransactions,
+} from "#rwa";
+import { type Maybe, type Scalars } from "document-model";
 
 export type RealWorldAssetsState = {
   accounts: Account[];

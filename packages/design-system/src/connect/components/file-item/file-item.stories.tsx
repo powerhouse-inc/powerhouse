@@ -1,7 +1,6 @@
-import { documentTypes } from "@/connect/constants";
-import { mockUiFileNode } from "@/connect/utils/mocks";
-import { Meta, StoryObj } from "@storybook/react";
-import { FileItem } from "./file-item";
+import { documentTypes, mockUiFileNode } from "#connect";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { FileItem } from "./file-item.js";
 
 const meta: Meta<typeof FileItem> = {
   title: "Connect/Components/FileItem",
@@ -26,6 +25,7 @@ export const Default: Story = {
   },
   render: function Wrapper(args) {
     const fileNodes = [...documentTypes, "SOME RANDOM DOCUMENT TYPE"].map(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       (documentType, index) => ({
         ...args.uiNode,
         documentType,
@@ -36,7 +36,14 @@ export const Default: Story = {
     return (
       <div className="flex flex-wrap gap-2">
         {fileNodes.map((node) => (
-          <FileItem key={node.id} {...args} uiNode={node} />
+          // @ts-expect-error
+          <FileItem
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            key={node.id}
+            {...args}
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            uiNode={node}
+          />
         ))}
       </div>
     );

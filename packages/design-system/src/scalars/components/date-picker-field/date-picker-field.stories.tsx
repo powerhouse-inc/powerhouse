@@ -1,17 +1,21 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withTimestampsAsISOStrings, withForm } from "@/scalars/lib/decorators";
-import { DatePickerField } from "./date-picker-field";
+import { FORMAT_MAPPING } from "../../../ui/components/data-entry/date-time-picker/utils.js";
+import { withForm, withTimestampsAsISOStrings } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { DatePickerField } from "./date-picker-field.js";
 
 const meta: Meta<typeof DatePickerField> = {
-  title: "Document Engineering/Fragments/Date Picker Field",
+  title: "Document Engineering/Scalars/Date Field",
   component: DatePickerField,
   parameters: {
     layout: "centered",
+    form: {
+      resetBehavior: "unmount",
+    },
   },
   decorators: [withForm, withTimestampsAsISOStrings],
   tags: ["autodocs"],
@@ -57,15 +61,10 @@ const meta: Meta<typeof DatePickerField> = {
       control: {
         type: "select",
       },
-      options: [
-        "yyyy-MM-dd",
-        "dd/MM/yyyy",
-        "MM/dd/yyyy",
-        "dd-MMM-yyyy",
-        "MMM-dd-yyyy",
-      ],
+      description: "The format of the date in the date picker",
+      options: Object.keys(FORMAT_MAPPING),
       table: {
-        defaultValue: { summary: "yyyy-MM-dd" },
+        defaultValue: { summary: "YYYY-MM-DD" },
         type: {
           summary: "string",
         },
@@ -98,6 +97,14 @@ const meta: Meta<typeof DatePickerField> = {
         type: { summary: "boolean" },
         defaultValue: { summary: "false" },
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    placeholder: {
+      control: "text",
+      description: "The placeholder text for the date picker",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.DEFAULT,
       },
     },
   },

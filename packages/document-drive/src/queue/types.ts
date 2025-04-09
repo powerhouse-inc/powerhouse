@@ -1,6 +1,6 @@
+import { type AddOperationOptions, type IOperationResult } from "#server/types";
 import type { Action, Operation } from "document-model";
 import type { Unsubscribe } from "nanoevents";
-import { AddOperationOptions, IOperationResult } from "#server/types";
 
 export interface BaseJob {
   driveId: string;
@@ -28,10 +28,7 @@ export interface QueueEvents {
 }
 
 export interface IServerDelegate {
-  checkDocumentExists: (
-    driveId: string,
-    documentId: string,
-  ) => Promise<boolean>;
+  exists: (documentId: string) => Promise<boolean>;
   processJob: (job: Job) => Promise<IOperationResult>;
 }
 

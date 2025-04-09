@@ -1,7 +1,7 @@
 import {
   createContext,
-  FC,
-  ReactNode,
+  type FC,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -9,7 +9,11 @@ import {
   useState,
 } from "react";
 import { DRIVE, FILE } from "../uiNodes/constants.js";
-import { UiDriveNode, UiFolderNode, UiNode } from "../uiNodes/types.js";
+import {
+  type UiDriveNode,
+  type UiFolderNode,
+  type UiNode,
+} from "../uiNodes/types.js";
 
 export * from "../uiNodes/constants.js";
 export * from "../uiNodes/types.js";

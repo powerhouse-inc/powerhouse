@@ -1,17 +1,24 @@
+import { cn, FormLabel, FormMessageList, type RadioGroupProps } from "#scalars";
 import React, { useId } from "react";
-import { cn } from "@/scalars/lib/utils";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { RadioGroupProps } from "@/scalars/components/enum-field/types";
-import { Radio } from "./radio";
-import { RadioGroup } from "./radio-group";
+import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
+import { RadioGroup } from "./radio-group.js";
+import { Radio } from "./radio.js";
 
-export interface RadioGroupFieldProps
-  extends FieldCommonProps<string>,
-    ErrorHandling,
-    RadioGroupProps {}
+type RadioGroupFieldBaseProps = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  | keyof InputBaseProps<string>
+  | keyof FieldErrorHandling
+  | keyof RadioGroupProps
+  | "dir"
+> & {
+  dir?: "ltr" | "rtl";
+};
+
+export type RadioGroupFieldProps = RadioGroupFieldBaseProps &
+  InputBaseProps<string> &
+  FieldErrorHandling &
+  RadioGroupProps;
 
 const RadioGroupFieldRaw = React.forwardRef<
   HTMLDivElement,
@@ -96,10 +103,7 @@ const RadioGroupFieldRaw = React.forwardRef<
   },
 );
 
-export const RadioGroupField = withFieldValidation<RadioGroupFieldProps>(
-  RadioGroupFieldRaw,
-) as React.ForwardRefExoticComponent<
-  RadioGroupFieldProps & React.RefAttributes<HTMLDivElement>
->;
+export const RadioGroupField =
+  withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);
 
 RadioGroupField.displayName = "RadioGroupField";

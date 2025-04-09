@@ -1,3 +1,4 @@
+import connectConfig from '#connect-config';
 import {
     CLOUD,
     debugNodeOptions,
@@ -10,10 +11,9 @@ import {
     FOLDER,
     LOCAL,
     PUBLIC,
-    SharingType,
+    type SharingType,
 } from '@powerhousedao/design-system';
-import connectConfig from 'connect-config';
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
 type AllNodeOptions =
     | (typeof debugNodeOptions)[number]

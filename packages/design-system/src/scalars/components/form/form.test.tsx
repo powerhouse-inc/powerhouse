@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { StringField } from "../string-field";
-import { Form } from "./form";
+import { StringField } from "../string-field/index.js";
+import { Form } from "./form.js";
 
 describe("Form", () => {
   it("should render children as React nodes", () => {

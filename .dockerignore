@@ -3,3 +3,12 @@ node_modules
 .env
 dist
 dev.db
+**/dist
+**/node_modules
+**/dev.db
+.nx/
+**/.nx
+pruned
+**/pruned
+.pnpm/
+**/.pnpm

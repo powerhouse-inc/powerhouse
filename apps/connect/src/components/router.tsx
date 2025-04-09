@@ -1,15 +1,16 @@
-import { Home } from '#pages/home';
-import connectConfig from 'connect-config';
+import connectConfig from '#connect-config';
 import React, { Suspense } from 'react';
 import {
-    RouteObject,
+    type RouteObject,
     RouterProvider,
     createBrowserRouter,
     createMemoryRouter,
 } from 'react-router-dom';
+import { AtlasImport } from './demo/atlas-import.js';
+import { Home } from '../pages/home.js';
+import Root from './root.js';
 
-const Root = React.lazy(() => import('./root'));
-const Content = React.lazy(() => import('#pages/content'));
+const Content = React.lazy(() => import('../pages/content.js'));
 
 async function createRouter(routes: RouteObject[]) {
     const isPackaged = await window.electronAPI?.isPackaged();
@@ -44,6 +45,10 @@ const RouterAsync = async () => {
                             <Content />
                         </Suspense>
                     ),
+                },
+                {
+                    path: 'import/:documentId',
+                    element: <AtlasImport />,
                 },
             ],
         },

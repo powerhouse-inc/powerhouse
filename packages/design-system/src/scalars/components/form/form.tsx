@@ -1,6 +1,4 @@
-import { deepEqual } from "@/scalars/lib/deep-equal";
-import { isEmpty } from "@/scalars/lib/is-empty";
-import { castValue, ValueCast } from "@/scalars/lib/value-cast";
+import { castValue, deepEqual, isEmpty, type ValueCast } from "#scalars";
 import {
   forwardRef,
   useCallback,
@@ -8,17 +6,28 @@ import {
   useId,
   useImperativeHandle,
 } from "react";
-import { FormProvider, useForm, UseFormReturn } from "react-hook-form";
-import { FormServerErrorMessage } from "../fragments/form-message/form-server-error-message";
-import { defaultOnError } from "./utils";
+import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
+import { FormServerErrorMessage } from "../fragments/form-message/form-server-error-message.js";
+import { defaultOnError } from "./utils.js";
 
+type FormMethods = UseFormReturn & {
+  /**
+   * Trigger the form submit event
+   */
+  triggerSubmit: () => void;
+
+  /**
+   * The id of the form in the DOM
+   */
+  formId: string;
+};
 interface FormProps {
   /**
    * Content of the form. Can be either React nodes or a render function that receives form methods
    * and returns React nodes. The render function approach is useful when you need access to form state
    * or methods (e.g., to disable submit button while submitting).
    */
-  children: React.ReactNode | ((methods: UseFormReturn) => React.ReactNode);
+  children: React.ReactNode | ((methods: FormMethods) => React.ReactNode);
 
   /**
    * Handler called when the form is submitted. Receives the form data as an argument.
@@ -231,6 +240,14 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
       ],
     );
 
+    const triggerSubmit = useCallback(() => {
+      // trigger form submit event
+      const form = document.getElementById(formId);
+      if (form) {
+        form.dispatchEvent(new Event("submit", { bubbles: true }));
+      }
+    }, [formId]);
+
     return (
       <FormProvider {...methods}>
         {!renderSubmitErrorsManually &&
@@ -246,7 +263,13 @@ export const Form = forwardRef<UseFormReturn, FormProps>(
           className={className}
           noValidate
         >
-          {typeof children === "function" ? children(methods) : children}
+          {typeof children === "function"
+            ? children({
+                ...methods,
+                triggerSubmit,
+                formId,
+              })
+            : children}
         </form>
       </FormProvider>
     );

@@ -1,5 +1,5 @@
-import { IconName, iconNames } from "@/powerhouse";
-import { Icon } from "@/powerhouse/components/icon";
+import { iconNames, type IconName } from "#powerhouse";
+import { Icon } from "#powerhouse";
 import { useMemo } from "react";
 
 interface UrlFaviconProps {

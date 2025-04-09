@@ -1,41 +1,41 @@
 import React from "react";
-import { RadioGroupField } from "@/scalars/components/fragments/radio-group-field";
-import { SelectField } from "@/scalars/components/fragments/select-field";
-import { FieldCommonProps, ErrorHandling } from "@/scalars/components/types";
-import { EnumProps } from "./types";
+import {
+  RadioGroupField,
+  type RadioGroupFieldProps,
+} from "../fragments/radio-group-field/radio-group-field.js";
+import {
+  SelectField,
+  type SelectFieldProps,
+} from "../fragments/select-field/select-field.js";
 
-export type EnumFieldProps = FieldCommonProps<string | string[]> &
-  ErrorHandling &
-  EnumProps;
+export type EnumFieldProps =
+  | ({
+      variant?: "auto";
+    } & (RadioGroupFieldProps | SelectFieldProps))
+  | ({
+      variant: "RadioGroup";
+    } & RadioGroupFieldProps)
+  | ({
+      variant: "Select";
+    } & SelectFieldProps);
 
-type RadioGroupVariant = Omit<
-  EnumFieldProps,
-  "defaultValue" | "value" | "onChange"
-> & {
-  defaultValue?: string;
-  value?: string;
-  onChange?: (value: string) => void;
-};
-
-type SelectVariant = Omit<
-  EnumFieldProps,
-  "defaultValue" | "value" | "onChange"
-> & {
-  defaultValue?: string[];
-  value?: string[];
-  onChange?: (value: string | string[]) => void;
-};
-
-export const EnumField: React.FC<EnumFieldProps> = ({
-  variant = "auto",
-  options = [],
-  ...props
-}) => {
+export const EnumField = React.forwardRef<
+  HTMLDivElement | HTMLButtonElement,
+  EnumFieldProps
+>(({ variant = "auto", options = [], ...props }, ref) => {
   const radio = (
-    <RadioGroupField options={options} {...(props as RadioGroupVariant)} />
+    <RadioGroupField
+      options={options}
+      {...(props as RadioGroupFieldProps)}
+      ref={ref as React.ForwardedRef<HTMLDivElement>}
+    />
   );
   const select = (
-    <SelectField options={options} {...(props as SelectVariant)} />
+    <SelectField
+      options={options}
+      {...(props as SelectFieldProps)}
+      ref={ref as React.ForwardedRef<HTMLButtonElement>}
+    />
   );
 
   switch (variant) {
@@ -46,6 +46,6 @@ export const EnumField: React.FC<EnumFieldProps> = ({
     case "auto":
       return options.length < 6 ? radio : select;
   }
-};
+});
 
 EnumField.displayName = "EnumField";

@@ -1,31 +1,21 @@
 import {
-  GlobalStateFromDocument,
-  LocalStateFromDocument,
-  OperationFromDocument,
-  OperationScope,
-  PHDocument,
+  type GlobalStateFromDocument,
+  type LocalStateFromDocument,
+  type OperationFromDocument,
+  type OperationScope,
+  type PHDocument,
 } from "document-model";
 
+import { type IProcessor } from "#processors/types";
 import {
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "#drive-document-model/gen/types";
-import {
-  GetDocumentOptions,
-  IBaseDocumentDriveServer,
-  Listener,
-  ListenerRevision,
-  StrandUpdate,
+  type GetDocumentOptions,
+  type IBaseDocumentDriveServer,
+  type IDocumentDriveServer,
+  type ListenerRevision,
+  type StrandUpdate,
 } from "#server/types";
 import { logger } from "#utils/logger";
-import { ITransmitter, StrandUpdateSource } from "./types.js";
-
-export interface IReceiver {
-  onStrands: <TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ) => Promise<void>;
-  onDisconnect: () => Promise<void>;
-}
+import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
   OperationFromDocument<TDocument>,
@@ -46,18 +36,13 @@ export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
   state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
 };
 
-export interface IInternalTransmitter extends ITransmitter {
-  setReceiver(receiver: IReceiver): void;
-}
-
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
-  protected listener: Listener;
-  protected receiver: IReceiver | undefined;
+  protected processor: IProcessor;
 
-  constructor(listener: Listener, drive: IBaseDocumentDriveServer) {
-    this.listener = listener;
+  constructor(drive: IDocumentDriveServer, processor: IProcessor) {
     this.drive = drive;
+    this.processor = processor;
   }
 
   async #buildInternalOperationUpdate<TDocument extends PHDocument>(
@@ -110,10 +95,6 @@ export class InternalTransmitter implements ITransmitter {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _source: StrandUpdateSource,
   ): Promise<ListenerRevision[]> {
-    if (!this.receiver) {
-      return [];
-    }
-
     const updates = [];
     for (const strand of strands) {
       const operations = await this.#buildInternalOperationUpdate(strand);
@@ -124,8 +105,9 @@ export class InternalTransmitter implements ITransmitter {
         state,
       });
     }
+
     try {
-      await this.receiver.onStrands(updates);
+      await this.processor.onStrands(updates);
       return strands.map(({ operations, ...s }) => ({
         ...s,
         status: "SUCCESS",
@@ -142,15 +124,7 @@ export class InternalTransmitter implements ITransmitter {
     }
   }
 
-  setReceiver(receiver: IReceiver) {
-    this.receiver = receiver;
-  }
-
   async disconnect(): Promise<void> {
-    await this.receiver?.onDisconnect();
-  }
-
-  getListener(): Listener {
-    return this.listener;
+    await this.processor?.onDisconnect();
   }
 }

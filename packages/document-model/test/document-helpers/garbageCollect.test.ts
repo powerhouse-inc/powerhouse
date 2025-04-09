@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   garbageCollect,
-  OperationIndex,
+  type OperationIndex,
 } from "../../src/document/utils/document-helpers.js";
 import { buildOperation, buildOperations } from "./utils.js";
 

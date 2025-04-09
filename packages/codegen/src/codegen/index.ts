@@ -1,11 +1,15 @@
-import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/scalars";
 import { paramCase, pascalCase } from "change-case";
-import { DocumentModelModule, DocumentModelState } from "document-model";
+import {
+  type DocumentModelModule,
+  type DocumentModelState,
+} from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
 import { generateSchema, generateSchemas } from "./graphql.js";
 import {
+  generateDriveEditor as _generateDriveEditor,
   generateEditor as _generateEditor,
   generateImportScript as _generateImportScript,
   generateProcessor as _generateProcessor,
@@ -136,6 +140,7 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
 
   await generateSchema(name, config.documentModelsDir, config);
   await generateDocumentModel(documentModel, config.documentModelsDir, config);
+  await generateSubgraph(name, path, config);
 }
 
 export async function generateEditor(
@@ -212,4 +217,13 @@ export async function generateImportScript(
   config: PowerhouseConfig,
 ) {
   return _generateImportScript(name, config.importScriptsDir, config);
+}
+
+export async function generateDriveEditor(
+  name: string,
+  config: PowerhouseConfig,
+) {
+  return _generateDriveEditor(name, config.editorsDir, {
+    skipFormat: config.skipFormat,
+  });
 }

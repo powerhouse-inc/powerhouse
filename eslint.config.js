@@ -3,7 +3,6 @@ import { default as eslint } from "@eslint/js";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
-// import tailwind from "eslint-plugin-tailwindcss";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -11,7 +10,6 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.stylisticTypeChecked,
   ...tseslint.configs.strictTypeChecked,
-  // ...tailwind.configs["flat/recommended"],
   eslintPluginPrettierRecommended,
   {
     ignores: [
@@ -38,16 +36,20 @@ export default tseslint.config(
       "**/postcss.config.mjs",
       "**/create-require.js",
       ".nx/",
+      "packages/codegen/**/__tests__",
       "packages/document-drive/**/*.test.ts",
       "packages/document-drive/**/*.bench.ts",
       "packages/reactor-api/**/*.test.ts",
       "packages/reactor-api/**/*.bench.ts",
+      "apps/connect/cypress/**/*.ts",
       "**/.vite/",
       "**/out/",
       "**/forge.config.js",
       "**/vite.config.ts.timestamp-*.mjs",
       "apps/connect/src/vite-env.d.ts",
       "**/*.config.*",
+      "clis/ph-cli/.ph/",
+      "packages/document-drive/src/storage/prisma/client/",
     ],
   },
   {
@@ -56,33 +58,16 @@ export default tseslint.config(
       ecmaVersion: "latest",
       globals: {
         ...globals.browser,
+        ...globals.node,
       },
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["vitest.workspace.ts"],
+        },
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
           jsx: true,
         },
-      },
-    },
-    settings: {
-      tailwindcss: {
-        callees: [
-          "classnames",
-          "clsx",
-          "ctl",
-          "twMerge",
-          "twJoin",
-          "mergeClassNameProps",
-          "cn",
-        ],
-        whitelist: [
-          "scrollbar-thin",
-          "scrollbar-thumb-gray-300",
-          "scrollbar-thumb-gray-600",
-          "scrollbar-track-transparent",
-          "scrollbar-track-gray-900",
-        ],
       },
     },
     rules: {
@@ -90,7 +75,13 @@ export default tseslint.config(
       "@typescript-eslint/consistent-indexed-object-style": "off",
       "@typescript-eslint/no-duplicate-type-constituents": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
-      "@typescript-eslint/consistent-type-imports": "off",
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "type-imports",
+          fixStyle: "inline-type-imports",
+        },
+      ],
       "@typescript-eslint/array-type": "off",
       "@typescript-eslint/prefer-function-type": "off",
       "@typescript-eslint/strict-boolean-expressions": "off",

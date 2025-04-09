@@ -1,6 +1,6 @@
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
 import React from "react";
-import { TabContentProps } from "./tab-content";
+import { type TabContentProps } from "./tab-content.js";
 
 export function Tabs({
   children,
@@ -19,8 +19,7 @@ export function Tabs({
             const { label, disabled } = child.props as TabContentProps;
             return (
               <Trigger
-                className="data-[state='active']:tab-shadow ata-disabled:cursor-not-allowed 
-              data-disabled:text-gray-400 flex h-7 flex-1 items-center justify-center rounded-lg transition duration-300 data-[state='active']:bg-gray-50 data-[state='active']:text-gray-900"
+                className="data-[state='active']:tab-shadow ata-disabled:cursor-not-allowed data-disabled:text-gray-400 flex h-7 flex-1 items-center justify-center rounded-lg transition duration-300 data-[state='active']:bg-gray-50 data-[state='active']:text-gray-900"
                 key={label as string}
                 value={label as string}
                 disabled={disabled ?? false}

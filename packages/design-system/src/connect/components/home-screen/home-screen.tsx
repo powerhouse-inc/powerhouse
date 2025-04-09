@@ -1,4 +1,4 @@
-import HomeBg from "@/assets/home-bg.png";
+import HomeBg from "#assets/home-bg.png";
 import { twMerge } from "tailwind-merge";
 
 type HomeScreenProps = {
@@ -10,7 +10,7 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
   return (
     <div
       className={twMerge(
-        "container relative flex h-full flex-col",
+        "container relative mx-auto flex h-full flex-col",
         containerClassName,
       )}
     >

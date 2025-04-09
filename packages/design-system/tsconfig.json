@@ -1,33 +1,15 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM"],
-    "emitDeclarationOnly": true,
-    "outDir": "./dist",
-    "jsx": "react-jsx",
-    "baseUrl": ".",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "composite": true
   },
+  "files": [],
   "references": [
     {
-      "path": "../document-model"
+      "path": "tsconfig.lib.json"
     },
     {
-      "path": "../scalars"
-    },
-    {
-      "path": "../config"
-    },
-    {
-      "path": "../reactor-browser"
+      "path": "tsconfig.test.json"
     }
-  ],
-  "include": ["src/**/*", "**/*.json", "./*.ts", "scripts/*"],
-  "exclude": ["node_modules", "./dist/**/*", "storybook-static"]
+  ]
 }

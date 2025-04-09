@@ -1,23 +1,26 @@
-import renownShortHover from "@/assets/renown-short-hover.png";
-import renownShort from "@/assets/renown-short.png";
+import renownShortHover from "#assets/renown-short-hover.png";
+import renownShort from "#assets/renown-short.png";
+import {
+  AccountPopover,
+  AccountPopoverLogin,
+} from "../account-popover/index.js";
 
 export interface SidebarLoginProps {
   onLogin: () => void;
 }
 
-
 export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
-  return (
-    <button
-      className="group/sidebar-footer w-full cursor-pointer items-baseline justify-start text-sm font-semibold leading-10 text-gray-600 flex"
-      onClick={onLogin}
-    >
-      <img className="group-hover/sidebar-footer:hidden" src={renownShort} />
-      <img
-        className="hidden group-hover/sidebar-footer:block"
-        src={renownShortHover}
-      />
-    </button>
+  const content = <AccountPopoverLogin onLogin={onLogin} />;
 
+  return (
+    <AccountPopover content={content}>
+      <div className="group/sidebar-footer flex w-full cursor-pointer items-baseline justify-start text-sm font-semibold leading-10 text-gray-600">
+        <img className="group-hover/sidebar-footer:hidden" src={renownShort} />
+        <img
+          className="hidden group-hover/sidebar-footer:block"
+          src={renownShortHover}
+        />
+      </div>
+    </AccountPopover>
   );
 };

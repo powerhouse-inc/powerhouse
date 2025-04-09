@@ -1,17 +1,17 @@
-import { useDefaultDocumentModelEditor } from '#hooks/useDefaultDocumentModelEditor/index';
-import { DocumentModelLib, EditorModule } from 'document-model';
+import { useDefaultDocumentModelEditor } from '#hooks';
+import { type DocumentModelLib, type EditorModule } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
-import { externalPackagesAtom } from './external-packages';
-
-export const LOCAL_DOCUMENT_EDITORS = import.meta.env.LOCAL_DOCUMENT_EDITORS;
+import { externalPackagesAtom } from './external-packages.js';
 
 async function loadBaseEditors() {
-    const documentModelEditorModule = (
-        await import('@powerhousedao/builder-tools/document-model-editor')
-    ).documentModelEditorModule;
-    return [documentModelEditorModule] as EditorModule[];
+    const documentModelEditor = await import(
+        '@powerhousedao/builder-tools/document-model-editor'
+    );
+    await import('@powerhousedao/builder-tools/style.css');
+    const module = documentModelEditor.documentModelEditorModule;
+    return [module] as EditorModule[];
 }
 
 function getEditorsFromModules(modules: DocumentModelLib[]) {
@@ -20,32 +20,14 @@ function getEditorsFromModules(modules: DocumentModelLib[]) {
         .reduce((acc, val) => acc.concat(val), []);
 }
 
-async function loadDynamicEditors() {
-    if (!LOCAL_DOCUMENT_EDITORS) {
-        return [];
-    }
-    try {
-        const localEditors = (await import(
-            'LOCAL_DOCUMENT_EDITORS'
-        )) as unknown as Record<string, EditorModule>;
-        console.log('Loaded local document editors:', localEditors);
-        return Object.values(localEditors);
-    } catch (e) {
-        console.error('Error loading local document editors', e);
-        return [];
-    }
-}
-
 const baseEditorsAtom = atomWithLazy(loadBaseEditors);
-const dynamicEditorsAtom = atomWithLazy(loadDynamicEditors);
 
 export const editorsAtom = atom(async get => {
     const baseEditors = await get(baseEditorsAtom);
-    const dynamicEditors = await get(dynamicEditorsAtom);
     const externalModules = await get(externalPackagesAtom);
     const externalEditors = getEditorsFromModules(externalModules);
 
-    return dynamicEditors.concat(externalEditors, baseEditors);
+    return externalEditors.concat(baseEditors);
 });
 
 const unwrappedEditorsAtom = unwrap(editorsAtom);
@@ -100,7 +82,7 @@ const getEditor = (
 ) => {
     const preferredEditor = editors.find(
         e =>
-            e.config?.id === preferredEditorId &&
+            e.config.id === preferredEditorId &&
             e.documentTypes.includes(documentType),
     );
 
@@ -139,7 +121,7 @@ export const usePreloadEditor = () => {
             const editor = getEditor(documentType, editors);
             if (editor && 'preload' in editor.Component) {
                 console.log(
-                    `Preloading editor for document '${documentType}': ${editor.config?.id}`,
+                    `Preloading editor for document '${documentType}': ${editor.config.id}`,
                 );
                 await (
                     editor.Component as { preload: () => Promise<void> }

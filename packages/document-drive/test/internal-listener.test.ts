@@ -1,28 +1,35 @@
-import { DocumentModelModule } from "document-model";
+import { DocumentModelModule, setModelName } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
-import { InternalTransmitterUpdate, IReceiver, ReactorBuilder } from "../src";
-import { expectUTCTimestamp, expectUUID } from "./utils";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { DocumentDriveServer } from "../src/server/base.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+import { ReactorBuilder } from "../src/server/builder.js";
 import {
-  IReceiver,
+  InternalTransmitter,
   InternalTransmitterUpdate,
+  IProcessor,
 } from "../src/server/listener/transmitter/internal.js";
-import { expectUTCTimestamp, expectUUID } from "./utils.js";
+import { expectUTCTimestamp, expectUUID } from "./utils";
+
+import { documentModelDocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import { Listener } from "../src/server/types.js";
+import { generateUUID } from "../src/utils/misc.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
-    DocumentModelLib,
-    ...Object.values(DocumentModelsLibs),
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
   ] as DocumentModelModule[];
 
-  async function buildServer(receiver: IReceiver) {
-    const server = new ReactorBuilder(documentModels).build();
+  async function buildServer(processor: IProcessor) {
+    const builder = new ReactorBuilder(documentModels);
+    const server = builder.build();
     await server.initialize();
 
+    const driveId = "drive";
     await server.addDrive({
       global: {
-        id: "drive",
+        id: driveId,
         name: "Global Drive",
         icon: "",
         slug: "global",
@@ -34,17 +41,35 @@ describe("Internal Listener", () => {
         triggers: [],
       },
     });
-    await server.addInternalListener("drive", receiver, {
-      block: true,
+
+    const listenerManager = builder.listenerManager;
+
+    // Create the listener and transmitter
+    const uuid = generateUUID();
+    const listener: Listener = {
+      driveId,
+      listenerId: uuid,
+      block: false,
       filter: {
         branch: ["main"],
         documentId: ["*"],
         documentType: ["*"],
         scope: ["global"],
       },
-      label: "Internal",
-      listenerId: "internal",
-    });
+      system: false,
+      label: `Internal #${uuid}`,
+      callInfo: {
+        data: "",
+        name: "Internal",
+        transmitterType: "Internal",
+      },
+    };
+
+    // TODO: circular reference
+    listener.transmitter = new InternalTransmitter(server, processor);
+
+    await listenerManager?.setListener(driveId, listener);
+
     return server;
   }
 
@@ -63,7 +88,7 @@ describe("Internal Listener", () => {
     });
     const drive = await server.getDrive("drive");
 
-    const action = utils.generateAddNodeAction(
+    const action = generateAddNodeAction(
       drive.state.global,
       {
         id: "1",
@@ -75,9 +100,9 @@ describe("Internal Listener", () => {
     await server.addDriveAction("drive", action);
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
 
-    const update: InternalTransmitterUpdate<DocumentDriveDocument, "global"> = {
+    const update: InternalTransmitterUpdate<DocumentDriveDocument> = {
       branch: "main",
-      documentId: "",
+      documentId: "drive",
       driveId: "drive",
       operations: [
         {
@@ -156,11 +181,7 @@ describe("Internal Listener", () => {
     };
     expect(transmitFn).toHaveBeenCalledWith([update]);
 
-    await server.addAction(
-      "drive",
-      "1",
-      DocumentModelLib.actions.setModelName({ name: "test" }),
-    );
+    await server.addAction("drive", "1", setModelName({ name: "test" }));
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
 
@@ -219,11 +240,7 @@ describe("Internal Listener", () => {
       },
     ]);
 
-    await server.addAction(
-      "drive",
-      "1",
-      DocumentModelLib.actions.setModelName({ name: "test 2" }),
-    );
+    await server.addAction("drive", "1", setModelName({ name: "test 2" }));
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
     expect(transmitFn).toHaveBeenLastCalledWith([
@@ -281,7 +298,7 @@ describe("Internal Listener", () => {
     ]);
   });
 
-  test("should call disconnect function of receiver", async () => {
+  test("should call disconnect function of processor", async () => {
     const disconnectFn = vitest.fn(() => Promise.resolve());
 
     const server = await buildServer({

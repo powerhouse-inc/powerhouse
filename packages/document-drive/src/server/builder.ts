@@ -1,10 +1,10 @@
-import InMemoryCache from "#cache/memory";
-import { ICache } from "#cache/types";
-import { BaseQueueManager } from "#queue/base";
-import { IQueueManager } from "#queue/types";
-import { MemoryStorage } from "#storage/memory";
-import { IDriveStorage } from "#storage/types";
-import { DocumentModelModule } from "document-model";
+import { type DocumentModelModule } from "document-model";
+import InMemoryCache from "../cache/memory.js";
+import { type ICache } from "../cache/types.js";
+import { BaseQueueManager } from "../queue/base.js";
+import { type IQueueManager } from "../queue/types.js";
+import { MemoryStorage } from "../storage/memory.js";
+import { type IDocumentStorage, type IDriveStorage } from "../storage/types.js";
 import { DocumentDriveServer } from "./base-server.js";
 import { DefaultEventEmitter } from "./event-emitter.js";
 import { ListenerManager } from "./listener/listener-manager.js";
@@ -12,27 +12,28 @@ import TransmitterFactory from "./listener/transmitter/factory.js";
 import SynchronizationManager from "./sync-manager.js";
 import {
   DefaultListenerManagerOptions,
-  DocumentDriveServerOptions,
-  IEventEmitter,
-  IListenerManager,
-  ISynchronizationManager,
-  ITransmitterFactory,
+  type DocumentDriveServerOptions,
+  type IDocumentDriveServer,
+  type IEventEmitter,
+  type IListenerManager,
+  type ISynchronizationManager,
+  type ITransmitterFactory,
 } from "./types.js";
 
 /**
  * Builder class for constructing Reactor instances with proper configuration
  */
 export class ReactorBuilder {
-  private documentModelModules: DocumentModelModule[] = [];
+  public documentModelModules: DocumentModelModule[] = [];
 
-  private storage?: IDriveStorage;
-  private cache?: ICache;
-  private queueManager?: IQueueManager;
-  private eventEmitter?: IEventEmitter;
-  private options?: DocumentDriveServerOptions;
-  private synchronizationManager?: ISynchronizationManager;
-  private listenerManager?: IListenerManager;
-  private transmitterFactory?: ITransmitterFactory;
+  public storage?: IDriveStorage;
+  public cache?: ICache;
+  public queueManager?: IQueueManager;
+  public eventEmitter?: IEventEmitter;
+  public options?: DocumentDriveServerOptions;
+  public synchronizationManager?: ISynchronizationManager;
+  public listenerManager?: IListenerManager;
+  public transmitterFactory?: ITransmitterFactory;
 
   constructor(documentModelModules: DocumentModelModule[]) {
     this.documentModelModules = documentModelModules;
@@ -80,7 +81,7 @@ export class ReactorBuilder {
     return this;
   }
 
-  public build() {
+  public build(): IDocumentDriveServer {
     if (!this.documentModelModules.length) {
       throw new Error("Document models are required to build the server");
     }
@@ -104,6 +105,8 @@ export class ReactorBuilder {
     if (!this.synchronizationManager) {
       this.synchronizationManager = new SynchronizationManager(
         this.storage,
+        // as we refactor, we're secretly making all the IStorage implementations also implement IDocumentStorage
+        this.storage as unknown as IDocumentStorage,
         this.cache,
         this.documentModelModules,
         this.eventEmitter,
@@ -129,12 +132,13 @@ export class ReactorBuilder {
     return new DocumentDriveServer(
       this.documentModelModules,
       this.storage,
+      // as we refactor, we're secretly making all the IStorage implementations also implement IDocumentStorage
+      this.storage as unknown as IDocumentStorage,
       this.cache,
       this.queueManager,
       this.eventEmitter,
       this.synchronizationManager,
       this.listenerManager,
-      this.transmitterFactory,
       this.options,
     );
   }

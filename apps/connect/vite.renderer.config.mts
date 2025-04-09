@@ -1,23 +1,45 @@
 import {
+    externalIds,
     generateImportMapPlugin,
     viteConnectDevStudioPlugin,
     viteLoadExternalPackages,
 } from '@powerhousedao/builder-tools/connect-studio';
-import { externalIds } from '@powerhousedao/builder-tools/connect-studio/vite-plugins/base';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
+import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
-import path from 'path';
-import { HtmlTagDescriptor, PluginOption, defineConfig, loadEnv } from 'vite';
+import path from 'node:path';
+import {
+    defineConfig,
+    HtmlTagDescriptor,
+    loadEnv,
+    type PluginOption,
+} from 'vite';
 import { viteEnvs } from 'vite-envs';
 import { createHtmlPlugin } from 'vite-plugin-html';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
-import clientConfig from './client.config';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import clientConfig from './client.config.js';
+import pkg from './package.json' with { type: 'json' };
 
-import pkg from './package.json';
-const isBuildStudio = process.env.BUILD_STUDIO === 'true';
+const staticFiles = [
+    './src/service-worker.ts',
+    './src/external-packages.ts',
+    './src/hmr.ts',
+];
+const staticInputs = staticFiles.reduce(
+    (acc, file) =>
+        Object.assign(acc, {
+            [path.basename(file, path.extname(file))]: path.resolve(
+                __dirname,
+                file,
+            ),
+        }),
+    {},
+);
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
@@ -47,7 +69,12 @@ export default defineConfig(({ mode }) => {
         (process.env.SENTRY_RELEASE ?? env.SENTRY_RELEASE) || APP_VERSION;
     const uploadSentrySourcemaps = authToken && org && project;
 
+    const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
+    const phPackages = phPackagesStr?.split(',') || [];
+
     const plugins: PluginOption[] = [
+        nodeResolve(),
+        tailwind(),
         nodePolyfills({
             include: ['events'],
             globals: {
@@ -57,9 +84,10 @@ export default defineConfig(({ mode }) => {
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
-        viteLoadExternalPackages(undefined),
+        viteLoadExternalPackages(false, phPackages, outDir),
+        tsconfigPaths(),
         react({
-            include: 'src/**/*.tsx',
+            include: './src/**/*.tsx',
             babel: {
                 parserOpts: {
                     plugins: ['decorators'],
@@ -122,37 +150,30 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
-                    'service-worker': path.resolve(
-                        __dirname,
-                        'src/service-worker.ts',
-                    ),
+                    ...staticInputs,
                 },
                 output: {
                     entryFileNames: chunk =>
-                        ['service-worker'].includes(chunk.name)
+                        Object.keys(staticInputs).includes(chunk.name)
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
                 external: [...externalAndExclude, ...externalIds],
             },
         },
-        resolve: {
-            alias: {
-                '@/assets': path.resolve(__dirname, './assets'),
-                src: path.resolve(__dirname, './src'),
-                'connect-config': path.resolve(
-                    __dirname,
-                    './src/connect.config.ts',
-                ),
-            },
-        },
         optimizeDeps: {
             include: ['did-key-creator'],
             exclude: externalAndExclude,
         },
+        resolve: {
+            dedupe: ['@powerhousedao/reactor-browser'],
+        },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),
             __REQUIRES_HARD_REFRESH__: JSON.stringify(REQUIRES_HARD_REFRESH),
+            ...(mode !== 'development' && {
+                'import.meta.hot': 'import.meta.hot',
+            }),
         },
     };
 });

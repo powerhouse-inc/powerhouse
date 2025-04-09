@@ -1,6 +1,6 @@
 import { addDays } from "date-fns";
-import { Operation } from "document-model";
-import { SignatureArray } from "./types";
+import { type Operation } from "document-model";
+import { type SignatureArray } from "./types.js";
 
 export const mockSignature: SignatureArray = [
   "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",

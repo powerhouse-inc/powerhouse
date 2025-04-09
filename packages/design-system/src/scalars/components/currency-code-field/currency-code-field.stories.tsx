@@ -1,15 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { CurrencyCodeField } from "./currency-code-field";
-import { withForm } from "@/scalars/lib/decorators";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
-import { commonCryptoCurrencies, commonFiatCurrencies } from "./defaults";
-
+} from "../../lib/storybook-arg-types.js";
+import { CurrencyCodeField } from "./currency-code-field.js";
 const meta: Meta<typeof CurrencyCodeField> = {
-  title: "Document Engineering/Simple Components/Currency Code Field",
+  title: "Document Engineering/Scalars/Currency Code Field",
   component: CurrencyCodeField,
   decorators: [withForm, (Story) => <div className="w-48">{Story()}</div>],
   parameters: {
@@ -36,15 +34,6 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    allowedTypes: {
-      control: "select",
-      description: "Either Crypto, Fiat or Both",
-      options: ["Fiat", "Crypto", "Both"],
-      table: {
-        defaultValue: { summary: "Both" },
-        category: StorybookControlCategory.COMPONENT_SPECIFIC,
-      },
-    },
     favoriteCurrencies: {
       control: "object",
       description:
@@ -54,10 +43,44 @@ const meta: Meta<typeof CurrencyCodeField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+    symbolPosition: {
+      control: "select",
+      description: "Position of the currency symbol",
+      options: ["left", "right"],
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: {
+        arg: "includeCurrencySymbols",
+        eq: true,
+      },
+    },
+    allowedTypes: {
+      control: "select",
+      description:
+        "Allowed types of currencies to display when no currencies are provided",
+      options: ["Fiat", "Crypto", "Both"],
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
+    searchable: {
+      control: "boolean",
+      description: "Whether the dropdown is searchable",
+      table: {
+        defaultValue: { summary: "false" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+    },
   },
+
   args: {
     name: "currency-code-field",
     placeholder: "Select a currency",
+    favoriteCurrencies: [],
+    currencies: [],
   },
 };
 
@@ -67,7 +90,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     label: "Currency",
-    currencies: commonCryptoCurrencies,
+    onChange: () => {},
+    allowedTypes: "Both",
   },
 };
 
@@ -76,6 +100,40 @@ export const Disabled: Story = {
     label: "Currency",
     value: "EUR",
     disabled: true,
-    currencies: commonFiatCurrencies,
+    onChange: () => {},
+    allowedTypes: "Fiat",
+  },
+};
+
+export const WithFavorites: Story = {
+  args: {
+    label: "Currency",
+    onChange: () => {},
+    currencies: [
+      {
+        ticker: "BTC",
+        crypto: true,
+        label: "Bitcoin",
+        symbol: "₿",
+      },
+      {
+        ticker: "ETH",
+        crypto: true,
+        label: "Ether",
+        symbol: "Ξ",
+      },
+      {
+        ticker: "USDS",
+        crypto: true,
+        label: "Sky USD",
+        symbol: "USDS",
+      },
+      {
+        ticker: "USDC",
+        crypto: true,
+        icon: "Briefcase",
+      },
+    ],
+    favoriteCurrencies: ["BTC", "ETH"],
   },
 };

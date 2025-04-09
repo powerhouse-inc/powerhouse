@@ -1,28 +1,19 @@
-import { SignalDispatch } from "../src/document/signal.js";
 import {
-  Action,
-  BaseAction,
-  Operation,
-  OperationScope,
-  PHDocument,
-  ReducerOptions,
-  StateReducer,
+  type BaseAction,
+  type Operation,
+  type OperationScope,
+  type PHDocument,
+  type StateReducer,
 } from "../src/document/types.js";
 import { createAction, createReducer } from "../src/document/utils/base.js";
 
 // Empty reducer that supports base actions
-export const emptyReducer = <TDocument extends PHDocument = PHDocument>(
-  document: PHDocument,
-) => document as TDocument;
-
-export const wrappedEmptyReducer = <TDocument extends PHDocument = PHDocument>(
-  document: TDocument,
-  action: Action | Operation,
-  dispatch?: SignalDispatch,
-  options?: ReducerOptions,
-): TDocument => {
-  return emptyReducer(document);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
+  return state;
 };
+
+export const wrappedEmptyReducer = createReducer(emptyReducer);
 
 // Counter reducer that supports increment/decrement actions
 export type IncrementAction = BaseAction<"INCREMENT", undefined>;

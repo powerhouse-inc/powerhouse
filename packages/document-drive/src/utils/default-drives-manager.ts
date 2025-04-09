@@ -1,13 +1,12 @@
-import { IReadModeDriveServer } from "#read-mode/types";
-import { DriveNotFoundError } from "#server/error";
+import { type IReadModeDriveServer } from "#read-mode/types";
 import {
-  DefaultRemoteDriveInfo,
-  DocumentDriveServerOptions,
-  DriveEvents,
-  IBaseDocumentDriveServer,
-  RemoteDriveAccessLevel,
-  RemoveDriveStrategy,
-  RemoveOldRemoteDrivesOption,
+  type DefaultRemoteDriveInfo,
+  type DocumentDriveServerOptions,
+  type DriveEvents,
+  type IBaseDocumentDriveServer,
+  type RemoteDriveAccessLevel,
+  type RemoveDriveStrategy,
+  type RemoveOldRemoteDrivesOption,
 } from "#server/types";
 import { requestPublicDrive } from "./graphql.js";
 import { logger } from "./logger.js";
@@ -69,9 +68,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
     try {
       await this.server.deleteDrive(driveId);
     } catch (error) {
-      if (!(error instanceof DriveNotFoundError)) {
-        logger.error(error);
-      }
+      logger.error(error);
     }
   }
 

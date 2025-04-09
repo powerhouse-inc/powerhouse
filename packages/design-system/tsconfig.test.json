@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "allowJs": true,
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "types": [
+      "node",
+      "vite/client",
+      "vitest/globals",
+      "@testing-library/jest-dom",
+      "@storybook/types"
+    ],
+    "outDir": ".storybook/dist",
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": false,
+    "strict": true
+  },
+  "references": [
+    {
+      "path": "tsconfig.lib.json"
+    }
+  ],
+  "include": [
+    "setupTests.ts",
+    ".storybook",
+    "vitest.config.ts",
+    "src/**/*.json",
+    "**/docs",
+    "**/*.stories.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}

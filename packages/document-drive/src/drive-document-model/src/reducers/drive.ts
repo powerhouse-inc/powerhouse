@@ -4,7 +4,7 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { DocumentDriveDriveOperations } from "../../gen/drive/operations.js";
+import { type DocumentDriveDriveOperations } from "../../gen/drive/operations.js";
 
 export const reducer: DocumentDriveDriveOperations = {
   setDriveNameOperation(state, action, dispatch) {

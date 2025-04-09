@@ -1,6 +1,5 @@
-import { FieldCommonProps } from "../types";
+import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 
-import { ErrorHandling } from "../types";
 type NumberProps = {
   numericType?: NumericType | undefined;
   minValue?: number;
@@ -25,9 +24,9 @@ export type NumericType =
 
 export interface InputNumberProps
   extends Omit<
-    FieldCommonProps<string | number> &
+    InputBaseProps<string | number> &
+      FieldErrorHandling &
       NumberProps &
-      ErrorHandling &
       Omit<
         React.InputHTMLAttributes<HTMLInputElement>,
         "min" | "max" | "minLength" | "maxLength"

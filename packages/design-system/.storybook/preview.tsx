@@ -1,7 +1,6 @@
-import { WagmiContext } from "@/connect/context/WagmiContext";
-import { withThemeByDataAttribute } from "@storybook/addon-themes";
+import { withThemeByClassName } from "@storybook/addon-themes";
 import type { Preview, ReactRenderer } from "@storybook/react";
-import "../src/globals.css";
+import "../dist/style.css";
 
 const preview: Preview = {
   parameters: {
@@ -17,8 +16,17 @@ const preview: Preview = {
           "Connect",
           "Powerhouse",
           "RWA",
-          "Document Engineering", 
-          ["Simple Components", "Complex Components", "Layout Components", "Fragments"],
+          "Document Engineering",
+          [
+            "Getting started",
+            "Scalars",
+            ["Forms", "Examples"],
+            "Data Entry",
+            "Data Display",
+            "Navigation",
+            "Layout Components",
+            "Fragments",
+          ],
         ],
         method: "alphabetical",
         includeNames: true,
@@ -26,18 +34,12 @@ const preview: Preview = {
     },
   },
   decorators: [
-    (Story) => (
-      <WagmiContext>
-        <Story />
-      </WagmiContext>
-    ),
-    withThemeByDataAttribute<ReactRenderer>({
+    withThemeByClassName<ReactRenderer>({
       themes: {
         light: "light",
         dark: "dark",
       },
       defaultTheme: "light",
-      attributeName: 'data-mode',
     }),
   ],
 };

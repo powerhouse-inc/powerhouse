@@ -1,4 +1,4 @@
-import { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import path, { dirname } from "node:path";
@@ -14,6 +14,8 @@ export const packageManagers = {
     uninstallCommand: "bun remove {{dependency}}",
     workspaceOption: "",
     lockfile: "bun.lock",
+    updateCommand: "bun update {{dependency}}",
+    buildAffected: "bun run build:affected",
   },
   pnpm: {
     globalPathRegexp: /[\\/]pnpm[\\/]/,
@@ -21,6 +23,8 @@ export const packageManagers = {
     uninstallCommand: "pnpm remove {{dependency}}",
     workspaceOption: "--workspace-root",
     lockfile: "pnpm-lock.yaml",
+    updateCommand: "pnpm update {{dependency}}",
+    buildAffected: "pnpm run build:affected",
   },
   yarn: {
     globalPathRegexp: /[\\/]yarn[\\/]/,
@@ -28,12 +32,16 @@ export const packageManagers = {
     uninstallCommand: "yarn remove {{dependency}}",
     workspaceOption: "-W",
     lockfile: "yarn.lock",
+    updateCommand: "yarn upgrade {{dependency}}",
+    buildAffected: "yarn run build:affected",
   },
   npm: {
     installCommand: "npm install {{dependency}}",
     uninstallCommand: "npm uninstall {{dependency}}",
     workspaceOption: "",
     lockfile: "package-lock.json",
+    updateCommand: "npm update {{dependency}} --save",
+    buildAffected: "npm run build:affected",
   },
 };
 
@@ -150,7 +158,16 @@ export function updateConfigFile(
   const updatedConfig: PowerhouseConfig = {
     ...config,
     packages: isInstall
-      ? [...(config.packages || []), ...mappedPackages]
+      ? [
+          // replace existing packages if they were already listed on the config file
+          ...(config.packages?.filter(
+            (packages) =>
+              !config.packages?.find(
+                (p) => p.packageName === packages.packageName,
+              ),
+          ) || []),
+          ...mappedPackages,
+        ]
       : [...(config.packages || [])].filter(
           (pkg) => !dependencies.includes(pkg.packageName),
         ),
@@ -158,5 +175,41 @@ export function updateConfigFile(
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
 }
+
+/**
+ * Recursively searches for a specific file by traversing up the directory tree.
+ * Starting from the given path, it checks each parent directory until it finds
+ * the target file or reaches the root directory.
+ *
+ * @param startPath - The absolute path of the directory to start searching from
+ * @param targetFile - The name of the file to search for (e.g., 'package.json', 'pnpm-workspace.yaml')
+ * @returns The absolute path of the directory containing the target file, or null if not found
+ *
+ * @example
+ * // Find the workspace root directory
+ * const workspaceRoot = findContainerDirectory('/path/to/project/src', 'pnpm-workspace.yaml');
+ *
+ * // Find the nearest package.json
+ * const packageDir = findContainerDirectory('/path/to/project/src/components', 'package.json');
+ */
+export const findContainerDirectory = (
+  startPath: string,
+  targetFile: string,
+): string | null => {
+  const filePath = path.join(startPath, targetFile);
+
+  if (fs.existsSync(filePath)) {
+    return startPath;
+  }
+
+  const parentDir = path.dirname(startPath);
+
+  //reached the root directory and haven't found the file
+  if (parentDir === startPath) {
+    return null;
+  }
+
+  return findContainerDirectory(parentDir, targetFile);
+};
 
 export { getConfig } from "@powerhousedao/config/powerhouse";

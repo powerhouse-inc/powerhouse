@@ -1,10 +1,10 @@
 import {
-  TNodeOptions,
-  UiDriveNode,
-  UiFileNode,
-  UiFolderNode,
-  UiNode,
-} from "@/connect";
+  type TNodeOptions,
+  type UiDriveNode,
+  type UiFileNode,
+  type UiFolderNode,
+  type UiNode,
+} from "#connect";
 
 export type NodeProps = {
   nodeOptions: TNodeOptions;

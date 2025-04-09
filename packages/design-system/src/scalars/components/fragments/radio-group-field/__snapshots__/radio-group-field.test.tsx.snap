@@ -13,7 +13,7 @@ exports[`RadioGroupField Component > should match snapshot 1`] = `
       dir="ltr"
       id=":r1:-radio-group"
       role="radiogroup"
-      style="outline: none;"
+      style="outline-color: none; outline-style: none; outline-width: initial;"
       tabindex="0"
     >
       <div

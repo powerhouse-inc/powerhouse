@@ -1,11 +1,12 @@
 {
   "name": "document-drive",
-  "version": "1.20.4",
+  "version": "1.29.8-dev.3",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
+    "./storage/prisma": "./dist/src/storage/prisma/prisma.js",
     "./*": "./dist/src/*.js"
   },
   "imports": {
@@ -21,49 +22,59 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
+    "postbuild": "npm run copy-prisma",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
+    "test:flaky": "vitest run --coverage test/flaky",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
     "bench": "vitest bench",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
-    "migrate": "prisma generate && prisma db push"
+    "migrate": "prisma generate && prisma db push",
+    "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
+    "prebuild:tsc": "prisma generate --no-hints",
+    "prebuild": "prisma generate --no-hints",
+    "prelint:nx": "prisma generate --no-hints"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
-    "@prisma/client": "^5.18.0",
-    "exponential-backoff": "^3.1.1",
+    "@prisma/client": "5.17.0",
     "localforage": "^1.10.0",
     "redis": "^4.6.15",
     "sequelize": "^6.37.3",
     "sqlite3": "^5.1.7"
   },
   "dependencies": {
+    "@helia/mfs": "^4.0.3",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
-    "@types/node": "^20.14.11",
-    "@types/uuid": "^9.0.8",
     "change-case": "^5.4.4",
     "document-model": "workspace:*",
     "exponential-backoff": "^3.1.1",
-    "fake-indexeddb": "^5.0.2",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
+    "helia": "^5.3.0",
     "json-stringify-deterministic": "^1.0.12",
     "localforage": "^1.10.0",
-    "msw": "^2.3.1",
     "nanoevents": "^9.0.0",
-    "prisma": "^5.18.0",
+    "prisma": "5.17.0",
     "sanitize-filename": "^1.6.3",
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
     "uuid": "^11.0.5",
-    "vitest-fetch-mock": "^0.3.0",
-    "webdriverio": "^9.0.9",
-    "zod": "^3.24.1"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
-    "vitest": "^3.0.7"
+    "@types/node": "^20.14.11",
+    "@types/uuid": "^9.0.8",
+    "copyfiles": "^2.4.1",
+    "fake-indexeddb": "^5.0.2",
+    "msw": "^2.3.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.2",
+    "vitest": "^3.0.7",
+    "vitest-fetch-mock": "^0.4.5",
+    "webdriverio": "^9.0.9"
   }
 }

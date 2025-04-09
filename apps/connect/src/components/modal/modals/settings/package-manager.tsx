@@ -1,28 +1,27 @@
-import { useDocumentDrives } from '#hooks/useDocumentDrives';
-import { addExternalPackage, removeExternalPackage } from '#services/hmr';
-import {
-    useExternalPackages,
-    useMutableExternalPackages,
-} from '#store/external-packages';
+import { useDocumentDrives } from '#hooks';
+import { addExternalPackage, removeExternalPackage } from '#services';
+import { useExternalPackages, useMutableExternalPackages } from '#store';
+import { PH_PACKAGES } from '@powerhousedao/config/packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
-import { Manifest } from 'document-model';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { type Manifest } from 'document-model';
+import type React from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';
 
 function manifestToDetails(manifest: Manifest, id: string, removable: boolean) {
-    const documentModels = manifest.documentModels.map(
-        dm => `Document Model: ${dm.name}`,
-    );
-    const editors = manifest.editors.map(editor => `Editor: ${editor.name}`);
-    const apps = manifest.apps?.map(app => `App: ${app.name}`);
+    const documentModels =
+        manifest.documentModels?.map(dm => `Document Model: ${dm.name}`) ?? [];
+    const editors =
+        manifest.editors?.map(editor => `Editor: ${editor.name}`) ?? [];
+    const apps = manifest.apps?.map(app => `App: ${app.name}`) ?? [];
     return {
         id,
         ...manifest,
         publisher: manifest.publisher.name,
         publisherUrl: manifest.publisher.url,
-        modules: documentModels.concat(editors).concat(apps ?? []),
+        modules: documentModels.concat(editors).concat(apps),
         removable,
     };
 }
@@ -127,6 +126,7 @@ export const PackageManager: React.FC = () => {
             onReactorChange={handleReactorChange}
             onInstall={handleInstall}
             onUninstall={handleUninstall}
+            packageOptions={PH_PACKAGES}
         />
     );
 };

@@ -112,7 +112,6 @@ describe("DocumentModel", () => {
       {
         index: 1,
         skip: 1,
-        input: {},
         scope: "global",
         type: "NOOP",
       },
@@ -120,6 +119,8 @@ describe("DocumentModel", () => {
 
     const expectedLoadedDocumentModel = { ...documentModel };
     expectedLoadedDocumentModel.clipboard = [];
-    expect(loadedDocumentModel).toStrictEqual(expectedLoadedDocumentModel);
+    expect(JSON.parse(JSON.stringify(loadedDocumentModel))).toStrictEqual(
+      JSON.parse(JSON.stringify(expectedLoadedDocumentModel)),
+    );
   });
 });

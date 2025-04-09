@@ -1,35 +1,35 @@
 import {
-  Account,
+  type Account,
   allGroupTransactionTypes,
   assetGroupTransactions,
   feesTransactions,
   FeeTransactionsTable,
   formatDateForDisplay,
-  FormInputsByTableName,
+  type FormInputsByTableName,
   groupTransactionTypeLabels,
   handleTableDatum,
   makeFixedIncomeOptionLabel,
-  Operation,
+  type Operation,
   RWANumberInput,
   RWATableSelect,
   RWATableTextInput,
-  TableItemType,
-  TableName,
+  type TableItemType,
+  type TableName,
   tableNames,
   TransactionReference,
   UnitPrice,
   useEditorContext,
   useModal,
-} from "@/rwa";
-import { ReactElement, ReactNode, useCallback, useMemo } from "react";
+} from "#rwa";
+import { type ReactElement, type ReactNode, useCallback, useMemo } from "react";
 import {
-  Control,
-  FormState,
-  UseFormRegister,
-  UseFormWatch,
+  type Control,
+  type FormState,
+  type UseFormRegister,
+  type UseFormWatch,
 } from "react-hook-form";
-import { EntryTimeLabel } from "../components/inputs/entry-time-label";
-import { CashBalanceChange } from "../components/table/transactions/cash-balance-change";
+import { EntryTimeLabel } from "../components/inputs/entry-time-label.js";
+import { CashBalanceChange } from "../components/table/transactions/cash-balance-change.js";
 
 type Input = {
   label: string;

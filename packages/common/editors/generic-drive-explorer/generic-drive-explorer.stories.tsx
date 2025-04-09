@@ -1,5 +1,5 @@
-import { createDriveStoryWithUINodes } from "#editors/utils/storybook";
-import { Meta, StoryObj } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { createDriveStoryWithUINodes } from "../utils/storybook.js";
 import Editor from "./editor.js";
 
 const { meta: _meta, CreateDocumentStory } =

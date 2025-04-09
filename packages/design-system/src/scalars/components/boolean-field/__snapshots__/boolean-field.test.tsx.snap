@@ -25,7 +25,7 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
           value="on"
         >
           <span
-            class="text-current flex items-center justify-center"
+            class="flex items-center justify-center text-current"
             data-state="checked"
             style="pointer-events: none;"
           >
@@ -68,10 +68,28 @@ exports[`BooleanField > should render checkbox field when isToggle is false 1`] 
             data-state="closed"
             type="button"
           >
-            <div
-              data-testid="icon-fallback"
+            <svg
+              class="ml-1 cursor-pointer text-gray-600 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-500"
+              fill="none"
               style="width: 16px; height: 16px;"
-            />
+              viewBox="0 0 16 16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                clip-rule="evenodd"
+                d="M8 2C4.8934 2 2 4.8934 2 8C2 11.1066 4.8934 14 8 14C11.1066 14 14 11.1066 14 8C14 4.8934 11.1066 2 8 2ZM0.5 8C0.5 3.85786 3.85786 0.5 8 0.5C12.1422 0.5 15.5 3.85786 15.5 8C15.5 12.1422 12.1422 15.5 8 15.5C3.85786 15.5 0.5 12.1422 0.5 8Z"
+                fill="currentcolor"
+                fill-rule="evenodd"
+              />
+              <path
+                d="M8 12.5C7.58579 12.5 7.25 12.1642 7.25 11.75V8C7.25 7.58579 7.58579 7.25 8 7.25C8.41421 7.25 8.75 7.58579 8.75 8V11.75C8.75 12.1642 8.41421 12.5 8 12.5Z"
+                fill="currentcolor"
+              />
+              <path
+                d="M8 5.75C7.58579 5.75 7.25 5.41421 7.25 5C7.25 4.58579 7.58579 4.25 8 4.25C8.41421 4.25 8.75 4.58579 8.75 5C8.75 5.41421 8.41421 5.75 8 5.75Z"
+                fill="currentcolor"
+              />
+            </svg>
           </button>
         </label>
       </div>
@@ -103,7 +121,7 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
           aria-checked="true"
           aria-labelledby=":r1:-label"
           aria-required="true"
-          class="focus-visible:ring-ring focus-visible:ring-offset-background peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]"
+          class="focus-visible:ring-ring focus-visible:ring-offset-background peer inline-flex h-4 w-8 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=checked]:bg-[#343839] data-[state=unchecked]:bg-[#D7D8D9] dark:data-[state=checked]:bg-[#3BBE5F] dark:data-[state=unchecked]:bg-[#404446]"
           data-state="checked"
           id=":r1:"
           role="switch"
@@ -140,10 +158,28 @@ exports[`BooleanField > should render toggle field when isToggle is true 1`] = `
             data-state="closed"
             type="button"
           >
-            <div
-              data-testid="icon-fallback"
+            <svg
+              class="ml-1 cursor-pointer text-gray-600 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-500"
+              fill="none"
               style="width: 16px; height: 16px;"
-            />
+              viewBox="0 0 16 16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                clip-rule="evenodd"
+                d="M8 2C4.8934 2 2 4.8934 2 8C2 11.1066 4.8934 14 8 14C11.1066 14 14 11.1066 14 8C14 4.8934 11.1066 2 8 2ZM0.5 8C0.5 3.85786 3.85786 0.5 8 0.5C12.1422 0.5 15.5 3.85786 15.5 8C15.5 12.1422 12.1422 15.5 8 15.5C3.85786 15.5 0.5 12.1422 0.5 8Z"
+                fill="currentcolor"
+                fill-rule="evenodd"
+              />
+              <path
+                d="M8 12.5C7.58579 12.5 7.25 12.1642 7.25 11.75V8C7.25 7.58579 7.58579 7.25 8 7.25C8.41421 7.25 8.75 7.58579 8.75 8V11.75C8.75 12.1642 8.41421 12.5 8 12.5Z"
+                fill="currentcolor"
+              />
+              <path
+                d="M8 5.75C7.58579 5.75 7.25 5.41421 7.25 5C7.25 4.58579 7.58579 4.25 8 4.25C8.41421 4.25 8.75 4.58579 8.75 5C8.75 5.41421 8.41421 5.75 8 5.75Z"
+                fill="currentcolor"
+              />
+            </svg>
           </button>
         </label>
       </div>

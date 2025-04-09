@@ -1,4 +1,4 @@
-import { OperationScope } from "document-model";
+import { type OperationScope } from "document-model";
 
 export type Scope = OperationScope;
 

@@ -1,6 +1,6 @@
 /// <reference lib="WebWorker" />
 
-import { ServiceWorkerEvent } from './utils/registerServiceWorker';
+import { type ServiceWorkerEvent } from './utils/registerServiceWorker.js';
 
 const _self = self as unknown as ServiceWorkerGlobalScope;
 

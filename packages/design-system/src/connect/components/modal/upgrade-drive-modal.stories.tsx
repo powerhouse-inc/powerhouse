@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ConnectUpgradeDriveModal } from "./upgrade-drive-modal";
+import { ConnectUpgradeDriveModal } from "./upgrade-drive-modal.js";
 
 const meta: Meta<typeof ConnectUpgradeDriveModal> = {
   title: "Connect/Components/Modal/UpgradeDriveModal",

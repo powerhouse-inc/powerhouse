@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { CountryCodeField } from "./country-code-field";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../lib/testing.js";
+import { CountryCodeField } from "./country-code-field.js";
 
 describe("CountryCodeField Component", () => {
   const defaultProps = {

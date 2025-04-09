@@ -1,6 +1,6 @@
-import React from "react";
-import { FormMessage, FormMessageType } from "./form-message";
-import { cn } from "@/scalars/lib";
+import { cn } from "#scalars";
+
+import { FormMessage, type FormMessageType } from "./form-message.js";
 
 interface FormMessageListProps {
   messages: string[];

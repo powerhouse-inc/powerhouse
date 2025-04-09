@@ -1,6 +1,6 @@
 import { parseArgs, promptDirectories } from "#utils/cli";
 import { getPackageManager } from "#utils/package-manager";
-import arg from "arg";
+import type arg from "arg";
 import { execSync } from "child_process";
 import enquirer from "enquirer";
 import fs from "node:fs";
@@ -81,11 +81,15 @@ function buildIndex(
 ) {
   fs.writeFileSync(
     path.join(appPath, "index.ts"),
-    `import * as documentModelsExports from '${documentModelsDir}';
-        import * as editorsExports from '${editorsDir}';
+    `import type { Manifest } from "document-model";
+import manifestJson from "./powerhouse.manifest.json" assert { type: "json" };
+import * as documentModelsExports from '${documentModelsDir}/index.js';
+import * as editorsExports from '${editorsDir}/index.js';
 
-        export const documentModels = Object.values(documentModelsExports);
-        export const editors = Object.values(editorsExports);`,
+export const manifest: Manifest = manifestJson;
+export const documentModels = Object.values(documentModelsExports);
+export const editors = Object.values(editorsExports);
+`,
     "utf8",
   );
 }

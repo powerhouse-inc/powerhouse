@@ -1,49 +1,60 @@
 import {
-  DRIVE,
-  FILE,
-  FOLDER,
-  SharingType,
-  SyncStatus,
-  TDocumentType,
-} from "@/connect";
-import { Maybe, SynchronizationUnitInput } from "document-model";
-import { Scalars } from "zod";
+  type DRIVE,
+  type FILE,
+  type FOLDER,
+  type SharingType,
+  type SyncStatus,
+  type TDocumentType,
+} from "#connect";
+import { type Maybe, type SynchronizationUnitInput } from "document-model";
 
-export type UiFileNode = {
-  kind: typeof FILE;
+export type BaseUiFolderNode = {
   id: string;
   name: string;
+  driveId: string;
+  kind: typeof FOLDER;
+  parentFolder: string;
+  syncStatus: SyncStatus | undefined;
+};
+
+export type BaseUiDriveNode = {
+  id: string;
+  name: string;
+  driveId: string;
+  kind: typeof DRIVE;
+  parentFolder: null;
+  syncStatus: SyncStatus | undefined;
+};
+
+export type BaseUiFileNode = {
+  id: string;
+  name: string;
+  driveId: string;
+  kind: typeof FILE;
+  parentFolder: string;
+  documentType: string;
+  syncStatus: SyncStatus | undefined;
+};
+
+export type BaseUiNode = BaseUiFolderNode | BaseUiFileNode | BaseUiDriveNode;
+
+export type UiFileNode = BaseUiFileNode & {
   slug?: string | null;
   documentType: TDocumentType;
-  parentFolder: string;
-  driveId: string;
-  syncStatus: SyncStatus | undefined;
   synchronizationUnits: SynchronizationUnitInput[];
   sharingType: SharingType;
 };
 
-export type UiFolderNode = {
-  kind: typeof FOLDER;
-  id: string;
-  name: string;
+export type UiFolderNode = BaseUiFolderNode & {
   slug?: string | null;
-  parentFolder: string;
-  driveId: string;
   children: UiNode[];
-  syncStatus: SyncStatus | undefined;
   sharingType: SharingType;
 };
 
-export type UiDriveNode = {
-  kind: typeof DRIVE;
-  id: string;
-  name: string;
+export type UiDriveNode = BaseUiDriveNode & {
   slug: string | null;
-  parentFolder: null;
-  driveId: string;
   children: UiNode[];
   nodeMap: Record<string, UiNode>;
-  syncStatus: SyncStatus | undefined;
   sharingType: SharingType;
   availableOffline: boolean;
   icon: string | null;

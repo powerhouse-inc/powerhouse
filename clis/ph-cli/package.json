@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.34.9-dev.0",
+  "version": "0.40.32-dev.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -19,19 +19,14 @@
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix"
+    "lint:fix": "eslint --fix",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "@powerhousedao/analytics-engine-core": "^0.3.2",
-    "@powerhousedao/analytics-engine-graphql": "^0.2.2",
-    "@powerhousedao/analytics-engine-pg": "^0.4.0",
     "concurrently": "^9.1.2",
-    "document-drive": "workspace:*",
-    "graphql-tag": "^2.12.6",
-    "knex": "^3.1.0",
-    "luxon": "^3.5.0",
     "nodemon": "^3.1.9"
   },
   "dependencies": {
@@ -43,6 +38,7 @@
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "document-model": "workspace:*",
+    "document-drive": "workspace:*",
     "pm2": "^5.4.3"
   }
 }

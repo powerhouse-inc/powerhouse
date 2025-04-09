@@ -41,6 +41,7 @@ export {
   isFileNode,
   isFolderNode,
 } from "#drive-document-model/src/utils";
+export type { IProcessor } from "#processors/types";
 export { BaseQueueManager } from "#queue/base";
 export {
   ReadDocumentNotFoundError,
@@ -65,10 +66,7 @@ export {
   SynchronizationUnitNotFoundError,
 } from "#server/error";
 export { InternalTransmitter } from "#server/listener/transmitter/internal";
-export type {
-  InternalTransmitterUpdate,
-  IReceiver,
-} from "#server/listener/transmitter/internal";
+export type { InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
 export { PullResponderTransmitter } from "#server/listener/transmitter/pull-responder";
 export type { StrandUpdateGraphQL } from "#server/listener/transmitter/pull-responder";
 export type { PullResponderTrigger } from "#server/listener/transmitter/types";
@@ -76,6 +74,7 @@ export type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
   DriveInput,
+  GetDocumentOptions,
   IDocumentDriveServer,
   ListenerRevision,
   RemoteDriveOptions,

@@ -10,7 +10,7 @@ import {
     getBreadcrumbItem,
     newFolder,
     selectSidebarItem,
-} from './utils';
+} from './utils/index.js';
 
 describe('Navigation', () => {
     const maxRetries = 5;

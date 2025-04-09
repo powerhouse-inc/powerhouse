@@ -1,2 +1,1 @@
-export * from "./toggle";
-export * from "./toggle-field";
+export { ToggleField } from "./toggle-field.js";

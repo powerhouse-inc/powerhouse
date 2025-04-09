@@ -1,4 +1,6 @@
+import prettier from "@prettier/sync";
 import camelCase from "camelcase";
+import { execSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -7,14 +9,31 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import prettier from "@prettier/sync";
 
 const iconsDir = join("public/icons");
-const outputDirPath = join("src/assets/icon-components");
+const outputDirPath = join("src/powerhouse/components/icon-components");
 
 const toPascalCase = (filename: string): string => {
   return camelCase(filename.replace(".svg", ""), { pascalCase: true });
 };
+
+// Check if there are changes in the icons directory
+const hasChanges = () => {
+  try {
+    const output = execSync(`git status --porcelain ${iconsDir}`).toString();
+    return output.trim().length > 0;
+  } catch (error) {
+    console.error("Error checking git status:", error);
+    return false;
+  }
+};
+
+// if (!hasChanges()) {
+//   console.log(
+//     "No changes detected in the icons directory. Skipping generation.",
+//   );
+//   process.exit(0);
+// }
 
 if (!existsSync(outputDirPath)) {
   mkdirSync(outputDirPath);
@@ -41,14 +60,13 @@ readdir(iconsDir, (err, files) => {
     const svgData = readFileSync(filePath, "utf8");
     const svgDataWithProps = svgData
       .replace("<svg", "<svg {...props}")
-      // turn props into camelCase
       .replace(
         /([a-z-]+)="([^"]*)"/g,
         (_, attrName: string, attrValue: string) => {
           return `${camelCase(attrName)}="${attrValue}"`;
         },
       );
-    let iconContent = 'import type { Props } from "./types";\n';
+    let iconContent = 'import type { Props } from "./index.js";\n';
     iconContent += `export default function ${componentName}(props: Props) {\n`;
     iconContent += `  return (\n${svgDataWithProps}\n  );\n`;
     iconContent += `}\n\n`;
@@ -63,15 +81,21 @@ readdir(iconsDir, (err, files) => {
     iconNames.push(componentName);
   });
 
-  let typesContent =
+  let indexContent =
     "import type { ComponentPropsWithoutRef } from 'react';\n\n";
-  typesContent += "export type Props = ComponentPropsWithoutRef<'svg'>;\n\n";
-  typesContent += `export const iconNames = ${JSON.stringify(iconNames, null, 2)} as const;\n\n`;
-  typesContent += `export type IconName = (typeof iconNames)[number];\n`;
-  const formattedTypesContent = prettier.format(typesContent, {
+  for (const iconName of iconNames) {
+    indexContent += `import ${iconName} from "./${iconName}.js";\n`;
+  }
+  indexContent += `export type Props = ComponentPropsWithoutRef<'svg'>;\n\n`;
+  indexContent += `export const iconNames = ${JSON.stringify(iconNames, null, 2)} as const;\n\n`;
+  indexContent += `export type IconName = (typeof iconNames)[number];\n`;
+  indexContent += `export const iconComponents: Record<IconName, (props: Props) => React.JSX.Element> = {
+    ${iconNames.map((name) => name).join(",\n    ")}
+  } as const;\n`;
+  const formattedTypesContent = prettier.format(indexContent, {
     parser: "typescript",
   });
-  writeFileSync(join(outputDirPath, "types.ts"), formattedTypesContent);
+  writeFileSync(join(outputDirPath, "index.ts"), formattedTypesContent);
 
   console.log(`Generated icon components at: ${outputDirPath}`);
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Operation } from "../../src/document/types.js";
+import { type Operation } from "../../src/document/types.js";
 import { groupOperationsByScope } from "../../src/document/utils/document-helpers.js";
 import { buildOperations } from "./utils.js";
 

@@ -1,13 +1,17 @@
-import { useLoadInitialData } from '#hooks/useLoadInitialData';
-import { useLogin } from '#hooks/useLogin';
-import { useNodeNavigation } from '#hooks/useNodeNavigation';
-import { isElectron, isMac } from '#hooks/utils';
-import IconConnect from '@/assets/icons/connect.svg?react';
-import IconLogo from '@/assets/icons/logo.svg?react';
+import IconConnect from '#assets/icons/connect.svg?react';
+import IconLogo from '#assets/icons/logo.svg?react';
+import { ModalManager } from '#components';
+import {
+    isElectron,
+    isMac,
+    useLoadInitialData,
+    useLogin,
+    useNodeNavigation,
+} from '#hooks';
 import { logger } from 'document-drive';
 import { Suspense, useEffect } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
-import Sidebar from './sidebar';
+import Sidebar from './sidebar.js';
 
 export default function Root() {
     useLoadInitialData();
@@ -41,31 +45,33 @@ export default function Root() {
     }, [navigate]);
 
     return (
-        <div className="h-screen">
-            {isElectron && (
-                <div
-                    className={`h-8 w-full
+        <ModalManager>
+            <div className="h-screen">
+                {isElectron && (
+                    <div
+                        className={`h-8 w-full
                     ${isMac && 'justify-center'}
                     flex items-center bg-gray-50`}
-                >
-                    <IconLogo className="ml-1 mr-0.5 p-1.5" />
-                    <IconConnect className="h-3 w-fit" />
-                </div>
-            )}
-            <div
-                className={`flex items-stretch overflow-auto
+                    >
+                        <IconLogo className="ml-1 mr-0.5 p-1.5" />
+                        <IconConnect className="h-3 w-fit" />
+                    </div>
+                )}
+                <div
+                    className={`flex items-stretch overflow-auto
                         ${isElectron ? 'h-app-height' : 'h-screen'}
                     `}
-                role="presentation"
-                tabIndex={0}
-            >
-                <Suspense>
-                    <Sidebar />
-                    <div className="relative flex-1 overflow-auto">
-                        <Outlet />
-                    </div>
-                </Suspense>
+                    role="presentation"
+                    tabIndex={0}
+                >
+                    <Suspense>
+                        <Sidebar />
+                        <div className="relative flex-1 overflow-auto">
+                            <Outlet />
+                        </div>
+                    </Suspense>
+                </div>
             </div>
-        </div>
+        </ModalManager>
     );
 }

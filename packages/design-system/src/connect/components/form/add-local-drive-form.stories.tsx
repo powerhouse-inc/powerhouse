@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { AddLocalDriveForm } from "./add-local-drive-form";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { AddLocalDriveForm } from "./add-local-drive-form.js";
 
 const meta = {
   title: "Connect/Components/Create Local Drive Form",

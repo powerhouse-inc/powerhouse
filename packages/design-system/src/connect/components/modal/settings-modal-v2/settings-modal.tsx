@@ -1,5 +1,7 @@
-import { Icon, Modal } from "@/powerhouse";
-import React, { ComponentProps, useState } from "react";
+import { Icon, Modal } from "#powerhouse";
+import { type ComponentProps } from "react";
+
+import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type SettingsTab = {
@@ -79,7 +81,7 @@ export function SettingsModal(props: Props) {
           <Icon name="XmarkLight" size={24} />
         </button>
       </div>
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1">
         <div className="flex flex-col gap-y-1 p-3 pt-6">{tabsContent}</div>
         <div className="m-6 flex h-full flex-1 flex-col overflow-hidden rounded-lg border border-slate-50">
           {typeof SelectedTabComponent === "function" ? (

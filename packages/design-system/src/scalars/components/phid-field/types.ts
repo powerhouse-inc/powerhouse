@@ -1,38 +1,6 @@
-import type { IconName } from "@/powerhouse/components/icon";
+import type { PHIDInputProps } from "../../../ui/components/data-entry/phid-input/types.js";
+import type { FieldErrorHandling } from "../types.js";
 
-export interface PHIDBaseProps {
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  allowedScopes?: string[];
-  allowUris?: boolean;
-  allowDataObjectReference?: boolean;
-  maxLength?: number;
-  isOpenByDefault?: boolean;
-  initialOptions?: PHIDItem[];
-}
+type PHIDFieldProps = PHIDInputProps & FieldErrorHandling;
 
-export type PHIDProps = PHIDBaseProps &
-  (
-    | {
-        autoComplete: false;
-        variant?: never;
-        fetchOptionsCallback?: never;
-        fetchSelectedOptionCallback?: never;
-      }
-    | {
-        autoComplete?: true;
-        variant?: "withId" | "withIdAndTitle" | "withIdTitleAndDescription";
-        fetchOptionsCallback: (phidFragment: string) => Promise<PHIDItem[]>;
-        fetchSelectedOptionCallback?: (
-          phid: string,
-        ) => Promise<PHIDItem | undefined>;
-      }
-  );
-
-export interface PHIDItem {
-  icon?: IconName | React.ReactElement;
-  title?: string;
-  path?: string;
-  phid: string;
-  description?: string;
-}
+export type { PHIDFieldProps };

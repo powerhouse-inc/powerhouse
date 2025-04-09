@@ -1,1 +1,1 @@
-export * from "./ens-avatar";
+export * from "./ens-avatar.js";

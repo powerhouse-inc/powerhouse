@@ -1,6 +1,6 @@
 import { pascalCase } from "change-case";
-import { ValidationError } from "../../document/types.js";
-import { Module, Operation } from "../gen/schema/types.js";
+import { type ValidationError } from "../../document/types.js";
+import { type Module, type Operation } from "../gen/schema/types.js";
 
 export function validateInitialState(
   initialState: string,

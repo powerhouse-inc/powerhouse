@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "@/scalars/lib/decorators";
-import { CountryCodeField } from "./country-code-field";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { CountryCodeField } from "./country-code-field.js";
 
 const meta: Meta<typeof CountryCodeField> = {
-  title: "Document Engineering/Simple Components/Country Code Field",
+  title: "Document Engineering/Scalars/Country Code Field",
   component: CountryCodeField,
   decorators: [
     withForm,

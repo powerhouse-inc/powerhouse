@@ -1,4 +1,4 @@
-import { DEFAULT, documentTypes, iconMap, TDocumentType } from "@/connect";
+import { DEFAULT, documentTypes, iconMap, type TDocumentType } from "#connect";
 
 export function getDocumentIconSrc(
   documentType: TDocumentType,

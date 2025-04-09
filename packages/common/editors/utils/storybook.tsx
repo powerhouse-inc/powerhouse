@@ -1,32 +1,34 @@
 import {
   createDocumentStory,
-  DocumentStory,
-  EditorStoryArgs,
-  EditorStoryComponent,
+  type DocumentStory,
+  type DriveDocumentStory,
+  type DriveEditorStoryComponent,
+  type EditorStoryArgs,
+  type EditorStoryComponent,
   type EditorStoryProps,
 } from "@powerhousedao/builder-tools/editor-utils";
 import {
   DRIVE,
   DriveContextProvider,
-  UiDriveNode,
+  type UiDriveNode,
   UiNodesContextProvider,
   useUiNodesContext,
 } from "@powerhousedao/reactor-browser";
-import { Decorator, Meta } from "@storybook/react";
+import { type Decorator, type Meta } from "@storybook/react";
 import {
-  DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
+  type DocumentDriveDocument,
+  type DocumentDriveLocalState,
+  type DocumentDriveState,
   driveDocumentModelModule,
-  Node,
+  type Node,
 } from "document-drive";
 import {
   documentModelDocumentModelModule,
-  DocumentModelModule,
-  ExtendedState,
-  PartialState,
+  type DocumentModelModule,
+  type ExtendedState,
+  type PartialState,
 } from "document-model";
-import { PropsWithChildren, useEffect, useState } from "react";
+import { type PropsWithChildren, useEffect, useState } from "react";
 import { makeUiDriveNode } from "./uiNodes.js";
 
 // Sets the ui drive nodes for the story
@@ -86,6 +88,11 @@ const DriveContextDecorator: Decorator<
   return (
     <DriveContextProvider
       value={{
+        useDocumentEditorProps: () => ({
+          dispatch: () => {},
+          document: context.args.document,
+          error: undefined,
+        }),
         showSearchBar: false,
         isAllowedToCreateDocuments: true,
         documentModels: [
@@ -94,8 +101,13 @@ const DriveContextDecorator: Decorator<
         selectedNode,
         selectNode: setSelectedNode,
         useSyncStatus: () => "SUCCESS",
+        useDriveDocumentState: () => undefined,
+        useDriveDocumentStates: () => [{}, () => Promise.resolve()],
         addFile() {
           throw new Error("addFile not implemented");
+        },
+        addDocument() {
+          throw new Error("addDocument not implemented");
         },
         showCreateDocumentModal(documentModel: DocumentModelModule) {
           return Promise.resolve({
@@ -134,7 +146,7 @@ export function createDriveStory(
 }
 
 export function createDriveStoryWithUINodes(
-  Editor: EditorStoryComponent<DocumentDriveDocument>,
+  Editor: DriveEditorStoryComponent<DocumentDriveDocument>,
   initialState?: ExtendedState<
     PartialState<DocumentDriveState>,
     PartialState<DocumentDriveLocalState>
@@ -143,10 +155,10 @@ export function createDriveStoryWithUINodes(
   decorators?: Decorator<EditorStoryProps<DocumentDriveDocument>>[],
 ): {
   meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory<DocumentDriveDocument>;
+  CreateDocumentStory: DriveDocumentStory<DocumentDriveDocument>;
 } {
-  return createDocumentStory(
-    Editor,
+  const { meta, CreateDocumentStory } = createDocumentStory(
+    Editor as EditorStoryComponent<DocumentDriveDocument>,
     driveDocumentModelModule.reducer,
     initialState ??
       driveDocumentModelModule.utils.createExtendedState({
@@ -155,4 +167,10 @@ export function createDriveStoryWithUINodes(
     additionalStoryArgs,
     [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
   );
+
+  return {
+    meta: meta as Meta<typeof Editor>,
+    CreateDocumentStory:
+      CreateDocumentStory as DriveDocumentStory<DocumentDriveDocument>,
+  };
 }

@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { Form } from "#scalars";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { renderWithForm } from "@/scalars/lib/testing";
-import { PHIDField } from "./phid-field";
-import { Form } from "@/scalars/components/form";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../../lib/testing.js";
+import { PHIDField } from "./phid-field.js";
 
 describe("PHIDField Component", () => {
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -19,28 +19,28 @@ describe("PHIDField Component", () => {
     dispatchEvent: vi.fn(),
   }));
 
-  const mockOptions = [
+  const mockedOptions = [
     {
       icon: "PowerhouseLogoSmall",
       title: "Document A",
       path: "projects/finance/document-a",
-      phid: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea7:main:public",
+      value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea7:main:public",
       description: "Financial report for Q1 2024",
     },
     {
       icon: "PowerhouseLogoSmall",
       title: "Document B",
       path: "projects/legal/document-b",
-      phid: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8:main:public",
+      value: "phd:baefc2a4-f9a0-4950-8161-fd8d8cc6cdb8:main:public",
       description: "Legal compliance documentation",
     },
   ];
 
-  const defaultGetOptions = vi.fn().mockResolvedValue(mockOptions);
+  const defaultGetOptions = vi.fn().mockResolvedValue(mockedOptions);
   const defaultGetSelectedOption = vi
     .fn()
-    .mockImplementation((phid: string) => {
-      return mockOptions.find((option) => option.phid === phid);
+    .mockImplementation((value: string) => {
+      return mockedOptions.find((option) => option.value === value);
     });
 
   it("should match snapshot", () => {
@@ -131,8 +131,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
-        placeholder="phd:"
-        variant="withIdAndTitle"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -140,16 +139,20 @@ describe("PHIDField Component", () => {
 
     const input = screen.getByRole("combobox");
     await user.click(input);
+    await user.clear(input);
     await user.type(input, "test");
 
     await waitFor(() => {
-      expect(defaultGetOptions).toHaveBeenCalledWith("test");
+      expect(defaultGetOptions).toHaveBeenCalledWith("test", {
+        allowUris: undefined,
+        allowedScopes: undefined,
+      });
     });
 
     await waitFor(() => {
       expect(input).toHaveAttribute("aria-expanded", "true");
-      expect(screen.getByText(mockOptions[0].title)).toBeInTheDocument();
-      expect(screen.getByText(mockOptions[1].title)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].title)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[1].title)).toBeInTheDocument();
     });
 
     Math.random = originalRandom;
@@ -178,19 +181,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
-        variant="withIdAndTitle"
-        fetchOptionsCallback={defaultGetOptions}
-        fetchSelectedOptionCallback={defaultGetSelectedOption}
-      />,
-    );
-
-    expect(screen.getByText("Title not available")).toBeInTheDocument();
-
-    rerender(
-      <PHIDField
-        name="phid"
-        label="Test Label"
-        variant="withIdTitleAndDescription"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -199,6 +190,38 @@ describe("PHIDField Component", () => {
     expect(screen.getByText("Title not available")).toBeInTheDocument();
     expect(screen.getByText("Path not available")).toBeInTheDocument();
     expect(screen.getByText("Description not available")).toBeInTheDocument();
+
+    rerender(
+      <PHIDField
+        name="phid"
+        label="Test Label"
+        variant="withValueAndTitle"
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
+      />,
+    );
+
+    expect(screen.getByText("Title not available")).toBeInTheDocument();
+    expect(screen.getByText("Path not available")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Description not available"),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <PHIDField
+        name="phid"
+        label="Test Label"
+        variant="withValue"
+        fetchOptionsCallback={defaultGetOptions}
+        fetchSelectedOptionCallback={defaultGetSelectedOption}
+      />,
+    );
+
+    expect(screen.queryByText("Title not available")).not.toBeInTheDocument();
+    expect(screen.queryByText("Path not available")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Description not available"),
+    ).not.toBeInTheDocument();
   });
 
   it("should handle autoComplete disabled", () => {
@@ -213,7 +236,7 @@ describe("PHIDField Component", () => {
   it("should validate PHID format on submit", async () => {
     const mockOnSubmit = vi.fn();
     const user = userEvent.setup();
-    const validPhid = mockOptions[0].phid;
+    const validPhid = mockedOptions[0].value;
     const invalidPhid = "invalid-phid";
 
     render(
@@ -221,6 +244,8 @@ describe("PHIDField Component", () => {
         <PHIDField
           name="phid"
           label="Test Label"
+          allowUris
+          allowedScopes={["public"]}
           fetchOptionsCallback={defaultGetOptions}
           fetchSelectedOptionCallback={defaultGetSelectedOption}
         />
@@ -258,7 +283,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
-        variant="withIdTitleAndDescription"
+        variant="withValueTitleAndDescription"
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
       />,
@@ -266,16 +291,18 @@ describe("PHIDField Component", () => {
 
     const input = screen.getByRole("combobox");
     await user.click(input);
-    await user.type(input, mockOptions[0].phid);
+    await user.type(input, mockedOptions[0].value);
 
     await waitFor(() => {
       expect(input).toHaveAttribute("aria-expanded", "false");
     });
 
     await waitFor(() => {
-      expect(screen.getByText(mockOptions[0].title)).toBeInTheDocument();
-      expect(screen.getByText(mockOptions[0].path)).toBeInTheDocument();
-      expect(screen.getByText(mockOptions[0].description)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].title)).toBeInTheDocument();
+      expect(screen.getByText(mockedOptions[0].path)).toBeInTheDocument();
+      expect(
+        screen.getByText(mockedOptions[0].description),
+      ).toBeInTheDocument();
     });
 
     Math.random = originalRandom;
@@ -287,7 +314,7 @@ describe("PHIDField Component", () => {
       <PHIDField
         name="phid"
         label="Test Label"
-        defaultValue={mockOptions[0].phid}
+        defaultValue={mockedOptions[0].value}
         fetchOptionsCallback={defaultGetOptions}
         fetchSelectedOptionCallback={defaultGetSelectedOption}
         onChange={onChange}

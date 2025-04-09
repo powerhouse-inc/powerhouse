@@ -5,10 +5,10 @@ import {
   replayDocument,
 } from "../../src/document/utils/base.js";
 import {
-  CountAction,
-  CountDocument,
-  CountLocalState,
-  CountState,
+  type CountAction,
+  type CountDocument,
+  type CountLocalState,
+  type CountState,
   baseCountReducer,
   countReducer,
   increment,
@@ -23,6 +23,7 @@ describe("DocumentModel Class", () => {
     documentType: "",
     created: "",
     lastModified: "",
+    meta: {},
     state: {
       global: {
         count: 0,
@@ -46,6 +47,7 @@ describe("DocumentModel Class", () => {
     documentType: "",
     created: "",
     lastModified: "",
+    meta: {},
     state: {
       global: {
         count: 0,
@@ -101,12 +103,20 @@ describe("DocumentModel Class", () => {
       reuseOperationResultingState: true,
     });
     newDocument = reducer(newDocument, increment());
+
+    // path resulting state so it is reused
+    const lastOperation = newDocument.operations.global.at(-1);
+    if (lastOperation) {
+      lastOperation.resultingState = JSON.stringify(newDocument.state.global);
+    }
+
     newDocument = reducer(newDocument, increment());
     newDocument = reducer(newDocument, noop(), undefined, {
       skip: 1,
       reuseOperationResultingState: true,
     });
-    expect(mockReducer).toHaveBeenCalledTimes(5);
+
+    expect(mockReducer).toHaveBeenCalledTimes(4);
     expect(newDocument.state.global.count).toBe(2);
   });
 

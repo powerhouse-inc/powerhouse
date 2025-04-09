@@ -8,17 +8,17 @@ import {
 } from "./actions/operations.js";
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from "./actions/types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
-import { SignalDispatch } from "./signal.js";
+import { type SignalDispatch } from "./signal.js";
 import {
-  Action,
-  ActionFromDocument,
-  DefaultAction,
-  Operation,
-  OperationFromDocument,
-  OperationScope,
-  PHDocument,
-  ReducerOptions,
-  StateReducer,
+  type Action,
+  type ActionFromDocument,
+  type DefaultAction,
+  type Operation,
+  type OperationFromDocument,
+  type OperationScope,
+  type PHDocument,
+  type ReducerOptions,
+  type StateReducer,
 } from "./types.js";
 import {
   getDocumentLastModified,

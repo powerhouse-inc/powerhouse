@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-import { getApp } from './utils/app-manager';
-import { beforeAll } from './utils/before-all';
-import { getAppInfo } from './utils/get-app-info';
+import { getApp } from './utils/app-manager.js';
+import { beforeAll } from './utils/before-all.js';
+import { getAppInfo } from './utils/get-app-info.js';
 
 test.describe('App', () => {
     test.beforeAll(beforeAll);

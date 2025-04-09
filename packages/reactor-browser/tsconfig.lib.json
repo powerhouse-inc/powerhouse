@@ -1,0 +1,32 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["ES2022", "DOM"],
+    "outDir": "./dist",
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "types": [],
+    "experimentalDecorators": true
+  },
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../config"
+    }
+  ],
+  "include": ["src", "package.json"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.test.ts.snap"
+  ]
+}

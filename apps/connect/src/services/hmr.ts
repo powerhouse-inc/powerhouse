@@ -1,5 +1,6 @@
-import { ExternalPackage } from '#store/external-packages';
+import { type ExternalPackage } from '#store';
 import type { ViteHotContext } from 'vite/types/hot.js';
+
 export type PackagesUpdate = {
     url: string;
     timestamp: string;
@@ -8,19 +9,14 @@ export type PackagesUpdate = {
 export async function getHMRModule(): Promise<ViteHotContext | undefined> {
     // if running connect in dev mode then use its hmr
     if (import.meta.hot) {
-        return import.meta.hot;
-    }
-
-    if (process.env.NODE_ENV === 'production') {
-        return undefined;
+        return import.meta.hot as ViteHotContext;
     }
 
     try {
-        const module = await import('PH:HMR_MODULE');
+        const module = await import('../hmr.js');
         const hmr = module.hmr;
-        return hmr as ViteHotContext;
-    } catch (error) {
-        console.error(error);
+        return hmr;
+    } catch (e) {
         return undefined;
     }
 }

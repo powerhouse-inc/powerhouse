@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard-gui",
   "private": true,
-  "version": "0.17.0",
+  "version": "0.25.0-dev.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "preview": "vite preview",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "dependencies": {
     "@apollo/client": "^3.11.8",
@@ -20,11 +22,12 @@
     "postcss": "^8",
     "preact": "^10.24.1",
     "preact-router": "^4.1.2",
-    "tailwindcss": "^3.4.16",
+    "tailwindcss": "^4.0.11",
     "zustand": "5.0.0-rc.2"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.3",
-    "vite": "^5.4.8"
+    "@tailwindcss/vite": "^4.0.9",
+    "vite": "^6.2.0"
   }
 }

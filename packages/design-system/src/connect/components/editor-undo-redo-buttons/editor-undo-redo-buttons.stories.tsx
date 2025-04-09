@@ -1,5 +1,5 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { EditorUndoRedoButtons } from "./editor-undo-redo-buttons";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { EditorUndoRedoButtons } from "./editor-undo-redo-buttons.js";
 
 const meta: Meta = {
   title: "Connect/Components/Editor Undo Redo Buttons",

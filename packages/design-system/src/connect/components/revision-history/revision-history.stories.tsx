@@ -1,8 +1,8 @@
-import { Meta, StoryObj } from "@storybook/react";
-import { Operation } from "document-model";
-import { globalOperations, localOperations } from "./mocks";
+import { type Meta, type StoryObj } from "@storybook/react";
+import { type Operation } from "document-model";
+import { globalOperations, localOperations } from "./mocks.js";
 import nsOperations from "./ns-operations.json";
-import { RevisionHistory } from "./revision-history";
+import { RevisionHistory } from "./revision-history.js";
 import skipOperations from "./skip-operations.json";
 
 const meta = {

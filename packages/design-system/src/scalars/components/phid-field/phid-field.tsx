@@ -1,231 +1,8 @@
-/* eslint-disable react/jsx-max-depth */
-/* eslint-disable react/jsx-no-bind */
-/* eslint-disable react/jsx-props-no-spreading */
-import React, { useId } from "react";
-import { Command } from "@/scalars/components/fragments/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverAnchor,
-} from "@/scalars/components/fragments/popover";
-import { FormGroup } from "@/scalars/components/fragments/form-group";
-import { FormLabel } from "@/scalars/components/fragments/form-label";
-import { FormDescription } from "@/scalars/components/fragments/form-description";
-import { FormMessageList } from "@/scalars/components/fragments/form-message";
-import { Input } from "@/scalars/components/fragments/input";
-import { withFieldValidation } from "@/scalars/components/fragments/with-field-validation";
-import { cn } from "@/scalars/lib/utils";
-import type {
-  FieldCommonProps,
-  ErrorHandling,
-} from "@/scalars/components/types";
-import type { PHIDProps } from "./types";
-import { usePHIDField } from "./use-phid-field";
-import { PHIDInputContainer } from "./phid-input-container";
-import { PHIDList } from "./phid-list";
-import { PHIDListItem } from "./phid-list-item";
+import { PHIDInput } from "../../../ui/components/data-entry/phid-input/index.js";
+import { withFieldValidation } from "../fragments/with-field-validation/index.js";
+import type { PHIDFieldProps } from "./types.js";
 
-type PHIDFieldBaseProps = Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  | keyof FieldCommonProps<string>
-  | keyof ErrorHandling
-  | keyof PHIDProps
-  | "pattern"
->;
-
-export type PHIDFieldProps = PHIDFieldBaseProps &
-  FieldCommonProps<string> &
-  ErrorHandling &
-  PHIDProps;
-
-const PHIDFieldRaw = React.forwardRef<HTMLInputElement, PHIDFieldProps>(
-  (
-    {
-      id: idProp,
-      name,
-      className,
-      label,
-      description,
-      value,
-      defaultValue,
-      disabled,
-      placeholder,
-      required,
-      errors,
-      warnings,
-      onChange,
-      onBlur,
-      onClick,
-      onMouseDown,
-      allowedScopes, // used in field validation
-      allowUris, // used in field validation
-      autoComplete = true,
-      allowDataObjectReference = false, // allways false for now
-      variant = "withId",
-      maxLength,
-      fetchOptionsCallback,
-      fetchSelectedOptionCallback,
-      isOpenByDefault, // to be used only in stories
-      initialOptions, // to be used only in stories
-      ...props
-    },
-    ref,
-  ) => {
-    const prefix = useId();
-    const id = idProp ?? `${prefix}-phid`;
-
-    const hasWarning = Array.isArray(warnings) && warnings.length > 0;
-    const hasError = Array.isArray(errors) && errors.length > 0;
-
-    const {
-      selectedValue,
-      selectedOption,
-      isPopoverOpen,
-      commandListRef,
-      options,
-      isLoading,
-      isLoadingSelectedOption,
-      haveFetchError,
-      commandValue,
-      toggleOption,
-      handleOpenChange,
-      onTriggerBlur,
-      handleChange,
-      handleCommandValue,
-      handleFetchSelectedOption,
-      handlePaste,
-    } = usePHIDField({
-      autoComplete,
-      defaultValue,
-      value,
-      isOpenByDefault,
-      initialOptions,
-      onChange,
-      onBlur,
-      fetchOptions: fetchOptionsCallback,
-      fetchSelectedOption: fetchSelectedOptionCallback,
-    });
-
-    const asCard =
-      variant === "withIdAndTitle" || variant === "withIdTitleAndDescription";
-
-    return (
-      <FormGroup>
-        {!!label && (
-          <FormLabel
-            htmlFor={id}
-            disabled={disabled}
-            hasError={hasError}
-            required={required}
-            onClick={(e) => {
-              e.preventDefault();
-              (e.target as HTMLLabelElement).control?.focus();
-            }}
-          >
-            {label}
-          </FormLabel>
-        )}
-        {autoComplete && fetchOptionsCallback ? (
-          <Popover open={isPopoverOpen} onOpenChange={handleOpenChange}>
-            <Command
-              shouldFilter={false}
-              value={commandValue}
-              onValueChange={handleCommandValue}
-              className={cn("dark:bg-charcoal-900 bg-gray-100")}
-            >
-              <PopoverAnchor asChild={true}>
-                <PHIDInputContainer
-                  id={id}
-                  name={name}
-                  value={selectedValue}
-                  className={className}
-                  isLoading={isLoading}
-                  haveFetchError={haveFetchError}
-                  disabled={disabled}
-                  onChange={handleChange}
-                  onBlur={onTriggerBlur}
-                  onClick={onClick}
-                  selectedOption={selectedOption}
-                  handleOpenChange={handleOpenChange}
-                  onMouseDown={onMouseDown}
-                  placeholder={placeholder}
-                  hasError={hasError}
-                  label={label}
-                  required={required}
-                  isPopoverOpen={isPopoverOpen}
-                  maxLength={maxLength}
-                  handlePaste={handlePaste}
-                  {...props}
-                  ref={ref}
-                />
-              </PopoverAnchor>
-              {asCard && (
-                <PHIDListItem
-                  variant={variant}
-                  icon={selectedOption?.icon}
-                  title={selectedOption?.title}
-                  path={selectedOption?.path}
-                  phid={selectedOption?.phid ?? ""}
-                  description={selectedOption?.description}
-                  asPlaceholder={selectedOption === undefined}
-                  showPHID={false}
-                  isLoadingSelectedOption={isLoadingSelectedOption}
-                  handleFetchSelectedOption={
-                    fetchSelectedOptionCallback
-                      ? handleFetchSelectedOption
-                      : undefined
-                  }
-                  className={cn("rounded-t-none pt-2")}
-                />
-              )}
-              <PopoverContent
-                align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-                onInteractOutside={(e) => {
-                  if (e.target instanceof Element && e.target.id === id) {
-                    e.preventDefault();
-                  }
-                }}
-              >
-                <PHIDList
-                  variant={variant}
-                  commandListRef={commandListRef}
-                  selectedValue={selectedValue}
-                  options={options}
-                  toggleOption={toggleOption}
-                />
-              </PopoverContent>
-            </Command>
-          </Popover>
-        ) : (
-          <Input
-            id={id}
-            name={name}
-            value={selectedValue}
-            className={className}
-            disabled={disabled}
-            onChange={handleChange}
-            onBlur={onBlur}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            placeholder={placeholder}
-            aria-invalid={hasError}
-            aria-label={!label ? "PHID field" : undefined}
-            aria-required={required}
-            maxLength={maxLength}
-            {...props}
-            ref={ref}
-          />
-        )}
-        {!!description && <FormDescription>{description}</FormDescription>}
-        {hasWarning && <FormMessageList messages={warnings} type="warning" />}
-        {hasError && <FormMessageList messages={errors} type="error" />}
-      </FormGroup>
-    );
-  },
-);
-
-export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
+const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDInput, {
   validations: {
     _validPHIDFormat:
       ({ allowUris, allowedScopes }) =>
@@ -240,7 +17,7 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         const domainSegment = "[a-zA-Z0-9](?:[a-zA-Z0-9\\-]*[a-zA-Z0-9])?";
         const domain = `${domainSegment}(?:\\.${domainSegment})*`;
         const uuidPattern =
-          "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}";
+          "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
         const URLFormat = `^phd://${domain}/${uuidPattern}$`;
 
         // Validate URL format first
@@ -250,8 +27,8 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
         }
 
         // If it's not a URL and URIs are not allowed, return error
-        if (allowUris === false) {
-          return "Please use a URL format: phd://<domain>/<documentID>";
+        if (!allowUris) {
+          return "Invalid format. Please use URL format: phd://<domain>/<documentID>";
         }
 
         // URI patterns
@@ -269,19 +46,14 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
           new RegExp(format).test(value),
         );
         if (!isValidURIFormat) {
-          return "Invalid format. Please use either: URL format: phd://<domain>/<documentID> or URI format: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
+          return "Invalid format. Please use either URL format: phd://<domain>/<documentID> or URI format: phd:uuid, phd:uuid:branch, phd:uuid::scope, or phd:uuid:branch:scope";
         }
 
-        // Validate scope if present
-        const scopeMatch =
-          /.*:.*::([^:]+)$/.exec(value) || /.*:.*:.*:([^:]+)$/.exec(value);
-        if (
-          scopeMatch &&
-          Array.isArray(allowedScopes) &&
-          allowedScopes.length > 0
-        ) {
-          const scope = scopeMatch[1];
-          if (!allowedScopes.includes(scope)) {
+        // Validate scope
+        if (Array.isArray(allowedScopes)) {
+          const scopeMatch =
+            /.*:.*::([^:]+)$/.exec(value) || /.*:.*:.*:([^:]+)$/.exec(value);
+          if (scopeMatch && !allowedScopes.includes(scopeMatch[1])) {
             return `Invalid scope. Allowed scopes are: ${allowedScopes.join(", ")}`;
           }
         }
@@ -292,3 +64,5 @@ export const PHIDField = withFieldValidation<PHIDFieldProps>(PHIDFieldRaw, {
 });
 
 PHIDField.displayName = "PHIDField";
+
+export { PHIDField };

@@ -7,19 +7,19 @@ import {
   formatDateForDisplay,
   FormattedNumber,
   getFixedIncomeAssets,
-  GroupTransactionType,
+  type GroupTransactionType,
   groupTransactionTypeLabels,
   isAssetGroupTransactionType,
   isISODate,
-  Item,
-  ItemData,
-  RealWorldAssetsState,
-  TableItem,
-  TableItemType,
-  TableName,
-  TransactionFeeInput,
-} from "@/rwa";
-import { InputMaybe } from "document-model";
+  type Item,
+  type ItemData,
+  type RealWorldAssetsState,
+  type TableItem,
+  type TableItemType,
+  type TableName,
+  type TransactionFeeInput,
+} from "#rwa";
+import { type InputMaybe } from "document-model";
 
 export function handleDateInTable(
   maybeDate: string | Date,
@@ -64,7 +64,6 @@ export function calculateCashBalanceChange(
 
   const sign = cashTransactionSignByTransactionType[transactionType];
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const feeAmounts = (fees?.map((fee) => fee.amount).filter(Boolean) ??
     []) as number[];
 

@@ -1,4 +1,9 @@
-import { Asset, CashAsset, FixedIncomeType, SPV } from "@/rwa";
+import {
+  type Asset,
+  type CashAsset,
+  type FixedIncomeType,
+  type SPV,
+} from "#rwa";
 
 export const mockPrincipalLenderAccountId = "principal-lender-account-id";
 

@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { UrlField } from "./url-field";
-import { withForm } from "@/scalars/lib/decorators";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@/scalars/lib/storybook-arg-types";
+} from "../../lib/storybook-arg-types.js";
+import { UrlField } from "./url-field.js";
 
 const meta: Meta<typeof UrlField> = {
-  title: "Document Engineering/Simple Components/Url Field",
+  title: "Document Engineering/Scalars/Url Field",
   component: UrlField,
   decorators: [withForm],
   parameters: {
