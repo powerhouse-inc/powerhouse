@@ -173,7 +173,7 @@ export class GraphQLManager {
         supergraphSdl: new IntrospectAndCompose({
           subgraphs: Object.keys(endpoints).map((path) => ({
             name: path.replaceAll("/", ""),
-            url: `${herokuOrLocal}${path}`,
+            url: `${herokuOrLocal}${process.env.BASE_PATH && process.env.BASE_PATH !== "/" ? process.env.BASE_PATH : ""}${path}`,
           })),
         }),
       });
