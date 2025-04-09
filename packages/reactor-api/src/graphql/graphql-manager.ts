@@ -148,7 +148,7 @@ export class GraphQLManager {
         await this.#waitForServer(server);
         this.#setupApolloExpressMiddleware(server, router, path);
         if (supergraph !== "") {
-          supergraphEndpoints[path] = server;
+          supergraphEndpoints[supergraph] = server;
         }
       }
 
