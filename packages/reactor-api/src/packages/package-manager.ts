@@ -5,11 +5,9 @@ import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
 import {
-  IDocumentModelLoader,
-  IPackagesManager,
-  IPackagesManagerOptions,
-  IProcessorLoader,
-  ISubgraphLoader,
+  IPackageLoader,
+  IPackageManager,
+  IPackageManagerOptions,
   PackageManagerResult,
 } from "./types.js";
 
@@ -27,39 +25,37 @@ export function getUniqueDocumentModels(
   return Array.from(uniqueModels.values());
 }
 
-export class PackagesManager implements IPackagesManager {
-  private documentModelLoader: IDocumentModelLoader;
-  private subgraphLoader: ISubgraphLoader;
-  private processorLoader: IProcessorLoader;
+export class PackageManager implements IPackageManager {
+  private loaders: IPackageLoader[];
 
   private docModelsMap = new Map<string, DocumentModelModule[]>();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
-  private processorMap = new Map<string, (module: any) => ProcessorFactory>();
+  private processorMap = new Map<
+    string,
+    ((module: any) => ProcessorFactory)[]
+  >();
   private configWatcher: StatWatcher | undefined;
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
     subgraphsChange: [Map<string, SubgraphClass[]>];
-    processorsChange: [Map<string, (module: any) => ProcessorFactory>];
+    processorsChange: [Map<string, ((module: any) => ProcessorFactory)[]>];
   }>();
 
   constructor(
-    documentModelLoader: IDocumentModelLoader,
-    subgraphLoader: ISubgraphLoader,
-    processorLoader: IProcessorLoader,
-    protected options: IPackagesManagerOptions,
+    loaders: IPackageLoader[],
+    protected options: IPackageManagerOptions,
     protected onError?: (e: unknown) => void,
   ) {
-    this.documentModelLoader = documentModelLoader;
-    this.subgraphLoader = subgraphLoader;
-    this.processorLoader = processorLoader;
-
+    this.loaders = loaders;
     this.eventEmitter.setMaxListeners(0);
   }
 
   public async init(): Promise<PackageManagerResult> {
-    if ("packages" in this.options) {
+    if (this.options.packages) {
       return await this.loadPackages(this.options.packages);
-    } else if ("configFile" in this.options) {
+    }
+
+    if (this.options.configFile) {
       return await this.initConfigFile(this.options.configFile);
     }
 
@@ -75,16 +71,29 @@ export class PackagesManager implements IPackagesManager {
   ): Promise<PackageManagerResult> {
     const packagesMap = new Map<string, DocumentModelModule[]>();
     const subgraphsMap = new Map<string, SubgraphClass[]>();
-    const processorsMap = new Map<string, (module: any) => ProcessorFactory>();
+    const processorsMap = new Map<
+      string,
+      ((module: any) => ProcessorFactory)[]
+    >();
 
     for (const pkg of packages) {
-      const documentModels = await this.documentModelLoader.load(pkg);
-      const subgraphs = await this.subgraphLoader.load(pkg);
-      const processors = await this.processorLoader.load(pkg);
+      const allDocumentModels: DocumentModelModule[] = [];
+      const allSubgraphs: SubgraphClass[] = [];
+      const allProcessors: ((module: any) => ProcessorFactory)[] = [];
 
-      packagesMap.set(pkg, documentModels);
-      subgraphsMap.set(pkg, subgraphs);
-      processorsMap.set(pkg, processors);
+      for (const loader of this.loaders) {
+        const documentModels = await loader.loadDocumentModels(pkg);
+        const subgraphs = await loader.loadSubgraphs(pkg);
+        const processors = await loader.loadProcessors(pkg);
+
+        allDocumentModels.push(...documentModels);
+        allSubgraphs.push(...subgraphs);
+        allProcessors.push(processors);
+      }
+
+      packagesMap.set(pkg, allDocumentModels);
+      subgraphsMap.set(pkg, allSubgraphs);
+      processorsMap.set(pkg, allProcessors);
     }
 
     this.updatePackagesMap(packagesMap);
@@ -165,7 +174,7 @@ export class PackagesManager implements IPackagesManager {
   }
 
   private updateProcessorsMap(
-    processorsMap: Map<string, (module: any) => ProcessorFactory>,
+    processorsMap: Map<string, ((module: any) => ProcessorFactory)[]>,
   ) {
     const oldPackages = Array.from(this.processorMap.keys());
     const newPackages = Array.from(processorsMap.keys());
@@ -193,7 +202,7 @@ export class PackagesManager implements IPackagesManager {
 
   onProcessorsChange(
     handler: (
-      processors: Map<string, (module: any) => ProcessorFactory>,
+      processors: Map<string, ((module: any) => ProcessorFactory)[]>,
     ) => void,
   ): void {
     this.eventEmitter.on("processorsChange", handler);

@@ -17,9 +17,8 @@ export async function loadDependency(
 ): Promise<unknown> {
   try {
     const fullPath = `${packageName}/${subPath}`;
-    return await import(fullPath);
+    return await import(/* @vite-ignore */ fullPath);
   } catch (e) {
-    console.error("Error loading dependency", packageName, subPath, e);
     return null;
   }
 }
