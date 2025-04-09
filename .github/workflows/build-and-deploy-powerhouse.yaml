@@ -66,4 +66,4 @@ jobs:
           dockerfile_directory: .
           dockerfile_name: apps/switchboard/Dockerfile
           process_type: web
-          docker_options: "--build-arg PH_PACKAGES=@sky-ph/atlas"
+          docker_options: "--build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}"
