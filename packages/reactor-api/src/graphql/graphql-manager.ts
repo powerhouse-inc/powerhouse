@@ -75,7 +75,7 @@ export class GraphQLManager {
     }
     this.subgraphs.get(supergraph)?.push(subgraphInstance);
     console.log(
-      `> Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? "/" + supergraph : ""}${subgraphInstance.name} subgraph.`,
+      `> Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     await this.updateRouter();
   }
