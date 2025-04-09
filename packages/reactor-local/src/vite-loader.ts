@@ -39,15 +39,15 @@ export class VitePackageLoader implements IPackageLoader {
         DocumentModelModule
       >;
 
-      this.logger.info(`  ➜  Loaded Document Models from: ${identifier}`);
+      const documentModels = Object.values(localDMs);
 
-      return Object.values(localDMs);
+      this.logger.info(
+        `  ➜  Loaded ${documentModels.length} Document Models from: ${identifier}`,
+      );
+
+      return documentModels;
     } catch (e) {
-      if ((e as FSError).code === "ENOENT") {
-        this.logger.warn("No local document models found");
-      } else {
-        this.logger.error("Error loading document models", e);
-      }
+      this.logger.info(`  ➜  No Document Models found for: ${identifier}`);
     }
 
     return [];
@@ -63,14 +63,8 @@ export class VitePackageLoader implements IPackageLoader {
       await access(fullPath);
 
       localSubgraphs = await this.vite.ssrLoadModule(fullPath);
-
-      this.logger.info(`  ➜  Loaded Subgraphs from: ${identifier}`);
     } catch (e) {
-      if ((e as FSError).code === "ENOENT") {
-        this.logger.warn("No local document models found");
-      } else {
-        this.logger.error("Error loading subgraphs", e);
-      }
+      this.logger.info(`  ➜  No Subgraphs found for: ${identifier}`);
 
       return [];
     }
@@ -83,6 +77,10 @@ export class VitePackageLoader implements IPackageLoader {
         subgraphs.push(SubgraphClass);
       }
     }
+
+    this.logger.info(
+      `  ➜  Loaded ${subgraphs.length} Subgraphs from: ${identifier}`,
+    );
 
     return subgraphs;
   }
@@ -99,20 +97,16 @@ export class VitePackageLoader implements IPackageLoader {
 
       const module = await this.vite.ssrLoadModule(fullPath);
 
-      this.logger.info(`  ➜  Loaded Processors from: ${identifier}`);
-
       if (module.processorFactory) {
+        this.logger.info(`  ➜  Loaded Processor factory from: ${identifier}`);
+
         return module.processorFactory;
       }
-
-      return () => () => [];
     } catch (e) {
-      if ((e as FSError).code === "ENOENT") {
-        this.logger.warn("No local document models found");
-      } else {
-        this.logger.error("Error loading document models", e);
-      }
+      //
     }
+
+    this.logger.info(`  ➜  No Processor Factory found for: ${identifier}`);
 
     // return empty processor factory
     return () => () => [];

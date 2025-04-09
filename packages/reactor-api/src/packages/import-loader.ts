@@ -20,7 +20,7 @@ export class ImportPackageLoader implements IPackageLoader {
         [key: string]: DocumentModelModule;
       };
     } catch (e) {
-      this.logger.error("Error loading Document Models from", identifier, e);
+      this.logger.info(`  ➜  No Document Models found: ${identifier}`);
 
       return [];
     }
@@ -30,7 +30,7 @@ export class ImportPackageLoader implements IPackageLoader {
 
       return Object.values(pkgModule);
     } else {
-      this.logger.warn(`  ➜  No Document Models found: ${identifier}`);
+      this.logger.info(`  ➜  No Document Models found: ${identifier}`);
 
       return [];
     }
@@ -44,7 +44,7 @@ export class ImportPackageLoader implements IPackageLoader {
       | Record<string, Record<string, SubgraphClass>>;
 
     if (!pkgModule) {
-      this.logger.warn(`  ➜  No Subgraphs found: ${identifier}`);
+      this.logger.info(`  ➜  No Subgraphs found: ${identifier}`);
 
       return [];
     }
@@ -70,7 +70,7 @@ export class ImportPackageLoader implements IPackageLoader {
       this.logger.info(`  ➜  Loaded Processor Factory from: ${identifier}`);
       return pkgModule;
     } else {
-      this.logger.warn(`  ➜  No Processor Factory found: ${identifier}`);
+      this.logger.info(`  ➜  No Processor Factory found: ${identifier}`);
     }
 
     // empty processor factory

@@ -17,6 +17,9 @@ export async function loadDependency(
 ): Promise<unknown> {
   try {
     const fullPath = `${packageName}/${subPath}`;
+
+    // vite does not support this, but that's okay as we have provided the
+    // vite-loader for this purpose
     return await import(/* @vite-ignore */ fullPath);
   } catch (e) {
     return null;

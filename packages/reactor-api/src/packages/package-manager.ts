@@ -1,7 +1,11 @@
 import { getConfig, PowerhouseConfig } from "@powerhousedao/config";
 import { type SubgraphClass } from "@powerhousedao/reactor-api";
+import { childLogger, driveDocumentModelModule } from "document-drive";
 import { ProcessorFactory } from "document-drive/processors/types";
-import { type DocumentModelModule } from "document-model";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+} from "document-model";
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
 import {
@@ -10,7 +14,6 @@ import {
   IPackageManagerOptions,
   PackageManagerResult,
 } from "./types.js";
-
 export function getUniqueDocumentModels(
   ...documentModels: DocumentModelModule[][]
 ): DocumentModelModule[] {
@@ -26,6 +29,7 @@ export function getUniqueDocumentModels(
 }
 
 export class PackageManager implements IPackageManager {
+  private readonly logger = childLogger(["reactor-api", "package-manager"]);
   private loaders: IPackageLoader[];
 
   private docModelsMap = new Map<string, DocumentModelModule[]>();
@@ -44,37 +48,37 @@ export class PackageManager implements IPackageManager {
   constructor(
     loaders: IPackageLoader[],
     protected options: IPackageManagerOptions,
-    protected onError?: (e: unknown) => void,
   ) {
     this.loaders = loaders;
     this.eventEmitter.setMaxListeners(0);
   }
 
   public async init(): Promise<PackageManagerResult> {
-    if (this.options.packages) {
-      return await this.loadPackages(this.options.packages);
-    }
-
     if (this.options.configFile) {
-      return await this.initConfigFile(this.options.configFile);
+      this.initConfigFileWatcher(this.options.configFile);
     }
 
-    return {
-      documentModels: [],
-      subgraphs: new Map(),
-      processors: new Map(),
-    };
+    return await this.loadPackages(this.getAllPackageNames());
   }
 
   private async loadPackages(
     packages: string[],
   ): Promise<PackageManagerResult> {
-    const packagesMap = new Map<string, DocumentModelModule[]>();
+    const documentModelModuleMap = new Map<string, DocumentModelModule[]>();
     const subgraphsMap = new Map<string, SubgraphClass[]>();
     const processorsMap = new Map<
       string,
       ((module: any) => ProcessorFactory)[]
     >();
+
+    // static prereqs
+    documentModelModuleMap.set("document-drive", [
+      driveDocumentModelModule as DocumentModelModule,
+    ]);
+
+    documentModelModuleMap.set("document-model", [
+      documentModelDocumentModelModule as DocumentModelModule,
+    ]);
 
     for (const pkg of packages) {
       const allDocumentModels: DocumentModelModule[] = [];
@@ -91,45 +95,40 @@ export class PackageManager implements IPackageManager {
         allProcessors.push(processors);
       }
 
-      packagesMap.set(pkg, allDocumentModels);
+      documentModelModuleMap.set(pkg, allDocumentModels);
       subgraphsMap.set(pkg, allSubgraphs);
       processorsMap.set(pkg, allProcessors);
     }
 
-    this.updatePackagesMap(packagesMap);
+    this.updatePackagesMap(documentModelModuleMap);
     this.updateSubgraphsMap(subgraphsMap);
     this.updateProcessorsMap(processorsMap);
 
     return {
       documentModels: getUniqueDocumentModels(
-        ...Array.from(packagesMap.values()),
+        ...Array.from(documentModelModuleMap.values()),
       ),
       subgraphs: subgraphsMap,
       processors: processorsMap,
     };
   }
 
-  private async loadFromConfigFile(configFile: string) {
-    try {
-      const loadedConfig = getConfig(configFile) as PowerhouseConfig;
-      if (!loadedConfig) {
-        throw new Error(`Failed to load config from ${configFile}`);
-      }
-      const packageNames =
-        loadedConfig.packages?.map((pkg) => pkg.packageName) ?? [];
-      return await this.loadPackages(packageNames);
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      if (this.onError) {
-        this.onError(err);
-      }
-      return Promise.reject(err);
+  private getAllPackageNames(): string[] {
+    const packageNames = this.options.packages ?? [];
+    if (this.options.configFile) {
+      packageNames.push(
+        ...this.getPackageNamesFromConfigFile(this.options.configFile),
+      );
     }
+    return packageNames;
   }
 
-  private initConfigFile(configFile: string): Promise<PackageManagerResult> {
-    const result = this.loadFromConfigFile(configFile);
+  private getPackageNamesFromConfigFile(configFile: string) {
+    const loadedConfig = getConfig(configFile) as PowerhouseConfig;
+    return loadedConfig.packages?.map((pkg) => pkg.packageName) ?? [];
+  }
 
+  private initConfigFileWatcher(configFile: string) {
     if (!this.configWatcher) {
       this.configWatcher = watchFile(
         configFile,
@@ -138,12 +137,11 @@ export class PackageManager implements IPackageManager {
           if (curr.mtime === prev.mtime) {
             return;
           }
-          void this.loadFromConfigFile(configFile).catch(this.onError);
+
+          void this.loadPackages(this.getAllPackageNames());
         },
       );
     }
-
-    return result;
   }
 
   private updatePackagesMap(packagesMap: Map<string, DocumentModelModule[]>) {
@@ -152,7 +150,7 @@ export class PackageManager implements IPackageManager {
     oldPackages
       .filter((pkg) => !newPackages.includes(pkg))
       .forEach((pkg) => {
-        console.log("> Removed package:", pkg);
+        this.logger.info(`> Removed package: ${pkg}`);
       });
     this.docModelsMap = packagesMap;
     this.eventEmitter.emit(
@@ -167,7 +165,7 @@ export class PackageManager implements IPackageManager {
     oldPackages
       .filter((pkg) => !newPackages.includes(pkg))
       .forEach((pkg) => {
-        console.log("> Removed Subgraphs from:", pkg);
+        this.logger.info(`> Removed Subgraphs from: ${pkg}`);
       });
     this.subgraphsMap = subgraphsMap;
     this.eventEmitter.emit("subgraphsChange", subgraphsMap);
@@ -181,7 +179,7 @@ export class PackageManager implements IPackageManager {
     oldPackages
       .filter((pkg) => !newPackages.includes(pkg))
       .forEach((pkg) => {
-        console.log("> Removed Processor Factories from:", pkg);
+        this.logger.info(`> Removed Processor Factories from: ${pkg}`);
       });
 
     this.processorMap = processorsMap;

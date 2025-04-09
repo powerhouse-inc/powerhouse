@@ -220,6 +220,7 @@ export async function startAPI(
 
   // Initialize package manager
   const loaders: IPackageLoader[] = [new ImportPackageLoader()];
+
   if (options.packageLoader) {
     loaders.push(options.packageLoader);
   }
