@@ -134,6 +134,7 @@ export const update: CommandActionType<
 export function updateCommand(program: Command) {
   program
     .command("update")
+    .alias("up")
     .description(
       "Allows you to update your dependencies to the latest version based on the specified range in package.json. If you want to update to the latest available version, use the --force flag.",
     )
