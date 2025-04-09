@@ -31,15 +31,7 @@ jobs:
         run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Checkout
         uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            src:
-              - 'apps/connect/**'
-              - 'packages/**'
       - name: Build, Push and Release APP to Heroku. # Your custom step name
-        if: steps.changes.outputs.src == 'true'
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
@@ -64,15 +56,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set up heroku
-        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            src:
-              - 'apps/switchboard/**' 
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh     
       - name: Build, Push and Release API to Heroku. # Your custom step name
-        if: steps.changes.outputs.src == 'true'
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
