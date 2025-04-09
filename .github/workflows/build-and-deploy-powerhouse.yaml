@@ -9,6 +9,8 @@ on:
         type: choice
         options:
           - "develop"
+          - "staging"
+          - "sky-atlas-staging"
           - "sky-atlas-demo"
 
 env:
@@ -26,7 +28,9 @@ jobs:
       - name: Set up heroku
         run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.environment == "develop"  ? "main" : inputs.environment }}
       - name: Build, Push and Release APP to Heroku. # Your custom step name
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
@@ -50,7 +54,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.environment == "develop" ? "main" : inputs.environment }}
       - name: Set up heroku
         run: sudo curl https://cli-assets.heroku.com/install.sh | sh     
       - name: Build, Push and Release API to Heroku. # Your custom step name
