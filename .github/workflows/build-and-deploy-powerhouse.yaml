@@ -15,7 +15,7 @@ on:
 
 env:
   HUSKY: 0
-  ENVIRONMENT: ${{ inputs.environment == "develop" && "main" || inputs.environment }}
+  ENVIRONMENT: ${{ inputs.environment }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
