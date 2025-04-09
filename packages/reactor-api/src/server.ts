@@ -2,7 +2,7 @@ import { GraphQLManager } from "#graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "#graphql/playground.js";
 import {
   getUniqueDocumentModels,
-  PackageManagerResult,
+  type PackageManagerResult,
   PackagesManager,
 } from "#package-manager.js";
 import { type PGlite } from "@electric-sql/pglite";
@@ -15,8 +15,8 @@ import devcert from "devcert";
 import { type IDocumentDriveServer } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
 import {
-  IProcessorManager,
-  ProcessorFactory,
+  type IProcessorManager,
+  type ProcessorFactory,
 } from "document-drive/processors/types";
 import express, { type Express } from "express";
 import { type Knex } from "knex";
