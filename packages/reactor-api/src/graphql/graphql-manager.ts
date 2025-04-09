@@ -165,11 +165,15 @@ export class GraphQLManager {
 
   async #createApolloGateway(endpoints: Record<string, ApolloServer>) {
     try {
+      const herokuOrLocal = process.env.HEROKU_APP_NAME
+        ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`
+        : `http://localhost:${process.env.PORT ?? 4001}`;
+
       const gateway = new ApolloGateway({
         supergraphSdl: new IntrospectAndCompose({
           subgraphs: Object.keys(endpoints).map((path) => ({
             name: path.replaceAll("/", ""),
-            url: `http://localhost:${process.env.PORT ?? 4001}${path}`,
+            url: `${herokuOrLocal}${path}`,
           })),
         }),
       });
