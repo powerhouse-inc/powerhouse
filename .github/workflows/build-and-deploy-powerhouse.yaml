@@ -9,11 +9,7 @@ on:
         type: choice
         options:
           - "develop"
-          - "staging"
-          - "production"
           - "sky-atlas-demo"
-          - "sky-atlas-staging"
-
 
 env:
   HUSKY: 0
