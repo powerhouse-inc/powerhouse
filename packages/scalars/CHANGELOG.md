@@ -1,3 +1,18 @@
+## 1.33.1-staging.0 (2025-04-09)
+
+### 🚀 Features
+
+- added sky-atlas-staging ([ac1658ce9](https://github.com/powerhouse-inc/powerhouse/commit/ac1658ce9))
+
+### 🩹 Fixes
+
+- made ph packages env var ([df93611b7](https://github.com/powerhouse-inc/powerhouse/commit/df93611b7))
+- remove filter ([842a93a75](https://github.com/powerhouse-inc/powerhouse/commit/842a93a75))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 1.33.1-dev.1 (2025-04-08)
 
 ### 🚀 Features
