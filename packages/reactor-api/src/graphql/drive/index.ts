@@ -43,6 +43,9 @@ export class DriveSubgraph extends Subgraph {
     this.logger.verbose(`constructor()`);
   }
 
+  // Note: This GQL declaration depends on the document drive subgraph already
+  // being registered. If the document drive subgraph is not registered, this
+  // will throw an error as it relies on those types.
   name = "d/:drive";
   typeDefs = gql`
     type DriveMeta {
