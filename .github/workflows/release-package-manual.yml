@@ -1,6 +1,8 @@
 name: Release Package Manual
 
 on:
+  schedule:
+    - cron: "0 15 * * *"
   workflow_dispatch:
     inputs:
       tag:
@@ -12,6 +14,7 @@ on:
 env:
   NX_ISOLATE_PLUGINS: false
   PREID: ${{ inputs.tag != 'latest' && inputs.tag ||  ''  }}
+  TAG: ${{ inputs.tag ||  'dev'  }}
 
 jobs:
   test:
@@ -67,7 +70,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish to npm
-        run: pnpm nx release publish --projects='apps/connect,packages/*,clis/*' --tag=${{ inputs.tag }}
+        run: pnpm nx release publish --projects='apps/connect,packages/*,clis/*' --tag=${{ env.TAG }}
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
