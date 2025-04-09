@@ -112,7 +112,7 @@ async function setupGraphQLManager(
   result: PackageManagerResult,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
-    "/",
+    process.env.BASE_PATH ?? "/",
     app,
     reactor,
     db,
