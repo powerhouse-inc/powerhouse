@@ -12,6 +12,7 @@ on:
           - "staging"
           - "production"
           - "sky-atlas-demo"
+          - "sky-atlas-staging"
 
 
 env:
