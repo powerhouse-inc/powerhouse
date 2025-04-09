@@ -172,8 +172,8 @@ export class GraphQLManager {
 
   async #createApolloGateway(endpoints: Record<string, ApolloServer>) {
     try {
-      const herokuOrLocal = process.env.HEROKU_APP_NAME
-        ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`
+      const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
+        ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
         : `http://localhost:${process.env.PORT ?? 4001}`;
 
       const gateway = new ApolloGateway({
