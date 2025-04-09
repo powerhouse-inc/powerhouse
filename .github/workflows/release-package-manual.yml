@@ -17,7 +17,7 @@ env:
   TAG: ${{ inputs.tag ||  'dev'  }}
 
 jobs:
-  test:
+  build-and-publish:
     name: Build and Publish Package
     runs-on: ubuntu-latest
     permissions:
