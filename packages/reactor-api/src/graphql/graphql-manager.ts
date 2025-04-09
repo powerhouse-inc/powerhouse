@@ -153,6 +153,7 @@ export class GraphQLManager {
       }
 
       if (Object.keys(supergraphEndpoints).length > 0) {
+        await this.#sleep(1000);
         const supergraphServer =
           await this.#createApolloGateway(supergraphEndpoints);
         if (supergraphServer) {
@@ -161,6 +162,12 @@ export class GraphQLManager {
         }
       }
     }
+  }
+
+  #sleep(ms: number) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
   }
 
   async #createApolloGateway(endpoints: Record<string, ApolloServer>) {
