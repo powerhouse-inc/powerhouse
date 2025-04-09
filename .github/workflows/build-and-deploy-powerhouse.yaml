@@ -8,8 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - "develop"
-          - "sky-atlas-demo"
+          - "staging"
+          - "sky-atlas-staging"
 
 env:
   HUSKY: 0

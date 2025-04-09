@@ -1,17 +1,15 @@
 name: Release Package
 
 on: 
-  schedule:
-  - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       tag:
         type: string
-        default: "dev"
+        default: "staging"
 
 env:
   NX_ISOLATE_PLUGINS: false
-  TAG: ${{ inputs.tag ||  'dev'  }}
+  TAG: ${{ inputs.tag ||  'staging'  }}
 
 jobs:
   validate-tag:
@@ -19,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check tag value
-        if: ${{ inputs.tag == 'staging' || inputs.tag == 'production' || inputs.tag == 'latest' }}
+        if: ${{ inputs.tag == 'dev' || inputs.tag == 'production' || inputs.tag == 'latest' }}
         run: |
           echo "::error::Tag value '${{ inputs.tag }}' is not allowed"
           exit 1
