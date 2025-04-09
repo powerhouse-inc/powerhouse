@@ -64,6 +64,8 @@ export class PackageManager implements IPackageManager {
   private async loadPackages(
     packages: string[],
   ): Promise<PackageManagerResult> {
+    this.logger.info(`Loading packages: ${packages.join(", ")}`);
+
     const documentModelModuleMap = new Map<string, DocumentModelModule[]>();
     const subgraphsMap = new Map<string, SubgraphClass[]>();
     const processorsMap = new Map<

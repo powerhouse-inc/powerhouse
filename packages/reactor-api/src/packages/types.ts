@@ -30,7 +30,7 @@ export interface PowerhouseConfig {
 }
 
 export type PackageManagerResult = {
-  documentModels?: DocumentModelModule[];
-  subgraphs?: Map<string, SubgraphClass[]>;
-  processors?: Map<string, ((module: any) => ProcessorFactory)[]>;
+  documentModels: DocumentModelModule[];
+  subgraphs: Map<string, SubgraphClass[]>;
+  processors: Map<string, ((module: any) => ProcessorFactory)[]>;
 };

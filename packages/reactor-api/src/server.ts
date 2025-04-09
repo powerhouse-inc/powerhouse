@@ -5,7 +5,7 @@ import {
   getUniqueDocumentModels,
   PackageManager,
 } from "#packages/package-manager.js";
-import { IPackageLoader, PackageManagerResult } from "#packages/types.js";
+import { IPackageLoader } from "#packages/types.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
@@ -13,12 +13,13 @@ import {
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
 import devcert from "devcert";
-import { childLogger, type IDocumentDriveServer } from "document-drive";
-import { ProcessorManager } from "document-drive/processors/processor-manager";
 import {
-  IProcessorManager,
-  ProcessorFactory,
-} from "document-drive/processors/types";
+  childLogger,
+  DocumentDriveDocument,
+  type IDocumentDriveServer,
+} from "document-drive";
+import { ProcessorManager } from "document-drive/processors/processor-manager";
+import { IProcessorManager } from "document-drive/processors/types";
 import express, { type Express } from "express";
 import { type Knex } from "knex";
 import fs from "node:fs";
@@ -26,7 +27,7 @@ import https from "node:https";
 import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
-import { type API } from "./types.js";
+import { SubgraphClass, type API } from "./types.js";
 import { getDbClient } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);
@@ -93,7 +94,7 @@ async function setupGraphQLManager(
   reactor: IDocumentDriveServer,
   db: Knex,
   analyticsStore: IAnalyticsStore,
-  result: PackageManagerResult,
+  subgraphs: Map<string, SubgraphClass[]>,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     "/",
@@ -105,11 +106,9 @@ async function setupGraphQLManager(
 
   await graphqlManager.init();
 
-  if (result.subgraphs) {
-    for (const [supergraph, subgraphs] of result.subgraphs.entries()) {
-      for (const subgraph of subgraphs) {
-        graphqlManager.registerSubgraph(subgraph, supergraph);
-      }
+  for (const [supergraph, collection] of subgraphs.entries()) {
+    for (const subgraph of collection) {
+      graphqlManager.registerSubgraph(subgraph, supergraph);
     }
   }
 
@@ -220,7 +219,6 @@ export async function startAPI(
 
   // Initialize package manager
   const loaders: IPackageLoader[] = [new ImportPackageLoader()];
-
   if (options.packageLoader) {
     loaders.push(options.packageLoader);
   }
@@ -230,16 +228,11 @@ export async function startAPI(
     packages: options.packages ?? [],
   });
 
-  const result = await packages.init();
-  const documentModels = result.documentModels ?? [];
+  const { documentModels, processors, subgraphs } = await packages.init();
 
   // initialize processors
   const processorManager = new ProcessorManager(reactor.listeners, reactor);
-
-  const packageToProcessorFactory =
-    result.processors ??
-    new Map<string, ((module: any) => ProcessorFactory)[]>();
-  for (const [packageName, fns] of packageToProcessorFactory) {
+  for (const [packageName, fns] of processors) {
     const factories = fns.map((fn) => fn(module));
 
     await processorManager.registerFactory(packageName, (driveId: string) =>
@@ -247,7 +240,12 @@ export async function startAPI(
     );
   }
 
-  // Set document model modules
+  // hook up processor manager to drive added event
+  reactor.on("driveAdded", async (drive: DocumentDriveDocument) => {
+    await processorManager.registerDrive(drive.state.global.id);
+  });
+
+  // set document model modules
   reactor.setDocumentModelModules(
     getUniqueDocumentModels([
       ...reactor.getDocumentModelModules(),
@@ -255,13 +253,13 @@ export async function startAPI(
     ]),
   );
 
-  // Set up subgraph manager
+  // set up subgraph manager
   const graphqlManager = await setupGraphQLManager(
     app,
     reactor,
     db,
     analyticsStore,
-    result,
+    subgraphs,
   );
 
   // Set up event listeners

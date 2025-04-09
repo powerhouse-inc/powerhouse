@@ -12,7 +12,7 @@ export class ImportPackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-api", "import-loader"]);
 
   async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
-    this.logger.info("Loading document models from package:", identifier);
+    this.logger.verbose("Loading document models from package:", identifier);
 
     let pkgModule: Record<string, DocumentModelModule> | undefined;
     try {
@@ -20,31 +20,31 @@ export class ImportPackageLoader implements IPackageLoader {
         [key: string]: DocumentModelModule;
       };
     } catch (e) {
-      this.logger.info(`  ➜  No Document Models found: ${identifier}`);
+      this.logger.verbose(`  ➜  No Document Models found: ${identifier}`);
 
       return [];
     }
 
     if (pkgModule) {
-      this.logger.info(`  ➜  Loaded Document Models from: ${identifier}`);
+      this.logger.verbose(`  ➜  Loaded Document Models from: ${identifier}`);
 
       return Object.values(pkgModule);
     } else {
-      this.logger.info(`  ➜  No Document Models found: ${identifier}`);
+      this.logger.verbose(`  ➜  No Document Models found: ${identifier}`);
 
       return [];
     }
   }
 
   async loadSubgraphs(identifier: string): Promise<SubgraphClass[]> {
-    this.logger.info("Loading subgraphs from package:", identifier);
+    this.logger.verbose("Loading subgraphs from package:", identifier);
 
     const pkgModule = (await loadDependency(identifier, "subgraphs")) as
       | undefined
       | Record<string, Record<string, SubgraphClass>>;
 
     if (!pkgModule) {
-      this.logger.info(`  ➜  No Subgraphs found: ${identifier}`);
+      this.logger.verbose(`  ➜  No Subgraphs found: ${identifier}`);
 
       return [];
     }
@@ -53,7 +53,7 @@ export class ImportPackageLoader implements IPackageLoader {
       return Object.values(subgraph);
     });
 
-    this.logger.info(`  ➜  Loaded Subgraphs from: ${identifier}`);
+    this.logger.verbose(`  ➜  Loaded Subgraphs from: ${identifier}`);
 
     return subgraphs.flat();
   }
@@ -61,16 +61,16 @@ export class ImportPackageLoader implements IPackageLoader {
   async loadProcessors(
     identifier: string,
   ): Promise<(module: any) => ProcessorFactory> {
-    this.logger.info("Loading processors from package:", identifier);
+    this.logger.verbose("Loading processors from package:", identifier);
 
     const pkgModule = (await loadDependency(identifier, "processors")) as (
       module: any,
     ) => ProcessorFactory;
     if (pkgModule) {
-      this.logger.info(`  ➜  Loaded Processor Factory from: ${identifier}`);
+      this.logger.verbose(`  ➜  Loaded Processor Factory from: ${identifier}`);
       return pkgModule;
     } else {
-      this.logger.info(`  ➜  No Processor Factory found: ${identifier}`);
+      this.logger.verbose(`  ➜  No Processor Factory found: ${identifier}`);
     }
 
     // empty processor factory

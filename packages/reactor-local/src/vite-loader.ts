@@ -10,13 +10,6 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 import { ViteDevServer } from "vite";
 
-type FSError = {
-  errno: number;
-  code: string;
-  syscall: string;
-  path: string;
-};
-
 export class VitePackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-local", "vite-loader"]);
 
@@ -29,7 +22,7 @@ export class VitePackageLoader implements IPackageLoader {
   async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
     const fullPath = path.join(identifier, "./document-models");
 
-    this.logger.info("Loading document models from", fullPath);
+    this.logger.verbose("Loading document models from", fullPath);
 
     try {
       await access(fullPath);
@@ -41,13 +34,13 @@ export class VitePackageLoader implements IPackageLoader {
 
       const documentModels = Object.values(localDMs);
 
-      this.logger.info(
+      this.logger.verbose(
         `  ➜  Loaded ${documentModels.length} Document Models from: ${identifier}`,
       );
 
       return documentModels;
     } catch (e) {
-      this.logger.info(`  ➜  No Document Models found for: ${identifier}`);
+      this.logger.verbose(`  ➜  No Document Models found for: ${identifier}`);
     }
 
     return [];
@@ -56,7 +49,7 @@ export class VitePackageLoader implements IPackageLoader {
   async loadSubgraphs(identifier: string): Promise<SubgraphClass[]> {
     const fullPath = path.join(identifier, "./subgraphs");
 
-    this.logger.info("Loading subgraphs from", fullPath);
+    this.logger.verbose("Loading subgraphs from", fullPath);
 
     let localSubgraphs: Record<string, Record<string, SubgraphClass>> = {};
     try {
@@ -64,7 +57,7 @@ export class VitePackageLoader implements IPackageLoader {
 
       localSubgraphs = await this.vite.ssrLoadModule(fullPath);
     } catch (e) {
-      this.logger.info(`  ➜  No Subgraphs found for: ${identifier}`);
+      this.logger.verbose(`  ➜  No Subgraphs found for: ${identifier}`);
 
       return [];
     }
@@ -78,7 +71,7 @@ export class VitePackageLoader implements IPackageLoader {
       }
     }
 
-    this.logger.info(
+    this.logger.verbose(
       `  ➜  Loaded ${subgraphs.length} Subgraphs from: ${identifier}`,
     );
 
@@ -90,7 +83,7 @@ export class VitePackageLoader implements IPackageLoader {
   ): Promise<(module: any) => ProcessorFactory> {
     const fullPath = path.join(identifier, "./processors");
 
-    this.logger.info("Loading processors from", fullPath);
+    this.logger.verbose("Loading processors from", fullPath);
 
     try {
       await access(fullPath);
@@ -98,7 +91,9 @@ export class VitePackageLoader implements IPackageLoader {
       const module = await this.vite.ssrLoadModule(fullPath);
 
       if (module.processorFactory) {
-        this.logger.info(`  ➜  Loaded Processor factory from: ${identifier}`);
+        this.logger.verbose(
+          `  ➜  Loaded Processor factory from: ${identifier}`,
+        );
 
         return module.processorFactory;
       }
@@ -106,7 +101,7 @@ export class VitePackageLoader implements IPackageLoader {
       //
     }
 
-    this.logger.info(`  ➜  No Processor Factory found for: ${identifier}`);
+    this.logger.verbose(`  ➜  No Processor Factory found for: ${identifier}`);
 
     // return empty processor factory
     return () => () => [];
