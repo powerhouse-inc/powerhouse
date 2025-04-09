@@ -7,7 +7,7 @@ import { gql, request } from 'graphql-request';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
-const REACTOR_URL = 'https://apps.powerhouse.io/sky-atlas/switchboard/';
+const REACTOR_URL = 'https://apps.powerhouse.io/staging/sky-atlas/switchboard/';
 const MIN_LOADING_TIME = 2000;
 
 function useReactorUrl() {
