@@ -2,20 +2,9 @@ name: Deploy Powerhouse
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: The environment to deploy to
-        required: true
-        type: choice
-        options:
-          - "develop"
-          - "staging"
-          - "sky-atlas-staging"
-          - "sky-atlas-demo"
 
 env:
   HUSKY: 0
-  ENVIRONMENT: ${{ inputs.environment }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,15 +12,13 @@ concurrency:
 
 jobs:
   connect:
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.ref_name }}
     runs-on: ubuntu-latest
     steps:
       - name: Set up heroku
         run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ env.ENVIRONMENT }}
       - name: Build, Push and Release APP to Heroku. # Your custom step name
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
@@ -45,19 +32,17 @@ jobs:
             --build-arg BASE_PATH=${{ vars.CONNECT_BASE_PATH }}
             --build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}
             --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.CONNECT_SENTRY_DSN }}
-            --build-arg PH_CONNECT_SENTRY_ENV=${{ inputs.environment }}
+            --build-arg PH_CONNECT_SENTRY_ENV=${{ github.ref_name }}
             --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
             --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
           process_type: web
   switchboard:
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.ref_name }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ env.ENVIRONMENT }}
       - name: Set up heroku
         run: sudo curl https://cli-assets.heroku.com/install.sh | sh     
       - name: Build, Push and Release API to Heroku. # Your custom step name
