@@ -31,10 +31,12 @@ export class GraphQLManager {
     private readonly subgraphs: Map<string, Subgraph[]> = new Map(),
   ) {
     // Setup Default subgraphs
-    this.registerSubgraph(AuthSubgraph);
-    this.registerSubgraph(SystemSubgraph);
+    this.registerSubgraph(AuthSubgraph, "graphql");
+    this.registerSubgraph(SystemSubgraph, "graphql");
+    this.registerSubgraph(AnalyticsSubgraph, "graphql");
+
+    // special case for drive
     this.registerSubgraph(DriveSubgraph);
-    this.registerSubgraph(AnalyticsSubgraph);
   }
 
   async init() {
