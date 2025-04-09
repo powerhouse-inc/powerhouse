@@ -1,8 +1,8 @@
 name: Release Package Manual
 
-on:
+on: 
   schedule:
-    - cron: "0 15 * * *"
+  - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       tag:
