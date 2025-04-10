@@ -114,6 +114,11 @@ export const viteLoadExternalPackages = (
   return [
     {
       name: "vite-plugin-ph-external-packages",
+      config() {
+        if (!localPackage) {
+          generateImportScript(packages ?? [], importPath, localPackage);
+        }
+      },
       closeBundle() {
         generateImportScript(packages ?? [], importPath, localPackage);
       },
