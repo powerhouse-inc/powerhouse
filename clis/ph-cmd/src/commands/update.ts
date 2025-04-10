@@ -18,8 +18,8 @@ import {
 } from "./use.js";
 
 type PackageJson = {
-  dependencies: Record<string, string>;
-  devDependencies: Record<string, string>;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
 };
 
 const FILE_PROTOCOL = "file:";
@@ -56,8 +56,8 @@ const getLocalDependencyPath = (projectPath: string) => {
 
   // filter dependencies
   const filteredDependencies = Object.entries({
-    ...packageJson.dependencies,
-    ...packageJson.devDependencies,
+    ...(packageJson.dependencies || {}),
+    ...(packageJson.devDependencies || {}),
   }).filter(([name]) => PH_PROJECT_DEPENDENCIES.includes(name));
 
   const [_, localDependencyPath] = filteredDependencies.find(
@@ -69,6 +69,23 @@ const getLocalDependencyPath = (projectPath: string) => {
   return localDependencyPath
     .replace(FILE_PROTOCOL, "")
     .replace(LINK_PROTOCOL, "");
+};
+
+const getInstalledDependencies = (projectPath: string) => {
+  // read package json from projectInfo.path
+  const packageJson = JSON.parse(
+    fs.readFileSync(path.join(projectPath, "package.json"), "utf-8"),
+  ) as PackageJson;
+
+  // Get all installed Powerhouse dependencies
+  const installedDeps = Object.keys({
+    ...(packageJson.dependencies || {}),
+    ...(packageJson.devDependencies || {}),
+  })
+    .filter((name) => PH_PROJECT_DEPENDENCIES.includes(name))
+    .sort(); // Sort dependencies alphabetically
+
+  return installedDeps;
 };
 
 export const update: CommandActionType<
@@ -115,13 +132,23 @@ export const update: CommandActionType<
     return;
   }
 
-  const pkgManager = packageManagers[pkgManagerName];
+  const installedDeps = getInstalledDependencies(projectInfo.path);
 
-  const deps = PH_PROJECT_DEPENDENCIES.join(" ");
+  if (installedDeps.length === 0) {
+    console.log("ℹ️ No Powerhouse dependencies found to update");
+    return;
+  }
+
+  const pkgManager = packageManagers[pkgManagerName];
+  const deps = installedDeps.join(" ");
   const updateCommand = pkgManager.updateCommand.replace(
     "{{dependency}}",
     deps,
   );
+
+  if (options.debug) {
+    console.log(">>> dependencies to update", installedDeps);
+  }
 
   const commandOptions = { cwd: projectInfo.path };
 
@@ -134,6 +161,7 @@ export const update: CommandActionType<
 export function updateCommand(program: Command) {
   program
     .command("update")
+    .alias("up")
     .description(
       "Allows you to update your dependencies to the latest version based on the specified range in package.json. If you want to update to the latest available version, use the --force flag.",
     )

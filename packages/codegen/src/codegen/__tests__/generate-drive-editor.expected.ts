@@ -1,8 +1,8 @@
-export const EXPECTED_INDEX_CONTENT = `import { type EditorModule } from "document-model";
-import Editor from "./editor.js";
+export const EXPECTED_INDEX_CONTENT = `import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
 import { type DocumentDriveDocument } from "document-drive";
+import Editor from "./editor.js";
 
-export const module: EditorModule<DocumentDriveDocument> = {
+export const module: DriveEditorModule<DocumentDriveDocument> = {
   Component: Editor,
   documentTypes: ["powerhouse/document-drive"],
   config: {
@@ -15,15 +15,16 @@ export const module: EditorModule<DocumentDriveDocument> = {
 
 export default module;`;
 
-export const EXPECTED_EDITOR_CONTENT = `import { type EditorProps, hashKey } from "document-model";
+export const EXPECTED_EDITOR_CONTENT = `import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
+import { DriveContextProvider } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import { type DocumentDriveDocument, addFolder, deleteNode, updateNode, generateNodesCopy, copyNode } from "document-drive";
 import { WagmiContext } from "@powerhousedao/design-system";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { useCallback } from "react";
 
-export type IProps = EditorProps<DocumentDriveDocument>;
+export type IProps = DriveEditorProps<DocumentDriveDocument>;
 
-export default function Editor(props: IProps) {
+export function BaseEditor(props: IProps) {
   const { dispatch, context } = props;
   
   const onAddFolder = useCallback((name: string, parentFolder?: string) => {
@@ -65,18 +66,26 @@ export default function Editor(props: IProps) {
       className="new-drive-explorer"
       style={{ height: "100%" }}
     >
-      <WagmiContext>
-        <DriveExplorer
-          driveId={props.document.state.global.id}
-          nodes={props.document.state.global.nodes}
-          onAddFolder={onAddFolder}
-          onDeleteNode={onDeleteNode}
-          renameNode={renameNode}
-          onCopyNode={onCopyNode}
-          context={context}
-        />
-      </WagmiContext>
+      <DriveExplorer
+        driveId={props.document.state.global.id}
+        nodes={props.document.state.global.nodes}
+        onAddFolder={onAddFolder}
+        onDeleteNode={onDeleteNode}
+        renameNode={renameNode}
+        onCopyNode={onCopyNode}
+        context={context}
+      />
     </div>
+  );
+}
+
+export default function Editor(props: IProps) {
+  return (
+    <DriveContextProvider value={props.context}>
+      <WagmiContext>
+        <BaseEditor {...props} />
+      </WagmiContext>
+    </DriveContextProvider>
   );
 }`;
 

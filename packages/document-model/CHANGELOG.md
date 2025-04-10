@@ -1,3 +1,31 @@
+## 2.28.1-dev.2 (2025-04-10)
+
+### 🚀 Features
+
+- checkout release branch ([6f3e20067](https://github.com/powerhouse-inc/powerhouse/commit/6f3e20067))
+- added sky-atlas-staging ([7eb24f6c6](https://github.com/powerhouse-inc/powerhouse/commit/7eb24f6c6))
+
+### 🩹 Fixes
+
+- **deploy:** set branch env var ([835cc704d](https://github.com/powerhouse-inc/powerhouse/commit/835cc704d))
+- build and deploy action ([e8c550849](https://github.com/powerhouse-inc/powerhouse/commit/e8c550849))
+- made ph packages env var ([b9aaff84d](https://github.com/powerhouse-inc/powerhouse/commit/b9aaff84d))
+- remove filter ([ece84a667](https://github.com/powerhouse-inc/powerhouse/commit/ece84a667))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.28.1-dev.1 (2025-04-08)
+
+### 🚀 Features
+
+- removed DriveContextProvider dep from connect DriveEditorContainer ([ea926fc30](https://github.com/powerhouse-inc/powerhouse/commit/ea926fc30))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 2.28.1-dev.0 (2025-04-03)
 
 ### 🚀 Features

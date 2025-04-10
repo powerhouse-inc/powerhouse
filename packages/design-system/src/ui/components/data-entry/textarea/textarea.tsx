@@ -39,7 +39,7 @@ const textareaBaseStyles = cn(
   "dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 dark:focus:bg-charcoal-900 focus:bg-gray-50",
   // Disabled state
   "disabled:cursor-not-allowed",
-  "disabled:border-gray-300 disabled:bg-white disabled:text-gray-700",
+  "disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700",
   "disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300",
 );
 

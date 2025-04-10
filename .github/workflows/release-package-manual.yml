@@ -1,21 +1,32 @@
-name: Release Package Manual
+name: Release Package
 
-on:
+on: 
+  schedule:
+  - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       tag:
-        description: "The NPM tag to apply to the release. Use 'latest' for Production release."
-        required: false
         type: string
         default: "dev"
 
 env:
   NX_ISOLATE_PLUGINS: false
-  PREID: ${{ inputs.tag != 'latest' && inputs.tag ||  ''  }}
+  TAG: ${{ inputs.tag ||  'dev'  }}
 
 jobs:
-  test:
+  validate-tag:
+    name: Validate Tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check tag value
+        if: ${{ inputs.tag == 'staging' || inputs.tag == 'production' || inputs.tag == 'latest' }}
+        run: |
+          echo "::error::Tag value '${{ inputs.tag }}' is not allowed"
+          exit 1
+
+  build-and-publish:
     name: Build and Publish Package
+    needs: validate-tag
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -59,7 +70,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: pnpm nx release --projects='packages/*,apps/connect,clis/*' --skip-publish --preid=${{ env.PREID }}
+        run: pnpm nx release --projects='packages/*,apps/connect,clis/*' --skip-publish --preid=${{ env.TAG }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -67,7 +78,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish to npm
-        run: pnpm nx release publish --projects='apps/connect,packages/*,clis/*' --tag=${{ inputs.tag }}
+        run: pnpm nx release publish --projects='apps/connect,packages/*,clis/*' --tag=${{ env.TAG }}
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
