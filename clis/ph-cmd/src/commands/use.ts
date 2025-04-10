@@ -1,4 +1,5 @@
 import { type Command } from "commander";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { type CommandActionType } from "../types.js";
 import {
@@ -9,7 +10,11 @@ import {
 } from "../utils.js";
 
 export const ORG = "@powerhousedao";
-export const CLIS = ["ph-cli"];
+
+// Special packages that don't use the @powerhousedao organization
+export const SPECIAL_PACKAGES = ["document-model", "document-drive"];
+
+// Dynamically list all packages, clis, and apps
 export const PACKAGES = [
   "common",
   "design-system",
@@ -19,16 +24,29 @@ export const PACKAGES = [
   "reactor-api",
   "reactor-local",
   "scalars",
+  "switchboard-gui",
+  "renown",
+  "config",
+  ...SPECIAL_PACKAGES,
 ];
 
+export const CLIS = ["ph-cli", "ph-cmd"];
+
+export const APPS = ["switchboard", "connect"];
+
 export const PH_PROJECT_DEPENDENCIES = [
-  ...PACKAGES.map((dependency) => `${ORG}/${dependency}`),
+  ...PACKAGES.filter((pkg) => !SPECIAL_PACKAGES.includes(pkg)).map(
+    (dependency) => `${ORG}/${dependency}`,
+  ),
+  ...SPECIAL_PACKAGES,
   ...CLIS.map((dependency) => `${ORG}/${dependency}`),
+  ...APPS.map((dependency) => `${ORG}/${dependency}`),
 ];
 
 export const PH_PROJECT_LOCAL_DEPENDENCIES = [
   ...PACKAGES.map((dependency) => path.join("packages", dependency)),
   ...CLIS.map((dependency) => path.join("clis", dependency)),
+  ...APPS.map((dependency) => path.join("apps", dependency)),
 ];
 
 export const ENV_MAP = {
@@ -46,9 +64,7 @@ export const updatePackageJson = (
   packageManager?: PackageManager,
   debug?: boolean,
 ) => {
-  const dependencies: string[] = [];
   const projectInfo = getProjectInfo();
-
   const pkgManager =
     packageManager || getPackageManagerFromLockfile(projectInfo.path);
 
@@ -57,22 +73,49 @@ export const updatePackageJson = (
     console.log(">>> pkgManager", pkgManager);
   }
 
-  if (localPath) {
-    const localPathDependencies = PH_PROJECT_LOCAL_DEPENDENCIES.map(
-      (dependency) => path.join(localPath, dependency),
-    );
+  // Read the project's package.json
+  const packageJsonPath = path.join(projectInfo.path, "package.json");
+  const packageJsonContent = readFileSync(packageJsonPath, "utf-8");
+  const packageJson = JSON.parse(packageJsonContent) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
 
-    dependencies.push(...localPathDependencies);
+  const existingDependencies = {
+    ...(packageJson.dependencies || {}),
+    ...(packageJson.devDependencies || {}),
+  };
+
+  const dependencies: string[] = [];
+
+  if (localPath) {
+    // For local path, only include dependencies that exist in package.json
+    PH_PROJECT_LOCAL_DEPENDENCIES.forEach((dependency) => {
+      const fullPath = path.join(localPath, dependency);
+      const packageName = path.basename(dependency);
+      const depName = SPECIAL_PACKAGES.includes(packageName)
+        ? packageName
+        : `${ORG}/${packageName}`;
+      if (existingDependencies[depName]) {
+        dependencies.push(fullPath);
+      }
+    });
   } else {
-    dependencies.push(
-      ...PH_PROJECT_DEPENDENCIES.map(
-        (dependency) => `${dependency}@${ENV_MAP[env]}`,
-      ),
-    );
+    // For remote dependencies, only include those that exist in package.json
+    PH_PROJECT_DEPENDENCIES.forEach((dependency) => {
+      if (existingDependencies[dependency]) {
+        dependencies.push(`${dependency}@${ENV_MAP[env]}`);
+      }
+    });
   }
 
   if (debug) {
-    console.log(">>> dependencies", dependencies);
+    console.log(">>> dependencies to update", dependencies);
+  }
+
+  if (dependencies.length === 0) {
+    console.log("ℹ️ No Powerhouse dependencies found to update");
+    return;
   }
 
   try {

@@ -2,10 +2,11 @@ import AtlasIcon from '#assets/icons/Atlas-Logomark.svg?react';
 import RefreshIcon from '#assets/icons/refresh.svg?react';
 import { useDocumentDriveServer } from '#hooks';
 import { useUnwrappedReactor } from '#store';
-import { Button, toast } from '@powerhousedao/design-system';
+import { Button } from '@powerhousedao/design-system';
 import { gql, request } from 'graphql-request';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { toast } from '../../services/toast';
 
 const REACTOR_URL = 'https://apps.powerhouse.io/sky-atlas/staging/switchboard';
 const MIN_LOADING_TIME = 2000;
@@ -28,7 +29,7 @@ async function forkAtlas(
             ForkAtlas(docId: $docId)
         }
     `;
-    return await request(`${reactorUrl}fork`, document, { docId });
+    return await request(`${reactorUrl}graphql`, document, { docId });
 }
 
 export function AtlasImport() {

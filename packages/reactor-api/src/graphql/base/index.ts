@@ -25,6 +25,7 @@ export class Subgraph implements ISubgraph {
     this.reactor = args.reactor;
     this.graphqlManager = args.graphqlManager;
     this.operationalStore = args.operationalStore;
+    this.path = args.path ?? "";
   }
   async onSetup() {
     // noop

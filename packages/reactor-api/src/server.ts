@@ -1,9 +1,10 @@
+import { config } from "#config.js";
 import { GraphQLManager } from "#graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "#graphql/playground.js";
 import {
   getUniqueDocumentModels,
-  type PackageManagerResult,
   PackagesManager,
+  type PackageManagerResult,
 } from "#package-manager.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
@@ -45,16 +46,16 @@ type Options = {
 };
 
 const DEFAULT_PORT = 4000;
-
 /**
  * Sets up the Express app with necessary routes
  */
-function setupGraphQlExplorer(app: Express): void {
-  app.get("/explorer/:endpoint?", (req, res) => {
+function setupGraphQlExplorer(router: express.Router): void {
+  router.get("/explorer/:endpoint?", (req, res) => {
     res.setHeader("Content-Type", "text/html");
-    const basePath =
-      process.env.BASE_PATH === "/" ? "" : process.env.BASE_PATH || "";
-    const endpoint = `${basePath}${req.params.endpoint !== undefined ? `/${req.params.endpoint}` : "/graphql"}`;
+    const endpoint =
+      req.params.endpoint !== undefined
+        ? `/${req.params.endpoint}`
+        : "/graphql";
 
     const { query } = req.query;
     if (query && typeof query !== "string") {
@@ -112,23 +113,22 @@ async function setupGraphQLManager(
   result: PackageManagerResult,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
-    "/",
+    config.basePath,
     app,
     reactor,
     db,
     analyticsStore,
   );
 
-  await graphqlManager.init();
-
   if (result.subgraphs) {
     for (const [supergraph, subgraphs] of result.subgraphs.entries()) {
       for (const subgraph of subgraphs) {
-        graphqlManager.registerSubgraph(subgraph, supergraph);
+        await graphqlManager.registerSubgraph(subgraph, supergraph);
       }
     }
   }
 
+  await graphqlManager.init();
   return graphqlManager;
 }
 
@@ -156,6 +156,7 @@ function setupEventListeners(
         graphqlManager.registerSubgraph(subgraph, supergraph);
       }
     }
+    graphqlManager.updateRouter();
   });
 
   pkgManager.onProcessorsChange(async (processors) => {
@@ -215,8 +216,9 @@ export async function startAPI(
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 
-  // Set up Express app with routes
-  setupGraphQlExplorer(app);
+  const defaultRouter = express.Router();
+  setupGraphQlExplorer(defaultRouter);
+  app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
   const { db, analyticsStore } = initializeDatabaseAndAnalytics(options.dbPath);

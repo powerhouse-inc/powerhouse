@@ -10,7 +10,6 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
-import http from "http";
 import { initRedis } from "./clients/redis.js";
 import { PackagesManager } from "./utils/package-manager.js";
 
@@ -32,7 +31,7 @@ if (process.env.SENTRY_DSN) {
   });
 }
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
-const httpServer = http.createServer(app);
+
 const main = async () => {
   try {
     const packages =
@@ -79,9 +78,9 @@ const main = async () => {
     });
 
     // start http server
-    httpServer.listen({ port: serverPort }, () => {
-      console.log(`Subgraph server listening on port ${serverPort}`);
-    });
+    // httpServer.listen({ port: serverPort }, () => {
+    //   console.log(`Subgraph server listening on port ${serverPort}`);
+    // });
   } catch (e) {
     console.error("App crashed", e);
   }
