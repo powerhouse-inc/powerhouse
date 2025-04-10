@@ -27,6 +27,7 @@
     "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
+    "@sky-ph/atlas": "^1.2.27",
     "change-case": "^5.4.4",
     "commander": "^12.1.0",
     "document-drive": "workspace:*",

@@ -82,10 +82,6 @@ export class ReactorBuilder {
   }
 
   public build(): IDocumentDriveServer {
-    if (!this.documentModelModules.length) {
-      throw new Error("Document models are required to build the server");
-    }
-
     if (!this.storage) {
       this.storage = new MemoryStorage();
     }
