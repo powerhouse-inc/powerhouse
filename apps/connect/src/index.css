@@ -5,3 +5,5 @@
     --spacing-app-height: calc(100vh - 32px);
     --spacing-search-bar-width: 642px;
 }
+
+@custom-variant dark (&:where(.dark, .dark *));

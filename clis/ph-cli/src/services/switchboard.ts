@@ -5,14 +5,17 @@ import {
 } from "@powerhousedao/config/powerhouse";
 import {
   DefaultStartServerOptions,
-  type LocalReactor,
   startServer,
+  type LocalReactor,
   type StartServerOptions,
 } from "@powerhousedao/reactor-local";
-import { IReceiver } from "document-drive";
-import { InternalTransmitter, InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { Listener } from "document-drive/server/types";
-import { DocumentModelDocument } from "document-model";
+import { IProcessor } from "document-drive/processors/types";
+import {
+  InternalTransmitter,
+  type InternalTransmitterUpdate,
+} from "document-drive/server/listener/transmitter/internal";
+import { type Listener } from "document-drive/server/types";
+import { type DocumentModelDocument } from "document-model";
 
 export type SwitchboardOptions = StartServerOptions & {
   configFile?: string;
@@ -41,6 +44,7 @@ export async function startLocalSwitchboard(
     ...options,
     https,
     logLevel: baseConfig.logLevel,
+    storage: baseConfig.reactor?.storage || options.storage,
   });
 
   if (options.generate) {
@@ -49,12 +53,15 @@ export async function startLocalSwitchboard(
   return reactor;
 }
 
+// TODO: instead of doing this by hand, we should use the processor manager
 async function addGenerateTransmitter(
   reactor: LocalReactor,
   config: PowerhouseConfig,
 ) {
-  const receiver: IReceiver = {
-    onStrands: async function (strands: InternalTransmitterUpdate<DocumentModelDocument>[]) {
+  const processor: IProcessor = {
+    onStrands: async function (
+      strands: InternalTransmitterUpdate<DocumentModelDocument>[],
+    ) {
       const documentPaths = new Set<string>();
       for (const strand of strands) {
         documentPaths.add(
@@ -91,7 +98,7 @@ async function addGenerateTransmitter(
     },
   };
 
-  const transmitter = new InternalTransmitter(listener, reactor.server, receiver);
+  const transmitter = new InternalTransmitter(reactor.server, processor);
 
   listener.transmitter = transmitter;
 

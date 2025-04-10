@@ -2,17 +2,6 @@ name: Deploy Powerhouse
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: The environment to deploy to
-        required: true
-        type: choice
-        options:
-          - "develop"
-          - "staging"
-          - "production"
-          - "sky-atlas-demo"
-
 
 env:
   HUSKY: 0
@@ -23,22 +12,14 @@ concurrency:
 
 jobs:
   connect:
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.ref_name }}
     runs-on: ubuntu-latest
     steps:
       - name: Set up heroku
         run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Checkout
-        uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            src:
-              - 'apps/connect/**'
-              - 'packages/**'
+        uses: actions/checkout@v4
       - name: Build, Push and Release APP to Heroku. # Your custom step name
-        if: steps.changes.outputs.src == 'true'
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
@@ -50,28 +31,21 @@ jobs:
             --build-arg NX_SOCKET_DIR=${{ vars.NX_SOCKET_DIR }}
             --build-arg BASE_PATH=${{ vars.CONNECT_BASE_PATH }}
             --build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}
-            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
-            --build-arg PH_CONNECT_SENTRY_ENV=${{ secrets.SENTRY_ENV }}
+            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.CONNECT_SENTRY_DSN }}
+            --build-arg PH_CONNECT_SENTRY_ENV=${{ github.ref_name }}
             --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
             --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
           process_type: web
   switchboard:
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.ref_name }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Set up heroku
-        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            src:
-              - 'apps/switchboard/**' 
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh     
       - name: Build, Push and Release API to Heroku. # Your custom step name
-        if: steps.changes.outputs.src == 'true'
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
@@ -80,4 +54,4 @@ jobs:
           dockerfile_directory: .
           dockerfile_name: apps/switchboard/Dockerfile
           process_type: web
-          docker_options: "--build-arg PH_PACKAGES=@sky-ph/atlas"
+          docker_options: "--build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}"

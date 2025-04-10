@@ -6,6 +6,7 @@ import {
 import { logger } from 'document-drive';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useModal } from '../../modal.js';
 
 export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
@@ -15,10 +16,14 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
     const { clearStorage } = useDocumentDriveServer();
     const { driveNodes, deleteDrive } = useUiNodes();
     const { showModal } = useModal();
+    const navigate = useNavigate();
 
     const handleDeleteDrive = useCallback(
-        (drive: UiDriveNode) => deleteDrive(drive.driveId),
-        [deleteDrive],
+        async (drive: UiDriveNode) => {
+            navigate('/');
+            await deleteDrive(drive.driveId);
+        },
+        [deleteDrive, navigate],
     );
 
     const handleClearStorage = () => {

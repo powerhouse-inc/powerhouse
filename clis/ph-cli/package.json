@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.39.3-dev.0",
+  "version": "0.40.33-dev.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -19,7 +19,9 @@
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix"
+    "lint:fix": "eslint --fix",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "keywords": [],
   "author": "",

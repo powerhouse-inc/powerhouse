@@ -125,8 +125,7 @@ export class BaseQueueManager implements IQueueManager {
 
     // checks if the job is for a document that doesn't exist in storage yet
     const newDocument =
-      job.documentId &&
-      !(await this.delegate.checkDocumentExists(job.driveId, job.documentId));
+      job.documentId && !(await this.delegate.exists(job.documentId));
     // if it is a new document and queue is not yet blocked then
     // blocks it so the jobs are not processed until it's ready
     if (newDocument && !(await queue.isBlocked())) {

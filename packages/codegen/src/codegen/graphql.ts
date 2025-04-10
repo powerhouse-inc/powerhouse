@@ -1,4 +1,3 @@
-import { type plugin } from "@acaldas/graphql-codegen-typescript-validation-schema";
 import { type CodegenConfig, generate } from "@graphql-codegen/cli";
 import { type TypeScriptPluginConfig } from "@graphql-codegen/typescript";
 import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
@@ -10,15 +9,26 @@ const getDirectories = (source: string) =>
     .filter((dirent) => dirent.isDirectory())
     .map((dirent) => dirent.name);
 
+export const scalars = {
+  Unknown: "unknown",
+  DateTime: "string",
+  Attachment: "string",
+  Address: "`${string}:0x${string}`",
+  ...(generatorTypeDefs as Record<string, string>),
+};
+
+export const scalarsValidation = {
+  Unknown: "z.unknown()",
+  DateTime: "z.string().datetime()",
+  Attachment: "z.string()",
+  Address:
+    "z.custom<`${string}:0x${string}`>((val) => /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string))",
+  ...(validationSchema as Record<string, string>),
+};
+
 export const tsConfig: TypeScriptPluginConfig = {
   strictScalars: true,
-  scalars: {
-    Unknown: "unknown",
-    DateTime: "string",
-    Attachment: "string",
-    Address: "`${string}:0x${string}`",
-    ...(generatorTypeDefs as Record<string, string>),
-  },
+  scalars,
   enumsAsTypes: true,
   allowEnumStringTypes: true,
   avoidOptionals: {
@@ -29,27 +39,19 @@ export const tsConfig: TypeScriptPluginConfig = {
   inputMaybeValue: "T | null | undefined",
 };
 
-export type ValidationSchemaConfigType = Parameters<typeof plugin>[2];
-
-export const validationConfig: ValidationSchemaConfigType = {
+export const zodConfig: Record<string, unknown> = {
+  ...tsConfig,
   importFrom: `./types.js`,
   schema: "zod",
-  ...tsConfig,
-  scalarSchemas: {
-    Unknown: "z.unknown()",
-    DateTime: "z.string().datetime()",
-    Attachment: "z.string()",
-    Address:
-      "z.custom<`${string}:0x${string}`>((val) => /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string))",
-    ...(validationSchema as Record<string, string>),
-  },
+  useTypeImports: true,
+  scalarSchemas: scalarsValidation,
   directives: {
     equals: {
       value: ["regex", "/^$1$/"],
     },
   },
   withObjectType: true,
-};
+} as const;
 
 export function schemaConfig(
   name: string,
@@ -70,7 +72,7 @@ export function schemaConfig(
     [`${dir}/${name}/gen/schema/zod.ts`]: {
       schema: `${dir}/${name}/schema.graphql`,
       plugins: ["@acaldas/graphql-codegen-typescript-validation-schema"],
-      config: validationConfig,
+      config: zodConfig,
     },
   };
 }

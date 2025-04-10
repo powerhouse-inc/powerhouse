@@ -1,9 +1,17 @@
-import { Express } from "express";
-import { SubgraphManager } from "./subgraphs/manager.js";
-
+import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { type IProcessorManager } from "document-drive/processors/types";
+import { type Express } from "express";
+import { type GraphQLManager } from "./graphql/graphql-manager.js";
+import { type Db } from "./utils/db.js";
 export type { Db } from "./utils/db.js";
 
 export type API = {
   app: Express;
-  subgraphManager: SubgraphManager;
+  graphqlManager: GraphQLManager;
+  processorManager: IProcessorManager;
+};
+
+export type ReactorModule = {
+  analyticsStore: IAnalyticsStore;
+  operationalStore: Db;
 };
