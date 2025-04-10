@@ -28,7 +28,7 @@ async function forkAtlas(
             ForkAtlas(docId: $docId)
         }
     `;
-    return await request(`${reactorUrl}fork`, document, { docId });
+    return await request(`${reactorUrl}graphql`, document, { docId });
 }
 
 export function AtlasImport() {
