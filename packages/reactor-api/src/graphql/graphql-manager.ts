@@ -74,8 +74,8 @@ export class GraphQLManager {
     if (!this.subgraphs.get(supergraph)) {
       if (supergraph !== "") {
         console.log(`> Created /${supergraph} supergraph `);
-        this.subgraphs.set(supergraph, []);
       }
+      this.subgraphs.set(supergraph, []);
     }
 
     this.subgraphs.get(supergraph)?.push(subgraphInstance);
