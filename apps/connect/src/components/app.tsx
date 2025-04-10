@@ -28,8 +28,11 @@ const App = () => (
                 <WagmiContext>
                     <RootProvider>
                         <ReadModeContextProvider>
+                            <ToastContainer
+                                position="bottom-right"
+                                containerId="connect"
+                            />
                             <UiNodesContextProvider>
-                                <ToastContainer position="bottom-right" />
                                 <Router />
                                 <CookieBanner />
                                 <Analytics />

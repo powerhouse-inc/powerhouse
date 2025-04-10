@@ -18,7 +18,6 @@ import {
     PUBLIC,
     type SharingType,
     SUCCESS,
-    toast,
     type UiDriveNode,
     type UiFileNode,
     type UiFolderNode,
@@ -28,6 +27,7 @@ import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNod
 import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from '../services/toast.js';
 import { useDocumentDriveById } from './useDocumentDriveById.js';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 import { useOpenSwitchboardLink } from './useOpenSwitchboardLink.js';
