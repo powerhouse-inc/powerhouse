@@ -1,3 +1,21 @@
+## 0.25.0-staging.1 (2025-04-10)
+
+### 🚀 Features
+
+- checkout release branch ([6f3e20067](https://github.com/powerhouse-inc/powerhouse/commit/6f3e20067))
+- added sky-atlas-staging ([7eb24f6c6](https://github.com/powerhouse-inc/powerhouse/commit/7eb24f6c6))
+
+### 🩹 Fixes
+
+- **deploy:** set branch env var ([835cc704d](https://github.com/powerhouse-inc/powerhouse/commit/835cc704d))
+- build and deploy action ([e8c550849](https://github.com/powerhouse-inc/powerhouse/commit/e8c550849))
+- made ph packages env var ([b9aaff84d](https://github.com/powerhouse-inc/powerhouse/commit/b9aaff84d))
+- remove filter ([ece84a667](https://github.com/powerhouse-inc/powerhouse/commit/ece84a667))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 0.25.0-staging.0 (2025-04-09)
 
 ### 🚀 Features
