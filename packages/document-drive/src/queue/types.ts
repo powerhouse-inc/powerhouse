@@ -63,6 +63,7 @@ export interface IQueue<T> {
   getJobs(): Promise<IJob<T>[]>;
   addDependencies: (job: IJob<Job>) => Promise<void>;
   removeDependencies: (job: IJob<Job>) => Promise<void>;
+  onJobAdded?: (callback: (job: IJob<T>) => void) => Unsubscribe;
 }
 
 export type IJobQueue = IQueue<Job>;

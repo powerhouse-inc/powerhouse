@@ -1,3 +1,4 @@
+import { createNanoEvents, type Unsubscribe } from "nanoevents";
 import { type RedisClientType } from "redis";
 import { BaseQueueManager } from "./base.js";
 import {
@@ -11,6 +12,9 @@ import {
 export class RedisQueue<T> implements IQueue<T> {
   private id: string;
   private client: RedisClientType;
+  private jobAddedEmitter = createNanoEvents<{
+    jobAdded: (job: IJob<T>) => void;
+  }>();
 
   constructor(id: string, client: RedisClientType) {
     this.client = client;
@@ -19,8 +23,9 @@ export class RedisQueue<T> implements IQueue<T> {
     this.client.hSet(this.id, "blocked", "false");
   }
 
-  async addJob(data: any) {
+  async addJob(data: IJob<T>) {
     await this.client.lPush(this.id + "-jobs", JSON.stringify(data));
+    this.jobAddedEmitter.emit("jobAdded", data);
   }
 
   async getNextJob() {
@@ -96,6 +101,10 @@ export class RedisQueue<T> implements IQueue<T> {
       await this.client.hSet("queues", this.id, "true");
     }
   }
+
+  onJobAdded(callback: (job: IJob<T>) => void): Unsubscribe {
+    return this.jobAddedEmitter.on("jobAdded", callback);
+  }
 }
 
 export class RedisQueueManager
@@ -118,7 +127,9 @@ export class RedisQueueManager
     for (const queueId in queues) {
       const active = await this.client.hGet("queues", queueId);
       if (active === "true") {
-        this.queues.push(new RedisQueue(queueId, this.client));
+        const queue = new RedisQueue<Job>(queueId, this.client);
+        this.queues.push(queue);
+        this.setupQueueListener(queue);
       }
     }
   }
@@ -128,8 +139,9 @@ export class RedisQueueManager
     let queue = this.queues.find((q) => q.getId() === queueId);
 
     if (!queue) {
-      queue = new RedisQueue(queueId, this.client);
+      queue = new RedisQueue<Job>(queueId, this.client);
       this.queues.push(queue);
+      this.setupQueueListener(queue);
     }
 
     return queue;
