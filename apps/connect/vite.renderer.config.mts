@@ -84,7 +84,11 @@ export default defineConfig(({ mode }) => {
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
-        viteLoadExternalPackages(false, phPackages, outDir),
+        viteLoadExternalPackages(
+            false,
+            phPackages,
+            path.resolve(__dirname, './src'),
+        ),
         tsconfigPaths(),
         react({
             include: './src/**/*.tsx',
