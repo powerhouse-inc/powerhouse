@@ -27,7 +27,7 @@ import pkg from './package.json' with { type: 'json' };
 
 const staticFiles = [
     './src/service-worker.ts',
-    './src/external-packages.ts',
+    './src/external-packages.js',
     './src/hmr.ts',
 ];
 const staticInputs = staticFiles.reduce(
