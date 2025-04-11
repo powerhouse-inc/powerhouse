@@ -146,7 +146,7 @@ export const use: CommandActionType<
 > = (environment, localPath, options) => {
   if (
     !environment ||
-    (!force &&
+    (!options.force &&
       environment !== "local" &&
       !Object.keys(ENV_MAP).includes(environment))
   ) {
