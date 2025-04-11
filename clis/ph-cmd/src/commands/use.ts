@@ -51,6 +51,7 @@ export const PH_PROJECT_LOCAL_DEPENDENCIES = [
 
 export const ENV_MAP = {
   dev: "dev",
+  staging: "staging",
   prod: "latest",
   latest: "latest",
 };
@@ -138,16 +139,19 @@ export const use: CommandActionType<
       local?: string;
       debug?: boolean;
       latest?: boolean;
+      force?: boolean;
       packageManager?: string;
     },
   ]
 > = (environment, localPath, options) => {
   if (
     !environment ||
-    (environment !== "local" && !Object.keys(ENV_MAP).includes(environment))
+    (!force &&
+      environment !== "local" &&
+      !Object.keys(ENV_MAP).includes(environment))
   ) {
     throw new Error(
-      "❌ Invalid environment, please use one of the following: latest, dev, prod, local",
+      `❌ Invalid environment, use --force or use one of the following: ${Object.keys(ENV_MAP).join(", ")}`,
     );
   }
 
@@ -182,6 +186,7 @@ export function useCommand(program: Command) {
       "[localPath]",
       "The path to the local environment (you have to specify the path to the local environment)",
     )
+    .option("--force", "force environment to use")
     .option(
       "--package-manager <packageManager>",
       "force package manager to use",
