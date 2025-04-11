@@ -1,3 +1,13 @@
+## 2.28.1-dev.3 (2025-04-11)
+
+### 🩹 Fixes
+
+- update lockfile ([07931c848](https://github.com/powerhouse-inc/powerhouse/commit/07931c848))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 2.28.1-dev.2 (2025-04-10)
 
 ### 🚀 Features
