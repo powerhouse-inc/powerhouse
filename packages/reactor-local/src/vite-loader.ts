@@ -32,7 +32,15 @@ export class VitePackageLoader implements IPackageLoader {
         DocumentModelModule
       >;
 
-      const documentModels = Object.values(localDMs);
+      const exports = Object.values(localDMs);
+
+      // duck type
+      const documentModels: DocumentModelModule[] = [];
+      for (const dm of exports) {
+        if (dm.documentModel) {
+          documentModels.push(dm);
+        }
+      }
 
       this.logger.verbose(
         `  ➜  Loaded ${documentModels.length} Document Models from: ${identifier}`,
