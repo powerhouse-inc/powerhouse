@@ -275,6 +275,7 @@ async function loadSubgraphs(
         await graphqlManager.registerSubgraph(SubgraphClass, "graphql");
       }
     }
+    await graphqlManager.updateRouter();
   } catch (e) {
     if ((e as FSError).code === "ENOENT") {
       console.warn("No local document models found");

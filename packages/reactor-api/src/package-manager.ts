@@ -12,7 +12,7 @@ export const readManifest = () => {
 
 import { getConfig } from "@powerhousedao/config";
 import { type SubgraphClass } from "@powerhousedao/reactor-api";
-import { ProcessorFactory } from "document-drive/processors/types";
+import { type ProcessorFactory } from "document-drive/processors/types";
 import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
@@ -39,7 +39,7 @@ export async function loadDependency(
 ): Promise<unknown> {
   try {
     const fullPath = `${packageName}/${subPath}`;
-    return await import(fullPath);
+    return await import(/* @vite-ignore */ fullPath);
   } catch (e) {
     console.error("Error loading dependency", packageName, subPath, e);
     return null;
