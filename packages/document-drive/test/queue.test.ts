@@ -153,21 +153,30 @@ describe.each(queueLayers)(
         }),
       );
 
-      // queue mutation
+      // queue mutation first - this should be blocked
       const documentResult = server.queueOperations(driveId, documentId, [
         mutation,
       ]);
+
+      // verify document doesn't exist yet
       await expect(
         server.getDocument(driveId, documentId),
       ).rejects.toThrowError(`Document with id ${documentId} not found`);
 
-      // now queue add file
+      // now queue add file - this should create the document
       const results = await server.queueDriveOperations(
         driveId,
         driveOperations,
       );
 
-      const errors = [results, await documentResult].filter((r) => !!r.error);
+      // wait for both operations to complete
+      const [driveResult, docResult] = await Promise.all([
+        results,
+        documentResult,
+      ]);
+
+      // check for errors
+      const errors = [driveResult, docResult].filter((r) => !!r.error);
       if (errors.length) {
         errors.forEach((error) => console.error("Error queueing", error));
       }
