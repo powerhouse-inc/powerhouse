@@ -6,7 +6,7 @@ import {
   getUniqueDocumentModels,
   PackageManager,
 } from "#packages/package-manager.js";
-import { IPackageLoader } from "#packages/types.js";
+import { type IPackageLoader } from "#packages/types.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
@@ -16,11 +16,11 @@ import {
 import devcert from "devcert";
 import {
   childLogger,
-  DocumentDriveDocument,
+  type DocumentDriveDocument,
   type IDocumentDriveServer,
 } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
-import { IProcessorManager } from "document-drive/processors/types";
+import { type IProcessorManager } from "document-drive/processors/types";
 import express, { type Express } from "express";
 import { type Knex } from "knex";
 import fs from "node:fs";
@@ -28,7 +28,7 @@ import https from "node:https";
 import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
-import { SubgraphClass, type API } from "./types.js";
+import { type API, type SubgraphClass } from "./types.js";
 import { getDbClient } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);
@@ -109,7 +109,7 @@ async function setupGraphQLManager(
 
   for (const [supergraph, collection] of subgraphs.entries()) {
     for (const subgraph of collection) {
-      graphqlManager.registerSubgraph(subgraph, supergraph);
+      graphqlManager.registerSubgraph(subgraph, "graphql");
     }
   }
 
@@ -138,7 +138,7 @@ function setupEventListeners(
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
     for (const [supergraph, subgraphs] of packagedSubgraphs) {
       for (const subgraph of subgraphs) {
-        graphqlManager.registerSubgraph(subgraph, supergraph);
+        graphqlManager.registerSubgraph(subgraph, "graphql");
       }
     }
     graphqlManager.updateRouter();
