@@ -207,6 +207,13 @@ export class DriveSubgraph extends Subgraph {
         return obj.documentType ? "FileNode" : "FolderNode";
       },
     },
+    DocumentDrive_Node: {
+      __resolveType: (obj: FileNode) => {
+        return obj.documentType
+          ? "DocumentDrive_FileNode"
+          : "DocumentDrive_FolderNode";
+      },
+    },
     Document: {
       operations: async (
         obj: PHDocument,
@@ -226,10 +233,7 @@ export class DriveSubgraph extends Subgraph {
         return {
           meta: drive.meta,
           ...drive.state.global,
-          nodes: drive.state.global.nodes.map((n) => ({
-            ...n,
-            __typename: driveKindTypeNames[n.kind] || "UnkownDriveNode",
-          })),
+          nodes: drive.state.global.nodes,
         };
       },
       documents: async (_: unknown, args: unknown, ctx: Context) => {
