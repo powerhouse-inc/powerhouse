@@ -3,6 +3,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import CalendarTime from "./CalendarTime.js";
 import CaretLeft from "./CaretLeft.js";
 import CaretRight from "./CaretRight.js";
+import ArrowCouterclockwise from "./ArrowCouterclockwise.js";
 import ArrowFilledRight from "./ArrowFilledRight.js";
 import ArrowLeft from "./ArrowLeft.js";
 import ArrowUp from "./ArrowUp.js";
@@ -25,6 +26,7 @@ import ChevronDown from "./ChevronDown.js";
 import CircleInfo from "./CircleInfo.js";
 import Circle from "./Circle.js";
 import ClockFill from "./ClockFill.js";
+import ClockHistory from "./ClockHistory.js";
 import Clock from "./Clock.js";
 import CloudSlash from "./CloudSlash.js";
 import Collapse from "./Collapse.js";
@@ -98,6 +100,7 @@ import Settings from "./Settings.js";
 import Synced from "./Synced.js";
 import Syncing from "./Syncing.js";
 import Tabler from "./Tabler.js";
+import Timeline from "./Timeline.js";
 import TrashFill from "./TrashFill.js";
 import Trash from "./Trash.js";
 import TreeViewSlash from "./TreeViewSlash.js";
@@ -116,6 +119,7 @@ export const iconNames = [
   "CalendarTime",
   "CaretLeft",
   "CaretRight",
+  "ArrowCouterclockwise",
   "ArrowFilledRight",
   "ArrowLeft",
   "ArrowUp",
@@ -138,6 +142,7 @@ export const iconNames = [
   "CircleInfo",
   "Circle",
   "ClockFill",
+  "ClockHistory",
   "Clock",
   "CloudSlash",
   "Collapse",
@@ -211,6 +216,7 @@ export const iconNames = [
   "Synced",
   "Syncing",
   "Tabler",
+  "Timeline",
   "TrashFill",
   "Trash",
   "TreeViewSlash",
@@ -233,6 +239,7 @@ export const iconComponents: Record<
   CalendarTime,
   CaretLeft,
   CaretRight,
+  ArrowCouterclockwise,
   ArrowFilledRight,
   ArrowLeft,
   ArrowUp,
@@ -255,6 +262,7 @@ export const iconComponents: Record<
   CircleInfo,
   Circle,
   ClockFill,
+  ClockHistory,
   Clock,
   CloudSlash,
   Collapse,
@@ -328,6 +336,7 @@ export const iconComponents: Record<
   Synced,
   Syncing,
   Tabler,
+  Timeline,
   TrashFill,
   Trash,
   TreeViewSlash,
