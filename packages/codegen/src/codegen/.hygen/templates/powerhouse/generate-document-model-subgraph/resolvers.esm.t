@@ -36,6 +36,7 @@ export const getResolvers = (subgraph: Subgraph) => {
                   driveId: driveId,
                   ...doc,
                   state: doc.state.global,
+                  stateJSON: doc.state.global,
                   revision: doc.revision.global,
                 };
               }),
