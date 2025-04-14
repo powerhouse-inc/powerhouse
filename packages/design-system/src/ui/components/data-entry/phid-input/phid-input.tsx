@@ -66,7 +66,7 @@ const PHIDInput = React.forwardRef<HTMLInputElement, PHIDInputProps>(
           path={
             displayProps?.asPlaceholder
               ? previewPlaceholder?.path || "Type not available"
-              : option.path
+              : option.path || "Type not available"
           }
           value={
             displayProps?.asPlaceholder
