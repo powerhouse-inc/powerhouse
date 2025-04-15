@@ -19,7 +19,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
 
     const drives = await reactor.getDrives();
     if (!drives.length && connectConfig.drives.sections.LOCAL.enabled) {
-        reactor
+        return reactor
             .addDrive({
                 global: {
                     id: hashKey(),
