@@ -755,7 +755,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     // add drive with the same slug as the first drive, which should throw an error
     await expect(addDrive("4", "slug1")).rejects.toThrowError(
-      "Drive with slug slug1 already exists",
+      "Document with slug slug1 already exists",
     );
 
     let drive = await server.getDriveBySlug("slug1");

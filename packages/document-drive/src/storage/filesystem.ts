@@ -27,6 +27,11 @@ interface DriveManifest {
   documentIds: string[];
 }
 
+// Interface for slug manifest that maps slugs to document IDs
+interface SlugManifest {
+  slugToId: Record<string, string>;
+}
+
 function ensureDir(dir: string) {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
@@ -51,11 +56,24 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   }
 
   // TODO: this should throw an error if the document already exists.
-  create(documentId: string, document: PHDocument) {
+  async create(documentId: string, document: PHDocument) {
     const documentPath = this._buildDocumentPath(documentId);
     writeFileSync(documentPath, stringify(document), {
       encoding: "utf-8",
     });
+
+    // Update the slug manifest if the document has a slug
+    const slug =
+      (document.initialState.state.global as any)?.slug ?? documentId;
+    if (slug) {
+      const slugManifest = await this.getSlugManifest();
+      if (slugManifest.slugToId[slug]) {
+        throw new Error(`Document with slug ${slug} already exists`);
+      }
+
+      slugManifest.slugToId[slug] = documentId;
+      await this.updateSlugManifest(slugManifest);
+    }
 
     return Promise.resolve();
   }
@@ -72,7 +90,36 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     }
   }
 
+  async getBySlug<TDocument extends PHDocument>(
+    slug: string,
+  ): Promise<TDocument> {
+    const slugManifest = await this.getSlugManifest();
+    const documentId = slugManifest.slugToId[slug];
+
+    if (!documentId) {
+      throw new Error(`Document with slug ${slug} not found`);
+    }
+
+    return this.get<TDocument>(documentId);
+  }
+
   async delete(documentId: string): Promise<boolean> {
+    // First, find any slug for this document and remove it from the slug manifest
+    try {
+      const document = await this.get<PHDocument>(documentId);
+      const slug = (document.initialState.state.global as any)?.slug;
+
+      if (slug) {
+        const slugManifest = await this.getSlugManifest();
+        if (slugManifest.slugToId[slug] === documentId) {
+          delete slugManifest.slugToId[slug];
+          await this.updateSlugManifest(slugManifest);
+        }
+      }
+    } catch (error) {
+      // If we can't get the document, we can't remove its slug
+    }
+
     // delete the document from all other drive manifests
     const drives = await this.getDrives();
     for (const driveId of drives) {
@@ -193,39 +240,10 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDriveBySlug(slug: string) {
-    // get oldest drives first
-    const drives = (await this.getDrives()).reverse();
-    for (const drive of drives) {
-      const {
-        initialState: {
-          state: {
-            global: { slug: driveSlug },
-          },
-        },
-      } = await this.get<DocumentDriveDocument>(drive);
-      if (driveSlug === slug) {
-        return this.get<DocumentDriveDocument>(drive);
-      }
-    }
-
-    throw new Error(`Drive with slug ${slug} not found`);
+    return this.getBySlug<DocumentDriveDocument>(slug);
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
-    // check if a drive with the same slug already exists
-    const slug = drive.initialState.state.global.slug;
-    if (slug) {
-      let existingDrive;
-      try {
-        existingDrive = await this.getDriveBySlug(slug);
-      } catch {
-        // do nothing
-      }
-      if (existingDrive) {
-        throw new Error(`Drive with slug ${slug} already exists`);
-      }
-    }
-
     await this.create(id, drive);
 
     // Initialize an empty manifest for the new drive
@@ -331,6 +349,10 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return `${this.basePath}/manifest-${driveId}.json`;
   }
 
+  private _buildSlugManifestPath() {
+    return `${this.basePath}/slugs.json`;
+  }
+
   private async getManifest(driveId: string): Promise<DriveManifest> {
     const manifestPath = this._buildManifestPath(driveId);
     try {
@@ -348,5 +370,21 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   ): Promise<void> {
     const manifestPath = this._buildManifestPath(driveId);
     writeFileSync(manifestPath, stringify(manifest), { encoding: "utf-8" });
+  }
+
+  private async getSlugManifest(): Promise<SlugManifest> {
+    const slugManifestPath = this._buildSlugManifestPath();
+    try {
+      const content = readFileSync(slugManifestPath, { encoding: "utf-8" });
+      return JSON.parse(content) as SlugManifest;
+    } catch (error) {
+      // Return empty slug manifest if file doesn't exist
+      return { slugToId: {} };
+    }
+  }
+
+  private async updateSlugManifest(manifest: SlugManifest): Promise<void> {
+    const slugManifestPath = this._buildSlugManifestPath();
+    writeFileSync(slugManifestPath, stringify(manifest), { encoding: "utf-8" });
   }
 }

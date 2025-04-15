@@ -20,6 +20,11 @@ interface DriveManifest {
   documentIds: string[];
 }
 
+// Interface for slug manifest that maps slugs to document IDs
+interface SlugManifest {
+  slugToId: Record<string, string>;
+}
+
 export class IPFSStorage implements IStorage, IDocumentStorage {
   private fs: MFS;
 
@@ -56,6 +61,15 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
       new TextEncoder().encode(stringify(document)),
       this._buildDocumentPath(documentId),
     );
+
+    // Update the slug manifest if the document has a slug
+    const slug =
+      (document.initialState.state.global as any)?.slug ?? documentId;
+    if (slug) {
+      const slugManifest = await this.getSlugManifest();
+      slugManifest.slugToId[slug] = documentId;
+      await this.updateSlugManifest(slugManifest);
+    }
   }
 
   async get<TDocument extends PHDocument>(
@@ -78,7 +92,36 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     }
   }
 
+  async getBySlug<TDocument extends PHDocument>(
+    slug: string,
+  ): Promise<TDocument> {
+    const slugManifest = await this.getSlugManifest();
+    const documentId = slugManifest.slugToId[slug];
+
+    if (!documentId) {
+      throw new Error(`Document with slug ${slug} not found`);
+    }
+
+    return this.get<TDocument>(documentId);
+  }
+
   async delete(documentId: string): Promise<boolean> {
+    // Remove from slug manifest if it has a slug
+    try {
+      const document = await this.get<PHDocument>(documentId);
+      const slug = (document.initialState.state.global as any)?.slug;
+
+      if (slug) {
+        const slugManifest = await this.getSlugManifest();
+        if (slugManifest.slugToId[slug] === documentId) {
+          delete slugManifest.slugToId[slug];
+          await this.updateSlugManifest(slugManifest);
+        }
+      }
+    } catch (error) {
+      // If we can't get the document, we can't remove its slug
+    }
+
     // delete the document from all other drive manifests
     const drives = await this.getDrives();
     for (const driveId of drives) {
@@ -199,24 +242,24 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   }
 
   async getDriveBySlug(slug: string): Promise<DocumentDriveDocument> {
-    // Get oldest drives first
-    const drives = (await this.getDrives()).reverse();
-    for (const drive of drives) {
-      const {
-        initialState: {
-          state: {
-            global: { slug: driveSlug },
-          },
-        },
-      } = await this.getDrive(drive);
-      if (driveSlug === slug) {
-        return this.getDrive(drive);
-      }
-    }
-    throw new Error(`Drive with slug ${slug} not found`);
+    return this.getBySlug<DocumentDriveDocument>(slug);
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
+    // check if a drive with the same slug already exists
+    const slug = drive.initialState.state.global.slug;
+    if (slug) {
+      let existingDrive;
+      try {
+        existingDrive = await this.getBySlug(slug);
+      } catch {
+        // do nothing
+      }
+      if (existingDrive) {
+        throw new Error(`Drive with slug ${slug} already exists`);
+      }
+    }
+
     const drivePath = this._buildDrivePath(id);
     const driveContent = stringify(drive);
     const driveBuffer = new TextEncoder().encode(driveContent);
@@ -352,6 +395,10 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return `/manifest-${driveId}.json`;
   }
 
+  private _buildSlugManifestPath(): string {
+    return `/slugs.json`;
+  }
+
   private async getDriveManifest(driveId: string): Promise<DriveManifest> {
     try {
       const manifestPath = this._buildDriveManifestPath(driveId);
@@ -373,6 +420,29 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     manifest: DriveManifest,
   ): Promise<void> {
     const manifestPath = this._buildDriveManifestPath(driveId);
+    const manifestContent = stringify(manifest);
+    const manifestBuffer = new TextEncoder().encode(manifestContent);
+    await this.fs.writeBytes(manifestBuffer, manifestPath, { force: true });
+  }
+
+  private async getSlugManifest(): Promise<SlugManifest> {
+    try {
+      const manifestPath = this._buildSlugManifestPath();
+      const chunks = [];
+      for await (const chunk of this.fs.cat(manifestPath)) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+      const content = new TextDecoder().decode(buffer);
+      return JSON.parse(content) as SlugManifest;
+    } catch (error) {
+      // If manifest doesn't exist, return an empty one
+      return { slugToId: {} };
+    }
+  }
+
+  private async updateSlugManifest(manifest: SlugManifest): Promise<void> {
+    const manifestPath = this._buildSlugManifestPath();
     const manifestContent = stringify(manifest);
     const manifestBuffer = new TextEncoder().encode(manifestContent);
     await this.fs.writeBytes(manifestBuffer, manifestPath, { force: true });

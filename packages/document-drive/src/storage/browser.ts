@@ -19,6 +19,11 @@ interface DriveManifest {
   documentIds: string[];
 }
 
+// Interface for slug manifest that maps slugs to document IDs
+interface SlugManifest {
+  slugToId: Record<string, string>;
+}
+
 export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   private db: Promise<LocalForage>;
 
@@ -26,6 +31,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   static SEP = ":";
   static DOCUMENT_KEY = "DOCUMENT";
   static MANIFEST_KEY = "MANIFEST";
+  static SLUG_MANIFEST_KEY = "SLUG_MANIFEST";
 
   constructor(namespace?: string) {
     this.db = LocalForage.ready().then(() =>
@@ -59,6 +65,21 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   async create(documentId: string, document: PHDocument): Promise<void> {
     const db = await this.db;
     await db.setItem(this.buildDocumentKey(documentId), document);
+
+    // Update the slug manifest if the document has a slug
+    const slug =
+      (document.initialState.state.global as any)?.slug ?? documentId;
+    if (slug) {
+      const slugManifest = await this.getSlugManifest();
+
+      // check if the slug is already taken
+      if (slugManifest.slugToId[slug]) {
+        throw new Error(`Document with slug ${slug} already exists`);
+      }
+
+      slugManifest.slugToId[slug] = documentId;
+      await this.updateSlugManifest(slugManifest);
+    }
   }
 
   async get<TDocument extends PHDocument>(
@@ -76,6 +97,19 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return document;
   }
 
+  async getBySlug<TDocument extends PHDocument>(
+    slug: string,
+  ): Promise<TDocument> {
+    const slugManifest = await this.getSlugManifest();
+    const documentId = slugManifest.slugToId[slug];
+
+    if (!documentId) {
+      throw new Error(`Document with slug ${slug} not found`);
+    }
+
+    return this.get<TDocument>(documentId);
+  }
+
   async delete(documentId: string): Promise<boolean> {
     const db = await this.db;
 
@@ -85,6 +119,20 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
 
     if (!document) {
       return false;
+    }
+
+    // Remove from slug manifest if it has a slug
+    try {
+      const slug = (document.initialState.state.global as any)?.slug;
+      if (slug) {
+        const slugManifest = await this.getSlugManifest();
+        if (slugManifest.slugToId[slug] === documentId) {
+          delete slugManifest.slugToId[slug];
+          await this.updateSlugManifest(slugManifest);
+        }
+      }
+    } catch (error) {
+      // If we can't get the slug, we can't remove it from the manifest
     }
 
     // delete the document from all other drive manifests
@@ -159,6 +207,19 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     await db.setItem(this.buildManifestKey(driveId), manifest);
   }
 
+  private async getSlugManifest(): Promise<SlugManifest> {
+    const db = await this.db;
+    const manifest = await db.getItem<SlugManifest>(
+      BrowserStorage.SLUG_MANIFEST_KEY,
+    );
+    return manifest || { slugToId: {} };
+  }
+
+  private async updateSlugManifest(manifest: SlugManifest): Promise<void> {
+    const db = await this.db;
+    await db.setItem(BrowserStorage.SLUG_MANIFEST_KEY, manifest);
+  }
+
   async clearStorage(): Promise<void> {
     return (await this.db).clear();
   }
@@ -197,33 +258,10 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDriveBySlug(slug: string) {
-    // get oldes drives first
-    const drives = (await this.getDrives()).reverse();
-    for (const drive of drives) {
-      const driveData = await this.get<DocumentDriveDocument>(drive);
-      if (driveData.initialState.state.global.slug === slug) {
-        return driveData;
-      }
-    }
-
-    throw new Error(`Drive with slug ${slug} not found`);
+    return this.getBySlug<DocumentDriveDocument>(slug);
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
-    // check if a drive with the same slug already exists
-    const slug = drive.initialState.state.global.slug;
-    if (slug) {
-      let existingDrive;
-      try {
-        existingDrive = await this.getDriveBySlug(slug);
-      } catch {
-        // do nothing
-      }
-      if (existingDrive) {
-        throw new Error(`Drive with slug ${slug} already exists`);
-      }
-    }
-
     await this.create(id, drive);
 
     // Initialize an empty manifest for the new drive

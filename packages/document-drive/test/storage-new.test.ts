@@ -8,6 +8,7 @@ import {
 } from "../../document-model/index";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
 import InMemoryCache from "../src/cache/memory";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { BrowserStorage } from "../src/storage/browser";
@@ -154,6 +155,19 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const childrenB = await storage.getChildren("driveB");
     expect(childrenB).toEqual([]);
+  });
+
+  it("should allow creating and retrieving a document with a slug", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const document = createDriveDocument();
+    document.initialState.state.global.slug = "test";
+    await storage.create("test", document);
+
+    const result = await storage.getBySlug<DocumentDriveDocument>("test");
+    expect(result.initialState.state.global.slug).toBe("test");
   });
 
   it("should allow associating a document with another document", async ({

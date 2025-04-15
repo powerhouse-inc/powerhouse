@@ -13,7 +13,6 @@ datasource db {
 
 model Drive {
   id            String  @id
-  slug          String  @unique
   driveDocuments DriveDocument[]
 }
 
@@ -21,7 +20,7 @@ model Document {
   id                  String               @id
   created             DateTime             @default(now())
   lastModified        DateTime             @default(now())
-  isDrive             Boolean
+  slug                String?              @unique
   revision            String
   name                String?
   operations          Operation[]

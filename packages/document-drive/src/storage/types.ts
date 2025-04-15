@@ -16,6 +16,8 @@ export interface IDocumentStorage {
   exists(documentId: string): Promise<boolean>;
 
   /**
+   * TODO: SPLIT OFF into `create` and `createWithSlug`.
+   *
    * Creates a new document with the given id.
    *
    * @param documentId - The id of the document to create.
@@ -33,6 +35,13 @@ export interface IDocumentStorage {
    * @throws Error if the document does not exist.
    */
   get<TDocument extends PHDocument>(documentId: string): Promise<TDocument>;
+
+  /**
+   * Returns the document with the given slug.
+   *
+   * @param slug - The slug of the document to get.
+   */
+  getBySlug<TDocument extends PHDocument>(slug: string): Promise<TDocument>;
 
   /**
    * Deletes the document with the given id.
