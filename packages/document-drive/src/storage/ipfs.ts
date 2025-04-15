@@ -241,10 +241,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     }
   }
 
-  async getDriveBySlug(slug: string): Promise<DocumentDriveDocument> {
-    return this.getBySlug<DocumentDriveDocument>(slug);
-  }
-
   async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
     // check if a drive with the same slug already exists
     const slug = drive.initialState.state.global.slug;

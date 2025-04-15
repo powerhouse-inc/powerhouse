@@ -598,10 +598,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return drives.map((d) => d.id);
   }
 
-  async getDriveBySlug(slug: string) {
-    return this.getBySlug<DocumentDriveDocument>(slug);
-  }
-
   async deleteDrive(id: string) {
     // delete drive
     await this.db.drive.delete({

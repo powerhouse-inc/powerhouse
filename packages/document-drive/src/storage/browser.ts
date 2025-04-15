@@ -257,10 +257,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
       );
   }
 
-  async getDriveBySlug(slug: string) {
-    return this.getBySlug<DocumentDriveDocument>(slug);
-  }
-
   async createDrive(id: string, drive: DocumentDriveDocument) {
     await this.create(id, drive);
 

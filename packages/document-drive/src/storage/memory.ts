@@ -165,10 +165,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return Object.keys(this.driveManifests);
   }
 
-  async getDriveBySlug(slug: string) {
-    return this.getBySlug<DocumentDriveDocument>(slug);
-  }
-
   async createDrive(id: string, drive: DocumentDriveDocument) {
     await this.create(id, drive);
 

@@ -69,7 +69,6 @@ describe.each(queueLayers)(
           id: generateUUID(),
           name: "name",
           icon: "icon",
-          slug: "slug",
         },
         local: {
           availableOffline: false,

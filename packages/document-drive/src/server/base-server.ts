@@ -727,7 +727,7 @@ export class BaseDocumentDriveServer
       this.logger.error("Error getting drive from cache", e);
     }
 
-    const driveStorage = await this.legacyStorage.getDriveBySlug(slug);
+    const driveStorage = await this.documentStorage.getBySlug(slug);
     const document = this._buildDocument(driveStorage, options);
     if (!isDocumentDrive(document)) {
       throw new Error(`Document with slug ${slug} is not a Document Drive`);
