@@ -215,8 +215,8 @@ export class DriveSubgraph extends Subgraph {
     DocumentDrive_Node: {
       __resolveType: (obj: FileNode) => {
         return obj.documentType
-          ? "DocumentDrive_FileNode"
-          : "DocumentDrive_FolderNode";
+          ? driveKindTypeNames.file
+          : driveKindTypeNames.folder;
       },
     },
     Document: {
