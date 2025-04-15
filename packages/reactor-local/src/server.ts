@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 import path from "node:path";
 import {
   DefaultStartServerOptions,
-  LocalReactor,
-  StartServerOptions,
+  type LocalReactor,
+  type StartServerOptions,
 } from "./types.js";
 import { addDefaultDrive, createStorage, startViteServer } from "./util.js";
 import { VitePackageLoader } from "./vite-loader.js";
@@ -58,7 +58,7 @@ const startServer = async (
   const driveUrl = await addDefaultDrive(driveServer, drive, serverPort);
 
   // create loader
-  let packageLoader = vite ? new VitePackageLoader(vite) : undefined;
+  const packageLoader = vite ? new VitePackageLoader(vite) : undefined;
 
   // start api
   const api = await startAPI(driveServer, {
@@ -80,7 +80,12 @@ const startServer = async (
   return {
     driveUrl,
     getDocumentPath: (driveId: string, documentId: string): string => {
-      return path.join(storage.filesystemPath!, driveId, `${documentId}.json`);
+      if (!storage.filesystemPath) {
+        throw new Error(
+          `"getDocumentPath" is only available with the Filesystem storage adapter.`,
+        );
+      }
+      return path.join(storage.filesystemPath, driveId, `${documentId}.json`);
     },
     server: driveServer,
   };
