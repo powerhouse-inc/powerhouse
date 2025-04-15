@@ -30,9 +30,7 @@ export class GraphQLManager {
     private readonly operationalStore: Db,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly subgraphs: Map<string, Subgraph[]> = new Map(),
-  ) {
-    this.subgraphs.set("graphql", []);
-  }
+  ) {}
 
   async init() {
     console.log(`> Initializing Subgraph Manager...`);
@@ -190,6 +188,7 @@ export class GraphQLManager {
   }
 
   async #createApolloGateway(endpoints: string[]) {
+    const uniqueEndpoints = new Set([...endpoints]);
     try {
       const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
         ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
@@ -197,7 +196,7 @@ export class GraphQLManager {
 
       const gateway = new ApolloGateway({
         supergraphSdl: new IntrospectAndCompose({
-          subgraphs: endpoints.map((endpoint) => ({
+          subgraphs: Array.from(uniqueEndpoints).map((endpoint) => ({
             name: endpoint.replaceAll("/", ""),
             url: `${herokuOrLocal}${endpoint}`,
           })),
