@@ -1,11 +1,11 @@
 import { Subgraph } from "./base/index.js";
 
 export * as analyticsSubgraph from "./analytics/index.js";
+export * as authSubgraph from "./auth/index.js";
+export { Subgraph } from "./base/index.js";
 export * as driveSubgraph from "./drive/index.js";
 export * as systemSubgraph from "./system/index.js";
-export * as authSubgraph from "./auth/index.js";
 export * from "./types.js";
-export { Subgraph } from "./base/index.js";
 
 export type SubgraphClass = typeof Subgraph;
 export function isSubgraphClass(

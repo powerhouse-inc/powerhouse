@@ -1,27 +1,37 @@
 import { type Db } from "#types.js";
 import { createSchema } from "#utils/create-schema.js";
 import { ApolloGateway, IntrospectAndCompose } from "@apollo/gateway";
+import { type SupergraphSdlHookOptions } from "@apollo/gateway/dist/config.js";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
+import { buildSubgraphSchema } from "@apollo/subgraph";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { type IDocumentDriveServer } from "document-drive";
 import type express from "express";
-import { Router, type IRouter } from "express";
-import { type GraphQLSchema } from "graphql";
+import { Request, Router, type IRouter } from "express";
+import { printSchema, type GraphQLSchema } from "graphql";
 import path from "node:path";
 import { AnalyticsSubgraph } from "./analytics/index.js";
 import { AuthSubgraph } from "./auth/index.js";
 import { DriveSubgraph } from "./drive/index.js";
 import { type Subgraph, type SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
-import { type Context } from "./types.js";
+
+const BASE_URL = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
+  ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
+  : `http://localhost:${process.env.PORT ?? 4001}`;
+
 export class GraphQLManager {
-  private reactorRouter: IRouter = Router();
+  private router: IRouter = Router();
+  private gateway: ApolloGateway | undefined;
+  private server: ApolloServer | undefined;
+  private gatewayOptions: SupergraphSdlHookOptions | undefined;
   private contextFields: Record<string, any> = {};
+  private subgraphServers = new Map<string, ApolloServer>();
 
   constructor(
     private readonly path: string,
@@ -32,18 +42,26 @@ export class GraphQLManager {
     private readonly subgraphs: Map<string, Subgraph[]> = new Map(),
   ) {
     this.subgraphs.set("graphql", []);
+    this.router.use(cors());
+    this.router.use(bodyParser.json());
+    this.router.use(this.#routeSubgraphs.bind(this));
+  }
+
+  async #updateGatewaySupergraph(endpoints: string[]) {
+    const options = await this.gatewayOptions;
+    const introspectAndCompose = new IntrospectAndCompose({
+      subgraphs: endpoints.map((endpoint) => ({
+        name: endpoint.replaceAll("/", ""),
+        url: `${BASE_URL}${endpoint}`,
+      })),
+    });
+    const supergraphSdl = await introspectAndCompose.initialize(options);
+    console.log("NEW SUPERGRAPH", supergraphSdl.supergraphSdl);
   }
 
   async init() {
     console.log(`> Initializing Subgraph Manager...`);
 
-    // Setup Default subgraphs
-    await this.registerSubgraph(AuthSubgraph, "graphql");
-    await this.registerSubgraph(SystemSubgraph, "graphql");
-    await this.registerSubgraph(AnalyticsSubgraph, "graphql");
-
-    // special case for drive
-    await this.registerSubgraph(DriveSubgraph);
     const models = this.reactor.getDocumentModelModules();
     const driveModel = models.find(
       (it) => it.documentModel.name === "DocumentDrive",
@@ -56,9 +74,60 @@ export class GraphQLManager {
       this.updateRouter().catch((error: unknown) => console.error(error));
     });
 
-    this.app.use("/", (req, res, next) => this.reactorRouter(req, res, next));
+    this.app.use("/", (req, res, next) => this.router(req, res, next));
 
-    this.updateRouter();
+    console.log("SETTING UP DEFAULT SUBGRAPHS");
+    // Setup Default subgraphs
+    await this.registerSubgraph(AuthSubgraph, "graphql");
+    await this.registerSubgraph(SystemSubgraph, "graphql");
+    await this.registerSubgraph(AnalyticsSubgraph, "graphql");
+
+    // special case for drive
+    await this.registerSubgraph(DriveSubgraph);
+
+    // creates the Apollo Gateway and Server, keeping a reference
+    // to the method to be able to update the supergraph later
+    const resolvers = Promise.withResolvers<SupergraphSdlHookOptions>();
+    this.gatewayOptions = resolvers.promise;
+    try {
+      this.gateway = new ApolloGateway({
+        async supergraphSdl(options) {
+          resolvers.resolve(options);
+          const test = new IntrospectAndCompose({
+            subgraphs: [
+              {
+                name: "graphql",
+                url: `${BASE_URL}/graphql"`,
+              },
+            ],
+          });
+          const result = await test.initialize(options);
+          return { supergraphSdl: result.supergraphSdl };
+          return Promise.resolve({
+            supergraphSdl: printSchema(buildSubgraphSchema([])),
+          });
+        },
+      });
+
+      this.server = new ApolloServer({
+        gateway: this.gateway,
+        plugins: [
+          ApolloServerPluginInlineTraceDisabled(),
+          ApolloServerPluginLandingPageLocalDefault(),
+        ],
+      });
+
+      await this.server.start();
+    } catch (e) {
+      if (e instanceof Error) {
+        console.error("> " + e.message);
+      } else {
+        console.error("> Could not create Apollo Gateway");
+      }
+      throw e;
+    }
+
+    return this.updateRouter();
   }
 
   async registerSubgraph(subgraph: SubgraphClass, supergraph = "") {
@@ -69,7 +138,6 @@ export class GraphQLManager {
       graphqlManager: this,
       path: this.path,
     });
-
     await subgraphInstance.onSetup();
     if (!this.subgraphs.get(supergraph)) {
       if (supergraph !== "") {
@@ -87,35 +155,25 @@ export class GraphQLManager {
     console.log(
       `> Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
-    // this.updateRouter();
   }
 
   async updateRouter() {
-    console.log("> Updating router");
-    const newRouter = Router();
-    newRouter.use(cors());
-    newRouter.use(bodyParser.json());
-    await this.#setupSubgraphs(newRouter);
-    this.reactorRouter = newRouter;
+    await this.#setupSubgraphs();
+    console.log("> Router updated.");
   }
 
-  getAdditionalContextFields = () => {
-    return this.contextFields;
+  #buildRequestContext = (req: Express.Request) => {
+    return Promise.resolve({
+      headers: req.headers,
+      driveId: req.params.drive || undefined,
+      driveServer: this.reactor,
+      db: this.operationalStore,
+      ...this.contextFields,
+    })
   };
 
   setAdditionalContextFields(fields: Record<string, any>) {
     this.contextFields = { ...this.contextFields, ...fields };
-  }
-
-  setSupergraph(supergraph: string, subgraphs: Subgraph[]) {
-    this.subgraphs.set(supergraph, subgraphs);
-    const globalSubgraphs = this.subgraphs.get("graphql");
-    if (globalSubgraphs) {
-      this.subgraphs.set("graphql", [...globalSubgraphs, ...subgraphs]);
-    } else {
-      this.subgraphs.set("graphql", subgraphs);
-    }
-    this.updateRouter();
   }
 
   #createApolloServer(schema: GraphQLSchema) {
@@ -129,124 +187,63 @@ export class GraphQLManager {
     });
   }
 
-  async #waitForServer(server: ApolloServer) {
-    return new Promise((resolve) => {
-      try {
-        server.assertStarted("waitForServer");
-        resolve(true);
-      } catch (e) {
-        setTimeout(() => this.#waitForServer(server), 100);
-      }
-    });
-  }
-
   #getSubgraphPath(subgraph: Subgraph, supergraph: string) {
     return path.join(subgraph.path, supergraph, subgraph.name);
   }
 
-  async #setupSubgraphs(router: IRouter) {
-    for (const [supergraph, subgraphs] of this.subgraphs.entries()) {
-      const supergraphEndpoints: string[] = [];
-      for (const subgraph of subgraphs) {
-        const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
-        if (!subgraphConfig) continue;
-        // create subgraph schema
-        const schema = createSchema(
-          this.reactor,
-          subgraphConfig.resolvers,
-          subgraphConfig.typeDefs,
-        );
-        // create and start apollo server
-        const server = this.#createApolloServer(schema);
-        const path = this.#getSubgraphPath(subgraph, supergraph);
-        await server.start();
-        await this.#waitForServer(server);
-        this.#setupApolloExpressMiddleware(server, router, path);
-        if (supergraph !== "") {
-          supergraphEndpoints.push(this.#getSubgraphPath(subgraph, supergraph));
-        }
-      }
-
-      if (supergraphEndpoints.length > 0) {
-        await this.#sleep(1000);
-        const supergraphServer =
-          await this.#createApolloGateway(supergraphEndpoints);
-        if (supergraphServer) {
-          const superGraphPath = path.join(this.path, supergraph ?? "graphql");
-          this.#setupApolloExpressMiddleware(
-            supergraphServer,
-            router,
-            superGraphPath,
-          );
-        }
-      }
+  async #setupSubgraph(subgraph: Subgraph, supergraph: string) {
+    const subgraphConfig = this.#getLocalSubgraphConfig(subgraph.name);
+    if (!subgraphConfig) {
+      throw new Error(`Subgraph not found: "${subgraph.name}"`);
     }
+    // create subgraph schema
+    const schema = createSchema(
+      this.reactor,
+      subgraphConfig.resolvers,
+      subgraphConfig.typeDefs,
+    );
+
+    // create and start apollo server
+    const server = this.#createApolloServer(schema);
+    const path = this.#getSubgraphPath(subgraph, supergraph);
+    await server.start();
+    this.#setupApolloExpressMiddleware(server, this.router, path);
+
+    // stops previous server if it exists
+    const oldServer = this.subgraphServers.get(subgraph.path);
+    this.subgraphServers.set(subgraph.path, server);
+    await oldServer?.stop();
+    //   if (supergraph !== "") {
+    //     supergraphEndpoints.push(this.#getSubgraphPath(subgraph, supergraph));
+    //   }
+
+    // if (supergraphEndpoints.length > 0) {
+    //   await this.#updateGatewaySupergraph(supergraphEndpoints);
+    //   const superGraphPath = path.join(this.path, supergraph || "graphql");
+    //   this.#setupApolloExpressMiddleware(
+    //     this.server,
+    //     this.router,
+    //     superGraphPath,
+    //   );
+    // }
   }
 
-  #sleep(ms: number) {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms);
+  #routeSubgraphs(router: IRouter) {
+    router.use((req, res, next) {
+
+      const server = this.subgraphServers.get(path);
+      if (server) {
+        return expressMiddleware(server, {
+          context: ({ req }) => this.#buildRequestContext(req)
+        });
+      } else {
+        next();
+      }
     });
   }
 
-  async #createApolloGateway(endpoints: string[]) {
-    try {
-      const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
-        ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
-        : `http://localhost:${process.env.PORT ?? 4001}`;
-
-      const gateway = new ApolloGateway({
-        supergraphSdl: new IntrospectAndCompose({
-          subgraphs: endpoints.map((endpoint) => ({
-            name: endpoint.replaceAll("/", ""),
-            url: `${herokuOrLocal}${endpoint}`,
-          })),
-        }),
-      });
-
-      const server = new ApolloServer({
-        gateway,
-        plugins: [
-          ApolloServerPluginInlineTraceDisabled(),
-          ApolloServerPluginLandingPageLocalDefault(),
-        ],
-      });
-
-      await server.start();
-      return server;
-    } catch (e) {
-      if (e instanceof Error) {
-        console.error("> " + e.message);
-      } else {
-        console.error("> Could not create Apollo Gateway");
-      }
-    }
-  }
-
-  #setupApolloExpressMiddleware(
-    server: ApolloServer,
-    router: IRouter,
-    path: string,
-  ) {
-    router.use(
-      path,
-      // @ts-expect-error todo check type defs
-      expressMiddleware(server, {
-        context: ({ req }): Context => ({
-          headers: req.headers,
-          driveId: req.params.drive ?? undefined,
-          driveServer: this.reactor,
-          db: this.operationalStore,
-          ...this.getAdditionalContextFields(),
-        }),
-      }),
-    );
-
-    this.reactorRouter = router;
-  }
-
   #getLocalSubgraphConfig(subgraphName: string): Subgraph | undefined {
-    for (const [_, subgraphs] of this.subgraphs) {
+    for (const [, subgraphs] of this.subgraphs) {
       const entry = subgraphs.find((it) => it.name === subgraphName);
       if (entry) return entry;
     }

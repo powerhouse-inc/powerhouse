@@ -107,13 +107,9 @@ async function setupGraphQLManager(
 
   await graphqlManager.init();
 
-  for (const [supergraph, collection] of subgraphs.entries()) {
-    for (const subgraph of collection) {
-      graphqlManager.registerSubgraph(subgraph, "graphql");
-    }
-  }
+  const allSubgraphs = subgraphs.values().toArray().flat();
+  await registerSubgraphs(graphqlManager, allSubgraphs, "graphql");
 
-  await graphqlManager.init();
   return graphqlManager;
 }
 
@@ -127,21 +123,17 @@ function setupEventListeners(
   processorManager: IProcessorManager,
   module: { db: Knex; analyticsStore: IAnalyticsStore },
 ): void {
-  pkgManager.onDocumentModelsChange((documentModels) => {
+  pkgManager.onDocumentModelsChange(async (documentModels) => {
     const uniqueModels = getUniqueDocumentModels(
       Object.values(documentModels).flat(),
     );
     reactor.setDocumentModelModules(uniqueModels);
-    graphqlManager.updateRouter();
+    await graphqlManager.updateRouter();
   });
 
-  pkgManager.onSubgraphsChange((packagedSubgraphs) => {
-    for (const [supergraph, subgraphs] of packagedSubgraphs) {
-      for (const subgraph of subgraphs) {
-        graphqlManager.registerSubgraph(subgraph, "graphql");
-      }
-    }
-    graphqlManager.updateRouter();
+  pkgManager.onSubgraphsChange(async (packagedSubgraphs) => {
+    const subgraphs = packagedSubgraphs.values().toArray().flat();
+    await registerSubgraphs(graphqlManager, subgraphs, "graphql");
   });
 
   pkgManager.onProcessorsChange(async (processors) => {
@@ -155,6 +147,22 @@ function setupEventListeners(
       );
     }
   });
+}
+
+async function registerSubgraphs(
+  graphqlManager: GraphQLManager,
+  subgraphs: SubgraphClass[],
+  supergraph: string,
+) {
+  const results = await Promise.allSettled(
+    subgraphs.map((subgraph) =>
+      graphqlManager.registerSubgraph(subgraph, supergraph),
+    ),
+  );
+
+  await graphqlManager.updateRouter();
+
+  return results;
 }
 
 /**
