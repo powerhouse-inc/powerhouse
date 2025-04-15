@@ -250,7 +250,9 @@ export class DriveSubgraph extends Subgraph {
       document: async (_: unknown, { id }: { id: string }, ctx: Context) => {
         this.logger.verbose(`document(drive: ${ctx.driveId}, id: ${id})`);
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const document = await this.reactor.getDocument(ctx.driveId, id);
+        const document = await (ctx.driveId === id
+          ? this.reactor.getDrive(id)
+          : this.reactor.getDocument(ctx.driveId, id));
 
         const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
