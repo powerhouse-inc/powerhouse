@@ -49,6 +49,7 @@ export interface IPullResponderTransmitter extends ITransmitter {
 }
 
 const MAX_REVISIONS_PER_ACK = 100;
+const MAX_PULLS = 50;
 
 interface GraphQLError {
   message: string;
@@ -350,6 +351,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
    * All other errors are caught, logged, and passed to `onError`.
    *
    * Because of this, `onError` _may be called multiple times_.
+   *
+   * @returns boolean indicating whether there might be more data to pull
    */
   private static async executePull(
     driveId: string,
@@ -361,7 +364,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
-  ) {
+  ): Promise<boolean> {
     staticLogger().verbose(
       `executePull(driveId: ${driveId}), trigger:`,
       trigger,
@@ -421,7 +424,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             );
 
             onError(error as Error);
-            return;
+            return false;
           }
 
           break;
@@ -435,7 +438,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       );
 
       onError(error!);
-      return;
+      return false;
     }
 
     // if there are no new strands then do nothing
@@ -455,7 +458,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         onError(error as Error);
       }
 
-      return;
+      return false;
     }
 
     staticLogger().verbose(
@@ -570,6 +573,9 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       // pass the error to the caller
       onError(error as Error);
     }
+
+    // Return true if we received strands, indicating there might be more to pull
+    return strands.length > 0;
   }
 
   static setupPull(
@@ -613,14 +619,27 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           `[SYNC DEBUG] Starting pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
         );
 
-        await this.executePull(
-          driveId,
-          trigger,
-          onStrandUpdate,
-          onError,
-          onRevisions,
-          onAcknowledge,
-        );
+        // keep pulling until we get no more strands, encounter an error, or hit the limit
+        let counter = 0;
+        let hasMore = true;
+        while (hasMore && !isCancelled && counter < MAX_PULLS) {
+          counter++;
+
+          hasMore = await this.executePull(
+            driveId,
+            trigger,
+            onStrandUpdate,
+            onError,
+            onRevisions,
+            onAcknowledge,
+          );
+
+          if (hasMore) {
+            staticLogger().verbose(
+              `[SYNC DEBUG] More strands available, continuing pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
+            );
+          }
+        }
 
         staticLogger().verbose(
           `[SYNC DEBUG] Completed pull cycle for drive: ${driveId}, listenerId: ${trigger.data.listenerId}, waiting ${loopInterval}ms for next cycle`,
