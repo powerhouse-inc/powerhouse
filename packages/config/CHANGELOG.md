@@ -1,3 +1,15 @@
+## 1.27.0-dev.5 (2025-04-15)
+
+### 🩹 Fixes
+
+- add source map generation so we can debug ([a4e8cbb69](https://github.com/powerhouse-inc/powerhouse/commit/a4e8cbb69))
+- **codegen:** getDocument query ([a9900f27c](https://github.com/powerhouse-inc/powerhouse/commit/a9900f27c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
 ## 1.27.0-dev.4 (2025-04-11)
 
 ### 🩹 Fixes
