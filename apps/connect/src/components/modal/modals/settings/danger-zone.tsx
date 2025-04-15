@@ -38,6 +38,7 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
                 clearStorage()
                     .then(() => {
                         // refreshes the page to reload default drive
+                        navigate('/');
                         onRefresh();
                     })
                     .catch(logger.error);
