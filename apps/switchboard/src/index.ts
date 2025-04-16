@@ -17,19 +17,16 @@ import { PackagesManager } from "./utils/package-manager.js";
 dotenv.config();
 
 // Create a monolith express app for all subgraphs
-
 const app = express();
 
 if (process.env.SENTRY_DSN) {
+  console.log("Initialized Sentry with env:", process.env.SENTRY_ENV);
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
+    environment: process.env.SENTRY_ENV,
   });
 
   Sentry.setupExpressErrorHandler(app);
-
-  app.get("/debug-sentry", function mainHandler(req, res) {
-    throw new Error("My first Sentry error!");
-  });
 }
 
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
