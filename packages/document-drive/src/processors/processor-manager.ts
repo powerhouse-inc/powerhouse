@@ -38,7 +38,7 @@ export class ProcessorManager implements IProcessorManager {
     // iterate over all drives and register the factory
     const driveIds = await this.drive.getDrives();
     for (const driveId of driveIds) {
-      await this.registerDrive(driveId);
+      await this.createProcessors(driveId, identifier, factory);
     }
   }
 
@@ -61,30 +61,44 @@ export class ProcessorManager implements IProcessorManager {
 
     // iterate over all factories and create listeners
     for (const [identifier, factory] of this.idToFactory) {
-      let listeners = this.identifierToListeners.get(identifier) ?? [];
-      if (!listeners) {
-        listeners = [];
-        this.identifierToListeners.set(identifier, listeners);
-      }
+      await this.createProcessors(driveId, identifier, factory);
+    }
+  }
 
-      const processors = factory(driveId);
+  /**
+   * Creates processors for a specific (drive, identifier) pair.
+   *
+   * This should be called once and only once for each (drive, identifier),
+   * unless unregisterFactory is called, which will remove them.
+   */
+  async createProcessors(
+    driveId: string,
+    identifier: string,
+    factory: ProcessorFactory,
+  ) {
+    let listeners = this.identifierToListeners.get(identifier) ?? [];
+    if (!listeners) {
+      listeners = [];
+      this.identifierToListeners.set(identifier, listeners);
+    }
 
-      for (const { filter, processor } of processors) {
-        const id = generateId();
-        const listener: Listener = {
-          driveId,
-          listenerId: id,
-          block: false,
-          system: false,
-          filter,
-          callInfo: undefined,
-          transmitter: new InternalTransmitter(this.drive, processor),
-        };
+    const processors = factory(driveId);
 
-        this.listeners.setListener(driveId, listener);
+    for (const { filter, processor } of processors) {
+      const id = generateId();
+      const listener: Listener = {
+        driveId,
+        listenerId: id,
+        block: false,
+        system: false,
+        filter,
+        callInfo: undefined,
+        transmitter: new InternalTransmitter(this.drive, processor),
+      };
 
-        listeners.push(listener);
-      }
+      this.listeners.setListener(driveId, listener);
+
+      listeners.push(listener);
     }
   }
 }
