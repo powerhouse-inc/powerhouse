@@ -9,19 +9,20 @@ import {
   type AnalyticsQuery,
   AnalyticsQueryEngine,
   DateTime,
-  MemoryAnalyticsStore,
+  type IAnalyticsStore,
   useAddSeriesValue,
   useAnalyticsQuery,
   useAnalyticsSeries,
   useGetDimensions,
 } from "../src/analytics/analytics.js";
+import { MemoryAnalyticsStore } from "../src/analytics/store/memory.js";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(
     "test/analytics/AnalyticsStore.spec",
   );
 
-  function createWrapper(store: MemoryAnalyticsStore) {
+  function createWrapper(store: IAnalyticsStore) {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
