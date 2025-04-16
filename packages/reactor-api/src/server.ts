@@ -235,6 +235,14 @@ export async function startAPI(
 
   const { documentModels, processors, subgraphs } = await packages.init();
 
+  // set document model modules here, processors might use them immediately
+  reactor.setDocumentModelModules(
+    getUniqueDocumentModels([
+      ...reactor.getDocumentModelModules(),
+      ...documentModels,
+    ]),
+  );
+
   // initialize processors
   const processorManager = new ProcessorManager(reactor.listeners, reactor);
   for (const [packageName, fns] of processors) {
@@ -249,14 +257,6 @@ export async function startAPI(
   reactor.on("driveAdded", async (drive: DocumentDriveDocument) => {
     await processorManager.registerDrive(drive.state.global.id);
   });
-
-  // set document model modules
-  reactor.setDocumentModelModules(
-    getUniqueDocumentModels([
-      ...reactor.getDocumentModelModules(),
-      ...documentModels,
-    ]),
-  );
 
   // set up subgraph manager
   const graphqlManager = await setupGraphQLManager(
