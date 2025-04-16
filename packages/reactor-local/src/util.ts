@@ -50,23 +50,14 @@ export async function addDefaultDrive(
   let driveId = drive.global.slug ?? drive.global.id;
   try {
     // add default drive
-    const driveDoc = await driveServer.addDrive(drive);
-    driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
+    await driveServer.addDrive(drive);
   } catch (e) {
-    if (e instanceof DriveAlreadyExistsError) {
-      if (driveId) {
-        const driveDoc = await (drive.global.slug
-          ? driveServer.getDriveBySlug(drive.global.slug)
-          : driveServer.getDrive(driveId));
-        driveId = driveDoc.state.global.slug ?? driveDoc.state.global.id;
-      }
-    } else {
+    if (!(e instanceof DriveAlreadyExistsError)) {
       throw e;
     }
   }
 
-  const driveUrl = `http://localhost:${serverPort}/${driveId ? `d/${drive.global.slug ?? drive.global.id}` : ""}`;
-  return driveUrl;
+  return `http://localhost:${serverPort}/d/${driveId}`;
 }
 
 export async function startViteServer() {
