@@ -109,11 +109,11 @@ async function setupGraphQLManager(
 
   for (const [supergraph, collection] of subgraphs.entries()) {
     for (const subgraph of collection) {
-      graphqlManager.registerSubgraph(subgraph, "graphql");
+      await graphqlManager.registerSubgraph(subgraph, "graphql");
     }
   }
 
-  await graphqlManager.init();
+  await graphqlManager.updateRouter();
   return graphqlManager;
 }
 
