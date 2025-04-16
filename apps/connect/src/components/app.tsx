@@ -5,6 +5,7 @@ import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Provider, useAtomValue } from 'jotai';
 import React, { Suspense } from 'react';
+import { ReactorAnalyticsProvider } from '../context/reactor-analytics.js';
 import Analytics from './analytics.js';
 
 const Router = React.lazy(async () => {
@@ -28,15 +29,17 @@ const App = () => (
                 <WagmiContext>
                     <RootProvider>
                         <ReadModeContextProvider>
-                            <ToastContainer
-                                position="bottom-right"
-                                containerId="connect"
-                            />
-                            <UiNodesContextProvider>
-                                <Router />
-                                <CookieBanner />
-                                <Analytics />
-                            </UiNodesContextProvider>
+                            <ReactorAnalyticsProvider>
+                                <ToastContainer
+                                    position="bottom-right"
+                                    containerId="connect"
+                                />
+                                <UiNodesContextProvider>
+                                    <Router />
+                                    <CookieBanner />
+                                    <Analytics />
+                                </UiNodesContextProvider>
+                            </ReactorAnalyticsProvider>
                         </ReadModeContextProvider>
                     </RootProvider>
                 </WagmiContext>

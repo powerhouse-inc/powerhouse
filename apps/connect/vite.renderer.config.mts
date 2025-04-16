@@ -141,7 +141,6 @@ export default defineConfig(({ mode }) => {
             generateImportMapPlugin(outDir, [
                 { name: 'react', provider: 'esm.sh' },
                 { name: 'react-dom', provider: 'esm.sh' },
-                '@powerhousedao/reactor-browser',
             ]),
         );
     }
@@ -166,7 +165,11 @@ export default defineConfig(({ mode }) => {
             },
         },
         optimizeDeps: {
-            include: ['did-key-creator'],
+            include: [
+                'did-key-creator',
+                '@powerhousedao/reactor-browser/analytics/store/browser',
+                '@powerhousedao/reactor-browser > @powerhousedao/analytics-engine-browser > @powerhousedao/analytics-engine-knex',
+            ],
             exclude: externalAndExclude,
         },
         resolve: {
