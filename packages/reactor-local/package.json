@@ -9,6 +9,7 @@
   "scripts": {
     "start": "vite-node src/index.ts",
     "build:tsc": "tsc --build",
+    "build": "tsc --build",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },

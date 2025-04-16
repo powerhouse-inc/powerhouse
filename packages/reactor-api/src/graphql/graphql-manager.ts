@@ -56,7 +56,7 @@ export class GraphQLManager {
 
     this.app.use("/", (req, res, next) => this.reactorRouter(req, res, next));
 
-    this.updateRouter();
+    return this.updateRouter();
   }
 
   async registerSubgraph(subgraph: SubgraphClass, supergraph = "") {
@@ -85,7 +85,6 @@ export class GraphQLManager {
     console.log(
       `> Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
-    // this.updateRouter();
   }
 
   async updateRouter() {

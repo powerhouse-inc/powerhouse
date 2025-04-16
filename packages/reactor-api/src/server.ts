@@ -40,6 +40,7 @@ type Options = {
   client?: PGlite | typeof Pool | undefined;
   configFile?: string;
   packages?: string[];
+  autostart?: boolean; // if the server should start listening to requests. True by default. If set to false then `startServer` should be called.
   https?:
     | {
         keyPath: string;
@@ -109,11 +110,11 @@ async function setupGraphQLManager(
 
   for (const [supergraph, collection] of subgraphs.entries()) {
     for (const subgraph of collection) {
-      graphqlManager.registerSubgraph(subgraph, "graphql");
+      await graphqlManager.registerSubgraph(subgraph, "graphql");
     }
   }
 
-  await graphqlManager.init();
+  await graphqlManager.updateRouter();
   return graphqlManager;
 }
 
@@ -160,7 +161,7 @@ function setupEventListeners(
 /**
  * Starts the server (HTTP or HTTPS)
  */
-async function startServer(
+export async function startServer(
   app: Express,
   port: number,
   httpsOptions: Options["https"],
@@ -276,7 +277,9 @@ export async function startAPI(
   );
 
   // Start the server
-  await startServer(app, port, options.https);
+  if (options.autostart === undefined || options.autostart) {
+    await startServer(app, port, options.https);
+  }
 
   return { app, graphqlManager, processorManager, packages };
 }
