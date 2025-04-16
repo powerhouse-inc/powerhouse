@@ -10,7 +10,7 @@ export const HDivider = (props: HDividerProps) => {
   return (
     <div
       className={twMerge(
-        "mx-0.5 flex h-[25px] w-1.5 flex-col items-center justify-center rounded-[2px] hover:bg-blue-200",
+        "mx-0.5 flex h-[25px] w-1.5 flex-col items-center justify-center rounded-[2px] hover:bg-blue-300",
         className,
       )}
     >
