@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.2.106-staging.0",
+  "version": "2.2.107-staging.0",
   "main": "dist/src/index.js",
   "bin": {
     "switchboard": "dist/src/index.js"
