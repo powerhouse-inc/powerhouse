@@ -141,7 +141,6 @@ export default defineConfig(({ mode }) => {
             generateImportMapPlugin(outDir, [
                 { name: 'react', provider: 'esm.sh' },
                 { name: 'react-dom', provider: 'esm.sh' },
-                '@powerhousedao/reactor-browser',
             ]),
         );
     }
