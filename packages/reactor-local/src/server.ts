@@ -1,12 +1,7 @@
-import {
-  startAPI,
-  startServer as startAPIServer,
-} from "@powerhousedao/reactor-api";
+import { startAPI } from "@powerhousedao/reactor-api";
 import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
-import { setTimeout } from "node:timers/promises";
-
 import {
   DefaultStartServerOptions,
   type LocalReactor,
@@ -16,10 +11,6 @@ import { addDefaultDrive, createStorage, startViteServer } from "./util.js";
 import { VitePackageLoader } from "./vite-loader.js";
 
 dotenv.config();
-
-const INITIAL_TIMEOUT = process.env.INITIAL_TIMEOUT
-  ? Number(process.env.INITIAL_TIMEOUT)
-  : 1000;
 
 const startServer = async (
   options?: StartServerOptions,
@@ -77,7 +68,6 @@ const startServer = async (
     packageLoader,
     configFile,
     packages,
-    autostart: false,
   });
 
   // add vite middleware after express app is initialized if applicable
@@ -85,8 +75,6 @@ const startServer = async (
     api.app.use(vite.middlewares);
   }
 
-  await setTimeout(INITIAL_TIMEOUT);
-  await startAPIServer(api.app, serverPort, options?.https);
   logger.info(`  ➜  Reactor:   ${driveUrl}`);
 
   return {
