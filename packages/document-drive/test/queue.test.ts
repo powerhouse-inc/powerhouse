@@ -64,11 +64,13 @@ describe.each(queueLayers)(
     const ADD_OPERATIONS_TO_DRIVE = 10;
 
     const createDrive = async (server: IBaseDocumentDriveServer) => {
+      const id = generateUUID();
       const driveState = await server.addDrive({
         global: {
-          id: generateUUID(),
+          id,
           name: "name",
           icon: "icon",
+          slug: `name-${id}`,
         },
         local: {
           availableOffline: false,
@@ -376,7 +378,7 @@ describe.each(queueLayers)(
       expect(drive.state.global.nodes).toStrictEqual([]);
     });
 
-    it("produces error on addDriveOperations with wrong index", async ({
+    it("queues operations when using addDriveOperations", async ({
       expect,
     }) => {
       const queue = await buildQueue();
@@ -400,7 +402,7 @@ describe.each(queueLayers)(
 
       expect(
         driveResults.flat().filter((f) => f.status === "ERROR").length,
-      ).toBeGreaterThan(0);
+      ).toBe(0);
     });
 
     it("produces no errors on queueDriveOperations", async ({ expect }) => {
