@@ -36,6 +36,7 @@ type Options = {
   client?: PGlite | typeof Pool | undefined;
   configFile?: string;
   packages?: string[];
+  autostart?: boolean; // if the server should start listening to requests. True by default. If set to false then `startServer` should be called.
   https?:
     | {
         keyPath: string;
@@ -172,7 +173,7 @@ function setupEventListeners(
 /**
  * Starts the server (HTTP or HTTPS)
  */
-async function startServer(
+export async function startServer(
   app: Express,
   port: number,
   httpsOptions: Options["https"],
@@ -235,7 +236,7 @@ export async function startAPI(
     result.processors ?? new Map<string, (module: any) => ProcessorFactory>();
   for (const [packageName, fn] of packageToProcessorFactory) {
     const factory = fn(module);
-    processorManager.registerFactory(packageName, factory);
+    await processorManager.registerFactory(packageName, factory);
   }
 
   // Set document model modules
@@ -265,7 +266,9 @@ export async function startAPI(
   );
 
   // Start the server
-  await startServer(app, port, options.https);
+  if (options.autostart === undefined || options.autostart) {
+    await startServer(app, port, options.https);
+  }
 
   return { app, graphqlManager, processorManager };
 }

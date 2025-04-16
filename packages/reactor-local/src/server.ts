@@ -3,6 +3,7 @@ import {
   type GraphQLManager,
   isSubgraphClass,
   startAPI,
+  startServer as startAPIServer,
   type SubgraphClass,
 } from "@powerhousedao/reactor-api";
 import {
@@ -26,6 +27,7 @@ import {
 import dotenv from "dotenv";
 import { access } from "node:fs/promises";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
 
 type FSError = {
@@ -96,6 +98,10 @@ const baseDocumentModelModules = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
 ] as DocumentModelModule[];
+
+const INITIAL_TIMEOUT = process.env.INITIAL_TIMEOUT
+  ? Number(process.env.INITIAL_TIMEOUT)
+  : 1000;
 
 const createStorage = (options: StorageOptions, cache: ICache) => {
   switch (options.type) {
@@ -177,6 +183,7 @@ const startServer = async (
     dbPath,
     https: options?.https,
     ...packageOptions,
+    autostart: false,
   });
 
   if (vite) {
@@ -187,6 +194,8 @@ const startServer = async (
     await loadSubgraphs(subgraphsPath, vite, api.graphqlManager);
   }
 
+  await setTimeout(INITIAL_TIMEOUT);
+  await startAPIServer(api.app, serverPort, options?.https);
   console.log(`  ➜  Reactor:   ${driveUrl}`);
 
   return {
