@@ -165,7 +165,11 @@ export default defineConfig(({ mode }) => {
             },
         },
         optimizeDeps: {
-            include: ['did-key-creator'],
+            include: [
+                'did-key-creator',
+                '@powerhousedao/reactor-browser/analytics/store/browser',
+                '@powerhousedao/reactor-browser > @powerhousedao/analytics-engine-browser > @powerhousedao/analytics-engine-knex',
+            ],
             exclude: externalAndExclude,
         },
         define: {
