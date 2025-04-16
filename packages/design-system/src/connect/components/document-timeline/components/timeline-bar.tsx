@@ -1,6 +1,7 @@
 /* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-no-bind */
 import { Tooltip } from "#connect";
+import { Icon } from "#powerhouse";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
@@ -12,6 +13,8 @@ export interface TimelineBarProps {
   timestamp?: string;
   additions?: number;
   deletions?: number;
+  onClick?: () => void;
+  isSelected?: boolean;
 }
 
 const getBarHeight = (size = 0) => {
@@ -42,12 +45,14 @@ const formatTimestamp = (isoString?: string) => {
 };
 
 export const TimelineBar: React.FC<TimelineBarProps> = ({
+  onClick,
   className,
-  addSize = 0,
-  delSize = 0,
   timestamp,
   additions,
   deletions,
+  addSize = 0,
+  delSize = 0,
+  isSelected = false,
 }) => {
   const [open, setOpen] = useState<boolean>(false);
   const noChanges = addSize === 0 && delSize === 0;
@@ -79,13 +84,22 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      {isSelected && (
+        <Icon
+          name="TimelineCaret"
+          color="#4EA9FF"
+          size={10}
+          className="absolute left-[-2px] top-[-11px] z-40"
+        />
+      )}
       {noChanges ? (
         <div
           className={twMerge(
-            "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-200",
+            "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-300",
             className,
           )}
           data-timestamp={timestamp}
+          onClick={onClick}
         >
           <div className="size-[3px] rounded-full bg-gray-500" />
         </div>
@@ -99,10 +113,12 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
         >
           <div
             className={twMerge(
-              "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-200",
+              "flex h-[25px] w-1.5 cursor-pointer flex-col items-center justify-center rounded-[2px] hover:bg-blue-300",
               className,
+              isSelected && "bg-blue-300",
             )}
             data-timestamp={timestamp}
+            onClick={onClick}
           >
             <div className="flex h-3 w-0.5 items-end">
               <div
