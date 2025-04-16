@@ -1,6 +1,7 @@
+/* eslint-disable react/jsx-max-depth */
 /* eslint-disable react/jsx-no-bind */
 import { TooltipProvider } from "#connect";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   HDivider,
   TimelineBar,
@@ -31,6 +32,7 @@ const defaultTimeLineItem: TimelineBarItem = {
 export const DocumentTimeline = (props: DocumentTimelineProps) => {
   const { timeline = [] } = props;
   const [selectedItem, setSelectedItem] = useState<null | string>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleClick = (id: string | null) => {
     if (id === selectedItem || id === defaultTimeLineItem.id) {
@@ -88,17 +90,41 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
     [selectedItems, renderTimelineItems],
   );
 
-  console.log("selectedItem", selectedItem);
-  console.log("unselectedItems", unselectedItems);
-  console.log("selectedItems", selectedItems);
+  // Scroll to the end by default
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft =
+        scrollContainerRef.current.scrollWidth;
+    }
+  }, []);
 
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-      <div className="flex h-[25px] w-full overflow-x-auto rounded-md bg-slate-50">
-        <div className="ml-auto flex w-max items-center px-2">
-          <div className="flex">{unselectedContent}</div>
-          <div className="flex rounded-sm bg-blue-200">{selectedContent}</div>
+      <div className="relative h-[36px] w-full">
+        <div className="absolute left-[0px] z-[20] h-[17px] w-[6px] bg-white">
+          <div className="mt-[11px] h-[6px] w-[6px] rounded-tl-md bg-slate-50" />
         </div>
+
+        <div className="absolute right-[0px] top-[11px] z-[20] h-[6px] w-[6px] bg-white">
+          <div className="h-[6px] w-[6px] rounded-tr-md bg-slate-50" />
+        </div>
+        <div className="absolute inset-x-0 bottom-0 h-[25px] rounded-md bg-slate-50" />
+
+        <div className="absolute inset-x-0 bottom-0 h-[36px]">
+          <div
+            ref={scrollContainerRef}
+            className="h-full overflow-x-auto rounded-md"
+          >
+            <div className="ml-auto flex h-[36px] w-max items-end px-2 pb-0">
+              <div className="flex">{unselectedContent}</div>
+              <div className="flex rounded-sm bg-blue-200">
+                {selectedContent}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="pointer-events-none absolute bottom-0 left-0 z-10 h-[25px] w-2 rounded-l-md bg-slate-50" />
+        <div className="pointer-events-none absolute bottom-0 right-0 z-10 h-[25px] w-2 rounded-r-md bg-slate-50" />
       </div>
     </TooltipProvider>
   );
