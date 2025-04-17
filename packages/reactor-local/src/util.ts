@@ -1,4 +1,8 @@
-import { DriveAlreadyExistsError, logger, MemoryStorage } from "document-drive";
+import {
+  DocumentAlreadyExistsError,
+  logger,
+  MemoryStorage,
+} from "document-drive";
 
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import { DriveInput, IDocumentDriveServer } from "document-drive";
@@ -52,7 +56,7 @@ export async function addDefaultDrive(
     // add default drive
     await driveServer.addDrive(drive);
   } catch (e) {
-    if (!(e instanceof DriveAlreadyExistsError)) {
+    if (!(e instanceof DocumentAlreadyExistsError)) {
       throw e;
     }
   }

@@ -185,6 +185,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       global: [],
       local: [],
     };
+
     const cachedDocument = await this.cache.getDocument<TDocument>(documentId);
     if (cachedDocument) {
       cachedOperations = cachedDocument.operations;

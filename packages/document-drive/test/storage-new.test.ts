@@ -116,13 +116,27 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     expect(restResult).toEqual(rest);
   });
 
-  it("should throw an error if the document is not found", async ({
+  it("should throw a DocumentNotFoundError if the document is not found", async ({
     expect,
   }) => {
     const storage = await buildStorage();
 
     try {
       await storage.get("test");
+
+      throw new Error("Document should not be found");
+    } catch (e) {
+      expect((e as DocumentNotFoundError).documentId).toBe("test");
+    }
+  });
+
+  it("should throw a DocumentNotFoundError if the document is not found by slug", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    try {
+      await storage.getBySlug("test");
 
       throw new Error("Document should not be found");
     } catch (e) {

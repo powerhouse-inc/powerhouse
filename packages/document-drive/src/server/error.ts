@@ -42,12 +42,12 @@ export class MissingOperationError extends OperationError {
   }
 }
 
-export class DriveAlreadyExistsError extends Error {
-  driveId: string;
+export class DocumentAlreadyExistsError extends Error {
+  documentId: string;
 
-  constructor(driveId: string) {
-    super(`Drive already exists. ID: ${driveId}`);
-    this.driveId = driveId;
+  constructor(documentId: string) {
+    super(`Document with id ${documentId} already exists`);
+    this.documentId = documentId;
   }
 }
 
