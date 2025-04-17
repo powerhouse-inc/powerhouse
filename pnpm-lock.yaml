@@ -1368,11 +1368,14 @@ importers:
   packages/reactor-browser:
     dependencies:
       '@powerhousedao/analytics-engine-browser':
+        specifier: 0.5.0
+        version: 0.5.0(@powerhousedao/analytics-engine-core@0.4.0)(@powerhousedao/analytics-engine-knex@0.5.1(@powerhousedao/analytics-engine-core@0.4.0))
+      '@powerhousedao/analytics-engine-core':
         specifier: 0.4.0
         version: 0.4.0
-      '@powerhousedao/analytics-engine-core':
-        specifier: 0.3.0
-        version: 0.3.0
+      '@powerhousedao/analytics-engine-knex':
+        specifier: 0.5.1
+        version: 0.5.1(@powerhousedao/analytics-engine-core@0.4.0)
       '@tanstack/react-query':
         specifier: ^5.49.2
         version: 5.69.3(react@18.3.1)
@@ -5300,8 +5303,11 @@ packages:
   '@popperjs/core@2.11.8':
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
 
-  '@powerhousedao/analytics-engine-browser@0.4.0':
-    resolution: {integrity: sha512-+CtNpIjTZp0V6K4L+QmcInxTXZSPQD5ahT4mzLCqqwnCwX10q6gA0x2mxkB9N7V3xBWOkPo48wCLuXOj5TolYA==}
+  '@powerhousedao/analytics-engine-browser@0.5.0':
+    resolution: {integrity: sha512-tC0jxzDsmSZtUuWk9vqWu/mcsmDdK9t6Vor5YiV9Smm3oowmZOmNxw9xnNL++P++9CvZFBkoTjXzjmLyjSyFDQ==}
+    peerDependencies:
+      '@powerhousedao/analytics-engine-core': 0.4.0
+      '@powerhousedao/analytics-engine-knex': 0.5.0
 
   '@powerhousedao/analytics-engine-core@0.3.0':
     resolution: {integrity: sha512-8Rl8U2P3u5Y+O8iXqEmN+Vjezal32SQ/ce05IgsZqOvtIpuiUmX44wdyufXw8qObxWFPdc7cyFXTHJ3yYUWlzw==}
@@ -5309,11 +5315,19 @@ packages:
   '@powerhousedao/analytics-engine-core@0.3.2':
     resolution: {integrity: sha512-ZgE8YxCxp8yFlCR0Odvzxmme/iD1ff/LriPp8YmVhQZ35kyTv2Jct0NG5JYVDDU9SpAN6fcQwaSfHq0ctlvsUw==}
 
+  '@powerhousedao/analytics-engine-core@0.4.0':
+    resolution: {integrity: sha512-PxbASaW64xe2fX0wCcYJTK8bZUt+aAGI7OPLcd9UE5rHZ26cQhV4ysPfXrBzlmHlPdmo/3ELAl7g4E4nO4t7Fw==}
+
   '@powerhousedao/analytics-engine-graphql@0.2.2':
     resolution: {integrity: sha512-XKlnnrwptdXi3BsxZBsCXLRBEz3QRi1ziZ2hb3TA4TxYMDb9M8KGR/qJ2YqWHAFVBgSKDmCK+cauYxItuJu0zw==}
 
   '@powerhousedao/analytics-engine-knex@0.4.0':
     resolution: {integrity: sha512-WzMwRR8K1p/MA8SpkOXv6IR5KUjJv7QRce8Y372H5agjBlZvE8WwDUDgsNRcGEX+1ArD87vverkN/c6j+ui+ag==}
+
+  '@powerhousedao/analytics-engine-knex@0.5.1':
+    resolution: {integrity: sha512-QSv3/CBwTMM3KeDYoG0/1QnV8qLru4riyR2LUVxrZ+BT/2JKZUHmbekZmVD+m8qT2AdcpPhCTCGlt24xaN606g==}
+    peerDependencies:
+      '@powerhousedao/analytics-engine-core': ^0.4.0
 
   '@preact/preset-vite@2.10.1':
     resolution: {integrity: sha512-59lyGBXNfZIr5OOuBUB4/IB8AqF/ULbvYnyItgK/2BJnsGJqaeaJobRVtMp1129obHQuj8oZ/dVxB9inmH8Xig==}
@@ -21640,11 +21654,11 @@ snapshots:
 
   '@popperjs/core@2.11.8': {}
 
-  '@powerhousedao/analytics-engine-browser@0.4.0':
+  '@powerhousedao/analytics-engine-browser@0.5.0(@powerhousedao/analytics-engine-core@0.4.0)(@powerhousedao/analytics-engine-knex@0.5.1(@powerhousedao/analytics-engine-core@0.4.0))':
     dependencies:
       '@electric-sql/pglite': 0.2.17
-      '@powerhousedao/analytics-engine-core': 0.3.0
-      '@powerhousedao/analytics-engine-knex': 0.4.0(sqlite3@5.1.7)
+      '@powerhousedao/analytics-engine-core': 0.4.0
+      '@powerhousedao/analytics-engine-knex': 0.5.1(@powerhousedao/analytics-engine-core@0.4.0)
       date-fns: 3.6.0
       events: 3.3.0
       knex: 3.1.0(pg@8.14.1)(sqlite3@5.1.7)
@@ -21668,6 +21682,10 @@ snapshots:
     dependencies:
       date-fns: 3.6.0
 
+  '@powerhousedao/analytics-engine-core@0.4.0':
+    dependencies:
+      date-fns: 3.6.0
+
   '@powerhousedao/analytics-engine-graphql@0.2.2':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.3.2
@@ -21682,6 +21700,25 @@ snapshots:
       date-fns: 3.6.0
       knex: 3.1.0(pg@8.14.1)(sqlite3@5.1.7)
       luxon: 3.6.0
+      pg: 8.14.1
+    transitivePeerDependencies:
+      - better-sqlite3
+      - mysql
+      - mysql2
+      - pg-native
+      - sqlite3
+      - supports-color
+      - tedious
+
+  '@powerhousedao/analytics-engine-knex@0.5.1(@powerhousedao/analytics-engine-core@0.4.0)':
+    dependencies:
+      '@powerhousedao/analytics-engine-core': 0.4.0
+      '@types/luxon': 3.6.2
+      '@types/node': 22.13.14
+      '@types/pg': 8.11.11
+      date-fns: 3.6.0
+      knex: 3.1.0(pg@8.14.1)(sqlite3@5.1.7)
+      luxon: 3.6.1
       pg: 8.14.1
     transitivePeerDependencies:
       - better-sqlite3

@@ -11,3 +11,5 @@ export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
         children
     );
 }
+
+export default ReactorAnalyticsProvider;

@@ -40,7 +40,12 @@ const staticInputs = staticFiles.reduce(
         }),
     {},
 );
-const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
+const externalAndExclude = [
+    'vite',
+    'vite-envs',
+    'node:crypto',
+    '@electric-sql/pglite',
+];
 
 export default defineConfig(({ mode }) => {
     const outDir = path.resolve(__dirname, './dist');
@@ -80,7 +85,7 @@ export default defineConfig(({ mode }) => {
             globals: {
                 Buffer: false,
                 global: false,
-                process: false,
+                process: true,
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
@@ -149,7 +154,7 @@ export default defineConfig(({ mode }) => {
         plugins,
         build: {
             minify: false,
-            sourcemap: false,
+            sourcemap: true,
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
@@ -165,11 +170,7 @@ export default defineConfig(({ mode }) => {
             },
         },
         optimizeDeps: {
-            include: [
-                'did-key-creator',
-                '@powerhousedao/reactor-browser/analytics/store/browser',
-                '@powerhousedao/reactor-browser > @powerhousedao/analytics-engine-browser > @powerhousedao/analytics-engine-knex',
-            ],
+            include: ['did-key-creator'],
             exclude: externalAndExclude,
         },
         define: {
