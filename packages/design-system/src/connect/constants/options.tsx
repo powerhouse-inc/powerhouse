@@ -97,10 +97,6 @@ export const normalNodeOptionsMap: Record<NormalNodeOption, OptionMetadata> = {
     label: "Duplicate",
     icon: <Icon name="FilesEarmark" />,
   },
-  [NEW_FOLDER]: {
-    label: "New Folder",
-    icon: <Icon name="FolderPlus" />,
-  },
   [RENAME]: {
     label: "Rename",
     icon: <Icon name="Pencil" />,
