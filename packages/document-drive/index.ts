@@ -61,8 +61,8 @@ export {
 } from "#server/base-server";
 export { ReactorBuilder } from "#server/builder";
 export {
+  DocumentAlreadyExistsError,
   DocumentModelNotFoundError,
-  DriveAlreadyExistsError,
   SynchronizationUnitNotFoundError,
 } from "#server/error";
 export { InternalTransmitter } from "#server/listener/transmitter/internal";

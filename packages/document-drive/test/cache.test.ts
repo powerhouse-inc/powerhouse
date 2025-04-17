@@ -1,21 +1,10 @@
 import { createClient } from "redis";
 import { beforeEach, describe, it } from "vitest";
-import {
-  createDocument as createDocumentModelDocument,
-  DocumentModelModule,
-} from "../../document-model/index";
-import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
+import { createDocument as createDocumentModelDocument } from "../../document-model/index";
 import InMemoryCache from "../src/cache/memory";
 import RedisCache from "../src/cache/redis";
 import { ICache } from "../src/cache/types";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils";
-import { driveDocumentModelModule } from "../src/drive-document-model/module";
-
-// Set up document models for testing
-const documentModels = [
-  documentModelDocumentModelModule,
-  driveDocumentModelModule,
-] as DocumentModelModule[];
 
 const initRedis = async () => {
   const redisClient = createClient({

@@ -12,6 +12,7 @@ export interface ICache {
   getDocument<TDocument extends PHDocument>(
     documentId: string,
   ): Promise<TDocument | undefined>;
+
   // @returns — true if a document existed and has been removed, or false if the document is not cached.
   deleteDocument(documentId: string): Promise<boolean>;
 

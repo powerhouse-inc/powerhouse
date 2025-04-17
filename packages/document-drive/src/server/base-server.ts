@@ -52,7 +52,7 @@ import { type Unsubscribe } from "nanoevents";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
-  DriveAlreadyExistsError,
+  DocumentAlreadyExistsError,
   OperationError,
   type SynchronizationUnitNotFoundError,
 } from "./error.js";
@@ -608,7 +608,7 @@ export class BaseDocumentDriveServer
 
     const drives = await this.legacyStorage.getDrives();
     if (drives.includes(id)) {
-      throw new DriveAlreadyExistsError(id);
+      throw new DocumentAlreadyExistsError(id);
     }
 
     const document = createDocument({
