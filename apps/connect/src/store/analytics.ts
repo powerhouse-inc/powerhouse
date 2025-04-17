@@ -14,7 +14,7 @@ async function createAnalyticsStore() {
     return store;
 }
 
-const analyticsStoreAtom =
+export const analyticsStoreAtom =
     atomWithLazy<Promise<IAnalyticsStore>>(createAnalyticsStore);
 
 const unwrappedAnalyticsStore = unwrap(analyticsStoreAtom);

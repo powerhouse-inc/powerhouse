@@ -16,10 +16,14 @@ function Analytics() {
     const [value, setValue] = useState('1000');
     const addSeriesValue = useAddSeriesValue();
 
-    const { data: queryResults, isLoading } = useAnalyticsQuery({
-        start: DateTime.now().minus({ days: 7 }).startOf('day'),
+    const {
+        data: queryResults,
+        isLoading,
+        refetch,
+    } = useAnalyticsQuery({
+        start: DateTime.now().startOf('day'),
         end: DateTime.now().endOf('day'),
-        granularity: AnalyticsGranularity.Total,
+        granularity: AnalyticsGranularity.Hourly,
         metrics: ['Demo'],
         select: {
             category: [AnalyticsPath.fromString('demo/category')],
@@ -42,7 +46,7 @@ function Analytics() {
                         category: AnalyticsPath.fromString('demo/category'),
                     },
                 })
-                .then(value => console.log(value));
+                .then(() => refetch());
         },
         [addSeriesValue, value],
     );
