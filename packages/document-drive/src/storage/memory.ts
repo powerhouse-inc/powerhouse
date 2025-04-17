@@ -1,4 +1,5 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { DocumentNotFoundError } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -54,7 +55,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   get<TDocument extends PHDocument>(documentId: string): Promise<TDocument> {
     const document = this.documents[documentId];
     if (!document) {
-      throw new Error(`Document with id ${documentId} not found`);
+      return Promise.reject(new DocumentNotFoundError(documentId));
     }
 
     return Promise.resolve(document as TDocument);
@@ -64,7 +65,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     const documentId = this.slugToDocumentId[slug];
 
     if (!documentId) {
-      throw new Error(`Document with slug ${slug} not found`);
+      return Promise.reject(new DocumentNotFoundError(slug));
     }
 
     return this.get<TDocument>(documentId);
@@ -102,28 +103,34 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
 
   async addChild(parentId: string, childId: string) {
     if (parentId === childId) {
-      throw new Error("Cannot associate a document with itself");
+      return Promise.reject(
+        new Error("Cannot associate a document with itself"),
+      );
     }
 
     // check if the child is a parent of the parent
     const children = await this.getChildren(childId);
     if (children.includes(parentId)) {
-      throw new Error("Cannot associate a document with its child");
+      return Promise.reject(
+        new Error("Cannot associate a document with its child"),
+      );
     }
 
     const manifest = this.getManifest(parentId);
     manifest.documentIds.add(childId);
     this.updateDriveManifest(parentId, manifest);
+
+    return Promise.resolve();
   }
 
   async removeChild(parentId: string, childId: string) {
     const manifest = this.getManifest(parentId);
     if (manifest.documentIds.delete(childId)) {
       this.updateDriveManifest(parentId, manifest);
-      return true;
+      return Promise.resolve(true);
     }
 
-    return false;
+    return Promise.resolve(false);
   }
 
   async getChildren(parentId: string): Promise<string[]> {
@@ -149,7 +156,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   ): Promise<void> {
     const document = await this.get(id);
     if (!document) {
-      throw new Error(`Document with id ${id} not found`);
+      return Promise.reject(new DocumentNotFoundError(id));
     }
 
     const mergedOperations = mergeOperations(document.operations, operations);

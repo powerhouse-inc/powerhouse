@@ -18,7 +18,10 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "../../drive-document-model/gen/types.js";
-import { ConflictOperationError } from "../../server/error.js";
+import {
+  ConflictOperationError,
+  DocumentNotFoundError,
+} from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
 import type { IDocumentStorage, IDriveStorage } from "../types.js";
@@ -175,7 +178,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
     const result = await prisma.document.findUnique(query);
     if (result === null) {
-      throw new Error(`Document with id ${documentId} not found`);
+      throw new DocumentNotFoundError(documentId);
     }
 
     let cachedOperations: DocumentOperations = {
@@ -300,7 +303,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     });
 
     if (!result) {
-      throw new Error(`Document with slug ${slug} not found`);
+      return Promise.reject(new DocumentNotFoundError(slug));
     }
 
     return this.get<TDocument>(result.id);
@@ -359,13 +362,17 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
   async addChild(parentId: string, childId: string) {
     if (parentId === childId) {
-      throw new Error("Cannot associate a document with itself");
+      return Promise.reject(
+        new Error("Cannot associate a document with itself"),
+      );
     }
 
     // check if the child is a parent of the parent
     const children = await this.getChildren(childId);
     if (children.includes(parentId)) {
-      throw new Error("Cannot associate a document with its child");
+      return Promise.reject(
+        new Error("Cannot associate a document with its child"),
+      );
     }
 
     // create the many-to-many relation
@@ -561,7 +568,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       async (tx) => {
         const document = await this.get<TDocument>(id, tx);
         if (!document) {
-          throw new Error(`Document with id ${id} not found`);
+          return Promise.reject(new DocumentNotFoundError(id));
         }
         result = await callback(document);
 

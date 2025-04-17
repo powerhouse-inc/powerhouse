@@ -2,6 +2,7 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
+import { DocumentNotFoundError } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -86,7 +87,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
       return Promise.resolve(JSON.parse(content) as TDocument);
     } catch (error) {
-      throw new Error(`Document with id ${documentId} not found`);
+      return Promise.reject(new DocumentNotFoundError(documentId));
     }
   }
 
@@ -97,7 +98,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     const documentId = slugManifest.slugToId[slug];
 
     if (!documentId) {
-      throw new Error(`Document with slug ${slug} not found`);
+      return Promise.reject(new DocumentNotFoundError(slug));
     }
 
     return this.get<TDocument>(documentId);
@@ -148,13 +149,17 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
   async addChild(parentId: string, childId: string): Promise<void> {
     if (parentId === childId) {
-      throw new Error("Cannot associate a document with itself");
+      return Promise.reject(
+        new Error("Cannot associate a document with itself"),
+      );
     }
 
     // check if the child is a parent of the parent
     const children = await this.getChildren(childId);
     if (children.includes(parentId)) {
-      throw new Error("Cannot associate a document with its child");
+      return Promise.reject(
+        new Error("Cannot associate a document with its child"),
+      );
     }
 
     // Update the drive manifest to include this document
@@ -209,7 +214,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   ) {
     const document = await this.get(id);
     if (!document) {
-      throw new Error(`Document with id ${id} not found`);
+      return Promise.reject(new DocumentNotFoundError(id));
     }
 
     const mergedOperations = mergeOperations(document.operations, operations);
