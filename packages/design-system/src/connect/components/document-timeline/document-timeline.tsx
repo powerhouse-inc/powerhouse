@@ -16,6 +16,9 @@ export type TimelineBarItem = Omit<TimelineBarProps, "className"> & {
 export type TimelineDividerItem = {
   id: string;
   type: "divider";
+  timestamp?: string;
+  title?: string;
+  subtitle?: string;
 };
 
 export interface DocumentTimelineProps {
@@ -58,23 +61,33 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
 
   const renderTimelineItems = useCallback(
     (items: Array<TimelineBarItem | TimelineDividerItem>) => {
-      return items.map((item) => {
-        if (item.type === "bar") {
+      return items.map((item, idx) => {
+        if (item.type === "divider") {
+          const { timestamp, title, subtitle } = item;
           return (
-            <TimelineBar
-              key={item.id}
-              isSelected={item.id === selectedItem}
-              addSize={item.addSize}
-              delSize={item.delSize}
-              timestamp={item.timestamp}
-              additions={item.additions}
-              deletions={item.deletions}
+            <HDivider
+              key={`divider-${idx}-${item.id}`}
+              timestamp={timestamp}
+              title={title}
+              subtitle={subtitle}
               onClick={() => handleClick(item.id)}
+              isSelected={item.id === selectedItem}
             />
           );
         }
 
-        return <HDivider key={item.id} />;
+        return (
+          <TimelineBar
+            key={`bar-${idx}-${item.id}`}
+            timestamp={item.timestamp}
+            addSize={item.addSize}
+            delSize={item.delSize}
+            additions={item.additions}
+            deletions={item.deletions}
+            isSelected={item.id === selectedItem}
+            onClick={() => handleClick(item.id)}
+          />
+        );
       });
     },
     [handleClick, selectedItem],
