@@ -141,7 +141,6 @@ export default defineConfig(({ mode }) => {
             generateImportMapPlugin(outDir, [
                 { name: 'react', provider: 'esm.sh' },
                 { name: 'react-dom', provider: 'esm.sh' },
-                '@powerhousedao/reactor-browser',
             ]),
         );
     }
@@ -168,9 +167,6 @@ export default defineConfig(({ mode }) => {
         optimizeDeps: {
             include: ['did-key-creator'],
             exclude: externalAndExclude,
-        },
-        resolve: {
-            dedupe: ['@powerhousedao/reactor-browser'],
         },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),

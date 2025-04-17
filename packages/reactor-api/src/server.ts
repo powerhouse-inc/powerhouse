@@ -1,11 +1,12 @@
 import { config } from "#config.js";
 import { GraphQLManager } from "#graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "#graphql/playground.js";
+import { ImportPackageLoader } from "#packages/import-loader.js";
 import {
   getUniqueDocumentModels,
-  PackagesManager,
-  type PackageManagerResult,
-} from "#package-manager.js";
+  PackageManager,
+} from "#packages/package-manager.js";
+import { type IPackageLoader } from "#packages/types.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
@@ -13,12 +14,13 @@ import {
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
 import devcert from "devcert";
-import { type IDocumentDriveServer } from "document-drive";
-import { ProcessorManager } from "document-drive/processors/processor-manager";
 import {
-  type IProcessorManager,
-  type ProcessorFactory,
-} from "document-drive/processors/types";
+  childLogger,
+  type DocumentDriveDocument,
+  type IDocumentDriveServer,
+} from "document-drive";
+import { ProcessorManager } from "document-drive/processors/processor-manager";
+import { type IProcessorManager } from "document-drive/processors/types";
 import express, { type Express } from "express";
 import { type Knex } from "knex";
 import fs from "node:fs";
@@ -26,8 +28,10 @@ import https from "node:https";
 import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
-import { type API } from "./types.js";
+import { type API, type SubgraphClass } from "./types.js";
 import { getDbClient } from "./utils/db.js";
+
+const logger = childLogger(["reactor-api", "server"]);
 
 type Options = {
   express?: Express;
@@ -36,7 +40,6 @@ type Options = {
   client?: PGlite | typeof Pool | undefined;
   configFile?: string;
   packages?: string[];
-  autostart?: boolean; // if the server should start listening to requests. True by default. If set to false then `startServer` should be called.
   https?:
     | {
         keyPath: string;
@@ -44,6 +47,7 @@ type Options = {
       }
     | boolean
     | undefined;
+  packageLoader?: IPackageLoader;
 };
 
 const DEFAULT_PORT = 4000;
@@ -84,26 +88,6 @@ function initializeDatabaseAndAnalytics(dbPath: string | undefined): {
 }
 
 /**
- * Initializes the package manager and returns the result
- */
-async function initializePackageManager(
-  options: Options,
-): Promise<{ pkgManager: PackagesManager; result: PackageManagerResult }> {
-  const pkgManager = new PackagesManager(
-    options.configFile
-      ? {
-          configFile: options.configFile,
-        }
-      : {
-          packages: options.packages ?? [],
-        },
-  );
-
-  const result = (await pkgManager.init()) as unknown as PackageManagerResult;
-  return { pkgManager, result };
-}
-
-/**
  * Sets up the subgraph manager and registers subgraphs
  */
 async function setupGraphQLManager(
@@ -111,7 +95,7 @@ async function setupGraphQLManager(
   reactor: IDocumentDriveServer,
   db: Knex,
   analyticsStore: IAnalyticsStore,
-  result: PackageManagerResult,
+  subgraphs: Map<string, SubgraphClass[]>,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -121,15 +105,15 @@ async function setupGraphQLManager(
     analyticsStore,
   );
 
-  if (result.subgraphs) {
-    for (const [supergraph, subgraphs] of result.subgraphs.entries()) {
-      for (const subgraph of subgraphs) {
-        await graphqlManager.registerSubgraph(subgraph, supergraph);
-      }
+  await graphqlManager.init();
+
+  for (const [supergraph, collection] of subgraphs.entries()) {
+    for (const subgraph of collection) {
+      await graphqlManager.registerSubgraph(subgraph, "graphql");
     }
   }
 
-  await graphqlManager.init();
+  await graphqlManager.updateRouter();
   return graphqlManager;
 }
 
@@ -137,7 +121,7 @@ async function setupGraphQLManager(
  * Sets up event listeners for package manager changes
  */
 function setupEventListeners(
-  pkgManager: PackagesManager,
+  pkgManager: PackageManager,
   reactor: IDocumentDriveServer,
   graphqlManager: GraphQLManager,
   processorManager: IProcessorManager,
@@ -154,18 +138,21 @@ function setupEventListeners(
   pkgManager.onSubgraphsChange((packagedSubgraphs) => {
     for (const [supergraph, subgraphs] of packagedSubgraphs) {
       for (const subgraph of subgraphs) {
-        graphqlManager.registerSubgraph(subgraph, supergraph);
+        graphqlManager.registerSubgraph(subgraph, "graphql");
       }
     }
     graphqlManager.updateRouter();
   });
 
   pkgManager.onProcessorsChange(async (processors) => {
-    for (const [packageName, fn] of processors) {
+    for (const [packageName, fns] of processors) {
       await processorManager.unregisterFactory(packageName);
 
-      const factory = fn(module);
-      await processorManager.registerFactory(packageName, factory);
+      const factories = fns.map((fn) => fn(module));
+
+      await processorManager.registerFactory(packageName, (driveId: string) =>
+        factories.map((factory) => factory(driveId)).flat(),
+      );
     }
   });
 }
@@ -173,7 +160,7 @@ function setupEventListeners(
 /**
  * Starts the server (HTTP or HTTPS)
  */
-export async function startServer(
+async function startServer(
   app: Express,
   port: number,
   httpsOptions: Options["https"],
@@ -210,6 +197,15 @@ export async function startServer(
   }
 }
 
+/**
+ * Starts the API server.
+ *
+ * @param reactor - The document drive server.
+ * @param options - Additional options for server configuration. These options intended to be serializable.
+ * @param overrides - System overrides. These overrides are intended to be object references.
+ *
+ * @returns The API server.
+ */
 export async function startAPI(
   reactor: IDocumentDriveServer,
   options: Options,
@@ -226,20 +222,19 @@ export async function startAPI(
   const module = { db, analyticsStore };
 
   // Initialize package manager
-  const { pkgManager, result } = await initializePackageManager(options);
-  const documentModels = result.documentModels ?? [];
-
-  // initialize processors
-  const processorManager = new ProcessorManager(reactor.listeners, reactor);
-
-  const packageToProcessorFactory =
-    result.processors ?? new Map<string, (module: any) => ProcessorFactory>();
-  for (const [packageName, fn] of packageToProcessorFactory) {
-    const factory = fn(module);
-    await processorManager.registerFactory(packageName, factory);
+  const loaders: IPackageLoader[] = [new ImportPackageLoader()];
+  if (options.packageLoader) {
+    loaders.push(options.packageLoader);
   }
 
-  // Set document model modules
+  const packages = new PackageManager(loaders, {
+    configFile: options.configFile,
+    packages: options.packages ?? [],
+  });
+
+  const { documentModels, processors, subgraphs } = await packages.init();
+
+  // set document model modules here, processors might use them immediately
   reactor.setDocumentModelModules(
     getUniqueDocumentModels([
       ...reactor.getDocumentModelModules(),
@@ -247,18 +242,33 @@ export async function startAPI(
     ]),
   );
 
-  // Set up subgraph manager
+  // initialize processors
+  const processorManager = new ProcessorManager(reactor.listeners, reactor);
+  for (const [packageName, fns] of processors) {
+    const factories = fns.map((fn) => fn(module));
+
+    await processorManager.registerFactory(packageName, (driveId: string) =>
+      factories.map((factory) => factory(driveId)).flat(),
+    );
+  }
+
+  // hook up processor manager to drive added event
+  reactor.on("driveAdded", async (drive: DocumentDriveDocument) => {
+    await processorManager.registerDrive(drive.state.global.id);
+  });
+
+  // set up subgraph manager
   const graphqlManager = await setupGraphQLManager(
     app,
     reactor,
     db,
     analyticsStore,
-    result,
+    subgraphs,
   );
 
   // Set up event listeners
   setupEventListeners(
-    pkgManager,
+    packages,
     reactor,
     graphqlManager,
     processorManager,
@@ -266,9 +276,7 @@ export async function startAPI(
   );
 
   // Start the server
-  if (options.autostart === undefined || options.autostart) {
-    await startServer(app, port, options.https);
-  }
+  await startServer(app, port, options.https);
 
-  return { app, graphqlManager, processorManager };
+  return { app, graphqlManager, processorManager, packages };
 }

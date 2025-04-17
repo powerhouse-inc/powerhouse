@@ -43,6 +43,9 @@ export class DriveSubgraph extends Subgraph {
     this.logger.verbose(`constructor()`);
   }
 
+  // Note: This GQL declaration depends on the document drive subgraph already
+  // being registered. If the document drive subgraph is not registered, this
+  // will throw an error as it relies on those types.
   name = "d/:drive";
   typeDefs = gql`
     type DriveMeta {
@@ -265,7 +268,7 @@ export class DriveSubgraph extends Subgraph {
           id,
           revision: document.revision.global,
           state: document.state.global,
-          stateJSON: JSON.stringify(document.state.global),
+          stateJSON: document.state.global,
           operations: document.operations.global.map((op: Operation) => ({
             ...op,
             inputText:

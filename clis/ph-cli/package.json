@@ -1,6 +1,10 @@
 {
   "name": "@powerhousedao/ph-cli",
+<<<<<<< HEAD
   "version": "0.40.40-staging.0",
+=======
+  "version": "0.40.46-dev.0",
+>>>>>>> main
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",

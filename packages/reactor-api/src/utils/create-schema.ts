@@ -1,6 +1,9 @@
 import { type Context } from "#graphql/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import {
+  type GraphQLResolverMap,
+  type GraphQLSchemaModule,
+} from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
 import { type IDocumentDriveServer } from "document-drive";
@@ -8,22 +11,29 @@ import { type DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
 
-export const createSchema = (
+export const buildSubgraphSchemaModule = (
   documentDriveServer: IDocumentDriveServer,
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
-) => {
+): GraphQLSchemaModule => {
   const newResolvers = {
     ...resolvers,
     JSONObject: GraphQLJSONObject,
   };
 
-  return buildSubgraphSchema([
-    {
-      typeDefs: getDocumentModelTypeDefs(documentDriveServer, typeDefs),
-      resolvers: newResolvers,
-    },
-  ]);
+  return {
+    typeDefs: getDocumentModelTypeDefs(documentDriveServer, typeDefs),
+    resolvers: newResolvers,
+  };
+};
+export const createSchema = (
+  documentDriveServer: IDocumentDriveServer,
+  resolvers: GraphQLResolverMap<Context>,
+  typeDefs: DocumentNode,
+) => {
+  return buildSubgraphSchema(
+    buildSubgraphSchemaModule(documentDriveServer, resolvers, typeDefs),
+  );
 };
 
 export const getDocumentModelTypeDefs = (

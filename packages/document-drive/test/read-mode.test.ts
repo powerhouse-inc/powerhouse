@@ -187,10 +187,10 @@ describe("Read mode methods", () => {
                     }
                     ... on DocumentDrive {
                         state {
-                            id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug
+                            id name nodes { ... on DocumentDrive_FolderNode { id name kind parentFolder } ... on DocumentDrive_FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug
                         }
                         initialState {
-                            id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug
+                            id name nodes { ... on DocumentDrive_FolderNode { id name kind parentFolder } ... on DocumentDrive_FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug
                         }
                     }
                 }

@@ -10,4 +10,4 @@ startServer({
   dev: true,
   ...config.reactor,
   logLevel: "verbose",
-});
+}).catch(console.error);

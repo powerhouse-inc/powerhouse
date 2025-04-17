@@ -163,7 +163,6 @@ export async function startServer(
       generateImportMapPlugin(studioPath, [
         { name: "react", provider: "esm.sh" },
         { name: "react-dom", provider: "esm.sh" },
-        "@powerhousedao/reactor-browser",
       ]),
     ],
   };

@@ -12,12 +12,12 @@ import dotenv from "dotenv";
 import express from "express";
 import { setTimeout } from "node:timers/promises";
 import { initRedis } from "./clients/redis.js";
+import { initProfilerFromEnv } from "./profiler.js";
 import { PackagesManager } from "./utils/package-manager.js";
 
 dotenv.config();
 
 // Create a monolith express app for all subgraphs
-
 const app = express();
 
 if (process.env.SENTRY_DSN) {
@@ -29,6 +29,7 @@ if (process.env.SENTRY_DSN) {
 
   Sentry.setupExpressErrorHandler(app);
 }
+
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
 
 const INITIAL_TIMEOUT = process.env.INITIAL_TIMEOUT
@@ -36,6 +37,15 @@ const INITIAL_TIMEOUT = process.env.INITIAL_TIMEOUT
   : 1000 * 10;
 
 const main = async () => {
+  if (process.env.PYROSCOPE_SERVER_ADDRESS) {
+    try {
+      await initProfilerFromEnv(process.env);
+    } catch (e) {
+      Sentry.captureException(e);
+      console.error("Error starting profiler", e);
+    }
+  }
+
   try {
     const packages =
       process.env.PH_PACKAGES && process.env.PH_PACKAGES !== ""
@@ -86,7 +96,9 @@ const main = async () => {
     await startServer(app, serverPort, undefined);
     console.log("Started listening on port:", serverPort);
   } catch (e) {
+    Sentry.captureException(e);
     console.error("App crashed", e);
+    throw e;
   }
 };
 

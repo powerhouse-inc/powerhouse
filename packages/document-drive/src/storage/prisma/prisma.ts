@@ -123,42 +123,42 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
   // TODO: this should throw an error if the document already exists.
   async create(documentId: string, document: PHDocument) {
-    await this.db.document.upsert({
-      where: {
-        id: documentId,
-      },
-      update: {},
-      create: {
-        name: document.name,
-        documentType: document.documentType,
-        isDrive: false,
-        initialState: JSON.stringify(document.initialState),
-        lastModified: document.lastModified,
-        revision: JSON.stringify(document.revision),
-        meta: document.meta ? JSON.stringify(document.meta) : undefined,
-        id: documentId,
-      },
-    });
+    const slug =
+      (document.initialState.state.global as any)?.slug ?? documentId;
 
-    // temporary -- but we need to create drives automatically for documents
+    try {
+      await this.db.document.upsert({
+        where: {
+          id: documentId,
+        },
+        update: {},
+        create: {
+          name: document.name,
+          documentType: document.documentType,
+          slug,
+          initialState: JSON.stringify(document.initialState),
+          lastModified: document.lastModified,
+          revision: JSON.stringify(document.revision),
+          meta: document.meta ? JSON.stringify(document.meta) : undefined,
+          id: documentId,
+        },
+      });
+    } catch (e) {
+      if ((e as any).code === "P2002") {
+        throw new Error(`Document with slug ${slug} already exists`);
+      }
+
+      throw e;
+    }
+
+    // temporary -- but we need to create drive records automatically for documents
     // of the correct type
     if (document.documentType === "powerhouse/document-drive") {
-      const drive = document as DocumentDriveDocument;
-      try {
-        await this.db.drive.create({
-          data: {
-            id: documentId,
-            slug: drive.initialState.state.global.slug ?? documentId,
-          },
-        });
-      } catch (e) {
-        if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
-          throw new Error(
-            `Drive with slug ${drive.initialState.state.global.slug ?? documentId} already exists`,
-          );
-        }
-        throw e;
-      }
+      await this.db.drive.create({
+        data: {
+          id: documentId,
+        },
+      });
     }
   }
 
@@ -290,6 +290,22 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return doc as unknown as TDocument;
   }
 
+  async getBySlug<TDocument extends PHDocument>(
+    slug: string,
+  ): Promise<TDocument> {
+    const result = await this.db.document.findUnique({
+      where: {
+        slug,
+      },
+    });
+
+    if (!result) {
+      throw new Error(`Document with slug ${slug} not found`);
+    }
+
+    return this.get<TDocument>(result.id);
+  }
+
   async delete(documentId: string): Promise<boolean> {
     try {
       // delete out of drives
@@ -403,34 +419,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   ////////////////////////////////
 
   async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    try {
-      await this.db.drive.create({
-        data: {
-          id,
-          slug: drive.initialState.state.global.slug ?? id,
-        },
-      });
-    } catch (e) {
-      if ((e as PrismaClientKnownRequestError)?.code === "P2002") {
-        throw new Error(
-          `Drive with slug ${drive.initialState.state.global.slug ?? id} already exists`,
-        );
-      }
-      throw e;
-    }
-
-    await this.db.document.create({
-      data: {
-        name: drive.name,
-        documentType: drive.documentType,
-        isDrive: true,
-        initialState: JSON.stringify(drive.initialState),
-        lastModified: drive.lastModified,
-        revision: JSON.stringify(drive.revision),
-        meta: drive.meta ? JSON.stringify(drive.meta) : undefined,
-        id,
-      },
-    });
+    return this.create(id, drive);
   }
 
   async addDriveOperations(
@@ -607,20 +596,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     });
 
     return drives.map((d) => d.id);
-  }
-
-  async getDriveBySlug(slug: string) {
-    const driveEntity = await this.db.drive.findFirst({
-      where: {
-        slug,
-      },
-    });
-
-    if (!driveEntity) {
-      throw new Error(`Drive with slug ${slug} not found`);
-    }
-
-    return this.get<DocumentDriveDocument>(driveEntity.id);
   }
 
   async deleteDrive(id: string) {

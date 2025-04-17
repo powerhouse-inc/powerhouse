@@ -9,13 +9,7 @@ export function viteConnectDevStudioPlugin(
   env?: Record<string, string>,
 ): PluginOption[] {
   return [
-    enabled &&
-      viteIgnoreStaticImport([
-        "react",
-        "react-dom",
-        "@powerhousedao/reactor-browser",
-        ...externalIds,
-      ]),
+    enabled && viteIgnoreStaticImport(["react", "react-dom", ...externalIds]),
     {
       name: "vite-plugin-connect-dev-studio",
       enforce: "pre",

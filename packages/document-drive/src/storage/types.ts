@@ -26,6 +26,21 @@ export interface IDocumentStorage {
   create(documentId: string, document: PHDocument): Promise<void>;
 
   /**
+   * Creates a new document with the given id and slug.
+   *
+   * @param documentId - The id of the document to create.
+   * @param slug - The slug of the document to create.
+   * @param document - The document to create.
+   *
+   * @throws Error if the document already exists.
+   */
+  // createWithSlug(
+  //   documentId: string,
+  //   slug: string,
+  //   document: PHDocument,
+  // ): Promise<void>;
+
+  /**
    * Returns the document with the given id.
    *
    * @param documentId - The id of the document to get.
@@ -33,6 +48,13 @@ export interface IDocumentStorage {
    * @throws Error if the document does not exist.
    */
   get<TDocument extends PHDocument>(documentId: string): Promise<TDocument>;
+
+  /**
+   * Returns the document with the given slug.
+   *
+   * @param slug - The slug of the document to get.
+   */
+  getBySlug<TDocument extends PHDocument>(slug: string): Promise<TDocument>;
 
   /**
    * Deletes the document with the given id.
@@ -110,7 +132,6 @@ export interface IStorage {
 
 export interface IDriveStorage extends IStorage {
   getDrives(): Promise<string[]>;
-  getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
   createDrive(id: string, drive: DocumentDriveDocument): Promise<void>;
   deleteDrive(id: string): Promise<void>;
   clearStorage?(): Promise<void>;

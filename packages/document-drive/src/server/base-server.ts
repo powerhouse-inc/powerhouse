@@ -128,8 +128,8 @@ export class BaseDocumentDriveServer
       options,
     }: OperationJob) => {
       return !documentId || driveId === documentId
-        ? this.addDriveOperations(driveId, operations, options)
-        : this.addOperations(driveId, documentId, operations, options);
+        ? this.processDriveOperations(driveId, operations, options)
+        : this.processOperations(driveId, documentId, operations, options);
     },
     processActionJob: async ({
       driveId,
@@ -138,8 +138,8 @@ export class BaseDocumentDriveServer
       options,
     }: ActionJob) => {
       return documentId
-        ? this.addActions(driveId, documentId, actions, options)
-        : this.addDriveActions(driveId, actions, options);
+        ? this.processActions(driveId, documentId, actions, options)
+        : this.processDriveActions(driveId, actions, options);
     },
     processJob: async (job: Job) => {
       if (isOperationJob(job)) {
@@ -464,11 +464,11 @@ export class BaseDocumentDriveServer
         );
 
         const transmitter = new SwitchboardPushTransmitter(
-          zodListener.callInfo?.data ?? "",
+          zodListener.callInfo.data ?? "",
         );
 
         this.logger.verbose(
-          `[SYNC DEBUG] Created SwitchboardPush transmitter with URL: ${zodListener.callInfo?.data || "none"}`,
+          `[SYNC DEBUG] Created SwitchboardPush transmitter with URL: ${zodListener.callInfo.data || "none"}`,
         );
 
         await this.listenerManager
@@ -476,10 +476,10 @@ export class BaseDocumentDriveServer
             block: zodListener.block,
             driveId: drive.state.global.id,
             filter: {
-              branch: zodListener.filter?.branch ?? [],
-              documentId: zodListener.filter?.documentId ?? [],
-              documentType: zodListener.filter?.documentType ?? [],
-              scope: zodListener.filter?.scope ?? [],
+              branch: zodListener.filter.branch ?? [],
+              documentId: zodListener.filter.documentId ?? [],
+              documentType: zodListener.filter.documentType ?? [],
+              scope: zodListener.filter.scope ?? [],
             },
             listenerId: zodListener.listenerId,
             callInfo: zodListener.callInfo,
@@ -727,7 +727,7 @@ export class BaseDocumentDriveServer
       this.logger.error("Error getting drive from cache", e);
     }
 
-    const driveStorage = await this.legacyStorage.getDriveBySlug(slug);
+    const driveStorage = await this.documentStorage.getBySlug(slug);
     const document = this._buildDocument(driveStorage, options);
     if (!isDocumentDrive(document)) {
       throw new Error(`Document with slug ${slug} is not a Document Drive`);
@@ -1332,7 +1332,7 @@ export class BaseDocumentDriveServer
         options,
       });
 
-      return new Promise<IOperationResult>((resolve, reject) => {
+      return await new Promise<IOperationResult>((resolve, reject) => {
         const unsubscribe = this.queueManager.on(
           "jobCompleted",
           (job, result) => {
@@ -1379,7 +1379,7 @@ export class BaseDocumentDriveServer
         actions,
         options,
       });
-      return new Promise<IOperationResult<DocumentDriveDocument>>(
+      return await new Promise<IOperationResult<DocumentDriveDocument>>(
         (resolve, reject) => {
           const unsubscribe = this.queueManager.on(
             "jobCompleted",
@@ -1410,6 +1410,15 @@ export class BaseDocumentDriveServer
   }
 
   async addOperations(
+    driveId: string,
+    documentId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult> {
+    return this.queueOperations(driveId, documentId, operations, options);
+  }
+
+  private async processOperations(
     driveId: string,
     documentId: string,
     operations: Operation[],
@@ -1694,7 +1703,7 @@ export class BaseDocumentDriveServer
         operations,
         options,
       });
-      return new Promise<DriveOperationResult>((resolve, reject) => {
+      return await new Promise<DriveOperationResult>((resolve, reject) => {
         const unsubscribe = this.queueManager.on(
           "jobCompleted",
           (job, result) => {
@@ -1723,6 +1732,14 @@ export class BaseDocumentDriveServer
   }
 
   async addDriveOperations(
+    driveId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<DriveOperationResult> {
+    return this.queueDriveOperations(driveId, operations, options);
+  }
+
+  private async processDriveOperations(
     driveId: string,
     operations: Operation[],
     options?: AddOperationOptions,
@@ -1912,9 +1929,18 @@ export class BaseDocumentDriveServer
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
+    return this.queueActions(driveId, documentId, actions, options);
+  }
+
+  private async processActions(
+    driveId: string,
+    documentId: string,
+    actions: Action[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult> {
     const document = await this.getDocument(driveId, documentId);
     const operations = this._buildOperations(document, actions);
-    return this.addOperations(driveId, documentId, operations, options);
+    return this.processOperations(driveId, documentId, operations, options);
   }
 
   async addDriveAction(
@@ -1930,10 +1956,21 @@ export class BaseDocumentDriveServer
     actions: (DocumentDriveAction | Action)[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
+    return this.queueDriveActions(
+      driveId,
+      actions as DocumentDriveAction[],
+      options,
+    );
+  }
+
+  private async processDriveActions(
+    driveId: string,
+    actions: (DocumentDriveAction | Action)[],
+    options?: AddOperationOptions,
+  ): Promise<DriveOperationResult> {
     const document = await this.getDrive(driveId);
     const operations = this._buildOperations(document, actions);
-    const result = await this.addDriveOperations(driveId, operations, options);
-    return result;
+    return this.processDriveOperations(driveId, operations, options);
   }
 
   async detachDrive(driveId: string) {

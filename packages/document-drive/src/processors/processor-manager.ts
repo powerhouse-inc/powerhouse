@@ -9,8 +9,14 @@ import {
   type Listener,
 } from "document-drive/server/types";
 import { generateId } from "document-model";
+import { childLogger } from "../../index.js";
 
 export class ProcessorManager implements IProcessorManager {
+  private readonly logger = childLogger([
+    "document-drive",
+    "processor-manager",
+  ]);
+
   private idToFactory = new Map<string, ProcessorFactory>();
   private identifierToListeners = new Map<string, Listener[]>();
 
@@ -25,12 +31,14 @@ export class ProcessorManager implements IProcessorManager {
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
+    this.logger.info(`Registering factory '${identifier}'.`);
+
     this.idToFactory.set(identifier, factory);
 
     // iterate over all drives and register the factory
     const driveIds = await this.drive.getDrives();
     for (const driveId of driveIds) {
-      await this.registerDrive(driveId);
+      await this.createProcessors(driveId, identifier, factory);
     }
   }
 
@@ -49,36 +57,48 @@ export class ProcessorManager implements IProcessorManager {
   }
 
   async registerDrive(driveId: string) {
+    this.logger.info(`Registering drive '${driveId}'.`);
+
     // iterate over all factories and create listeners
-    await Promise.all(
-      Object.entries(this.idToFactory).map(
-        ([identifier, factory]: [string, ProcessorFactory]) => {
-          let listeners = this.identifierToListeners.get(identifier) ?? [];
-          if (!listeners) {
-            listeners = [];
-            this.identifierToListeners.set(identifier, listeners);
-          }
+    for (const [identifier, factory] of this.idToFactory) {
+      await this.createProcessors(driveId, identifier, factory);
+    }
+  }
 
-          const processors = factory(driveId);
+  /**
+   * Creates processors for a specific (drive, identifier) pair.
+   *
+   * This should be called once and only once for each (drive, identifier),
+   * unless unregisterFactory is called, which will remove them.
+   */
+  async createProcessors(
+    driveId: string,
+    identifier: string,
+    factory: ProcessorFactory,
+  ) {
+    let listeners = this.identifierToListeners.get(identifier) ?? [];
+    if (!listeners) {
+      listeners = [];
+      this.identifierToListeners.set(identifier, listeners);
+    }
 
-          for (const { filter, processor } of processors) {
-            const id = generateId();
-            const listener: Listener = {
-              driveId,
-              listenerId: id,
-              block: false,
-              system: false,
-              filter,
-              callInfo: undefined,
-              transmitter: new InternalTransmitter(this.drive, processor),
-            };
+    const processors = factory(driveId);
 
-            this.listeners.setListener(driveId, listener);
+    for (const { filter, processor } of processors) {
+      const id = generateId();
+      const listener: Listener = {
+        driveId,
+        listenerId: id,
+        block: false,
+        system: false,
+        filter,
+        callInfo: undefined,
+        transmitter: new InternalTransmitter(this.drive, processor),
+      };
 
-            listeners.push(listener);
-          }
-        },
-      ),
-    );
+      this.listeners.setListener(driveId, listener);
+
+      listeners.push(listener);
+    }
   }
 }

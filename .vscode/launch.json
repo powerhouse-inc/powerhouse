@@ -26,12 +26,14 @@
       "outFiles": ["${workspaceRoot}/packages/*/dist/**/*.js"],
       "sourceMaps": true,
       "resolveSourceMapLocations": [
-        "${workspaceRoot}/packages/*/dist/**/*.ts.map"
+        "${workspaceRoot}/packages/*/dist/**/*.js.map",
+        "${workspaceRoot}/packages/*/dist/**/*.ts.map",
+        "${workspaceRoot}/packages/*/src/**/*.ts"
       ],
       "smartStep": true,
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "cwd": "${workspaceRoot}/../finances"
+      "cwd": "${workspaceRoot}/../effective-octo-adventure"
     }
   ]
 }
