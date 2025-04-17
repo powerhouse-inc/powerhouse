@@ -108,7 +108,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.createDrive(driveId, drive);
+      await storage.create(driveId, drive);
 
       const driveOperation = buildOperation(
         reducer,
@@ -158,7 +158,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.createDrive(driveId, drive);
+      await storage.create(driveId, drive);
 
       const driveOperation = buildOperation(
         reducer,
@@ -234,7 +234,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.createDrive(driveId, drive);
+      await storage.create(driveId, drive);
 
       const driveOperation = buildOperation(
         reducer,

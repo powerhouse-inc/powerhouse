@@ -473,10 +473,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   // IDriveStorage
   ////////////////////////////////
 
-  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    return this.create(id, drive);
-  }
-
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],

@@ -258,10 +258,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     };
   }
 
-  async createDrive(id: string, drive: DocumentDriveDocument) {
-    return this.create(id, drive);
-  }
-
   async addDriveOperations(
     id: string,
     operations: OperationFromDocument<DocumentDriveDocument>[],

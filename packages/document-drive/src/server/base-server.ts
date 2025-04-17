@@ -613,7 +613,7 @@ export class BaseDocumentDriveServer
       preferredEditor: preferredEditor,
     };
 
-    await this.legacyStorage.createDrive(id, document);
+    await this.documentStorage.create(id, document);
 
     if (input.global.slug) {
       await this.cache.deleteDriveBySlug(input.global.slug);

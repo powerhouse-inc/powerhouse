@@ -333,10 +333,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     }
   }
 
-  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    return this.create(id, drive);
-  }
-
   async deleteDrive(id: string): Promise<void> {
     // Get all documents in this drive
     const manifest = await this.getDriveManifest(id);

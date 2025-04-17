@@ -349,10 +349,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     });
   }
 
-  async createDrive(id: string, drive: DocumentDriveDocument) {
-    return this.create(id, drive);
-  }
-
   async deleteDrive(id: string) {
     // First get all documents in this drive
     const documents = await this.getChildren(id);
