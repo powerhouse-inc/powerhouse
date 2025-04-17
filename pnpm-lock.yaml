@@ -226,6 +226,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@powerhousedao/diff-analyzer':
+        specifier: link:../../../diff-analyzer
+        version: link:../../../diff-analyzer
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser

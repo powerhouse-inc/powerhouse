@@ -53,8 +53,9 @@ async function createReactor() {
     return server;
 }
 
-const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(createReactor);
-const unwrappedReactor = unwrap(reactorAtom);
+export const reactorAtom =
+    atomWithLazy<Promise<IDocumentDriveServer>>(createReactor);
+export const unwrappedReactor = unwrap(reactorAtom);
 
 // blocks rendering until reactor is initialized.
 export const useReactor = (): IDocumentDriveServer | undefined =>

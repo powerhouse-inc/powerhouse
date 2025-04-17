@@ -1,3 +1,9 @@
+import {
+    AnalyticsGranularity,
+    AnalyticsPath,
+    DateTime,
+    useAnalyticsQuery,
+} from '@powerhousedao/reactor-browser/analytics';
 import { type Operation, type PHDocument } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +29,28 @@ export function DocumentEditorContainer() {
         renameNode,
         getDocumentModelModule,
     } = useUiNodes();
+
+    const { data: queryResults } = useAnalyticsQuery({
+        start: DateTime.now().startOf('day'),
+        end: DateTime.now().endOf('day'),
+        granularity: AnalyticsGranularity.Hourly,
+        metrics: ['Count'],
+        select: {
+            changes: [
+                AnalyticsPath.fromString(`changes/add`),
+                AnalyticsPath.fromString(`changes/remove`),
+            ],
+            document: [
+                AnalyticsPath.fromString(
+                    `document/${selectedNode?.id}/main/global`,
+                ),
+            ],
+        },
+        currency: AnalyticsPath.fromString('Count'),
+        lod: {},
+    });
+
+    console.log(queryResults);
 
     const handleAddOperationToSelectedDocument = useCallback(
         async (operation: Operation) => {
