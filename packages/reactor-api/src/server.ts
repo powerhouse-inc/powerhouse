@@ -245,10 +245,31 @@ export async function startAPI(
   // initialize processors
   const processorManager = new ProcessorManager(reactor.listeners, reactor);
   for (const [packageName, fns] of processors) {
-    const factories = fns.map((fn) => fn(module));
+    const factories = fns.map((fn) => {
+      try {
+        return fn(module);
+      } catch (e) {
+        logger.error(
+          `Error initializing processor factory for package ${packageName}:`,
+          e,
+        );
+
+        return () => [];
+      }
+    });
 
     await processorManager.registerFactory(packageName, (driveId: string) =>
-      factories.map((factory) => factory(driveId)).flat(),
+      factories
+        .map((factory) => {
+          try {
+            return factory(driveId);
+          } catch (e) {
+            logger.error(`Error creating processor for drive ${driveId}:`, e);
+
+            return [];
+          }
+        })
+        .flat(),
     );
   }
 

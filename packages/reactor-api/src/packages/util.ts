@@ -11,6 +11,9 @@ export const readManifest = () => {
   return manifest;
 };
 
+/**
+ * Tries to import a dependency from a package. This function cannot throw.
+ */
 export async function loadDependency(
   packageName: string,
   subPath: string,

@@ -14,16 +14,9 @@ export class ImportPackageLoader implements IPackageLoader {
   async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
     this.logger.verbose("Loading document models from package:", identifier);
 
-    let pkgModule: Record<string, DocumentModelModule> | undefined;
-    try {
-      pkgModule = (await loadDependency(identifier, "document-models")) as {
-        [key: string]: DocumentModelModule;
-      };
-    } catch (e) {
-      this.logger.verbose(`  ➜  No Document Models found: ${identifier}`);
-
-      return [];
-    }
+    const pkgModule = (await loadDependency(identifier, "document-models")) as {
+      [key: string]: DocumentModelModule;
+    };
 
     if (pkgModule) {
       this.logger.verbose(`  ➜  Loaded Document Models from: ${identifier}`);
@@ -67,8 +60,16 @@ export class ImportPackageLoader implements IPackageLoader {
       module: any,
     ) => ProcessorFactory;
     if (pkgModule) {
-      this.logger.verbose(`  ➜  Loaded Processor Factory from: ${identifier}`);
-      return pkgModule;
+      if (!(typeof pkgModule === "function")) {
+        this.logger.verbose(
+          `  ➜  Processor Factory is not a function: ${identifier}`,
+        );
+      } else {
+        this.logger.verbose(
+          `  ➜  Loaded Processor Factory from: ${identifier}`,
+        );
+        return pkgModule;
+      }
     } else {
       this.logger.verbose(`  ➜  No Processor Factory found: ${identifier}`);
     }
