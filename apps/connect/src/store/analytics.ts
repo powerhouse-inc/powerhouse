@@ -4,24 +4,18 @@ import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, unwrap } from 'jotai/utils';
 
 async function createAnalyticsStore() {
-    try {
-        const { BrowserAnalyticsStore } = await import(
-            '@powerhousedao/reactor-browser/analytics/store/browser'
-        );
-        const store = new BrowserAnalyticsStore({
-            databaseName: `${connectConfig.routerBasename}:analytics`,
-        });
-        await store.init();
-        return store;
-    } catch (error) {
-        console.error('Error initializing BrowserAnalyticsStore');
-        console.error(error);
-        return undefined;
-    }
+    const { BrowserAnalyticsStore } = await import(
+        '@powerhousedao/reactor-browser/analytics/store/browser'
+    );
+    const store = new BrowserAnalyticsStore({
+        databaseName: `${connectConfig.routerBasename}:analytics`,
+    });
+    await store.init();
+    return store;
 }
 
 const analyticsStoreAtom =
-    atomWithLazy<Promise<IAnalyticsStore | undefined>>(createAnalyticsStore);
+    atomWithLazy<Promise<IAnalyticsStore>>(createAnalyticsStore);
 
 const unwrappedAnalyticsStore = unwrap(analyticsStoreAtom);
 
