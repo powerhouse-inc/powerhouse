@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { startAPI, startServer } from "@powerhousedao/reactor-api";
+import { startAPI } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
@@ -10,7 +10,6 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
-import { setTimeout } from "node:timers/promises";
 import { initRedis } from "./clients/redis.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import { PackagesManager } from "./utils/package-manager.js";
@@ -31,10 +30,6 @@ if (process.env.SENTRY_DSN) {
 }
 
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
-
-const INITIAL_TIMEOUT = process.env.INITIAL_TIMEOUT
-  ? Number(process.env.INITIAL_TIMEOUT)
-  : 1000 * 10;
 
 const main = async () => {
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
@@ -88,13 +83,7 @@ const main = async () => {
       port: serverPort,
       dbPath: dbUrl,
       packages,
-      autostart: false,
     });
-
-    await setTimeout(INITIAL_TIMEOUT);
-
-    await startServer(app, serverPort, undefined);
-    console.log("Started listening on port:", serverPort);
   } catch (e) {
     Sentry.captureException(e);
     console.error("App crashed", e);
