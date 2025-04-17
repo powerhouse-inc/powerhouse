@@ -2,6 +2,7 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
+import { DocumentNotFoundError } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations } from "#utils/misc";
@@ -91,7 +92,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     );
 
     if (!document) {
-      throw new Error(`Document with id ${documentId} not found`);
+      return Promise.reject(new DocumentNotFoundError(documentId));
     }
 
     return document;
@@ -104,7 +105,7 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     const documentId = slugManifest.slugToId[slug];
 
     if (!documentId) {
-      throw new Error(`Document with slug ${slug} not found`);
+      return Promise.reject(new DocumentNotFoundError(slug));
     }
 
     return this.get<TDocument>(documentId);

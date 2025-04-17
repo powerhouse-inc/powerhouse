@@ -57,6 +57,19 @@ export interface IDocumentStorage {
   getBySlug<TDocument extends PHDocument>(slug: string): Promise<TDocument>;
 
   /**
+   * Returns all documents of the given document-model type.
+   *
+   * @param documentModelType - The type of the documents to get.
+   */
+  // getByType<TDocument extends PHDocument>(
+  //   documentModelType: string,
+  //   cursor?: string,
+  // ): Promise<{
+  //   documents: TDocument[];
+  //   nextCursor: string | undefined;
+  // }>;
+
+  /**
    * Deletes the document with the given id.
    *
    * @param documentId - The id of the document to delete.

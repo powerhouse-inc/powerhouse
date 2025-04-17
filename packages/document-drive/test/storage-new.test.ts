@@ -1,3 +1,4 @@
+import { DocumentNotFoundError } from "#server/error";
 import { existsSync, rmSync } from "fs";
 import { createHelia } from "helia";
 import path from "path";
@@ -113,6 +114,20 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       ...restResult
     } = result;
     expect(restResult).toEqual(rest);
+  });
+
+  it("should throw an error if the document is not found", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    try {
+      await storage.get("test");
+
+      throw new Error("Document should not be found");
+    } catch (e) {
+      expect((e as DocumentNotFoundError).documentId).toBe("test");
+    }
   });
 
   it("should allow deleting a document", async ({ expect }) => {

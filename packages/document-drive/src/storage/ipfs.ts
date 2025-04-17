@@ -2,6 +2,7 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
+import { DocumentNotFoundError } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import { mfs, type MFS } from "@helia/mfs";
@@ -88,7 +89,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
 
       return JSON.parse(content) as TDocument;
     } catch (error) {
-      throw new Error(`Document with id ${documentId} not found`);
+      return Promise.reject(new DocumentNotFoundError(documentId));
     }
   }
 
@@ -99,7 +100,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     const documentId = slugManifest.slugToId[slug];
 
     if (!documentId) {
-      throw new Error(`Document with slug ${slug} not found`);
+      return Promise.reject(new DocumentNotFoundError(slug));
     }
 
     return this.get<TDocument>(documentId);
