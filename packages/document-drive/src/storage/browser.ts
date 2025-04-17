@@ -228,12 +228,24 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     }
 
     // delete the document from all other drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === documentId) continue;
+    let cursor: string | undefined;
+    do {
+      const { documents: drives, nextCursor } = await this.findByType(
+        "powerhouse/document-drive",
+        100,
+        cursor,
+      );
 
-      await this.removeChild(driveId, documentId);
-    }
+      for (const driveId of drives) {
+        if (driveId === documentId) {
+          continue;
+        }
+
+        await this.removeChild(driveId, documentId);
+      }
+
+      cursor = nextCursor;
+    } while (cursor);
 
     // delete any manifest for this document
     await db.removeItem(this.buildManifestKey(documentId));
@@ -337,11 +349,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     });
   }
 
-  async getDrives() {
-    const result = await this.findByType("powerhouse/document-drive");
-    return result.documents;
-  }
-
   async createDrive(id: string, drive: DocumentDriveDocument) {
     return this.create(id, drive);
   }
@@ -427,15 +434,24 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
 
   // migrates all stored operations from legacy signature to signatures array
   async migrateOperationSignatures() {
-    const drives = await this.getDrives();
-    for (const drive of drives) {
-      await this.migrateDrive(drive);
-
-      const documents = await this.getChildren(drive);
-      await Promise.all(
-        documents.map(async (docId) => this.migrateDocument(drive, docId)),
+    let cursor: string | undefined;
+    do {
+      const { documents: drives, nextCursor } = await this.findByType(
+        "powerhouse/document-drive",
+        100,
+        cursor,
       );
-    }
+      for (const drive of drives) {
+        await this.migrateDrive(drive);
+
+        const documents = await this.getChildren(drive);
+        await Promise.all(
+          documents.map(async (docId) => this.migrateDocument(drive, docId)),
+        );
+      }
+
+      cursor = nextCursor;
+    } while (cursor);
   }
 
   private async migrateDrive(driveId: string) {

@@ -682,8 +682,22 @@ export class BaseDocumentDriveServer
     });
   }
 
-  getDrives() {
-    return this.legacyStorage.getDrives();
+  // TODO: paginate
+  async getDrives() {
+    const drives: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const { documents, nextCursor } = await this.documentStorage.findByType(
+        "powerhouse/document-drive",
+        100,
+        cursor,
+      );
+
+      drives.push(...documents);
+      cursor = nextCursor;
+    } while (cursor);
+
+    return drives;
   }
 
   async getDrive(driveId: string, options?: GetDocumentOptions) {

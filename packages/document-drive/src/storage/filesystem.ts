@@ -214,12 +214,23 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     }
 
     // delete the document from all other drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === documentId) continue;
+    let cursor: string | undefined;
+    do {
+      const { documents: drives, nextCursor } = await this.findByType(
+        "powerhouse/document-drive",
+        100,
+        cursor,
+      );
+      for (const driveId of drives) {
+        if (driveId === documentId) {
+          continue;
+        }
 
-      await this.removeChild(driveId, documentId);
-    }
+        await this.removeChild(driveId, documentId);
+      }
+
+      cursor = nextCursor;
+    } while (cursor);
 
     // delete any manifest for this document
     try {
@@ -323,11 +334,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
         encoding: "utf-8",
       },
     );
-  }
-
-  async getDrives() {
-    const result = await this.findByType("powerhouse/document-drive");
-    return result.documents;
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {

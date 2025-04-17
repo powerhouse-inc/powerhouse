@@ -160,12 +160,24 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     }
 
     // delete the document from all other drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === documentId) continue;
+    let cursor: string | undefined;
+    do {
+      const { documents, nextCursor } = await this.findByType(
+        "powerhouse/document-drive",
+        100,
+        cursor,
+      );
 
-      await this.removeChild(driveId, documentId);
-    }
+      for (const driveId of documents) {
+        if (driveId === documentId) {
+          continue;
+        }
+
+        await this.removeChild(driveId, documentId);
+      }
+
+      cursor = nextCursor;
+    } while (cursor);
 
     // delete any manifest for this document
     delete this.driveManifests[documentId];
@@ -246,11 +258,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     };
   }
 
-  async getDrives() {
-    const result = await this.findByType("powerhouse/document-drive");
-    return result.documents;
-  }
-
   async createDrive(id: string, drive: DocumentDriveDocument) {
     return this.create(id, drive);
   }
@@ -278,32 +285,41 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     const manifest = this.getManifest(id);
 
     // delete each document that belongs only to this drive
-    const drives = await this.getDrives();
-    await Promise.all(
-      [...manifest.documentIds].map((docId) => {
-        for (const driveId of drives) {
-          if (driveId === id) {
-            continue;
+    let cursor: string | undefined;
+    do {
+      const { documents: drives, nextCursor } = await this.findByType(
+        "powerhouse/document-drive",
+        100,
+        cursor,
+      );
+      await Promise.all(
+        [...manifest.documentIds].map((docId) => {
+          for (const driveId of drives) {
+            if (driveId === id) {
+              continue;
+            }
+
+            const manifest = this.getManifest(driveId);
+            if (manifest.documentIds.has(docId)) {
+              return;
+            }
           }
 
-          const manifest = this.getManifest(driveId);
-          if (manifest.documentIds.has(docId)) {
-            return;
+          // Remove from slug lookup if needed
+          const document = this.documents[docId];
+          if (document) {
+            const slug = (document.initialState.state.global as any)?.slug;
+            if (slug && this.slugToDocumentId[slug] === docId) {
+              delete this.slugToDocumentId[slug];
+            }
           }
-        }
 
-        // Remove from slug lookup if needed
-        const document = this.documents[docId];
-        if (document) {
-          const slug = (document.initialState.state.global as any)?.slug;
-          if (slug && this.slugToDocumentId[slug] === docId) {
-            delete this.slugToDocumentId[slug];
-          }
-        }
+          delete this.documents[docId];
+        }),
+      );
 
-        delete this.documents[docId];
-      }),
-    );
+      cursor = nextCursor;
+    } while (cursor);
 
     // Delete the drive manifest and the drive itself
     delete this.driveManifests[id];
