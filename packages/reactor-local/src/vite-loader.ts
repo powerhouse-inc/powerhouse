@@ -1,14 +1,15 @@
 import {
-  IPackageLoader,
+  type IPackageLoader,
+  type IProcessorHostModule,
   isSubgraphClass,
   type SubgraphClass,
 } from "@powerhousedao/reactor-api";
 import { childLogger } from "document-drive";
-import { ProcessorFactory } from "document-drive/processors/types";
-import { DocumentModelModule } from "document-model";
+import { type ProcessorFactory } from "document-drive/processors/types";
+import { type DocumentModelModule } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { ViteDevServer } from "vite";
+import { type ViteDevServer } from "vite";
 
 export class VitePackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-local", "vite-loader"]);
@@ -72,8 +73,7 @@ export class VitePackageLoader implements IPackageLoader {
 
     const subgraphs: SubgraphClass[] = [];
     for (const [name, subgraph] of Object.entries(localSubgraphs)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const SubgraphClass = subgraph[name] as SubgraphClass;
+      const SubgraphClass = subgraph[name];
       if (isSubgraphClass(SubgraphClass)) {
         subgraphs.push(SubgraphClass);
       }
@@ -88,7 +88,7 @@ export class VitePackageLoader implements IPackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<(module: any) => ProcessorFactory> {
+  ): Promise<(module: IProcessorHostModule) => ProcessorFactory> {
     const fullPath = path.join(identifier, "./processors");
 
     this.logger.verbose("Loading processors from", fullPath);
@@ -103,7 +103,9 @@ export class VitePackageLoader implements IPackageLoader {
           `  ➜  Loaded Processor factory from: ${identifier}`,
         );
 
-        return module.processorFactory;
+        return module.processorFactory as (
+          module: IProcessorHostModule,
+        ) => ProcessorFactory;
       }
     } catch (e) {
       //
