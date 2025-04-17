@@ -1,3 +1,16 @@
+## 2.28.1-staging.2 (2025-04-17)
+
+### 🩹 Fixes
+
+- add source map generation so we can debug ([a4e8cbb69](https://github.com/powerhouse-inc/powerhouse/commit/a4e8cbb69))
+- **codegen:** getDocument query ([a9900f27c](https://github.com/powerhouse-inc/powerhouse/commit/a9900f27c))
+- update lockfile ([07931c848](https://github.com/powerhouse-inc/powerhouse/commit/07931c848))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
 ## 2.28.1-staging.1 (2025-04-10)
 
 ### 🚀 Features
