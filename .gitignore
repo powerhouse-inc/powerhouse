@@ -12,3 +12,4 @@ dev.db
 .cursor
 storybook-static
 .gitignore.local
+.env
