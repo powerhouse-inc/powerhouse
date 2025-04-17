@@ -18,7 +18,7 @@ export type {
   Immutable,
   Signal,
   SignalDispatch,
-  SynchronizationUnitInput,
+  SynchronizationUnitInput
 };
 //  [
 //     signerAddress,
@@ -366,6 +366,8 @@ export type EditorContext = {
   theme: "light" | "dark";
   debug?: boolean;
   user?: User;
+  readMode?: boolean;
+  selectedTimelineRevision?: string | number | null;
 };
 
 export type ActionErrorCallback = (error: unknown) => void;
@@ -411,6 +413,7 @@ export type EditorModule<
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;
+    timelineEnabled?: boolean;
   };
 };
 

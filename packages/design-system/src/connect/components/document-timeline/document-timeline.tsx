@@ -22,6 +22,7 @@ export type TimelineDividerItem = {
 };
 
 export interface DocumentTimelineProps {
+  onItemClick?: (id: string | null) => void;
   timeline?: Array<TimelineBarItem | TimelineDividerItem>;
 }
 
@@ -33,14 +34,16 @@ const defaultTimeLineItem: TimelineBarItem = {
 };
 
 export const DocumentTimeline = (props: DocumentTimelineProps) => {
-  const { timeline = [] } = props;
+  const { timeline = [], onItemClick } = props;
   const [selectedItem, setSelectedItem] = useState<null | string>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleClick = (id: string | null) => {
     if (id === selectedItem || id === defaultTimeLineItem.id) {
+      onItemClick?.(null);
       setSelectedItem(null);
     } else {
+      onItemClick?.(id);
       setSelectedItem(id);
     }
   };

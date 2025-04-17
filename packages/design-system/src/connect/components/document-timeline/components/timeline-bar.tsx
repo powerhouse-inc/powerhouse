@@ -110,6 +110,8 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
           open={open}
           onOpenChange={setOpen}
           delayDuration={0}
+          side="bottom"
+          sideOffset={5}
         >
           <div
             className={twMerge(
