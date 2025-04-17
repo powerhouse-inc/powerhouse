@@ -13,6 +13,7 @@ import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import * as DriveUtils from "../src/drive-document-model/src/utils";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils";
 import { ReactorBuilder } from "../src/server/builder";
+import { DocumentAlreadyExistsError } from "../src/server/error";
 import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
@@ -754,9 +755,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await addDrive("3", "slug3");
 
     // add drive with the same slug as the first drive, which should throw an error
-    await expect(addDrive("4", "slug1")).rejects.toThrowError(
-      "Document with slug slug1 already exists",
-    );
+    try {
+      await addDrive("4", "slug1");
+
+      throw new Error("created drive with duplicate slug");
+    } catch (error) {
+      expect((error as DocumentAlreadyExistsError).documentId).toContain("4");
+    }
 
     let drive = await server.getDriveBySlug("slug1");
     expect(drive.state.global.id).toBe("1");

@@ -46,7 +46,8 @@ export class DocumentAlreadyExistsError extends Error {
   documentId: string;
 
   constructor(documentId: string) {
-    super(`Document with id ${documentId} already exists`);
+    super(`Document with id ${documentId} uses id or slug that already exists`);
+
     this.documentId = documentId;
   }
 }
@@ -56,6 +57,7 @@ export class DocumentNotFoundError extends Error {
 
   constructor(documentId: string) {
     super(`Document with id ${documentId} not found`);
+
     this.documentId = documentId;
   }
 }

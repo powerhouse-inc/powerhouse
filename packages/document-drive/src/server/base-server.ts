@@ -52,7 +52,6 @@ import { type Unsubscribe } from "nanoevents";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
-  DocumentAlreadyExistsError,
   OperationError,
   type SynchronizationUnitNotFoundError,
 } from "./error.js";
@@ -604,11 +603,6 @@ export class BaseDocumentDriveServer
     const id = input.global.id || generateUUID();
     if (!id) {
       throw new Error("Invalid Drive Id");
-    }
-
-    const drives = await this.legacyStorage.getDrives();
-    if (drives.includes(id)) {
-      throw new DocumentAlreadyExistsError(id);
     }
 
     const document = createDocument({
