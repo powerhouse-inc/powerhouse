@@ -240,14 +240,13 @@ export class GraphQLManager {
         ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
         : `http://localhost:${process.env.PORT ?? 4001}`;
 
-      const serviceList: ServiceDefinition[] = subgraphs
-        .entries()
-        .toArray()
-        .map(([path, subgraph]) => ({
-          name: path.replace("/", ":"),
-          typeDefs: this.#buildSubgraphSchemaModule(subgraph).typeDefs,
-          url: `${herokuOrLocal}${path}`,
-        }));
+      const serviceList: ServiceDefinition[] = Array.from(
+        subgraphs.entries(),
+      ).map(([path, subgraph]) => ({
+        name: path.replace("/", ":"),
+        typeDefs: this.#buildSubgraphSchemaModule(subgraph).typeDefs,
+        url: `${herokuOrLocal}${path}`,
+      }));
 
       const gateway = new ApolloGateway({
         supergraphSdl: new LocalCompose({
