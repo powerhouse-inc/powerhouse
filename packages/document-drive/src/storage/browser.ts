@@ -132,6 +132,76 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(documentId);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit: number = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const db = await this.db;
+    const keys = await db.keys();
+
+    const documentKeys = keys.filter((key) =>
+      key.startsWith(`${BrowserStorage.DOCUMENT_KEY}${BrowserStorage.SEP}`),
+    );
+
+    // Load documents with matching type and collect their metadata
+    const documentsAndIds: Array<{ id: string; document: PHDocument }> = [];
+    for (const key of documentKeys) {
+      const documentId = key.slice(
+        BrowserStorage.DOCUMENT_KEY.length + BrowserStorage.SEP.length,
+      );
+
+      try {
+        const document = await db.getItem<PHDocument>(key);
+        if (!document || document.documentType !== documentModelType) {
+          continue;
+        }
+
+        documentsAndIds.push({ id: documentId, document });
+      } catch (error) {
+        continue;
+      }
+    }
+
+    // Sort by creation date, then by ID
+    documentsAndIds.sort((a, b) => {
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      if (aDate.getTime() === bDate.getTime()) {
+        return a.id.localeCompare(b.id);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    // cursor
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // count to limit
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     const db = await this.db;
 

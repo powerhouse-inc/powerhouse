@@ -306,6 +306,57 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(result.id);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit: number = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const queryOptions: Prisma.DocumentFindManyArgs = {
+      where: {
+        documentType: documentModelType,
+      },
+      orderBy: {
+        ordinal: "asc",
+      },
+      select: {
+        id: true,
+        ordinal: true,
+      },
+      take: limit,
+    };
+
+    // if cursor is provided, add it to the query
+    if (cursor) {
+      const cursorOrdinal = parseInt(cursor, 10);
+      if (isNaN(cursorOrdinal)) {
+        throw new Error("Invalid cursor format: Expected an integer");
+      }
+
+      queryOptions.cursor = {
+        ordinal: cursorOrdinal,
+      };
+
+      // skip the cursor itself
+      queryOptions.skip = 1;
+    }
+
+    const results = await this.db.document.findMany(queryOptions);
+
+    let nextCursor: string | undefined;
+    if (results.length === limit) {
+      // the cursor is the last document in the results
+      nextCursor = results[limit - 1].ordinal.toString();
+    }
+
+    return {
+      documents: results.map((doc) => doc.id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     try {
       // delete out of drives

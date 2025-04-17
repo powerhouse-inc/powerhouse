@@ -124,6 +124,95 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return this.get<TDocument>(documentId);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit: number = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    // Get all document files from IPFS
+    const documentFiles = [];
+    try {
+      for await (const entry of this.fs.ls("/")) {
+        if (
+          entry.name.startsWith("document-") &&
+          entry.name.endsWith(".json")
+        ) {
+          documentFiles.push(entry.name);
+        }
+      }
+    } catch (error) {
+      // If directory listing fails, return empty results
+      return { documents: [], nextCursor: undefined };
+    }
+
+    // Load documents with matching type and collect their metadata
+    const documentsAndIds: Array<{ id: string; document: PHDocument }> = [];
+
+    for (const fileName of documentFiles) {
+      // Extract the document ID from the filename
+      const documentId = fileName.replace("document-", "").replace(".json", "");
+
+      try {
+        // Read and parse the document from IPFS
+        const chunks = [];
+        for await (const chunk of this.fs.cat(`/${fileName}`)) {
+          chunks.push(chunk);
+        }
+
+        const buffer = Buffer.concat(chunks);
+        const content = new TextDecoder().decode(buffer);
+        const document = JSON.parse(content) as PHDocument;
+
+        // Only include documents of the requested type
+        if (document.documentType === documentModelType) {
+          documentsAndIds.push({ id: documentId, document });
+        }
+      } catch (error) {
+        // Skip files that can't be read or parsed
+        continue;
+      }
+    }
+
+    // Sort by creation date first, then by ID
+    documentsAndIds.sort((a, b) => {
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      if (aDate.getTime() === bDate.getTime()) {
+        return a.id.localeCompare(b.id);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    // cursor
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // count to limit
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     // Remove from slug manifest if it has a slug
     try {

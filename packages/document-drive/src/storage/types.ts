@@ -59,17 +59,21 @@ export interface IDocumentStorage {
   getBySlug<TDocument extends PHDocument>(slug: string): Promise<TDocument>;
 
   /**
-   * Returns all documents of the given document-model type.
+   * Returns ids of all documents of the given document-model type.
    *
    * @param documentModelType - The type of the documents to get.
+   * @param limit - The maximum number of documents to return.
+   * @param cursor - The cursor to start the search from.
+   *
    */
-  // getByType<TDocument extends PHDocument>(
-  //   documentModelType: string,
-  //   cursor?: string,
-  // ): Promise<{
-  //   documents: TDocument[];
-  //   nextCursor: string | undefined;
-  // }>;
+  findByType(
+    documentModelType: string,
+    limit?: number,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }>;
 
   /**
    * Deletes the document with the given id.

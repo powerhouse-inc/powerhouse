@@ -6,7 +6,10 @@ import { existsSync, rmSync } from "fs";
 import { createHelia } from "helia";
 import path from "path";
 import { describe, it } from "vitest";
-import { createDocument } from "../../document-model/index";
+import {
+  createDocument,
+  DocumentModelDocument,
+} from "../../document-model/index";
 import InMemoryCache from "../src/cache/memory";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils";
@@ -79,6 +82,19 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const result = await storage.exists("test");
     expect(result).toBe(true);
+  });
+
+  it("should not change the state of a document to match id", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    document.initialState.state.global.id = "FOOOP";
+    await storage.create("test", document);
+
+    const result = await storage.get<DocumentModelDocument>("test");
+    expect(result.initialState.state.global.id).toBe("FOOOP");
   });
 
   it("should throw a DocumentAlreadyExistsError when creating a document if the document already exists", async ({
@@ -238,6 +254,50 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const result = await storage.getBySlug<DocumentDriveDocument>("test");
     expect(result);
+  });
+
+  it("should return documents with matching document model type", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    // create docs of different types
+    await storage.create("document1", createDocument());
+    await storage.create("document2", createDriveDocument());
+    await storage.create("document3", createDocument());
+
+    const result = await storage.findByType("powerhouse/document-drive");
+    expect(result.documents.length).toBe(1);
+    expect(result.documents[0]).toBe("document2");
+
+    const result2 = await storage.findByType("powerhouse/document-model");
+    expect(result2.documents.length).toBe(2);
+    expect(result2.documents[0]).toBe("document1");
+    expect(result2.documents[1]).toBe("document3");
+  });
+
+  it("should allow paginating documents by type", async ({ expect }) => {
+    const storage = await buildStorage();
+
+    // create 10 documents of the same type
+    for (let i = 0; i < 10; i++) {
+      await storage.create(`document${i}`, createDocument());
+    }
+
+    // pull by 2s
+    let nextCursor: string | undefined = undefined;
+    for (let i = 0; i < 10; i += 2) {
+      const result = await storage.findByType(
+        "powerhouse/document-model",
+        2,
+        nextCursor,
+      );
+
+      expect(result.documents.length).toBe(2);
+      expect(result.documents[0]).toBe(`document${i}`);
+      expect(result.documents[1]).toBe(`document${i + 1}`);
+      nextCursor = result.nextCursor;
+    }
   });
 
   it("should allow associating a document with another document", async ({

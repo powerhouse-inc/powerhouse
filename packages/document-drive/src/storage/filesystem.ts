@@ -122,6 +122,80 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(documentId);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit: number = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const files = await fs.readdir(this.basePath, { withFileTypes: true });
+    const documentFiles = files.filter(
+      (file) =>
+        file.name.startsWith("document-") && file.name.endsWith(".json"),
+    );
+
+    // Load documents with matching type and collect their metadata
+    const documentsAndIds: Array<{ id: string; document: PHDocument }> = [];
+    for (const file of documentFiles) {
+      const documentId = file.name
+        .replace("document-", "")
+        .replace(".json", "");
+
+      try {
+        // Read and parse the document
+        const document = JSON.parse(
+          readFileSync(this._buildDocumentPath(documentId), {
+            encoding: "utf-8",
+          }),
+        ) as PHDocument;
+
+        // Only include documents of the requested type
+        if (document.documentType === documentModelType) {
+          documentsAndIds.push({ id: documentId, document });
+        }
+      } catch (error) {
+        // Skip files that can't be read or parsed
+        continue;
+      }
+    }
+
+    // Sort by creation date first, then by ID (consistent sort order for pagination)
+    documentsAndIds.sort((a, b) => {
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      if (aDate.getTime() === bDate.getTime()) {
+        return a.id.localeCompare(b.id);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // cursor
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     // First, find any slug for this document and remove it from the slug manifest
     try {

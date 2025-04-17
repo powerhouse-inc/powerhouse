@@ -65,7 +65,7 @@ describe.each(queueLayers)(
 
     const createDrive = async (server: IBaseDocumentDriveServer) => {
       const id = generateUUID();
-      const driveState = await server.addDrive({
+      await server.addDrive({
         global: {
           id,
           name: "name",
@@ -80,7 +80,7 @@ describe.each(queueLayers)(
         },
       });
 
-      const drive = await server.getDrive(driveState.state.global.id);
+      const drive = await server.getDrive(id);
       return drive;
     };
 

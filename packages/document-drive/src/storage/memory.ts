@@ -91,6 +91,64 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(documentId);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit: number = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const documentsAndIds = Object.entries(this.documents)
+      .filter(([_, doc]) => doc.documentType === documentModelType)
+      .map(([id, doc]) => ({
+        id,
+        document: doc,
+      }));
+
+    // sort: created first, then id -- similar to prisma's ordinal but not guaranteed
+    documentsAndIds.sort((a, b) => {
+      // get date objects
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      // if the dates are the same, sort by id
+      if (aDate.getTime() === bDate.getTime()) {
+        const aId = a.id;
+        const bId = b.id;
+
+        return aId.localeCompare(bId);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    // if cursor is provided, start there
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // count to limit
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    // return the documents
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     // Remove from slug lookup if it has a slug
     const document = this.documents[documentId];
