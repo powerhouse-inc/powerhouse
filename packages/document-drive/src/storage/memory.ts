@@ -247,7 +247,8 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDrives() {
-    return Object.keys(this.driveManifests);
+    const result = await this.findByType("powerhouse/document-drive");
+    return result.documents;
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {

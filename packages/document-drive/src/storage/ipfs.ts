@@ -314,24 +314,8 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   }
 
   async getDrives(): Promise<string[]> {
-    try {
-      // List all files in root directory
-      const drives = [];
-      for await (const entry of this.fs.ls("/")) {
-        if (
-          entry.name.startsWith("manifest-") &&
-          entry.name.endsWith(".json")
-        ) {
-          const driveId = entry.name
-            .replace("manifest-", "")
-            .replace(".json", "");
-          drives.push(driveId);
-        }
-      }
-      return drives;
-    } catch (error) {
-      return [];
-    }
+    const result = await this.findByType("powerhouse/document-drive");
+    return result.documents;
   }
 
   async getDrive(id: string): Promise<DocumentDriveDocument> {

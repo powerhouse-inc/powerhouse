@@ -338,15 +338,8 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDrives() {
-    const db = await this.db;
-    const keys = await db.keys();
-    return keys
-      .filter((key) => key.startsWith(BrowserStorage.MANIFEST_KEY))
-      .map((key) =>
-        key.slice(
-          BrowserStorage.MANIFEST_KEY.length + BrowserStorage.SEP.length,
-        ),
-      );
+    const result = await this.findByType("powerhouse/document-drive");
+    return result.documents;
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {

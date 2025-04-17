@@ -326,14 +326,8 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async getDrives() {
-    // get anything that starts with drive-
-    const files = await fs.readdir(this.basePath, { withFileTypes: true });
-    return (
-      files
-        .filter((file) => file.name.startsWith("manifest-"))
-        // remove manifest- prefix and extension
-        .map((file) => file.name.replace("manifest-", "").replace(".json", ""))
-    );
+    const result = await this.findByType("powerhouse/document-drive");
+    return result.documents;
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
