@@ -30,13 +30,7 @@ export const defaultFolderOptions = [
   DUPLICATE,
 ] as const;
 
-export const normalNodeOptions = [
-  DUPLICATE,
-  NEW_FOLDER,
-  RENAME,
-  DELETE,
-  SETTINGS,
-] as const;
+export const normalNodeOptions = [DUPLICATE, RENAME, DELETE, SETTINGS] as const;
 
 export const debugNodeOptions = [
   ADD_TRIGGER,
