@@ -2,7 +2,10 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { DocumentNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentNotFoundError,
+} from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -56,16 +59,26 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(documentExists);
   }
 
-  // TODO: this should throw an error if the document already exists.
   async create(documentId: string, document: PHDocument) {
     const documentPath = this._buildDocumentPath(documentId);
+    if (existsSync(documentPath)) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    const slug =
+      (document.initialState.state.global as any)?.slug ?? documentId;
+    if (slug) {
+      const slugManifest = await this.getSlugManifest();
+      if (slugManifest.slugToId[slug]) {
+        throw new DocumentAlreadyExistsError(documentId);
+      }
+    }
+
     writeFileSync(documentPath, stringify(document), {
       encoding: "utf-8",
     });
 
     // Update the slug manifest if the document has a slug
-    const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
     if (slug) {
       const slugManifest = await this.getSlugManifest();
       if (slugManifest.slugToId[slug]) {
@@ -74,6 +87,11 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
 
       slugManifest.slugToId[slug] = documentId;
       await this.updateSlugManifest(slugManifest);
+    }
+
+    // temporary: initialize an empty manifest for new drives
+    if (document.documentType === "powerhouse/document-drive") {
+      this.updateDriveManifest(documentId, { documentIds: [] });
     }
 
     return Promise.resolve();
@@ -245,10 +263,7 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
-    await this.create(id, drive);
-
-    // Initialize an empty manifest for the new drive
-    await this.updateDriveManifest(id, { documentIds: [] });
+    return this.create(id, drive);
   }
 
   async deleteDrive(id: string) {

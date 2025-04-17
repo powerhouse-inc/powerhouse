@@ -2,7 +2,10 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { DocumentNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentNotFoundError,
+} from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import { mfs, type MFS } from "@helia/mfs";
@@ -56,20 +59,35 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return false;
   }
 
-  // TODO: this should throw an error if the document already exists.
   async create(documentId: string, document: PHDocument): Promise<void> {
+    if (await this.exists(documentId)) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    const slug =
+      (document.initialState.state.global as any)?.slug ?? documentId;
+    if (slug) {
+      const slugManifest = await this.getSlugManifest();
+      if (slugManifest.slugToId[slug]) {
+        throw new DocumentAlreadyExistsError(documentId);
+      }
+    }
+
     await this.fs.writeBytes(
       new TextEncoder().encode(stringify(document)),
       this._buildDocumentPath(documentId),
     );
 
     // Update the slug manifest if the document has a slug
-    const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
     if (slug) {
       const slugManifest = await this.getSlugManifest();
       slugManifest.slugToId[slug] = documentId;
       await this.updateSlugManifest(slugManifest);
+    }
+
+    // temporary: initialize an empty manifest for new drives
+    if (document.documentType === "powerhouse/document-drive") {
+      this.updateDriveManifest(documentId, { documentIds: [] });
     }
   }
 
@@ -243,31 +261,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    // check if a drive with the same slug already exists
-    const slug = drive.initialState.state.global.slug;
-    if (slug) {
-      let existingDrive;
-      try {
-        existingDrive = await this.getBySlug(slug);
-      } catch {
-        // do nothing
-      }
-      if (existingDrive) {
-        throw new Error(`Drive with slug ${slug} already exists`);
-      }
-    }
-
-    const drivePath = this._buildDrivePath(id);
-    const driveContent = stringify(drive);
-    const driveBuffer = new TextEncoder().encode(driveContent);
-
-    // Write the drive to storage
-    await this.fs.writeBytes(driveBuffer, drivePath);
-
-    // Initialize an empty manifest for the new drive
-    await this.updateDriveManifest(id, { documentIds: [] });
-
-    return Promise.resolve();
+    return this.create(id, drive);
   }
 
   async deleteDrive(id: string): Promise<void> {

@@ -21,7 +21,7 @@ export interface IDocumentStorage {
    * @param documentId - The id of the document to create.
    * @param document - The document to create.
    *
-   * @throws Error if the document already exists.
+   * @throws Error if the document with a matching id OR slug already exists.
    */
   create(documentId: string, document: PHDocument): Promise<void>;
 
@@ -53,6 +53,8 @@ export interface IDocumentStorage {
    * Returns the document with the given slug.
    *
    * @param slug - The slug of the document to get.
+   *
+   * @throws Error if the document does not exist.
    */
   getBySlug<TDocument extends PHDocument>(slug: string): Promise<TDocument>;
 

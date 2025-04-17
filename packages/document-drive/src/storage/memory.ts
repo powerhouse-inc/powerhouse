@@ -1,5 +1,8 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { DocumentNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentNotFoundError,
+} from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -34,19 +37,36 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(!!this.documents[documentId]);
   }
 
-  // TODO: this should throw an error if the document already exists.
   create(documentId: string, document: PHDocument) {
+    // check if the document already exists by id
+    if (this.documents[documentId]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    const slug =
+      (document.initialState.state.global as any)?.slug ?? documentId;
+
+    // check if the document already exists by slug
+    if (slug && this.slugToDocumentId[slug]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    // store the document
     this.documents[documentId] = document;
 
-    // Add slug to lookup if it exists
-    const slug = (document.initialState.state.global as any)?.slug;
+    // add slug to lookup if it exists
     if (slug) {
       // check if the slug is already taken
       if (this.slugToDocumentId[slug]) {
-        throw new Error(`Document with slug ${slug} already exists`);
+        throw new DocumentAlreadyExistsError(documentId);
       }
 
       this.slugToDocumentId[slug] = documentId;
+    }
+
+    // temporary: initialize an empty manifest for new drives
+    if (document.documentType === "powerhouse/document-drive") {
+      this.updateDriveManifest(documentId, { documentIds: new Set() });
     }
 
     return Promise.resolve();
@@ -173,10 +193,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async createDrive(id: string, drive: DocumentDriveDocument) {
-    await this.create(id, drive);
-
-    // Initialize an empty manifest for the new drive
-    this.updateDriveManifest(id, { documentIds: new Set() });
+    return this.create(id, drive);
   }
 
   async addDriveOperations(

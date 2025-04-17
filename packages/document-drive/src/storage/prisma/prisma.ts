@@ -20,6 +20,7 @@ import {
 } from "../../drive-document-model/gen/types.js";
 import {
   ConflictOperationError,
+  DocumentAlreadyExistsError,
   DocumentNotFoundError,
 } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
@@ -124,18 +125,13 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return count > 0;
   }
 
-  // TODO: this should throw an error if the document already exists.
   async create(documentId: string, document: PHDocument) {
     const slug =
       (document.initialState.state.global as any)?.slug ?? documentId;
 
     try {
-      await this.db.document.upsert({
-        where: {
-          id: documentId,
-        },
-        update: {},
-        create: {
+      await this.db.document.create({
+        data: {
           name: document.name,
           documentType: document.documentType,
           slug,
@@ -148,7 +144,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       });
     } catch (e) {
       if ((e as any).code === "P2002") {
-        throw new Error(`Document with slug ${slug} already exists`);
+        throw new DocumentAlreadyExistsError(documentId);
       }
 
       throw e;

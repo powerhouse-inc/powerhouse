@@ -1,17 +1,15 @@
-import { DocumentNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentNotFoundError,
+} from "#server/error";
 import { existsSync, rmSync } from "fs";
 import { createHelia } from "helia";
 import path from "path";
 import { describe, it } from "vitest";
-import {
-  createDocument,
-  DocumentModelModule,
-} from "../../document-model/index";
-import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
+import { createDocument } from "../../document-model/index";
 import InMemoryCache from "../src/cache/memory";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils";
-import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { BrowserStorage } from "../src/storage/browser";
 import { FilesystemStorage } from "../src/storage/filesystem";
 import { IPFSStorage } from "../src/storage/ipfs";
@@ -19,13 +17,6 @@ import { MemoryStorage } from "../src/storage/memory";
 import { PrismaClient } from "../src/storage/prisma/client";
 import { PrismaStorage } from "../src/storage/prisma/prisma";
 import { IDocumentStorage } from "../src/storage/types";
-
-const PG_URL = process.env.PG_URL || "postgresql://localhost:5432/postgres";
-
-const documentModels = [
-  documentModelDocumentModelModule,
-  driveDocumentModelModule,
-] as DocumentModelModule[];
 
 const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
   ["Memory Storage", () => Promise.resolve(new MemoryStorage())],
@@ -88,6 +79,44 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const result = await storage.exists("test");
     expect(result).toBe(true);
+  });
+
+  it("should throw a DocumentAlreadyExistsError when creating a document if the document already exists", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    await storage.create("test", document);
+
+    try {
+      await storage.create("test", document);
+
+      throw new Error("Document should not be created");
+    } catch (e) {
+      expect((e as DocumentAlreadyExistsError).documentId).toBe("test");
+    }
+  });
+
+  it("should throw a DocumentAlreadyExistsError when creating a drive with a slug that already exists", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const a = createDriveDocument();
+    a.initialState.state.global.slug = "test";
+    await storage.create("a", a);
+
+    // different id, but same slug
+    const b = createDriveDocument();
+    b.initialState.state.global.slug = "test";
+    try {
+      await storage.create("b", b);
+
+      throw new Error("Document should not be created");
+    } catch (e) {
+      expect((e as DocumentAlreadyExistsError).documentId).toBe("b");
+    }
   });
 
   it("should allow getting a document", async ({ expect }) => {
@@ -197,6 +226,18 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const result = await storage.getBySlug<DocumentDriveDocument>("test");
     expect(result.initialState.state.global.slug).toBe("test");
+  });
+
+  it("the id should be used as the slug if no slug is provided", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const document = createDriveDocument();
+    await storage.create("test", document);
+
+    const result = await storage.getBySlug<DocumentDriveDocument>("test");
+    expect(result);
   });
 
   it("should allow associating a document with another document", async ({

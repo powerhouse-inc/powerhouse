@@ -1,4 +1,5 @@
 import {
+  ProcessorRecord,
   type IProcessorManager,
   type ProcessorFactory,
 } from "document-drive/processors/types";
@@ -82,7 +83,15 @@ export class ProcessorManager implements IProcessorManager {
       this.identifierToListeners.set(identifier, listeners);
     }
 
-    const processors = factory(driveId);
+    // don't let the factory throw, we want to continue with the rest of the processors
+    let processors: ProcessorRecord[] = [];
+    try {
+      processors = factory(driveId);
+    } catch (e) {
+      this.logger.error(`Error creating processors for drive ${driveId}:`, e);
+
+      return;
+    }
 
     for (const { filter, processor } of processors) {
       const id = generateId();
