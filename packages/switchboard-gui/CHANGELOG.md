@@ -1,3 +1,15 @@
+## 0.25.0-staging.3 (2025-04-17)
+
+### 🩹 Fixes
+
+- remove .env and add to .gitignore ([0d2d48684](https://github.com/powerhouse-inc/powerhouse/commit/0d2d48684))
+- **switchboard,reactor-local:** latest version of sky atlas was not being installed ([72bf72fd4](https://github.com/powerhouse-inc/powerhouse/commit/72bf72fd4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 0.25.0-staging.2 (2025-04-17)
 
 ### 🩹 Fixes

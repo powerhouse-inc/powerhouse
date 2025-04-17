@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/scalars",
-  "version": "1.33.1-staging.2",
+  "version": "1.33.1-staging.3",
   "license": "AGPL-3.0-only",
   "publishConfig": {
     "access": "public"
