@@ -1,5 +1,8 @@
 import { type Meta, type StoryObj } from "@storybook/react";
+import { generateLargeTimeline } from "../document-timeline/mock-utils.js";
 import { DocumentToolbar } from "./document-toolbar.js";
+
+const timelineData = generateLargeTimeline(200);
 
 const meta = {
   title: "Connect/Components/DocumentToolbar",
@@ -21,7 +24,11 @@ export const Default: Story = {
     onExport: () => console.log("export"),
     onShowRevisionHistory: () => console.log("show revision history"),
     onSwitchboardLinkClick: () => console.log("switchboard link click"),
-    onShowTimeline: () => console.log("show timeline"),
+    fetchTimelineData: () => {
+      console.log("fetching timeline data");
+      return timelineData;
+    },
+    timelineButtonVisible: true,
   },
 };
 
@@ -39,6 +46,36 @@ export const WithDisabledButtons: Story = {
     onExport: undefined,
     onShowRevisionHistory: undefined,
     onSwitchboardLinkClick: undefined,
-    onShowTimeline: undefined,
+    fetchTimelineData: undefined,
+    timelineButtonVisible: true,
+  },
+};
+
+export const WithTimelineExpanded: Story = {
+  args: {
+    ...Default.args,
+    initialTimelineVisible: true,
+  },
+  render: (args) => (
+    <div className="flex flex-col gap-4">
+      <div className="text-sm text-gray-500">
+        Timeline is automatically shown on initial render
+      </div>
+      <DocumentToolbar {...args} />
+    </div>
+  ),
+};
+
+export const WithoutTimelineButton: Story = {
+  args: {
+    ...Default.args,
+    timelineButtonVisible: false,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: "A toolbar without the timeline button visible",
+      },
+    },
   },
 };

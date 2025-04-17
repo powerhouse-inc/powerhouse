@@ -81,6 +81,8 @@ export const HDivider = (props: HDividerProps) => {
         open={open && hasContent}
         onOpenChange={setOpen}
         delayDuration={0}
+        side="bottom"
+        sideOffset={5}
       >
         <div
           className={twMerge(
