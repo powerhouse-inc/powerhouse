@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.39.17-canary.0",
+  "version": "1.39.17",
   "description": "",
   "files": [
     "/dist"
