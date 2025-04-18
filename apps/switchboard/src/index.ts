@@ -1,13 +1,6 @@
 #!/usr/bin/env node
-import {
-  KnexAnalyticsStore,
-  KnexQueryExecutor,
-} from "@powerhousedao/analytics-engine-knex";
-import {
-  type Subgraph,
-  SubgraphManager,
-  getDbClient,
-} from "@powerhousedao/reactor-api";
+import { startAPI } from "@powerhousedao/reactor-api";
+import * as Sentry from "@sentry/node";
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
@@ -17,16 +10,37 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
-import http from "http";
 import { initRedis } from "./clients/redis.js";
+import { initProfilerFromEnv } from "./profiler.js";
 import { PackagesManager } from "./utils/package-manager.js";
+
 dotenv.config();
 
 // Create a monolith express app for all subgraphs
 const app = express();
+
+if (process.env.SENTRY_DSN) {
+  console.log("Initialized Sentry with env:", process.env.SENTRY_ENV);
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.SENTRY_ENV,
+  });
+
+  Sentry.setupExpressErrorHandler(app);
+}
+
 const serverPort = process.env.PORT ? Number(process.env.PORT) : 4001;
-const httpServer = http.createServer(app);
+
 const main = async () => {
+  if (process.env.PYROSCOPE_SERVER_ADDRESS) {
+    try {
+      await initProfilerFromEnv(process.env);
+    } catch (e) {
+      Sentry.captureException(e);
+      console.error("Error starting profiler", e);
+    }
+  }
+
   try {
     const packages =
       process.env.PH_PACKAGES && process.env.PH_PACKAGES !== ""
@@ -47,12 +61,9 @@ const main = async () => {
         ? connectionString + "?sslmode=no-verify"
         : connectionString;
 
-    const storageFactory = new PrismaStorageFactory(dbUrl);
-    const storage = storageFactory.build();
-
-    const knex = getDbClient(dbUrl);
-
     const redisCache = new RedisCache(redis);
+    const storageFactory = new PrismaStorageFactory(dbUrl, redisCache);
+    const storage = storageFactory.build();
 
     const reactor = new ReactorBuilder([
       documentModelDocumentModelModule,
@@ -65,43 +76,23 @@ const main = async () => {
 
     // init drive server
     await reactor.initialize();
-    const analyticsStore = new KnexAnalyticsStore({
-      executor: new KnexQueryExecutor(),
-      knex,
+
+    // Start the API with the reactor and options
+    await startAPI(reactor, {
+      express: app,
+      port: serverPort,
+      dbPath: dbUrl,
+      packages,
     });
-    const subgraphManager = new SubgraphManager(
-      process.env.BASE_PATH || "/",
-      app,
-      reactor,
-      knex,
-      // @ts-expect-error todo update analytics store to use IAnalyticsStore
-      analyticsStore,
-    );
-    // init router
-    await subgraphManager.init();
-
-    for (const subgraph of subgraphs) {
-      await subgraphManager.registerSubgraph(
-        subgraph as unknown as typeof Subgraph,
-      );
-    }
-
-    // // load switchboard-gui
-    // app.use(
-    //   express.static(
-    //     path.join(
-    //       __dirname,
-    //       "../node_modules/@powerhousedao/switchboard-gui/dist",
-    //     ),
-    //   ),
-    // );
 
     // start http server
-    httpServer.listen({ port: serverPort }, () => {
-      console.log(`Subgraph server listening on port ${serverPort}`);
-    });
+    // httpServer.listen({ port: serverPort }, () => {
+    //   console.log(`Subgraph server listening on port ${serverPort}`);
+    // });
   } catch (e) {
+    Sentry.captureException(e);
     console.error("App crashed", e);
+    throw e;
   }
 };
 

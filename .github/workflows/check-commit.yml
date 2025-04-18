@@ -1,0 +1,92 @@
+name: Check Commit
+
+concurrency:
+  group: check-commit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - "packages/document-drive/**"
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize]
+    paths-ignore:
+      - "packages/document-drive/**"
+
+env:
+  NX_ISOLATE_PLUGINS: false
+  PNPM_VERSION: 9
+  NODE_VERSION: 22
+  EXCLUDE: document-drive
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  lint:
+    uses: ./.github/workflows/run-nx-target.yml
+    with:
+      target: lint:nx
+
+  test:
+    uses: ./.github/workflows/run-nx-target.yml
+    with:
+      target: test
+      exclude: document-drive
+
+  build:
+    uses: ./.github/workflows/run-nx-target.yml
+    with:
+      target: build
+
+  storybook:
+    uses: ./.github/workflows/run-nx-target.yml
+    with:
+      target: build-storybook
+
+  notify-discord:
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    needs: [lint, test, build, storybook]
+    steps:
+      - name: Collect failed jobs from needs
+        id: collect-failures
+        run: |
+          FAILED_TARGETS=""
+          for job in $(jq -r 'keys[]' <<< '${{ toJson(needs) }}'); do
+            result=$(jq -r --arg job "$job" '.[$job].result' <<< '${{ toJson(needs) }}')
+            if [[ "$result" == "failure" ]]; then
+              FAILED_TARGETS+="$job, "
+            fi
+          done
+          FAILED_TARGETS="${FAILED_TARGETS%, }"
+          echo "failed=$FAILED_TARGETS" >> $GITHUB_OUTPUT
+
+      - name: Prepare and send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
+        run: |
+          FAILED_TARGETS="${{ steps.collect-failures.outputs.failed }}"
+          if [ -z "$FAILED_TARGETS" ]; then
+            echo "No failed targets, skipping notification."
+            exit 0
+          fi
+
+          DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
+          MENTION_STRING=""
+          if [ ! -z "$DISCORD_USER" ]; then
+            MENTION_STRING="<@${DISCORD_USER}> "
+          fi
+
+          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
+            "embeds": [{
+              "title": "⚠️ Job Failed",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed targets:** [`'"$FAILED_TARGETS"'`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 16711680
+            }]
+          }'

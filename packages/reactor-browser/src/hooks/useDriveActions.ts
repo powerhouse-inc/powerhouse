@@ -210,7 +210,7 @@ function createDriveActions(
     targetFolderId: string | undefined,
   ) => {
     const target = targetFolderId ? getNode(targetFolderId, drive) : undefined;
-    if (targetFolderId && !target) {
+    if (targetFolderId && !target && targetFolderId !== driveId) {
       throw new Error(`Target node with id "${targetFolderId}" not found`);
     }
     if (target && !isFolderNode(target)) {

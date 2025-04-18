@@ -21,7 +21,7 @@ import {
     type DocumentDriveDocument,
     type DriveInput,
     PullResponderTransmitter,
-    PullResponderTrigger,
+    type PullResponderTrigger,
     type RemoteDriveOptions,
     type StrandUpdate,
     type SyncStatus,
@@ -48,7 +48,7 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { Listener } from 'document-drive/server/types';
+import { type Listener } from 'document-drive/server/types';
 import { type Operation, type PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
@@ -757,6 +757,8 @@ export function useDocumentDriveServer() {
 
             // for backwards compatibility: return everything but the transmitter
             return {
+                driveId,
+                filter: listener.filter,
                 data: {
                     interval: `${options.pullInterval}` || '1000',
                     listenerId: uuid,

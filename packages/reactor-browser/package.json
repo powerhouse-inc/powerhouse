@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "1.21.0",
+  "version": "1.22.25-dev.2",
   "license": "AGPL-3.0-only",
   "type": "module",
   "publishConfig": {
@@ -22,26 +22,32 @@
     "lint:fix": "eslint --fix",
     "build": "tsc --build",
     "build:watch": "tsc --build --watch",
-    "test": "vitest run --passWithNoTests",
+    "test:browser": "vitest run",
     "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "clean:node_modules": "rimraf node_modules",
+    "install:playwright": "playwright install"
   },
   "keywords": [],
   "author": "",
   "devDependencies": {
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/browser": "^3.0.7",
+    "playwright": "^1.51.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "vitest": "^3.0.7",
+    "vitest-browser-react": "^0.1.1"
   },
   "peerDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "dependencies": {
+    "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "did-key-creator": "^1.2.0",
     "jotai": "^2.10.3"
   }
 }

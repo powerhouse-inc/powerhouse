@@ -42,21 +42,23 @@ export class MissingOperationError extends OperationError {
   }
 }
 
-export class DriveAlreadyExistsError extends Error {
-  driveId: string;
+export class DocumentAlreadyExistsError extends Error {
+  documentId: string;
 
-  constructor(driveId: string) {
-    super(`Drive already exists. ID: ${driveId}`);
-    this.driveId = driveId;
+  constructor(documentId: string) {
+    super(`Document with id ${documentId} uses id or slug that already exists`);
+
+    this.documentId = documentId;
   }
 }
 
-export class DriveNotFoundError extends Error {
-  driveId: string;
+export class DocumentNotFoundError extends Error {
+  documentId: string;
 
-  constructor(driveId: string) {
-    super(`Drive with id ${driveId} not found`);
-    this.driveId = driveId;
+  constructor(documentId: string) {
+    super(`Document with id ${documentId} not found`);
+
+    this.documentId = documentId;
   }
 }
 

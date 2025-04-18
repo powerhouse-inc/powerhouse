@@ -38,6 +38,7 @@ export function removeBase64EnvValues(appPath: string) {
     }
 
     // Use regex to replace the dynamic Base64 values with empty strings
+    // TODO is this needed?
     const modifiedData = data
       .replace(
         /"LOCAL_DOCUMENT_MODELS":\s*".*?",/,

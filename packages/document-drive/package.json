@@ -1,12 +1,12 @@
 {
   "name": "document-drive",
-  "version": "1.27.0",
+  "version": "1.29.9-dev.3",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
-    "./storage/prisma": "./dist/src/storage/prisma/index.js",
+    "./storage/prisma": "./dist/src/storage/prisma/prisma.js",
     "./*": "./dist/src/*.js"
   },
   "imports": {
@@ -31,9 +31,10 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "migrate": "prisma generate && prisma db push",
-    "copy-prisma": "copyfiles prisma/schema.prisma dist/",
+    "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prebuild:tsc": "prisma generate --no-hints",
-    "prebuild": "prisma generate --no-hints"
+    "prebuild": "prisma generate --no-hints",
+    "prelint:nx": "prisma generate --no-hints"
   },
   "optionalDependencies": {
     "@powerhousedao/scalars": "workspace:*",
@@ -44,6 +45,7 @@
     "sqlite3": "^5.1.7"
   },
   "dependencies": {
+    "@helia/mfs": "^4.0.3",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
@@ -52,6 +54,7 @@
     "exponential-backoff": "^3.1.1",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
+    "helia": "^5.3.0",
     "json-stringify-deterministic": "^1.0.12",
     "localforage": "^1.10.0",
     "nanoevents": "^9.0.0",
@@ -69,7 +72,7 @@
     "fake-indexeddb": "^5.0.2",
     "msw": "^2.3.1",
     "typescript": "^5.7.3",
-    "vite": "^6.2.0",
+    "vite": "^6.2.2",
     "vitest": "^3.0.7",
     "vitest-fetch-mock": "^0.4.5",
     "webdriverio": "^9.0.9"

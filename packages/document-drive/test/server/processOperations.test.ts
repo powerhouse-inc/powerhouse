@@ -18,7 +18,6 @@ import { reducer as documentDriveReducer } from "../../src/drive-document-model/
 import { driveDocumentModelModule } from "../../src/drive-document-model/module";
 import { generateAddNodeAction } from "../../src/drive-document-model/src/utils";
 import { ReactorBuilder } from "../../src/server/builder";
-import { OperationError } from "../../src/server/error";
 import { IOperationResult } from "../../src/server/types";
 import { BasicClient, buildOperation, buildOperations } from "../utils";
 
@@ -42,7 +41,7 @@ describe("processOperations", () => {
     await server.initialize();
   });
 
-  const driveId = "1";
+  const driveId = "drive/1";
   const documentId = "1";
 
   async function buildFile(initialOperations: Action[] = []) {
@@ -261,7 +260,6 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.error).toBeInstanceOf(OperationError);
     expect(result.error?.message).toBe(
       "Missing operations: expected 3 with skip 0 or equivalent, got index 4 with skip 0",
     );
@@ -315,7 +313,6 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.error).toBeInstanceOf(OperationError);
     expect(result.error?.message).toBe(
       "Missing operations: expected 5 with skip 0 or equivalent, got index 6 with skip 0",
     );

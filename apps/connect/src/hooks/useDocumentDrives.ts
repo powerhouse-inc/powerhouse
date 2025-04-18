@@ -89,7 +89,7 @@ export function useDocumentDrives() {
         documentDrivesInitializedMapAtomFamily(reactor),
     );
 
-    if (status === 'INITIAL') {
+    if (status === 'INITIAL' && reactor) {
         setStatus('LOADING');
         refreshDocumentDrives()
             .then(() => setStatus('LOADED'))

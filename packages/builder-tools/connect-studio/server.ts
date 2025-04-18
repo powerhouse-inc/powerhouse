@@ -1,4 +1,6 @@
+import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import viteReact from "@vitejs/plugin-react";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -16,7 +18,6 @@ import {
   removeBase64EnvValues,
 } from "./helpers.js";
 import { type StartServerOptions } from "./types.js";
-import { getStudioConfig } from "./vite-plugins/base.js";
 import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
 import { generateImportMapPlugin } from "./vite-plugins/importmap.js";
 import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
@@ -108,7 +109,6 @@ export async function startServer(
     typeof process.env.OPEN_BROWSER === "string"
       ? process.env.OPEN_BROWSER === "true"
       : false;
-  const studioConfig = getStudioConfig();
 
   // needed for viteEnvs
   if (!fs.existsSync(join(studioPath, "src"))) {
@@ -117,7 +117,7 @@ export async function startServer(
 
   process.env.PH_CONNECT_STUDIO_MODE = "true";
   process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
-  const computedEnv = { ...studioConfig, LOG_LEVEL: options.logLevel };
+  const computedEnv = { LOG_LEVEL: options.logLevel };
 
   const config: InlineConfig = {
     customLogger: logger,
@@ -143,8 +143,14 @@ export async function startServer(
       dedupe: ["@powerhousedao/reactor-browser"],
     },
     plugins: [
+      tailwindcss(),
+      viteReact({
+        // includes js|jsx|ts|tsx)$/ inside projectRoot
+        include: [join(projectRoot, "**/*.(js|jsx|ts|tsx)")],
+        exclude: ["node_modules", join(studioPath, "assets/*.js")],
+      }),
       viteConnectDevStudioPlugin(true, studioPath),
-      viteLoadExternalPackages(options.packages, studioPath, true),
+      viteLoadExternalPackages(true, options.packages, studioPath),
       viteEnvs({
         declarationFile: join(studioPath, ".env"),
         computedEnv,
@@ -157,7 +163,6 @@ export async function startServer(
       generateImportMapPlugin(studioPath, [
         { name: "react", provider: "esm.sh" },
         { name: "react-dom", provider: "esm.sh" },
-        "@powerhousedao/reactor-browser",
       ]),
     ],
   };

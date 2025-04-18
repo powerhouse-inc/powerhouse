@@ -27,14 +27,6 @@ export function connectCommand(program: Command) {
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
     )
-    .option(
-      "-le, --local-editors <localEditors>",
-      "Link local document editors path",
-    )
-    .option(
-      "-ld, --local-documents <localDocuments>",
-      "Link local documents path",
-    )
     .action(async (...args: [ConnectOptions]) => {
       await connect(...args);
     });
@@ -42,9 +34,7 @@ export function connectCommand(program: Command) {
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg
-    ? (JSON.parse(optionsArg) as ConnectOptions)
-    : {};
+  const options = optionsArg ? (JSON.parse(optionsArg) as ConnectOptions) : {};
   startConnect(options).catch((e: unknown) => {
     throw e;
   });

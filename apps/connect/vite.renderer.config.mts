@@ -25,6 +25,21 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import clientConfig from './client.config.js';
 import pkg from './package.json' with { type: 'json' };
 
+const staticFiles = [
+    './src/service-worker.ts',
+    './src/external-packages.js',
+    './src/hmr.ts',
+];
+const staticInputs = staticFiles.reduce(
+    (acc, file) =>
+        Object.assign(acc, {
+            [path.basename(file, path.extname(file))]: path.resolve(
+                __dirname,
+                file,
+            ),
+        }),
+    {},
+);
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
@@ -69,7 +84,11 @@ export default defineConfig(({ mode }) => {
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
-        viteLoadExternalPackages(phPackages, outDir),
+        viteLoadExternalPackages(
+            false,
+            phPackages,
+            path.resolve(__dirname, './src'),
+        ),
         tsconfigPaths(),
         react({
             include: './src/**/*.tsx',
@@ -98,7 +117,6 @@ export default defineConfig(({ mode }) => {
                     APP_VERSION,
                     REQUIRES_HARD_REFRESH,
                     SENTRY_RELEASE: release,
-                    LOAD_EXTERNAL_PACKAGES: phPackages.length > 0,
                 };
             },
         }),
@@ -123,7 +141,6 @@ export default defineConfig(({ mode }) => {
             generateImportMapPlugin(outDir, [
                 { name: 'react', provider: 'esm.sh' },
                 { name: 'react-dom', provider: 'esm.sh' },
-                '@powerhousedao/reactor-browser',
             ]),
         );
     }
@@ -136,14 +153,11 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
-                    'service-worker': path.resolve(
-                        __dirname,
-                        './src/service-worker.ts',
-                    ),
+                    ...staticInputs,
                 },
                 output: {
                     entryFileNames: chunk =>
-                        ['service-worker'].includes(chunk.name)
+                        Object.keys(staticInputs).includes(chunk.name)
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
@@ -154,12 +168,12 @@ export default defineConfig(({ mode }) => {
             include: ['did-key-creator'],
             exclude: externalAndExclude,
         },
-        resolve: {
-            dedupe: ['@powerhousedao/reactor-browser'],
-        },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),
             __REQUIRES_HARD_REFRESH__: JSON.stringify(REQUIRES_HARD_REFRESH),
+            ...(mode !== 'development' && {
+                'import.meta.hot': 'import.meta.hot',
+            }),
         },
     };
 });

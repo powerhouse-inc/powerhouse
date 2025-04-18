@@ -26,6 +26,26 @@ const Template: Story = {
   ],
 };
 
+const TemplateShareable: Story = {
+  args: {
+    title: "Frank Inc.",
+    icon: <Icon name="Drive" />,
+    description: "Contributor App",
+    shareable: true,
+  },
+  decorators: [
+    (Story) => (
+      <div className="grid h-48 w-96 place-items-center bg-white">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
 export const Default: Story = {
   ...Template,
+};
+
+export const Shareable: Story = {
+  ...TemplateShareable,
 };

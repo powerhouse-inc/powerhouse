@@ -63,6 +63,7 @@ out/
 
 # Generated assets
 public/icons.svg
+src/external-packages.js
 
 .env.local
 # Sentry Config File

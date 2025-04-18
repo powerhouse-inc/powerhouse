@@ -14,10 +14,7 @@ import {
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
-import {
-    DriveContextProvider,
-    type IDriveContext,
-} from '@powerhousedao/reactor-browser/hooks/useDriveContext';
+import { type IDriveContext } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { driveDocumentModelModule } from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
@@ -141,19 +138,21 @@ export function DriveEditorContainer() {
         driveEditor?.Component ?? GenericDriveExplorer.Component;
 
     return (
-        <DriveContextProvider value={driveContext} key={selectedDriveNode?.id}>
-            <ErrorBoundary
-                fallbackRender={DriveEditorError}
+        <ErrorBoundary
+            fallbackRender={DriveEditorError}
+            key={selectedDriveNode?.id}
+        >
+            <DriveEditorComponent
                 key={selectedDriveNode?.id}
-            >
-                <DriveEditorComponent
-                    key={selectedDriveNode?.id}
-                    {...editorProps}
-                    onSwitchboardLinkClick={undefined} // TODO
-                    document={document}
-                    error={error}
-                />
-            </ErrorBoundary>
-        </DriveContextProvider>
+                {...editorProps}
+                context={{
+                    ...editorProps.context,
+                    ...driveContext,
+                }}
+                onSwitchboardLinkClick={undefined} // TODO
+                document={document}
+                error={error}
+            />
+        </ErrorBoundary>
     );
 }
