@@ -1,6 +1,6 @@
 import {
+  AnalyticsPath,
   type AnalyticsDimension,
-  type AnalyticsPath,
   type AnalyticsQuery,
   type AnalyticsSeries,
   type AnalyticsSeriesInput,
@@ -10,9 +10,11 @@ import {
 import {
   useMutation,
   useQuery,
+  useQueryClient,
   type UseMutationOptions,
   type UseQueryOptions,
 } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { useAnalyticsEngine, useAnalyticsStore } from "./context.js";
 
 type UseAnalyticsQueryOptions = Omit<
@@ -25,12 +27,39 @@ export function useAnalyticsQuery(
   options?: UseAnalyticsQueryOptions,
 ) {
   const engine = useAnalyticsEngine();
+  const store = useAnalyticsStore();
+  const { data: querySources } = useQuerySources(query);
+  const queryClient = useQueryClient();
+  const subscriptions = useRef<Array<() => void>>([]);
 
-  return useQuery({
+  const result = useQuery({
     queryKey: ["analytics", "query", query],
     queryFn: () => engine.execute(query),
     ...options,
   });
+
+  useEffect(() => {
+    if (!querySources?.length) {
+      return;
+    }
+
+    querySources.forEach((source) => {
+      const unsub = store.subscribeToSource(source, () => {
+        return queryClient.invalidateQueries({
+          queryKey: ["analytics", "query", query],
+        });
+      });
+      subscriptions.current.push(unsub);
+    });
+
+    // Unsubscribes from store when component unmounts or dependencies change
+    return () => {
+      subscriptions.current.forEach((unsub) => unsub());
+      subscriptions.current = [];
+    };
+  }, [querySources]);
+
+  return result;
 }
 
 export type UseAnalyticsSeriesOptions<Dimension = string | AnalyticsDimension> =
@@ -135,6 +164,56 @@ export function useGetDimensions<TData = any>(
   return useQuery({
     queryKey: ["analytics", "dimensions"],
     queryFn: () => store.getDimensions(),
+    ...options,
+  });
+}
+
+export type UseMatchingSeriesOptions<Dimension = string | AnalyticsDimension> =
+  Omit<
+    UseQueryOptions<AnalyticsSeries[], Error, AnalyticsSeries<Dimension>[]>,
+    "queryKey" | "queryFn"
+  >;
+
+export function useMatchingSeries<Dimension = string | AnalyticsDimension>(
+  query: AnalyticsSeriesQuery,
+  options?: UseMatchingSeriesOptions<Dimension>,
+) {
+  const store = useAnalyticsStore();
+
+  const result = useQuery({
+    queryKey: ["analytics", "matchingSeries", query],
+    queryFn: () => store.getMatchingSeries(query),
+
+    ...options,
+  });
+
+  return result;
+}
+
+// Add this type near other type definitions
+export type UseQuerySourcesOptions = Omit<
+  UseQueryOptions<AnalyticsPath[]>,
+  "queryKey" | "queryFn"
+>;
+
+export function useQuerySources(
+  query: AnalyticsSeriesQuery,
+  options?: UseQuerySourcesOptions,
+) {
+  const { data: matchingSeries } = useMatchingSeries(query);
+
+  return useQuery({
+    queryKey: ["analytics", "sources", query],
+    queryFn: () => {
+      if (!matchingSeries?.length) {
+        return [];
+      }
+      const uniqueSources = [
+        ...new Set(matchingSeries.map((s) => s.source.toString())),
+      ];
+      return uniqueSources.map((source) => AnalyticsPath.fromString(source));
+    },
+    enabled: !!matchingSeries,
     ...options,
   });
 }
