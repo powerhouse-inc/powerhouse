@@ -75,6 +75,9 @@ export const useTimelineItems = (
         const bDate = new Date(b.start as unknown as Date);
         return aDate.getTime() - bDate.getTime();
       })
+      .filter((result) => {
+        return result.rows.every((row) => row.value > 0);
+      })
       .map((result) => {
         const { additions, deletions } = result.rows.reduce(
           (acc, row) => {
@@ -82,12 +85,12 @@ export const useTimelineItems = (
               (row.dimensions.changes.path as unknown as string) ===
               "changes/add"
             ) {
-              acc.additions += row.sum;
+              acc.additions += row.value;
             } else if (
               (row.dimensions.changes.path as unknown as string) ===
               "changes/remove"
             ) {
-              acc.deletions += row.sum;
+              acc.deletions += row.value;
             }
             return acc;
           },
