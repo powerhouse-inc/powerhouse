@@ -56,6 +56,7 @@ export type EditorProps<TDocument extends PHDocument = PHDocument> = {
     onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
     onChange?: (documentId: string, document: TDocument) => void;
+    onGetDocumentRevision?: EditorContext['getDocumentRevision'];
 };
 
 function EditorError({ message }: { message: React.ReactNode }) {
@@ -82,6 +83,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         onChange,
         onExport,
         onAddOperation,
+        onGetDocumentRevision,
         onOpenSwitchboardLink,
     } = props;
     const documentId = fileNodeDocument?.documentId;
@@ -403,6 +405,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                                 error={error}
                                 context={{
                                     ...context,
+                                    getDocumentRevision: onGetDocumentRevision,
                                     readMode: !!selectedRevisionId,
                                     selectedTimelineRevision:
                                         selectedRevisionId,

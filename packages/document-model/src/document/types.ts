@@ -362,12 +362,26 @@ export type User = {
   ens?: ENSInfo;
 };
 
+export type PartialRecord<K extends keyof any, T> = {
+  [P in K]?: T;
+};
+
+export type RevisionsFilter = PartialRecord<OperationScope, number>;
+
+export type GetDocumentOptions = ReducerOptions & {
+  revisions?: RevisionsFilter;
+  checkHashes?: boolean;
+};
+
 export type EditorContext = {
   theme: "light" | "dark";
   debug?: boolean;
   user?: User;
   readMode?: boolean;
   selectedTimelineRevision?: string | number | null;
+  getDocumentRevision?: (
+    options?: GetDocumentOptions,
+  ) => Promise<PHDocument> | undefined;
 };
 
 export type ActionErrorCallback = (error: unknown) => void;

@@ -48,7 +48,10 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { type Listener } from 'document-drive/server/types';
+import {
+    type GetDocumentOptions,
+    type Listener,
+} from 'document-drive/server/types';
 import { type Operation, type PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
@@ -82,11 +85,11 @@ export function useDocumentDriveServer() {
         useDocumentDrives();
 
     const openFile = useCallback(
-        async (drive: string, id: string) => {
+        async (drive: string, id: string, options?: GetDocumentOptions) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
-            const document = await reactor.getDocument(drive, id);
+            const document = await reactor.getDocument(drive, id, options);
             if (!document) {
                 throw new Error(
                     `There was an error opening file with id ${id} on drive ${drive}`,

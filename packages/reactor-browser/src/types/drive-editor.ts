@@ -1,4 +1,9 @@
-import { type FileNode, type Node, type SyncStatus } from "document-drive";
+import {
+  type FileNode,
+  type GetDocumentOptions,
+  type Node,
+  type SyncStatus,
+} from "document-drive";
 import {
   type Action,
   type ActionErrorCallback,
@@ -13,7 +18,8 @@ import { type HookState } from "../hooks/document-state.js";
 import { type User } from "../renown/types.js";
 import type { UiNode } from "../uiNodes/types.js";
 
-export interface DriveEditorContext extends EditorContext {
+export interface DriveEditorContext
+  extends Omit<EditorContext, "getDocumentRevision"> {
   /** Controls the visibility of the search bar in the drive interface */
   showSearchBar: boolean;
 
@@ -120,6 +126,11 @@ export interface DriveEditorContext extends EditorContext {
     driveId: string;
     documentId: string;
   }) => PHDocument["state"] | undefined;
+
+  getDocumentRevision?: (
+    documentId: string,
+    options?: GetDocumentOptions,
+  ) => Promise<PHDocument> | undefined;
 }
 
 export interface DriveEditorProps<TDocument extends PHDocument>
