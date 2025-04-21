@@ -44,7 +44,7 @@
     "vite": "^6.2.2"
   },
   "devDependencies": {
-    "@powerhousedao/analytics-engine-graphql": "^0.2.2",
+    "@powerhousedao/analytics-engine-graphql": "^0.3.0",
     "@powerhousedao/config": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",

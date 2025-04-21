@@ -342,7 +342,7 @@ importers:
         version: 4.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-i18next:
         specifier: ^13.5.0
-        version: 13.5.0(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react-native@0.78.1(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(@types/react@18.3.20)(bufferutil@4.0.9)(react@18.3.1)(utf-8-validate@5.0.10))(react@18.3.1)
+        version: 13.5.0(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-router-dom:
         specifier: ^6.11.2
         version: 6.30.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -384,7 +384,7 @@ importers:
     dependencies:
       '@powerhousedao/analytics-engine-knex':
         specifier: ^0.4.0
-        version: 0.4.0(sqlite3@5.1.7)
+        version: 0.4.0
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -763,7 +763,7 @@ importers:
         version: link:../document-model
       react-i18next:
         specifier: ^13.5.0
-        version: 13.5.0(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react-native@0.78.1(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(@types/react@18.3.20)(bufferutil@4.0.9)(react@18.3.1)(utf-8-validate@5.0.10))(react@18.3.1)
+        version: 13.5.0(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
       '@powerhousedao/config':
         specifier: workspace:*
@@ -1247,14 +1247,14 @@ importers:
         specifier: ^0.2.12
         version: 0.2.17
       '@powerhousedao/analytics-engine-core':
-        specifier: ^0.3.2
-        version: 0.3.2
-      '@powerhousedao/analytics-engine-graphql':
-        specifier: ^0.2.2
-        version: 0.2.2
-      '@powerhousedao/analytics-engine-knex':
         specifier: ^0.4.0
-        version: 0.4.0(sqlite3@5.1.7)
+        version: 0.4.0
+      '@powerhousedao/analytics-engine-graphql':
+        specifier: ^0.3.0
+        version: 0.3.0(@powerhousedao/analytics-engine-core@0.4.0)
+      '@powerhousedao/analytics-engine-knex':
+        specifier: ^0.5.1
+        version: 0.5.1(@powerhousedao/analytics-engine-core@0.4.0)(sqlite3@5.1.7)
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
@@ -1472,8 +1472,8 @@ importers:
         version: 6.2.3(@types/node@22.13.14)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.39.0)(tsx@4.19.3)(yaml@2.7.0)
     devDependencies:
       '@powerhousedao/analytics-engine-graphql':
-        specifier: ^0.2.2
-        version: 0.2.2
+        specifier: ^0.3.0
+        version: 0.3.0(@powerhousedao/analytics-engine-core@0.4.0)
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
@@ -5285,14 +5285,21 @@ packages:
   '@powerhousedao/analytics-engine-core@0.3.0':
     resolution: {integrity: sha512-8Rl8U2P3u5Y+O8iXqEmN+Vjezal32SQ/ce05IgsZqOvtIpuiUmX44wdyufXw8qObxWFPdc7cyFXTHJ3yYUWlzw==}
 
-  '@powerhousedao/analytics-engine-core@0.3.2':
-    resolution: {integrity: sha512-ZgE8YxCxp8yFlCR0Odvzxmme/iD1ff/LriPp8YmVhQZ35kyTv2Jct0NG5JYVDDU9SpAN6fcQwaSfHq0ctlvsUw==}
+  '@powerhousedao/analytics-engine-core@0.4.0':
+    resolution: {integrity: sha512-PxbASaW64xe2fX0wCcYJTK8bZUt+aAGI7OPLcd9UE5rHZ26cQhV4ysPfXrBzlmHlPdmo/3ELAl7g4E4nO4t7Fw==}
 
-  '@powerhousedao/analytics-engine-graphql@0.2.2':
-    resolution: {integrity: sha512-XKlnnrwptdXi3BsxZBsCXLRBEz3QRi1ziZ2hb3TA4TxYMDb9M8KGR/qJ2YqWHAFVBgSKDmCK+cauYxItuJu0zw==}
+  '@powerhousedao/analytics-engine-graphql@0.3.0':
+    resolution: {integrity: sha512-onHtV9xFrlqdb06sbkDWKahOg+pVyxSYwhriAGm5pcFAWmM6Nzf/gQA/cYGSYJ3Jd7z8dcb+NLA27C0B/38IJQ==}
+    peerDependencies:
+      '@powerhousedao/analytics-engine-core': ^0.4.0
 
   '@powerhousedao/analytics-engine-knex@0.4.0':
     resolution: {integrity: sha512-WzMwRR8K1p/MA8SpkOXv6IR5KUjJv7QRce8Y372H5agjBlZvE8WwDUDgsNRcGEX+1ArD87vverkN/c6j+ui+ag==}
+
+  '@powerhousedao/analytics-engine-knex@0.5.1':
+    resolution: {integrity: sha512-QSv3/CBwTMM3KeDYoG0/1QnV8qLru4riyR2LUVxrZ+BT/2JKZUHmbekZmVD+m8qT2AdcpPhCTCGlt24xaN606g==}
+    peerDependencies:
+      '@powerhousedao/analytics-engine-core': ^0.4.0
 
   '@preact/preset-vite@2.10.1':
     resolution: {integrity: sha512-59lyGBXNfZIr5OOuBUB4/IB8AqF/ULbvYnyItgK/2BJnsGJqaeaJobRVtMp1129obHQuj8oZ/dVxB9inmH8Xig==}
@@ -21616,18 +21623,37 @@ snapshots:
     dependencies:
       date-fns: 3.6.0
 
-  '@powerhousedao/analytics-engine-core@0.3.2':
+  '@powerhousedao/analytics-engine-core@0.4.0':
     dependencies:
       date-fns: 3.6.0
 
-  '@powerhousedao/analytics-engine-graphql@0.2.2':
+  '@powerhousedao/analytics-engine-graphql@0.3.0(@powerhousedao/analytics-engine-core@0.4.0)':
     dependencies:
-      '@powerhousedao/analytics-engine-core': 0.3.2
+      '@powerhousedao/analytics-engine-core': 0.4.0
       luxon: 3.6.0
 
-  '@powerhousedao/analytics-engine-knex@0.4.0(sqlite3@5.1.7)':
+  '@powerhousedao/analytics-engine-knex@0.4.0':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.3.0
+      '@types/luxon': 3.4.2
+      '@types/node': 22.13.14
+      '@types/pg': 8.11.11
+      date-fns: 3.6.0
+      knex: 3.1.0(pg@8.14.1)(sqlite3@5.1.7)
+      luxon: 3.6.0
+      pg: 8.14.1
+    transitivePeerDependencies:
+      - better-sqlite3
+      - mysql
+      - mysql2
+      - pg-native
+      - sqlite3
+      - supports-color
+      - tedious
+
+  '@powerhousedao/analytics-engine-knex@0.5.1(@powerhousedao/analytics-engine-core@0.4.0)(sqlite3@5.1.7)':
+    dependencies:
+      '@powerhousedao/analytics-engine-core': 0.4.0
       '@types/luxon': 3.4.2
       '@types/node': 22.13.14
       '@types/pg': 8.11.11
@@ -32104,7 +32130,7 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  react-i18next@13.5.0(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react-native@0.78.1(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(@types/react@18.3.20)(bufferutil@4.0.9)(react@18.3.1)(utf-8-validate@5.0.10))(react@18.3.1):
+  react-i18next@13.5.0(i18next@23.16.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@babel/runtime': 7.27.0
       html-parse-stringify: 3.0.1
@@ -32112,7 +32138,6 @@ snapshots:
       react: 18.3.1
     optionalDependencies:
       react-dom: 18.3.1(react@18.3.1)
-      react-native: 0.78.1(@babel/core@7.26.10)(@babel/preset-env@7.26.9(@babel/core@7.26.10))(@types/react@18.3.20)(bufferutil@4.0.9)(react@18.3.1)(utf-8-validate@5.0.10)
 
   react-is@16.13.1: {}
 
