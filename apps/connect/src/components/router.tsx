@@ -7,7 +7,6 @@ import {
     createMemoryRouter,
 } from 'react-router-dom';
 import { Home } from '../pages/home.js';
-import { DemoAnalytics } from './demo/analytics.js';
 import { AtlasImport } from './demo/atlas-import.js';
 import Root from './root.js';
 
@@ -44,13 +43,6 @@ function createRoutes() {
             element: <AtlasImport />,
         },
     ];
-
-    if (connectConfig.demo.analytics) {
-        routes.push({
-            path: 'demo/analytics',
-            element: <DemoAnalytics />,
-        });
-    }
 
     return [
         {

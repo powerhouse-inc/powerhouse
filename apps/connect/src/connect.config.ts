@@ -49,10 +49,6 @@ const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
 const PH_CONNECT_CLI_VERSION =
     import.meta.env.PH_CONNECT_CLI_VERSION || undefined;
 
-
-const PH_CONNECT_DEMO_ANALYTICS =
-    import.meta.env.PH_CONNECT_DEMO_ANALYTICS || 'false';
-
 setLogLevel(import.meta.env.LOG_LEVEL as LogLevel);
 logger.info(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
 
@@ -92,7 +88,4 @@ export default {
     },
     gaTrackingId: GA_TRACKING_ID,
     phCliVersion: PH_CONNECT_CLI_VERSION,
-    demo: {
-        analytics: PH_CONNECT_DEMO_ANALYTICS === 'true',
-    },
 };
