@@ -39,3 +39,7 @@ const unwrappedProcessorManager = unwrap(processorManagerAtom);
 
 export const useUnwrappedProcessorManager = () =>
     useAtomValue(unwrappedProcessorManager);
+
+atomStore.sub(reactorAtom, () => {
+    return atomStore.get(processorManagerAtom);
+});

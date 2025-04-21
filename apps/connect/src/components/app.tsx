@@ -6,6 +6,7 @@ import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Provider, useAtomValue } from 'jotai';
 import React, { lazy, type PropsWithChildren, Suspense } from 'react';
+import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
 
 const Router = React.lazy(async () => {
@@ -18,6 +19,7 @@ const Preloader = () => {
     for (const atom of Object.values(atoms)) {
         useAtomValue(atom);
     }
+    useProcessorManager();
     return null;
 };
 
