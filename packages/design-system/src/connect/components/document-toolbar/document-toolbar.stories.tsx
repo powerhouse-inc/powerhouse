@@ -24,10 +24,7 @@ export const Default: Story = {
     onExport: () => console.log("export"),
     onShowRevisionHistory: () => console.log("show revision history"),
     onSwitchboardLinkClick: () => console.log("switchboard link click"),
-    fetchTimelineData: () => {
-      console.log("fetching timeline data");
-      return timelineData;
-    },
+    timelineItems: timelineData,
     timelineButtonVisible: true,
   },
 };
@@ -46,7 +43,7 @@ export const WithDisabledButtons: Story = {
     onExport: undefined,
     onShowRevisionHistory: undefined,
     onSwitchboardLinkClick: undefined,
-    fetchTimelineData: undefined,
+    timelineItems: [],
     timelineButtonVisible: true,
   },
 };
@@ -75,6 +72,22 @@ export const WithoutTimelineButton: Story = {
     docs: {
       description: {
         story: "A toolbar without the timeline button visible",
+      },
+    },
+  },
+};
+
+export const WithEmptyTimeline: Story = {
+  args: {
+    ...Default.args,
+    timelineItems: [],
+    initialTimelineVisible: false,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "A toolbar with an empty timeline (timeline button should be disabled)",
       },
     },
   },

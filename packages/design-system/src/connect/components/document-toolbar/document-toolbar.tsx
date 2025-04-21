@@ -21,9 +21,7 @@ export type DocumentToolbarProps = {
   onExport?: () => void;
   onClose: () => void;
   onShowRevisionHistory?: () => void;
-  fetchTimelineData?: () =>
-    | Promise<Array<TimelineBarItem | TimelineDividerItem>>
-    | Array<TimelineBarItem | TimelineDividerItem>;
+  timelineItems?: Array<TimelineBarItem | TimelineDividerItem>;
   onSwitchboardLinkClick?: () => void;
   initialTimelineVisible?: boolean;
   timelineButtonVisible?: boolean;
@@ -42,46 +40,29 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
     className,
     onShowRevisionHistory,
     onSwitchboardLinkClick,
-    fetchTimelineData,
+    timelineItems = [],
     onTimelineItemClick,
     initialTimelineVisible = false,
     timelineButtonVisible = false,
   } = props;
 
   const [showTimeline, setShowTimeline] = useState(initialTimelineVisible);
-  const [timelineData, setTimelineData] = useState<
-    Array<TimelineBarItem | TimelineDividerItem>
-  >([]);
-  const [initialFetchDone, setInitialFetchDone] = useState(false);
 
   const isUndoDisabled = !canUndo || !undo;
   const isRedoDisabled = !canRedo || !redo;
   const isExportDisabled = !onExport;
   const isSwitchboardLinkDisabled = !onSwitchboardLinkClick;
   const isRevisionHistoryDisabled = !onShowRevisionHistory;
-  const isTimelineDisabled = !fetchTimelineData;
+  const isTimelineDisabled = timelineItems.length === 0;
 
-  // Fetch the timeline data on mount if initialTimelineVisible is true
   useEffect(() => {
-    const fetchInitialData = async () => {
-      if (initialTimelineVisible && fetchTimelineData && !initialFetchDone) {
-        const data = await fetchTimelineData();
-        setTimelineData(data);
-        setInitialFetchDone(true);
-      }
-    };
-
-    fetchInitialData();
-  }, [initialTimelineVisible, fetchTimelineData, initialFetchDone]);
-
-  const handleTimelineToggle = async () => {
-    if (isTimelineDisabled) return;
-
-    if (!showTimeline && fetchTimelineData) {
-      const data = await fetchTimelineData();
-      setTimelineData(data);
+    if (initialTimelineVisible) {
+      setShowTimeline(true);
     }
+  }, [initialTimelineVisible]);
 
+  const handleTimelineToggle = () => {
+    if (isTimelineDisabled) return;
     setShowTimeline(!showTimeline);
   };
 
@@ -222,7 +203,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
       {showTimeline && (
         <div className="mt-2 w-full">
           <DocumentTimeline
-            timeline={timelineData}
+            timeline={timelineItems}
             onItemClick={onTimelineItemClick}
           />
         </div>

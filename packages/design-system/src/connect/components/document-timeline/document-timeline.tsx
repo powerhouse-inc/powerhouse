@@ -64,12 +64,12 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
 
   const renderTimelineItems = useCallback(
     (items: Array<TimelineBarItem | TimelineDividerItem>) => {
-      return items.map((item, idx) => {
+      return items.map((item) => {
         if (item.type === "divider") {
           const { timestamp, title, subtitle } = item;
           return (
             <HDivider
-              key={`divider-${idx}-${item.id}`}
+              key={item.id}
               timestamp={timestamp}
               title={title}
               subtitle={subtitle}
@@ -81,7 +81,7 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
 
         return (
           <TimelineBar
-            key={`bar-${idx}-${item.id}`}
+            key={item.id}
             timestamp={item.timestamp}
             addSize={item.addSize}
             delSize={item.delSize}

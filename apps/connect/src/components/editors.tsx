@@ -18,10 +18,10 @@ import {
     signOperation,
     useDocumentDispatch,
 } from '#utils';
+import { useTimelineItems } from '@powerhousedao/common';
 import {
     Button,
     DocumentToolbar,
-    generateLargeTimeline,
     RevisionHistory,
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
@@ -116,6 +116,11 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         [theme, user],
     );
     const userPermissions = useUserPermissions();
+
+    const timelineItems = useTimelineItems(
+        documentId,
+        initialDocument?.created,
+    );
 
     const currentDocument = useRef({ ...fileNodeDocument, document });
     useEffect(() => {
@@ -355,9 +360,8 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                         onShowRevisionHistory={showRevisionHistory}
                         title={fileNodeDocument.name || document.name}
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
-                        // timelineButtonVisible={timelineEnabled}
-                        timelineButtonVisible={true} // TODO: remove this
-                        fetchTimelineData={() => generateLargeTimeline(200)}
+                        timelineButtonVisible={timelineEnabled}
+                        timelineItems={timelineItems.data}
                         onTimelineItemClick={setSelectedRevisionId}
                     />
                 )}
