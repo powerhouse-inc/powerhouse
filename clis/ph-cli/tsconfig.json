@@ -5,6 +5,7 @@
     "resolveJsonModule": true
   },
   "include": ["**/*", "package.json"],
+  "exclude": ["node_modules", "dist", "test"],
   "references": [
     {
       "path": "../../packages/codegen"
