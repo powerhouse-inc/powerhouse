@@ -17,7 +17,7 @@ export const getResolvers = (subgraph: Subgraph) => {
 
   return ({
     Query: {
-      <%- h.changeCase.pascal(documentType) %>: async (_: any, args: any, ctx: any) => {
+      <%- h.changeCase.pascal(documentType) %>: async (_: any, args: any, ctx: any): Record<string, any> => {
         return {
           getDocument: async (args: any) => {
             const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
