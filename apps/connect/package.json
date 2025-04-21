@@ -64,7 +64,7 @@
         "@powerhousedao/common": "workspace:*",
         "@powerhousedao/config": "workspace:*",
         "@powerhousedao/design-system": "workspace:*",
-        "@powerhousedao/diff-analyzer": "@powerhousedao/diff-analyzer@0.0.0-dev.3",
+        "@powerhousedao/diff-analyzer": "^0.0.0-dev.3",
         "@powerhousedao/reactor-browser": "workspace:*",
         "@powerhousedao/scalars": "workspace:*",
         "@rollup/plugin-node-resolve": "^15.2.3",
