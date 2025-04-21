@@ -1,3 +1,24 @@
+## 2.28.1-dev.6 (2025-04-21)
+
+### 🚀 Features
+
+- timeline integration ([6580b762e](https://github.com/powerhouse-inc/powerhouse/commit/6580b762e))
+- **reactor-api,reactor-local:** updated analytics dependencies ([34ba69ba4](https://github.com/powerhouse-inc/powerhouse/commit/34ba69ba4))
+- **connect,reactor-browser:** implemented analytics demo on connect ([d71c42400](https://github.com/powerhouse-inc/powerhouse/commit/d71c42400))
+- **reactor-browser:** added analytics engine support ([50067856f](https://github.com/powerhouse-inc/powerhouse/commit/50067856f))
+
+### 🩹 Fixes
+
+- **ph-cli:** ph add does not remove installed packages ([1109ef2ed](https://github.com/powerhouse-inc/powerhouse/commit/1109ef2ed))
+- **connect:** fixed diff analyzer dependency version ([c4119416f](https://github.com/powerhouse-inc/powerhouse/commit/c4119416f))
+- **connect:** updated diff analyzer dependency ([012eb867c](https://github.com/powerhouse-inc/powerhouse/commit/012eb867c))
+- **connect,document-drive,reactor-browser:** build issues ([d8142a0e3](https://github.com/powerhouse-inc/powerhouse/commit/d8142a0e3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 2.28.1-dev.5 (2025-04-17)
 
 ### 🩹 Fixes
