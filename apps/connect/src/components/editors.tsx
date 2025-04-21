@@ -21,6 +21,7 @@ import {
 import {
     Button,
     DocumentToolbar,
+    generateLargeTimeline,
     RevisionHistory,
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
@@ -84,6 +85,9 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         onOpenSwitchboardLink,
     } = props;
     const documentId = fileNodeDocument?.documentId;
+    const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(
+        null,
+    );
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
@@ -335,6 +339,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         disableExternalControls,
         documentToolbarEnabled,
         showSwitchboardLink,
+        timelineEnabled,
     } = editor.config || {};
 
     const handleSwitchboardLinkClick =
@@ -350,6 +355,10 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                         onShowRevisionHistory={showRevisionHistory}
                         title={fileNodeDocument.name || document.name}
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
+                        // timelineButtonVisible={timelineEnabled}
+                        timelineButtonVisible={true} // TODO: remove this
+                        fetchTimelineData={() => generateLargeTimeline(200)}
+                        onTimelineItemClick={setSelectedRevisionId}
                     />
                 )}
             {!disableExternalControls && (
@@ -388,7 +397,12 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                             <EditorComponent
                                 key={documentId}
                                 error={error}
-                                context={context}
+                                context={{
+                                    ...context,
+                                    readMode: !!selectedRevisionId,
+                                    selectedTimelineRevision:
+                                        selectedRevisionId,
+                                }}
                                 document={document}
                                 documentNodeName={fileNodeDocument.name}
                                 dispatch={dispatch}
