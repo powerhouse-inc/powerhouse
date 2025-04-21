@@ -14,7 +14,6 @@
   "exports": {
     ".": "./dist/src/index.js",
     "./analytics": "./dist/src/analytics/analytics.js",
-    "./analytics/*": "./dist/src/analytics/*.js",
     "./*": "./dist/src/*.js"
   },
   "scripts": {

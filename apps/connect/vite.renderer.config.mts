@@ -173,6 +173,21 @@ export default defineConfig(({ mode }) => {
             include: ['did-key-creator'],
             exclude: externalAndExclude,
         },
+        resolve: {
+            alias: {
+                ...(mode !== 'development' && {
+                    'vite-plugin-node-polyfills/shims/process': path.resolve(
+                        __dirname,
+                        'node_modules',
+                        'vite-plugin-node-polyfills',
+                        'shims',
+                        'process',
+                        'dist',
+                        'index.cjs',
+                    ),
+                }),
+            },
+        },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),
             __REQUIRES_HARD_REFRESH__: JSON.stringify(REQUIRES_HARD_REFRESH),
