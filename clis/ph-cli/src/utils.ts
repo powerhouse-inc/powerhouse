@@ -173,8 +173,6 @@ export function updateConfigFile(
     fs.readFileSync(configPath, "utf-8"),
   ) as PowerhouseConfig;
 
-  console.log("LOADED CONFIG", config);
-
   const updatedConfig: PowerhouseConfig = {
     ...config,
     packages: updatePackagesArray(config.packages, dependencies, task),
