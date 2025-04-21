@@ -53,7 +53,7 @@ export const useTimelineItems = (
   const { data: diffResult, isLoading } = useAnalyticsQuery({
     start,
     end: DateTime.now().endOf("day"),
-    granularity: AnalyticsGranularity.Daily,
+    granularity: AnalyticsGranularity.Hourly,
     metrics: ["Count"],
     select: {
       changes: [AnalyticsPath.fromString(`changes`)],
