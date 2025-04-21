@@ -227,8 +227,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/design-system
       '@powerhousedao/diff-analyzer':
-        specifier: link:../../../diff-analyzer
-        version: link:../../../diff-analyzer
+        specifier: '@powerhousedao/diff-analyzer@0.0.0-dev.3'
+        version: link:@powerhousedao/diff-analyzer@0.0.0-dev.3
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser
