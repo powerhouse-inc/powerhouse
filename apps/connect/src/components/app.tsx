@@ -1,11 +1,10 @@
 import { CookieBanner } from '#components';
-import connectConfig from '#connect-config';
 import { ReadModeContextProvider, RootProvider } from '#context';
 import { atoms, atomStore } from '#store';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Provider, useAtomValue } from 'jotai';
-import React, { lazy, type PropsWithChildren, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
 
@@ -23,12 +22,8 @@ const Preloader = () => {
     return null;
 };
 
-const ReactorAnalyticsProvider = lazy(() =>
-    connectConfig.demo.analytics
-        ? import('../context/reactor-analytics.js')
-        : Promise.resolve({
-              default: (props: PropsWithChildren) => <div {...props}></div>,
-          }),
+const ReactorAnalyticsProvider = lazy(
+    () => import('../context/reactor-analytics.js'),
 );
 
 const App = () => (
