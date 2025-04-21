@@ -26,11 +26,13 @@ type BarItem = {
   timestamp: string;
   date: Date;
   endDate: Date;
+  revision?: number;
 };
 
 type DividerItem = {
   id: string;
   type: "divider";
+  revision?: number;
 };
 
 type TimelineItem = BarItem | DividerItem;
@@ -104,6 +106,7 @@ export const useTimelineItems = (
           timestamp: startDate.toISOString(),
           date: startDate,
           endDate: new Date(result.end as unknown as Date),
+          revision: 0,
         };
       });
   }, [diffResult]);
@@ -136,6 +139,7 @@ export const useTimelineItems = (
           result.push({
             id: `divider-${item.id}-${mappedResult[index + 1].id}`,
             type: "divider" as const,
+            revision: 0,
           });
         }
       }

@@ -11,6 +11,7 @@ import {
 export type TimelineBarItem = Omit<TimelineBarProps, "className"> & {
   id: string;
   type: "bar";
+  revision?: number;
 };
 
 export type TimelineDividerItem = {
@@ -19,11 +20,14 @@ export type TimelineDividerItem = {
   timestamp?: string;
   title?: string;
   subtitle?: string;
+  revision?: number;
 };
 
+export type TimelineItem = TimelineBarItem | TimelineDividerItem;
+
 export interface DocumentTimelineProps {
-  onItemClick?: (id: string | null) => void;
-  timeline?: Array<TimelineBarItem | TimelineDividerItem>;
+  onItemClick?: (item: TimelineItem | null) => void;
+  timeline?: Array<TimelineItem>;
 }
 
 const defaultTimeLineItem: TimelineBarItem = {
@@ -38,13 +42,13 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
   const [selectedItem, setSelectedItem] = useState<null | string>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleClick = (id: string | null) => {
-    if (id === selectedItem || id === defaultTimeLineItem.id) {
+  const handleClick = (item: TimelineItem) => {
+    if (item.id === selectedItem || item.id === defaultTimeLineItem.id) {
       onItemClick?.(null);
       setSelectedItem(null);
     } else {
-      onItemClick?.(id);
-      setSelectedItem(id);
+      onItemClick?.(item);
+      setSelectedItem(item.id);
     }
   };
 
@@ -73,7 +77,7 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
               timestamp={timestamp}
               title={title}
               subtitle={subtitle}
-              onClick={() => handleClick(item.id)}
+              onClick={() => handleClick(item)}
               isSelected={item.id === selectedItem}
             />
           );
@@ -88,7 +92,7 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
             additions={item.additions}
             deletions={item.deletions}
             isSelected={item.id === selectedItem}
-            onClick={() => handleClick(item.id)}
+            onClick={() => handleClick(item)}
           />
         );
       });

@@ -23,6 +23,7 @@ import {
     Button,
     DocumentToolbar,
     RevisionHistory,
+    type TimelineItem,
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
 import {
@@ -87,9 +88,9 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         onOpenSwitchboardLink,
     } = props;
     const documentId = fileNodeDocument?.documentId;
-    const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(
-        null,
-    );
+    const [selectedTimelineItem, setSelectedTimelineItem] =
+        useState<TimelineItem | null>(null);
+
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
@@ -364,7 +365,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
                         timelineButtonVisible={timelineEnabled}
                         timelineItems={timelineItems.data}
-                        onTimelineItemClick={setSelectedRevisionId}
+                        onTimelineItemClick={setSelectedTimelineItem}
                     />
                 )}
             {!disableExternalControls && (
@@ -406,9 +407,9 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                                 context={{
                                     ...context,
                                     getDocumentRevision: onGetDocumentRevision,
-                                    readMode: !!selectedRevisionId,
+                                    readMode: !!selectedTimelineItem,
                                     selectedTimelineRevision:
-                                        selectedRevisionId,
+                                        selectedTimelineItem?.revision,
                                 }}
                                 document={document}
                                 documentNodeName={fileNodeDocument.name}
