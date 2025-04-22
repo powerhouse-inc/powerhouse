@@ -274,7 +274,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     expect(parents).toEqual(["driveB"]);
   });
 
-  /*it("should, when deleting a document, also delete all child documents that were only a child of that document", async ({
+  it("should, when deleting a document, also delete all child documents that were only a child of that document", async ({
     expect,
   }) => {
     const storage = await buildStorage();
@@ -290,7 +290,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const result = await storage.exists("child");
     expect(result).toBe(false);
-  });*/
+  });
 
   it("should allow creating and retrieving a document with a slug", async ({
     expect,

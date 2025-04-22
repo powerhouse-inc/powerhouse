@@ -358,6 +358,36 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async delete(documentId: string): Promise<boolean> {
+    // find all children that are only children of this document
+    try {
+      // Find documents that are only associated with this drive (have no other parents)
+      const documentsToDelete = await this.db.document.findMany({
+        where: {
+          driveDocuments: {
+            some: {
+              driveId: documentId,
+            },
+            every: {
+              driveId: documentId,
+            },
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      // Delete these documents that only belong to this drive
+      for (const doc of documentsToDelete) {
+        await this.delete(doc.id);
+      }
+    } catch (e: unknown) {
+      this.logger.error(
+        "Error deleting child documents that only belong to this document",
+        e,
+      );
+    }
+
     try {
       // delete out of drives
       await this.db.drive.deleteMany({

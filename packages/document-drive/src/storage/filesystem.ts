@@ -219,6 +219,15 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
       await this.removeChild(parent, documentId);
     }
 
+    // check children: any children that are only children of this document should be deleted
+    const children = await this.getChildren(documentId);
+    for (const child of children) {
+      const childParents = await this.getParents(child);
+      if (childParents.length === 1 && childParents[0] === documentId) {
+        await this.delete(child);
+      }
+    }
+
     // delete any manifest for this document
     try {
       await fs.rm(this._buildManifestPath(documentId));
