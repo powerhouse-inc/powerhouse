@@ -358,18 +358,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     );
   }
 
-  async deleteDrive(id: string) {
-    // First get all documents in this drive
-    const documents = await this.getChildren(id);
-
-    // Delete each document from this drive (may not actually delete the file if shared with other drives)
-    await Promise.all(documents.map((doc) => this.delete(doc)));
-
-    // Delete the drive manifest and the drive itself
-    await fs.rm(this._buildManifestPath(id));
-    await fs.rm(this._buildDocumentPath(id));
-  }
-
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],

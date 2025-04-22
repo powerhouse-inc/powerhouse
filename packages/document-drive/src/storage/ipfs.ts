@@ -371,31 +371,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     }
   }
 
-  async deleteDrive(id: string): Promise<void> {
-    // Get all documents in this drive
-    const manifest = await this.getDriveManifest(id);
-    const documents = manifest.documentIds;
-
-    // Delete each document from this drive (may not actually delete files if shared with other drives)
-    await Promise.all(documents.map((document) => this.delete(document)));
-
-    // Delete the drive manifest
-    try {
-      await this.fs.rm(this._buildDriveManifestPath(id));
-    } catch (error) {
-      // If manifest doesn't exist, ignore the error
-    }
-
-    // Delete the drive document
-    try {
-      await this.fs.rm(this._buildDrivePath(id));
-    } catch (error) {
-      // If file doesn't exist, ignore the error
-    }
-
-    return Promise.resolve();
-  }
-
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],

@@ -76,7 +76,8 @@ export interface IDocumentStorage {
   }>;
 
   /**
-   * Deletes the document with the given id.
+   * Deletes the document with the given id. Also deletes any child documents
+   * that are only children of this document.
    *
    * @param documentId - The id of the document to delete.
    *
@@ -155,7 +156,6 @@ export interface IStorage {
 }
 
 export interface IDriveStorage extends IStorage {
-  deleteDrive(id: string): Promise<void>;
   clearStorage?(): Promise<void>;
   addDriveOperations(
     id: string,

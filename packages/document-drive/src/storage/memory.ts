@@ -284,52 +284,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     };
   }
 
-  async deleteDrive(id: string) {
-    // Get all documents in this drive
-    const manifest = this.getManifest(id);
-
-    // delete each document that belongs only to this drive
-    let cursor: string | undefined;
-    do {
-      const { documents: drives, nextCursor } = await this.findByType(
-        "powerhouse/document-drive",
-        100,
-        cursor,
-      );
-      await Promise.all(
-        [...manifest.documentIds].map((docId) => {
-          for (const driveId of drives) {
-            if (driveId === id) {
-              continue;
-            }
-
-            const manifest = this.getManifest(driveId);
-            if (manifest.documentIds.has(docId)) {
-              return;
-            }
-          }
-
-          // Remove from slug lookup if needed
-          const document = this.documents[docId];
-          if (document) {
-            const slug = (document.initialState.state.global as any)?.slug;
-            if (slug && this.slugToDocumentId[slug] === docId) {
-              delete this.slugToDocumentId[slug];
-            }
-          }
-
-          delete this.documents[docId];
-        }),
-      );
-
-      cursor = nextCursor;
-    } while (cursor);
-
-    // Delete the drive manifest and the drive itself
-    delete this.driveManifests[id];
-    delete this.documents[id];
-  }
-
   async getSynchronizationUnitsRevision(
     units: SynchronizationUnitQuery[],
   ): Promise<

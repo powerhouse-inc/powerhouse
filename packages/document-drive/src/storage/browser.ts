@@ -370,19 +370,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     });
   }
 
-  async deleteDrive(id: string) {
-    // First get all documents in this drive
-    const documents = await this.getChildren(id);
-
-    // Delete each document (this already updates the manifest)
-    await Promise.all(documents.map((doc) => this.delete(doc)));
-
-    // Delete the drive and its manifest
-    const db = await this.db;
-    await db.removeItem(this.buildManifestKey(id));
-    return db.removeItem(this.buildDocumentKey(id));
-  }
-
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],

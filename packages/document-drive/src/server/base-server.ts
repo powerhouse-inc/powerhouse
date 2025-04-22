@@ -672,7 +672,7 @@ export class BaseDocumentDriveServer
       this.stopSyncRemoteDrive(driveId),
       this.listenerManager.removeDrive(driveId),
       this.cache.deleteDrive(driveId),
-      this.legacyStorage.deleteDrive(driveId),
+      this.documentStorage.delete(driveId),
     ]);
 
     this.eventEmitter.emit("driveDeleted", driveId);

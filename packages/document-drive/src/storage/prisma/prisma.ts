@@ -684,33 +684,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return this._addDocumentOperations(this.db, drive, id, operations, header);
   }
 
-  async deleteDrive(id: string) {
-    // delete drive
-    await this.db.drive.delete({
-      where: {
-        id,
-      },
-    });
-
-    // delete drive document (will cascade)
-    await this.db.document.delete({
-      where: {
-        id,
-      },
-    });
-
-    // deletes all documents that only belong to this drive
-    await this.db.document.deleteMany({
-      where: {
-        driveDocuments: {
-          none: {
-            driveId: id,
-          },
-        },
-      },
-    });
-  }
-
   async getOperationResultingState(
     driveId: string,
     documentId: string,
