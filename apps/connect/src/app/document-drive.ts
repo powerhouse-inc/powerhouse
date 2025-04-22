@@ -153,7 +153,15 @@ export default (
             }),
     );
 
-    ipcMain.handle('documentDrive:clearStorage', () => storage.clearStorage());
+    ipcMain.handle('documentDrive:clearStorage', async () => {
+        // delete all drives so events are emitted
+        for (const drive of await documentDrive.getDrives()) {
+            await documentDrive.deleteDrive(drive);
+        }
+
+        // clear everything else
+        await storage.clearStorage();
+    });
 
     ipcMain.handle('documentDrive:getSyncStatus', (_e, drive: string) =>
         documentDrive.getSyncStatus(drive),
