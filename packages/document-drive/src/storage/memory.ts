@@ -160,6 +160,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     }
 
     // delete the document from all other drive manifests
+    // todo: this is horribly inefficient
     let cursor: string | undefined;
     do {
       const { documents, nextCursor } = await this.findByType(
@@ -226,6 +227,19 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
   async getChildren(parentId: string): Promise<string[]> {
     const manifest = this.getManifest(parentId);
     return [...manifest.documentIds];
+  }
+
+  async getParents(childId: string): Promise<string[]> {
+    const parents: string[] = [];
+
+    // Scan through all drive manifests to find ones that contain the childId
+    for (const [driveId, manifest] of Object.entries(this.driveManifests)) {
+      if (manifest.documentIds.has(childId)) {
+        parents.push(driveId);
+      }
+    }
+
+    return parents;
   }
 
   ////////////////////////////////

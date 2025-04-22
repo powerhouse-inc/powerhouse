@@ -363,8 +363,8 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
       await this.db.drive.deleteMany({
         where: {
           driveDocuments: {
-            none: {
-              documentId,
+            every: {
+              driveId: documentId,
             },
           },
         },
@@ -467,6 +467,21 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     });
 
     return docs.map((doc) => doc.id);
+  }
+
+  async getParents(childId: string): Promise<string[]> {
+    // Query the DriveDocument table to find all drives that have the given document as a child
+    const driveDocuments = await this.db.driveDocument.findMany({
+      where: {
+        documentId: childId,
+      },
+      select: {
+        driveId: true,
+      },
+    });
+
+    // Extract the drive IDs from the query result
+    return driveDocuments.map((doc) => doc.driveId);
   }
 
   ////////////////////////////////

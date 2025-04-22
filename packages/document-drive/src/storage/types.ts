@@ -113,7 +113,12 @@ export interface IDocumentStorage {
    */
   getChildren(parentId: string): Promise<string[]>;
 
-  //getParent(childId: string): Promise<string | undefined>;
+  /**
+   * Returns all parent documents of the child document with the given id.
+   *
+   * @param childId - The id of the child document.
+   */
+  getParents(childId: string): Promise<string[]>;
 }
 
 export interface IStorage {

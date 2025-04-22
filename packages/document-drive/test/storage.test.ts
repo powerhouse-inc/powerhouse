@@ -231,6 +231,67 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     expect(childrenB).toEqual([]);
   });
 
+  it("should allow getting all parents of a document", async ({ expect }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    await storage.create("child", document);
+
+    let parents = await storage.getParents("child");
+    expect(parents).toEqual([]);
+
+    const driveA = createDriveDocument();
+    await storage.create("driveA", driveA);
+    const driveB = createDriveDocument();
+    await storage.create("driveB", driveB);
+
+    await storage.addChild("driveA", "child");
+    await storage.addChild("driveB", "child");
+
+    parents = await storage.getParents("child");
+    expect(parents).toEqual(["driveA", "driveB"]);
+  });
+
+  it("should update the parents of a document when a parent is deleted", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    await storage.create("child", document);
+
+    const driveA = createDriveDocument();
+    await storage.create("driveA", driveA);
+    const driveB = createDriveDocument();
+    await storage.create("driveB", driveB);
+
+    await storage.addChild("driveA", "child");
+    await storage.addChild("driveB", "child");
+
+    await storage.delete("driveA");
+
+    const parents = await storage.getParents("child");
+    expect(parents).toEqual(["driveB"]);
+  });
+
+  /*it("should, when deleting a document, also delete all child documents that were only a child of that document", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+    await storage.create("child", document);
+
+    const driveA = createDriveDocument();
+    await storage.create("driveA", driveA);
+    await storage.addChild("driveA", "child");
+
+    await storage.delete("driveA");
+
+    const result = await storage.exists("child");
+    expect(result).toBe(false);
+  });*/
+
   it("should allow creating and retrieving a document with a slug", async ({
     expect,
   }) => {

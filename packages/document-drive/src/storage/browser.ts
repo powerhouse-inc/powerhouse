@@ -291,6 +291,32 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    const db = await this.db;
+    const keys = await db.keys();
+    const parents: string[] = [];
+
+    // Find all manifest keys
+    const manifestKeys = keys.filter((key) =>
+      key.startsWith(`${BrowserStorage.MANIFEST_KEY}${BrowserStorage.SEP}`),
+    );
+
+    // Check each manifest to see if it contains the childId
+    for (const key of manifestKeys) {
+      // Extract the driveId from the manifest key
+      const driveId = key.slice(
+        BrowserStorage.MANIFEST_KEY.length + BrowserStorage.SEP.length,
+      );
+
+      const manifest = await this.getManifest(driveId);
+      if (manifest.documentIds.includes(childId)) {
+        parents.push(driveId);
+      }
+    }
+
+    return parents;
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////

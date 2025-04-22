@@ -291,6 +291,35 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    const parents: string[] = [];
+
+    // Get all manifest files by listing the directory and finding manifest files
+    try {
+      for await (const entry of this.fs.ls("/")) {
+        if (
+          entry.name.startsWith("manifest-") &&
+          entry.name.endsWith(".json")
+        ) {
+          // Extract the driveId from the manifest filename
+          const driveId = entry.name
+            .replace("manifest-", "")
+            .replace(".json", "");
+
+          // Check if the manifest contains the childId
+          const manifest = await this.getDriveManifest(driveId);
+          if (manifest.documentIds.includes(childId)) {
+            parents.push(driveId);
+          }
+        }
+      }
+    } catch (error) {
+      // If listing fails, return empty array
+    }
+
+    return parents;
+  }
+
   // IDriveStorage
   ////////////////////////////////
 

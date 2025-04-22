@@ -290,6 +290,32 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    const parents: string[] = [];
+
+    // Get all files in the base directory
+    const files = await fs.readdir(this.basePath, { withFileTypes: true });
+
+    // Filter to only include manifest files
+    const manifestFiles = files.filter(
+      (file) =>
+        file.name.startsWith("manifest-") && file.name.endsWith(".json"),
+    );
+
+    // Check each manifest file to see if it contains the childId
+    for (const file of manifestFiles) {
+      // Extract the driveId from the manifest filename
+      const driveId = file.name.replace("manifest-", "").replace(".json", "");
+
+      const manifest = await this.getManifest(driveId);
+      if (manifest.documentIds.includes(childId)) {
+        parents.push(driveId);
+      }
+    }
+
+    return parents;
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
