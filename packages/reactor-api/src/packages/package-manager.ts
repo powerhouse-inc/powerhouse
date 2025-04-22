@@ -1,7 +1,7 @@
-import { getConfig, PowerhouseConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config";
 import { type SubgraphClass } from "@powerhousedao/reactor-api";
 import { childLogger, driveDocumentModelModule } from "document-drive";
-import { ProcessorFactory } from "document-drive/processors/types";
+import { type ProcessorFactory } from "document-drive/processors/types";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
@@ -9,10 +9,10 @@ import {
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
 import {
-  IPackageLoader,
-  IPackageManager,
-  IPackageManagerOptions,
-  PackageManagerResult,
+  type IPackageLoader,
+  type IPackageManager,
+  type IPackageManagerOptions,
+  type PackageManagerResult,
 } from "./types.js";
 export function getUniqueDocumentModels(
   ...documentModels: DocumentModelModule[][]
@@ -94,7 +94,9 @@ export class PackageManager implements IPackageManager {
 
         allDocumentModels.push(...documentModels);
         allSubgraphs.push(...subgraphs);
-        allProcessors.push(processors);
+        if (processors) {
+          allProcessors.push(processors);
+        }
       }
 
       documentModelModuleMap.set(pkg, allDocumentModels);
@@ -126,7 +128,7 @@ export class PackageManager implements IPackageManager {
   }
 
   private getPackageNamesFromConfigFile(configFile: string) {
-    const loadedConfig = getConfig(configFile) as PowerhouseConfig;
+    const loadedConfig = getConfig(configFile);
     return loadedConfig.packages?.map((pkg) => pkg.packageName) ?? [];
   }
 

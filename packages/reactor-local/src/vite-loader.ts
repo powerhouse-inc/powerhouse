@@ -1,14 +1,14 @@
 import {
-  IPackageLoader,
+  type IPackageLoader,
   isSubgraphClass,
   type SubgraphClass,
 } from "@powerhousedao/reactor-api";
 import { childLogger } from "document-drive";
-import { ProcessorFactory } from "document-drive/processors/types";
-import { DocumentModelModule } from "document-model";
+import { type ProcessorFactory } from "document-drive/processors/types";
+import { type DocumentModelModule } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { ViteDevServer } from "vite";
+import { type ViteDevServer } from "vite";
 
 export class VitePackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-local", "vite-loader"]);
@@ -72,8 +72,7 @@ export class VitePackageLoader implements IPackageLoader {
 
     const subgraphs: SubgraphClass[] = [];
     for (const [name, subgraph] of Object.entries(localSubgraphs)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const SubgraphClass = subgraph[name] as SubgraphClass;
+      const SubgraphClass = subgraph[name];
       if (isSubgraphClass(SubgraphClass)) {
         subgraphs.push(SubgraphClass);
       }
@@ -88,7 +87,7 @@ export class VitePackageLoader implements IPackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<(module: any) => ProcessorFactory> {
+  ): Promise<((module: any) => ProcessorFactory) | null> {
     const fullPath = path.join(identifier, "./processors");
 
     this.logger.verbose("Loading processors from", fullPath);
@@ -98,12 +97,15 @@ export class VitePackageLoader implements IPackageLoader {
 
       const module = await this.vite.ssrLoadModule(fullPath);
 
-      if (module.processorFactory) {
+      if (
+        module.processorFactory &&
+        typeof module.processorFactory === "function"
+      ) {
         this.logger.verbose(
           `  ➜  Loaded Processor factory from: ${identifier}`,
         );
 
-        return module.processorFactory;
+        return module.processorFactory as (module: any) => ProcessorFactory;
       }
     } catch (e) {
       //
@@ -112,6 +114,6 @@ export class VitePackageLoader implements IPackageLoader {
     this.logger.verbose(`  ➜  No Processor Factory found for: ${identifier}`);
 
     // return empty processor factory
-    return () => () => [];
+    return null;
   }
 }

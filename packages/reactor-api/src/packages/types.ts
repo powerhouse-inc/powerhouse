@@ -1,13 +1,13 @@
-import { SubgraphClass } from "#graphql/index.js";
-import { ProcessorFactory } from "document-drive/processors/types";
-import { DocumentModelModule } from "document-model";
+import { type SubgraphClass } from "#graphql/index.js";
+import { type ProcessorFactory } from "document-drive/processors/types";
+import { type DocumentModelModule } from "document-model";
 
 export interface IPackageLoader {
   loadDocumentModels(identifier: string): Promise<DocumentModelModule[]>;
   loadSubgraphs(identifier: string): Promise<SubgraphClass[]>;
   loadProcessors(
     identifier: string,
-  ): Promise<(module: any) => ProcessorFactory>;
+  ): Promise<((module: any) => ProcessorFactory) | null>;
 }
 
 export interface IPackageManager {

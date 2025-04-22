@@ -681,6 +681,8 @@ export class BaseDocumentDriveServer
       this.legacyStorage.deleteDrive(driveId),
     ]);
 
+    this.eventEmitter.emit("driveDeleted", driveId);
+
     result.forEach((r) => {
       if (r.status === "rejected") {
         throw r.reason;
