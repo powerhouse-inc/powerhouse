@@ -213,24 +213,11 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
       // If we can't get the document, we can't remove its slug
     }
 
-    // delete the document from all other drive manifests
-    let cursor: string | undefined;
-    do {
-      const { documents: drives, nextCursor } = await this.findByType(
-        "powerhouse/document-drive",
-        100,
-        cursor,
-      );
-      for (const driveId of drives) {
-        if (driveId === documentId) {
-          continue;
-        }
-
-        await this.removeChild(driveId, documentId);
-      }
-
-      cursor = nextCursor;
-    } while (cursor);
+    // delete from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
+      await this.removeChild(parent, documentId);
+    }
 
     // delete any manifest for this document
     try {

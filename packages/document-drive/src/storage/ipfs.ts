@@ -232,11 +232,9 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
       // If we can't get the document, we can't remove its slug
     }
 
-    // delete the document from all other drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === documentId) continue;
-
+    // delete the document from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
       await this.removeChild(driveId, documentId);
     }
 

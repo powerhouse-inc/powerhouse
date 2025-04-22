@@ -159,26 +159,11 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
       }
     }
 
-    // delete the document from all other drive manifests
-    // todo: this is horribly inefficient
-    let cursor: string | undefined;
-    do {
-      const { documents, nextCursor } = await this.findByType(
-        "powerhouse/document-drive",
-        100,
-        cursor,
-      );
-
-      for (const driveId of documents) {
-        if (driveId === documentId) {
-          continue;
-        }
-
-        await this.removeChild(driveId, documentId);
-      }
-
-      cursor = nextCursor;
-    } while (cursor);
+    // remove from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
+      await this.removeChild(parent, documentId);
+    }
 
     // delete any manifest for this document
     delete this.driveManifests[documentId];
