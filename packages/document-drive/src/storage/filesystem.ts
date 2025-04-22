@@ -315,10 +315,10 @@ export class FilesystemStorage
   }
 
   ////////////////////////////////
-  // IDriveStorage
+  // IDocumentAdminStorage
   ////////////////////////////////
 
-  async clearStorage() {
+  async clear() {
     // delete content of basePath
     const files = (
       await fs.readdir(this.basePath, { withFileTypes: true })
@@ -332,6 +332,10 @@ export class FilesystemStorage
       }),
     );
   }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
 
   async addDocumentOperations(
     drive: string,

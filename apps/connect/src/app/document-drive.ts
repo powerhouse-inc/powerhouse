@@ -160,7 +160,7 @@ export default (
         }
 
         // clear everything else
-        await storage.clearStorage();
+        await storage.clear();
     });
 
     ipcMain.handle('documentDrive:getSyncStatus', (_e, drive: string) =>

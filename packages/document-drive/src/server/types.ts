@@ -498,8 +498,6 @@ export interface IBaseDocumentDriveServer {
   /** Internal methods **/
   getDocumentModelModules(): DocumentModelModule[];
 
-  clearStorage(): Promise<void>;
-
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
 }
 

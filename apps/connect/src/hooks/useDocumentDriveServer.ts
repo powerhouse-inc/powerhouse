@@ -1,4 +1,5 @@
 import {
+    useDocumentAdminStorage,
     useGetDocumentModelModule,
     useUnwrappedReactor,
     useUser,
@@ -78,6 +79,7 @@ export function useDocumentDriveServer() {
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const reactor = useUnwrappedReactor();
+    const storage = useDocumentAdminStorage();
 
     const getDocumentModelModule = useGetDocumentModelModule();
 
@@ -686,12 +688,14 @@ export function useDocumentDriveServer() {
     );
 
     const clearStorage = useCallback(async () => {
+        // reactor may have not loaded yet
         if (!reactor) {
             return;
         }
-        await reactor.clearStorage();
+
+        await storage.clear();
         await refreshDocumentDrives();
-    }, [refreshDocumentDrives, reactor]);
+    }, [refreshDocumentDrives, reactor, storage]);
 
     const handleRemoveTrigger = useCallback(
         async (driveId: string, triggerId: string) => {

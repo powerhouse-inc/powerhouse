@@ -1620,14 +1620,6 @@ export class BaseDocumentDriveServer
     return this.addDriveOperations(driveId, [operation], options);
   }
 
-  async clearStorage() {
-    for (const drive of await this.getDrives()) {
-      await this.deleteDrive(drive);
-    }
-
-    await this.legacyStorage.clearStorage?.();
-  }
-
   private async _addDriveOperations(
     driveId: string,
     callback: (document: DocumentDriveDocument) => Promise<{

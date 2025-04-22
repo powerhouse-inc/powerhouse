@@ -16,7 +16,11 @@ import type {
   PHDocument,
 } from "document-model";
 import LocalForage from "localforage";
-import { type IDocumentStorage, type IDriveOperationStorage } from "./types.js";
+import {
+  IDocumentAdminStorage,
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "./types.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -29,7 +33,7 @@ interface SlugManifest {
 }
 
 export class BrowserStorage
-  implements IDriveOperationStorage, IDocumentStorage
+  implements IDriveOperationStorage, IDocumentStorage, IDocumentAdminStorage
 {
   private db: Promise<LocalForage>;
 
@@ -48,6 +52,10 @@ export class BrowserStorage
       }),
     );
   }
+
+  ////////////////////////////////
+  // IDocumentAdminStorage
+  ////////////////////////////////
 
   async clear() {
     const db = await this.db;
@@ -345,10 +353,6 @@ export class BrowserStorage
   private async updateSlugManifest(manifest: SlugManifest): Promise<void> {
     const db = await this.db;
     await db.setItem(BrowserStorage.SLUG_MANIFEST_KEY, manifest);
-  }
-
-  async clearStorage(): Promise<void> {
-    return (await this.db).clear();
   }
 
   async addDocumentOperations(

@@ -7,6 +7,13 @@ import type {
   PHDocument,
 } from "document-model";
 
+export interface IDocumentAdminStorage {
+  /**
+   * Clears the storage.
+   */
+  clear(): Promise<void>;
+}
+
 export interface IDocumentStorage {
   /**
    * Returns true if and only if the document exists.
@@ -156,7 +163,6 @@ export interface IDocumentOperationStorage {
 }
 
 export interface IDriveOperationStorage extends IDocumentOperationStorage {
-  clearStorage?(): Promise<void>;
   addDriveOperations(
     id: string,
     operations: Operation[],
