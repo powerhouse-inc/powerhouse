@@ -88,7 +88,7 @@ export class VitePackageLoader implements IPackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<(module: IProcessorHostModule) => ProcessorFactory> {
+  ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null> {
     const fullPath = path.join(identifier, "./processors");
 
     this.logger.verbose("Loading processors from", fullPath);
@@ -98,7 +98,10 @@ export class VitePackageLoader implements IPackageLoader {
 
       const module = await this.vite.ssrLoadModule(fullPath);
 
-      if (module.processorFactory) {
+      if (
+        module.processorFactory &&
+        typeof module.processorFactory === "function"
+      ) {
         this.logger.verbose(
           `  ➜  Loaded Processor factory from: ${identifier}`,
         );
@@ -114,6 +117,6 @@ export class VitePackageLoader implements IPackageLoader {
     this.logger.verbose(`  ➜  No Processor Factory found for: ${identifier}`);
 
     // return empty processor factory
-    return () => () => [];
+    return null;
   }
 }

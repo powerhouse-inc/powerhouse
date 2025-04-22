@@ -53,14 +53,14 @@ export class ImportPackageLoader implements IPackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<(module: IProcessorHostModule) => ProcessorFactory> {
+  ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null> {
     this.logger.verbose("Loading processors from package:", identifier);
 
-    const pkgModule = (await loadDependency(identifier, "processors")) as (
-      module: IProcessorHostModule,
-    ) => ProcessorFactory;
-    if (pkgModule) {
-      if (!(typeof pkgModule === "function")) {
+    const pkgModule = (await loadDependency(identifier, "processors")) as {
+      processorFactory: (module: IProcessorHostModule) => ProcessorFactory;
+    } | null;
+    if (pkgModule?.processorFactory) {
+      if (!(typeof pkgModule.processorFactory === "function")) {
         this.logger.verbose(
           `  ➜  Processor Factory is not a function: ${identifier}`,
         );
@@ -68,13 +68,12 @@ export class ImportPackageLoader implements IPackageLoader {
         this.logger.verbose(
           `  ➜  Loaded Processor Factory from: ${identifier}`,
         );
-        return pkgModule;
+        return pkgModule.processorFactory;
       }
     } else {
       this.logger.verbose(`  ➜  No Processor Factory found: ${identifier}`);
     }
 
-    // empty processor factory
-    return () => () => [];
+    return null;
   }
 }

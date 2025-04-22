@@ -12,7 +12,7 @@ export interface IPackageLoader {
   loadSubgraphs(identifier: string): Promise<SubgraphClass[]>;
   loadProcessors(
     identifier: string,
-  ): Promise<(module: IProcessorHostModule) => ProcessorFactory>;
+  ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null>;
 }
 
 export interface IPackageManager {

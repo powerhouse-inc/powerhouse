@@ -99,7 +99,9 @@ export class PackageManager implements IPackageManager {
 
         allDocumentModels.push(...documentModels);
         allSubgraphs.push(...subgraphs);
-        allProcessors.push(processors);
+        if (processors) {
+          allProcessors.push(processors);
+        }
       }
 
       documentModelModuleMap.set(pkg, allDocumentModels);
