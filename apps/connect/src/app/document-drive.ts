@@ -26,8 +26,9 @@ export default (
     path: string,
     ipcMain: IpcMain,
 ) => {
+    const storage = new FilesystemStorage(join(path, 'Document Drives'));
     const documentDrive = new ReactorBuilder(documentModels)
-        .withStorage(new FilesystemStorage(join(path, 'Document Drives')))
+        .withStorage(storage)
         .withCache(new InMemoryCache())
         .withQueueManager(new BaseQueueManager(1, 10))
         .withOptions({ ...getReactorDefaultDrivesConfig() })
@@ -152,9 +153,7 @@ export default (
             }),
     );
 
-    ipcMain.handle('documentDrive:clearStorage', () =>
-        documentDrive.clearStorage(),
-    );
+    ipcMain.handle('documentDrive:clearStorage', () => storage.clearStorage());
 
     ipcMain.handle('documentDrive:getSyncStatus', (_e, drive: string) =>
         documentDrive.getSyncStatus(drive),
