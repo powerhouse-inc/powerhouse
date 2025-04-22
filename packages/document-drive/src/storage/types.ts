@@ -122,7 +122,7 @@ export interface IDocumentStorage {
   getParents(childId: string): Promise<string[]>;
 }
 
-export interface IStorage {
+export interface IDocumentOperationStorage {
   addDocumentOperations<TDocument extends PHDocument>(
     drive: string,
     id: string,
@@ -155,7 +155,7 @@ export interface IStorage {
   >;
 }
 
-export interface IDriveStorage extends IStorage {
+export interface IDriveOperationStorage extends IDocumentOperationStorage {
   clearStorage?(): Promise<void>;
   addDriveOperations(
     id: string,

@@ -16,7 +16,7 @@ import type {
   PHDocument,
 } from "document-model";
 import LocalForage from "localforage";
-import { type IDocumentStorage, type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveOperationStorage } from "./types.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -28,7 +28,9 @@ interface SlugManifest {
   slugToId: Record<string, string>;
 }
 
-export class BrowserStorage implements IDriveStorage, IDocumentStorage {
+export class BrowserStorage
+  implements IDriveOperationStorage, IDocumentStorage
+{
   private db: Promise<LocalForage>;
 
   static DBName = "DOCUMENT_DRIVES";

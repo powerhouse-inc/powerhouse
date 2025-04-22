@@ -13,7 +13,10 @@ import {
   isOperationJob,
 } from "#queue/types";
 import { ReadModeServer } from "#read-mode/server";
-import { type IDocumentStorage, type IDriveStorage } from "#storage/types";
+import {
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "#storage/types";
 import {
   DefaultDrivesManager,
   type IDefaultDrivesManager,
@@ -99,7 +102,7 @@ export class BaseDocumentDriveServer
 
   // external dependencies
   private documentModelModules: DocumentModelModule[];
-  private legacyStorage: IDriveStorage;
+  private legacyStorage: IDriveOperationStorage;
   private documentStorage: IDocumentStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
@@ -160,7 +163,7 @@ export class BaseDocumentDriveServer
 
   constructor(
     documentModelModules: DocumentModelModule[],
-    storage: IDriveStorage,
+    storage: IDriveOperationStorage,
     documentStorage: IDocumentStorage,
     cache: ICache,
     queueManager: IQueueManager,

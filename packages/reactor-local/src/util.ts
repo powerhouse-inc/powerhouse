@@ -10,14 +10,14 @@ import { ICache } from "document-drive/cache/types";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma/factory";
-import { IDriveStorage } from "document-drive/storage/types";
+import { IDriveOperationStorage } from "document-drive/storage/types";
 import { createServer } from "vite";
 import { StorageOptions } from "./types.js";
 
 export const createStorage = (
   options: StorageOptions,
   cache: ICache,
-): IDriveStorage => {
+): IDriveOperationStorage => {
   switch (options.type) {
     case "filesystem":
       logger.info(

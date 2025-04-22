@@ -19,7 +19,7 @@ import {
 } from "document-model";
 import { type Helia } from "helia";
 import stringify from "json-stringify-deterministic";
-import type { IDocumentStorage, IStorage } from "./types.js";
+import type { IDocumentOperationStorage, IDocumentStorage } from "./types.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -31,7 +31,9 @@ interface SlugManifest {
   slugToId: Record<string, string>;
 }
 
-export class IPFSStorage implements IStorage, IDocumentStorage {
+export class IPFSStorage
+  implements IDocumentOperationStorage, IDocumentStorage
+{
   private fs: MFS;
 
   constructor(helia: Helia) {

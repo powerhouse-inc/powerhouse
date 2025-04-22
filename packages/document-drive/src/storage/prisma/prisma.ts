@@ -25,7 +25,7 @@ import {
 } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
-import type { IDocumentStorage, IDriveStorage } from "../types.js";
+import type { IDocumentStorage, IDriveOperationStorage } from "../types.js";
 import { type Prisma, type PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
@@ -95,7 +95,7 @@ type ExtendedPrismaClient = ReturnType<
   typeof getRetryTransactionsClient<PrismaClient>
 >;
 
-export class PrismaStorage implements IDriveStorage, IDocumentStorage {
+export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   private logger = childLogger(["PrismaStorage"]);
 
   private db: ExtendedPrismaClient;

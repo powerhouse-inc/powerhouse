@@ -24,7 +24,7 @@ import {
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
-import { type IDocumentStorage, type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveOperationStorage } from "./types.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -42,7 +42,9 @@ function ensureDir(dir: string) {
   }
 }
 
-export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
+export class FilesystemStorage
+  implements IDriveOperationStorage, IDocumentStorage
+{
   private basePath: string;
 
   constructor(basePath: string) {

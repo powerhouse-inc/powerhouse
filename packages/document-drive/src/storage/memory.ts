@@ -12,13 +12,13 @@ import {
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import { type IDocumentStorage, type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveOperationStorage } from "./types.js";
 
 type DriveManifest = {
   documentIds: Set<string>;
 };
 
-export class MemoryStorage implements IDriveStorage, IDocumentStorage {
+export class MemoryStorage implements IDriveOperationStorage, IDocumentStorage {
   private documents: Record<string, PHDocument>;
   private driveManifests: Record<string, DriveManifest>;
   private slugToDocumentId: Record<string, string>;
