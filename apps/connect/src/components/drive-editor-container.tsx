@@ -3,6 +3,7 @@ import {
     useDocumentDriveServer,
     useDocumentEditor,
     useEditorProps,
+    useGetDocument,
     useSyncStatus,
     useUiNodes,
 } from '#hooks';
@@ -13,10 +14,14 @@ import {
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
+import { type DriveEditorContext } from '@powerhousedao/reactor-browser';
 import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
 import { type IDriveContext } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
-import { driveDocumentModelModule } from 'document-drive';
+import {
+    driveDocumentModelModule,
+    type GetDocumentOptions,
+} from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
@@ -99,6 +104,19 @@ export function DriveEditorContainer() {
     const { addFile, addDocument } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
     const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
+    const getDocument = useGetDocument();
+
+    const onGetDocumentRevision: DriveEditorContext['getDocumentRevision'] =
+        useCallback(
+            (documentId: string, options?: GetDocumentOptions) => {
+                if (!selectedNode) {
+                    console.error('No selected node');
+                    return Promise.reject(new Error('No selected node'));
+                }
+                return getDocument(selectedNode.driveId, documentId, options);
+            },
+            [getDocument, selectedNode],
+        );
 
     const driveContext: IDriveContext = useMemo(
         () => ({
@@ -148,6 +166,7 @@ export function DriveEditorContainer() {
                 context={{
                     ...editorProps.context,
                     ...driveContext,
+                    getDocumentRevision: onGetDocumentRevision,
                 }}
                 onSwitchboardLinkClick={undefined} // TODO
                 document={document}

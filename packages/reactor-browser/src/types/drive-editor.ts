@@ -28,6 +28,7 @@ export interface DriveEditorContext
 
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
+
   /** Currently selected node (file/folder) in the drive */
   selectedNode: Node | null;
 
@@ -127,12 +128,17 @@ export interface DriveEditorContext
     documentId: string;
   }) => PHDocument["state"] | undefined;
 
+  /**
+   * Retrieves a document from a specific revision
+   * @param documentId - ID of the document to retrieve
+   * @param options - Optional configuration options for the retrieval
+   * @returns Promise resolving to the document at the specified revision
+   */
   getDocumentRevision?: (
     documentId: string,
     options?: GetDocumentOptions,
   ) => Promise<PHDocument> | undefined;
 }
-
 export interface DriveEditorProps<TDocument extends PHDocument>
   extends Omit<EditorProps<TDocument>, "context"> {
   context: DriveEditorContext;
