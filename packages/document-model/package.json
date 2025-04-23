@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "2.28.1-staging.3",
+  "version": "2.28.1",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
