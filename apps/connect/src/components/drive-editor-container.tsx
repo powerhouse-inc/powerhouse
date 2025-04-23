@@ -26,6 +26,7 @@ import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useGetDriveDocuments } from '../hooks/useGetDriveDocuments.js';
+import { useUnwrappedAnalyticsStore } from '../store/analytics.js';
 import { useModal } from './modal/index.js';
 
 function DriveEditorError({ error }: FallbackProps) {
@@ -105,6 +106,7 @@ export function DriveEditorContainer() {
     const documentModels = useFilteredDocumentModels();
     const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
     const getDocument = useGetDocument();
+    const analyticsStore = useUnwrappedAnalyticsStore();
 
     const onGetDocumentRevision: DriveEditorContext['getDocumentRevision'] =
         useCallback(
@@ -167,6 +169,7 @@ export function DriveEditorContainer() {
                     ...editorProps.context,
                     ...driveContext,
                     getDocumentRevision: onGetDocumentRevision,
+                    analyticsStore,
                 }}
                 onSwitchboardLinkClick={undefined} // TODO
                 document={document}

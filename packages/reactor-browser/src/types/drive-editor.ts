@@ -14,6 +14,7 @@ import {
 } from "document-model";
 import { type FC } from "react";
 
+import { type IAnalyticsStore } from "../analytics/analytics.js";
 import { type HookState } from "../hooks/document-state.js";
 import { type User } from "../renown/types.js";
 import type { UiNode } from "../uiNodes/types.js";
@@ -138,6 +139,8 @@ export interface DriveEditorContext
     documentId: string,
     options?: GetDocumentOptions,
   ) => Promise<PHDocument> | undefined;
+
+  analyticsStore?: IAnalyticsStore;
 }
 export interface DriveEditorProps<TDocument extends PHDocument>
   extends Omit<EditorProps<TDocument>, "context"> {
