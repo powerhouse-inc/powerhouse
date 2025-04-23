@@ -8,10 +8,10 @@ import {
   type User,
 } from "@powerhousedao/reactor-browser";
 import {
-    documentModelDocumentModelModule,
+  documentModelDocumentModelModule,
+  type EditorModule,
   type DocumentModelModule,
   type EditorContext,
-  type EditorProps,
   type PHDocument,
 } from "document-model";
 import {
@@ -22,6 +22,7 @@ import {
 } from "@powerhousedao/design-system";
 import { useTimelineItems, getRevisionFromDate } from "@powerhousedao/common";
 import { useState, Suspense, type FC, useCallback, lazy } from "react";
+import { useDocumentModel, useDocumentEditorModule } from "../hooks/useDocumentModels.js";
 
 export interface EditorContainerProps {
   driveId: string;
@@ -30,28 +31,6 @@ export interface EditorContainerProps {
   onClose: () => void;
   title: string;
   context: EditorContext;
-}
-
-const documentModelsMap = {
-  [documentModelDocumentModelModule.documentModel.id]: documentModelDocumentModelModule,
-};
-
-const documentEditorMap = {
-  [documentModelDocumentModelModule.documentModel.id]: lazy(() =>
-    import('@powerhousedao/builder-tools/style.css').then(() =>
-      import("@powerhousedao/builder-tools/document-model-editor").then((m) => ({
-        default: m.documentModelEditorModule.Component,
-      }))
-    )
-  ),
-} as const;
-
-function getDocumentModel(documentType: string) {
-  return documentModelsMap[documentType];
-}
-
-function getDocumentEditor(documentType: string) {
-  return documentEditorMap[documentType];
 }
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
@@ -64,9 +43,11 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
 
   const user = context.user as User | undefined;
 
-  const documentModelModule = getDocumentModel(
+  const documentModelModule = useDocumentModel(
     documentType,
   ) as DocumentModelModule<PHDocument>;
+
+  const { editorModule, isLoading } = useDocumentEditorModule(documentType);
 
   const { dispatch, error, document } = useDocumentEditorProps({
     documentId,
@@ -89,11 +70,9 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
     </div>
   );
 
-  if (!document) return loadingContent;
+  if (!document || isLoading) return loadingContent;
 
-  const Editor = getDocumentEditor(documentType);
-
-  if (!Editor) {
+  if (!editorModule) {
     console.error("No editor found for document type:", documentType);
     return (
       <div className="flex-1">
@@ -101,7 +80,9 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
       </div>
     );
   }
-  const EditorComponent = Editor as FC<EditorProps<PHDocument>>;
+
+  const moduleWithComponent = editorModule as EditorModule<PHDocument>;
+  const EditorComponent = moduleWithComponent.Component;
 
   return showRevisionHistory ? (
     <RevisionHistory
@@ -120,7 +101,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
         onShowRevisionHistory={() => setShowRevisionHistory(true)}
         onSwitchboardLinkClick={() => {}}
         title={title}
-        timelineButtonVisible
+        timelineButtonVisible={moduleWithComponent.config.timelineEnabled}
         timelineItems={timelineItems.data}
         onTimelineItemClick={setSelectedTimelineItem}
       />
