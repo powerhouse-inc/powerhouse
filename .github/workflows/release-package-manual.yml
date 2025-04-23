@@ -2,29 +2,13 @@ name: Release Package
 
 on: 
   workflow_dispatch:
-    inputs:
-      tag:
-        type: string
-        default: "staging"
 
 env:
   NX_ISOLATE_PLUGINS: false
-  TAG: ${{ inputs.tag ||  'staging'  }}
 
 jobs:
-  validate-tag:
-    name: Validate Tag
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check tag value
-        if: ${{ inputs.tag == 'dev' || inputs.tag == 'production' || inputs.tag == 'latest' }}
-        run: |
-          echo "::error::Tag value '${{ inputs.tag }}' is not allowed"
-          exit 1
-
   build-and-publish:
     name: Build and Publish Package
-    needs: validate-tag
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -68,7 +52,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: pnpm nx release --projects='packages/*,apps/connect,clis/*' --skip-publish --preid=${{ env.TAG }}
+        run: pnpm nx release --projects='packages/*,apps/connect,clis/*' --skip-publish
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,7 +60,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish to npm
-        run: pnpm nx release publish --projects='apps/connect,packages/*,clis/*' --tag=${{ env.TAG }}
+        run: pnpm nx release publish --projects='apps/connect,packages/*,clis/*'
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
