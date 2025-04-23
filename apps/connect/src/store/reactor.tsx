@@ -41,7 +41,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
 
 async function createReactor() {
     // get storage
-    const storage = useAtomValue(storageAtom);
+    const storage = atomStore.get(storageAtom);
 
     // waits for document models to be loaded
     const documentModels = await atomStore.get(documentModelsAtom);
