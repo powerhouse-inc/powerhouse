@@ -24,7 +24,7 @@ type BarItem = {
   additions: number;
   deletions: number;
   timestamp: string;
-  date: Date;
+  startDate: Date;
   endDate: Date;
   revision?: number;
 };
@@ -33,6 +33,8 @@ type DividerItem = {
   id: string;
   type: "divider";
   revision?: number;
+  startDate?: Date;
+  endDate?: Date;
 };
 
 type TimelineItem = BarItem | DividerItem;
@@ -107,7 +109,7 @@ export const useTimelineItems = (
           additions,
           deletions,
           timestamp: startDate.toISOString(),
-          date: startDate,
+          startDate: startDate,
           endDate: new Date(result.end as unknown as Date),
           revision: 0,
         };
@@ -124,8 +126,8 @@ export const useTimelineItems = (
 
       // Check if there's a next item and if they're not in consecutive hours
       if (index < mappedResult.length - 1) {
-        const currentDate = new Date(item.date);
-        const nextDate = new Date(mappedResult[index + 1].date);
+        const currentDate = new Date(item.startDate);
+        const nextDate = new Date(mappedResult[index + 1].startDate);
 
         const currentHour = currentDate.getHours();
         const nextHour = nextDate.getHours();

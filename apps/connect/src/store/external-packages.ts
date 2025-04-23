@@ -1,4 +1,5 @@
 import { getHMRModule, subscribeExternalPackages } from '#services';
+import { type DriveEditorModule } from '@powerhousedao/reactor-browser';
 import { type App, type DocumentModelLib } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
@@ -84,6 +85,8 @@ export const useDriveEditor = (editorId?: string) => {
         const pkg = externalPackages.find(pkg =>
             pkg.manifest.apps?.find(app => app.driveEditor === editorId),
         );
-        return pkg?.editors.find(editor => editor.config.id === editorId);
+        return pkg?.editors.find(
+            editor => editor.config.id === editorId,
+        ) as DriveEditorModule;
     }, [externalPackages, editorId]);
 };

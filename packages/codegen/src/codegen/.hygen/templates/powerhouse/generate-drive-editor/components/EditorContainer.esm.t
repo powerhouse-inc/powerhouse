@@ -18,7 +18,9 @@ import {
   DocumentToolbar,
   RevisionHistory,
   DefaultEditorLoader,
+  type TimelineItem,
 } from "@powerhousedao/design-system";
+import { useTimelineItems, getRevisionFromDate } from "@powerhousedao/common";
 import { useState, Suspense, type FC, useCallback, lazy } from "react";
 
 export interface EditorContainerProps {
@@ -55,8 +57,11 @@ function getDocumentEditor(documentType: string) {
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
   const { driveId, documentId, documentType, onClose, title, context } = props;
 
+  const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
   const [showRevisionHistory, setShowRevisionHistory] = useState(false);
   const { useDocumentEditorProps } = useDriveContext();
+  const timelineItems = useTimelineItems(documentId);
+
   const user = context.user as User | undefined;
 
   const documentModelModule = getDocumentModel(
@@ -115,9 +120,20 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
         onShowRevisionHistory={() => setShowRevisionHistory(true)}
         onSwitchboardLinkClick={() => {}}
         title={title}
+        timelineButtonVisible
+        timelineItems={timelineItems.data}
+        onTimelineItemClick={setSelectedTimelineItem}
       />
       <EditorComponent
-        context={context}
+        context={{
+          ...context,
+          readMode: !!selectedTimelineItem,
+          selectedTimelineRevision: getRevisionFromDate(
+            selectedTimelineItem?.startDate,
+            selectedTimelineItem?.endDate,
+            document.operations.global,
+          ),
+        }}
         dispatch={dispatch}
         document={document}
         error={error}

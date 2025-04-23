@@ -18,7 +18,7 @@ import {
     signOperation,
     useDocumentDispatch,
 } from '#utils';
-import { useTimelineItems } from '@powerhousedao/common';
+import { getRevisionFromDate, useTimelineItems } from '@powerhousedao/common';
 import {
     Button,
     DocumentToolbar,
@@ -409,7 +409,11 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                                     getDocumentRevision: onGetDocumentRevision,
                                     readMode: !!selectedTimelineItem,
                                     selectedTimelineRevision:
-                                        selectedTimelineItem?.revision,
+                                        getRevisionFromDate(
+                                            selectedTimelineItem?.startDate,
+                                            selectedTimelineItem?.endDate,
+                                            document.operations.global,
+                                        ),
                                 }}
                                 document={document}
                                 documentNodeName={fileNodeDocument.name}

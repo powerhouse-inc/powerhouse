@@ -12,6 +12,8 @@ export type TimelineBarItem = Omit<TimelineBarProps, "className"> & {
   id: string;
   type: "bar";
   revision?: number;
+  startDate?: Date;
+  endDate?: Date;
 };
 
 export type TimelineDividerItem = {
@@ -21,6 +23,8 @@ export type TimelineDividerItem = {
   title?: string;
   subtitle?: string;
   revision?: number;
+  startDate?: Date;
+  endDate?: Date;
 };
 
 export type TimelineItem = TimelineBarItem | TimelineDividerItem;
