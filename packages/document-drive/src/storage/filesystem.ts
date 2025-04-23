@@ -68,7 +68,8 @@ export class FilesystemStorage
     }
 
     const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
+      (document.initialState.state.global as { slug?: string })?.slug ??
+      documentId;
     if (slug) {
       const slugManifest = await this.getSlugManifest();
       if (slugManifest.slugToId[slug]) {
@@ -126,7 +127,7 @@ export class FilesystemStorage
 
   async findByType(
     documentModelType: string,
-    limit: number = 100,
+    limit = 100,
     cursor?: string,
   ): Promise<{
     documents: string[];
@@ -202,7 +203,8 @@ export class FilesystemStorage
     // First, find any slug for this document and remove it from the slug manifest
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = (document.initialState.state.global as any)?.slug;
+      const slug = (document.initialState.state.global as { slug?: string })
+        ?.slug;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();

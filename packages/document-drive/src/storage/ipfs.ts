@@ -69,7 +69,8 @@ export class IPFSStorage
     }
 
     const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
+      (document.initialState.state.global as { slug?: string })?.slug ??
+      documentId;
     if (slug) {
       const slugManifest = await this.getSlugManifest();
       if (slugManifest.slugToId[slug]) {
@@ -221,7 +222,8 @@ export class IPFSStorage
     // Remove from slug manifest if it has a slug
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = (document.initialState.state.global as any)?.slug;
+      const slug = (document.initialState.state.global as { slug?: string })
+        ?.slug;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();
@@ -384,7 +386,7 @@ export class IPFSStorage
       operations,
     );
 
-    await this.createDrive(id, {
+    await this.create(id, {
       ...drive,
       ...header,
       operations: mergedOperations,

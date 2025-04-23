@@ -17,7 +17,7 @@ import type {
 } from "document-model";
 import LocalForage from "localforage";
 import {
-  IDocumentAdminStorage,
+  type IDocumentAdminStorage,
   type IDocumentStorage,
   type IDriveOperationStorage,
 } from "./types.js";
@@ -83,7 +83,8 @@ export class BrowserStorage
     }
 
     const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
+      (document.initialState.state.global as { slug?: string }).slug ??
+      documentId;
 
     // check if the slug is already taken
     if (slug) {
@@ -144,7 +145,7 @@ export class BrowserStorage
 
   async findByType(
     documentModelType: string,
-    limit: number = 100,
+    limit = 100,
     cursor?: string,
   ): Promise<{
     documents: string[];
@@ -224,8 +225,9 @@ export class BrowserStorage
     }
 
     // Remove from slug manifest if it has a slug
+    const slug = (document.initialState.state.global as { slug?: string })
+      ?.slug;
     try {
-      const slug = (document.initialState.state.global as any)?.slug;
       if (slug) {
         const slugManifest = await this.getSlugManifest();
         if (slugManifest.slugToId[slug] === documentId) {

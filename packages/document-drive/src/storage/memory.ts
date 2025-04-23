@@ -13,7 +13,7 @@ import {
   type PHDocument,
 } from "document-model";
 import {
-  IDocumentAdminStorage,
+  type IDocumentAdminStorage,
   type IDocumentStorage,
   type IDriveOperationStorage,
 } from "./types.js";
@@ -50,7 +50,8 @@ export class MemoryStorage
     }
 
     const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
+      (document.initialState.state.global as { slug?: string })?.slug ??
+      documentId;
 
     // check if the document already exists by slug
     if (slug && this.slugToDocumentId[slug]) {
@@ -99,7 +100,7 @@ export class MemoryStorage
 
   async findByType(
     documentModelType: string,
-    limit: number = 100,
+    limit = 100,
     cursor?: string,
   ): Promise<{
     documents: string[];
@@ -159,7 +160,8 @@ export class MemoryStorage
     // Remove from slug lookup if it has a slug
     const document = this.documents[documentId];
     if (document) {
-      const slug = (document.initialState.state.global as any)?.slug;
+      const slug = (document.initialState.state.global as { slug?: string })
+        ?.slug;
       if (slug && this.slugToDocumentId[slug] === documentId) {
         delete this.slugToDocumentId[slug];
       }

@@ -127,7 +127,8 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
   async create(documentId: string, document: PHDocument) {
     const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
+      (document.initialState.state.global as { slug?: string })?.slug ??
+      documentId;
 
     try {
       await this.db.document.create({
@@ -143,7 +144,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         },
       });
     } catch (e) {
-      if ((e as any).code === "P2002") {
+      if ((e as { code?: string }).code === "P2002") {
         throw new DocumentAlreadyExistsError(documentId);
       }
 
@@ -308,7 +309,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
   async findByType(
     documentModelType: string,
-    limit: number = 100,
+    limit = 100,
     cursor?: string,
   ): Promise<{
     documents: string[];
