@@ -3,14 +3,8 @@ import {
   type IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createContext, useContext, type PropsWithChildren } from "react";
-
-interface AnalyticsContextValue {
-  store: IAnalyticsStore;
-  engine: AnalyticsQueryEngine;
-}
-
-const AnalyticsContext = createContext<AnalyticsContextValue | null>(null);
+import { useEffect, type PropsWithChildren } from "react";
+import { clearGlobal, getGlobal, setGlobal } from "../global/core.js";
 
 const defaultQueryClient = new QueryClient();
 
@@ -28,41 +22,46 @@ export function AnalyticsProvider({
   store,
   queryClient = defaultQueryClient,
 }: AnalyticsProviderProps) {
-  const engine = new AnalyticsQueryEngine(store);
-  const content = (
-    <AnalyticsContext.Provider value={{ store, engine }}>
-      {children}
-    </AnalyticsContext.Provider>
-  );
+  // Only initialize if not already initialized
+  const globalAnalytics = getGlobal("analytics");
+  if (!globalAnalytics) {
+    const engine = new AnalyticsQueryEngine(store);
+    setGlobal("analytics", { store, engine });
+  }
+
+  useEffect(() => {
+    return () => clearGlobal("analytics");
+  }, [store]);
 
   if (queryClient === false) {
-    return content;
+    return children;
   }
 
   return (
-    <QueryClientProvider client={queryClient}>{content}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
 
-export function useAnalyticsStore(): IAnalyticsStore {
-  const context = useContext(AnalyticsContext);
+export function useAnalyticsStore(): IAnalyticsStore | undefined {
+  const globalAnalytics = getGlobal("analytics");
 
-  if (!context?.store) {
-    throw new Error(
+  if (!globalAnalytics?.store) {
+    console.warn(
       "No analytics store available. Use within an AnalyticsProvider.",
     );
   }
 
-  return context.store;
+  return globalAnalytics?.store;
 }
 
-export function useAnalyticsEngine(): AnalyticsQueryEngine {
-  const context = useContext(AnalyticsContext);
-  if (!context?.engine) {
-    throw new Error(
+export function useAnalyticsEngine(): AnalyticsQueryEngine | undefined {
+  const globalAnalytics = getGlobal("analytics");
+
+  if (!globalAnalytics?.engine) {
+    console.warn(
       "No analytics engine available. Use within an AnalyticsProvider.",
     );
   }
 
-  return context.engine;
+  return globalAnalytics?.engine;
 }
