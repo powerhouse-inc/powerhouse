@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 import {
@@ -16,13 +16,14 @@ import {
   useGetDimensions,
 } from "../src/analytics/analytics.js";
 import { MemoryAnalyticsStore } from "../src/analytics/store/memory.js";
+import { clearGlobal } from "../src/global/core.js";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(
     "test/analytics/AnalyticsStore.spec",
   );
 
-  function createWrapper(store: IAnalyticsStore) {
+  function createWrapper(store?: IAnalyticsStore) {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -32,10 +33,15 @@ describe("Analytics Store", () => {
     });
 
     return function Wrapper({ children }: { children: React.ReactNode }) {
-      return (
+      return store ? (
         <AnalyticsProvider store={store} queryClient={queryClient}>
           {children}
         </AnalyticsProvider>
+      ) : (
+        <QueryClientProvider client={queryClient}>
+          {children}
+          children
+        </QueryClientProvider>
       );
     };
   }
@@ -46,7 +52,6 @@ describe("Analytics Store", () => {
 
     const wrapper = createWrapper(store);
 
-    // Test adding a series value
     const { result: addResult } = renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
@@ -103,18 +108,68 @@ describe("Analytics Store", () => {
       ),
     ).toEqual(["atlas/legacy/core-units/SES-001"]);
   });
+
+  it("should fail gracefully when analytics store is not available", async () => {
+    const wrapper = createWrapper();
+
+    const { result: addResult } = renderHook(() => useAddSeriesValue(), {
+      wrapper,
+    });
+
+    await expect(
+      addResult.current.mutateAsync({
+        start: DateTime.now(),
+        source: TEST_SOURCE,
+        value: 10000,
+        unit: "DAI",
+        metric: "Budget",
+        dimensions: {
+          budget: AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
+        },
+      }),
+    ).rejects.toThrow(
+      "No analytics store available. Use within an AnalyticsProvider.",
+    );
+
+    const { result: queryResult } = renderHook(
+      () =>
+        useAnalyticsSeries({
+          start: null,
+          end: null,
+          currency: AnalyticsPath.fromString("DAI"),
+          metrics: ["Budget"],
+          select: {
+            budget: [
+              AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
+            ],
+          },
+        }),
+      { wrapper },
+    );
+
+    await vi.waitFor(() => expect(queryResult.current.isError).toBe(true));
+    expect(queryResult.current.error).toMatchObject({
+      message: "No analytics store available. Use within an AnalyticsProvider.",
+    });
+  });
 });
 
 describe("Analytics Engine", () => {
-  const TEST_SOURCE = AnalyticsPath.fromString(
-    "test/analytics/AnalyticsStore.spec",
-  );
+  const TEST_SOURCE = AnalyticsPath.fromString("test/analytics/AnalyticsStore");
 
   function createWrapper(store: MemoryAnalyticsStore) {
     return function Wrapper({ children }: { children: React.ReactNode }) {
       return <AnalyticsProvider store={store}>{children}</AnalyticsProvider>;
     };
   }
+  beforeAll(() => {
+    clearGlobal("analytics");
+  });
+
+  afterEach(() => {
+    // Clear the global analytics store before each test
+    clearGlobal("analytics");
+  });
 
   it("should execute analytics query", async () => {
     const store = new MemoryAnalyticsStore();

@@ -1,11 +1,12 @@
 import {
   AnalyticsPath,
-  type AnalyticsDimension,
   type AnalyticsQuery,
+  type AnalyticsQueryEngine,
   type AnalyticsSeries,
   type AnalyticsSeriesInput,
   type AnalyticsSeriesQuery,
   type GroupedPeriodResults,
+  type IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
 import {
   useMutation,
@@ -17,6 +18,32 @@ import {
 import { useEffect, useRef } from "react";
 import { useAnalyticsEngine, useAnalyticsStore } from "./context.js";
 
+function useAnalyticsQueryWrapper<TData>(
+  options: Omit<UseQueryOptions<TData, Error, TData>, "queryFn"> & {
+    queryFn: (analytics: {
+      store: IAnalyticsStore;
+      engine: AnalyticsQueryEngine;
+    }) => Promise<TData> | TData;
+  },
+) {
+  const { queryFn, ...queryOptions } = options;
+  const store = useAnalyticsStore();
+  const engine = useAnalyticsEngine();
+
+  return useQuery({
+    ...queryOptions,
+    queryFn: () => {
+      if (!store || !engine) {
+        throw new Error(
+          "No analytics store available. Use within an AnalyticsProvider.",
+        );
+      }
+      return queryFn({ store, engine });
+    },
+    enabled: (!!store && !!engine) || queryOptions.enabled !== false,
+  });
+}
+
 type UseAnalyticsQueryOptions = Omit<
   UseQueryOptions<GroupedPeriodResults>,
   "queryKey" | "queryFn"
@@ -26,20 +53,19 @@ export function useAnalyticsQuery(
   query: AnalyticsQuery,
   options?: UseAnalyticsQueryOptions,
 ) {
-  const engine = useAnalyticsEngine();
   const store = useAnalyticsStore();
   const { data: querySources } = useQuerySources(query);
   const queryClient = useQueryClient();
   const subscriptions = useRef<Array<() => void>>([]);
 
-  const result = useQuery({
+  const result = useAnalyticsQueryWrapper({
     queryKey: ["analytics", "query", query],
-    queryFn: () => engine.execute(query),
+    queryFn: ({ engine }) => engine.execute(query),
     ...options,
   });
 
   useEffect(() => {
-    if (!querySources?.length) {
+    if (!querySources?.length || !store) {
       return;
     }
 
@@ -62,21 +88,18 @@ export function useAnalyticsQuery(
   return result;
 }
 
-export type UseAnalyticsSeriesOptions<Dimension = string | AnalyticsDimension> =
-  Omit<
-    UseQueryOptions<AnalyticsSeries[], Error, AnalyticsSeries<Dimension>[]>,
-    "queryKey" | "queryFn"
-  >;
+export type UseAnalyticsSeriesOptions = Omit<
+  UseQueryOptions<AnalyticsSeries[], Error, AnalyticsSeries[]>,
+  "queryKey" | "queryFn"
+>;
 
-export function useAnalyticsSeries<Dimension = string | AnalyticsDimension>(
+export function useAnalyticsSeries(
   query: AnalyticsSeriesQuery,
-  options?: UseAnalyticsSeriesOptions<Dimension>,
+  options?: UseAnalyticsSeriesOptions,
 ) {
-  const store = useAnalyticsStore();
-
-  return useQuery({
+  return useAnalyticsQueryWrapper({
     queryKey: ["analytics", "series", query],
-    queryFn: () => store.getMatchingSeries(query),
+    queryFn: ({ store }) => store.getMatchingSeries(query),
     ...options,
   });
 }
@@ -91,7 +114,14 @@ export function useAddSeriesValue(options?: UseAddSeriesValueOptions) {
 
   return useMutation({
     mutationKey: ["analytics", "addSeries"],
-    mutationFn: (value: AnalyticsSeriesInput) => store.addSeriesValue(value),
+    mutationFn: (value: AnalyticsSeriesInput) => {
+      if (!store) {
+        throw new Error(
+          "No analytics store available. Use within an AnalyticsProvider.",
+        );
+      }
+      return store.addSeriesValue(value);
+    },
     ...options,
   });
 }
@@ -112,8 +142,14 @@ export function useClearSeriesBySource(
 
   return useMutation({
     mutationKey: ["analytics", "clearSeries"],
-    mutationFn: ({ source, cleanUpDimensions }) =>
-      store.clearSeriesBySource(source, cleanUpDimensions),
+    mutationFn: ({ source, cleanUpDimensions }) => {
+      if (!store) {
+        throw new Error(
+          "No analytics store available. Use within an AnalyticsProvider.",
+        );
+      }
+      return store.clearSeriesBySource(source, cleanUpDimensions);
+    },
     ...options,
   });
 }
@@ -130,7 +166,14 @@ export function useClearEmptyAnalyticsDimensions(
 
   return useMutation({
     mutationKey: ["analytics", "clearEmptyDimensions"],
-    mutationFn: () => store.clearEmptyAnalyticsDimensions(),
+    mutationFn: () => {
+      if (!store) {
+        throw new Error(
+          "No analytics store available. Use within an AnalyticsProvider.",
+        );
+      }
+      return store.clearEmptyAnalyticsDimensions();
+    },
     ...options,
   });
 }
@@ -145,8 +188,14 @@ export function useAddSeriesValues(options?: UseAddSeriesValuesOptions) {
 
   return useMutation({
     mutationKey: ["analytics", "addSeriesValues"],
-    mutationFn: (values: AnalyticsSeriesInput[]) =>
-      store.addSeriesValues(values),
+    mutationFn: (values: AnalyticsSeriesInput[]) => {
+      if (!store) {
+        throw new Error(
+          "No analytics store available. Use within an AnalyticsProvider.",
+        );
+      }
+      return store.addSeriesValues(values);
+    },
     ...options,
   });
 }
@@ -159,40 +208,33 @@ export type UseGetDimensionsOptions<TData> = Omit<
 export function useGetDimensions<TData = any>(
   options?: UseGetDimensionsOptions<TData>,
 ) {
-  const store = useAnalyticsStore();
-
-  return useQuery({
+  return useAnalyticsQueryWrapper({
     queryKey: ["analytics", "dimensions"],
-    queryFn: () => store.getDimensions(),
+    queryFn: ({ store }) => store.getDimensions(),
     ...options,
   });
 }
 
-export type UseMatchingSeriesOptions<Dimension = string | AnalyticsDimension> =
-  Omit<
-    UseQueryOptions<AnalyticsSeries[], Error, AnalyticsSeries<Dimension>[]>,
-    "queryKey" | "queryFn"
-  >;
+export type UseMatchingSeriesOptions = Omit<
+  UseQueryOptions<AnalyticsSeries[], Error, AnalyticsSeries[]>,
+  "queryKey" | "queryFn"
+>;
 
-export function useMatchingSeries<Dimension = string | AnalyticsDimension>(
+export function useMatchingSeries(
   query: AnalyticsSeriesQuery,
-  options?: UseMatchingSeriesOptions<Dimension>,
+  options?: UseMatchingSeriesOptions,
 ) {
-  const store = useAnalyticsStore();
-
-  const result = useQuery({
+  const result = useAnalyticsQueryWrapper({
     queryKey: ["analytics", "matchingSeries", query],
-    queryFn: () => store.getMatchingSeries(query),
-
+    queryFn: ({ store }) => store.getMatchingSeries(query),
     ...options,
   });
 
   return result;
 }
 
-// Add this type near other type definitions
 export type UseQuerySourcesOptions = Omit<
-  UseQueryOptions<AnalyticsPath[]>,
+  UseQueryOptions<AnalyticsPath[] | undefined>,
   "queryKey" | "queryFn"
 >;
 
