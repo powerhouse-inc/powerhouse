@@ -3,9 +3,9 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-    getPackageManagerFromLockfile,
-    getProjectInfo,
-    type ProjectInfo,
+  getPackageManagerFromLockfile,
+  getProjectInfo,
+  type ProjectInfo,
 } from "../../utils.js";
 import { useCommand } from "../use.js";
 

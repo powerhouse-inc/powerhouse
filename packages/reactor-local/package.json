@@ -41,7 +41,7 @@
     "nanoevents": "^9.0.0",
     "sanitize-filename": "^1.6.3",
     "uuid": "^11.0.2",
-    "vite": "^6.2.2"
+    "vite": "^6.3.3"
   },
   "devDependencies": {
     "@powerhousedao/analytics-engine-graphql": "^0.3.0",

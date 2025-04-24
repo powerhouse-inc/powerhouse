@@ -35,7 +35,8 @@
     "@types/uuid": "^10.0.0",
     "playwright": "^1.46.1",
     "react": "^18.3.1",
-    "rollup-plugin-polyfill-node": "^0.13.0"
+    "rollup-plugin-polyfill-node": "^0.13.0",
+    "vitest": "^3.1.2"
   },
   "dependencies": {
     "change-case": "^5.4.4",

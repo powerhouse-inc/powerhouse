@@ -9,7 +9,7 @@ import {
   type LocalReactor,
   type StartServerOptions,
 } from "@powerhousedao/reactor-local";
-import { IProcessor } from "document-drive/processors/types";
+import { type IProcessor } from "document-drive/processors/types";
 import {
   InternalTransmitter,
   type InternalTransmitterUpdate,

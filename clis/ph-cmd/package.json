@@ -31,5 +31,8 @@
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
     "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.1.2"
   }
 }
