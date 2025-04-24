@@ -22,16 +22,15 @@ export function AnalyticsProvider({
   store,
   queryClient = defaultQueryClient,
 }: AnalyticsProviderProps) {
-  // Only initialize if not already initialized
-  const globalAnalytics = getGlobal("analytics");
-  if (!globalAnalytics) {
-    const engine = new AnalyticsQueryEngine(store);
-    setGlobal("analytics", { store, engine });
-  }
-
   useEffect(() => {
-    return () => clearGlobal("analytics");
-  }, [store]);
+    // Only initialize if not already initialized
+    const globalAnalytics = getGlobal("analytics");
+    if (!globalAnalytics) {
+      const engine = new AnalyticsQueryEngine(store);
+      setGlobal("analytics", { store, engine });
+      return () => clearGlobal("analytics");
+    }
+  }, []);
 
   if (queryClient === false) {
     return children;
