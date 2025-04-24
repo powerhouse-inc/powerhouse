@@ -59,13 +59,13 @@ export const ENV_MAP = {
 // create type with the keys of ENV_MAP
 export type Environment = keyof typeof ENV_MAP;
 
-export const updatePackageJson = (
+export const updatePackageJson = async (
   env: Environment,
   localPath?: string,
   packageManager?: PackageManager,
   debug?: boolean,
 ) => {
-  const projectInfo = getProjectInfo();
+  const projectInfo = await getProjectInfo();
   const pkgManager =
     packageManager || getPackageManagerFromLockfile(projectInfo.path);
 
@@ -143,7 +143,7 @@ export const use: CommandActionType<
       packageManager?: string;
     },
   ]
-> = (environment, localPath, options) => {
+> = async (environment, localPath, options) => {
   if (
     !environment ||
     (!options.force &&
@@ -169,7 +169,12 @@ export const use: CommandActionType<
     console.log(">>> options", options);
   }
 
-  updatePackageJson(env, localPath, packageManager as PackageManager, debug);
+  await updatePackageJson(
+    env,
+    localPath,
+    packageManager as PackageManager,
+    debug,
+  );
 };
 
 export function useCommand(program: Command) {

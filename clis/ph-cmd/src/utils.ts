@@ -1,3 +1,4 @@
+import { createProject, parseVersion } from "@powerhousedao/codegen";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { homedir } from "node:os";
@@ -137,7 +138,7 @@ export function getPackageManagerFromLockfile(dir: string): PackageManager {
   return "npm";
 }
 
-export function getProjectInfo(debug?: boolean): ProjectInfo {
+export async function getProjectInfo(debug?: boolean): Promise<ProjectInfo> {
   const currentPath = process.cwd();
 
   if (debug) {
@@ -147,6 +148,8 @@ export function getProjectInfo(debug?: boolean): ProjectInfo {
   const projectPath = findNodeProjectRoot(currentPath, isPowerhouseProject);
 
   if (!projectPath) {
+    await createGlobalProject();
+
     return {
       isGlobal: true,
       path: POWERHOUSE_GLOBAL_DIR,
@@ -248,3 +251,44 @@ export function installDependency(
     ...commandOptions,
   });
 }
+
+export type GlobalProjectOptions = {
+  project?: string;
+  interactive?: boolean;
+  version?: string;
+  dev?: boolean;
+  staging?: boolean;
+  packageManager?: string;
+};
+
+export const createGlobalProject = async (
+  projectName?: string,
+  options: GlobalProjectOptions = {},
+) => {
+  // check if the global project already exists
+  const globalProjectExists = fs.existsSync(POWERHOUSE_GLOBAL_DIR);
+
+  if (globalProjectExists) {
+    console.log(`📦 Using global project: ${POWERHOUSE_GLOBAL_DIR}`);
+    return;
+  }
+
+  console.log("📦 Initializing global project...");
+  process.chdir(HOME_DIR);
+
+  try {
+    await createProject({
+      name: PH_GLOBAL_PROJECT_NAME,
+      interactive: false,
+      version: parseVersion(options),
+      packageManager:
+        options.packageManager ?? getPackageManagerFromPath(PH_BIN_PATH),
+    });
+
+    console.log(
+      `🚀 Global project initialized successfully: ${POWERHOUSE_GLOBAL_DIR}`,
+    );
+  } catch (error) {
+    console.error("❌ Failed to initialize the global project", error);
+  }
+};

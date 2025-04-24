@@ -96,14 +96,14 @@ export const update: CommandActionType<
       packageManager?: string;
     },
   ]
-> = (options) => {
+> = async (options) => {
   const { force, packageManager, debug } = options;
 
   if (debug) {
     console.log(">>> options", options);
   }
 
-  const projectInfo = getProjectInfo();
+  const projectInfo = await getProjectInfo();
   const pkgManagerName = (packageManager ||
     getPackageManagerFromLockfile(projectInfo.path)) as PackageManager;
 
@@ -128,7 +128,7 @@ export const update: CommandActionType<
     }
 
     const env = force as Environment;
-    updatePackageJson(env, undefined, pkgManagerName, debug);
+    await updatePackageJson(env, undefined, pkgManagerName, debug);
     return;
   }
 
