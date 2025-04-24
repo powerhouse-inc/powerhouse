@@ -25,7 +25,7 @@ import {
 } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
-import type { IDocumentStorage, IDriveStorage } from "../types.js";
+import type { IDocumentStorage, IDriveOperationStorage } from "../types.js";
 import { type Prisma, type PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
@@ -95,7 +95,7 @@ type ExtendedPrismaClient = ReturnType<
   typeof getRetryTransactionsClient<PrismaClient>
 >;
 
-export class PrismaStorage implements IDriveStorage, IDocumentStorage {
+export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   private logger = childLogger(["PrismaStorage"]);
 
   private db: ExtendedPrismaClient;
@@ -127,7 +127,8 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
   async create(documentId: string, document: PHDocument) {
     const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
+      (document.initialState.state.global as { slug?: string })?.slug ??
+      documentId;
 
     try {
       await this.db.document.create({
@@ -143,7 +144,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
         },
       });
     } catch (e) {
-      if ((e as any).code === "P2002") {
+      if ((e as { code?: string }).code === "P2002") {
         throw new DocumentAlreadyExistsError(documentId);
       }
 
@@ -308,7 +309,7 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
 
   async findByType(
     documentModelType: string,
-    limit: number = 100,
+    limit = 100,
     cursor?: string,
   ): Promise<{
     documents: string[];
@@ -358,13 +359,43 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
   }
 
   async delete(documentId: string): Promise<boolean> {
+    // find all children that are only children of this document
+    try {
+      // Find documents that are only associated with this drive (have no other parents)
+      const documentsToDelete = await this.db.document.findMany({
+        where: {
+          driveDocuments: {
+            some: {
+              driveId: documentId,
+            },
+            every: {
+              driveId: documentId,
+            },
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      // Delete these documents that only belong to this drive
+      for (const doc of documentsToDelete) {
+        await this.delete(doc.id);
+      }
+    } catch (e: unknown) {
+      this.logger.error(
+        "Error deleting child documents that only belong to this document",
+        e,
+      );
+    }
+
     try {
       // delete out of drives
       await this.db.drive.deleteMany({
         where: {
           driveDocuments: {
-            none: {
-              documentId,
+            every: {
+              driveId: documentId,
             },
           },
         },
@@ -467,6 +498,21 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     });
 
     return docs.map((doc) => doc.id);
+  }
+
+  async getParents(childId: string): Promise<string[]> {
+    // Query the DriveDocument table to find all drives that have the given document as a child
+    const driveDocuments = await this.db.driveDocument.findMany({
+      where: {
+        documentId: childId,
+      },
+      select: {
+        driveId: true,
+      },
+    });
+
+    // Extract the drive IDs from the query result
+    return driveDocuments.map((doc) => doc.driveId);
   }
 
   ////////////////////////////////
@@ -637,33 +683,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     header: DocumentHeader,
   ): Promise<void> {
     return this._addDocumentOperations(this.db, drive, id, operations, header);
-  }
-
-  async deleteDrive(id: string) {
-    // delete drive
-    await this.db.drive.delete({
-      where: {
-        id,
-      },
-    });
-
-    // delete drive document (will cascade)
-    await this.db.document.delete({
-      where: {
-        id,
-      },
-    });
-
-    // deletes all documents that only belong to this drive
-    await this.db.document.deleteMany({
-      where: {
-        driveDocuments: {
-          none: {
-            driveId: id,
-          },
-        },
-      },
-    });
   }
 
   async getOperationResultingState(

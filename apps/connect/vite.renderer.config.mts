@@ -40,7 +40,12 @@ const staticInputs = staticFiles.reduce(
         }),
     {},
 );
-const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
+const externalAndExclude = [
+    'vite',
+    'vite-envs',
+    'node:crypto',
+    '@electric-sql/pglite',
+];
 
 export default defineConfig(({ mode }) => {
     const outDir = path.resolve(__dirname, './dist');
@@ -80,7 +85,7 @@ export default defineConfig(({ mode }) => {
             globals: {
                 Buffer: false,
                 global: false,
-                process: false,
+                process: true,
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
@@ -149,7 +154,7 @@ export default defineConfig(({ mode }) => {
         plugins,
         build: {
             minify: false,
-            sourcemap: false,
+            sourcemap: true,
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
@@ -167,6 +172,21 @@ export default defineConfig(({ mode }) => {
         optimizeDeps: {
             include: ['did-key-creator'],
             exclude: externalAndExclude,
+        },
+        resolve: {
+            alias: {
+                ...(mode !== 'development' && {
+                    'vite-plugin-node-polyfills/shims/process': path.resolve(
+                        __dirname,
+                        'node_modules',
+                        'vite-plugin-node-polyfills',
+                        'shims',
+                        'process',
+                        'dist',
+                        'index.cjs',
+                    ),
+                }),
+            },
         },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),

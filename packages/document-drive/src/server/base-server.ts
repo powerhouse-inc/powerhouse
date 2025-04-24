@@ -13,7 +13,10 @@ import {
   isOperationJob,
 } from "#queue/types";
 import { ReadModeServer } from "#read-mode/server";
-import { type IDocumentStorage, type IDriveStorage } from "#storage/types";
+import {
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "#storage/types";
 import {
   DefaultDrivesManager,
   type IDefaultDrivesManager,
@@ -99,7 +102,7 @@ export class BaseDocumentDriveServer
 
   // external dependencies
   private documentModelModules: DocumentModelModule[];
-  private legacyStorage: IDriveStorage;
+  private legacyStorage: IDriveOperationStorage;
   private documentStorage: IDocumentStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
@@ -160,7 +163,7 @@ export class BaseDocumentDriveServer
 
   constructor(
     documentModelModules: DocumentModelModule[],
-    storage: IDriveStorage,
+    storage: IDriveOperationStorage,
     documentStorage: IDocumentStorage,
     cache: ICache,
     queueManager: IQueueManager,
@@ -672,8 +675,10 @@ export class BaseDocumentDriveServer
       this.stopSyncRemoteDrive(driveId),
       this.listenerManager.removeDrive(driveId),
       this.cache.deleteDrive(driveId),
-      this.legacyStorage.deleteDrive(driveId),
+      this.documentStorage.delete(driveId),
     ]);
+
+    this.eventEmitter.emit("driveDeleted", driveId);
 
     result.forEach((r) => {
       if (r.status === "rejected") {
@@ -1613,14 +1618,6 @@ export class BaseDocumentDriveServer
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
     return this.addDriveOperations(driveId, [operation], options);
-  }
-
-  async clearStorage() {
-    for (const drive of await this.getDrives()) {
-      await this.deleteDrive(drive);
-    }
-
-    await this.legacyStorage.clearStorage?.();
   }
 
   private async _addDriveOperations(

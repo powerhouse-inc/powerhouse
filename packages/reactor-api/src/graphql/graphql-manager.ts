@@ -256,6 +256,7 @@ export class GraphQLManager {
 
       const server = new ApolloServer({
         gateway,
+        introspection: true,
         plugins: [
           ApolloServerPluginInlineTraceDisabled(),
           ApolloServerPluginLandingPageLocalDefault(),

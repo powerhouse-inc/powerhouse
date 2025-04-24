@@ -1,7 +1,7 @@
 import {
-  ProcessorRecord,
   type IProcessorManager,
   type ProcessorFactory,
+  type ProcessorRecord,
 } from "document-drive/processors/types";
 import { InternalTransmitter } from "document-drive/server/listener/transmitter/internal";
 import {
@@ -47,7 +47,9 @@ export class ProcessorManager implements IProcessorManager {
     // remove all listeners for this identifier
     const listeners = this.identifierToListeners.get(identifier) ?? [];
     for (const listener of listeners) {
-      this.listeners.removeListener(listener.driveId, listener.listenerId);
+      await this.listeners
+        .removeListener(listener.driveId, listener.listenerId)
+        .catch(this.logger.error);
 
       if (listener.transmitter?.disconnect) {
         await listener.transmitter.disconnect();
@@ -77,7 +79,7 @@ export class ProcessorManager implements IProcessorManager {
     identifier: string,
     factory: ProcessorFactory,
   ) {
-    let listeners = this.identifierToListeners.get(identifier) ?? [];
+    let listeners = this.identifierToListeners.get(identifier);
     if (!listeners) {
       listeners = [];
       this.identifierToListeners.set(identifier, listeners);
@@ -89,7 +91,6 @@ export class ProcessorManager implements IProcessorManager {
       processors = factory(driveId);
     } catch (e) {
       this.logger.error(`Error creating processors for drive ${driveId}:`, e);
-
       return;
     }
 
@@ -105,7 +106,7 @@ export class ProcessorManager implements IProcessorManager {
         transmitter: new InternalTransmitter(this.drive, processor),
       };
 
-      this.listeners.setListener(driveId, listener);
+      await this.listeners.setListener(driveId, listener);
 
       listeners.push(listener);
     }

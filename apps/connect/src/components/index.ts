@@ -1,5 +1,4 @@
 export * from './analytics.js';
-export * from './app-loader.js';
 export * from './app.js';
 export * from './button.js';
 export * from './content/index.js';
@@ -18,7 +17,6 @@ export * from './login.js';
 export * from './modal/index.js';
 export * from './ph-logo.js';
 export * from './root.js';
-export * from './router.js';
 export * from './search-bar.js';
 export * from './sidebar.js';
 export * from './toast/index.js';

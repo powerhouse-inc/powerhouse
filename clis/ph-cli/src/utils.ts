@@ -131,13 +131,37 @@ export function getPackageManagerFromPath(dir: string): PackageManager {
   return "npm";
 }
 
+export function updatePackagesArray(
+  currentPackages: PowerhouseConfig["packages"] = [],
+  dependencies: string[],
+  task: "install" | "uninstall" = "install",
+): PowerhouseConfig["packages"] {
+  const isInstall = task === "install";
+  const mappedPackages = dependencies.map((dep) => ({
+    packageName: dep,
+  }));
+
+  if (isInstall) {
+    return [
+      ...currentPackages.filter(
+        (pkg) => !dependencies.includes(pkg.packageName),
+      ),
+      ...mappedPackages,
+    ];
+  }
+
+  return currentPackages.filter(
+    (pkg) => !dependencies.includes(pkg.packageName),
+  );
+}
+
+// Modify updateConfigFile to use the new function
 export function updateConfigFile(
   dependencies: string[],
   projectPath: string,
   task: "install" | "uninstall" = "install",
 ) {
   const configPath = path.join(projectPath, POWERHOUSE_CONFIG_FILE);
-  const isInstall = task === "install";
 
   if (!fs.existsSync(configPath)) {
     throw new Error(
@@ -149,28 +173,9 @@ export function updateConfigFile(
     fs.readFileSync(configPath, "utf-8"),
   ) as PowerhouseConfig;
 
-  const mappedPackages: PowerhouseConfig["packages"] = dependencies.map(
-    (dep) => ({
-      packageName: dep,
-    }),
-  );
-
   const updatedConfig: PowerhouseConfig = {
     ...config,
-    packages: isInstall
-      ? [
-          // replace existing packages if they were already listed on the config file
-          ...(config.packages?.filter(
-            (packages) =>
-              !config.packages?.find(
-                (p) => p.packageName === packages.packageName,
-              ),
-          ) || []),
-          ...mappedPackages,
-        ]
-      : [...(config.packages || [])].filter(
-          (pkg) => !dependencies.includes(pkg.packageName),
-        ),
+    packages: updatePackagesArray(config.packages, dependencies, task),
   };
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));

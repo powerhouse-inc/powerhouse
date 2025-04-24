@@ -1,13 +1,18 @@
-import { SubgraphClass } from "#graphql/index.js";
-import { ProcessorFactory } from "document-drive/processors/types";
-import { DocumentModelModule } from "document-model";
+import { type SubgraphClass } from "#graphql/index.js";
+import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { type ProcessorFactory } from "document-drive/processors/types";
+import { type DocumentModelModule } from "document-model";
+
+export interface IProcessorHostModule {
+  analyticsStore: IAnalyticsStore;
+}
 
 export interface IPackageLoader {
   loadDocumentModels(identifier: string): Promise<DocumentModelModule[]>;
   loadSubgraphs(identifier: string): Promise<SubgraphClass[]>;
   loadProcessors(
     identifier: string,
-  ): Promise<(module: any) => ProcessorFactory>;
+  ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null>;
 }
 
 export interface IPackageManager {
@@ -32,5 +37,8 @@ export interface PowerhouseConfig {
 export type PackageManagerResult = {
   documentModels: DocumentModelModule[];
   subgraphs: Map<string, SubgraphClass[]>;
-  processors: Map<string, ((module: any) => ProcessorFactory)[]>;
+  processors: Map<
+    string,
+    ((module: IProcessorHostModule) => ProcessorFactory)[]
+  >;
 };

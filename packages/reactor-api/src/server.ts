@@ -20,7 +20,10 @@ import {
   type IDocumentDriveServer,
 } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
-import { type IProcessorManager } from "document-drive/processors/types";
+import {
+  type IProcessorManager,
+  type ProcessorFactory,
+} from "document-drive/processors/types";
 import express, { type Express } from "express";
 import { type Knex } from "knex";
 import fs from "node:fs";
@@ -107,7 +110,7 @@ async function setupGraphQLManager(
 
   await graphqlManager.init();
 
-  for (const [supergraph, collection] of subgraphs.entries()) {
+  for (const [, collection] of subgraphs.entries()) {
     for (const subgraph of collection) {
       await graphqlManager.registerSubgraph(subgraph, "graphql");
     }
@@ -127,21 +130,21 @@ function setupEventListeners(
   processorManager: IProcessorManager,
   module: { db: Knex; analyticsStore: IAnalyticsStore },
 ): void {
-  pkgManager.onDocumentModelsChange((documentModels) => {
+  pkgManager.onDocumentModelsChange(async (documentModels) => {
     const uniqueModels = getUniqueDocumentModels(
       Object.values(documentModels).flat(),
     );
     reactor.setDocumentModelModules(uniqueModels);
-    graphqlManager.updateRouter();
+    await graphqlManager.updateRouter();
   });
 
-  pkgManager.onSubgraphsChange((packagedSubgraphs) => {
-    for (const [supergraph, subgraphs] of packagedSubgraphs) {
+  pkgManager.onSubgraphsChange(async (packagedSubgraphs) => {
+    for (const [, subgraphs] of packagedSubgraphs) {
       for (const subgraph of subgraphs) {
-        graphqlManager.registerSubgraph(subgraph, "graphql");
+        await graphqlManager.registerSubgraph(subgraph, "graphql");
       }
     }
-    graphqlManager.updateRouter();
+    await graphqlManager.updateRouter();
   });
 
   pkgManager.onProcessorsChange(async (processors) => {
@@ -254,12 +257,21 @@ export async function startAPI(
           e,
         );
 
-        return () => [];
+        return null;
       }
     });
 
+    const validFactories = factories.filter(
+      (factory): factory is ProcessorFactory =>
+        factory !== null && typeof factory === "function",
+    );
+
+    if (!validFactories.length) {
+      continue;
+    }
+
     await processorManager.registerFactory(packageName, (driveId: string) =>
-      factories
+      validFactories
         .map((factory) => {
           try {
             return factory(driveId);

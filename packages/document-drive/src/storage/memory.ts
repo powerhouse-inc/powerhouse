@@ -12,13 +12,19 @@ import {
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import { type IDocumentStorage, type IDriveStorage } from "./types.js";
+import {
+  type IDocumentAdminStorage,
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "./types.js";
 
 type DriveManifest = {
   documentIds: Set<string>;
 };
 
-export class MemoryStorage implements IDriveStorage, IDocumentStorage {
+export class MemoryStorage
+  implements IDriveOperationStorage, IDocumentStorage, IDocumentAdminStorage
+{
   private documents: Record<string, PHDocument>;
   private driveManifests: Record<string, DriveManifest>;
   private slugToDocumentId: Record<string, string>;
@@ -44,7 +50,8 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     }
 
     const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
+      (document.initialState.state.global as { slug?: string })?.slug ??
+      documentId;
 
     // check if the document already exists by slug
     if (slug && this.slugToDocumentId[slug]) {
@@ -93,7 +100,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
 
   async findByType(
     documentModelType: string,
-    limit: number = 100,
+    limit = 100,
     cursor?: string,
   ): Promise<{
     documents: string[];
@@ -153,31 +160,27 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     // Remove from slug lookup if it has a slug
     const document = this.documents[documentId];
     if (document) {
-      const slug = (document.initialState.state.global as any)?.slug;
+      const slug = (document.initialState.state.global as { slug?: string })
+        ?.slug;
       if (slug && this.slugToDocumentId[slug] === documentId) {
         delete this.slugToDocumentId[slug];
       }
     }
 
-    // delete the document from all other drive manifests
-    let cursor: string | undefined;
-    do {
-      const { documents, nextCursor } = await this.findByType(
-        "powerhouse/document-drive",
-        100,
-        cursor,
-      );
+    // remove from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
+      await this.removeChild(parent, documentId);
+    }
 
-      for (const driveId of documents) {
-        if (driveId === documentId) {
-          continue;
-        }
-
-        await this.removeChild(driveId, documentId);
+    // check children: any children that are only children of this document should be deleted
+    const children = await this.getChildren(documentId);
+    for (const child of children) {
+      const childParents = await this.getParents(child);
+      if (childParents.length === 1) {
+        await this.delete(child);
       }
-
-      cursor = nextCursor;
-    } while (cursor);
+    }
 
     // delete any manifest for this document
     delete this.driveManifests[documentId];
@@ -228,15 +231,32 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return [...manifest.documentIds];
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    const parents: string[] = [];
+
+    // Scan through all drive manifests to find ones that contain the childId
+    for (const [driveId, manifest] of Object.entries(this.driveManifests)) {
+      if (manifest.documentIds.has(childId)) {
+        parents.push(driveId);
+      }
+    }
+
+    return parents;
+  }
+
   ////////////////////////////////
-  // IDriveStorage
+  // IDocumentAdminStorage
   ////////////////////////////////
 
-  async clearStorage(): Promise<void> {
+  async clear(): Promise<void> {
     this.documents = {};
     this.driveManifests = {};
     this.slugToDocumentId = {};
   }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
 
   async addDocumentOperations(
     drive: string,
@@ -274,52 +294,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
       ...header,
       operations: mergedOperations,
     };
-  }
-
-  async deleteDrive(id: string) {
-    // Get all documents in this drive
-    const manifest = this.getManifest(id);
-
-    // delete each document that belongs only to this drive
-    let cursor: string | undefined;
-    do {
-      const { documents: drives, nextCursor } = await this.findByType(
-        "powerhouse/document-drive",
-        100,
-        cursor,
-      );
-      await Promise.all(
-        [...manifest.documentIds].map((docId) => {
-          for (const driveId of drives) {
-            if (driveId === id) {
-              continue;
-            }
-
-            const manifest = this.getManifest(driveId);
-            if (manifest.documentIds.has(docId)) {
-              return;
-            }
-          }
-
-          // Remove from slug lookup if needed
-          const document = this.documents[docId];
-          if (document) {
-            const slug = (document.initialState.state.global as any)?.slug;
-            if (slug && this.slugToDocumentId[slug] === docId) {
-              delete this.slugToDocumentId[slug];
-            }
-          }
-
-          delete this.documents[docId];
-        }),
-      );
-
-      cursor = nextCursor;
-    } while (cursor);
-
-    // Delete the drive manifest and the drive itself
-    delete this.driveManifests[id];
-    delete this.documents[id];
   }
 
   async getSynchronizationUnitsRevision(

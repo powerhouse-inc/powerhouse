@@ -82,7 +82,7 @@ function buildIndex(
   fs.writeFileSync(
     path.join(appPath, "index.ts"),
     `import type { Manifest } from "document-model";
-import manifestJson from "./powerhouse.manifest.json" assert { type: "json" };
+import manifestJson from "./powerhouse.manifest.json" with { type: "json" };
 import * as documentModelsExports from '${documentModelsDir}/index.js';
 import * as editorsExports from '${editorsDir}/index.js';
 

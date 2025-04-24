@@ -11,17 +11,17 @@ import {
   type UiNode,
 } from "@powerhousedao/design-system";
 import { useCallback, useState, useRef, useEffect } from "react";
-import type { FileNode, Node } from "document-drive";
+import type { FileNode, GetDocumentOptions, Node } from "document-drive";
 import { FileItemsGrid } from "./FileItemsGrid.js";
 import { FolderItemsGrid } from "./FolderItemsGrid.js";
 import { FolderTree } from "./FolderTree.js";
 import { useTransformedNodes } from "../hooks/useTransformedNodes.js";
 import { useSelectedFolderChildren } from "../hooks/useSelectedFolderChildren.js";
 import { EditorContainer } from "./EditorContainer.js";
-import type { EditorContext, DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { CreateDocumentModal } from "@powerhousedao/design-system";
 import { CreateDocument } from "./CreateDocument.js";
-import { useDriveContext } from "@powerhousedao/reactor-browser";
+import { type DriveEditorContext, useDriveContext } from "@powerhousedao/reactor-browser";
 
 interface DriveExplorerProps {
   driveId: string;
@@ -30,7 +30,7 @@ interface DriveExplorerProps {
   onDeleteNode: (nodeId: string) => void;
   renameNode: (nodeId: string, name: string) => void;
   onCopyNode: (nodeId: string, targetName: string, parentId?: string) => void;
-  context: EditorContext;
+  context: DriveEditorContext;
 }
 
 export function DriveExplorer({
@@ -42,6 +42,8 @@ export function DriveExplorer({
   onCopyNode,
   context,
 }: DriveExplorerProps) {
+  const { getDocumentRevision } = context;
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [activeDocumentId, setActiveDocumentId] = useState<
     string | undefined
@@ -109,6 +111,14 @@ export function DriveExplorer({
     []
   );
 
+  const onGetDocumentRevision = useCallback(
+    (options?: GetDocumentOptions) => {
+      if (!activeDocumentId) return;
+      return getDocumentRevision?.(activeDocumentId, options);
+    },
+    [getDocumentRevision, activeDocumentId],
+  );
+
   const filteredDocumentModels = documentModels;
 
   // Transform nodes using the custom hook
@@ -150,7 +160,10 @@ export function DriveExplorer({
       <div className="flex-1 p-4 overflow-y-auto">
         {activeDocument ? (
           <EditorContainer
-            context={context}
+            context={{
+              ...context,
+              getDocumentRevision: onGetDocumentRevision,
+            }}
             documentId={activeDocumentId!}
             documentType={activeDocument.documentType}
             driveId={driveId}

@@ -12,7 +12,7 @@ import { generateId, hashKey } from "document-model";
 
 const DEFAULT_DRIVE_ID = "powerhouse";
 
-export const getResolvers = (subgraph: Subgraph) => {
+export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
   const reactor = subgraph.reactor;
 
   return ({

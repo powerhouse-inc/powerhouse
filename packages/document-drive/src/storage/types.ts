@@ -7,6 +7,9 @@ import type {
   PHDocument,
 } from "document-model";
 
+/**
+ * Describes the storage interface for documents.
+ */
 export interface IDocumentStorage {
   /**
    * Returns true if and only if the document exists.
@@ -76,7 +79,8 @@ export interface IDocumentStorage {
   }>;
 
   /**
-   * Deletes the document with the given id.
+   * Deletes the document with the given id. Also deletes any child documents
+   * that are only children of this document.
    *
    * @param documentId - The id of the document to delete.
    *
@@ -113,10 +117,28 @@ export interface IDocumentStorage {
    */
   getChildren(parentId: string): Promise<string[]>;
 
-  //getParent(childId: string): Promise<string | undefined>;
+  /**
+   * Returns all parent documents of the child document with the given id.
+   *
+   * @param childId - The id of the child document.
+   */
+  getParents(childId: string): Promise<string[]>;
 }
 
-export interface IStorage {
+/**
+ * Storage interface that allows for deletion.
+ */
+export interface IDocumentAdminStorage extends IDocumentStorage {
+  /**
+   * Clears the storage.
+   */
+  clear(): Promise<void>;
+}
+
+/**
+ * Describes the storage interface for document operations.
+ */
+export interface IDocumentOperationStorage {
   addDocumentOperations<TDocument extends PHDocument>(
     drive: string,
     id: string,
@@ -149,9 +171,10 @@ export interface IStorage {
   >;
 }
 
-export interface IDriveStorage extends IStorage {
-  deleteDrive(id: string): Promise<void>;
-  clearStorage?(): Promise<void>;
+/**
+ * Describes the storage interface for drive operations.
+ */
+export interface IDriveOperationStorage extends IDocumentOperationStorage {
   addDriveOperations(
     id: string,
     operations: Operation[],

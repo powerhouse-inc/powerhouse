@@ -16,11 +16,13 @@ export const module: DriveEditorModule<DocumentDriveDocument> = {
 export default module;`;
 
 export const EXPECTED_EDITOR_CONTENT = `import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
+import { AnalyticsProvider } from '@powerhousedao/reactor-browser/analytics/context';
 import { DriveContextProvider } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import { type DocumentDriveDocument, addFolder, deleteNode, updateNode, generateNodesCopy, copyNode } from "document-drive";
 import { WagmiContext } from "@powerhousedao/design-system";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { useCallback } from "react";
+import { hashKey } from "document-model";
 
 export type IProps = DriveEditorProps<DocumentDriveDocument>;
 
@@ -80,10 +82,18 @@ export function BaseEditor(props: IProps) {
 }
 
 export default function Editor(props: IProps) {
+  const baseEditor = props.context.analyticsStore ? (
+    <AnalyticsProvider store={props.context.analyticsStore}>
+      <BaseEditor {...props} />
+    </AnalyticsProvider>
+  ) : (
+    <BaseEditor {...props} />
+  );
+
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>
-        <BaseEditor {...props} />
+        {baseEditor}
       </WagmiContext>
     </DriveContextProvider>
   );

@@ -1,4 +1,7 @@
+import { childLogger } from "document-drive";
 import { execSync } from "node:child_process";
+
+const logger = childLogger(["reactor-api", "packages/util"]);
 
 export const installPackages = async (packages: string[]) => {
   for (const packageName of packages) {
@@ -25,6 +28,15 @@ export async function loadDependency(
     // vite-loader for this purpose
     return await import(/* @vite-ignore */ fullPath);
   } catch (e) {
+    if (
+      e instanceof Error &&
+      "code" in e &&
+      !["ERR_PACKAGE_PATH_NOT_EXPORTED", "ERR_MODULE_NOT_FOUND"].includes(
+        e.code as string,
+      )
+    ) {
+      logger.debug(e);
+    }
     return null;
   }
 }

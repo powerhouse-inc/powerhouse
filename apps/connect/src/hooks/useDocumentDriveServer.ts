@@ -1,4 +1,5 @@
 import {
+    useDocumentAdminStorage,
     useGetDocumentModelModule,
     useUnwrappedReactor,
     useUser,
@@ -48,7 +49,10 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { type Listener } from 'document-drive/server/types';
+import {
+    type GetDocumentOptions,
+    type Listener,
+} from 'document-drive/server/types';
 import { type Operation, type PHDocument, hashKey } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
@@ -75,6 +79,7 @@ export function useDocumentDriveServer() {
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const reactor = useUnwrappedReactor();
+    const storage = useDocumentAdminStorage();
 
     const getDocumentModelModule = useGetDocumentModelModule();
 
@@ -82,11 +87,11 @@ export function useDocumentDriveServer() {
         useDocumentDrives();
 
     const openFile = useCallback(
-        async (drive: string, id: string) => {
+        async (drive: string, id: string, options?: GetDocumentOptions) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
-            const document = await reactor.getDocument(drive, id);
+            const document = await reactor.getDocument(drive, id, options);
             if (!document) {
                 throw new Error(
                     `There was an error opening file with id ${id} on drive ${drive}`,
@@ -683,12 +688,14 @@ export function useDocumentDriveServer() {
     );
 
     const clearStorage = useCallback(async () => {
+        // reactor may have not loaded yet
         if (!reactor) {
             return;
         }
-        await reactor.clearStorage();
+
+        await storage.clear();
         await refreshDocumentDrives();
-    }, [refreshDocumentDrives, reactor]);
+    }, [refreshDocumentDrives, reactor, storage]);
 
     const handleRemoveTrigger = useCallback(
         async (driveId: string, triggerId: string) => {
