@@ -1,22 +1,23 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  forwardRef,
   useCallback,
   useEffect,
-  useRef,
-  forwardRef,
+  useId,
   useImperativeHandle,
+  useRef,
 } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { type FieldValues, useForm } from "react-hook-form";
 import { z } from "zod";
 import { createNameSchema } from "../schemas/inputs.js";
 import { compareStringsWithoutWhitespace } from "../utils/helpers.js";
 import {
+  Form,
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
-  Form,
 } from "./form.js";
 import { type TextareaHandle, Textarea } from "./text-area.js";
 
@@ -60,7 +61,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
     ref,
   ) => {
     const textareaRef = useRef<TextareaHandle | null>(null);
-
+    const id = useId();
     useEffect(() => {
       if (focusOnMount && textareaRef.current) {
         textareaRef.current.focus();
@@ -71,9 +72,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
       [name]: createNameSchema({ required, allowEmpty, unique }),
     });
 
-    type FieldValues = z.infer<typeof fieldSchema>;
-
-    const form = useForm<FieldValues>({
+    const form = useForm({
       resolver: zodResolver(fieldSchema),
       defaultValues: {
         [name]: value ?? "",
@@ -82,7 +81,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
 
     const handleSubmit = useCallback(
       (values: FieldValues) => {
-        const newValue = values[name as keyof FieldValues];
+        const newValue = values[name] as string | undefined;
         if (newValue === undefined || value === newValue) return;
         onSubmit(newValue);
         if (shouldReset) form.reset({ [name]: "" });
@@ -153,7 +152,8 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
               <FormControl>
                 <Textarea
                   {...field}
-                  id={name}
+                  id={id}
+                  name={name}
                   ref={(node) => {
                     if (node) {
                       field.ref(node.element);
