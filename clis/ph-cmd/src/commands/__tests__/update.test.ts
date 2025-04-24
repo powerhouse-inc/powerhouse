@@ -45,7 +45,7 @@ describe("updateCommand", () => {
 
     // Mock utils functions
     vi.mocked(getPackageManagerFromLockfile).mockReturnValue("pnpm");
-    vi.mocked(getProjectInfo).mockReturnValue({
+    vi.mocked(getProjectInfo).mockResolvedValue({
       path: "/test/project",
     } as ProjectInfo);
     vi.mocked(findContainerDirectory).mockReturnValue(
