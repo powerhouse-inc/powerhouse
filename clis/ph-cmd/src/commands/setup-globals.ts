@@ -1,14 +1,6 @@
-import { createProject, parseVersion } from "@powerhousedao/codegen";
 import { type Command } from "commander";
-import fs from "node:fs";
 import { type CommandActionType } from "../types.js";
-import {
-  getPackageManagerFromPath,
-  HOME_DIR,
-  PH_BIN_PATH,
-  PH_GLOBAL_PROJECT_NAME,
-  POWERHOUSE_GLOBAL_DIR,
-} from "../utils.js";
+import { createGlobalProject } from "../utils.js";
 
 export const setupGlobals: CommandActionType<
   [
@@ -23,34 +15,7 @@ export const setupGlobals: CommandActionType<
     },
   ]
 > = async (projectName, options) => {
-  // check if the global project already exists
-  const globalProjectExists = fs.existsSync(POWERHOUSE_GLOBAL_DIR);
-
-  if (globalProjectExists) {
-    console.log(
-      `📦 Global project already exists at: ${POWERHOUSE_GLOBAL_DIR}`,
-    );
-    return;
-  }
-
-  console.log("📦 Initializing global project...");
-  process.chdir(HOME_DIR);
-
-  try {
-    await createProject({
-      name: PH_GLOBAL_PROJECT_NAME,
-      interactive: false,
-      version: parseVersion(options),
-      packageManager:
-        options.packageManager ?? getPackageManagerFromPath(PH_BIN_PATH),
-    });
-
-    console.log(
-      `🚀 Global project initialized successfully: ${POWERHOUSE_GLOBAL_DIR}`,
-    );
-  } catch (error) {
-    console.error("❌ Failed to initialize the global project", error);
-  }
+  await createGlobalProject(projectName, options);
 };
 
 export function setupGlobalsCommand(program: Command) {

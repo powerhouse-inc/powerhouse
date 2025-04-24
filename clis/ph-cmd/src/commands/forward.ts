@@ -12,7 +12,7 @@ type FSError = {
   code: string;
 };
 
-export const forwardCommand = (
+export const forwardCommand = async (
   args: string,
   options: ForwardPHCommandOptions,
 ) => {
@@ -20,7 +20,7 @@ export const forwardCommand = (
     console.log(">>> command arguments:", { options });
   }
 
-  const projectInfo = getProjectInfo(options.debug);
+  const projectInfo = await getProjectInfo(options.debug);
 
   if (options.debug) {
     console.log("\n>>> projectInfo:", projectInfo);
