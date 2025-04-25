@@ -9,6 +9,7 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   packageManagers,
+  withCustomHelp,
   type PackageManager,
 } from "../utils/index.js";
 import {
@@ -89,15 +90,14 @@ const getInstalledDependencies = (projectPath: string) => {
   return installedDeps;
 };
 
-export const update: CommandActionType<
-  [
-    {
-      force?: string;
-      debug?: boolean;
-      packageManager?: string;
-    },
-  ]
-> = async (options) => {
+// Extract the type parameters for reuse
+export type UpdateOptions = {
+  force?: string;
+  debug?: boolean;
+  packageManager?: string;
+};
+
+export const update: CommandActionType<[UpdateOptions]> = async (options) => {
   const { force, packageManager, debug } = options;
 
   if (debug) {
@@ -159,8 +159,8 @@ export const update: CommandActionType<
   });
 };
 
-export function updateCommand(program: Command) {
-  program
+export function updateCommand(program: Command): Command {
+  const updateCmd = program
     .command("update")
     .alias("up")
     .description(
@@ -174,7 +174,8 @@ export function updateCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
-    .option("--debug", "Show additional logs")
-    .addHelpText("after", updateHelp)
-    .action(update);
+    .option("--debug", "Show additional logs");
+
+  // Use withCustomHelp instead of withHelpAction and addHelpText
+  return withCustomHelp<[UpdateOptions]>(updateCmd, update, updateHelp);
 }

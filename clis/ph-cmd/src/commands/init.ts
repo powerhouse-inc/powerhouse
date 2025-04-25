@@ -2,19 +2,20 @@ import { createProject, parseVersion } from "@powerhousedao/codegen";
 import { type Command } from "commander";
 import { initHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
+import { withCustomHelp } from "../utils/index.js";
+
+// Extract the type parameters for reuse
+export type InitOptions = {
+  project?: string;
+  interactive?: boolean;
+  version?: string;
+  dev?: boolean;
+  staging?: boolean;
+  packageManager?: string;
+};
 
 export const init: CommandActionType<
-  [
-    string | undefined,
-    {
-      project?: string;
-      interactive?: boolean;
-      version?: string;
-      dev?: boolean;
-      staging?: boolean;
-      packageManager?: string;
-    },
-  ]
+  [string | undefined, InitOptions]
 > = async (projectName, options) => {
   console.log("Initializing a new project...");
 
@@ -30,8 +31,8 @@ export const init: CommandActionType<
   }
 };
 
-export function initCommand(program: Command) {
-  program
+export function initCommand(program: Command): Command {
+  const initCmd = program
     .command("init")
     .description("Initialize a new project")
     .argument("[project-name]", "Name of the project")
@@ -46,7 +47,12 @@ export function initCommand(program: Command) {
     .option(
       "--package-manager <packageManager>",
       "force package manager to use",
-    )
-    .addHelpText("after", initHelp)
-    .action(init);
+    );
+
+  // Use withCustomHelp instead of withHelpAction and addHelpText
+  return withCustomHelp<[string | undefined, InitOptions]>(
+    initCmd,
+    init,
+    initHelp,
+  );
 }

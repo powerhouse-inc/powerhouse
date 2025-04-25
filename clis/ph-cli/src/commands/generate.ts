@@ -2,6 +2,7 @@ import { type Command } from "commander";
 import { generateHelp } from "../help.js";
 import { type GenerateOptions } from "../services/generate.js";
 import { type CommandActionType } from "../types.js";
+import { setCustomHelp } from "../utils.js";
 
 async function startGenerate(
   filePath: string | undefined,
@@ -19,7 +20,7 @@ export const generate: CommandActionType<
 };
 
 export function generateCommand(program: Command) {
-  program
+  const cmd = program
     .command("generate")
     .description("Generate code from the document models")
     .argument("[document-model-file]", "Path to the document model file")
@@ -39,7 +40,10 @@ export function generateCommand(program: Command) {
     .option(
       "-d, --drive-editor <name>",
       "Generate a drive editor with the specified name",
-    )
-    .addHelpText("after", generateHelp)
-    .action(generate);
+    );
+
+  // Use the setCustomHelp utility to apply custom help formatting
+  setCustomHelp(cmd, generateHelp);
+
+  cmd.action(generate);
 }

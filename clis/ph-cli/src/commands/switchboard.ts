@@ -3,6 +3,7 @@ import { type Command } from "commander";
 import { switchboardHelp } from "../help.js";
 import { type SwitchboardOptions } from "../services/switchboard.js";
 import { type CommandActionType } from "../types.js";
+import { setCustomHelp } from "../utils.js";
 
 async function startLocalSwitchboard(options: SwitchboardOptions) {
   const Switchboard = await import("../services/switchboard.js");
@@ -18,7 +19,7 @@ export const switchboard: CommandActionType<
 };
 
 export function reactorCommand(program: Command) {
-  program
+  const command = program
     .command("switchboard")
     .alias("reactor")
     .description("Starts local switchboard")
@@ -40,10 +41,11 @@ export function reactorCommand(program: Command) {
       "--packages <packages...>",
       "list of packages to be loaded, if defined then packages on config file are ignored",
     )
-    .addHelpText("after", switchboardHelp)
     .action(async (...args: [SwitchboardOptions]) => {
       await switchboard(...args);
     });
+
+  setCustomHelp(command, switchboardHelp);
 }
 
 if (process.argv.at(2) === "spawn") {

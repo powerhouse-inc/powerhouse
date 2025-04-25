@@ -8,6 +8,7 @@ import {
   getProjectInfo,
   installDependency,
   type PackageManager,
+  withCustomHelp,
 } from "../utils/index.js";
 
 export const ORG = "@powerhousedao";
@@ -130,20 +131,19 @@ export const updatePackageJson = async (
   }
 };
 
+// Extract the type parameters for reuse
+export type UseOptions = {
+  dev?: boolean;
+  prod?: boolean;
+  local?: string;
+  debug?: boolean;
+  latest?: boolean;
+  force?: boolean;
+  packageManager?: string;
+};
+
 export const use: CommandActionType<
-  [
-    string | undefined,
-    string | undefined,
-    {
-      dev?: boolean;
-      prod?: boolean;
-      local?: string;
-      debug?: boolean;
-      latest?: boolean;
-      force?: boolean;
-      packageManager?: string;
-    },
-  ]
+  [string | undefined, string | undefined, UseOptions]
 > = async (environment, localPath, options) => {
   if (
     !environment ||
@@ -178,7 +178,7 @@ export const use: CommandActionType<
   );
 };
 
-export function useCommand(program: Command) {
+export function useCommand(program: Command): Command {
   const useCmd = program
     .command("use")
     .description(
@@ -197,28 +197,24 @@ export function useCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
-    .option("--debug", "Show additional logs")
-    .addHelpText("after", useHelp);
+    .option("--debug", "Show additional logs");
 
-  useCmd.action((environment, localPath, options) => {
-    // Check raw arguments to see if help was requested
-    const rawArgs = process.argv;
-    const isHelpRequested =
-      rawArgs.includes("--help") || rawArgs.includes("-h");
-
-    // If help was explicitly requested, show the full command help
-    if (isHelpRequested) {
-      useCmd.outputHelp();
-      process.exit(0);
-    }
-
-    // If no environment, show error and usage
-    if (!environment) {
-      console.error('Error: Missing required argument "environment"');
-      process.exit(1);
-    }
-
-    // Run the original action function
-    return use(environment, localPath, options);
-  });
+  // Use withCustomHelp instead of withHelpAction and addHelpText
+  return withCustomHelp<[string | undefined, string | undefined, UseOptions]>(
+    useCmd,
+    use,
+    useHelp,
+    // Pre-check function to validate environment before running the action
+    (environment) => {
+      if (
+        !environment &&
+        !process.argv.includes("--help") &&
+        !process.argv.includes("-h")
+      ) {
+        console.error('Error: Missing required argument "environment"');
+        process.exit(1);
+        return false;
+      }
+    },
+  );
 }

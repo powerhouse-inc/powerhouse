@@ -2,6 +2,7 @@ import { type Command } from "commander";
 import { devHelp } from "../help.js";
 import { type DevOptions } from "../services/dev.js";
 import { type CommandActionType } from "../types.js";
+import { setCustomHelp } from "../utils.js";
 
 async function startDev(options: DevOptions) {
   const Dev = await import("../services/dev.js");
@@ -14,7 +15,7 @@ export const dev: CommandActionType<[DevOptions]> = async (options) => {
 };
 
 export function devCommand(program: Command) {
-  program
+  const cmd = program
     .command("dev")
     .description("Starts dev environment")
     .option("--generate", "generate code when document model is updated")
@@ -28,7 +29,10 @@ export function devCommand(program: Command) {
     .option(
       "-w, --watch",
       "if the switchboard should watch for local changes to document models and processors",
-    )
-    .addHelpText("after", devHelp)
-    .action(dev);
+    );
+
+  // Use the setCustomHelp utility to apply custom help formatting
+  setCustomHelp(cmd, devHelp);
+
+  cmd.action(dev);
 }

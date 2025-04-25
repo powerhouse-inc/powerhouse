@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { versionHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
-import { findNodeProjectRoot } from "../utils.js";
+import { findNodeProjectRoot, setCustomHelp } from "../utils.js";
 
 export function getVersion(debug: boolean) {
   const root = findNodeProjectRoot(fileURLToPath(import.meta.url));
@@ -44,11 +44,14 @@ export const version: CommandActionType<
 };
 
 export function versionCommand(program: Command) {
-  program
+  const cmd = program
     .command("version")
     .alias("v")
     .description("Display the current version of the PH CLI.")
-    .option("--debug", "Show additional logs")
-    .addHelpText("after", versionHelp)
-    .action(version);
+    .option("--debug", "Show additional logs");
+
+  // Use the setCustomHelp utility to apply custom help formatting
+  setCustomHelp(cmd, versionHelp);
+
+  cmd.action(version);
 }

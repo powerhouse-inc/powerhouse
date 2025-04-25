@@ -3,7 +3,7 @@ import { type Command } from "commander";
 import path from "node:path";
 import { listHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
-import { getProjectInfo } from "../utils.js";
+import { getProjectInfo, setCustomHelp } from "../utils.js";
 
 export const list: CommandActionType<
   [
@@ -42,11 +42,12 @@ export const list: CommandActionType<
 };
 
 export function listCommand(program: Command) {
-  program
+  const command = program
     .command("list")
     .alias("l")
     .description("List installed packages")
     .option("--debug", "Show additional logs")
-    .addHelpText("after", listHelp)
     .action(list);
+
+  setCustomHelp(command, listHelp);
 }
