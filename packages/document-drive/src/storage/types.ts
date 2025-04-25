@@ -1,11 +1,51 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { type SynchronizationUnitQuery } from "#server/types";
 import type {
+  Action,
   DocumentHeader,
   Operation,
   OperationFromDocument,
   PHDocument,
 } from "document-model";
+
+type StorageUnit = {
+  documentId: string;
+  scope: string;
+  branch: string;
+};
+
+// init operations is used instead of keeping document state in the Operation log storage
+type InitOperation = Operation<
+  Action<
+    "INIT_DOCUMENT",
+    {
+      created: string; // immutable
+      documentType: string; // immutable
+      initialState: object; // immutable
+      version: string;
+      name: string;
+      meta: Record<string, object>;
+    }
+  >
+>;
+type SetNameOperation = Operation<Action<"SET_NAME", { name: string }>>;
+type SetVersionOperation = Operation<
+  Action<"SET_VERSION", { version: string; created: string }>
+>;
+type SetMeta = Operation<
+  Action<"SET_META", { meta: Record<string, Serializable> }>
+>;
+
+interface IOperationLogStorage {
+  addOperations(unit: StorageUnit, operations: Operation[]): Promise<void>;
+  getOperations(
+    unit: StorageUnit,
+    limit?: number,
+    cursor?: string,
+  ): Promise<{ operations: Operation[]; nextCursor: string | undefined }>;
+}
+
+interface IStorageUnitReadCache {}
 
 /**
  * Describes the storage interface for documents.
