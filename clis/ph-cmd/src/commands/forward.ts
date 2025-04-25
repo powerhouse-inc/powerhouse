@@ -17,9 +17,7 @@ export const forwardCommand = async (
   options: ForwardPHCommandOptions,
 ) => {
   const isHelpCommand =
-    args.startsWith("help") ||
-    args.startsWith("--help") ||
-    args.startsWith("-h");
+    args.includes("help") || args.includes("--help") || args.includes("-h");
 
   if (options.debug) {
     console.log(">>> command arguments:", { options });
