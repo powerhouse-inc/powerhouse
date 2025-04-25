@@ -9,6 +9,7 @@ import {
   getProjectInfo,
   type PackageManager,
   packageManagers,
+  setCustomHelp,
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,
 } from "../utils.js";
@@ -120,7 +121,7 @@ export const install: CommandActionType<
 };
 
 export function installCommand(program: Command) {
-  program
+  const command = program
     .command("install")
     .alias("add")
     .alias("i")
@@ -136,6 +137,7 @@ export function installCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
-    .addHelpText("after", installHelp)
     .action(install);
+
+  setCustomHelp(command, installHelp);
 }

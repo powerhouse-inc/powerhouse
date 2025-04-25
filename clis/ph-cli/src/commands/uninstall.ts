@@ -5,12 +5,13 @@ import fs from "node:fs";
 import { uninstallHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
-    getPackageManagerFromLockfile,
-    getProjectInfo,
-    type PackageManager,
-    packageManagers,
-    SUPPORTED_PACKAGE_MANAGERS,
-    updateConfigFile,
+  getPackageManagerFromLockfile,
+  getProjectInfo,
+  type PackageManager,
+  packageManagers,
+  setCustomHelp,
+  SUPPORTED_PACKAGE_MANAGERS,
+  updateConfigFile,
 } from "../utils.js";
 
 export function uninstallDependency(
@@ -121,7 +122,7 @@ export const uninstall: CommandActionType<
 };
 
 export function uninstallCommand(program: Command) {
-  program
+  const command = program
     .command("uninstall")
     .alias("remove")
     .description("Uninstall a powerhouse dependency")
@@ -130,12 +131,13 @@ export function uninstallCommand(program: Command) {
     .option("--debug", "Show additional logs")
     .option(
       "-w, --workspace",
-      "Remove the dependency in the workspace (use this option for monorepos)",
+      "Uninstall the dependency in the workspace (use this option for monorepos)",
     )
     .option(
       "--package-manager <packageManager>",
       "force package manager to use",
     )
-    .addHelpText("after", uninstallHelp)
     .action(uninstall);
+
+  setCustomHelp(command, uninstallHelp);
 }

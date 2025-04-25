@@ -1,26 +1,26 @@
 import { type Command } from "commander";
 import { setupGlobalsHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
-import { createGlobalProject } from "../utils/index.js";
+import { createGlobalProject, withCustomHelp } from "../utils/index.js";
+
+// Extract the type parameters for reuse
+export type SetupGlobalsOptions = {
+  project?: string;
+  interactive?: boolean;
+  version?: string;
+  dev?: boolean;
+  staging?: boolean;
+  packageManager?: string;
+};
 
 export const setupGlobals: CommandActionType<
-  [
-    string | undefined,
-    {
-      project?: string;
-      interactive?: boolean;
-      version?: string;
-      dev?: boolean;
-      staging?: boolean;
-      packageManager?: string;
-    },
-  ]
+  [string | undefined, SetupGlobalsOptions]
 > = async (projectName, options) => {
   await createGlobalProject(projectName, options);
 };
 
-export function setupGlobalsCommand(program: Command) {
-  program
+export function setupGlobalsCommand(program: Command): Command {
+  const setupGlobalsCmd = program
     .command("setup-globals")
     .description("Initialize a new project")
     .argument("[project-name]", "Name of the project")
@@ -35,7 +35,12 @@ export function setupGlobalsCommand(program: Command) {
     .option(
       "--package-manager <packageManager>",
       "force package manager to use",
-    )
-    .addHelpText("after", setupGlobalsHelp)
-    .action(setupGlobals);
+    );
+
+  // Use withCustomHelp instead of withHelpAction and addHelpText
+  return withCustomHelp<[string | undefined, SetupGlobalsOptions]>(
+    setupGlobalsCmd,
+    setupGlobals,
+    setupGlobalsHelp,
+  );
 }
