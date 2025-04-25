@@ -1,7 +1,7 @@
 import { type Command } from "commander";
+import { devHelp } from "../help.js";
 import { type DevOptions } from "../services/dev.js";
 import { type CommandActionType } from "../types.js";
-import { DefaultSwitchboardOptions } from "../services/switchboard.js";
 
 async function startDev(options: DevOptions) {
   const Dev = await import("../services/dev.js");
@@ -29,5 +29,6 @@ export function devCommand(program: Command) {
       "-w, --watch",
       "if the switchboard should watch for local changes to document models and processors",
     )
+    .addHelpText("after", devHelp)
     .action(dev);
 }

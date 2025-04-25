@@ -2,6 +2,7 @@ import { type Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { updateHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
   findContainerDirectory,
@@ -9,7 +10,7 @@ import {
   getProjectInfo,
   packageManagers,
   type PackageManager,
-} from "../utils.js";
+} from "../utils/index.js";
 import {
   ENV_MAP,
   PH_PROJECT_DEPENDENCIES,
@@ -174,17 +175,6 @@ export function updateCommand(program: Command) {
       "force package manager to use",
     )
     .option("--debug", "Show additional logs")
-    .addHelpText(
-      "after",
-      `
-Examples:
-  $ ph update                          # Update dependencies based on package.json ranges
-  $ ph update --force dev              # Force update to latest dev version available
-  $ ph update --force prod             # Force update to latest stable version available (same as latest)
-  $ ph update --force latest           # Force update to latest stable version available (same as prod)
-  $ ph update --package-manager pnpm   # Specify package manager to use
-  $ ph update --debug                  # Show debug information during update
-    `,
-    )
+    .addHelpText("after", updateHelp)
     .action(update);
 }

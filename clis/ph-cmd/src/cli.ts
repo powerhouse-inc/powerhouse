@@ -4,26 +4,68 @@ import { Command } from "commander";
 import { forwardCommand } from "./commands/forward.js";
 import registerCommands from "./commands/index.js";
 import { type CommandActionType } from "./types.js";
+import { generateMergedHelp } from "./utils/index.js";
 
 const program = new Command();
 
-const defaultCommand: CommandActionType<
-  [{ verbose?: boolean; script?: boolean }]
-> = (options) => {
+// Flag to prevent duplicate help output
+let helpShown = false;
+
+// Custom help handler that uses the merged help functionality
+async function customHelpHandler() {
+  if (helpShown) return;
+  helpShown = true;
+
+  await generateMergedHelp(program);
+  process.exit(0);
+}
+
+const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = (
+  options,
+) => {
   const allArgs = process.argv.slice(2);
   const filteredArgs = allArgs.filter((arg) => arg !== "--verbose");
   const args = filteredArgs.join(" ");
 
-  forwardCommand(args, { debug: !!options.verbose });
+  const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");
+
+  if (!isHelpCommand) {
+    forwardCommand(args, { debug: !!options.verbose }).catch(
+      (error: unknown) => {
+        console.error(error);
+        process.exit(1);
+      },
+    );
+  }
 };
 
 program
-  .name("ph-cmd")
+  .name("ph")
   .description("CLI tool for Powerhouse DAO")
   .allowUnknownOption()
   .option("--verbose", "Enable debug mode")
-  .action(defaultCommand);
+  .option("-h, --help", "Display help information");
 
+// Register our commands
 registerCommands(program);
+
+// Hook the root action
+program.action(defaultCommand);
+
+// Handle global help requests - only for root help, not command-specific help
+program.on("option:help", () => {
+  // Check if this is a root help command (no other arguments except possibly --verbose)
+  const nonHelpArgs = process.argv
+    .slice(2)
+    .filter((arg) => arg !== "--help" && arg !== "-h" && arg !== "--verbose");
+
+  // Only run the custom help handler for global help
+  if (nonHelpArgs.length === 0) {
+    customHelpHandler().catch((error: unknown) => {
+      console.error(error);
+      process.exit(1);
+    });
+  }
+});
 
 program.parse(process.argv);

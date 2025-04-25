@@ -1,4 +1,5 @@
 import { type Command } from "commander";
+import { generateHelp } from "../help.js";
 import { type GenerateOptions } from "../services/generate.js";
 import { type CommandActionType } from "../types.js";
 
@@ -39,5 +40,6 @@ export function generateCommand(program: Command) {
       "-d, --drive-editor <name>",
       "Generate a drive editor with the specified name",
     )
+    .addHelpText("after", generateHelp)
     .action(generate);
 }

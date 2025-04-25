@@ -2,7 +2,7 @@ import {
   forwardPHCommand,
   getPackageManagerFromLockfile,
   getProjectInfo,
-} from "../utils.js";
+} from "../utils/index.js";
 
 type ForwardPHCommandOptions = {
   debug?: boolean;
@@ -16,11 +16,16 @@ export const forwardCommand = async (
   args: string,
   options: ForwardPHCommandOptions,
 ) => {
+  const isHelpCommand =
+    args.startsWith("help") ||
+    args.startsWith("--help") ||
+    args.startsWith("-h");
+
   if (options.debug) {
     console.log(">>> command arguments:", { options });
   }
 
-  const projectInfo = await getProjectInfo(options.debug);
+  const projectInfo = await getProjectInfo(options.debug, !isHelpCommand);
 
   if (options.debug) {
     console.log("\n>>> projectInfo:", projectInfo);
@@ -36,7 +41,20 @@ export const forwardCommand = async (
   }
 
   try {
-    forwardPHCommand(packageManager, projectInfo.path, args, options.debug);
+    if (isHelpCommand) {
+      // For help commands, capture the output and print it
+      const helpOutput = forwardPHCommand(
+        packageManager,
+        projectInfo.path,
+        args,
+        options.debug,
+        true,
+      );
+      console.log(helpOutput);
+    } else {
+      // For non-help commands, use standard behavior
+      forwardPHCommand(packageManager, projectInfo.path, args, options.debug);
+    }
   } catch (error) {
     console.error("❌ Failed to forward command");
     if ((error as FSError).code === "ENOENT") {

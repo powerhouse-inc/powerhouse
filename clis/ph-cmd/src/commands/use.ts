@@ -1,13 +1,14 @@
 import { type Command } from "commander";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { useHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   installDependency,
   type PackageManager,
-} from "../utils.js";
+} from "../utils/index.js";
 
 export const ORG = "@powerhousedao";
 
@@ -178,13 +179,13 @@ export const use: CommandActionType<
 };
 
 export function useCommand(program: Command) {
-  program
+  const useCmd = program
     .command("use")
     .description(
       "Allows you to change your environment (latest, development, production, local)",
     )
     .argument(
-      "<environment>",
+      "[environment]",
       "The environment to use (latest, dev, prod, local)",
     )
     .argument(
@@ -197,5 +198,27 @@ export function useCommand(program: Command) {
       "force package manager to use",
     )
     .option("--debug", "Show additional logs")
-    .action(use);
+    .addHelpText("after", useHelp);
+
+  useCmd.action((environment, localPath, options) => {
+    // Check raw arguments to see if help was requested
+    const rawArgs = process.argv;
+    const isHelpRequested =
+      rawArgs.includes("--help") || rawArgs.includes("-h");
+
+    // If help was explicitly requested, show the full command help
+    if (isHelpRequested) {
+      useCmd.outputHelp();
+      process.exit(0);
+    }
+
+    // If no environment, show error and usage
+    if (!environment) {
+      console.error('Error: Missing required argument "environment"');
+      process.exit(1);
+    }
+
+    // Run the original action function
+    return use(environment, localPath, options);
+  });
 }

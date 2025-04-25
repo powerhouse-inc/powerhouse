@@ -1,4 +1,5 @@
 import { type Command } from "commander";
+import { inspectHelp } from "../help.js";
 import { type InspectOptions } from "../services/inspect.js";
 import { type CommandActionType } from "../types.js";
 
@@ -22,5 +23,6 @@ export function inspectCommand(program: Command) {
     .description("Inspect a package")
     .option("--debug", "Show additional logs")
     .argument("<packageName>", "The name of the package to inspect")
+    .addHelpText("after", inspectHelp)
     .action(inspect);
 }

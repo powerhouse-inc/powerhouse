@@ -14,6 +14,8 @@
     "dist"
   ],
   "scripts": {
+    "generate-commands-md": "tsx scripts/generate-commands-md.ts",
+    "prebuild": "npm run generate-commands-md",
     "build": "tsc --build",
     "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "prepublishOnly": "npm run build",

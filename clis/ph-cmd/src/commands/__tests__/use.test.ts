@@ -3,19 +3,19 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-    getPackageManagerFromLockfile,
-    getProjectInfo,
-    type ProjectInfo,
-} from "../../utils.js";
+  getPackageManagerFromLockfile,
+  getProjectInfo,
+  type ProjectInfo,
+} from "../../utils/index.js";
 import { useCommand } from "../use.js";
 
 // Mock dependencies
 vi.mock("node:fs");
 
 // Import installDependency after mocking
-import { installDependency } from "../../utils.js";
+import { installDependency } from "../../utils/index.js";
 
-vi.mock("../../utils.js", () => ({
+vi.mock("../../utils/index.js", () => ({
   packageManagers: {
     pnpm: {
       buildAffected: "pnpm run build:affected",

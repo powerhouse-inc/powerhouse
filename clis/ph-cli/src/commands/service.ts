@@ -4,6 +4,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pm2, { type StartOptions } from "pm2";
+import { serviceHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 
 const actions = ["start", "stop", "status", "list", "startup", "unstartup"];
@@ -56,6 +57,7 @@ export function serviceCommand(program: Command) {
     .addArgument(
       new Argument("service").choices(services).argOptional().default("all"),
     )
+    .addHelpText("after", serviceHelp)
     .action(manageService);
 }
 
