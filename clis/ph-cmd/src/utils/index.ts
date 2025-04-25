@@ -76,6 +76,7 @@ export const packageManagers = {
 
 export type ProjectInfo = {
   isGlobal: boolean;
+  available: boolean;
   path: string;
 };
 
@@ -138,7 +139,10 @@ export function getPackageManagerFromLockfile(dir: string): PackageManager {
   return "npm";
 }
 
-export async function getProjectInfo(debug?: boolean): Promise<ProjectInfo> {
+export async function getProjectInfo(
+  debug?: boolean,
+  generateGlobalProject = true,
+): Promise<ProjectInfo> {
   const currentPath = process.cwd();
 
   if (debug) {
@@ -148,9 +152,15 @@ export async function getProjectInfo(debug?: boolean): Promise<ProjectInfo> {
   const projectPath = findNodeProjectRoot(currentPath, isPowerhouseProject);
 
   if (!projectPath) {
-    await createGlobalProject();
+    let available = false;
+
+    if (generateGlobalProject) {
+      await createGlobalProject();
+      available = true;
+    }
 
     return {
+      available,
       isGlobal: true,
       path: POWERHOUSE_GLOBAL_DIR,
     };
@@ -158,6 +168,7 @@ export async function getProjectInfo(debug?: boolean): Promise<ProjectInfo> {
 
   return {
     isGlobal: false,
+    available: true,
     path: projectPath,
   };
 }
@@ -167,6 +178,7 @@ export function forwardPHCommand(
   projectPath: string,
   args: string,
   debug?: boolean,
+  captureOutput = false,
 ) {
   const manager = packageManagers[packageManager];
   const command = manager.execCommand;
@@ -181,10 +193,21 @@ export function forwardPHCommand(
     console.log(">>> packageManager:", packageManager);
   }
 
-  execSync(execCommand, {
-    stdio: "inherit",
-    ...commandOptions,
-  });
+  if (captureOutput) {
+    // Capture output and return it
+    return execSync(execCommand, {
+      stdio: "pipe",
+      encoding: "utf8",
+      ...commandOptions,
+    });
+  } else {
+    // Original behavior - pipe directly to stdout/stderr
+    execSync(execCommand, {
+      stdio: "inherit",
+      ...commandOptions,
+    });
+    return "";
+  }
 }
 
 /**
@@ -292,3 +315,5 @@ export const createGlobalProject = async (
     console.error("❌ Failed to initialize the global project", error);
   }
 };
+
+export * from "./help-formatting.js";

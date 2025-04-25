@@ -1,4 +1,5 @@
 import { type Command } from "commander";
+import { helpCommand } from "./help.js";
 import { initCommand } from "./init.js";
 import { setupGlobalsCommand } from "./setup-globals.js";
 import { updateCommand } from "./update.js";
@@ -9,13 +10,16 @@ export const commands = [
   initCommand,
   useCommand,
   updateCommand,
+  helpCommand,
 ];
 
 export default function registerCommands(program: Command) {
   commands.forEach((command) => command(program));
 }
 
+export * from "./help.js";
 export * from "./init.js";
 export * from "./setup-globals.js";
 export * from "./update.js";
 export * from "./use.js";
+

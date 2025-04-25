@@ -1,5 +1,6 @@
-import { type Command } from "commander";
 import { createProject, parseVersion } from "@powerhousedao/codegen";
+import { type Command } from "commander";
+import { initHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 
 export const init: CommandActionType<
@@ -46,5 +47,6 @@ export function initCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
+    .addHelpText("after", initHelp)
     .action(init);
 }

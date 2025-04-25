@@ -1,4 +1,5 @@
 import { type Command } from "commander";
+import { connectHelp } from "../help.js";
 import { type ConnectOptions } from "../services/connect.js";
 import { type CommandActionType } from "../types.js";
 
@@ -27,6 +28,7 @@ export function connectCommand(program: Command) {
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
     )
+    .addHelpText("after", connectHelp)
     .action(async (...args: [ConnectOptions]) => {
       await connect(...args);
     });

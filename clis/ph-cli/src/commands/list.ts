@@ -1,6 +1,7 @@
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { type Command } from "commander";
 import path from "node:path";
+import { listHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import { getProjectInfo } from "../utils.js";
 
@@ -46,5 +47,6 @@ export function listCommand(program: Command) {
     .alias("l")
     .description("List installed packages")
     .option("--debug", "Show additional logs")
+    .addHelpText("after", listHelp)
     .action(list);
 }

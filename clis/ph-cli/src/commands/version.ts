@@ -2,6 +2,7 @@ import { type Command } from "commander";
 import fs from "fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { versionHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import { findNodeProjectRoot } from "../utils.js";
 
@@ -48,5 +49,6 @@ export function versionCommand(program: Command) {
     .alias("v")
     .description("Display the current version of the PH CLI.")
     .option("--debug", "Show additional logs")
+    .addHelpText("after", versionHelp)
     .action(version);
 }

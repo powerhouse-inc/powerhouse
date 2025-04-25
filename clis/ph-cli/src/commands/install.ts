@@ -2,6 +2,7 @@ import { type Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 
+import { installHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
   getPackageManagerFromLockfile,
@@ -135,5 +136,6 @@ export function installCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
+    .addHelpText("after", installHelp)
     .action(install);
 }

@@ -1,5 +1,6 @@
 import { type LocalReactor } from "@powerhousedao/reactor-local";
 import { type Command } from "commander";
+import { switchboardHelp } from "../help.js";
 import { type SwitchboardOptions } from "../services/switchboard.js";
 import { type CommandActionType } from "../types.js";
 
@@ -39,6 +40,7 @@ export function reactorCommand(program: Command) {
       "--packages <packages...>",
       "list of packages to be loaded, if defined then packages on config file are ignored",
     )
+    .addHelpText("after", switchboardHelp)
     .action(async (...args: [SwitchboardOptions]) => {
       await switchboard(...args);
     });

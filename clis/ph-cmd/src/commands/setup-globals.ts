@@ -1,6 +1,7 @@
 import { type Command } from "commander";
+import { setupGlobalsHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
-import { createGlobalProject } from "../utils.js";
+import { createGlobalProject } from "../utils/index.js";
 
 export const setupGlobals: CommandActionType<
   [
@@ -35,5 +36,6 @@ export function setupGlobalsCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
+    .addHelpText("after", setupGlobalsHelp)
     .action(setupGlobals);
 }
