@@ -152,7 +152,7 @@ export async function getProjectInfo(
   const projectPath = findNodeProjectRoot(currentPath, isPowerhouseProject);
 
   if (!projectPath) {
-    let available = false;
+    let available = fs.existsSync(POWERHOUSE_GLOBAL_DIR);
 
     if (generateGlobalProject) {
       await createGlobalProject();

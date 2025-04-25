@@ -202,27 +202,32 @@ export function captureCommanderHelp(program: Command): string {
 export async function generateMergedHelp(program: Command): Promise<void> {
   // Get project information
   const projectInfo = await getProjectInfo(undefined, false);
-  const packageManager = getPackageManagerFromLockfile(projectInfo.path);
 
-  // Get forwarded help from PH CLI
-  const forwardedHelp = forwardPHCommand(
-    packageManager,
-    projectInfo.path,
-    "help",
-    undefined,
-    true,
-  );
+  if (projectInfo.available) {
+    const packageManager = getPackageManagerFromLockfile(projectInfo.path);
 
-  // Apply padding to command descriptions for better alignment
-  applyCommandPadding(program);
+    // Get forwarded help from PH CLI
+    const forwardedHelp = forwardPHCommand(
+      packageManager,
+      projectInfo.path,
+      "help",
+      undefined,
+      true,
+    );
 
-  // Capture the output without displaying it
-  const helpText = captureCommanderHelp(program);
+    // Apply padding to command descriptions for better alignment
+    applyCommandPadding(program);
 
-  // Restore original descriptions
-  restoreCommandDescriptions(program);
+    // Capture the output without displaying it
+    const helpText = captureCommanderHelp(program);
 
-  // Merge and display help
-  const mergedHelp = mergeHelp(helpText, forwardedHelp);
-  console.log(mergedHelp);
+    // Restore original descriptions
+    restoreCommandDescriptions(program);
+
+    // Merge and display help
+    const mergedHelp = mergeHelp(helpText, forwardedHelp);
+    console.log(mergedHelp);
+  } else {
+    console.log(captureCommanderHelp(program));
+  }
 }
