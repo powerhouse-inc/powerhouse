@@ -41,7 +41,9 @@ const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = (
 
 program
   .name("ph")
-  .description("CLI tool for Powerhouse DAO")
+  .description(
+    "The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
+  )
   .allowUnknownOption()
   .option("--verbose", "Enable debug mode")
   .option("-h, --help", "Display help information");
