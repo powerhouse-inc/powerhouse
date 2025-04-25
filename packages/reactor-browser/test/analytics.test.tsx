@@ -1,4 +1,6 @@
+import { type BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type PropsWithChildren, Suspense } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 import {
@@ -9,21 +11,20 @@ import {
   type AnalyticsQuery,
   AnalyticsQueryEngine,
   DateTime,
-  type IAnalyticsStore,
   useAddSeriesValue,
   useAnalyticsQuery,
   useAnalyticsSeries,
   useGetDimensions,
 } from "../src/analytics/analytics.js";
 import { MemoryAnalyticsStore } from "../src/analytics/store/memory.js";
-import { clearGlobal } from "../src/global/core.js";
+import { clearGlobal, getGlobal } from "../src/global/core.js";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(
     "test/analytics/AnalyticsStore.spec",
   );
 
-  function createWrapper(store?: IAnalyticsStore) {
+  function createWrapper() {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -33,24 +34,33 @@ describe("Analytics Store", () => {
     });
 
     return function Wrapper({ children }: { children: React.ReactNode }) {
-      return store ? (
-        <AnalyticsProvider store={store} queryClient={queryClient}>
-          {children}
-        </AnalyticsProvider>
-      ) : (
-        <QueryClientProvider client={queryClient}>
-          {children}
-          children
-        </QueryClientProvider>
+      return (
+        <Suspense fallback={<div>Loading...</div>}>
+          <AnalyticsProvider
+            databaseName={Date.now().toString()}
+            queryClient={queryClient}
+          >
+            {children}
+          </AnalyticsProvider>
+        </Suspense>
       );
     };
   }
 
-  it("should add and query analytics data", async () => {
-    const store = new MemoryAnalyticsStore();
-    await store.init();
+  async function resetGlobalAnalytics() {
+    const store = getGlobal("analytics")?.store as
+      | BrowserAnalyticsStore
+      | undefined;
+    await store?.destroy();
+    clearGlobal("analytics");
+  }
 
-    const wrapper = createWrapper(store);
+  beforeEach(async () => {
+    await resetGlobalAnalytics();
+  });
+
+  it("should add and query analytics data", async () => {
+    const wrapper = createWrapper();
 
     const { result: addResult } = renderHook(() => useAddSeriesValue(), {
       wrapper,
@@ -110,8 +120,21 @@ describe("Analytics Store", () => {
   });
 
   it("should fail gracefully when analytics store is not available", async () => {
-    const wrapper = createWrapper();
-
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: {
+              queries: {
+                retry: false,
+              },
+            },
+          })
+        }
+      >
+        {children}
+      </QueryClientProvider>
+    );
     const { result: addResult } = renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
@@ -147,42 +170,27 @@ describe("Analytics Store", () => {
       { wrapper },
     );
 
-    await vi.waitFor(() => expect(queryResult.current.isError).toBe(true));
+    await vi.waitFor(() =>
+      expect(queryResult.current.status).not.toBe("pending"),
+    );
+
     expect(queryResult.current.error).toMatchObject({
       message: "No analytics store available. Use within an AnalyticsProvider.",
     });
-  });
-});
-
-describe("Analytics Engine", () => {
-  const TEST_SOURCE = AnalyticsPath.fromString("test/analytics/AnalyticsStore");
-
-  function createWrapper(store: MemoryAnalyticsStore) {
-    return function Wrapper({ children }: { children: React.ReactNode }) {
-      return <AnalyticsProvider store={store}>{children}</AnalyticsProvider>;
-    };
-  }
-  beforeAll(() => {
-    clearGlobal("analytics");
-  });
-
-  afterEach(() => {
-    // Clear the global analytics store before each test
-    clearGlobal("analytics");
   });
 
   it("should execute analytics query", async () => {
     const store = new MemoryAnalyticsStore();
     await store.init();
     const engine = new AnalyticsQueryEngine(store);
-    const wrapper = createWrapper(store);
+    const wrapper = createWrapper();
 
     // Add test data
     const { result: addResult } = renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
 
-    await addResult.current.mutateAsync({
+    const addValue = {
       start: DateTime.now(),
       source: TEST_SOURCE,
       value: 10000,
@@ -191,7 +199,9 @@ describe("Analytics Engine", () => {
       dimensions: {
         budget: AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
       },
-    });
+    };
+    await store.addSeriesValue(addValue);
+    await addResult.current.mutateAsync(addValue);
 
     const query: AnalyticsQuery = {
       start: DateTime.now().minus({ days: 1 }),
@@ -219,14 +229,15 @@ describe("Analytics Engine", () => {
   it("should get dimensions", async () => {
     const store = new MemoryAnalyticsStore();
     await store.init();
-    const wrapper = createWrapper(store);
+
+    const wrapper = createWrapper();
 
     // Add test data
     const { result: addResult } = renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
 
-    await addResult.current.mutateAsync({
+    const addValue = {
       start: DateTime.now(),
       source: TEST_SOURCE,
       value: 10000,
@@ -235,7 +246,10 @@ describe("Analytics Engine", () => {
       dimensions: {
         budget: AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
       },
-    });
+    };
+
+    await store.addSeriesValue(addValue);
+    await addResult.current.mutateAsync(addValue);
 
     const { result } = renderHook(() => useGetDimensions(), { wrapper });
 

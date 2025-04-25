@@ -1,14 +1,7 @@
-import type {
-  AnalyticsQueryEngine,
-  IAnalyticsStore,
-} from "@powerhousedao/analytics-engine-core";
+import { type IPowerhouseAnalytics } from "../analytics/types.js";
 
 export interface PowerhouseGlobal {
-  analytics?: {
-    store: IAnalyticsStore;
-    engine: AnalyticsQueryEngine;
-  };
-  // Add other global namespaces here
+  analytics?: IPowerhouseAnalytics;
 }
 
 declare global {

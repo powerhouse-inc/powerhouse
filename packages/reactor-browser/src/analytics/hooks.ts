@@ -16,7 +16,11 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { useAnalyticsEngine, useAnalyticsStore } from "./context.js";
+import {
+  analyticsStoreKey,
+  useAnalyticsEngine,
+  useAnalyticsStore,
+} from "./context.js";
 
 function useAnalyticsQueryWrapper<TData>(
   options: Omit<UseQueryOptions<TData, Error, TData>, "queryFn"> & {
@@ -40,7 +44,6 @@ function useAnalyticsQueryWrapper<TData>(
       }
       return queryFn({ store, engine });
     },
-    enabled: (!!store && !!engine) || queryOptions.enabled !== false,
   });
 }
 
@@ -110,17 +113,29 @@ export type UseAddSeriesValueOptions = Omit<
 >;
 
 export function useAddSeriesValue(options?: UseAddSeriesValueOptions) {
-  const store = useAnalyticsStore();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationKey: ["analytics", "addSeries"],
-    mutationFn: (value: AnalyticsSeriesInput) => {
-      if (!store) {
-        throw new Error(
-          "No analytics store available. Use within an AnalyticsProvider.",
-        );
+    mutationFn: async (value: AnalyticsSeriesInput) => {
+      try {
+        const store = await queryClient.ensureQueryData<IAnalyticsStore>({
+          queryKey: analyticsStoreKey,
+          staleTime: Infinity,
+        });
+
+        return await store.addSeriesValue(value);
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.includes("Missing queryFn")
+        ) {
+          throw new Error(
+            "No analytics store available. Use within an AnalyticsProvider.",
+          );
+        }
+        throw error;
       }
-      return store.addSeriesValue(value);
     },
     ...options,
   });
@@ -184,16 +199,16 @@ export type UseAddSeriesValuesOptions = Omit<
 >;
 
 export function useAddSeriesValues(options?: UseAddSeriesValuesOptions) {
-  const store = useAnalyticsStore();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationKey: ["analytics", "addSeriesValues"],
-    mutationFn: (values: AnalyticsSeriesInput[]) => {
-      if (!store) {
-        throw new Error(
-          "No analytics store available. Use within an AnalyticsProvider.",
-        );
-      }
+    mutationFn: async (values: AnalyticsSeriesInput[]) => {
+      const store = await queryClient.ensureQueryData<IAnalyticsStore>({
+        queryKey: analyticsStoreKey,
+        staleTime: Infinity,
+      });
+
       return store.addSeriesValues(values);
     },
     ...options,
