@@ -12,8 +12,14 @@ import { beforeEach, describe, it, vi, vitest } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 import { addFile, updateNode } from "../src/drive-document-model/gen/creators";
 import { reducer } from "../src/drive-document-model/gen/reducer";
-import { DocumentDriveDocument, DocumentDriveState } from "../src/drive-document-model/gen/types";
-import { createDocument, createState } from "../src/drive-document-model/gen/utils";
+import {
+  DocumentDriveDocument,
+  DocumentDriveState,
+} from "../src/drive-document-model/gen/types";
+import {
+  createDocument,
+  createState,
+} from "../src/drive-document-model/gen/utils";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import {
   ReadDocumentNotFoundError,
@@ -242,9 +248,10 @@ describe("Read mode methods", () => {
       id: readDriveId,
       name: "Read drive",
       nodes: [],
-      slug: "read-drive",
     };
     const drive = buildDriveDocument(driveData);
+    drive.slug = "read-drive";
+
     mockAddDrive(context.url, drive);
 
     await readModeService.addReadDrive(context.url, context);
@@ -530,9 +537,7 @@ describe("Read mode methods", () => {
 
     await expect(
       readModeService.addReadDrive(context.url),
-    ).rejects.toThrowError(
-      new ReadDriveNotFoundError(readDriveId),
-    );
+    ).rejects.toThrowError(new ReadDriveNotFoundError(readDriveId));
   });
 
   it("should throw if specific Graphql error is found", async ({ expect }) => {
@@ -598,7 +603,11 @@ describe("Read mode methods", () => {
         "powerhouse/document-drive",
       );
     } catch (error) {
-      expect(error).toStrictEqual(new GraphQLError('Cannot query field "revisio" on type "IDocument". Did you mean "revision"?'));
+      expect(error).toStrictEqual(
+        new GraphQLError(
+          'Cannot query field "revisio" on type "IDocument". Did you mean "revision"?',
+        ),
+      );
     }
 
     fetchMocker.mockOnceIf(context.url, () => ({
