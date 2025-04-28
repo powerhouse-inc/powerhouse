@@ -75,7 +75,6 @@ export type DocumentDriveState = {
   id: Scalars["ID"]["output"];
   name: Scalars["String"]["output"];
   nodes: Array<Node>;
-  slug: Maybe<Scalars["String"]["output"]>;
 };
 
 export type FileNode = {

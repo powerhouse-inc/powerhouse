@@ -662,7 +662,6 @@ export class BaseDocumentDriveServer
           id: id,
           name,
           icon: icon ?? null,
-          slug: null,
         },
         local: {
           triggers: [...triggers, pullTrigger],
