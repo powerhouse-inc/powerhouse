@@ -126,9 +126,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   async create(documentId: string, document: PHDocument) {
-    const slug =
-      (document.initialState.state.global as { slug?: string })?.slug ??
-      documentId;
+    const slug = document.slug.length > 0 ? document.slug : documentId;
 
     try {
       await this.db.document.create({
@@ -275,6 +273,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     const doc = {
       created: dbDoc.created.toISOString(),
       name: dbDoc.name ? dbDoc.name : "",
+      slug: dbDoc.slug ? dbDoc.slug : "",
       documentType: dbDoc.documentType,
       initialState: JSON.parse(
         dbDoc.initialState,

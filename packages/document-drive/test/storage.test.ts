@@ -120,12 +120,12 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const storage = await buildStorage();
 
     const a = createDriveDocument();
-    a.initialState.state.global.slug = "test";
+    a.slug = "test";
     await storage.create("a", a);
 
     // different id, but same slug
     const b = createDriveDocument();
-    b.initialState.state.global.slug = "test";
+    b.slug = "test";
     try {
       await storage.create("b", b);
 
@@ -150,12 +150,13 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     // replays the operations to get the state, if it doesn't exist.
     //
     // Also: we give storage implementations authority to set the created timestamp (like a postgres timestamp).
-    // So we compare every field except for state, created, and meta.
-    const { state, created, meta, ...rest } = document;
+    // So we compare every field except for a few...
+    const { state, created, meta, slug, ...rest } = document;
     const {
       state: _state,
       created: _created,
       meta: _meta,
+      slug: _slug,
       ...restResult
     } = result;
     expect(restResult).toEqual(rest);
@@ -298,12 +299,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const storage = await buildStorage();
 
     const document = createDriveDocument();
+    document.slug = "test-slug";
+    await storage.create("test-id", document);
 
-    document.initialState.state.global.slug = "test";
-    await storage.create("test", document);
-
-    const result = await storage.getBySlug<DocumentDriveDocument>("test");
-    expect(result.initialState.state.global.slug).toBe("test");
+    const result = await storage.getBySlug<DocumentDriveDocument>("test-slug");
+    expect(result.slug).toBe("test-slug");
   });
 
   it("the id should be used as the slug if no slug is provided", async ({

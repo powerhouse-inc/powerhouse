@@ -82,9 +82,7 @@ export class BrowserStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug =
-      (document.initialState.state.global as { slug?: string }).slug ??
-      documentId;
+    const slug = document.slug.length > 0 ? document.slug : documentId;
 
     // check if the slug is already taken
     if (slug) {
@@ -225,8 +223,7 @@ export class BrowserStorage
     }
 
     // Remove from slug manifest if it has a slug
-    const slug = (document.initialState.state.global as { slug?: string })
-      ?.slug;
+    const slug = document.slug.length > 0 ? document.slug : documentId;
     try {
       if (slug) {
         const slugManifest = await this.getSlugManifest();

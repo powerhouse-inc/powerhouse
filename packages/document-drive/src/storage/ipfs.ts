@@ -68,9 +68,7 @@ export class IPFSStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug =
-      (document.initialState.state.global as { slug?: string })?.slug ??
-      documentId;
+    const slug = document.slug.length > 0 ? document.slug : documentId;
     if (slug) {
       const slugManifest = await this.getSlugManifest();
       if (slugManifest.slugToId[slug]) {
@@ -222,8 +220,7 @@ export class IPFSStorage
     // Remove from slug manifest if it has a slug
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = (document.initialState.state.global as { slug?: string })
-        ?.slug;
+      const slug = document.slug.length > 0 ? document.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();
