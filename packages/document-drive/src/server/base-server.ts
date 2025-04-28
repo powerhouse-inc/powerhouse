@@ -612,13 +612,17 @@ export class BaseDocumentDriveServer
       state: input,
     });
 
+    if (input.slug && input.slug.length > 0) {
+      document.slug = input.slug;
+    }
+
     document.meta = {
       preferredEditor: preferredEditor,
     };
 
     await this.documentStorage.create(id, document);
 
-    if (input.slug) {
+    if (input.slug && input.slug.length > 0) {
       await this.cache.deleteDriveBySlug(input.slug);
     }
 
