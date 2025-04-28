@@ -442,7 +442,7 @@ export class BaseDocumentDriveServer
     const drive = await this.getDrive(driveId);
 
     this.logger.verbose(
-      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.state.global.slug}"`,
+      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.slug}"`,
     );
 
     await this.synchronizationManager.initializeDriveSyncStatus(driveId, drive);
@@ -618,8 +618,8 @@ export class BaseDocumentDriveServer
 
     await this.documentStorage.create(id, document);
 
-    if (input.global.slug) {
-      await this.cache.deleteDriveBySlug(input.global.slug);
+    if (input.slug) {
+      await this.cache.deleteDriveBySlug(input.slug);
     }
 
     await this._initializeDrive(id);
@@ -653,11 +653,12 @@ export class BaseDocumentDriveServer
 
     return await this.addDrive(
       {
+        slug,
         global: {
           id: id,
           name,
-          slug,
           icon: icon ?? null,
+          slug: null,
         },
         local: {
           triggers: [...triggers, pullTrigger],

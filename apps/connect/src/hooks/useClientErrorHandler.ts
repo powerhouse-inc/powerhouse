@@ -122,10 +122,10 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
 
                 await setDriveSharingType(driveId, LOCAL);
 
-                if (trigger.data?.url && drive.state.global.slug) {
+                if (trigger.data?.url && drive.slug) {
                     const newId = await getDriveIdBySlug(
                         trigger.data.url,
-                        drive.state.global.slug,
+                        drive.slug,
                     );
                     if (newId) {
                         const urlParts = trigger.data.url.split('/');

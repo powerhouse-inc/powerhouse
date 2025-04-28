@@ -22,11 +22,12 @@ async function initReactor(reactor: IDocumentDriveServer) {
     if (!drives.length && connectConfig.drives.sections.LOCAL.enabled) {
         return reactor
             .addDrive({
+                slug: 'my-local-drive',
                 global: {
                     id: hashKey(),
                     name: 'My Local Drive',
                     icon: null,
-                    slug: 'my-local-drive',
+                    slug: null,
                 },
                 local: {
                     availableOffline: false,

@@ -51,7 +51,8 @@ export async function addDefaultDrive(
   drive: DriveInput,
   serverPort: number,
 ) {
-  let driveId = drive.global.slug ?? drive.global.id;
+  let driveId =
+    drive.slug && drive.slug.length > 0 ? drive.slug : drive.global.id;
   try {
     // add default drive
     await driveServer.addDrive(drive);

@@ -120,7 +120,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
       // Set custom id so we can test the slug deletion logic
       drive.state.global.id = driveId;
-      drive.state.global.slug = "test-slug";
+      drive.slug = "test-slug";
 
       await cache.setDrive(driveId, drive);
       const deletionResult = await cache.deleteDrive(driveId);
@@ -150,14 +150,14 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
       // Set drive ID for consistency
       drive.state.global.id = driveId;
-      drive.state.global.slug = slug;
+      drive.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
       const retrievedDrive = await cache.getDriveBySlug(slug);
 
       expect(retrievedDrive).toBeDefined();
       expect(retrievedDrive?.state.global.id).toBe(driveId);
-      expect(retrievedDrive?.state.global.slug).toBe(slug);
+      expect(retrievedDrive?.slug).toBe(slug);
     });
 
     it("should return undefined when getting a non-existent drive by slug", async ({
@@ -177,7 +177,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
       // Set custom id and slug for testing
       drive.state.global.id = driveId;
-      drive.state.global.slug = slug;
+      drive.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
       const deletionResult = await cache.deleteDriveBySlug(slug);
@@ -209,7 +209,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
       // Set drive ID and slug for consistency
       drive.state.global.id = driveId;
-      drive.state.global.slug = slug;
+      drive.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
 
@@ -219,7 +219,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       expect(retrievedDriveBySlug).toBeDefined();
       expect(retrievedDriveById).toBeDefined();
       expect(retrievedDriveById?.state.global.id).toBe(driveId);
-      expect(retrievedDriveById?.state.global.slug).toBe(slug);
+      expect(retrievedDriveById?.slug).toBe(slug);
       expect(retrievedDriveBySlug?.state.global.id).toBe(
         retrievedDriveById?.state.global.id,
       );
@@ -234,7 +234,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
       // Set drive ID and slug for consistency
       drive.state.global.id = driveId;
-      drive.state.global.slug = slug;
+      drive.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
       await cache.deleteDrive(driveId);

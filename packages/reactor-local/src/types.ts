@@ -33,11 +33,12 @@ export const DefaultStartServerOptions = {
   },
   dbPath: path.join(process.cwd(), ".ph/read-model.db"),
   drive: {
+    slug: "powerhouse",
     global: {
       id: "powerhouse",
       name: "Powerhouse",
       icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
-      slug: "powerhouse",
+      slug: null,
     },
     local: {
       availableOffline: true,
