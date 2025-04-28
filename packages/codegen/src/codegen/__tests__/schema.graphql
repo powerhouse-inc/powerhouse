@@ -29,7 +29,6 @@ type DocumentDriveState {
   name: String!
   nodes: [Node!]!
   icon: String
-  slug: String
 }
 
 type ListenerFilter {
