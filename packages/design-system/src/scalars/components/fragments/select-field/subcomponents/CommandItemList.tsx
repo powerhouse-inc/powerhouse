@@ -12,6 +12,7 @@ interface FavoriteOptionsProps {
   selectionIconPosition: "left" | "right";
   hasAnyIcon: boolean;
   toggleOption: (value: string) => void;
+  tabIndex?: number;
 }
 
 const renderIcon = (
@@ -46,6 +47,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
   selectionIconPosition,
   hasAnyIcon,
   toggleOption,
+  tabIndex,
 }) => {
   return (
     <>
@@ -53,6 +55,7 @@ export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
         const isSelected = selectedValues.includes(opt.value);
         return (
           <CommandItem
+            tabIndex={tabIndex}
             key={`favorite-${opt.value}`}
             value={opt.label}
             onSelect={() => !opt.disabled && toggleOption(opt.value)}
