@@ -6,6 +6,7 @@ import {
 
 type ForwardPHCommandOptions = {
   debug?: boolean;
+  logOutput?: boolean;
 };
 
 type FSError = {
@@ -39,7 +40,7 @@ export const forwardCommand = async (
   }
 
   try {
-    if (isHelpCommand) {
+    if (isHelpCommand || options.logOutput) {
       // For help commands, capture the output and print it
       const helpOutput = forwardPHCommand(
         packageManager,

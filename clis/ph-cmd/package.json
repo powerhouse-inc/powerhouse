@@ -15,7 +15,8 @@
   ],
   "scripts": {
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
-    "prebuild": "npm run generate-commands-md",
+    "generate-version": "tsx scripts/generate-version.ts",
+    "prebuild": "npm run generate-commands-md && npm run generate-version",
     "build": "tsc --build",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
