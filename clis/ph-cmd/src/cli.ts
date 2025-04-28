@@ -28,8 +28,10 @@ const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = (
   const args = filteredArgs.join(" ");
 
   const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");
+  const isVersionCommand =
+    args.startsWith("--version") || args.startsWith("-v");
 
-  if (!isHelpCommand) {
+  if (!isHelpCommand && !isVersionCommand) {
     forwardCommand(args, { debug: !!options.verbose }).catch(
       (error: unknown) => {
         console.error(error);

@@ -49,12 +49,13 @@ Project Structure:
   - Development scripts and tooling
 
 Examples:
-  $ ph init my-awesome-project      # Create a new project named "my-awesome-project"
-  $ ph init -i                      # Create a project in interactive mode
-  $ ph init -p my-project           # Same as ph init my-project
-  $ ph init --dev                   # Use development version of boilerplate
-  $ ph init -v beta                 # Use specific version
-  $ ph init --package-manager yarn  # Use yarn as package manager
+  $ ph init my-awesome-project                                # Create a new project named "my-awesome-project"
+  $ ph init -i                                                # Create a project in interactive mode
+  $ ph init -p my-project                                     # Same as ph init my-project
+  $ ph init --dev                                             # Use development version of boilerplate
+  $ ph init -v beta                                           # Use specific version
+  $ ph init --package-manager yarn                            # Use yarn as package manager
+  $ ph init my-awesome-project --dev --package-manager pnpm   # Create a project with Powerhouse dev packages and pnpm as package manager
 ```
 
 ## Setup Globals

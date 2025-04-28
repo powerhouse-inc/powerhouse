@@ -4,6 +4,7 @@ import { initCommand } from "./init.js";
 import { setupGlobalsCommand } from "./setup-globals.js";
 import { updateCommand } from "./update.js";
 import { useCommand } from "./use.js";
+import { versionOption } from "./version.js";
 
 export const commands = [
   setupGlobalsCommand,
@@ -11,6 +12,7 @@ export const commands = [
   useCommand,
   updateCommand,
   helpCommand,
+  versionOption,
 ];
 
 export default function registerCommands(program: Command) {
@@ -22,4 +24,5 @@ export * from "./init.js";
 export * from "./setup-globals.js";
 export * from "./update.js";
 export * from "./use.js";
+export * from "./version.js";
 
