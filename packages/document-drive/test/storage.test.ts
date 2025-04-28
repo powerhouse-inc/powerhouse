@@ -298,6 +298,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const storage = await buildStorage();
 
     const document = createDriveDocument();
+
     document.initialState.state.global.slug = "test";
     await storage.create("test", document);
 

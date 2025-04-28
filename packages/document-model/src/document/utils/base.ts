@@ -177,6 +177,7 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
 ): ExtendedStateFromDocument<TDocument> {
   return {
     name: "",
+    slug: "",
     documentType: "",
     revision: {
       global: 0,
