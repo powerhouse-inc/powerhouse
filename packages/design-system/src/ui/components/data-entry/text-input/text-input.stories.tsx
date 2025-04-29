@@ -49,6 +49,10 @@ const meta = {
     ...PrebuiltArgTypes.minLength,
     ...PrebuiltArgTypes.maxLength,
     ...PrebuiltArgTypes.pattern,
+
+    ...PrebuiltArgTypes.viewMode,
+    ...PrebuiltArgTypes.diffMode,
+    ...PrebuiltArgTypes.baseValue,
   },
 } satisfies Meta<typeof TextInput>;
 

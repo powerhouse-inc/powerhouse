@@ -7,18 +7,23 @@ import { FormLabel } from "../../../../scalars/components/fragments/form-label/f
 import ValueTransformer, {
   type TransformerType,
 } from "../../../../scalars/components/fragments/value-transformer/value-transformer.js";
-import type { InputBaseProps } from "../../../../scalars/components/types.js";
+import type {
+  InputBaseProps,
+  WithDifference,
+} from "../../../../scalars/components/types.js";
 import { sharedValueTransformers } from "../../../../scalars/lib/shared-value-transformers.js";
 import { Input } from "../input/index.js";
+import TextInputDiff from "./text-input-diff.js";
 import type { CommonTextProps } from "./types.js";
 
 interface TextInputProps
   extends Omit<
-    InputBaseProps<string> &
-      Omit<React.InputHTMLAttributes<HTMLInputElement>, "pattern"> &
-      CommonTextProps,
-    "value" | "autoComplete"
-  > {
+      InputBaseProps<string> &
+        Omit<React.InputHTMLAttributes<HTMLInputElement>, "pattern"> &
+        CommonTextProps,
+      "value" | "autoComplete"
+    >,
+    WithDifference<string> {
   value?: string;
   autoComplete?: boolean;
 }
@@ -40,6 +45,9 @@ const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
       lowercase,
       maxLength,
       autoComplete,
+      viewMode = "edition",
+      diffMode = "words",
+      baseValue,
       ...props
     },
     ref,
@@ -63,43 +71,55 @@ const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
       [trim, lowercase, uppercase],
     );
 
+    if (viewMode === "edition") {
+      return (
+        <FormGroup>
+          {label && (
+            <FormLabel
+              htmlFor={id}
+              required={props.required}
+              disabled={props.disabled}
+              hasError={!!errors?.length}
+            >
+              {label}
+            </FormLabel>
+          )}
+          <ValueTransformer transformers={transformers}>
+            <Input
+              id={id}
+              value={value ?? defaultValue ?? ""}
+              onChange={onChange}
+              pattern={pattern?.toString()}
+              autoComplete={autoCompleteValue}
+              {...props}
+              ref={ref}
+            />
+          </ValueTransformer>
+          {typeof maxLength === "number" && maxLength > 0 && (
+            <div
+              className={cn(
+                "mt-[-6px] flex justify-end",
+                hasContentBelow && "-mb-1",
+              )}
+            >
+              <CharacterCounter maxLength={maxLength} value={value ?? ""} />
+            </div>
+          )}
+          {description && <FormDescription>{description}</FormDescription>}
+          {warnings && <FormMessageList messages={warnings} type="warning" />}
+          {errors && <FormMessageList messages={errors} type="error" />}
+        </FormGroup>
+      );
+    }
+
+    // Diff mode
     return (
-      <FormGroup>
-        {label && (
-          <FormLabel
-            htmlFor={id}
-            required={props.required}
-            disabled={props.disabled}
-            hasError={!!errors?.length}
-          >
-            {label}
-          </FormLabel>
-        )}
-        <ValueTransformer transformers={transformers}>
-          <Input
-            id={id}
-            value={value ?? defaultValue ?? ""}
-            onChange={onChange}
-            pattern={pattern?.toString()}
-            autoComplete={autoCompleteValue}
-            {...props}
-            ref={ref}
-          />
-        </ValueTransformer>
-        {typeof maxLength === "number" && maxLength > 0 && (
-          <div
-            className={cn(
-              "mt-[-6px] flex justify-end",
-              hasContentBelow && "-mb-1",
-            )}
-          >
-            <CharacterCounter maxLength={maxLength} value={value ?? ""} />
-          </div>
-        )}
-        {description && <FormDescription>{description}</FormDescription>}
-        {warnings && <FormMessageList messages={warnings} type="warning" />}
-        {errors && <FormMessageList messages={errors} type="error" />}
-      </FormGroup>
+      <TextInputDiff
+        value={value ?? ""}
+        viewMode={viewMode}
+        diffMode={diffMode}
+        baseValue={baseValue ?? ""}
+      />
     );
   },
 );

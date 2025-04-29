@@ -26,3 +26,12 @@ export interface FieldErrorHandling {
   showErrorOnChange?: boolean;
   validators?: ValidatorHandler[] | ValidatorHandler;
 }
+
+export type ViewMode = "edition" | "addition" | "removal" | "mixed";
+export type DiffMode = "words" | "sentences" | "lines";
+
+export interface WithDifference<T> {
+  viewMode?: ViewMode;
+  diffMode?: DiffMode;
+  baseValue?: T;
+}
