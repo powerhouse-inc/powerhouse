@@ -23,6 +23,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@powerhousedao/analytics-engine-core": "^0.4.0",
     "@powerhousedao/analytics-engine-knex": "^0.4.0",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
