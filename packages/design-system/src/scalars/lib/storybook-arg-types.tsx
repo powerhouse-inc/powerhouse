@@ -5,6 +5,7 @@ export enum StorybookControlCategory {
   DEFAULT = "Default",
   COMPONENT_SPECIFIC = "Component-specific",
   VALIDATION = "Validation",
+  DIFF = "Differences",
 }
 
 export const PrebuiltArgTypes = {
@@ -272,6 +273,37 @@ export const PrebuiltArgTypes = {
       table: {
         type: { summary: "boolean" },
         category: StorybookControlCategory.VALIDATION,
+      },
+    },
+  },
+
+  viewMode: {
+    viewMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["edition", "addition", "removal", "mixed"],
+      table: {
+        defaultValue: { summary: "edition" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+  },
+  diffMode: {
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["words", "sentences", "lines"],
+      table: {
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+  },
+  baseValue: {
+    baseValue: {
+      control: "text",
+      description: "The base value of the input field",
+      table: {
+        category: StorybookControlCategory.DIFF,
       },
     },
   },
