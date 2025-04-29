@@ -1,7 +1,6 @@
 import { safeParseSdl } from "#document-model-editor/context/schema-context";
 import * as customScalars from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
-import { type Author, type DocumentModelDocument } from "document-model";
 import {
   buildASTSchema,
   extendSchema,
@@ -22,7 +21,8 @@ import {
 import { type Scope } from "../types/documents.js";
 
 export function makeStateObject(modelName: string, scope: Scope) {
-  const name = makeStateObjectName(modelName, scope);
+  const name = `${pascalCase(modelName)}${scope === "local" ? "Local" : ""}State`;
+
   const inputNode: ObjectTypeDefinitionNode = {
     kind: Kind.OBJECT_TYPE_DEFINITION,
     name: {
@@ -49,12 +49,16 @@ export function makeStateObject(modelName: string, scope: Scope) {
   return print(inputNode);
 }
 
-export function makeEmptyInputObject(name: string) {
+export function makeOperationInputName(operationName: string) {
+  return `${pascalCase(operationName)}Input`;
+}
+export function makeOperationInitialDoc(name: string) {
+  const inputName = `${pascalCase(name)}Input`;
   const inputNode: InputObjectTypeDefinitionNode = {
     kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
     name: {
       kind: Kind.NAME,
-      value: name,
+      value: inputName,
     },
     fields: [
       {
@@ -72,22 +76,8 @@ export function makeEmptyInputObject(name: string) {
       },
     ],
   };
-
-  return print(inputNode);
-}
-
-export function makeOperationInputName(operationName: string) {
-  return `${pascalCase(operationName)}Input`;
-}
-
-export function makeStateObjectName(modelName: string, scope: string) {
-  return `${pascalCase(modelName)}${scope === "local" ? "Local" : ""}State`;
-}
-
-export function makeOperationInitialDoc(name: string) {
-  const inputName = makeOperationInputName(name);
-  const inputObject = makeEmptyInputObject(inputName);
-  return inputObject;
+  const inputSdl = print(inputNode);
+  return inputSdl;
 }
 
 export function makeInitialSchemaDoc(modelName: string, scope: Scope) {
@@ -95,81 +85,7 @@ export function makeInitialSchemaDoc(modelName: string, scope: Scope) {
   return stateObject;
 }
 
-export function makeSchemaStringFromDocs(docs: Record<string, string>) {
-  return Object.values(docs).join("\n");
-}
-
-export function getDocumentMetadata(document: DocumentModelDocument) {
-  const globalState = document.state.global;
-  const author: Author = {
-    name: globalState.author.name,
-    website: globalState.author.website,
-  };
-  return {
-    name: globalState.name,
-    documentType: globalState.id,
-    description: globalState.description,
-    extension: globalState.extension,
-    author,
-  };
-}
-
-export function getDifferences<T extends object>(
-  obj1: T | undefined | null,
-  obj2: Partial<T> | undefined | null,
-): Partial<T> {
-  if (!obj1 || !obj2) return {};
-
-  const differences: Partial<T> = {};
-
-  function isObject(value: any): value is object {
-    return !!value && typeof value === "object" && !Array.isArray(value);
-  }
-
-  const compare = (value1: any, value2: any): boolean => {
-    if (isObject(value1) && isObject(value2)) {
-      // Convert both objects to JSON strings to compare them as a whole.
-      const keys1 = Object.keys(value1).sort();
-      const keys2 = Object.keys(value2).sort();
-      if (
-        JSON.stringify(keys1) !== JSON.stringify(keys2) ||
-        keys1.some((key) =>
-          compare(
-            value1[key as keyof typeof value1],
-            value2[key as keyof typeof value1],
-          ),
-        )
-      ) {
-        return true; // Any difference in object structure or value means they're different.
-      }
-      return false;
-    } else if (Array.isArray(value1) && Array.isArray(value2)) {
-      // For arrays, compare their serialized forms.
-      return JSON.stringify(value1) !== JSON.stringify(value2);
-    } else {
-      // For primitives, compare directly.
-      return value1 !== value2;
-    }
-  };
-
-  for (const key of new Set([...Object.keys(obj1), ...Object.keys(obj2)])) {
-    if (
-      compare(obj1[key as keyof typeof obj1], obj2[key as keyof typeof obj2])
-    ) {
-      differences[key as keyof typeof differences] =
-        obj2[key as keyof typeof obj2];
-    }
-  }
-
-  return Object.entries(differences).reduce<Partial<T>>((acc, [key, value]) => {
-    if (value !== undefined) {
-      // @ts-expect-error generic cannot be inferred
-      acc[key] = value;
-    }
-    return acc;
-  }, {});
-}
-function isValidScalarValue(typeName: string, value: any): boolean {
+function isValidScalarValue(typeName: string, value: any) {
   if (typeName in customScalars) {
     const scalar = customScalars[typeName as keyof typeof customScalars];
     if (scalar instanceof GraphQLScalarType) {
@@ -274,10 +190,11 @@ export function makeMinimalObjectFromSDL(
 ) {
   const parsedSchema = safeParseSdl(schemaSdl);
   const typeAST = safeParseSdl(sdl);
-  if (!parsedSchema || !typeAST) return "";
+
+  if (!parsedSchema || !typeAST) return "{}";
+
   const schema = buildASTSchema(parsedSchema);
 
-  // Extract the type names from the SDL
   const typeNames: string[] = [];
   typeAST.definitions.forEach((def) => {
     if (
@@ -289,23 +206,23 @@ export function makeMinimalObjectFromSDL(
   });
 
   if (typeNames.length === 0) {
-    throw new Error("No object type definition found in SDL.");
+    return "{}";
   }
 
   // Assuming there's only one type definition in the SDL
-  const typeName = typeNames[0];
-  let type = schema.getType(typeName);
+  const stateTypeName = typeNames[0];
+  let type = schema.getType(stateTypeName);
 
   let effectiveSchema = schema;
 
   if (!type || !isObjectType(type)) {
     // Type doesn't exist in the schema, extend the schema
     effectiveSchema = extendSchema(schema, typeAST);
-    type = effectiveSchema.getType(typeName);
+    type = effectiveSchema.getType(stateTypeName);
   }
 
   if (!type || !isObjectType(type)) {
-    throw new Error(`Type "${typeName}" is not a valid ObjectType.`);
+    throw new Error(`Type "${stateTypeName}" is not a valid ObjectType.`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -342,7 +259,7 @@ export function renameSchemaType(
   const newTypeName = `${pascalCase(newName)}${typeSuffix}`;
 
   const ast = safeParseSdl(sdl);
-  if (!ast) return "";
+  if (!ast) return sdl;
 
   const updatedAst = visit(ast, {
     ObjectTypeDefinition: (node) => {
@@ -411,7 +328,7 @@ export function handleModelNameChange(params: {
   localStateSchema: string;
   setStateSchema: (schema: string, scope: Scope) => void;
 }) {
-  const { oldName, newName, globalStateSchema, setStateSchema } = params;
+  const { newName, globalStateSchema, setStateSchema } = params;
 
   const hasExistingSchema = !!globalStateSchema;
 

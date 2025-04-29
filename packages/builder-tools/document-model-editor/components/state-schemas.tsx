@@ -1,17 +1,17 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { typeDefsDoc } from "../constants/documents.js";
 import { useSchemaContext } from "../context/schema-context.js";
 import { type Scope } from "../types/documents.js";
 import {
-  makeMinimalObjectFromSDL,
   makeInitialSchemaDoc,
+  makeMinimalObjectFromSDL,
 } from "../utils/helpers.js";
 import { ensureValidStateSchemaName } from "../utils/linting.js";
 import { cn } from "../utils/style.js";
 import { Button } from "./button.js";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs.js";
 import { GraphqlEditor } from "./code-editors/graphql-editor.js";
 import { JSONEditor } from "./code-editors/json-editor.js";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs.js";
 
 type Props = {
   modelName: string;
