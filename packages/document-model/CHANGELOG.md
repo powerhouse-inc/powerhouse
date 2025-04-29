@@ -1,3 +1,20 @@
+## 2.28.1-dev.7 (2025-04-29)
+
+### 🚀 Features
+
+- **reactor-browser,connect:** use global analytics store ([213059fcd](https://github.com/powerhouse-inc/powerhouse/commit/213059fcd))
+
+### 🩹 Fixes
+
+- remove all usages of hashKey and replace with appropriate generateId/generateUUID functions ([1a365939d](https://github.com/powerhouse-inc/powerhouse/commit/1a365939d))
+- updating launch confituration to fix reactor local debug source mapping ([32af5af15](https://github.com/powerhouse-inc/powerhouse/commit/32af5af15))
+- **switchboard:** add analytics-engine-core as a dependency of switchboard ([bded7cbab](https://github.com/powerhouse-inc/powerhouse/commit/bded7cbab))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 2.28.1-dev.6 (2025-04-21)
 
 ### 🚀 Features
