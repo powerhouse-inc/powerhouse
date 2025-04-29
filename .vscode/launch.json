@@ -26,14 +26,21 @@
       "outFiles": ["${workspaceRoot}/packages/*/dist/**/*.js"],
       "sourceMaps": true,
       "resolveSourceMapLocations": [
-        "${workspaceRoot}/packages/*/dist/**/*.js.map",
-        "${workspaceRoot}/packages/*/dist/**/*.ts.map",
-        "${workspaceRoot}/packages/*/src/**/*.ts"
+        "${workspaceRoot}/packages/*/dist/**/*.js.map"
       ],
+      "sourceMapPathOverrides": {
+        "../../../src/*": "${workspaceRoot}/packages/document-drive/src/*",
+        "../src/*": "${workspaceRoot}/packages/document-drive/src/*",
+        "../../*": "${workspaceRoot}/packages/*",
+        "../*": "${workspaceRoot}/packages/*",
+        "/*": "${workspaceRoot}/*",
+        "*": "${workspaceRoot}/*"
+      },
+      "preLaunchTask": "tsc: build - tsconfig.json",
       "smartStep": true,
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "cwd": "${workspaceRoot}/../effective-octo-adventure"
+      "cwd": "${workspaceRoot}"
     }
   ]
 }
