@@ -3,6 +3,7 @@ import React, { useCallback, useId, useMemo } from "react";
 import { IdAutocompleteContext } from "../../../../scalars/components/fragments/id-autocomplete/id-autocomplete-context.js";
 import { IdAutocompleteListOption } from "../../../../scalars/components/fragments/id-autocomplete/id-autocomplete-list-option.js";
 import { IdAutocomplete } from "../../../../scalars/components/fragments/id-autocomplete/index.js";
+import { PHIDInputDiff } from "./phid-input-diff.js";
 import type { PHIDInputProps, PHIDOption } from "./types.js";
 
 const PHIDInput = React.forwardRef<HTMLInputElement, PHIDInputProps>(
@@ -34,6 +35,9 @@ const PHIDInput = React.forwardRef<HTMLInputElement, PHIDInputProps>(
       isOpenByDefault, // to be used only in stories
       initialOptions, // to be used only in stories
       previewPlaceholder,
+      viewMode = "edition",
+      diffMode,
+      baseValue,
       ...props
     },
     ref,
@@ -81,63 +85,75 @@ const PHIDInput = React.forwardRef<HTMLInputElement, PHIDInputProps>(
       [variant, previewPlaceholder],
     );
 
+    if (viewMode === "edition") {
+      return (
+        <IdAutocompleteContext.Provider value={contextValue}>
+          {autoComplete && fetchOptionsCallback ? (
+            <IdAutocomplete
+              id={id}
+              name={name}
+              className={className}
+              label={label}
+              description={description}
+              value={value}
+              defaultValue={defaultValue}
+              disabled={disabled}
+              placeholder={placeholder}
+              required={required}
+              errors={errors}
+              warnings={warnings}
+              onChange={onChange}
+              onBlur={onBlur}
+              onClick={onClick}
+              onMouseDown={onMouseDown}
+              autoComplete={true}
+              variant={variant}
+              maxLength={maxLength}
+              fetchOptionsCallback={fetchOptionsCallback}
+              fetchSelectedOptionCallback={fetchSelectedOptionCallback}
+              isOpenByDefault={isOpenByDefault}
+              initialOptions={initialOptions}
+              renderOption={renderOption}
+              previewPlaceholder={previewPlaceholder}
+              {...props}
+              ref={ref}
+            />
+          ) : (
+            <IdAutocomplete
+              id={id}
+              name={name}
+              className={className}
+              label={label}
+              description={description}
+              value={value}
+              defaultValue={defaultValue}
+              disabled={disabled}
+              placeholder={placeholder}
+              required={required}
+              errors={errors}
+              warnings={warnings}
+              onChange={onChange}
+              onBlur={onBlur}
+              onClick={onClick}
+              onMouseDown={onMouseDown}
+              autoComplete={false}
+              maxLength={maxLength}
+              {...props}
+              ref={ref}
+            />
+          )}
+        </IdAutocompleteContext.Provider>
+      );
+    }
+
     return (
-      <IdAutocompleteContext.Provider value={contextValue}>
-        {autoComplete && fetchOptionsCallback ? (
-          <IdAutocomplete
-            id={id}
-            name={name}
-            className={className}
-            label={label}
-            description={description}
-            value={value}
-            defaultValue={defaultValue}
-            disabled={disabled}
-            placeholder={placeholder}
-            required={required}
-            errors={errors}
-            warnings={warnings}
-            onChange={onChange}
-            onBlur={onBlur}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            autoComplete={true}
-            variant={variant}
-            maxLength={maxLength}
-            fetchOptionsCallback={fetchOptionsCallback}
-            fetchSelectedOptionCallback={fetchSelectedOptionCallback}
-            isOpenByDefault={isOpenByDefault}
-            initialOptions={initialOptions}
-            renderOption={renderOption}
-            previewPlaceholder={previewPlaceholder}
-            {...props}
-            ref={ref}
-          />
-        ) : (
-          <IdAutocomplete
-            id={id}
-            name={name}
-            className={className}
-            label={label}
-            description={description}
-            value={value}
-            defaultValue={defaultValue}
-            disabled={disabled}
-            placeholder={placeholder}
-            required={required}
-            errors={errors}
-            warnings={warnings}
-            onChange={onChange}
-            onBlur={onBlur}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            autoComplete={false}
-            maxLength={maxLength}
-            {...props}
-            ref={ref}
-          />
-        )}
-      </IdAutocompleteContext.Provider>
+      <PHIDInputDiff
+        value={value ?? defaultValue ?? ""}
+        viewMode={viewMode}
+        diffMode={diffMode}
+        baseValue={baseValue}
+        variant={variant}
+      />
     );
   },
 );
