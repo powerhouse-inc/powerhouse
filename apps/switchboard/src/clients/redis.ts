@@ -5,7 +5,7 @@ export const initRedis = async () => {
   if (!redisClient) {
     const url = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
     if (!url) {
-      throw new Error("REDIS_TLS_URL is not set");
+      return;
     }
 
     const socket = url.includes("rediss")

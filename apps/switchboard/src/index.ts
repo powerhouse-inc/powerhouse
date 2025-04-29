@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { startAPI } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
-import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
+import {
+  InMemoryCache,
+  ReactorBuilder,
+  driveDocumentModelModule,
+} from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
@@ -61,8 +65,8 @@ const main = async () => {
         ? connectionString + "?sslmode=no-verify"
         : connectionString;
 
-    const redisCache = new RedisCache(redis);
-    const storageFactory = new PrismaStorageFactory(dbUrl, redisCache);
+    const cache = redis ? new RedisCache(redis) : new InMemoryCache();
+    const storageFactory = new PrismaStorageFactory(dbUrl, cache);
     const storage = storageFactory.build();
 
     const reactor = new ReactorBuilder([
@@ -71,7 +75,7 @@ const main = async () => {
       ...documentModels,
     ] as DocumentModelModule[])
       .withStorage(storage)
-      .withCache(redisCache)
+      .withCache(cache)
       .build();
 
     // init drive server
