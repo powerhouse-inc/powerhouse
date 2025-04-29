@@ -2,7 +2,7 @@ import connectConfig from '#connect-config';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import { IDocumentAdminStorage, IDocumentOperationStorage, IDocumentStorage, IDriveOperationStorage } from 'document-drive/storage/types';
-import { hashKey } from 'document-model';
+import { generateId } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, unwrap } from 'jotai/utils';
 import {
@@ -24,7 +24,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
             .addDrive({
                 slug: 'my-local-drive',
                 global: {
-                    id: hashKey(),
+                    id: generateId(),
                     name: 'My Local Drive',
                     icon: null,
                 },

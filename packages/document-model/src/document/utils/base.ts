@@ -223,11 +223,6 @@ export function hashDocumentStateForScope(
   return hash(stringifyJson(document.state[scope] || ""));
 }
 
-export const hashKey = (date?: Date, randomLimit = 1000) => {
-  const random = Math.random() * randomLimit;
-  return hash(`${(date ?? new Date()).toISOString()}${random}`);
-};
-
 export function readOnly<T>(value: T): Readonly<T> {
   return Object.freeze(value);
 }
