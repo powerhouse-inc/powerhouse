@@ -24,7 +24,8 @@ export function makeUiNode(
   drive: DocumentDriveDocument,
   withChildren: boolean,
 ): UiNode {
-  const { id, name, icon, slug, nodes } = drive.state.global;
+  const { id, name, icon, nodes } = drive.state.global;
+  const { slug } = drive;
   const { sharingType: _sharingType, availableOffline } = drive.state.local;
   const __sharingType = _sharingType?.toUpperCase();
   const sharingType = __sharingType === "PRIVATE" ? LOCAL : __sharingType;

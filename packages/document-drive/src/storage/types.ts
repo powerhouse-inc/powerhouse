@@ -29,21 +29,6 @@ export interface IDocumentStorage {
   create(documentId: string, document: PHDocument): Promise<void>;
 
   /**
-   * Creates a new document with the given id and slug.
-   *
-   * @param documentId - The id of the document to create.
-   * @param slug - The slug of the document to create.
-   * @param document - The document to create.
-   *
-   * @throws Error if the document already exists.
-   */
-  // createWithSlug(
-  //   documentId: string,
-  //   slug: string,
-  //   document: PHDocument,
-  // ): Promise<void>;
-
-  /**
    * Returns the document with the given id.
    *
    * @param documentId - The id of the document to get.

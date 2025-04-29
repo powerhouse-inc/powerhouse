@@ -16,6 +16,7 @@ import {
 describe("DocumentModel Class", () => {
   const initialState = {
     name: "",
+    slug: "",
     revision: {
       global: 0,
       local: 0,
@@ -40,6 +41,7 @@ describe("DocumentModel Class", () => {
     CountAction
   > = {
     name: "",
+    slug: "",
     revision: {
       global: 0,
       local: 0,

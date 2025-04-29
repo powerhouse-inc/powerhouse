@@ -18,7 +18,7 @@ export type {
   Immutable,
   Signal,
   SignalDispatch,
-  SynchronizationUnitInput
+  SynchronizationUnitInput,
 };
 //  [
 //     signerAddress,
@@ -170,6 +170,8 @@ export type Meta = {
 export type DocumentHeader = {
   /** The name of the document. */
   name: string;
+  /** The slug of the document. */
+  slug: string;
   /** The number of operations applied to the document. */
   revision: Record<OperationScope, number>;
   /** The type of the document model. */

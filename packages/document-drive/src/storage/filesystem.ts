@@ -67,9 +67,7 @@ export class FilesystemStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug =
-      (document.initialState.state.global as { slug?: string })?.slug ??
-      documentId;
+    const slug = document.slug.length > 0 ? document.slug : documentId;
     if (slug) {
       const slugManifest = await this.getSlugManifest();
       if (slugManifest.slugToId[slug]) {
@@ -203,8 +201,7 @@ export class FilesystemStorage
     // First, find any slug for this document and remove it from the slug manifest
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = (document.initialState.state.global as { slug?: string })
-        ?.slug;
+      const slug = document.slug.length > 0 ? document.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();

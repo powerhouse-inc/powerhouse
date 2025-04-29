@@ -49,7 +49,7 @@ class InMemoryCache implements ICache {
       return false;
     }
 
-    const slug = drive.state.global.slug;
+    const slug = drive.slug.length > 0 ? drive.slug : driveId;
     if (slug) {
       this.slugToDriveId.delete(slug);
     }

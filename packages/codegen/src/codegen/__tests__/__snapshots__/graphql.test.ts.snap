@@ -47,7 +47,6 @@ export type DocumentDriveState = {
   name: Scalars['String']['output'];
   nodes: Array<Node>;
   icon: Maybe<Scalars['String']['output']>;
-  slug: Maybe<Scalars['String']['output']>;
 };
 
 export type ListenerFilter = {
@@ -298,8 +297,7 @@ export function DocumentDriveStateSchema(): z.ZodObject<Properties<DocumentDrive
     id: z.string(),
     name: z.string(),
     nodes: z.array(NodeSchema()),
-    icon: z.string().nullable(),
-    slug: z.string().nullable()
+    icon: z.string().nullable()
   })
 }
 

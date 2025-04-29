@@ -90,9 +90,8 @@ class RedisCache implements ICache {
       return false;
     }
 
-    const slug = drive.state.global.slug;
-    if (slug) {
-      const slugRedisId = RedisCache._getDriveBySlugKey(slug);
+    if (drive.slug.length > 0) {
+      const slugRedisId = RedisCache._getDriveBySlugKey(drive.slug);
       await this.redis.del(slugRedisId);
     }
 

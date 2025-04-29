@@ -37,7 +37,7 @@ export default function Content() {
             !documentDrives.find(
                 d =>
                     d.state.global.id === driveId ||
-                    d.state.global.slug === driveId ||
+                    d.slug === driveId ||
                     d.state.global.name === driveId,
             )
         ) {

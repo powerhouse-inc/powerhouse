@@ -19,7 +19,7 @@ import { FilesystemStorage } from "../src/storage/filesystem";
 import { MemoryStorage } from "../src/storage/memory";
 import { PrismaClient } from "../src/storage/prisma/client";
 import { PrismaStorage } from "../src/storage/prisma/prisma";
-import { IDriveStorage } from "../src/storage/types";
+import { IDriveOperationStorage } from "../src/storage/types";
 import { generateUUID } from "../src/utils/misc";
 import { baseDocumentModels, expectUUID } from "./utils";
 
@@ -45,20 +45,7 @@ const storageLayers = [
     },
   ],
   ["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
-  /*[
-    "SequelizeStorage",
-    async () => {
-      const storage = new SequelizeStorage({
-        dialect: "sqlite",
-        storage: ":memory:",
-        logging: false,
-      });
-
-      await storage.syncModels();
-      return storage;
-    },
-  ],*/
-] as unknown as [string, () => Promise<IDriveStorage>][];
+] as unknown as [string, () => Promise<IDriveOperationStorage>][];
 
 let file: PHDocument | undefined = undefined;
 // TODO import RealWorldAssets
@@ -79,7 +66,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     if (storageName === "FilesystemStorage") {
       return fs.rm(FileStorageDir, { recursive: true, force: true });
     } else if (storageName === "BrowserStorage") {
-      return (await buildStorage()).clearStorage?.();
+      return ((await buildStorage()) as BrowserStorage).clear();
     } else if (storageName === "PrismaStorage") {
       await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
       await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
@@ -94,7 +81,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     if (storageName === "FilesystemStorage") {
       return fs.rm(FileStorageDir, { recursive: true, force: true });
     } else if (storageName === "BrowserStorage") {
-      return (await buildStorage()).clearStorage?.();
+      return ((await buildStorage()) as BrowserStorage).clear();
     } else if (storageName === "PrismaStorage") {
       //await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
       //await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
@@ -736,11 +723,12 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .build();
     const addDrive = (driveId: string, slug: string) =>
       server.addDrive({
+        slug,
         global: {
           id: driveId,
           name: "name",
           icon: "icon",
-          slug: slug,
+          slug: null,
         },
         local: {
           availableOffline: false,
