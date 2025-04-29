@@ -2,7 +2,11 @@ import { createProject, parseVersion } from "@powerhousedao/codegen";
 import { type Command } from "commander";
 import { initHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
-import { withCustomHelp } from "../utils/index.js";
+import {
+  getPackageManagerFromPath,
+  PH_BIN_PATH,
+  withCustomHelp,
+} from "../utils/index.js";
 
 // Extract the type parameters for reuse
 export type InitOptions = {
@@ -24,7 +28,8 @@ export const init: CommandActionType<
       name: options.project ?? projectName,
       interactive: options.interactive ?? false,
       version: parseVersion(options),
-      packageManager: options.packageManager,
+      packageManager:
+        options.packageManager ?? getPackageManagerFromPath(PH_BIN_PATH),
     });
   } catch (error) {
     console.error("Failed to initialize the project", error);
