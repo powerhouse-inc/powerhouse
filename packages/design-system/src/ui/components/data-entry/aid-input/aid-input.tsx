@@ -65,7 +65,7 @@ const AIDInput = React.forwardRef<HTMLInputElement, AIDInputProps>(
           path={
             displayProps?.asPlaceholder
               ? previewPlaceholder?.path || "URL not available"
-              : option.path
+              : option.path || "URL not available"
           }
           value={
             displayProps?.asPlaceholder
@@ -76,7 +76,7 @@ const AIDInput = React.forwardRef<HTMLInputElement, AIDInputProps>(
           agentType={
             displayProps?.asPlaceholder
               ? previewPlaceholder?.agentType || "Agent type not available"
-              : option.agentType
+              : option.agentType || "Agent type not available"
           }
           placeholderIcon={previewPlaceholder?.icon || "Person"}
           {...displayProps}
