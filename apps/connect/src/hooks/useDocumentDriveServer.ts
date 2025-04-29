@@ -53,7 +53,7 @@ import {
     type GetDocumentOptions,
     type Listener,
 } from 'document-drive/server/types';
-import { type Operation, type PHDocument, hashKey } from 'document-model';
+import { type Operation, type PHDocument, generateId } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useDocumentDrives } from './useDocumentDrives.js';
@@ -199,17 +199,16 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create documents');
             }
 
-            const id = hashKey();
-
             let drive = documentDrives.find(d => d.state.global.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
 
+            const documentId = generateId();
             const action = generateAddNodeAction(
                 drive.state.global,
                 {
-                    id,
+                    id: documentId,
                     name,
                     parentFolder: parentFolder ?? null,
                     documentType,
@@ -220,7 +219,9 @@ export function useDocumentDriveServer() {
 
             drive = await _addDriveOperation(driveId, action);
 
-            const node = drive?.state.global.nodes.find(node => node.id === id);
+            const node = drive?.state.global.nodes.find(
+                node => node.id === documentId,
+            );
             if (!node || !isFileNode(node)) {
                 throw new Error('There was an error adding document');
             }
@@ -367,17 +368,19 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create folders');
             }
-            const id = hashKey();
+            const folderId = generateId();
             const drive = await _addDriveOperation(
                 driveId,
                 addFolder({
-                    id,
+                    id: folderId,
                     name,
                     parentFolder,
                 }),
             );
 
-            const node = drive?.state.global.nodes.find(node => node.id === id);
+            const node = drive?.state.global.nodes.find(
+                node => node.id === folderId,
+            );
             if (!node || !isFolderNode(node)) {
                 throw new Error('There was an error adding folder');
             }
@@ -459,15 +462,13 @@ export function useDocumentDriveServer() {
 
             if (!drive) return;
 
-            const generateId = () => hashKey();
-
             const copyNodesInput = generateNodesCopy(
                 {
                     srcId: src.id,
                     targetParentFolder: target.id,
                     targetName: src.name,
                 },
-                generateId,
+                () => generateId(),
                 drive.state.global.nodes,
             );
 
@@ -532,7 +533,7 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create drives');
             }
-            const id = drive.global.id || hashKey();
+            const id = drive.global.id || generateId();
             drive = createDriveState(drive);
             const newDrive = await reactor.addDrive(
                 {

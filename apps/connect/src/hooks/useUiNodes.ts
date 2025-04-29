@@ -330,7 +330,6 @@ export function useUiNodes() {
                             name: data.name,
                             id: undefined,
                             icon: null,
-                            slug: null,
                         },
                         local: {
                             availableOffline: data.availableOffline,

@@ -27,7 +27,6 @@ async function initReactor(reactor: IDocumentDriveServer) {
                     id: hashKey(),
                     name: 'My Local Drive',
                     icon: null,
-                    slug: null,
                 },
                 local: {
                     availableOffline: false,
