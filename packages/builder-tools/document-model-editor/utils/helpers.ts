@@ -105,9 +105,10 @@ export function getDocumentMetadata(document: DocumentModelDocument) {
     name: globalState.author.name,
     website: globalState.author.website,
   };
+
   return {
     name: globalState.name,
-    documentType: globalState.id,
+    documentType: document.id,
     description: globalState.description,
     extension: globalState.extension,
     author,

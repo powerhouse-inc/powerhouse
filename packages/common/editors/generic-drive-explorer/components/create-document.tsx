@@ -24,11 +24,11 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
         New document
       </h3>
       <div className="flex w-full flex-wrap gap-4">
-        {documentModels?.map((doc) => {
+        {documentModels?.map((doc, index) => {
           const spec = getDocumentSpec(doc);
           return (
             <Button
-              key={spec.id}
+              key={index}
               color="light"
               aria-details={spec.description}
               onClick={() => createDocument(doc)}

@@ -42,7 +42,7 @@ describe("DocumentModel", () => {
 
   it("should load from zip", async () => {
     const documentModel = await loadFromFile(`${tempDir}/test.phdm.zip`);
-    expect(documentModel.state.global.id).toBe("powerhouse/test");
+    expect(documentModel.id).toBe("powerhouse/test");
     expect(documentModel.operations.global).toMatchObject([
       {
         hash: "xmstBdekoMQJQXwUZaOcv/Q/d9Q=",
@@ -97,17 +97,14 @@ describe("DocumentModel", () => {
 
   it("should keep undo state when loading from zip", async () => {
     let documentModel = createDocument();
-    documentModel = reducer(
-      documentModel,
-      setModelId({ id: "powerhouse/test" }),
-    );
+    documentModel = reducer(documentModel, setModelName({ name: "name-test" }));
     documentModel = reducer(documentModel, undo());
-    expect(documentModel.state.global.id).toBe("");
+    expect(documentModel.state.global.name).toBe("");
 
     await saveToFile(documentModel, tempDir, "test2");
 
     const loadedDocumentModel = await loadFromFile(`${tempDir}/test2.phdm.zip`);
-    expect(loadedDocumentModel.state.global.id).toBe("");
+    expect(loadedDocumentModel.state.global.name).toBe("");
     expect(loadedDocumentModel.operations.global).toMatchObject([
       {
         index: 1,

@@ -37,9 +37,9 @@ import {
 
 export function DocumentModelEditor(props: EditorProps<DocumentModelDocument>) {
   const { document, documentNodeName, dispatch } = props;
+  const { id: documentType } = document;
   const {
     name: modelName,
-    id: documentType,
     extension,
     description,
     author: { name: authorName, website: authorWebsite },

@@ -9,7 +9,6 @@ describe("DocumentModel Class", () => {
     expect(model.revision).toBe(0);
     expect(model.operations.global.length).toBe(0);
 
-    expect(model.state.global.id).toBe("");
     expect(model.state.global.name).toBe("");
     expect(model.state.global.description).toBe("");
     expect(model.state.global.extension).toBe("");
@@ -27,14 +26,12 @@ describe("DocumentModel Class", () => {
     const model = new DocumentModelClass();
 
     model
-      .setModelId({ id: "<id>" })
       .setModelName({ name: "<name>" })
       .setModelDescription({ description: "<description>" })
       .setModelExtension({ extension: "phdm" })
       .setAuthorName({ authorName: "<authorName>" })
       .setAuthorWebsite({ authorWebsite: "<authorWebsite>" });
 
-    expect(model.state.global.id).toBe("<id>");
     expect(model.state.global.name).toBe("<name>");
     expect(model.state.global.description).toBe("<description>");
     expect(model.state.global.extension).toBe("phdm");

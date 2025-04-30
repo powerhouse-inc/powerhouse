@@ -19,7 +19,6 @@ const { CreateDocumentStory: WithData } = createDocumentStory(
   documentModelCreateExtendedState({
     state: {
       global: {
-        id: "test type",
         name: "test",
         extension: ".test.ph",
         description: "test description",
@@ -121,7 +120,6 @@ const { CreateDocumentStory: WithBackgroundUpdates } = createDocumentStory(
   documentModelCreateExtendedState({
     state: {
       global: {
-        id: "test type",
         name: "test",
         extension: ".test.ph",
         description: "test description",
