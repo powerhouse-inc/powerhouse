@@ -19,7 +19,7 @@ export const InputDiff = ({
     <div
       className={cn(
         "flex w-full rounded-md font-sans text-sm font-normal leading-5 text-gray-600",
-        "cursor-not-allowed border border-gray-300 bg-transparent px-3 py-[7px]",
+        "cursor-not-allowed border border-gray-300 bg-transparent px-3",
         !multiline && ellipsis && "truncate [&>span]:truncate",
         className,
       )}

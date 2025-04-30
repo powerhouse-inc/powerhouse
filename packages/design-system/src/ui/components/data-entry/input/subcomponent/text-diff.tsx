@@ -1,7 +1,7 @@
 import { cn } from "@powerhousedao/design-system/scalars";
 import { diffSentences, diffWords } from "diff";
 import { useMemo } from "react";
-import type { WithDifference } from "../../../../scalars/components/types.js";
+import type { WithDifference } from "../../../../../scalars/components/types.js";
 
 interface TextDiffProps extends WithDifference<string> {
   value: string;

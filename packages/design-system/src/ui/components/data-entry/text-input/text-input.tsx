@@ -120,6 +120,8 @@ const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         viewMode={viewMode}
         diffMode={diffMode}
         baseValue={baseValue}
+        label={label}
+        required={props.required}
       />
     );
   },

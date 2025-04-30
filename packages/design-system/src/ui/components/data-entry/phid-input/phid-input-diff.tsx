@@ -1,8 +1,8 @@
 /* eslint-disable react/jsx-max-depth */
 import { cn } from "@powerhousedao/design-system/scalars";
 import type { WithDifference } from "../../../../scalars/components/types.js";
-import { InputDiff } from "../input/input-diff.js";
-import { TextDiff } from "../input/text-diff.js";
+import { InputDiff } from "../input/subcomponent/input-diff.js";
+import { TextDiff } from "../input/subcomponent/text-diff.js";
 
 interface PHIDInputDiffProps extends WithDifference<string> {
   value: string;
