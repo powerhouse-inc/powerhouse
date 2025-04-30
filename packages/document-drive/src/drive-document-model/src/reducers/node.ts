@@ -4,6 +4,8 @@
  * - delete the file and run the code generator again to have it reset
  */
 
+import { DocumentIdValidationError } from "#server/error";
+import { isValidDocumentId } from "#storage/utils";
 import { type PHDocument, type SynchronizationUnitInput } from "document-model";
 import { type DocumentDriveNodeOperations } from "../../gen/node/operations.js";
 import { type FileNode } from "../../gen/types.js";
@@ -18,6 +20,10 @@ export const reducer: DocumentDriveNodeOperations = {
   addFileOperation(state, action, dispatch) {
     if (state.nodes.find((node) => node.id === action.input.id)) {
       throw new Error(`Node with id ${action.input.id} already exists!`);
+    }
+
+    if (!isValidDocumentId(action.input.id)) {
+      throw new DocumentIdValidationError(action.input.id);
     }
 
     const name = handleTargetNameCollisions({
@@ -147,6 +153,10 @@ export const reducer: DocumentDriveNodeOperations = {
 
     if (!node) {
       throw new Error(`Node with id ${action.input.srcId} not found`);
+    }
+
+    if (!isValidDocumentId(action.input.targetId)) {
+      throw new DocumentIdValidationError(action.input.targetId);
     }
 
     const duplicatedNode = state.nodes.find(

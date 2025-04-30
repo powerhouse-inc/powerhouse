@@ -1,3 +1,4 @@
+import { isValidDocumentId, isValidSlug } from "#storage/utils";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   AttachmentInput,
@@ -21,7 +22,9 @@ import {
 import {
   ConflictOperationError,
   DocumentAlreadyExistsError,
+  DocumentIdValidationError,
   DocumentNotFoundError,
+  DocumentSlugValidationError,
 } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
@@ -126,7 +129,14 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   async create(documentId: string, document: PHDocument) {
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
     const slug = document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
 
     try {
       await this.db.document.create({

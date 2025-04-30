@@ -6,7 +6,9 @@ import {
 } from "#drive-document-model/gen/types";
 import {
   DocumentAlreadyExistsError,
+  DocumentIdValidationError,
   DocumentNotFoundError,
+  DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
@@ -20,6 +22,7 @@ import {
 import { type Helia } from "helia";
 import stringify from "json-stringify-deterministic";
 import type { IDocumentOperationStorage, IDocumentStorage } from "./types.js";
+import { isValidDocumentId, isValidSlug } from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -64,11 +67,19 @@ export class IPFSStorage
   }
 
   async create(documentId: string, document: PHDocument): Promise<void> {
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
     if (await this.exists(documentId)) {
       throw new DocumentAlreadyExistsError(documentId);
     }
 
     const slug = document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
+
     if (slug) {
       const slugManifest = await this.getSlugManifest();
       if (slugManifest.slugToId[slug]) {

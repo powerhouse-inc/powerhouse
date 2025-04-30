@@ -1,7 +1,9 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import {
   DocumentAlreadyExistsError,
+  DocumentIdValidationError,
   DocumentNotFoundError,
+  DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
@@ -17,6 +19,7 @@ import {
   type IDocumentStorage,
   type IDriveOperationStorage,
 } from "./types.js";
+import { isValidDocumentId, isValidSlug } from "./utils.js";
 
 type DriveManifest = {
   documentIds: Set<string>;
@@ -44,12 +47,20 @@ export class MemoryStorage
   }
 
   create(documentId: string, document: PHDocument) {
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
     // check if the document already exists by id
     if (this.documents[documentId]) {
       throw new DocumentAlreadyExistsError(documentId);
     }
 
     const slug = document.slug.length > 0 ? document.slug : documentId;
+
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
 
     // check if the document already exists by slug
     if (slug && this.slugToDocumentId[slug]) {

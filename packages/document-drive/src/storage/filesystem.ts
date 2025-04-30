@@ -4,7 +4,9 @@ import {
 } from "#drive-document-model/gen/types";
 import {
   DocumentAlreadyExistsError,
+  DocumentIdValidationError,
   DocumentNotFoundError,
+  DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
@@ -25,6 +27,7 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import { type IDocumentStorage, type IDriveOperationStorage } from "./types.js";
+import { isValidDocumentId, isValidSlug } from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -62,12 +65,20 @@ export class FilesystemStorage
   }
 
   async create(documentId: string, document: PHDocument) {
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
     const documentPath = this._buildDocumentPath(documentId);
     if (existsSync(documentPath)) {
       throw new DocumentAlreadyExistsError(documentId);
     }
 
     const slug = document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
+
     if (slug) {
       const slugManifest = await this.getSlugManifest();
       if (slugManifest.slugToId[slug]) {
