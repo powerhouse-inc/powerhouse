@@ -25,9 +25,10 @@ export function createZip(document: PHDocument) {
   // create zip file
   const zip = new JSZip();
 
-  const { name, slug, revision, documentType, created, lastModified } =
+  const { id, name, slug, revision, documentType, created, lastModified } =
     document;
   const header: DocumentHeader = {
+    id,
     name,
     slug,
     revision,

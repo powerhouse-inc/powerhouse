@@ -64,7 +64,8 @@ export class FilesystemStorage
     return Promise.resolve(documentExists);
   }
 
-  async create(documentId: string, document: PHDocument) {
+  async create(document: PHDocument) {
+    const documentId = document.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }

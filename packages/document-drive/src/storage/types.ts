@@ -19,14 +19,13 @@ export interface IDocumentStorage {
   exists(documentId: string): Promise<boolean>;
 
   /**
-   * Creates a new document with the given id.
+   * Creates a new document.
    *
-   * @param documentId - The id of the document to create.
    * @param document - The document to create.
    *
    * @throws Error if the document with a matching id OR slug already exists.
    */
-  create(documentId: string, document: PHDocument): Promise<void>;
+  create(document: PHDocument): Promise<void>;
 
   /**
    * Returns the document with the given id.

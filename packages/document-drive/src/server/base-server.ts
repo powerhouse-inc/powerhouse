@@ -22,7 +22,7 @@ import {
   type IDefaultDrivesManager,
 } from "#utils/default-drives-manager";
 import { requestPublicDrive } from "#utils/graphql";
-import { generateUUID, isDocumentDrive, runAsapAsync } from "#utils/misc";
+import { isDocumentDrive, runAsapAsync } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
   type DocumentDriveAction,
@@ -603,26 +603,18 @@ export class BaseDocumentDriveServer
     input: DriveInput,
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
-    const id = input.global.id || generateUUID();
-    if (!id) {
-      throw new Error("Invalid Drive Id");
-    }
-
+    const id = input.id;
     const document = createDocument({
       state: input,
     });
-
-    if (input.slug && input.slug.length > 0) {
-      document.slug = input.slug;
-    }
-
+    document.id = id;
     document.meta = {
       preferredEditor: preferredEditor,
     };
 
-    await this.documentStorage.create(id, document);
+    await this.documentStorage.create(document);
 
-    if (input.slug && input.slug.length > 0) {
+    if (input.slug) {
       await this.cache.deleteDriveBySlug(input.slug);
     }
 
@@ -657,9 +649,9 @@ export class BaseDocumentDriveServer
 
     return await this.addDrive(
       {
+        id,
         slug,
         global: {
-          id: id,
           name,
           icon: icon ?? null,
         },
@@ -805,8 +797,9 @@ export class BaseDocumentDriveServer
 
     // stores document information
     const documentStorage: PHDocument = {
-      name: document.name,
+      id: document.id,
       slug: document.slug,
+      name: document.name,
       revision: document.revision,
       documentType: document.documentType,
       created: document.created,
@@ -817,7 +810,7 @@ export class BaseDocumentDriveServer
       state: state ?? document.state,
     };
 
-    await this.documentStorage.create(input.id, documentStorage);
+    await this.documentStorage.create(documentStorage);
 
     try {
       await this.documentStorage.addChild(driveId, input.id);

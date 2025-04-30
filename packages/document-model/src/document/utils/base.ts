@@ -1,5 +1,6 @@
 import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
+import { v4 as uuidv4 } from "uuid";
 import { ZodError } from "zod";
 import {
   LOAD_STATE,
@@ -176,6 +177,7 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
   createState?: CreateState<TDocument>,
 ): ExtendedStateFromDocument<TDocument> {
   return {
+    id: uuidv4(),
     name: "",
     slug: "",
     documentType: "",

@@ -13,8 +13,10 @@ import {
   countReducer,
   increment,
 } from "../helpers.js";
+
 describe("DocumentModel Class", () => {
   const initialState = {
+    id: "",
     name: "",
     slug: "",
     revision: {
@@ -35,11 +37,13 @@ describe("DocumentModel Class", () => {
     },
     attachments: {},
   };
+
   const initialDocument: BaseDocument<
     CountState,
     CountLocalState,
     CountAction
   > = {
+    id: "",
     name: "",
     slug: "",
     revision: {

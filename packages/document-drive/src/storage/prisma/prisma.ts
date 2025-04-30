@@ -128,7 +128,8 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     return count > 0;
   }
 
-  async create(documentId: string, document: PHDocument) {
+  async create(document: PHDocument) {
+    const documentId = document.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }
@@ -281,6 +282,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     }, cachedOperations) as OperationsFromDocument<TDocument>;
     const dbDoc = result;
     const doc = {
+      id: dbDoc.id,
       created: dbDoc.created.toISOString(),
       name: dbDoc.name ? dbDoc.name : "",
       slug: dbDoc.slug ? dbDoc.slug : "",
@@ -288,16 +290,15 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       initialState: JSON.parse(
         dbDoc.initialState,
       ) as ExtendedStateFromDocument<TDocument>,
-      state: undefined,
       lastModified: new Date(dbDoc.lastModified).toISOString(),
       operations: operationsByScope,
       clipboard: [],
       revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
       meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
       attachments: {},
-    };
+    } as Omit<PHDocument, "state">;
 
-    return doc as unknown as TDocument;
+    return doc as TDocument;
   }
 
   async getBySlug<TDocument extends PHDocument>(
