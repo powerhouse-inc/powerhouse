@@ -1,16 +1,10 @@
 import { cn } from "@powerhousedao/design-system/scalars";
 import { diffSentences, diffWords } from "diff";
 import { useMemo } from "react";
-import type {
-  DiffMode,
-  ViewMode,
-} from "../../../../scalars/components/types.js";
+import type { WithDifference } from "../../../../scalars/components/types.js";
 
-interface TextDiffProps {
-  baseValue: string;
+interface TextDiffProps extends WithDifference<string> {
   value: string;
-  viewMode?: ViewMode;
-  diffMode?: DiffMode;
   className?: string;
 }
 
@@ -23,8 +17,8 @@ export const TextDiff = ({
 }: TextDiffProps) => {
   const wordsDiff = useMemo(() => {
     return diffMode === "words"
-      ? diffWords(baseValue, value)
-      : diffSentences(baseValue, value);
+      ? diffWords(baseValue ?? "", value)
+      : diffSentences(baseValue ?? "", value);
   }, [baseValue, value, diffMode]);
 
   return (
