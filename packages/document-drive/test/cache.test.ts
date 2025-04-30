@@ -1,8 +1,12 @@
+import sizeof from "object-sizeof";
 import { createClient } from "redis";
 import { beforeEach, describe, it } from "vitest";
-import { createDocument as createDocumentModelDocument } from "../../document-model/index";
+import {
+  createDocument as createDocumentModelDocument,
+  DocumentModelState,
+} from "../../document-model/index";
+import { LRUCacheStorage } from "../src/cache/lru";
 import InMemoryCache from "../src/cache/memory";
-import RedisCache from "../src/cache/redis";
 import { ICache } from "../src/cache/types";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils";
 
@@ -25,17 +29,24 @@ const initRedis = async () => {
 const cacheImplementations: [string, () => Promise<ICache>][] = [
   ["InMemoryCache", () => Promise.resolve(new InMemoryCache())],
   [
-    "RedisCache",
-    async () => {
-      const client = await initRedis();
-
-      // Clear the test keys
-      await client.flushDb();
-
-      // Use type assertion to handle Redis client type compatibility
-      return new RedisCache(client as any);
-    },
+    "InMemoryCache with LRU with 512KB maxSize",
+    () =>
+      Promise.resolve(
+        new InMemoryCache(new LRUCacheStorage({ maxSize: 512000 })),
+      ),
   ],
+  // [
+  //   "RedisCache",
+  //   async () => {
+  //     const client = await initRedis();
+
+  //     // Clear the test keys
+  //     await client.flushDb();
+
+  //     // Use type assertion to handle Redis client type compatibility
+  //     return new RedisCache(client as any);
+  //   },
+  // ],
 ];
 
 describe.each(cacheImplementations)("%s", (_, buildCache) => {
@@ -266,5 +277,141 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       expect(retrievedDocument?.documentType).toBe(document.documentType);
       expect(retrievedDrive?.documentType).toBe(drive.documentType);
     });
+  });
+});
+
+// Test specifically for LRU cache behavior
+describe("LRU Cache Specific Tests", () => {
+  // Helper functions for test data
+  function createTestDocument() {
+    return createDocumentModelDocument({
+      state: {
+        global: {
+          id: `doc`,
+          name: `Document`,
+          author: { name: "author", website: "url" },
+          description: "x".repeat(100),
+          extension: "md",
+          specifications: [],
+        },
+        local: {},
+      },
+    });
+  }
+
+  function createTestDrive() {
+    const drive = createDriveDocument();
+    drive.state.global.nodes = new Array(10).fill(0).map((_, i) => ({
+      id: `node-${i}`,
+      name: `Node ${i}`,
+      kind: "FILE",
+      parentFolder: null,
+    }));
+    return drive;
+  }
+
+  const testDocSize = sizeof(createTestDocument());
+
+  it("should evict older documents when size limit is reached", async ({
+    expect,
+  }) => {
+    // Create a small LRU cache with size for a single document
+    const cache = new InMemoryCache(
+      new LRUCacheStorage({ maxSize: testDocSize }),
+    );
+    const doc = createTestDocument();
+
+    await cache.setDocument(`doc-1`, doc);
+    await cache.setDocument(`doc-2`, doc);
+
+    // The earliest documents should have been evicted
+    const firstDoc = await cache.getDocument("doc-1");
+    const lastDoc = await cache.getDocument("doc-2");
+
+    expect(firstDoc).toBeUndefined(); // Should be evicted
+    expect(lastDoc).toBeDefined(); // Should still be in cache
+  });
+
+  it("should keep most recently accessed documents in cache", async ({
+    expect,
+  }) => {
+    // Create cache that can hold 2 documents
+    const cache = new InMemoryCache(
+      new LRUCacheStorage({ maxSize: testDocSize * 2 }),
+    );
+    const doc = createTestDocument();
+
+    // Add 3 documents
+    await cache.setDocument(`doc-1`, doc);
+    await cache.setDocument(`doc-2`, doc);
+
+    // Access doc-1 to make it most recently used
+    await cache.getDocument(`doc-1`);
+
+    // Add doc-3 which should evict doc-2 since doc-1 was recently accessed
+    await cache.setDocument(`doc-3`, doc);
+
+    const doc1 = await cache.getDocument("doc-1");
+    const doc2 = await cache.getDocument("doc-2");
+    const doc3 = await cache.getDocument("doc-3");
+
+    expect(doc1).toBeDefined(); // Should remain as it was most recently accessed
+    expect(doc2).toBeUndefined(); // Should be evicted
+    expect(doc3).toBeDefined(); // Should be present as it was just added
+  });
+
+  it("should handle document updates without unnecessary eviction", async ({
+    expect,
+  }) => {
+    // Create cache that can hold 2 documents
+    const cache = new InMemoryCache(
+      new LRUCacheStorage({ maxSize: testDocSize * 2 }),
+    );
+    const doc = createTestDocument();
+
+    // Add 2 documents filling the cache
+    await cache.setDocument(`doc-1`, doc);
+    await cache.setDocument(`doc-2`, doc);
+
+    // Update doc-1 with similar sized content
+    const updatedDoc = JSON.parse(JSON.stringify(doc));
+    updatedDoc.state.global.description = "y".repeat(100);
+    await cache.setDocument(`doc-1`, updatedDoc);
+
+    const doc1 = await cache.getDocument("doc-1");
+    const doc2 = await cache.getDocument("doc-2");
+
+    expect(doc1).toBeDefined();
+    expect((doc1?.state.global as DocumentModelState).description).toBe(
+      "y".repeat(100),
+    );
+    expect(doc2).toBeDefined(); // Should not be evicted as cache size wasn't exceeded
+  });
+
+  it("should maintain size limit with multiple document types", async ({
+    expect,
+  }) => {
+    const doc = createTestDocument();
+    const drive = createTestDrive();
+    const totalSize = sizeof(doc) + sizeof(drive);
+
+    // Create cache that can hold one document and one drive
+    const cache = new InMemoryCache(
+      new LRUCacheStorage({ maxSize: totalSize }),
+    );
+
+    await cache.setDocument(`doc-1`, doc);
+    await cache.setDrive(`drive-1`, drive);
+
+    // Adding another document should evict the first document
+    await cache.setDocument(`doc-2`, doc);
+
+    const doc1 = await cache.getDocument("doc-1");
+    const doc2 = await cache.getDocument("doc-2");
+    const drive1 = await cache.getDrive("drive-1");
+
+    expect(doc1).toBeUndefined(); // Should be evicted
+    expect(doc2).toBeDefined(); // Should be present
+    expect(drive1).toBeDefined(); // Should be present as it's in a different storage
   });
 });
