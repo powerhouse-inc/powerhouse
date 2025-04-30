@@ -51,8 +51,7 @@ export async function addDefaultDrive(
   drive: DriveInput,
   serverPort: number,
 ) {
-  let driveId =
-    drive.slug && drive.slug.length > 0 ? drive.slug : drive.global.id;
+  let driveRef = drive.slug && drive.slug.length > 0 ? drive.slug : drive.id;
   try {
     // add default drive
     await driveServer.addDrive(drive);
@@ -62,7 +61,7 @@ export async function addDefaultDrive(
     }
   }
 
-  return `http://localhost:${serverPort}/d/${driveId}`;
+  return `http://localhost:${serverPort}/d/${driveRef}`;
 }
 
 export async function startViteServer() {

@@ -47,8 +47,14 @@ export class SystemSubgraph extends Subgraph {
           if (!isAdmin) {
             throw new GraphQLError("Unauthorized");
           }
+
           const drive = await this.reactor.addDrive(
-            { global: args.global, local: args.local },
+            {
+              id: args.id,
+              slug: args.slug,
+              global: args.global,
+              local: args.local,
+            },
             args.preferredEditor,
           );
           return drive.state.global;
