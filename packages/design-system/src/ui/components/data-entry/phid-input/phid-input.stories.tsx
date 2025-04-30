@@ -168,6 +168,10 @@ const meta: Meta<typeof PHIDInput> = {
       },
       if: { arg: "autoComplete", neq: false },
     },
+
+    ...PrebuiltArgTypes.viewMode,
+    ...PrebuiltArgTypes.diffMode,
+    ...PrebuiltArgTypes.baseValue,
   },
   args: {
     name: "phid-input",
