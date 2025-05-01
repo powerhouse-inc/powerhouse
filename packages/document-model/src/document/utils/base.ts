@@ -407,6 +407,9 @@ export function replayDocument<TDocument extends PHDocument>(
 
   // builds a new document from the initial data
   const document = baseCreateDocument(documentState);
+  if (header?.slug) {
+    document.slug = header.slug;
+  }
   document.initialState = initialState;
   document.operations = initialOperations;
 
@@ -476,6 +479,7 @@ export function replayDocument<TDocument extends PHDocument>(
     },
     { global: [], local: [] },
   );
+
   // gets the last modified timestamp from the latest operation
   const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
     const operation = curr.at(-1);
