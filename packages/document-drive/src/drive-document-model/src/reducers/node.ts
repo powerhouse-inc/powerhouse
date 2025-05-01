@@ -175,8 +175,9 @@ export const reducer: DocumentDriveNodeOperations = {
 
     const newNode = {
       ...node,
-      name,
       id: action.input.targetId,
+      slug: action.input.targetId,
+      name,
       parentFolder: action.input.targetParentFolder || null,
     };
 

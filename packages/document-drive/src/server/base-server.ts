@@ -22,7 +22,7 @@ import {
   type IDefaultDrivesManager,
 } from "#utils/default-drives-manager";
 import { requestPublicDrive } from "#utils/graphql";
-import { generateUUID, isDocumentDrive, runAsapAsync } from "#utils/misc";
+import { isDocumentDrive, runAsapAsync } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
   type DocumentDriveAction,
@@ -41,6 +41,7 @@ import {
   attachBranch,
   garbageCollect,
   garbageCollectDocumentOperations,
+  generateId,
   groupOperationsByScope,
   merge,
   precedes,
@@ -603,7 +604,7 @@ export class BaseDocumentDriveServer
     input: DriveInput,
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
-    const id = input.global.id || generateUUID();
+    const id = input.global.id || generateId();
     if (!id) {
       throw new Error("Invalid Drive Id");
     }
@@ -1133,13 +1134,19 @@ export class BaseDocumentDriveServer
           case "COPY_CHILD_DOCUMENT":
             handler = () =>
               this.getDocument(driveId, signal.input.id).then(
-                (documentToCopy) =>
-                  this.createDocument(driveId, {
+                (documentToCopy) => {
+                  const doc = {
+                    ...documentToCopy,
+                    slug: signal.input.newId,
+                  };
+
+                  return this.createDocument(driveId, {
                     id: signal.input.newId,
                     documentType: documentToCopy.documentType,
-                    document: documentToCopy,
+                    document: doc,
                     synchronizationUnits: signal.input.synchronizationUnits,
-                  }),
+                  });
+                },
               );
             break;
         }
