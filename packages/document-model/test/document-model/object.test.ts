@@ -1,4 +1,4 @@
-import { generateId } from "document-model";
+import { generateId } from "../../../document-model/src/document/utils/crypto.js";
 import { DocumentModelClass } from "../../src/document-model/gen/object.js";
 
 describe("DocumentModel Class", () => {
