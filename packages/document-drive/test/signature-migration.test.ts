@@ -1,5 +1,5 @@
 import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { ActionContext, Operation } from "document-model";
+import { ActionContext, Operation, generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
 import { addFile } from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
@@ -7,7 +7,6 @@ import { createDocument } from "../src/drive-document-model/gen/utils.js";
 import { BrowserStorage } from "../src/storage/browser.js";
 import { PrismaClient } from "../src/storage/prisma/client";
 import { migrateLegacyOperationSignature } from "../src/utils/migrations.js";
-import { generateUUID } from "../src/utils/misc.js";
 import { buildOperation } from "./utils.js";
 
 const prismaClient = new PrismaClient();
@@ -84,7 +83,7 @@ describe("Signature migration", () => {
 describe.each(storageLayers)(
   "should migrate operations in %s",
   async (_storageName, buildStorage) => {
-    const driveId = generateUUID();
+    const driveId = generateId();
     beforeEach(async () => {
       //const storage = storageLayers[1][1]();
       //return storage.deleteDrive(driveId);

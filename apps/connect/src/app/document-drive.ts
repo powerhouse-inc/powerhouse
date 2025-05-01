@@ -3,7 +3,6 @@ import {
     BaseQueueManager,
     type DocumentDriveAction,
     type DriveInput,
-    generateUUID,
     type IDocumentDriveServer,
     InMemoryCache,
     logger,
@@ -16,6 +15,7 @@ import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import {
     type DocumentAction,
     type DocumentModelModule,
+    generateId,
     type Operation,
 } from 'document-model';
 import { type IpcMain, webContents } from 'electron';
@@ -175,7 +175,7 @@ export default (
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
         ) => {
-            const uuid = generateUUID();
+            const uuid = generateId();
             const listener: Listener = {
                 driveId: drive,
                 listenerId: uuid,

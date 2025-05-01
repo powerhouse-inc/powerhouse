@@ -1,8 +1,8 @@
 import { type DeleteNodeAction } from "#drive-document-model/gen/actions";
 import { type AddFileInput } from "#drive-document-model/gen/types";
 import { logger } from "#utils/logger";
-import { generateUUID, runAsap } from "#utils/misc";
-import { type Action } from "document-model";
+import { runAsap } from "#utils/misc";
+import { type Action, generateId } from "document-model";
 import { createNanoEvents, type Unsubscribe } from "nanoevents";
 import {
   type IJob,
@@ -116,7 +116,7 @@ export class BaseQueueManager implements IQueueManager {
       throw new Error("No server delegate defined");
     }
 
-    const jobId = generateUUID();
+    const jobId = generateId();
     const queue = this.getQueue(job.driveId, job.documentId);
 
     if (await queue.isDeleted()) {

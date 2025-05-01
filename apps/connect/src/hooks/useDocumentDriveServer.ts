@@ -37,7 +37,6 @@ import {
     documentDriveReducer,
     generateAddNodeAction,
     generateNodesCopy,
-    generateUUID,
     isDocumentDrive,
     isFileNode,
     isFolderNode,
@@ -728,7 +727,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const uuid = generateUUID();
+            const uuid = generateId();
             const listener: Listener = {
                 driveId,
                 listenerId: uuid,

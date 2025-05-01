@@ -11,7 +11,6 @@ import { pascalCase } from "change-case";
 import {
   childLogger,
   type FileNode,
-  generateUUID,
   type ListenerFilter,
   type ListenerRevision,
   PullResponderTransmitter,
@@ -20,6 +19,7 @@ import {
 import { type Listener } from "document-drive/server/types";
 import {
   type DocumentModelInput,
+  generateId,
   type Operation,
   type PHDocument,
 } from "document-model";
@@ -299,7 +299,7 @@ export class DriveSubgraph extends Subgraph {
         }
 
         // Create the listener and transmitter
-        const uuid = listenerId ?? generateUUID();
+        const uuid = listenerId ?? generateId();
         const listener: Listener = {
           driveId: ctx.driveId,
           listenerId: uuid,

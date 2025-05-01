@@ -90,5 +90,5 @@ export {
   setLogLevel,
 } from "#utils/logger";
 export type { ILogger } from "#utils/logger";
-export { generateUUID, isDocumentDrive } from "#utils/misc";
+export { isDocumentDrive } from "#utils/misc";
 export { InMemoryCache };

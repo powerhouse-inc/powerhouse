@@ -1,4 +1,4 @@
-import { DocumentModelModule, setModelName } from "document-model";
+import { DocumentModelModule, generateId, setModelName } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
@@ -13,7 +13,6 @@ import { expectUTCTimestamp, expectUUID } from "./utils";
 import { documentModelDocumentModelModule } from "document-model";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { Listener } from "../src/server/types.js";
-import { generateUUID } from "../src/utils/misc.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
@@ -45,7 +44,7 @@ describe("Internal Listener", () => {
     const listenerManager = builder.listenerManager;
 
     // Create the listener and transmitter
-    const uuid = generateUUID();
+    const uuid = generateId();
     const listener: Listener = {
       driveId,
       listenerId: uuid,

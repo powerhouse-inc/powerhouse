@@ -1,7 +1,7 @@
 import { Subgraph } from "#graphql/index.js";
 import { type Db } from "#types.js";
 import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
-import { generateUUID } from "document-drive";
+import { generateId } from "document-model";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { SiweMessage } from "siwe";
@@ -108,7 +108,7 @@ export class AuthSubgraph extends Subgraph {
           throw new GraphQLError("Invalid origin");
         }
 
-        const nonce = generateUUID().replace(/-/g, "");
+        const nonce = generateId().replace(/-/g, "");
 
         const message = new SiweMessage({
           address,

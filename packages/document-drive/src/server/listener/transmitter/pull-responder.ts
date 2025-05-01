@@ -18,7 +18,7 @@ import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
 import { childLogger, type ILogger } from "#utils/logger";
-import { generateUUID } from "#utils/misc";
+import { generateId } from "document-model";
 import { gql } from "graphql-request";
 import {
   type ITransmitter,
@@ -693,7 +693,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     );
 
     const pullTrigger: PullResponderTrigger = {
-      id: generateUUID(),
+      id: generateId(),
       type: "PullResponder",
       driveId,
       filter,

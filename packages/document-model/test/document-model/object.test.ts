@@ -1,4 +1,4 @@
-import { generateUUID } from "#document/utils/browser.js";
+import { generateId } from "document-model";
 import { DocumentModelClass } from "../../src/document-model/gen/object.js";
 
 describe("DocumentModel Class", () => {
@@ -48,8 +48,8 @@ describe("DocumentModel Class", () => {
     const model = new DocumentModelClass();
 
     model
-      .addModule({ id: generateUUID(), name: "state" })
-      .addModule({ id: generateUUID(), name: "header" });
+      .addModule({ id: generateId(), name: "state" })
+      .addModule({ id: generateId(), name: "header" });
 
     expect(
       model.state.global.specifications[0].modules.map((m) => m.name),
@@ -101,14 +101,14 @@ describe("DocumentModel Class", () => {
     const model = new DocumentModelClass();
 
     model
-      .addModule({ id: generateUUID(), name: "header" })
-      .addModule({ id: generateUUID(), name: "state" });
+      .addModule({ id: generateId(), name: "header" })
+      .addModule({ id: generateId(), name: "state" });
 
     const headerModuleId = model.state.global.specifications[0].modules[0].id;
     const stateModuleId = model.state.global.specifications[0].modules[1].id;
 
     model.addOperation({
-      id: generateUUID(),
+      id: generateId(),
       moduleId: headerModuleId,
       name: "SetModuleExtension",
       schema: "<SetModuleExtension.schema>",
@@ -119,7 +119,7 @@ describe("DocumentModel Class", () => {
     });
 
     model.addOperation({
-      id: generateUUID(),
+      id: generateId(),
       moduleId: stateModuleId,
       name: "AddStateExample",
     });
