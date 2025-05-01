@@ -5,6 +5,7 @@ import {
   DocumentModelModule,
   documentModelReducer,
   garbageCollect,
+  generateId,
   Operation,
   setModelExtension,
   setModelId,
@@ -41,12 +42,12 @@ describe("processOperations", () => {
     await server.initialize();
   });
 
-  const driveId = "drive/1";
-  const documentId = "1";
+  const driveId = generateId();
+  const documentId = generateId();
 
   async function buildFile(initialOperations: Action[] = []) {
     await server.addDrive({
-      global: { id: driveId, name: "test", icon: null, slug: null },
+      global: { id: driveId, name: "test", icon: null },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -55,6 +56,7 @@ describe("processOperations", () => {
       },
     });
     const drive = await server.getDrive(driveId);
+
     await server.addDriveOperation(
       driveId,
       buildOperation(
@@ -63,7 +65,7 @@ describe("processOperations", () => {
         generateAddNodeAction(
           drive.state.global,
           {
-            id: "1",
+            id: documentId,
             name: "test",
             documentType: "powerhouse/document-model",
           },
