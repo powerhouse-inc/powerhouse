@@ -32,7 +32,7 @@ export const customVersionHandler = async () => {
   } else {
     console.log("-------------------------------------");
     console.log(
-      "PH CLI is not available, please run `ph init` to generate the default global project",
+      "PH CLI is not available, please run `ph setup-globals` to generate the default global project",
     );
   }
 };
