@@ -95,13 +95,12 @@ export class BrowserStorage
     }
 
     // check if the slug is already taken
-    if (slug) {
-      const slugManifest = await this.getSlugManifest();
-      if (slugManifest.slugToId[slug]) {
-        throw new DocumentAlreadyExistsError(documentId);
-      }
+    const slugManifest = await this.getSlugManifest();
+    if (slugManifest.slugToId[slug]) {
+      throw new DocumentAlreadyExistsError(documentId);
     }
 
+    document.slug = slug;
     await db.setItem(this.buildDocumentKey(documentId), document);
 
     // Update the slug manifest if the document has a slug

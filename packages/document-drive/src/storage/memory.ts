@@ -57,7 +57,6 @@ export class MemoryStorage
     }
 
     const slug = document.slug.length > 0 ? document.slug : documentId;
-
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -67,7 +66,8 @@ export class MemoryStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    // store the document
+    // store the document and update the slug
+    document.slug = slug;
     this.documents[documentId] = document;
 
     // add slug to lookup if it exists

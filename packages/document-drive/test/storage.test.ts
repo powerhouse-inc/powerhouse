@@ -171,12 +171,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     //
     // Also: we give storage implementations authority to set the created timestamp (like a postgres timestamp).
     // So we compare every field except for a few...
-    const { state, created, meta, slug, ...rest } = document;
+    const { state, created, meta, ...rest } = document;
     const {
       state: _state,
       created: _created,
       meta: _meta,
-      slug: _slug,
       ...restResult
     } = result;
     expect(restResult).toEqual(rest);

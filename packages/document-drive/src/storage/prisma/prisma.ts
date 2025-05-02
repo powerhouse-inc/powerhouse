@@ -138,6 +138,8 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       throw new DocumentSlugValidationError(slug);
     }
 
+    document.slug = slug;
+
     try {
       await this.db.document.create({
         data: {

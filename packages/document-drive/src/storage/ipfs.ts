@@ -80,24 +80,20 @@ export class IPFSStorage
       throw new DocumentSlugValidationError(slug);
     }
 
-    if (slug) {
-      const slugManifest = await this.getSlugManifest();
-      if (slugManifest.slugToId[slug]) {
-        throw new DocumentAlreadyExistsError(documentId);
-      }
+    const slugManifest = await this.getSlugManifest();
+    if (slugManifest.slugToId[slug]) {
+      throw new DocumentAlreadyExistsError(documentId);
     }
 
+    document.slug = slug;
     await this.fs.writeBytes(
       new TextEncoder().encode(stringify(document)),
       this._buildDocumentPath(documentId),
     );
 
     // Update the slug manifest if the document has a slug
-    if (slug) {
-      const slugManifest = await this.getSlugManifest();
-      slugManifest.slugToId[slug] = documentId;
-      await this.updateSlugManifest(slugManifest);
-    }
+    slugManifest.slugToId[slug] = documentId;
+    await this.updateSlugManifest(slugManifest);
 
     // temporary: initialize an empty manifest for new drives
     if (document.documentType === "powerhouse/document-drive") {
