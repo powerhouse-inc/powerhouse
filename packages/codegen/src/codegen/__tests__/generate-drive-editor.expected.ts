@@ -22,7 +22,7 @@ import { type DocumentDriveDocument, addFolder, deleteNode, updateNode, generate
 import { WagmiContext } from "@powerhousedao/design-system";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { useCallback } from "react";
-import { hashKey } from "document-model";
+import { generateId } from "document-model";
 
 export type IProps = DriveEditorProps<DocumentDriveDocument>;
 
@@ -31,7 +31,7 @@ export function BaseEditor(props: IProps) {
   
   const onAddFolder = useCallback((name: string, parentFolder?: string) => {
     dispatch(addFolder({
-      id: hashKey(),
+      id: generateId(),
       name,
       parentFolder,
     }));
@@ -46,8 +46,6 @@ export function BaseEditor(props: IProps) {
   }, [dispatch]);
 
   const onCopyNode = useCallback((nodeId: string, targetName: string, parentId?: string) => {
-    const generateId = () => hashKey();
-    
     const copyNodesInput = generateNodesCopy({
       srcId: nodeId,
       targetParentFolder: parentId,
