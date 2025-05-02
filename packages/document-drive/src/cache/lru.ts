@@ -1,3 +1,4 @@
+import { childLogger } from "#utils/logger";
 import { LRUCache as BaseLRUCache, type LRUCache } from "lru-cache";
 import sizeof from "object-sizeof";
 import { type ICacheStorage } from "./memory.js";
@@ -29,6 +30,7 @@ export interface LRUCacheStorageOptions {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export class LRUCacheStorage<Value extends {}> implements ICacheStorage {
   private cache: LRUCache<string, Value>;
+  private logger = childLogger(["cache", "LRUCache"]);
 
   constructor(options: LRUCacheStorageOptions) {
     const { maxSize, sizeCalculation = sizeof } = options;
@@ -36,6 +38,7 @@ export class LRUCacheStorage<Value extends {}> implements ICacheStorage {
       maxSize,
       sizeCalculation,
     });
+    this.logger.info(`Created LRUCache with maxSize: ${maxSize} bytes`);
   }
 
   get(key: string) {
