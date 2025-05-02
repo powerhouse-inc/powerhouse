@@ -1,9 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-
+import { generateId } from "../../index.js";
 import { setName } from "../../src/document/actions/creators.js";
 import { SET_NAME } from "../../src/document/actions/types.js";
-
-import { generateId } from "document-model";
 import { type CreateChildDocumentInput } from "../../src/document/signal.js";
 import { type CustomAction } from "../../src/document/types.js";
 import {

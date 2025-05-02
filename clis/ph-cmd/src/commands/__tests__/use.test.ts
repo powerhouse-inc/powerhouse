@@ -15,20 +15,24 @@ vi.mock("node:fs");
 // Import installDependency after mocking
 import { installDependency } from "../../utils/index.js";
 
-vi.mock("../../utils/index.js", () => ({
-  packageManagers: {
-    pnpm: {
-      buildAffected: "pnpm run build:affected",
-      updateCommand: "pnpm update {{dependency}}",
-      installCommand: "pnpm install {{dependency}}",
-      workspaceOption: "--workspace-root",
-      lockfile: "pnpm-lock.yaml",
+vi.mock("../../utils/index.js", async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return {
+    ...actual,
+    packageManagers: {
+      pnpm: {
+        buildAffected: "pnpm run build:affected",
+        updateCommand: "pnpm update {{dependency}}",
+        installCommand: "pnpm install {{dependency}}",
+        workspaceOption: "--workspace-root",
+        lockfile: "pnpm-lock.yaml",
+      },
     },
-  },
-  getPackageManagerFromLockfile: vi.fn(),
-  getProjectInfo: vi.fn(),
-  installDependency: vi.fn(),
-}));
+    getPackageManagerFromLockfile: vi.fn(),
+    getProjectInfo: vi.fn(),
+    installDependency: vi.fn(),
+  } as unknown;
+});
 
 describe("useCommand", () => {
   let program: Command;
