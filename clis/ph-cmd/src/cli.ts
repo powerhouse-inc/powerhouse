@@ -24,17 +24,26 @@ const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = (
   options,
 ) => {
   const allArgs = process.argv.slice(2);
-  const filteredArgs = allArgs.filter((arg) => arg !== "--verbose");
-  const args = filteredArgs.join(" ");
+  const args = allArgs.join(" ");
 
   const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");
   const isVersionCommand =
     args.startsWith("--version") || args.startsWith("-v");
 
+  // if no args are provided then runs the help command
+  if (!args.length) {
+    program.parse(process.argv.concat("--help"));
+    process.exit(0);
+  }
+
   if (!isHelpCommand && !isVersionCommand) {
     forwardCommand(args, { debug: !!options.verbose }).catch(
       (error: unknown) => {
-        console.error(error);
+        if (typeof error === "string" || options.verbose) {
+          console.error(error);
+        } else if (error instanceof Error) {
+          console.error(error.message);
+        }
         process.exit(1);
       },
     );
@@ -47,7 +56,7 @@ program
     "The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
   )
   .allowUnknownOption()
-  .option("--verbose", "Enable debug mode")
+  .option("--verbose, --debug", "Enable debug mode")
   .option("-h, --help", "Display help information");
 
 // Register our commands
@@ -61,7 +70,7 @@ program.on("option:help", () => {
   // Check if this is a root help command (no other arguments except possibly --verbose)
   const nonHelpArgs = process.argv
     .slice(2)
-    .filter((arg) => arg !== "--help" && arg !== "-h" && arg !== "--verbose");
+    .filter((arg) => arg !== "--help" && arg !== "-h");
 
   // Only run the custom help handler for global help
   if (nonHelpArgs.length === 0) {
@@ -72,4 +81,21 @@ program.on("option:help", () => {
   }
 });
 
-program.parse(process.argv);
+// Logs full error only on debug mode. Otherwise logs only error message
+program.parseAsync(process.argv).catch((error: unknown) => {
+  const isDebug = process.argv.find((arg) =>
+    ["--verbose", "--debug"].includes(arg),
+  );
+  if (isDebug) {
+    console.error(error);
+    return;
+  }
+
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : JSON.stringify(error, null, 2);
+  console.error(errorMessage);
+});
