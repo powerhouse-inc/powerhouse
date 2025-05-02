@@ -1,3 +1,19 @@
+## 2.28.1-dev.8 (2025-05-02)
+
+### 🚀 Features
+
+- **document-drive:** implemented LRU in memory cache ([9f6347b58](https://github.com/powerhouse-inc/powerhouse/commit/9f6347b58))
+
+### 🩹 Fixes
+
+- use relative path for generateId to fix test ([973a92662](https://github.com/powerhouse-inc/powerhouse/commit/973a92662))
+- **reactor:** fix  issue where get drive by revision was incorrect ([e6be7d3f1](https://github.com/powerhouse-inc/powerhouse/commit/e6be7d3f1))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 2.28.1-dev.7 (2025-04-29)
 
 ### 🚀 Features
