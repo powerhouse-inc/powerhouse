@@ -50,7 +50,7 @@ export function BaseEditor(props: IProps) {
       srcId: nodeId,
       targetParentFolder: parentId,
       targetName,
-    }, generateId, props.document.state.global.nodes);
+    }, () => generateId(), props.document.state.global.nodes);
 
     const copyNodesAction = copyNodesInput.map(input => {
       return copyNode(input);
