@@ -370,7 +370,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       trigger,
     );
 
-    staticLogger().info(
+    staticLogger().debug(
       `[SYNC DEBUG] PullResponderTransmitter.executePull starting for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
     );
 

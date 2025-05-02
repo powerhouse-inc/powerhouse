@@ -5,14 +5,14 @@ import {
 } from "document-drive";
 
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
-import { DriveInput, IDocumentDriveServer } from "document-drive";
-import { ICache } from "document-drive/cache/types";
+import { type DriveInput, type IDocumentDriveServer } from "document-drive";
+import { type ICache } from "document-drive/cache/types";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma/factory";
-import { IDriveOperationStorage } from "document-drive/storage/types";
+import { type IDriveOperationStorage } from "document-drive/storage/types";
 import { createServer } from "vite";
-import { StorageOptions } from "./types.js";
+import { type StorageOptions } from "./types.js";
 
 export const createStorage = (
   options: StorageOptions,
@@ -51,7 +51,7 @@ export async function addDefaultDrive(
   drive: DriveInput,
   serverPort: number,
 ) {
-  let driveId =
+  const driveId =
     drive.slug && drive.slug.length > 0 ? drive.slug : drive.global.id;
   try {
     // add default drive

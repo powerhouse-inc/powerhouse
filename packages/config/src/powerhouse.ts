@@ -1,13 +1,19 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
-export type LogLevel =
-  | "verbose"
-  | "debug"
-  | "info"
-  | "warn"
-  | "error"
-  | "silent";
+export const LogLevels = {
+  verbose: 1,
+  debug: 2,
+  info: 3,
+  warn: 4,
+  error: 5,
+  silent: 6,
+} as const;
 
+export type LogLevel = keyof typeof LogLevels;
+
+export function isLogLevel(value: unknown): value is LogLevel {
+  return typeof value === "string" && value in LogLevels;
+}
 export type PHPackageProvider = "npm" | "github" | "local";
 
 export type PowerhousePackage = {
@@ -57,7 +63,7 @@ const DEFAULT_PROCESSORS_DIR = "./processors";
 const DEFAULT_SUBGRAPHS_DIR = "./subgraphs";
 const DEFAULT_IMPORT_SCRIPTS_DIR = "./scripts";
 const DEFAULT_SKIP_FORMAT = false;
-const DEFAULT_LOG_LEVEL = "debug";
+const DEFAULT_LOG_LEVEL = "info";
 
 export const DEFAULT_CONFIG: PowerhouseConfig = {
   documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,

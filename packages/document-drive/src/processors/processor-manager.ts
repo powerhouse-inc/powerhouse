@@ -32,7 +32,7 @@ export class ProcessorManager implements IProcessorManager {
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
-    this.logger.info(`Registering factory '${identifier}'.`);
+    this.logger.debug(`Registering factory '${identifier}'.`);
 
     this.idToFactory.set(identifier, factory);
 
@@ -60,7 +60,7 @@ export class ProcessorManager implements IProcessorManager {
   }
 
   async registerDrive(driveId: string) {
-    this.logger.info(`Registering drive '${driveId}'.`);
+    this.logger.debug(`Registering drive '${driveId}'.`);
 
     // iterate over all factories and create listeners
     for (const [identifier, factory] of this.idToFactory) {

@@ -1,4 +1,5 @@
-import { DriveInput, IDocumentDriveServer } from "document-drive";
+import { type LogLevel } from "@powerhousedao/config";
+import { type DriveInput, type IDocumentDriveServer } from "document-drive";
 import path from "node:path";
 
 export type StorageOptions = {
@@ -22,7 +23,7 @@ export type StartServerOptions = {
       }
     | boolean
     | undefined;
-  logLevel?: "info" | "warn" | "error" | "debug" | "verbose" | "silent";
+  logLevel?: LogLevel;
 };
 
 export const DefaultStartServerOptions = {

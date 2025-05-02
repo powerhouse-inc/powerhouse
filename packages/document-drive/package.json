@@ -47,6 +47,7 @@
   "dependencies": {
     "@helia/mfs": "^4.0.3",
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
     "change-case": "^5.4.4",

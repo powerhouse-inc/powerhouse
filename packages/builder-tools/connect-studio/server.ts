@@ -84,7 +84,7 @@ function runShellScriptPlugin(scriptName: string, connectPath: string): Plugin {
 
 export async function startServer(
   options: StartServerOptions = {
-    logLevel: "debug",
+    logLevel: "info",
   },
 ) {
   // set from options, as they are dynamically loaded
