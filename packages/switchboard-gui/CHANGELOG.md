@@ -1,3 +1,19 @@
+## 0.25.0-dev.6 (2025-05-03)
+
+### 🚀 Features
+
+- moved log levels definition to config and set default level to "info" ([ef6040210](https://github.com/powerhouse-inc/powerhouse/commit/ef6040210))
+- **document-drive:** implemented LRU in memory cache ([9f6347b58](https://github.com/powerhouse-inc/powerhouse/commit/9f6347b58))
+
+### 🩹 Fixes
+
+- added script for testing end-to-end codegen pipeline ([8668f82b4](https://github.com/powerhouse-inc/powerhouse/commit/8668f82b4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 0.25.0-dev.5 (2025-04-29)
 
 ### 🚀 Features

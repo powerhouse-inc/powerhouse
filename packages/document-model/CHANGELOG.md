@@ -1,3 +1,18 @@
+## 2.28.1-dev.9 (2025-05-03)
+
+### 🚀 Features
+
+- moved log levels definition to config and set default level to "info" ([ef6040210](https://github.com/powerhouse-inc/powerhouse/commit/ef6040210))
+
+### 🩹 Fixes
+
+- added script for testing end-to-end codegen pipeline ([8668f82b4](https://github.com/powerhouse-inc/powerhouse/commit/8668f82b4))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 2.28.1-dev.8 (2025-05-02)
 
 ### 🚀 Features
