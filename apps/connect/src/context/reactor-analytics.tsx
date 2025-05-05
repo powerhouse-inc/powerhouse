@@ -6,7 +6,7 @@ import {
 } from '@powerhousedao/reactor-browser/analytics/context';
 import { logger } from 'document-drive';
 import { type ProcessorManager } from 'document-drive/processors/processor-manager';
-import { useEffect, type PropsWithChildren } from 'react';
+import { useEffect, useRef, type PropsWithChildren } from 'react';
 import { useUnwrappedProcessorManager } from '../store/processors';
 
 async function registerDiffAnalyzer(
@@ -26,12 +26,14 @@ async function registerDiffAnalyzer(
 export function DiffAnalyzerProcessor() {
     const store = useAnalyticsStore();
     const manager = useUnwrappedProcessorManager();
+    const hasRegistered = useRef(false);
 
     useEffect(() => {
-        if (!store || !manager) {
+        if (!store || !manager || hasRegistered.current) {
             return;
         }
-        console.log('registering diff analyzer');
+
+        hasRegistered.current = true;
         registerDiffAnalyzer(manager, store).catch(logger.error);
     }, [store, manager]);
 
@@ -43,6 +45,7 @@ export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
         <AnalyticsProvider
             databaseName={`${connectConfig.routerBasename}:analytics`}
         >
+            <DiffAnalyzerProcessor />
             {children}
         </AnalyticsProvider>
     );
