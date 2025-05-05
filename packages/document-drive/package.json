@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.29.12-staging.2",
+  "version": "1.29.13-staging.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
