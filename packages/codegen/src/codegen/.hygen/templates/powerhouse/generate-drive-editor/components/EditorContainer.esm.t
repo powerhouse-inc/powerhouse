@@ -6,12 +6,13 @@ import {
   useDriveContext,
   exportDocument,
   type User,
+  type DriveEditorContext,
 } from "@powerhousedao/reactor-browser";
 import {
-  documentModelDocumentModelModule,
-  type EditorModule,
-  type DocumentModelModule,
   type EditorContext,
+  type DocumentModelModule,
+  type EditorModule,
+  type EditorProps,
   type PHDocument,
 } from "document-model";
 import {
@@ -21,8 +22,7 @@ import {
   type TimelineItem,
 } from "@powerhousedao/design-system";
 import { useTimelineItems, getRevisionFromDate } from "@powerhousedao/common";
-import { useState, Suspense, type FC, useCallback, lazy } from "react";
-import { useDocumentModel, useDocumentEditorModule } from "../hooks/useDocumentModels.js";
+import { useState, Suspense, type FC, useCallback } from "react";
 
 export interface EditorContainerProps {
   driveId: string;
@@ -30,11 +30,22 @@ export interface EditorContainerProps {
   documentType: string;
   onClose: () => void;
   title: string;
-  context: EditorContext;
+  context: Omit<DriveEditorContext, "getDocumentRevision"> & Pick<EditorContext, "getDocumentRevision">;
+  documentModelModule: DocumentModelModule<PHDocument>;
+  editorModule: EditorModule;
 }
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
-  const { driveId, documentId, documentType, onClose, title, context } = props;
+  const {
+    title,
+    driveId,
+    context,
+    onClose,
+    documentId,
+    documentType,
+    editorModule,
+    documentModelModule,
+  } = props;
 
   const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
   const [showRevisionHistory, setShowRevisionHistory] = useState(false);
@@ -42,12 +53,6 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
   const timelineItems = useTimelineItems(documentId);
 
   const user = context.user as User | undefined;
-
-  const documentModelModule = useDocumentModel(
-    documentType,
-  ) as DocumentModelModule<PHDocument>;
-
-  const { editorModule, isLoading } = useDocumentEditorModule(documentType);
 
   const { dispatch, error, document } = useDocumentEditorProps({
     documentId,
@@ -70,19 +75,9 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
     </div>
   );
 
-  if (!document || isLoading) return loadingContent;
+  if (!document) return loadingContent;
 
-  if (!editorModule) {
-    console.error("No editor found for document type:", documentType);
-    return (
-      <div className="flex-1">
-        No editor found for document type: {documentType}
-      </div>
-    );
-  }
-
-  const moduleWithComponent = editorModule as EditorModule<PHDocument>;
-  const EditorComponent = moduleWithComponent.Component;
+  const EditorComponent = editorModule.Component as FC<EditorProps<PHDocument>>;
 
   return showRevisionHistory ? (
     <RevisionHistory
@@ -101,7 +96,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
         onShowRevisionHistory={() => setShowRevisionHistory(true)}
         onSwitchboardLinkClick={() => {}}
         title={title}
-        timelineButtonVisible={moduleWithComponent.config.timelineEnabled}
+        timelineButtonVisible={editorModule.config.timelineEnabled}
         timelineItems={timelineItems.data}
         onTimelineItemClick={setSelectedTimelineItem}
       />

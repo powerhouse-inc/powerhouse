@@ -12,6 +12,8 @@ import {
     useAsyncReactor,
     useDriveEditor,
     useFilteredDocumentModels,
+    useGetDocumentModelModule,
+    useGetEditor,
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
@@ -106,6 +108,8 @@ export function DriveEditorContainer() {
     const documentModels = useFilteredDocumentModels();
     const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
     const getDocument = useGetDocument();
+    const getDocumentModelModule = useGetDocumentModelModule();
+    const getEditor = useGetEditor();
 
     const onGetDocumentRevision: DriveEditorContext['getDocumentRevision'] =
         useCallback(
@@ -169,6 +173,8 @@ export function DriveEditorContainer() {
                     ...driveContext,
                     analyticsDatabaseName: connectConfig.analyticsDatabaseName,
                     getDocumentRevision: onGetDocumentRevision,
+                    getDocumentModelModule,
+                    getEditor,
                 }}
                 onSwitchboardLinkClick={undefined} // TODO
                 document={document}

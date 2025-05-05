@@ -144,6 +144,14 @@ export function DriveExplorer({
     ? files.find((file) => file.id === activeDocumentId)
     : undefined;
 
+  const documentModelModule = activeDocument
+    ? context.getDocumentModelModule(activeDocument.documentType)
+    : null;
+
+  const editorModule = activeDocument
+    ? context.getEditor(activeDocument.documentType)
+    : null;
+
   return (
     <div className="flex h-full">
       {/* Sidebar */}
@@ -158,7 +166,7 @@ export function DriveExplorer({
 
       {/* Main Content */}
       <div className="flex-1 p-4 overflow-y-auto">
-        {activeDocument ? (
+        {activeDocument && documentModelModule && editorModule ? (
           <EditorContainer
             context={{
               ...context,
@@ -169,6 +177,8 @@ export function DriveExplorer({
             driveId={driveId}
             onClose={handleEditorClose}
             title={activeDocument.name}
+            documentModelModule={documentModelModule}
+            editorModule={editorModule}
           />
         ) : (
           <>
