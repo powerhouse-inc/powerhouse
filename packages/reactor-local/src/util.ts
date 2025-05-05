@@ -51,8 +51,15 @@ export async function addDefaultDrive(
   drive: DriveInput,
   serverPort: number,
 ) {
-  const driveId =
-    drive.slug && drive.slug.length > 0 ? drive.slug : drive.global.id;
+  let driveId = drive.id;
+  if (!driveId || driveId.length === 0) {
+    driveId = drive.slug;
+  }
+
+  if (!driveId || driveId.length === 0) {
+    throw new Error("Invalid Drive Id");
+  }
+
   try {
     // add default drive
     await driveServer.addDrive(drive);
