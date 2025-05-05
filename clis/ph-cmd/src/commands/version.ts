@@ -14,17 +14,31 @@ export const customVersionHandler = async () => {
   if (projectInfo.available) {
     const packageManager = getPackageManagerFromLockfile(projectInfo.path);
 
-    const versionOutput = forwardPHCommand(
-      packageManager,
-      projectInfo.path,
-      "--version",
-      false,
-      true,
-    );
+    let versionOutput = "";
+    let errorOutput = "";
+
+    try {
+      versionOutput = forwardPHCommand(
+        packageManager,
+        projectInfo.path,
+        "--version",
+        false,
+        true,
+      );
+    } catch (err) {
+      errorOutput = (err as Error).message;
+    }
 
     const cleanedOutput = versionOutput.replace(/\n/g, "");
 
-    console.log("PH CLI version: ", cleanedOutput);
+    if (errorOutput) {
+      console.log(
+        "The current version of the PH CLI does not support --version flag",
+      );
+    } else {
+      console.log("PH CLI version: ", cleanedOutput);
+    }
+
     console.log("-------------------------------------");
     console.log("PH CLI path: ", projectInfo.path);
     console.log("PH CLI isGlobalProject: ", projectInfo.isGlobal);
