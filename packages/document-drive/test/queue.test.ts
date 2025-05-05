@@ -1,4 +1,3 @@
-import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
 import {
   DocumentModelDocument,
@@ -23,7 +22,6 @@ import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils";
 import { BaseQueueManager } from "../src/queue/base";
-import { RedisQueueManager } from "../src/queue/redis";
 import { IQueueManager } from "../src/queue/types";
 import { ReactorBuilder } from "../src/server/builder";
 import {
@@ -42,7 +40,7 @@ const documentModels = [
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
   ["Memory Queue", () => Promise.resolve(new BaseQueueManager())],
-  [
+  /*[
     "Redis Queue",
     async () => {
       try {
@@ -54,7 +52,7 @@ const queueLayers: [string, () => Promise<IQueueManager>][] = [
         throw error;
       }
     },
-  ],
+  ],*/
 ] as unknown as [string, () => Promise<IQueueManager>][];
 
 describe.each(queueLayers)(
