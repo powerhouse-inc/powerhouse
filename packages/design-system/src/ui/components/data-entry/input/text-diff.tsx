@@ -6,6 +6,7 @@ import type { WithDifference } from "../../../../scalars/components/types.js";
 interface TextDiffProps extends WithDifference<string> {
   value: string;
   className?: string;
+  childrenClassName?: string;
 }
 
 export const TextDiff = ({
@@ -14,6 +15,7 @@ export const TextDiff = ({
   viewMode,
   diffMode = "words",
   className,
+  childrenClassName,
 }: TextDiffProps) => {
   const wordsDiff = useMemo(() => {
     return diffMode === "words"
@@ -21,13 +23,30 @@ export const TextDiff = ({
       : diffSentences(baseValue ?? "", value);
   }, [baseValue, value, diffMode]);
 
+  const hasChanges = useMemo(() => {
+    return wordsDiff.some((word) => word.added || word.removed);
+  }, [wordsDiff]);
+
+  const bgColor =
+    diffMode === "sentences" && hasChanges
+      ? viewMode === "addition"
+        ? "bg-green-600/30"
+        : viewMode === "removal"
+          ? "bg-red-600/30"
+          : undefined
+      : undefined;
+
   return (
-    <span className={cn("leading-[18px]", className)}>
+    <span className={cn("leading-[18px] text-gray-700", bgColor, className)}>
       {wordsDiff.map((word, index) => {
         return word.added ? (
           viewMode === "addition" || viewMode === "mixed" ? (
             <span
-              className="mr-1 bg-green-600/30 text-gray-700"
+              className={cn(
+                (diffMode === "words" || viewMode === "mixed") &&
+                  "bg-green-600/30",
+                childrenClassName,
+              )}
               key={`${word.value}-${index}`}
             >
               {word.value}
@@ -36,14 +55,21 @@ export const TextDiff = ({
         ) : word.removed ? (
           viewMode === "removal" || viewMode === "mixed" ? (
             <span
-              className="mr-1 bg-red-600/30 text-gray-700"
+              className={cn(
+                (diffMode === "words" || viewMode === "mixed") &&
+                  "bg-red-600/30",
+                childrenClassName,
+              )}
               key={`${word.value}-${index}`}
             >
               {word.value}
             </span>
           ) : null
         ) : (
-          <span className="mr-1" key={`${word.value}-${index}`}>
+          <span
+            key={`${word.value}-${index}`}
+            className={cn(childrenClassName)}
+          >
             {word.value}
           </span>
         );

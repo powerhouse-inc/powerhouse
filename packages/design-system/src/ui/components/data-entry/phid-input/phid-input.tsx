@@ -33,11 +33,15 @@ const PHIDInput = React.forwardRef<HTMLInputElement, PHIDInputProps>(
       fetchOptionsCallback,
       fetchSelectedOptionCallback,
       isOpenByDefault, // to be used only in stories
-      initialOptions, // to be used only in stories
+      initialOptions,
       previewPlaceholder,
+      // Diff props
       viewMode = "edition",
       diffMode,
       baseValue,
+      basePreviewTitle,
+      basePreviewPath,
+      basePreviewDescription,
       ...props
     },
     ref,
@@ -149,10 +153,18 @@ const PHIDInput = React.forwardRef<HTMLInputElement, PHIDInputProps>(
     return (
       <PHIDInputDiff
         value={value ?? defaultValue ?? ""}
+        label={label}
+        required={required}
+        autoComplete={autoComplete}
+        initialOptions={initialOptions}
+        previewPlaceholder={previewPlaceholder}
+        variant={variant}
         viewMode={viewMode}
         diffMode={diffMode}
         baseValue={baseValue}
-        variant={variant}
+        basePreviewTitle={basePreviewTitle}
+        basePreviewPath={basePreviewPath}
+        basePreviewDescription={basePreviewDescription}
       />
     );
   },
