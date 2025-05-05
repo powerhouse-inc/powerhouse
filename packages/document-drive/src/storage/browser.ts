@@ -78,7 +78,8 @@ export class BrowserStorage
     return !!document;
   }
 
-  async create(documentId: string, document: PHDocument): Promise<void> {
+  async create(document: PHDocument): Promise<void> {
+    const documentId = document.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }

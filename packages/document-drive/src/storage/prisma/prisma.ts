@@ -128,7 +128,8 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     return count > 0;
   }
 
-  async create(documentId: string, document: PHDocument) {
+  async create(document: PHDocument) {
+    const documentId = document.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }

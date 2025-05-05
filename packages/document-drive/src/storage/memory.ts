@@ -46,7 +46,8 @@ export class MemoryStorage
     return Promise.resolve(!!this.documents[documentId]);
   }
 
-  create(documentId: string, document: PHDocument) {
+  create(document: PHDocument) {
+    const documentId = document.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }

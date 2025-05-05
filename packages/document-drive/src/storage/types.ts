@@ -26,7 +26,7 @@ export interface IDocumentStorage {
    *
    * @throws Error if the document with a matching id OR slug already exists.
    */
-  create(documentId: string, document: PHDocument): Promise<void>;
+  create(document: PHDocument): Promise<void>;
 
   /**
    * Returns the document with the given id.
