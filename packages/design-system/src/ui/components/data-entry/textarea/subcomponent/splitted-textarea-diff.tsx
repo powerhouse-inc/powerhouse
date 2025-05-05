@@ -1,8 +1,7 @@
 import { cn, FormGroup, FormLabel, type WithDifference } from "#scalars";
 import { InputDiff } from "../../input/subcomponent/input-diff.js";
 import { TextDiff } from "../../input/subcomponent/text-diff.js";
-// import type { WithDifference } from "../../../../scalars/components/types.js";
-// import { SplittedInputDiff } from "../input/splitted-input-diff.js";
+
 interface TextInputDiffProps extends WithDifference<string> {
   value: string;
   label?: React.ReactNode;
