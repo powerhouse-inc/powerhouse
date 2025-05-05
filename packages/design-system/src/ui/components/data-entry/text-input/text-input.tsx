@@ -8,6 +8,7 @@ import ValueTransformer, {
   type TransformerType,
 } from "../../../../scalars/components/fragments/value-transformer/value-transformer.js";
 import type {
+  DiffMode,
   InputBaseProps,
   WithDifference,
 } from "../../../../scalars/components/types.js";
@@ -23,9 +24,10 @@ interface TextInputProps
         CommonTextProps,
       "value" | "autoComplete"
     >,
-    WithDifference<string> {
+    Omit<WithDifference<string>, "diffMode"> {
   value?: string;
   autoComplete?: boolean;
+  diffMode?: Extract<DiffMode, "sentences">;
 }
 
 const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
@@ -120,6 +122,8 @@ const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         viewMode={viewMode}
         diffMode={diffMode}
         baseValue={baseValue}
+        label={label}
+        required={props.required}
       />
     );
   },
