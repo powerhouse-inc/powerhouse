@@ -41,7 +41,6 @@ import {
   attachBranch,
   garbageCollect,
   garbageCollectDocumentOperations,
-  generateId,
   groupOperationsByScope,
   merge,
   precedes,
@@ -604,14 +603,13 @@ export class BaseDocumentDriveServer
     input: DriveInput,
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
-    const id = input.global.id || generateId();
-    if (!id) {
-      throw new Error("Invalid Drive Id");
-    }
-
     const document = createDocument({
       state: input,
     });
+
+    if (input.id && input.id.length > 0) {
+      document.id = input.id;
+    }
 
     if (input.slug && input.slug.length > 0) {
       document.slug = input.slug;
@@ -621,13 +619,13 @@ export class BaseDocumentDriveServer
       preferredEditor: preferredEditor,
     };
 
-    await this.documentStorage.create(id, document);
+    await this.documentStorage.create(document);
 
     if (input.slug && input.slug.length > 0) {
       await this.cache.deleteDriveBySlug(input.slug);
     }
 
-    await this._initializeDrive(id);
+    await this._initializeDrive(document.id);
 
     this.eventEmitter.emit("driveAdded", document);
 
@@ -658,9 +656,9 @@ export class BaseDocumentDriveServer
 
     return await this.addDrive(
       {
+        id,
         slug,
         global: {
-          id: id,
           name,
           icon: icon ?? null,
         },
@@ -819,7 +817,7 @@ export class BaseDocumentDriveServer
       state: state ?? document.state,
     };
 
-    await this.documentStorage.create(input.id, documentStorage);
+    await this.documentStorage.create(documentStorage);
 
     try {
       await this.documentStorage.addChild(driveId, input.id);

@@ -47,9 +47,9 @@ export type DocumentDriveServerMixin<I> = Mixin<
 >;
 
 export type DriveInput = BaseState<
-  Omit<DocumentDriveState, "__typename" | "id" | "nodes"> & { id?: string },
+  Omit<DocumentDriveState, "__typename" | "id" | "nodes">,
   DocumentDriveLocalState
-> & { slug?: string };
+> & { id?: string; slug?: string };
 
 export type RemoteDriveAccessLevel = "READ" | "WRITE";
 
