@@ -806,6 +806,7 @@ export class BaseDocumentDriveServer
 
     // stores document information
     const documentStorage: PHDocument = {
+      id: document.id,
       name: document.name,
       slug: document.slug,
       revision: document.revision,

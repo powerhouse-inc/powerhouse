@@ -1,4 +1,4 @@
-import { hash } from "#utils/env";
+import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
 import {
@@ -175,9 +175,11 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
   >,
   createState?: CreateState<TDocument>,
 ): ExtendedStateFromDocument<TDocument> {
+  const id = generateUUID();
   return {
+    id,
+    slug: id,
     name: "",
-    slug: "",
     documentType: "",
     revision: {
       global: 0,

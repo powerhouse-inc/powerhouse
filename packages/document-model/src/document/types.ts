@@ -168,6 +168,8 @@ export type Meta = {
  * The base attributes of a {@link BaseDocument}.
  */
 export type DocumentHeader = {
+  /** The id of the document. */
+  id: string;
   /** The name of the document. */
   name: string;
   /** The slug of the document. */

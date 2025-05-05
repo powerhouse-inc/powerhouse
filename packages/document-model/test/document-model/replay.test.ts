@@ -15,6 +15,7 @@ import {
 } from "../helpers.js";
 describe("DocumentModel Class", () => {
   const initialState = {
+    id: "",
     name: "",
     slug: "",
     revision: {
@@ -40,6 +41,7 @@ describe("DocumentModel Class", () => {
     CountLocalState,
     CountAction
   > = {
+    id: "",
     name: "",
     slug: "",
     revision: {
