@@ -1,9 +1,8 @@
-/* eslint-disable react/jsx-max-depth */
 import { Icon, type IconName } from "#powerhouse";
 import { cn, FormLabel } from "@powerhousedao/design-system/scalars";
 import React from "react";
 import { SplittedInputDiff } from "../input/splitted-input-diff.js";
-import { TextDiff } from "../input/text-diff.js";
+import { TextDiff } from "../input/subcomponent/text-diff.js";
 import type { PHIDInputProps, PHIDInputWithDifference } from "./types.js";
 
 interface IconRendererProps {

@@ -1,7 +1,7 @@
 import { cn } from "@powerhousedao/design-system/scalars";
 import type { WithDifference } from "../../../../scalars/components/types.js";
-import { InputDiff } from "./input-diff.js";
-import { TextDiff } from "./text-diff.js";
+import { InputDiff } from "./subcomponent/input-diff.js";
+import { TextDiff } from "./subcomponent/text-diff.js";
 
 interface SplittedInputDiffProps extends WithDifference<string> {
   value: string;
