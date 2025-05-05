@@ -6,11 +6,11 @@ import {
   useDriveContext,
   exportDocument,
   type User,
+  type DriveEditorContext,
 } from "@powerhousedao/reactor-browser";
 import {
-    documentModelDocumentModelModule,
   type DocumentModelModule,
-  type EditorContext,
+  type EditorModule,
   type EditorProps,
   type PHDocument,
 } from "document-model";
@@ -19,7 +19,7 @@ import {
   RevisionHistory,
   DefaultEditorLoader,
 } from "@powerhousedao/design-system";
-import { useState, Suspense, type FC, useCallback, lazy } from "react";
+import { useState, Suspense, type FC, useCallback } from "react";
 
 export interface EditorContainerProps {
   driveId: string;
@@ -27,41 +27,26 @@ export interface EditorContainerProps {
   documentType: string;
   onClose: () => void;
   title: string;
-  context: EditorContext;
-}
-
-const documentModelsMap = {
-  [documentModelDocumentModelModule.documentModel.id]: documentModelDocumentModelModule,
-};
-
-const documentEditorMap = {
-  [documentModelDocumentModelModule.documentModel.id]: lazy(() =>
-    import('@powerhousedao/builder-tools/style.css').then(() =>
-      import("@powerhousedao/builder-tools/document-model-editor").then((m) => ({
-        default: m.documentModelEditorModule.Component,
-      }))
-    )
-  ),
-} as const;
-
-function getDocumentModel(documentType: string) {
-  return documentModelsMap[documentType];
-}
-
-function getDocumentEditor(documentType: string) {
-  return documentEditorMap[documentType];
+  context: DriveEditorContext;
+  documentModelModule: DocumentModelModule<PHDocument>;
+  editorModule: EditorModule;
 }
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
-  const { driveId, documentId, documentType, onClose, title, context } = props;
+  const {
+    title,
+    driveId,
+    context,
+    onClose,
+    documentId,
+    documentType,
+    editorModule,
+    documentModelModule,
+  } = props;
 
   const [showRevisionHistory, setShowRevisionHistory] = useState(false);
   const { useDocumentEditorProps } = useDriveContext();
   const user = context.user as User | undefined;
-
-  const documentModelModule = getDocumentModel(
-    documentType,
-  ) as DocumentModelModule<PHDocument>;
 
   const { dispatch, error, document } = useDocumentEditorProps({
     documentId,
@@ -86,17 +71,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
 
   if (!document) return loadingContent;
 
-  const Editor = getDocumentEditor(documentType);
-
-  if (!Editor) {
-    console.error("No editor found for document type:", documentType);
-    return (
-      <div className="flex-1">
-        No editor found for document type: {documentType}
-      </div>
-    );
-  }
-  const EditorComponent = Editor as FC<EditorProps<PHDocument>>;
+  const EditorComponent = editorModule.Component as FC<EditorProps<PHDocument>>;
 
   return showRevisionHistory ? (
     <RevisionHistory
