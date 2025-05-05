@@ -47,7 +47,8 @@ describe("processOperations", () => {
 
   async function buildFile(initialOperations: Action[] = []) {
     await server.addDrive({
-      global: { id: driveId, name: "test", icon: null },
+      id: driveId,
+      global: { name: "test", icon: null },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",

@@ -802,6 +802,10 @@ export class BaseDocumentDriveServer
       input.document ??
       this.getDocumentModelModule(input.documentType).utils.createDocument();
 
+    if (input.id && input.id.length > 0) {
+      document.id = input.id;
+    }
+
     // stores document information
     const documentStorage: PHDocument = {
       id: document.id,
