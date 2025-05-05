@@ -9,7 +9,8 @@
   "exports": {
     ".": "./dist/src/index.js",
     "./powerhouse": "./dist/src/powerhouse.js",
-    "./packages": "./dist/src/packages.js"
+    "./packages": "./dist/src/packages.js",
+    "./utils": "./dist/src/utils.js"
   },
   "publishConfig": {
     "access": "public"

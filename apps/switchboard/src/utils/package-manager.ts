@@ -10,7 +10,7 @@ export const readManifest = () => {
   return manifest;
 };
 
-import { getConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config/utils";
 import { type Subgraph } from "@powerhousedao/reactor-api";
 import { type DocumentModelModule } from "document-model";
 import EventEmitter from "node:events";

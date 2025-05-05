@@ -1,15 +1,13 @@
 import { generateFromFile } from "@powerhousedao/codegen";
-import {
-  getConfig,
-  type PowerhouseConfig,
-} from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config/utils";
 import {
   DefaultStartServerOptions,
   startServer,
   type LocalReactor,
   type StartServerOptions,
 } from "@powerhousedao/reactor-local";
-import { IProcessor } from "document-drive/processors/types";
+import { type IProcessor } from "document-drive/processors/types";
 import {
   InternalTransmitter,
   type InternalTransmitterUpdate,

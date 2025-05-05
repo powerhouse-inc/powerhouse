@@ -1,4 +1,4 @@
-import { getConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config/utils";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { dirname, join } from "node:path";

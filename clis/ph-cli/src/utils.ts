@@ -244,4 +244,4 @@ export function setCustomHelp(command: Command, helpText: string): Command {
   return command;
 }
 
-export { getConfig } from "@powerhousedao/config/powerhouse";
+export { getConfig } from "@powerhousedao/config/utils";
