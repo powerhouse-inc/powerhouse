@@ -143,14 +143,14 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     try {
       await this.db.document.create({
         data: {
+          id: documentId,
+          slug,
           name: document.name,
           documentType: document.documentType,
-          slug,
           initialState: JSON.stringify(document.initialState),
           lastModified: document.lastModified,
           revision: JSON.stringify(document.revision),
           meta: document.meta ? JSON.stringify(document.meta) : undefined,
-          id: documentId,
         },
       });
     } catch (e) {
@@ -283,6 +283,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     }, cachedOperations) as OperationsFromDocument<TDocument>;
     const dbDoc = result;
     const doc = {
+      id: dbDoc.id,
       created: dbDoc.created.toISOString(),
       name: dbDoc.name ? dbDoc.name : "",
       slug: dbDoc.slug ? dbDoc.slug : "",

@@ -158,7 +158,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const storage = await buildStorage();
 
     const document = createDocument();
-    const id = generateId();
+    const id = document.id;
     await storage.create(id, document);
 
     const result = await storage.get(id);
@@ -352,6 +352,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const id = generateId();
     const document = createDriveDocument();
+    document.slug = "";
     await storage.create(id, document);
 
     const result = await storage.getBySlug<DocumentDriveDocument>(id);
