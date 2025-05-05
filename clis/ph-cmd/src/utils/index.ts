@@ -197,11 +197,17 @@ export function forwardPHCommand(
 
   if (captureOutput) {
     // Capture output and return it
-    return execSync(execCommand, {
-      stdio: "pipe",
-      encoding: "utf8",
-      ...commandOptions,
-    });
+    try {
+      return execSync(execCommand, {
+        stdio: "pipe",
+        encoding: "utf8",
+        ...commandOptions,
+      });
+    } catch (error) {
+      throw new Error(
+        `Failed to execute command: ${execCommand}\nError: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   } else {
     // Original behavior - pipe directly to stdout/stderr
     execSync(execCommand, {
