@@ -292,7 +292,7 @@ export const PrebuiltArgTypes = {
     diffMode: {
       control: "select",
       description: "The mode of the input field",
-      options: ["words", "sentences", "lines"],
+      options: ["words", "sentences"],
       table: {
         category: StorybookControlCategory.DIFF,
       },

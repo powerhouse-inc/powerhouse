@@ -132,6 +132,17 @@ const meta: Meta<typeof PHIDInput> = {
       if: { arg: "autoComplete", neq: false },
     },
 
+    initialOptions: {
+      control: "object",
+      description:
+        "Array of options to initially populate the autocomplete dropdown",
+      table: {
+        type: { summary: "PHIDOption[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "autoComplete", neq: false },
+    },
+
     previewPlaceholder: {
       control: "object",
       description:
@@ -172,6 +183,28 @@ const meta: Meta<typeof PHIDInput> = {
     ...PrebuiltArgTypes.viewMode,
     ...PrebuiltArgTypes.diffMode,
     ...PrebuiltArgTypes.baseValue,
+
+    basePreviewTitle: {
+      control: "text",
+      description: "The title of the base preview",
+      table: {
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    basePreviewPath: {
+      control: "text",
+      description: "The path of the base preview",
+      table: {
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    basePreviewDescription: {
+      control: "text",
+      description: "The description of the base preview",
+      table: {
+        category: StorybookControlCategory.DIFF,
+      },
+    },
   },
   args: {
     name: "phid-input",

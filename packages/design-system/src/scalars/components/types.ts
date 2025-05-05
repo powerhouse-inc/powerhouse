@@ -8,7 +8,7 @@ export type ValidatorHandler = (
 ) => ValidatorResult | Promise<ValidatorResult>;
 
 export type ViewMode = "edition" | "addition" | "removal" | "mixed";
-export type DiffMode = "words" | "sentences" | "lines";
+export type DiffMode = "words" | "sentences";
 
 export interface WithDifference<T> {
   viewMode?: ViewMode;
