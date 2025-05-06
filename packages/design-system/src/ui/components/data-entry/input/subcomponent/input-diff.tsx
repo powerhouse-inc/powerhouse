@@ -6,6 +6,7 @@ interface InputDiffProps {
   ellipsis?: boolean;
   multiline?: boolean;
   rows?: number;
+  hasPadding?: boolean;
 }
 
 export const InputDiff = ({
@@ -14,6 +15,7 @@ export const InputDiff = ({
   ellipsis = true,
   multiline = false,
   rows = 3,
+  hasPadding = false,
 }: InputDiffProps) => {
   return (
     <div
@@ -22,6 +24,7 @@ export const InputDiff = ({
         "cursor-not-allowed border border-gray-300 bg-transparent px-3",
         !multiline && ellipsis && "truncate [&>span]:truncate",
         className,
+        hasPadding && "items-start py-2",
       )}
       style={{
         minHeight: multiline ? `${rows * 1.5}rem` : "2.25rem",

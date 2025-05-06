@@ -3,6 +3,7 @@ import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
+  StorybookControlCategory,
 } from "../../../../scalars/lib/storybook-arg-types.js";
 import { Textarea } from "./textarea.js";
 
@@ -49,6 +50,17 @@ const meta = {
     }),
     ...PrebuiltArgTypes.minLength,
     ...PrebuiltArgTypes.maxLength,
+    ...PrebuiltArgTypes.viewMode,
+
+    ...PrebuiltArgTypes.baseValue,
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["words"],
+      table: {
+        category: StorybookControlCategory.DIFF,
+      },
+    },
     autoExpand: {
       control: "boolean",
       description:
