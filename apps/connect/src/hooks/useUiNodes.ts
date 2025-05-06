@@ -18,7 +18,6 @@ import {
     PUBLIC,
     type SharingType,
     SUCCESS,
-    toast,
     type UiDriveNode,
     type UiFileNode,
     type UiFolderNode,
@@ -28,6 +27,7 @@ import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNod
 import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from '../services/toast.js';
 import { useDocumentDriveById } from './useDocumentDriveById.js';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 import { useOpenSwitchboardLink } from './useOpenSwitchboardLink.js';
@@ -81,7 +81,8 @@ export function useUiNodes() {
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument | ReadDrive) => {
             const isReadDrive = 'readContext' in drive;
-            const { id, name, icon, slug } = drive.state.global;
+            const { id, name, icon } = drive.state.global;
+            const { slug } = drive;
             const { sharingType: _sharingType, availableOffline } = !isReadDrive
                 ? drive.state.local
                 : { sharingType: PUBLIC, availableOffline: false };
@@ -324,11 +325,11 @@ export function useUiNodes() {
                 const app = apps.find(a => a.id === data.appId);
                 const newDrive = await addDrive(
                     {
+                        slug: '',
                         global: {
                             name: data.name,
                             id: undefined,
                             icon: null,
-                            slug: null,
                         },
                         local: {
                             availableOffline: data.availableOffline,

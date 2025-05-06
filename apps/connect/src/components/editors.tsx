@@ -18,10 +18,12 @@ import {
     signOperation,
     useDocumentDispatch,
 } from '#utils';
+import { getRevisionFromDate, useTimelineItems } from '@powerhousedao/common';
 import {
     Button,
     DocumentToolbar,
     RevisionHistory,
+    type TimelineItem,
 } from '@powerhousedao/design-system';
 import { logger } from 'document-drive';
 import {
@@ -55,6 +57,7 @@ export type EditorProps<TDocument extends PHDocument = PHDocument> = {
     onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
     onChange?: (documentId: string, document: TDocument) => void;
+    onGetDocumentRevision?: EditorContext['getDocumentRevision'];
 };
 
 function EditorError({ message }: { message: React.ReactNode }) {
@@ -81,9 +84,13 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         onChange,
         onExport,
         onAddOperation,
+        onGetDocumentRevision,
         onOpenSwitchboardLink,
     } = props;
     const documentId = fileNodeDocument?.documentId;
+    const [selectedTimelineItem, setSelectedTimelineItem] =
+        useState<TimelineItem | null>(null);
+
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
@@ -112,6 +119,11 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         [theme, user],
     );
     const userPermissions = useUserPermissions();
+
+    const timelineItems = useTimelineItems(
+        documentId,
+        initialDocument?.created,
+    );
 
     const currentDocument = useRef({ ...fileNodeDocument, document });
     useEffect(() => {
@@ -335,6 +347,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         disableExternalControls,
         documentToolbarEnabled,
         showSwitchboardLink,
+        timelineEnabled,
     } = editor.config || {};
 
     const handleSwitchboardLinkClick =
@@ -350,6 +363,9 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                         onShowRevisionHistory={showRevisionHistory}
                         title={fileNodeDocument.name || document.name}
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
+                        timelineButtonVisible={timelineEnabled}
+                        timelineItems={timelineItems.data}
+                        onTimelineItemClick={setSelectedTimelineItem}
                     />
                 )}
             {!disableExternalControls && (
@@ -388,7 +404,17 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                             <EditorComponent
                                 key={documentId}
                                 error={error}
-                                context={context}
+                                context={{
+                                    ...context,
+                                    getDocumentRevision: onGetDocumentRevision,
+                                    readMode: !!selectedTimelineItem,
+                                    selectedTimelineRevision:
+                                        getRevisionFromDate(
+                                            selectedTimelineItem?.startDate,
+                                            selectedTimelineItem?.endDate,
+                                            document.operations.global,
+                                        ),
+                                }}
                                 document={document}
                                 documentNodeName={fileNodeDocument.name}
                                 dispatch={dispatch}

@@ -1,4 +1,4 @@
-import { DocumentModelModule, setModelName } from "document-model";
+import { DocumentModelModule, generateId, setModelName } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
@@ -6,14 +6,13 @@ import { ReactorBuilder } from "../src/server/builder.js";
 import {
   InternalTransmitter,
   InternalTransmitterUpdate,
-  IReceiver,
+  IProcessor,
 } from "../src/server/listener/transmitter/internal.js";
 import { expectUTCTimestamp, expectUUID } from "./utils";
 
 import { documentModelDocumentModelModule } from "document-model";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { Listener } from "../src/server/types.js";
-import { generateUUID } from "../src/utils/misc.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
@@ -21,7 +20,7 @@ describe("Internal Listener", () => {
     driveDocumentModelModule,
   ] as DocumentModelModule[];
 
-  async function buildServer(receiver: IReceiver) {
+  async function buildServer(processor: IProcessor) {
     const builder = new ReactorBuilder(documentModels);
     const server = builder.build();
     await server.initialize();
@@ -45,8 +44,8 @@ describe("Internal Listener", () => {
     const listenerManager = builder.listenerManager;
 
     // Create the listener and transmitter
-    const uuid = generateUUID();
-    const listener:Listener = {
+    const uuid = generateId();
+    const listener: Listener = {
       driveId,
       listenerId: uuid,
       block: false,
@@ -64,9 +63,9 @@ describe("Internal Listener", () => {
         transmitterType: "Internal",
       },
     };
-    
+
     // TODO: circular reference
-    listener.transmitter = new InternalTransmitter(listener, server, receiver);
+    listener.transmitter = new InternalTransmitter(server, processor);
 
     await listenerManager?.setListener(driveId, listener);
 
@@ -102,7 +101,7 @@ describe("Internal Listener", () => {
 
     const update: InternalTransmitterUpdate<DocumentDriveDocument> = {
       branch: "main",
-      documentId: "",
+      documentId: "drive",
       driveId: "drive",
       operations: [
         {
@@ -298,7 +297,7 @@ describe("Internal Listener", () => {
     ]);
   });
 
-  test("should call disconnect function of receiver", async () => {
+  test("should call disconnect function of processor", async () => {
     const disconnectFn = vitest.fn(() => Promise.resolve());
 
     const server = await buildServer({

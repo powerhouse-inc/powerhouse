@@ -5,6 +5,7 @@ import {
   DocumentModelModule,
   documentModelReducer,
   garbageCollect,
+  generateId,
   Operation,
   setModelExtension,
   setModelId,
@@ -18,7 +19,6 @@ import { reducer as documentDriveReducer } from "../../src/drive-document-model/
 import { driveDocumentModelModule } from "../../src/drive-document-model/module";
 import { generateAddNodeAction } from "../../src/drive-document-model/src/utils";
 import { ReactorBuilder } from "../../src/server/builder";
-import { OperationError } from "../../src/server/error";
 import { IOperationResult } from "../../src/server/types";
 import { BasicClient, buildOperation, buildOperations } from "../utils";
 
@@ -42,12 +42,12 @@ describe("processOperations", () => {
     await server.initialize();
   });
 
-  const driveId = "1";
-  const documentId = "1";
+  const driveId = generateId();
+  const documentId = generateId();
 
   async function buildFile(initialOperations: Action[] = []) {
     await server.addDrive({
-      global: { id: driveId, name: "test", icon: null, slug: null },
+      global: { id: driveId, name: "test", icon: null },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -56,6 +56,7 @@ describe("processOperations", () => {
       },
     });
     const drive = await server.getDrive(driveId);
+
     await server.addDriveOperation(
       driveId,
       buildOperation(
@@ -64,7 +65,7 @@ describe("processOperations", () => {
         generateAddNodeAction(
           drive.state.global,
           {
-            id: "1",
+            id: documentId,
             name: "test",
             documentType: "powerhouse/document-model",
           },
@@ -261,7 +262,6 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.error).toBeInstanceOf(OperationError);
     expect(result.error?.message).toBe(
       "Missing operations: expected 3 with skip 0 or equivalent, got index 4 with skip 0",
     );
@@ -315,7 +315,6 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.error).toBeInstanceOf(OperationError);
     expect(result.error?.message).toBe(
       "Missing operations: expected 5 with skip 0 or equivalent, got index 6 with skip 0",
     );

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.1.473",
+  "version": "2.4.1-dev.0",
   "main": "dist/src/index.js",
   "bin": {
     "switchboard": "dist/src/index.js"
@@ -15,16 +15,21 @@
     "lint:nx": "eslint . --fix --quiet",
     "install-packages": "node dist/src/install-packages.js",
     "postbuild": "pnpm run install-packages",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@powerhousedao/analytics-engine-core": "^0.4.0",
     "@powerhousedao/analytics-engine-knex": "^0.4.0",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/scalars": "workspace:*",
+    "@pyroscope/nodejs": "^0.4.5",
+    "@sentry/node": "^9.6.1",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "document-drive": "workspace:*",

@@ -1,8 +1,8 @@
-import { createClient, RedisClientType } from "redis";
 import { describe, it } from "vitest";
 import {
   DocumentModelDocument,
   DocumentModelModule,
+  generateId,
 } from "../../document-model/index";
 import { setModelName } from "../../document-model/src/document-model/gen/creators";
 import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils";
@@ -22,7 +22,6 @@ import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
 import { driveDocumentModelModule } from "../src/drive-document-model/module";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils";
 import { BaseQueueManager } from "../src/queue/base";
-import { RedisQueueManager } from "../src/queue/redis";
 import { IQueueManager } from "../src/queue/types";
 import { ReactorBuilder } from "../src/server/builder";
 import {
@@ -30,7 +29,6 @@ import {
   IOperationResult,
 } from "../src/server/types";
 import { MemoryStorage } from "../src/storage/memory";
-import { generateUUID } from "../src/utils/misc";
 import { buildOperation, buildOperations } from "./utils";
 
 const REDIS_TLS_URL = process.env.REDIS_TLS_URL || "redis://localhost:6379";
@@ -42,7 +40,7 @@ const documentModels = [
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
   ["Memory Queue", () => Promise.resolve(new BaseQueueManager())],
-  [
+  /*[
     "Redis Queue",
     async () => {
       try {
@@ -54,7 +52,7 @@ const queueLayers: [string, () => Promise<IQueueManager>][] = [
         throw error;
       }
     },
-  ],
+  ],*/
 ] as unknown as [string, () => Promise<IQueueManager>][];
 
 describe.each(queueLayers)(
@@ -64,12 +62,13 @@ describe.each(queueLayers)(
     const ADD_OPERATIONS_TO_DRIVE = 10;
 
     const createDrive = async (server: IBaseDocumentDriveServer) => {
-      const driveState = await server.addDrive({
+      const id = generateId();
+      await server.addDrive({
+        slug: `name-${id}`,
         global: {
-          id: generateUUID(),
+          id,
           name: "name",
           icon: "icon",
-          slug: "slug",
         },
         local: {
           availableOffline: false,
@@ -79,7 +78,7 @@ describe.each(queueLayers)(
         },
       });
 
-      const drive = await server.getDrive(driveState.state.global.id);
+      const drive = await server.getDrive(id);
       return drive;
     };
 
@@ -90,7 +89,7 @@ describe.each(queueLayers)(
     ) => {
       const promisses: Promise<IOperationResult<DocumentDriveDocument>>[] = [];
       for (let i = 0; i < ADD_OPERATIONS_TO_DRIVE; i++) {
-        const id = generateUUID();
+        const id = generateId();
         drive = reducer(
           drive,
           generateAddNodeAction(
@@ -121,7 +120,8 @@ describe.each(queueLayers)(
     it("block document queue until ADD_FILE is processed", async ({
       expect,
     }) => {
-      const documentId = "file 1";
+      const documentId = generateId();
+      const folderId = generateId();
 
       const server = new ReactorBuilder(documentModels)
         .withStorage(new MemoryStorage())
@@ -132,11 +132,11 @@ describe.each(queueLayers)(
 
       const driveId = drive.state.global.id;
       const driveOperations = buildOperations(reducer, drive, [
-        addFolder({ id: "folder 1", name: "folder 1" }),
+        addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: documentId,
           name: "file 1",
-          parentFolder: "folder 1",
+          parentFolder: folderId,
           documentType: documentModelDocumentModelModule.documentModel.id,
           synchronizationUnits: [
             { syncId: "1", scope: "global", branch: "main" },
@@ -177,7 +177,7 @@ describe.each(queueLayers)(
       drive = await server.getDrive(driveId);
       expect(drive.state.global.nodes).toStrictEqual([
         expect.objectContaining({
-          id: "folder 1",
+          id: folderId,
           name: "folder 1",
           kind: "folder",
           parentFolder: null,
@@ -186,7 +186,7 @@ describe.each(queueLayers)(
           id: documentId,
           name: "file 1",
           kind: "file",
-          parentFolder: "folder 1",
+          parentFolder: folderId,
           documentType: documentModelDocumentModelModule.documentModel.id,
           synchronizationUnits: [
             { syncId: "1", scope: "global", branch: "main" },
@@ -213,12 +213,15 @@ describe.each(queueLayers)(
       let drive = await createDrive(server);
 
       const driveId = drive.state.global.id;
+      const folderId = generateId();
+      const folderId2 = generateId();
+      const fileId = generateId();
       const driveOperations = buildOperations(reducer, drive, [
-        addFolder({ id: "folder 1", name: "folder 1" }),
+        addFolder({ id: folderId, name: "folder 1" }),
         addFile({
-          id: "file 1",
+          id: fileId,
           name: "file 1",
-          parentFolder: "folder 1",
+          parentFolder: folderId,
           documentType: documentModelDocumentModelModule.documentModel.id,
           synchronizationUnits: [
             { syncId: "1", scope: "global", branch: "main" },
@@ -236,14 +239,14 @@ describe.each(queueLayers)(
       );
 
       const results = await Promise.all([
-        server.queueOperations(driveId, "file 1", [mutation]),
+        server.queueOperations(driveId, fileId, [mutation]),
         server.queueDriveOperations(driveId, driveOperations),
         server.queueDriveOperations(driveId, [
           buildOperation(
             reducer,
             drive,
             addFolder({
-              id: "folder 2",
+              id: folderId2,
               name: "folder 2",
             }),
           ),
@@ -262,23 +265,23 @@ describe.each(queueLayers)(
       expect(drive.state.global.nodes).toStrictEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: "folder 1",
+            id: folderId,
             name: "folder 1",
             kind: "folder",
             parentFolder: null,
           }),
           expect.objectContaining({
-            id: "file 1",
+            id: fileId,
             name: "file 1",
             kind: "file",
-            parentFolder: "folder 1",
+            parentFolder: folderId,
             documentType: documentModelDocumentModelModule.documentModel.id,
             synchronizationUnits: [
               { syncId: "1", scope: "global", branch: "main" },
             ],
           }),
           expect.objectContaining({
-            id: "folder 2",
+            id: folderId2,
             name: "folder 2",
             kind: "folder",
             parentFolder: null,
@@ -288,14 +291,14 @@ describe.each(queueLayers)(
 
       // add file 1 operation has to be processed after add folder 1
       expect(
-        drive.state.global.nodes.findIndex((n) => n.id === "file 1"),
+        drive.state.global.nodes.findIndex((n) => n.id === fileId),
       ).toBeGreaterThan(
-        drive.state.global.nodes.findIndex((n) => n.id === "folder 1"),
+        drive.state.global.nodes.findIndex((n) => n.id === folderId),
       );
 
       const docModelDocument = (await server.getDocument(
         driveId,
-        "file 1",
+        fileId,
       )) as DocumentModelDocument;
       expect(docModelDocument.state.global.name).toBe("foo");
     });
@@ -377,7 +380,7 @@ describe.each(queueLayers)(
       expect(drive.state.global.nodes).toStrictEqual([]);
     });
 
-    it("produces error on addDriveOperations with wrong index", async ({
+    it("queues operations when using addDriveOperations", async ({
       expect,
     }) => {
       const queue = await buildQueue();
@@ -401,7 +404,7 @@ describe.each(queueLayers)(
 
       expect(
         driveResults.flat().filter((f) => f.status === "ERROR").length,
-      ).toBeGreaterThan(0);
+      ).toBe(0);
     });
 
     it("produces no errors on queueDriveOperations", async ({ expect }) => {

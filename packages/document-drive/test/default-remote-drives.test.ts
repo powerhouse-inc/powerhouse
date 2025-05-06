@@ -1,6 +1,7 @@
 import {
   documentModelDocumentModelModule,
   DocumentModelModule,
+  generateId,
 } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
@@ -12,7 +13,6 @@ import {
 } from "../src/server/types";
 import { MemoryStorage } from "../src/storage/memory";
 import { DriveInfo } from "../src/utils/graphql";
-import { generateUUID } from "../src/utils/misc";
 
 type DriveInput = {
   url: string;
@@ -25,7 +25,7 @@ const drive1: DriveInput = {
 
 const drive2: DriveInput = {
   url: "https://test.com/d/drive2",
-  id: "drive2", 
+  id: "drive2",
 };
 
 const drive3: DriveInput = {
@@ -132,7 +132,7 @@ vi.mock(import("graphql-request"), async () => {
             if (query.includes("mutation registerPullResponderListener")) {
               return Promise.resolve({
                 registerPullResponderListener: {
-                  listenerId: generateUUID(),
+                  listenerId: generateId(),
                 },
               });
             }

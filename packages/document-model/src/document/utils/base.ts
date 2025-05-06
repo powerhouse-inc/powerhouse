@@ -177,6 +177,7 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
 ): ExtendedStateFromDocument<TDocument> {
   return {
     name: "",
+    slug: "",
     documentType: "",
     revision: {
       global: 0,
@@ -221,11 +222,6 @@ export function hashDocumentStateForScope(
 ) {
   return hash(stringifyJson(document.state[scope] || ""));
 }
-
-export const hashKey = (date?: Date, randomLimit = 1000) => {
-  const random = Math.random() * randomLimit;
-  return hash(`${(date ?? new Date()).toISOString()}${random}`);
-};
 
 export function readOnly<T>(value: T): Readonly<T> {
   return Object.freeze(value);
@@ -411,6 +407,9 @@ export function replayDocument<TDocument extends PHDocument>(
 
   // builds a new document from the initial data
   const document = baseCreateDocument(documentState);
+  if (header?.slug) {
+    document.slug = header.slug;
+  }
   document.initialState = initialState;
   document.operations = initialOperations;
 
@@ -480,6 +479,7 @@ export function replayDocument<TDocument extends PHDocument>(
     },
     { global: [], local: [] },
   );
+
   // gets the last modified timestamp from the latest operation
   const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
     const operation = curr.at(-1);

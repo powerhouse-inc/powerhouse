@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.39.3-dev.0",
+  "version": "0.40.59-dev.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -14,18 +14,25 @@
     "dist"
   ],
   "scripts": {
+    "generate-commands-md": "tsx scripts/generate-commands-md.ts",
+    "generate-version": "tsx scripts/generate-version.ts",
+    "prebuild": "npm run generate-commands-md && npm run generate-version",
     "build": "tsc --build",
     "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix"
+    "lint:fix": "eslint --fix",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules",
+    "test": "vitest --run"
   },
   "keywords": [],
   "author": "",
   "devDependencies": {
     "concurrently": "^9.1.2",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "vitest": "^3.0.7"
   },
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
@@ -35,8 +42,8 @@
     "@powerhousedao/reactor-local": "workspace:*",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
-    "document-model": "workspace:*",
     "document-drive": "workspace:*",
+    "document-model": "workspace:*",
     "pm2": "^5.4.3"
   }
 }

@@ -19,6 +19,7 @@ export function generateId(method?: "UUIDv4"): string {
       `Id generation method not supported: "${method.toString()}"`,
     );
   }
+
   return generateUUID();
 }
 

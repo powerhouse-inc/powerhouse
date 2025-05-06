@@ -1,5 +1,4 @@
 import { type IReadModeDriveServer } from "#read-mode/types";
-import { DriveNotFoundError } from "#server/error";
 import {
   type DefaultRemoteDriveInfo,
   type DocumentDriveServerOptions,
@@ -69,9 +68,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
     try {
       await this.server.deleteDrive(driveId);
     } catch (error) {
-      if (!(error instanceof DriveNotFoundError)) {
-        logger.error(error);
-      }
+      logger.error(error);
     }
   }
 

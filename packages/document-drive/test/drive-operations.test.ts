@@ -13,6 +13,7 @@ import { reducer as documentDriveReducer } from "../src/drive-document-model/gen
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { ReactorBuilder } from "../src/server/builder.js";
+import { MemoryStorage } from "../src/storage/memory.js";
 
 function buildOperation(
   document: DocumentDriveDocument,
@@ -43,7 +44,8 @@ describe("Drive operations", () => {
     driveDocumentModelModule,
   ] as DocumentModelModule[];
 
-  let server = new ReactorBuilder(documentModels).build();
+  const storage: MemoryStorage = new MemoryStorage();
+  let server = new ReactorBuilder(documentModels).withStorage(storage).build();
 
   beforeEach(async () => {
     server = new ReactorBuilder(documentModels).build();
@@ -69,7 +71,7 @@ describe("Drive operations", () => {
   });
 
   it("should reject invalid operation", async () => {
-    await server.clearStorage();
+    await storage.clear();
     await server.addDrive({
       global: { id: "1", name: "test", icon: null, slug: null },
       local: {

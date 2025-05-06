@@ -1,22 +1,16 @@
 import { getHMRModule, subscribeExternalPackages } from '#services';
+import { type DriveEditorModule } from '@powerhousedao/reactor-browser';
 import { type App, type DocumentModelLib } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
 
-const LOAD_EXTERNAL_PACKAGES = import.meta.env.LOAD_EXTERNAL_PACKAGES;
-const shouldLoadExternalPackages = LOAD_EXTERNAL_PACKAGES === 'true';
-
 export type ExternalPackage = DocumentModelLib & { id: string };
 
 function loadExternalPackages() {
-    if (!shouldLoadExternalPackages) {
-        return Promise.resolve([]);
-    } else {
-        return import('PH:EXTERNAL_PACKAGES').then(
-            module => module.default as ExternalPackage[],
-        );
-    }
+    return import('../external-packages.js')
+        .catch(e => console.error(e))
+        .then(module => (module?.default ?? []) as ExternalPackage[]);
 }
 
 const hmrAvailableAtom = atom(async () => {
@@ -91,6 +85,8 @@ export const useDriveEditor = (editorId?: string) => {
         const pkg = externalPackages.find(pkg =>
             pkg.manifest.apps?.find(app => app.driveEditor === editorId),
         );
-        return pkg?.editors.find(editor => editor.config.id === editorId);
+        return pkg?.editors.find(
+            editor => editor.config.id === editorId,
+        ) as DriveEditorModule;
     }, [externalPackages, editorId]);
 };

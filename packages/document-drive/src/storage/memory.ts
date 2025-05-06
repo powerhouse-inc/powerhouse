@@ -1,5 +1,10 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { DriveNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentIdValidationError,
+  DocumentNotFoundError,
+  DocumentSlugValidationError,
+} from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -9,77 +14,257 @@ import {
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import { type IDriveStorage } from "./types.js";
+import {
+  type IDocumentAdminStorage,
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "./types.js";
+import { isValidDocumentId, isValidSlug } from "./utils.js";
 
-export class MemoryStorage implements IDriveStorage {
-  private documents: Record<string, Record<string, PHDocument>>;
-  private drives: Record<string, DocumentDriveDocument>;
-  private slugToDriveId: Record<string, string> = {};
+type DriveManifest = {
+  documentIds: Set<string>;
+};
+
+export class MemoryStorage
+  implements IDriveOperationStorage, IDocumentStorage, IDocumentAdminStorage
+{
+  private documents: Record<string, PHDocument>;
+  private driveManifests: Record<string, DriveManifest>;
+  private slugToDocumentId: Record<string, string>;
 
   constructor() {
     this.documents = {};
-    this.drives = {};
+    this.driveManifests = {};
+    this.slugToDocumentId = {};
   }
 
-  checkDocumentExists(drive: string, id: string): Promise<boolean> {
-    return Promise.resolve(this.documents[drive][id] !== undefined);
+  ////////////////////////////////
+  // IDocumentStorage
+  ////////////////////////////////
+
+  exists(documentId: string): Promise<boolean> {
+    return Promise.resolve(!!this.documents[documentId]);
   }
 
-  async getDocuments(drive: string) {
-    return Object.keys(this.documents[drive] ?? {});
-  }
-
-  async getDocument<TDocument extends PHDocument>(
-    driveId: string,
-    id: string,
-  ): Promise<TDocument> {
-    const drive = this.documents[driveId];
-    if (!drive) {
-      throw new DriveNotFoundError(driveId);
+  create(documentId: string, document: PHDocument) {
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
     }
-    const document = drive[id];
+
+    // check if the document already exists by id
+    if (this.documents[documentId]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    const slug = document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
+
+    // check if the document already exists by slug
+    if (slug && this.slugToDocumentId[slug]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    // store the document and update the slug
+    document.slug = slug;
+    this.documents[documentId] = document;
+
+    // add slug to lookup if it exists
+    if (slug) {
+      // check if the slug is already taken
+      if (this.slugToDocumentId[slug]) {
+        throw new DocumentAlreadyExistsError(documentId);
+      }
+
+      this.slugToDocumentId[slug] = documentId;
+    }
+
+    // temporary: initialize an empty manifest for new drives
+    if (document.documentType === "powerhouse/document-drive") {
+      this.updateDriveManifest(documentId, { documentIds: new Set() });
+    }
+
+    return Promise.resolve();
+  }
+
+  get<TDocument extends PHDocument>(documentId: string): Promise<TDocument> {
+    const document = this.documents[documentId];
     if (!document) {
-      throw new Error(`Document with id ${id} not found`);
+      return Promise.reject(new DocumentNotFoundError(documentId));
     }
 
-    return document as TDocument;
+    return Promise.resolve(document as TDocument);
   }
 
-  async saveDocument(drive: string, id: string, document: PHDocument) {
-    this.documents[drive] = this.documents[drive] ?? {};
-    this.documents[drive][id] = document;
+  getBySlug<TDocument extends PHDocument>(slug: string): Promise<TDocument> {
+    const documentId = this.slugToDocumentId[slug];
+
+    if (!documentId) {
+      return Promise.reject(new DocumentNotFoundError(slug));
+    }
+
+    return this.get<TDocument>(documentId);
   }
 
-  async clearStorage(): Promise<void> {
+  async findByType(
+    documentModelType: string,
+    limit = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const documentsAndIds = Object.entries(this.documents)
+      .filter(([_, doc]) => doc.documentType === documentModelType)
+      .map(([id, doc]) => ({
+        id,
+        document: doc,
+      }));
+
+    // sort: created first, then id -- similar to prisma's ordinal but not guaranteed
+    documentsAndIds.sort((a, b) => {
+      // get date objects
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      // if the dates are the same, sort by id
+      if (aDate.getTime() === bDate.getTime()) {
+        const aId = a.id;
+        const bId = b.id;
+
+        return aId.localeCompare(bId);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    // if cursor is provided, start there
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // count to limit
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    // return the documents
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
+  async delete(documentId: string): Promise<boolean> {
+    // Remove from slug lookup if it has a slug
+    const document = this.documents[documentId];
+    if (document) {
+      const slug = document.slug.length > 0 ? document.slug : documentId;
+      if (slug && this.slugToDocumentId[slug] === documentId) {
+        delete this.slugToDocumentId[slug];
+      }
+    }
+
+    // remove from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
+      await this.removeChild(parent, documentId);
+    }
+
+    // check children: any children that are only children of this document should be deleted
+    const children = await this.getChildren(documentId);
+    for (const child of children) {
+      const childParents = await this.getParents(child);
+      if (childParents.length === 1) {
+        await this.delete(child);
+      }
+    }
+
+    // delete any manifest for this document
+    delete this.driveManifests[documentId];
+
+    if (this.documents[documentId]) {
+      delete this.documents[documentId];
+
+      return Promise.resolve(true);
+    }
+
+    return Promise.resolve(false);
+  }
+
+  async addChild(parentId: string, childId: string) {
+    if (parentId === childId) {
+      return Promise.reject(
+        new Error("Cannot associate a document with itself"),
+      );
+    }
+
+    // check if the child is a parent of the parent
+    const children = await this.getChildren(childId);
+    if (children.includes(parentId)) {
+      return Promise.reject(
+        new Error("Cannot associate a document with its child"),
+      );
+    }
+
+    const manifest = this.getManifest(parentId);
+    manifest.documentIds.add(childId);
+    this.updateDriveManifest(parentId, manifest);
+
+    return Promise.resolve();
+  }
+
+  async removeChild(parentId: string, childId: string) {
+    const manifest = this.getManifest(parentId);
+    if (manifest.documentIds.delete(childId)) {
+      this.updateDriveManifest(parentId, manifest);
+      return Promise.resolve(true);
+    }
+
+    return Promise.resolve(false);
+  }
+
+  async getChildren(parentId: string): Promise<string[]> {
+    const manifest = this.getManifest(parentId);
+    return [...manifest.documentIds];
+  }
+
+  async getParents(childId: string): Promise<string[]> {
+    const parents: string[] = [];
+
+    // Scan through all drive manifests to find ones that contain the childId
+    for (const [driveId, manifest] of Object.entries(this.driveManifests)) {
+      if (manifest.documentIds.has(childId)) {
+        parents.push(driveId);
+      }
+    }
+
+    return parents;
+  }
+
+  ////////////////////////////////
+  // IDocumentAdminStorage
+  ////////////////////////////////
+
+  async clear(): Promise<void> {
     this.documents = {};
-    this.drives = {};
+    this.driveManifests = {};
+    this.slugToDocumentId = {};
   }
 
-  async createDocument(drive: string, id: string, document: PHDocument) {
-    this.documents[drive] = this.documents[drive] ?? {};
-    const {
-      operations,
-      initialState,
-      name,
-      revision,
-      documentType,
-      created,
-      lastModified,
-      clipboard,
-      state,
-    } = document;
-    this.documents[drive][id] = {
-      operations,
-      initialState,
-      name,
-      revision,
-      documentType,
-      created,
-      lastModified,
-      clipboard,
-      state,
-    } as PHDocument;
-  }
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
 
   async addDocumentOperations(
     drive: string,
@@ -87,54 +272,18 @@ export class MemoryStorage implements IDriveStorage {
     operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
-    const document = await this.getDocument(drive, id);
+    const document = await this.get(id);
     if (!document) {
-      throw new Error(`Document with id ${id} not found`);
+      return Promise.reject(new DocumentNotFoundError(id));
     }
 
     const mergedOperations = mergeOperations(document.operations, operations);
 
-    this.documents[drive][id] = {
+    this.documents[id] = {
       ...document,
       ...header,
       operations: mergedOperations,
     };
-  }
-
-  async deleteDocument(drive: string, id: string) {
-    if (!this.documents[drive]) {
-      throw new DriveNotFoundError(drive);
-    }
-    delete this.documents[drive][id];
-  }
-
-  async getDrives() {
-    return Object.keys(this.drives);
-  }
-
-  async getDrive(id: string) {
-    const drive = this.drives[id];
-    if (!drive) {
-      throw new DriveNotFoundError(id);
-    }
-    return drive;
-  }
-
-  async getDriveBySlug(slug: string) {
-    const driveId = this.slugToDriveId[slug];
-    if (!driveId) {
-      throw new Error(`Drive with slug ${slug} not found`);
-    }
-    return this.getDrive(driveId);
-  }
-
-  async createDrive(id: string, drive: DocumentDriveDocument) {
-    this.drives[id] = drive;
-    this.documents[id] = {};
-    const { slug } = drive.initialState.state.global;
-    if (slug) {
-      this.slugToDriveId[slug] = id;
-    }
   }
 
   async addDriveOperations(
@@ -142,29 +291,23 @@ export class MemoryStorage implements IDriveStorage {
     operations: OperationFromDocument<DocumentDriveDocument>[],
     header: DocumentHeader,
   ): Promise<void> {
-    const drive = await this.getDrive(id);
+    const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
       drive.operations,
       operations,
     );
 
-    this.drives[id] = {
+    this.documents[id] = {
       ...drive,
       ...header,
       operations: mergedOperations,
     };
   }
 
-  async deleteDrive(id: string) {
-    delete this.documents[id];
-    delete this.drives[id];
-  }
-
   async getSynchronizationUnitsRevision(
     units: SynchronizationUnitQuery[],
   ): Promise<
     {
-      driveId: string;
       documentId: string;
       scope: string;
       branch: string;
@@ -175,9 +318,7 @@ export class MemoryStorage implements IDriveStorage {
     const results = await Promise.allSettled(
       units.map(async (unit) => {
         try {
-          const document = await (unit.documentId
-            ? this.getDocument(unit.driveId, unit.documentId)
-            : this.getDrive(unit.driveId));
+          const document = await this.get<PHDocument>(unit.documentId);
           if (!document) {
             return undefined;
           }
@@ -185,7 +326,6 @@ export class MemoryStorage implements IDriveStorage {
             document.operations[unit.scope as OperationScope].at(-1);
           if (operation) {
             return {
-              driveId: unit.driveId,
               documentId: unit.documentId,
               scope: unit.scope,
               branch: unit.branch,
@@ -200,7 +340,6 @@ export class MemoryStorage implements IDriveStorage {
     );
     return results.reduce<
       {
-        driveId: string;
         documentId: string;
         scope: string;
         branch: string;
@@ -213,5 +352,21 @@ export class MemoryStorage implements IDriveStorage {
       }
       return acc;
     }, []);
+  }
+
+  ////////////////////////////////
+  // Private
+  ////////////////////////////////
+
+  private getManifest(driveId: string): DriveManifest {
+    if (!this.driveManifests[driveId]) {
+      this.driveManifests[driveId] = { documentIds: new Set() };
+    }
+
+    return this.driveManifests[driveId];
+  }
+
+  private updateDriveManifest(driveId: string, manifest: DriveManifest): void {
+    this.driveManifests[driveId] = manifest;
   }
 }
