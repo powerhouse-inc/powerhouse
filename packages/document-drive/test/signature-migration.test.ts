@@ -97,7 +97,6 @@ describe.each(storageLayers)(
         state: {
           global: {
             icon: null,
-            id: driveId,
             name: "name",
             nodes: [],
           },

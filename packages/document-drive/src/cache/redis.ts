@@ -100,7 +100,7 @@ class RedisCache implements ICache {
 
   // We store two pices: slug -> driveId, and driveId -> drive
   async setDriveBySlug(slug: string, drive: DocumentDriveDocument) {
-    const driveId = drive.state.global.id;
+    const driveId = drive.id;
     const redisId = RedisCache._getDriveBySlugKey(slug);
     const result = await this.redis.set(redisId, driveId, {
       EX: this.timeoutInSeconds ? this.timeoutInSeconds : undefined,

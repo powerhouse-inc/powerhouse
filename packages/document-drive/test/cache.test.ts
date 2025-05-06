@@ -4,6 +4,7 @@ import { beforeEach, describe, it } from "vitest";
 import {
   createDocument as createDocumentModelDocument,
   DocumentModelState,
+  generateId,
 } from "../../document-model/index.js";
 import { LRUCacheStorage } from "../src/cache/lru.js";
 import InMemoryCache from "../src/cache/memory.js";
@@ -126,11 +127,10 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     });
 
     it("should delete a drive", async ({ expect }) => {
-      const driveId = "drive-to-delete";
       const drive = createDriveDocument();
+      const driveId = drive.id;
 
-      // Set custom id so we can test the slug deletion logic
-      drive.state.global.id = driveId;
+      // Set slug for slug deletion logic
       drive.slug = "test-slug";
 
       await cache.setDrive(driveId, drive);
@@ -144,7 +144,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     it("should return false when deleting a non-existent drive", async ({
       expect,
     }) => {
-      const driveId = "non-existent-drive";
+      const driveId = generateId();
 
       const deletionResult = await cache.deleteDrive(driveId);
 
@@ -157,17 +157,16 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     it("should set and get a drive by slug", async ({ expect }) => {
       const slug = "test-slug";
       const drive = createDriveDocument();
-      const driveId = "test-drive-id";
+      const driveId = drive.id;
 
-      // Set drive ID for consistency
-      drive.state.global.id = driveId;
+      drive.id = driveId;
       drive.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
       const retrievedDrive = await cache.getDriveBySlug(slug);
 
       expect(retrievedDrive).toBeDefined();
-      expect(retrievedDrive?.state.global.id).toBe(driveId);
+      expect(retrievedDrive?.id).toBe(driveId);
       expect(retrievedDrive?.slug).toBe(slug);
     });
 
@@ -183,11 +182,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
     it("should delete a drive by slug", async ({ expect }) => {
       const slug = "slug-to-delete";
-      const driveId = "drive-to-delete";
       const drive = createDriveDocument();
-
-      // Set custom id and slug for testing
-      drive.state.global.id = driveId;
       drive.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
@@ -215,11 +210,10 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       expect,
     }) => {
       const slug = "test-slug";
-      const driveId = "test-drive-id";
       const drive = createDriveDocument();
+      const driveId = drive.id;
 
-      // Set drive ID and slug for consistency
-      drive.state.global.id = driveId;
+      // Set slug for consistency
       drive.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
@@ -229,22 +223,19 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
       expect(retrievedDriveBySlug).toBeDefined();
       expect(retrievedDriveById).toBeDefined();
-      expect(retrievedDriveById?.state.global.id).toBe(driveId);
+      expect(retrievedDriveById?.id).toBe(driveId);
       expect(retrievedDriveById?.slug).toBe(slug);
-      expect(retrievedDriveBySlug?.state.global.id).toBe(
-        retrievedDriveById?.state.global.id,
-      );
+      expect(retrievedDriveBySlug?.id).toBe(retrievedDriveById?.id);
     });
 
     it("should make drive inaccessible by slug after deleting by ID", async ({
       expect,
     }) => {
       const slug = "test-slug";
-      const driveId = "test-drive-id";
       const drive = createDriveDocument();
+      const driveId = drive.id;
 
-      // Set drive ID and slug for consistency
-      drive.state.global.id = driveId;
+      // Set slug for slug deletion logic
       drive.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
@@ -257,14 +248,17 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
   });
 
   describe("collisions", () => {
-    it("should allow document and drives with the same id without colliding", async ({
+    it("(OBSOLETE) should allow document and drives with the same id without colliding", async ({
       expect,
     }) => {
-      const documentId = "1";
-      const driveId = "1";
+      const documentId = generateId();
+      const driveId = documentId;
 
       const document = createDocumentModelDocument();
+      document.id = documentId;
+
       const drive = createDriveDocument();
+      drive.id = driveId;
 
       await cache.setDocument(documentId, document);
       await cache.setDrive(driveId, drive);

@@ -514,7 +514,7 @@ export type DriveUpdateErrorHandler = (
 export interface IListenerManager {
   initialize(handler: DriveUpdateErrorHandler): Promise<void>;
 
-  removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
+  removeDrive(driveId: DocumentDriveDocument["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
 
   setListener(driveId: string, listener: Listener): Promise<void>;

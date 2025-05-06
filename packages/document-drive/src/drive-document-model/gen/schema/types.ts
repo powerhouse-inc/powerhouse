@@ -72,7 +72,6 @@ export type DocumentDriveLocalState = {
 
 export type DocumentDriveState = {
   icon: Maybe<Scalars["String"]["output"]>;
-  id: Scalars["ID"]["output"];
   name: Scalars["String"]["output"];
   nodes: Array<Node>;
 };

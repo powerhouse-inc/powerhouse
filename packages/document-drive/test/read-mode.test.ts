@@ -57,8 +57,6 @@ function buildDriveDocument(
   { id, slug }: { id: string; slug: string },
   state: Partial<DocumentDriveState>,
 ): DocumentDriveDocument {
-  state.id = id;
-
   return createDocument({
     id,
     slug,
@@ -332,7 +330,6 @@ describe("Read mode methods", () => {
       slug: "read-drive",
       state: {
         global: {
-          id: readDriveId,
           name: "Read drive",
           nodes: [],
           icon: null,

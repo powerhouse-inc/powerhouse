@@ -5,7 +5,6 @@ export const documentType = "powerhouse/document-drive" as const;
 export const documentModelName = "DocumentDrive" as const;
 
 export const initialGlobalState: DocumentDriveState = {
-  id: "",
   name: "",
   nodes: [],
   icon: null,

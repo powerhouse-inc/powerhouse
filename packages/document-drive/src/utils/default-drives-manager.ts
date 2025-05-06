@@ -85,9 +85,9 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
           drive.state.local.listeners.length > 0 ||
           drive.state.local.triggers.length > 0,
       )
-      .filter((drive) => !driveIdsToPreserve.includes(drive.state.global.id));
+      .filter((drive) => !driveIdsToPreserve.includes(drive.id));
 
-    const driveIds = drivesToRemove.map((drive) => drive.state.global.id);
+    const driveIds = drivesToRemove.map((drive) => drive.id);
 
     if (removeStrategy === "detach") {
       await this.detachDrivesById(driveIds);
@@ -180,7 +180,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
               drive.state.local.listeners.length > 0 ||
               drive.state.local.triggers.length > 0,
           )
-          .map((drive) => drive.state.global.id);
+          .map((drive) => drive.id);
 
         await this.removeDrivesById(drivesToRemove);
         break;

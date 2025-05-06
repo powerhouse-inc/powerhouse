@@ -210,7 +210,6 @@ describe("DocumentDrive Utils", () => {
     it("should generate uuid sync id", () => {
       const state: DocumentDriveState = {
         icon: null,
-        id: "",
         name: "",
         nodes: [],
       };
@@ -221,7 +220,6 @@ describe("DocumentDrive Utils", () => {
     it("should generate a sync unit for each scope", () => {
       const state: DocumentDriveState = {
         icon: null,
-        id: "",
         name: "",
         nodes: [],
       };

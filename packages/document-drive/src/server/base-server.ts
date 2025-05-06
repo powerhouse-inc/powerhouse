@@ -27,7 +27,6 @@ import { RunAsap } from "#utils/run-asap";
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
-  type DocumentDriveState,
   type Trigger,
   childLogger,
 } from "document-drive";
@@ -156,7 +155,7 @@ export class BaseDocumentDriveServer
 
   // internal state
   private triggerMap = new Map<
-    DocumentDriveState["id"],
+    DocumentDriveDocument["id"],
     Map<Trigger["id"], CancelPullLoop>
   >();
   private initializePromise: Promise<Error[] | null>;
@@ -476,7 +475,7 @@ export class BaseDocumentDriveServer
         await this.listenerManager
           .setListener(driveId, {
             block: zodListener.block,
-            driveId: drive.state.global.id,
+            driveId: drive.id,
             filter: {
               branch: zodListener.filter.branch ?? [],
               documentId: zodListener.filter.documentId ?? [],

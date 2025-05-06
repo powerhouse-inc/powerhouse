@@ -113,7 +113,7 @@ class InMemoryCache implements ICache {
   }
 
   async setDriveBySlug(slug: string, drive: DocumentDriveDocument) {
-    const driveId = drive.state.global.id;
+    const driveId = drive.id;
     this.slugToDriveId.set(slug, driveId);
     this.setDrive(driveId, drive);
   }

@@ -115,7 +115,6 @@ describe("Internal Listener", () => {
           type: "ADD_FILE",
           state: {
             icon: "",
-            id: driveId,
             name: "Global Drive",
             nodes: [
               {
@@ -138,20 +137,16 @@ describe("Internal Listener", () => {
                 ],
               },
             ],
-            //slug: "global",
           },
           previousState: {
             icon: "",
-            id: driveId,
             name: "Global Drive",
             nodes: [],
-            //slug: "global",
           },
         },
       ],
       state: {
         icon: "",
-        id: driveId,
         name: "Global Drive",
         nodes: [
           {
@@ -174,7 +169,6 @@ describe("Internal Listener", () => {
             ],
           },
         ],
-        //slug: "global",
       },
       scope: "global",
     };
@@ -222,7 +216,7 @@ describe("Internal Listener", () => {
           {
             hash: "nWKpqR6ns0l8C/Khwrl+SyKy0sA=",
             context: undefined,
-            id: documentId,
+            id: expectUUID(expect) as string,
             index: 0,
             input: {
               name: "test",
@@ -239,7 +233,11 @@ describe("Internal Listener", () => {
       },
     ]);
 
-    await server.addAction("drive", "1", setModelName({ name: "test 2" }));
+    await server.addAction(
+      driveId,
+      documentId,
+      setModelName({ name: "test 2" }),
+    );
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
     expect(transmitFn).toHaveBeenLastCalledWith([
@@ -251,7 +249,7 @@ describe("Internal Listener", () => {
           {
             hash: "s7RBcer0JqjSGvNb12gqpeeJGRY=",
             context: undefined,
-            id: documentId,
+            id: expectUUID(expect) as string,
             index: 1,
             input: {
               name: "test 2",
