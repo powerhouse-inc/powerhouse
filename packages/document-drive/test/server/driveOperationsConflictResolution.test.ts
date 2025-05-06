@@ -2,6 +2,7 @@ import {
   BaseAction,
   documentModelDocumentModelModule,
   DocumentModelModule,
+  generateId,
   Operation,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -18,6 +19,7 @@ import {
 import { createDocument } from "../../src/drive-document-model/gen/utils";
 import { driveDocumentModelModule } from "../../src/drive-document-model/module";
 import { generateNodesCopy } from "../../src/drive-document-model/src/utils";
+import { BaseDocumentDriveServer } from "../../src/server/base-server";
 import { ReactorBuilder } from "../../src/server/builder";
 import { IOperationResult } from "../../src/server/types";
 import { DriveBasicClient } from "../utils";
@@ -32,17 +34,20 @@ describe("Drive Operations", () => {
     driveDocumentModelModule,
   ] as DocumentModelModule[];
 
-  let server = new ReactorBuilder(documentModels).build();
+  let server: BaseDocumentDriveServer;
   beforeEach(async () => {
-    server = new ReactorBuilder(documentModels).build();
+    server = new ReactorBuilder(
+      documentModels,
+    ).build() as unknown as BaseDocumentDriveServer;
     await server.initialize();
   });
 
-  const driveId = "1";
+  const driveId = generateId();
 
   async function buildDrive() {
     await server.addDrive({
-      global: { id: driveId, name: "test", icon: null, slug: null },
+      id: driveId,
+      global: { name: "test", icon: null },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
