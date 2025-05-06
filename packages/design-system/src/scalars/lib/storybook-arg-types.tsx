@@ -283,6 +283,7 @@ export const PrebuiltArgTypes = {
       description: "The mode of the input field",
       options: ["edition", "addition", "removal", "mixed"],
       table: {
+        type: { summary: "edition | addition | removal | mixed" },
         defaultValue: { summary: "edition" },
         category: StorybookControlCategory.DIFF,
       },
@@ -294,6 +295,7 @@ export const PrebuiltArgTypes = {
       description: "The mode of the input field",
       options: ["words", "sentences"],
       table: {
+        type: { summary: "words | sentences" },
         category: StorybookControlCategory.DIFF,
       },
     },
@@ -303,6 +305,7 @@ export const PrebuiltArgTypes = {
       control: "text",
       description: "The base value of the input field",
       table: {
+        type: { summary: "string" },
         category: StorybookControlCategory.DIFF,
       },
     },

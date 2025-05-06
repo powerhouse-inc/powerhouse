@@ -39,6 +39,7 @@ const PHIDInput = React.forwardRef<HTMLInputElement, PHIDInputProps>(
       viewMode = "edition",
       diffMode,
       baseValue,
+      basePreviewIcon,
       basePreviewTitle,
       basePreviewPath,
       basePreviewDescription,
@@ -162,6 +163,7 @@ const PHIDInput = React.forwardRef<HTMLInputElement, PHIDInputProps>(
         viewMode={viewMode}
         diffMode={diffMode}
         baseValue={baseValue}
+        basePreviewIcon={basePreviewIcon}
         basePreviewTitle={basePreviewTitle}
         basePreviewPath={basePreviewPath}
         basePreviewDescription={basePreviewDescription}

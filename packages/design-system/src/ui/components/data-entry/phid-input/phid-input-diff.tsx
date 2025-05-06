@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-max-depth */
 import { Icon, type IconName } from "#powerhouse";
 import { cn, FormLabel } from "@powerhousedao/design-system/scalars";
 import React from "react";
@@ -8,9 +9,16 @@ import type { PHIDInputProps, PHIDInputWithDifference } from "./types.js";
 interface IconRendererProps {
   customIcon?: IconName | React.ReactElement;
   asPlaceholder?: boolean;
+  isRemoval?: boolean;
+  isAddition?: boolean;
 }
 
-const IconRenderer = ({ customIcon, asPlaceholder }: IconRendererProps) => {
+const IconRenderer = ({
+  customIcon,
+  asPlaceholder,
+  isRemoval,
+  isAddition,
+}: IconRendererProps) => {
   if (typeof customIcon === "string") {
     return (
       <Icon
@@ -19,12 +27,24 @@ const IconRenderer = ({ customIcon, asPlaceholder }: IconRendererProps) => {
         className={cn(
           "shrink-0",
           asPlaceholder ? "text-gray-400" : "text-gray-700",
+          isRemoval && "rounded-md bg-red-600/30 p-1",
+          isAddition && "rounded-md bg-green-600/30 p-1",
         )}
       />
     );
   }
   if (React.isValidElement(customIcon)) {
-    return <div className="size-6 shrink-0 overflow-hidden">{customIcon}</div>;
+    return (
+      <div
+        className={cn(
+          "size-6 shrink-0 overflow-hidden",
+          isRemoval && "rounded-md bg-red-600/30 p-1",
+          isAddition && "rounded-md bg-green-600/30 p-1",
+        )}
+      >
+        {customIcon}
+      </div>
+    );
   }
   return null;
 };
@@ -48,8 +68,9 @@ const PHIDInputDiff = ({
   previewPlaceholder,
   variant,
   viewMode,
-  diffMode,
+  diffMode = "sentences",
   baseValue = "",
+  basePreviewIcon,
   basePreviewTitle = "",
   basePreviewPath = "",
   basePreviewDescription = "",
