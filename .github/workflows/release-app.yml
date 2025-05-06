@@ -65,5 +65,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
-      # upload artifact if needed to the new release
-      # add additional steps here if needed
+      - name: Publish to npm
+        run: pnpm nx release publish --projects=${{ github.event.inputs.package }} --tag=${{ env.TAG }}
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
