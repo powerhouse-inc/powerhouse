@@ -81,7 +81,8 @@ export function useUiNodes() {
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument | ReadDrive) => {
             const isReadDrive = 'readContext' in drive;
-            const { id, name, icon } = drive.state.global;
+            const id = drive.id;
+            const { name, icon } = drive.state.global;
             const { slug } = drive;
             const { sharingType: _sharingType, availableOffline } = !isReadDrive
                 ? drive.state.local
@@ -325,10 +326,10 @@ export function useUiNodes() {
                 const app = apps.find(a => a.id === data.appId);
                 const newDrive = await addDrive(
                     {
+                        id: '',
                         slug: '',
                         global: {
                             name: data.name,
-                            id: undefined,
                             icon: null,
                         },
                         local: {

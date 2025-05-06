@@ -119,9 +119,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            let drive = documentDrives.find(
-                drive => drive.state.global.id === driveId,
-            );
+            let drive = documentDrives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -198,7 +196,7 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create documents');
             }
 
-            let drive = documentDrives.find(d => d.state.global.id === driveId);
+            let drive = documentDrives.find(d => d.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -244,9 +242,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(
-                drive => drive.state.global.id === driveId,
-            );
+            const drive = documentDrives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -307,7 +303,7 @@ export function useDocumentDriveServer() {
 
             // then add all the operations
             const driveDocument = documentDrives.find(
-                documentDrive => documentDrive.state.global.id === drive,
+                documentDrive => documentDrive.id === drive,
             );
             const waitForSync =
                 driveDocument && driveDocument.state.local.listeners.length > 0;
@@ -456,7 +452,7 @@ export function useDocumentDriveServer() {
             if (target.kind === FILE) return;
 
             const drive = documentDrives.find(
-                drive => drive.state.global.id === src.driveId,
+                drive => drive.id === src.driveId,
             );
 
             if (!drive) return;
@@ -506,9 +502,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(
-                drive => drive.state.global.id === driveId,
-            );
+            const drive = documentDrives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -532,12 +526,13 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create drives');
             }
-            const id = drive.global.id || generateId();
+            const id = drive.id || generateId();
             drive = createDriveState(drive);
             const newDrive = await reactor.addDrive(
                 {
-                    global: { ...drive.global, id },
+                    global: drive.global,
                     local: drive.local,
+                    id,
                 },
                 preferredEditor,
             );
@@ -569,9 +564,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(
-                drive => drive.state.global.id === id,
-            );
+            const drive = documentDrives.find(drive => drive.id === id);
             if (!drive) {
                 throw new Error(`Drive with id ${id} not found`);
             }
