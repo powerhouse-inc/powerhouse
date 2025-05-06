@@ -62,6 +62,17 @@ export const uninstall: CommandActionType<
     throw new Error("❌ Dependency name is required");
   }
 
+  // Adapt dependencies to the format expected by updateConfigFile
+  const parsedDependencies = dependencies.map((dep) => ({
+    name: dep,
+    version: undefined,
+    full: dep,
+  }));
+
+  if (options.debug) {
+    console.log(">>> parsedDependencies", parsedDependencies);
+  }
+
   if (
     options.packageManager &&
     !SUPPORTED_PACKAGE_MANAGERS.includes(options.packageManager)
@@ -113,7 +124,7 @@ export const uninstall: CommandActionType<
 
   try {
     console.log("⚙️ Updating powerhouse config file...");
-    updateConfigFile(dependencies, projectInfo.path, "uninstall");
+    updateConfigFile(parsedDependencies, projectInfo.path, "uninstall");
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");
