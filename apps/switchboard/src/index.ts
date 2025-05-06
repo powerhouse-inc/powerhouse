@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { startAPI } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
-import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
+import {
+  InMemoryCache,
+  ReactorBuilder,
+  driveDocumentModelModule,
+} from "document-drive";
 import RedisCache from "document-drive/cache/redis";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
@@ -10,6 +14,7 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
+import { type RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import { PackagesManager } from "./utils/package-manager.js";
@@ -50,7 +55,11 @@ const main = async () => {
       packages,
     });
     const { documentModels, subgraphs } = await pkgManager.init();
-    const redis = await initRedis();
+    const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
+    let redis: RedisClientType | undefined;
+    if (redisUrl) {
+      redis = await initRedis(redisUrl);
+    }
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error("Please set env var DATABASE_URL");
@@ -61,8 +70,8 @@ const main = async () => {
         ? connectionString + "?sslmode=no-verify"
         : connectionString;
 
-    const redisCache = new RedisCache(redis);
-    const storageFactory = new PrismaStorageFactory(dbUrl, redisCache);
+    const cache = redis ? new RedisCache(redis) : new InMemoryCache();
+    const storageFactory = new PrismaStorageFactory(dbUrl, cache);
     const storage = storageFactory.build();
 
     const reactor = new ReactorBuilder([
@@ -71,7 +80,7 @@ const main = async () => {
       ...documentModels,
     ] as DocumentModelModule[])
       .withStorage(storage)
-      .withCache(redisCache)
+      .withCache(cache)
       .build();
 
     // init drive server
