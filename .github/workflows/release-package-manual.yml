@@ -70,7 +70,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: pnpm nx release --projects='packages/*,apps/connect,clis/*' --skip-publish --preid=${{ env.TAG }}
+        run: pnpm nx release --projects='packages/*,apps/*,clis/*' --skip-publish --preid=${{ env.TAG }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -78,7 +78,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish to npm
-        run: pnpm nx release publish --projects='apps/connect,packages/*,clis/*' --tag=${{ env.TAG }}
+        run: pnpm nx release publish --projects='apps/*,packages/*,clis/*' --tag=${{ env.TAG }}
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
