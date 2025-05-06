@@ -80,18 +80,12 @@ export function BaseEditor(props: IProps) {
 }
 
 export default function Editor(props: IProps) {
-  const baseEditor = props.context.analyticsStore ? (
-    <AnalyticsProvider store={props.context.analyticsStore}>
-      <BaseEditor {...props} />
-    </AnalyticsProvider>
-  ) : (
-    <BaseEditor {...props} />
-  );
-
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>
-        {baseEditor}
+        <AnalyticsProvider databaseName={props.context.analyticsDatabaseName}>
+          <BaseEditor {...props} />
+        </AnalyticsProvider>
       </WagmiContext>
     </DriveContextProvider>
   );
