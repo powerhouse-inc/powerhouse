@@ -11,6 +11,13 @@ on:
         options:
           - "@powerhousedao/switchboard"
           - "@powerhousedao/connect"
+      tag:
+        type: string
+        default: "dev"
+
+env:
+  NX_ISOLATE_PLUGINS: false
+  TAG: ${{ inputs.tag ||  'dev'  }}
 
 jobs:
   test:
@@ -58,7 +65,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: npx nx release --projects=${{ github.event.inputs.package }}
+        run: npx nx release --projects=${{ github.event.inputs.package }} --skip-publish --preid=${{ env.TAG }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
