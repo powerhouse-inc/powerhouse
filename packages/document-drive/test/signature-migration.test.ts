@@ -5,7 +5,7 @@ import { addFile } from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
 import { createDocument } from "../src/drive-document-model/gen/utils.js";
 import { BrowserStorage } from "../src/storage/browser.js";
-import { PrismaClient } from "../src/storage/prisma/client";
+import { PrismaClient } from "../src/storage/prisma/client/index.js";
 import { migrateLegacyOperationSignature } from "../src/utils/migrations.js";
 import { buildOperation } from "./utils.js";
 

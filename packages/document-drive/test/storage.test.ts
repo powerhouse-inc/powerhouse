@@ -10,17 +10,17 @@ import {
   createDocument,
   DocumentModelDocument,
   generateId,
-} from "../../document-model/index";
-import InMemoryCache from "../src/cache/memory";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
-import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils";
-import { BrowserStorage } from "../src/storage/browser";
-import { FilesystemStorage } from "../src/storage/filesystem";
-import { IPFSStorage } from "../src/storage/ipfs";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaClient } from "../src/storage/prisma/client";
-import { PrismaStorage } from "../src/storage/prisma/prisma";
-import { IDocumentStorage } from "../src/storage/types";
+} from "../../document-model/index.js";
+import InMemoryCache from "../src/cache/memory.js";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
+import { BrowserStorage } from "../src/storage/browser.js";
+import { FilesystemStorage } from "../src/storage/filesystem.js";
+import { IPFSStorage } from "../src/storage/ipfs.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { PrismaClient } from "../src/storage/prisma/client/index.js";
+import { PrismaStorage } from "../src/storage/prisma/prisma.js";
+import { IDocumentStorage } from "../src/storage/types.js";
 
 const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
   ["Memory Storage", () => Promise.resolve(new MemoryStorage())],

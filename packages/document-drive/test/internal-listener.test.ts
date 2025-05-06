@@ -6,10 +6,10 @@ import { ReactorBuilder } from "../src/server/builder.js";
 import {
   InternalTransmitter,
   InternalTransmitterUpdate,
-  IProcessor,
 } from "../src/server/listener/transmitter/internal.js";
-import { expectUTCTimestamp, expectUUID } from "./utils";
+import { expectUTCTimestamp, expectUUID } from "./utils.js";
 
+import { IProcessor } from "#processors/types";
 import { documentModelDocumentModelModule } from "document-model";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { Listener } from "../src/server/types.js";
@@ -25,13 +25,12 @@ describe("Internal Listener", () => {
     const server = builder.build();
     await server.initialize();
 
-    const driveId = "drive";
+    const driveId = generateId();
     await server.addDrive({
+      id: driveId,
       global: {
-        id: driveId,
         name: "Global Drive",
         icon: "",
-        slug: "global",
       },
       local: {
         availableOffline: false,
@@ -138,14 +137,14 @@ describe("Internal Listener", () => {
                 ],
               },
             ],
-            slug: "global",
+            //slug: "global",
           },
           previousState: {
             icon: "",
             id: "drive",
             name: "Global Drive",
             nodes: [],
-            slug: "global",
+            //slug: "global",
           },
         },
       ],
@@ -174,7 +173,7 @@ describe("Internal Listener", () => {
             ],
           },
         ],
-        slug: "global",
+        //slug: "global",
       },
       scope: "global",
     };

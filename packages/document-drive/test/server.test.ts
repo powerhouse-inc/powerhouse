@@ -8,20 +8,20 @@ import {
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import InMemoryCache from "../src/cache/memory";
-import { reducer } from "../src/drive-document-model/gen/reducer";
-import { driveDocumentModelModule } from "../src/drive-document-model/module";
-import * as DriveUtils from "../src/drive-document-model/src/utils";
-import { generateAddNodeAction } from "../src/drive-document-model/src/utils";
-import { ReactorBuilder } from "../src/server/builder";
-import { DocumentAlreadyExistsError } from "../src/server/error";
-import { BrowserStorage } from "../src/storage/browser";
-import { FilesystemStorage } from "../src/storage/filesystem";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaClient } from "../src/storage/prisma/client";
-import { PrismaStorage } from "../src/storage/prisma/prisma";
-import { IDriveOperationStorage } from "../src/storage/types";
-import { baseDocumentModels, expectUUID } from "./utils";
+import InMemoryCache from "../src/cache/memory.js";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import * as DriveUtils from "../src/drive-document-model/src/utils.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+import { ReactorBuilder } from "../src/server/builder.js";
+import { DocumentAlreadyExistsError } from "../src/server/error.js";
+import { BrowserStorage } from "../src/storage/browser.js";
+import { FilesystemStorage } from "../src/storage/filesystem.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { PrismaClient } from "../src/storage/prisma/client/index.js";
+import { PrismaStorage } from "../src/storage/prisma/prisma.js";
+import { IDriveOperationStorage } from "../src/storage/types.js";
+import { baseDocumentModels, expectUUID } from "./utils.js";
 
 const documentModels = baseDocumentModels;
 

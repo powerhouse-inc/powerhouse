@@ -3,33 +3,33 @@ import {
   DocumentModelDocument,
   DocumentModelModule,
   generateId,
-} from "../../document-model/index";
-import { setModelName } from "../../document-model/src/document-model/gen/creators";
-import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils";
-import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module";
-import InMemoryCache from "../src/cache/memory";
-import { addListener } from "../src/drive-document-model/gen/creators";
+} from "../../document-model/index.js";
+import { setModelName } from "../../document-model/src/document-model/gen/creators.js";
+import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils.js";
+import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module.js";
+import InMemoryCache from "../src/cache/memory.js";
+import { addListener } from "../src/drive-document-model/gen/creators.js";
 import {
   addFile,
   addFolder,
   deleteNode,
-} from "../src/drive-document-model/gen/node/creators";
+} from "../src/drive-document-model/gen/node/creators.js";
 import {
   reducer as documentDriveReducer,
   reducer,
-} from "../src/drive-document-model/gen/reducer";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
-import { driveDocumentModelModule } from "../src/drive-document-model/module";
-import { generateAddNodeAction } from "../src/drive-document-model/src/utils";
-import { BaseQueueManager } from "../src/queue/base";
-import { IQueueManager } from "../src/queue/types";
-import { ReactorBuilder } from "../src/server/builder";
+} from "../src/drive-document-model/gen/reducer.js";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+import { BaseQueueManager } from "../src/queue/base.js";
+import { IQueueManager } from "../src/queue/types.js";
+import { ReactorBuilder } from "../src/server/builder.js";
 import {
   IBaseDocumentDriveServer,
   IOperationResult,
-} from "../src/server/types";
-import { MemoryStorage } from "../src/storage/memory";
-import { buildOperation, buildOperations } from "./utils";
+} from "../src/server/types.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { buildOperation, buildOperations } from "./utils.js";
 
 const REDIS_TLS_URL = process.env.REDIS_TLS_URL || "redis://localhost:6379";
 
@@ -64,9 +64,9 @@ describe.each(queueLayers)(
     const createDrive = async (server: IBaseDocumentDriveServer) => {
       const id = generateId();
       await server.addDrive({
+        id,
         slug: `name-${id}`,
         global: {
-          id,
           name: "name",
           icon: "icon",
         },

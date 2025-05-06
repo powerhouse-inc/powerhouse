@@ -4,15 +4,15 @@ import {
   generateId,
 } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types";
-import { driveDocumentModelModule } from "../src/drive-document-model/module";
-import { ReactorBuilder } from "../src/server/builder";
+import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import { ReactorBuilder } from "../src/server/builder.js";
 import {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
-} from "../src/server/types";
-import { MemoryStorage } from "../src/storage/memory";
-import { DriveInfo } from "../src/utils/graphql";
+} from "../src/server/types.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { DriveInfo } from "../src/utils/graphql.js";
 
 type DriveInput = {
   url: string;

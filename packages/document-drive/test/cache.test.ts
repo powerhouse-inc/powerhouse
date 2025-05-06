@@ -4,11 +4,11 @@ import { beforeEach, describe, it } from "vitest";
 import {
   createDocument as createDocumentModelDocument,
   DocumentModelState,
-} from "../../document-model/index";
-import { LRUCacheStorage } from "../src/cache/lru";
-import InMemoryCache from "../src/cache/memory";
-import { ICache } from "../src/cache/types";
-import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils";
+} from "../../document-model/index.js";
+import { LRUCacheStorage } from "../src/cache/lru.js";
+import InMemoryCache from "../src/cache/memory.js";
+import { ICache } from "../src/cache/types.js";
+import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
 
 const initRedis = async () => {
   const redisClient = createClient({
