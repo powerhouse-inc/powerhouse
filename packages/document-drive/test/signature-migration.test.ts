@@ -92,13 +92,14 @@ describe.each(storageLayers)(
     it("should migrate operation without context", async ({ expect }) => {
       const storage = await buildStorage();
       const drive = createDocument({
+        id: driveId,
+        slug: driveId,
         state: {
           global: {
             icon: null,
             id: driveId,
             name: "name",
             nodes: [],
-            slug: null,
           },
           local: {
             availableOffline: false,
@@ -107,7 +108,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.create(driveId, drive);
+      await storage.create(drive);
 
       const driveOperation = buildOperation(
         reducer,
@@ -142,13 +143,12 @@ describe.each(storageLayers)(
     }) => {
       const storage = await buildStorage();
       const drive = createDocument({
+        id: driveId,
         state: {
           global: {
             icon: null,
-            id: driveId,
             name: "name",
             nodes: [],
-            slug: null,
           },
           local: {
             availableOffline: false,
@@ -157,7 +157,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.create(driveId, drive);
+      await storage.create(drive);
 
       const driveOperation = buildOperation(
         reducer,
@@ -218,13 +218,12 @@ describe.each(storageLayers)(
     it("should migrate operation with a signature", async ({ expect }) => {
       const storage = await buildStorage();
       const drive = createDocument({
+        id: driveId,
         state: {
           global: {
             icon: null,
-            id: driveId,
             name: "name",
             nodes: [],
-            slug: null,
           },
           local: {
             availableOffline: false,
@@ -233,7 +232,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.create(driveId, drive);
+      await storage.create(drive);
 
       const driveOperation = buildOperation(
         reducer,
