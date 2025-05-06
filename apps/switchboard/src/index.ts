@@ -7,6 +7,7 @@ import {
   driveDocumentModelModule,
 } from "document-drive";
 import RedisCache from "document-drive/cache/redis";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
   type DocumentModelModule,
@@ -14,6 +15,7 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
+import path from "path";
 import { type RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initProfilerFromEnv } from "./profiler.js";
@@ -71,8 +73,14 @@ const main = async () => {
         : connectionString;
 
     const cache = redis ? new RedisCache(redis) : new InMemoryCache();
-    const storageFactory = new PrismaStorageFactory(dbUrl, cache);
-    const storage = storageFactory.build();
+    const storageFactory = dbUrl.startsWith("postgres")
+      ? new PrismaStorageFactory(dbUrl, cache)
+      : undefined;
+    const storage = storageFactory
+      ? storageFactory.build()
+      : new FilesystemStorage(
+          path.join(process.cwd(), dbUrl ?? "./.ph/drive-storage"),
+        );
 
     const reactor = new ReactorBuilder([
       documentModelDocumentModelModule,
