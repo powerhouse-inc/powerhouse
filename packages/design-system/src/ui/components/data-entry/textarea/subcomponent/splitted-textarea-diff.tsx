@@ -9,7 +9,6 @@ interface TextInputDiffProps extends WithDifference<string> {
   ellipsis?: boolean;
   multiline?: boolean;
   rows?: number;
-  hasPadding?: boolean;
 }
 const SplittedTextareaDiff = ({
   value,
@@ -21,7 +20,6 @@ const SplittedTextareaDiff = ({
   ellipsis = true,
   multiline = false,
   rows = 3,
-  hasPadding = false,
 }: TextInputDiffProps) => {
   return (
     <FormGroup>
@@ -42,7 +40,7 @@ const SplittedTextareaDiff = ({
           value={value}
           viewMode={viewMode}
           diffMode={diffMode}
-          className={cn("flex-1")}
+          className={cn("flex-1min-h-9")}
         />
       </InputDiff>
     </FormGroup>
