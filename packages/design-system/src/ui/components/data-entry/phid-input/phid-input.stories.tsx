@@ -181,13 +181,30 @@ const meta: Meta<typeof PHIDInput> = {
     },
 
     ...PrebuiltArgTypes.viewMode,
-    ...PrebuiltArgTypes.diffMode,
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["sentences"],
+      table: {
+        type: { summary: "sentences" },
+        defaultValue: { summary: "sentences" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
     ...PrebuiltArgTypes.baseValue,
-
+    basePreviewIcon: {
+      control: "text",
+      description: "The icon of the base preview",
+      table: {
+        type: { summary: "IconName | React.ReactElement" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
     basePreviewTitle: {
       control: "text",
       description: "The title of the base preview",
       table: {
+        type: { summary: "string" },
         category: StorybookControlCategory.DIFF,
       },
     },
@@ -195,6 +212,7 @@ const meta: Meta<typeof PHIDInput> = {
       control: "text",
       description: "The path of the base preview",
       table: {
+        type: { summary: "string" },
         category: StorybookControlCategory.DIFF,
       },
     },
@@ -202,6 +220,7 @@ const meta: Meta<typeof PHIDInput> = {
       control: "text",
       description: "The description of the base preview",
       table: {
+        type: { summary: "string" },
         category: StorybookControlCategory.DIFF,
       },
     },
