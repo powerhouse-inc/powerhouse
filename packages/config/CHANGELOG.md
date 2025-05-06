@@ -1,3 +1,13 @@
+## 1.27.0-dev.9 (2025-05-06)
+
+### 🩹 Fixes
+
+- separate node code in powerhouse config packages ([77071d3e9](https://github.com/powerhouse-inc/powerhouse/commit/77071d3e9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 1.27.0-dev.8 (2025-05-03)
 
 ### 🚀 Features
