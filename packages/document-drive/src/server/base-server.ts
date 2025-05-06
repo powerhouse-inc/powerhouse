@@ -608,11 +608,12 @@ export class BaseDocumentDriveServer
     });
 
     if (input.id && input.id.length > 0) {
-      document.id = input.id;
+      document.id = document.initialState.id = input.id;
+      document.slug = document.initialState.slug = input.id;
     }
 
     if (input.slug && input.slug.length > 0) {
-      document.slug = input.slug;
+      document.slug = document.initialState.slug = input.slug;
     }
 
     document.meta = {

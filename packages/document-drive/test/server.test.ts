@@ -97,8 +97,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -113,7 +113,6 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(drive.state).toStrictEqual(
       DocumentDriveUtils.createState({
         global: {
-          id: driveId,
           name: "name",
           icon: "icon",
         },
@@ -138,9 +137,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -205,9 +204,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -256,9 +255,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -317,9 +316,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -375,9 +374,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -438,9 +437,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -468,9 +467,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -515,9 +514,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -557,9 +556,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "drive",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -622,9 +621,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     // slugs have to change, as they are unique
     expect(document.slug).not.toBe(documentB.slug);
 
-    // compare everything but the slug
-    const { slug, ...rest } = document;
-    const { slug: slugB, ...restB } = documentB;
+    // compare everything but the slug + id (which are supposed to be different)
+    const { slug, id, ...rest } = document;
+    const { slug: slugB, id: idB, ...restB } = documentB;
     expect(rest).toStrictEqual(restB);
   });
 
@@ -636,9 +635,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -696,9 +695,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -759,9 +758,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .build();
     const addDrive = (driveId: string, slug: string) =>
       server.addDrive({
+        id: driveId,
         slug,
         global: {
-          id: driveId,
           name: "name",
           icon: "icon",
         },
@@ -789,13 +788,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     }
 
     let drive = await server.getDriveBySlug("slug1");
-    expect(drive.state.global.id).toBe(driveId1);
+    expect(drive.id).toBe(driveId1);
 
     drive = await server.getDriveBySlug("slug2");
-    expect(drive.state.global.id).toBe(driveId2);
+    expect(drive.id).toBe(driveId2);
 
     drive = await server.getDriveBySlug("slug3");
-    expect(drive.state.global.id).toBe(driveId3);
+    expect(drive.id).toBe(driveId3);
   });
 
   it.skipIf(!file)("import document from zip", async ({ expect }) => {
@@ -806,9 +805,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(storage)
       .build();
     const drive = await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -846,9 +845,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(storage)
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -892,7 +891,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(syncUnits).toStrictEqual([
       {
         driveId: driveId,
-        documentId: drive.state.global.id,
+        documentId: drive.id,
         documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
@@ -932,9 +931,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(storage)
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
@@ -991,9 +990,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       slug: "slug",
       global: {
-        id: driveId,
         name: "name",
         icon: "icon",
       },
