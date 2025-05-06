@@ -7,6 +7,15 @@ export type ValidatorHandler = (
   formState: Record<string, any>,
 ) => ValidatorResult | Promise<ValidatorResult>;
 
+export type ViewMode = "edition" | "addition" | "removal" | "mixed";
+export type DiffMode = "words" | "sentences";
+
+export interface WithDifference<T> {
+  viewMode?: ViewMode;
+  diffMode?: DiffMode;
+  baseValue?: T;
+}
+
 export interface InputBaseProps<T> {
   id?: string;
   name?: string;

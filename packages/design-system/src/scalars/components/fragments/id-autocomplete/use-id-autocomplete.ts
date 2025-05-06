@@ -255,7 +255,6 @@ export function useIdAutocomplete({
     isInternalChange.current = false;
   }, [value]);
 
-  // added to support the Filled variant in stories
   useEffect(() => {
     if (initialOptions?.length && selectedValue) {
       const matchingOption = initialOptions.find(

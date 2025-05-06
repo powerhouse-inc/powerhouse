@@ -3,6 +3,7 @@ import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
+  StorybookControlCategory,
 } from "../../../../scalars/lib/storybook-arg-types.js";
 import { TextInput } from "./text-input.js";
 
@@ -49,6 +50,18 @@ const meta = {
     ...PrebuiltArgTypes.minLength,
     ...PrebuiltArgTypes.maxLength,
     ...PrebuiltArgTypes.pattern,
+
+    ...PrebuiltArgTypes.viewMode,
+
+    ...PrebuiltArgTypes.baseValue,
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["sentences"],
+      table: {
+        category: StorybookControlCategory.DIFF,
+      },
+    },
   },
 } satisfies Meta<typeof TextInput>;
 
