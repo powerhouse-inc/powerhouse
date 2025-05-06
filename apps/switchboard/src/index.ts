@@ -19,7 +19,6 @@ import path from "path";
 import { type RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initProfilerFromEnv } from "./profiler.js";
-import { PackagesManager } from "./utils/package-manager.js";
 
 dotenv.config();
 
@@ -49,23 +48,12 @@ const main = async () => {
   }
 
   try {
-    const packages =
-      process.env.PH_PACKAGES && process.env.PH_PACKAGES !== ""
-        ? process.env.PH_PACKAGES.split(",")
-        : [];
-    const pkgManager = new PackagesManager({
-      packages,
-    });
-    const { documentModels, subgraphs } = await pkgManager.init();
     const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
     let redis: RedisClientType | undefined;
     if (redisUrl) {
       redis = await initRedis(redisUrl);
     }
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error("Please set env var DATABASE_URL");
-    }
+    const connectionString = process.env.DATABASE_URL ?? "./.ph/drive-storage";
     const dbUrl =
       connectionString.includes("amazonaws") &&
       !connectionString.includes("sslmode=no-verify")
@@ -78,14 +66,11 @@ const main = async () => {
       : undefined;
     const storage = storageFactory
       ? storageFactory.build()
-      : new FilesystemStorage(
-          path.join(process.cwd(), dbUrl ?? "./.ph/drive-storage"),
-        );
+      : new FilesystemStorage(path.join(process.cwd(), dbUrl));
 
     const reactor = new ReactorBuilder([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
-      ...documentModels,
     ] as DocumentModelModule[])
       .withStorage(storage)
       .withCache(cache)
@@ -98,14 +83,9 @@ const main = async () => {
     await startAPI(reactor, {
       express: app,
       port: serverPort,
-      dbPath: dbUrl,
-      packages,
+      dbPath: dbUrl.startsWith("postgres") ? dbUrl : "./.ph/read-storage",
+      configFile: path.join(process.cwd(), "powerhouse.config.json"),
     });
-
-    // start http server
-    // httpServer.listen({ port: serverPort }, () => {
-    //   console.log(`Subgraph server listening on port ${serverPort}`);
-    // });
   } catch (e) {
     Sentry.captureException(e);
     console.error("App crashed", e);
