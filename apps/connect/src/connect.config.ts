@@ -60,6 +60,7 @@ export default {
     studioMode: PH_CONNECT_STUDIO_MODE.toString() === 'true',
     warnOutdatedApp: WARN_OUTDATED_APP === 'true',
     routerBasename: PH_CONNECT_ROUTER_BASENAME,
+    analyticsDatabaseName: `${PH_CONNECT_ROUTER_BASENAME}:analytics`,
     sentry: {
         dsn: PH_CONNECT_SENTRY_DSN,
         env: PH_CONNECT_SENTRY_ENV,

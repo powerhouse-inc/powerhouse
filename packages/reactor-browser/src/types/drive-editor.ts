@@ -138,6 +138,11 @@ export interface DriveEditorContext
     documentId: string,
     options?: GetDocumentOptions,
   ) => Promise<PHDocument> | undefined;
+
+  /**
+   * The name of the analytics database to use for the drive editor
+   */
+  analyticsDatabaseName: string;
 }
 export interface DriveEditorProps<TDocument extends PHDocument>
   extends Omit<EditorProps<TDocument>, "context"> {

@@ -42,9 +42,7 @@ export function DiffAnalyzerProcessor() {
 
 export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
     return (
-        <AnalyticsProvider
-            databaseName={`${connectConfig.routerBasename}:analytics`}
-        >
+        <AnalyticsProvider databaseName={connectConfig.analyticsDatabaseName}>
             <DiffAnalyzerProcessor />
             {children}
         </AnalyticsProvider>

@@ -1,3 +1,4 @@
+import connectConfig from '#connect-config';
 import {
     useDocumentDriveById,
     useDocumentDriveServer,
@@ -166,6 +167,7 @@ export function DriveEditorContainer() {
                 context={{
                     ...editorProps.context,
                     ...driveContext,
+                    analyticsDatabaseName: connectConfig.analyticsDatabaseName,
                     getDocumentRevision: onGetDocumentRevision,
                 }}
                 onSwitchboardLinkClick={undefined} // TODO
