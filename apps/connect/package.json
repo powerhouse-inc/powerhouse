@@ -8,6 +8,9 @@
     "engines": {
         "node": ">=20.0.0"
     },
+    "bin": {
+        "connect": "serve ./dist"
+    },
     "files": [
         "dist",
         "nginx.conf",
@@ -120,5 +123,8 @@
     "optionalDependencies": {
         "@esbuild/linux-x64": "^0.21.4",
         "@rollup/rollup-linux-x64-musl": "4.14.3"
+    },
+    "dependencies": {
+        "serve": "^14.2.4"
     }
 }
