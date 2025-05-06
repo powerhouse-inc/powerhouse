@@ -121,7 +121,7 @@ describe("Drive operations", () => {
     );
 
     const result = await server.addDriveOperation(
-      "1",
+      id,
       buildOperation(drive, addFolder({ id: "2", name: "test 2" }), 2),
     );
     expect(result.status).toBe("ERROR");

@@ -262,14 +262,18 @@ export async function fetchDocument<TDocument extends PHDocument>(
           local: [],
         },
         attachments: {},
-        initialState: utils.createExtendedState({
-          // TODO: getDocument should return all the initial state fields
-          created: result.document.created,
-          lastModified: result.document.created,
-          state: utils.createState({
-            global: result.document.initialState.state.global,
+        initialState: {
+          ...utils.createExtendedState({
+            // TODO: getDocument should return all the initial state fields
+            created: result.document.created,
+            lastModified: result.document.created,
+            state: utils.createState({
+              global: result.document.initialState.state.global,
+            }),
           }),
-        }),
+          id: result.document.id,
+          slug: result.document.slug,
+        },
         clipboard: [],
       }
     : null;

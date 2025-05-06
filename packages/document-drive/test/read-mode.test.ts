@@ -57,6 +57,8 @@ function buildDriveDocument(
   { id, slug }: { id: string; slug: string },
   state: Partial<DocumentDriveState>,
 ): DocumentDriveDocument {
+  state.id = id;
+
   return createDocument({
     id,
     slug,
@@ -100,7 +102,7 @@ function mockAddDrive(url: string, drive: DocumentDriveDocument) {
       body: JSON.stringify({
         data:
           operationName === "getDrive"
-            ? { drive: drive.state.global }
+            ? { drive: { ...drive.state.global, id: drive.id } }
             : {
                 document: buildDocumentResponse(drive),
               },

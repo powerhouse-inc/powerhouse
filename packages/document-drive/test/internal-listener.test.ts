@@ -19,13 +19,13 @@ describe("Internal Listener", () => {
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ] as DocumentModelModule[];
+  const driveId = generateId();
 
   async function buildServer(processor: IProcessor) {
     const builder = new ReactorBuilder(documentModels);
     const server = builder.build();
     await server.initialize();
 
-    const driveId = generateId();
     await server.addDrive({
       id: driveId,
       global: {
@@ -84,24 +84,25 @@ describe("Internal Listener", () => {
       onStrands: transmitFn,
       onDisconnect: () => Promise.resolve(),
     });
-    const drive = await server.getDrive("drive");
+    const drive = await server.getDrive(driveId);
 
+    const documentId = generateId();
     const action = generateAddNodeAction(
       drive.state.global,
       {
-        id: "1",
+        id: documentId,
         name: "test",
         documentType: "powerhouse/document-model",
       },
       ["global", "local"],
     );
-    await server.addDriveAction("drive", action);
+    await server.addDriveAction(driveId, action);
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
 
     const update: InternalTransmitterUpdate<DocumentDriveDocument> = {
       branch: "main",
-      documentId: "drive",
-      driveId: "drive",
+      documentId: driveId,
+      driveId,
       operations: [
         {
           hash: expect.any(String) as string,
@@ -114,12 +115,12 @@ describe("Internal Listener", () => {
           type: "ADD_FILE",
           state: {
             icon: "",
-            id: "drive",
+            id: driveId,
             name: "Global Drive",
             nodes: [
               {
                 documentType: "powerhouse/document-model",
-                id: "1",
+                id: documentId,
                 kind: "file",
                 name: "test",
                 parentFolder: null,
@@ -141,7 +142,7 @@ describe("Internal Listener", () => {
           },
           previousState: {
             icon: "",
-            id: "drive",
+            id: driveId,
             name: "Global Drive",
             nodes: [],
             //slug: "global",
@@ -150,12 +151,12 @@ describe("Internal Listener", () => {
       ],
       state: {
         icon: "",
-        id: "drive",
+        id: driveId,
         name: "Global Drive",
         nodes: [
           {
             documentType: "powerhouse/document-model",
-            id: "1",
+            id: documentId,
             kind: "file",
             name: "test",
             parentFolder: null,
@@ -179,7 +180,7 @@ describe("Internal Listener", () => {
     };
     expect(transmitFn).toHaveBeenCalledWith([update]);
 
-    await server.addAction("drive", "1", setModelName({ name: "test" }));
+    await server.addAction(driveId, documentId, setModelName({ name: "test" }));
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
 
@@ -215,13 +216,13 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenLastCalledWith([
       {
         branch: "main",
-        documentId: "1",
-        driveId: "drive",
+        documentId,
+        driveId,
         operations: [
           {
             hash: "nWKpqR6ns0l8C/Khwrl+SyKy0sA=",
             context: undefined,
-            id: expectUUID(expect),
+            id: documentId,
             index: 0,
             input: {
               name: "test",
@@ -244,13 +245,13 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenLastCalledWith([
       {
         branch: "main",
-        documentId: "1",
-        driveId: "drive",
+        documentId,
+        driveId,
         operations: [
           {
             hash: "s7RBcer0JqjSGvNb12gqpeeJGRY=",
             context: undefined,
-            id: expectUUID(expect),
+            id: documentId,
             index: 1,
             input: {
               name: "test 2",
@@ -303,7 +304,7 @@ describe("Internal Listener", () => {
       onStrands: () => Promise.resolve(),
       onDisconnect: disconnectFn,
     });
-    await server.deleteDrive("drive");
+    await server.deleteDrive(driveId);
     expect(disconnectFn).toHaveBeenCalled();
   });
 });
