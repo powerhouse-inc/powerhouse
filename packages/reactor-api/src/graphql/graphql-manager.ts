@@ -175,7 +175,7 @@ export class GraphQLManager {
   }
 
   #getSubgraphPath(subgraph: Subgraph, supergraph: string) {
-    return path.join(subgraph.path, supergraph, subgraph.name);
+    return path.join(subgraph.path ?? "", supergraph, subgraph.name);
   }
 
   async #setupSubgraphs(
