@@ -1,4 +1,5 @@
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type Command } from "commander";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import path, { dirname } from "node:path";
@@ -216,5 +217,31 @@ export const findContainerDirectory = (
 
   return findContainerDirectory(parentDir, targetFile);
 };
+
+/**
+ * Applies custom help formatting to a command to avoid duplication in help output
+ *
+ * @param command - The Command instance to enhance
+ * @param helpText - The custom help text to display
+ * @returns The command for chaining
+ */
+export function setCustomHelp(command: Command, helpText: string): Command {
+  // Apply custom help formatter that avoids duplication
+  command.helpInformation = function () {
+    const name = command.name();
+    const args = command.usage();
+    const description = command.description();
+
+    // Create a minimal header
+    let header = `\nUsage: ph ${name}`;
+    if (args) header += ` ${args}`;
+    if (description) header += `\n\n${description}\n`;
+
+    // Return the custom help text
+    return header + "\n" + helpText;
+  };
+
+  return command;
+}
 
 export { getConfig } from "@powerhousedao/config/powerhouse";

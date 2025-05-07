@@ -10,6 +10,8 @@ import {
     useAsyncReactor,
     useDriveEditor,
     useFilteredDocumentModels,
+    useGetDocumentModelModule,
+    useGetEditor,
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
@@ -99,6 +101,8 @@ export function DriveEditorContainer() {
     const { addFile, addDocument } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
     const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
+    const getDocumentModelModule = useGetDocumentModelModule();
+    const getEditor = useGetEditor();
 
     const driveContext: IDriveContext = useMemo(
         () => ({
@@ -148,6 +152,8 @@ export function DriveEditorContainer() {
                 context={{
                     ...editorProps.context,
                     ...driveContext,
+                    getDocumentModelModule,
+                    getEditor,
                 }}
                 onSwitchboardLinkClick={undefined} // TODO
                 document={document}

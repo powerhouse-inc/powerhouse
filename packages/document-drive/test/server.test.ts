@@ -990,4 +990,48 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(drive0.operations.global.length).toBe(0);
     expect(drive0).toStrictEqual(drive);
   });
+
+  it("should allow removing a drive and then adding a new drive with the same id and slug", async ({
+    expect,
+  }) => {
+    const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
+      .withStorage(await buildStorage())
+      .build();
+
+    await server.addDrive({
+      global: {
+        id: "test-drive",
+        name: "test-drive",
+        icon: "icon",
+        slug: "test-drive",
+      },
+      local: {
+        availableOffline: false,
+        sharingType: "public",
+        listeners: [],
+        triggers: [],
+      },
+    });
+
+    await server.deleteDrive("test-drive");
+
+    await server.addDrive({
+      global: {
+        id: "test-drive",
+        name: "test-drive",
+        icon: "icon",
+        slug: "test-drive",
+      },
+      local: {
+        availableOffline: false,
+        sharingType: "public",
+        listeners: [],
+        triggers: [],
+      },
+    });
+
+    const drive = await server.getDriveBySlug("test-drive");
+    expect(drive.state.global.slug).toBe("test-drive");
+  });
 });

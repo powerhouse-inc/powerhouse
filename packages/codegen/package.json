@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.49.2-staging.6",
+  "version": "0.49.2",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -52,6 +52,7 @@
     "copyfiles": "^2.4.1",
     "esbuild-fix-imports-plugin": "^1.0.7",
     "graphql": "^16.8.1",
-    "husky": "^8.0.3"
+    "husky": "^8.0.3",
+    "vitest": "^3.1.2"
   }
 }

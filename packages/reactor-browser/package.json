@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "1.22.29-staging.0",
+  "version": "1.22.29",
   "license": "AGPL-3.0-only",
   "type": "module",
   "publishConfig": {
@@ -37,7 +37,7 @@
     "playwright": "^1.51.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vitest": "^3.0.7",
+    "vitest": "^3.1.2",
     "vitest-browser-react": "^0.1.1"
   },
   "peerDependencies": {

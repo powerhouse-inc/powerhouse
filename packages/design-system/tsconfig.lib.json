@@ -6,7 +6,7 @@
     "outDir": "./dist",
     "jsx": "react-jsx",
     "resolveJsonModule": true,
-    "types": ["vite/client", "@storybook/types"]
+    "types": ["vite/client"]
   },
   "references": [
     {

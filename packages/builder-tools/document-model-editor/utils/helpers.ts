@@ -1,3 +1,4 @@
+import { safeParseSdl } from "#document-model-editor/context/schema-context";
 import * as customScalars from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
 import { type Author, type DocumentModelDocument } from "document-model";
@@ -15,7 +16,6 @@ import {
   isScalarType,
   Kind,
   type ObjectTypeDefinitionNode,
-  parse,
   print,
   visit,
 } from "graphql";
@@ -171,7 +171,6 @@ export function getDifferences<T extends object>(
 }
 function isValidScalarValue(typeName: string, value: any): boolean {
   if (typeName in customScalars) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const scalar = customScalars[typeName as keyof typeof customScalars];
     if (scalar instanceof GraphQLScalarType) {
       return scalar.parseValue(value) !== undefined;
@@ -273,8 +272,10 @@ export function makeMinimalObjectFromSDL(
   sdl: string,
   existingValue?: any,
 ) {
-  const schema = buildASTSchema(parse(schemaSdl));
-  const typeAST = parse(sdl);
+  const parsedSchema = safeParseSdl(schemaSdl);
+  const typeAST = safeParseSdl(sdl);
+  if (!parsedSchema || !typeAST) return "";
+  const schema = buildASTSchema(parsedSchema);
 
   // Extract the type names from the SDL
   const typeNames: string[] = [];
@@ -340,7 +341,8 @@ export function renameSchemaType(
   const oldTypeName = `${pascalCase(oldName)}${typeSuffix}`;
   const newTypeName = `${pascalCase(newName)}${typeSuffix}`;
 
-  const ast = parse(sdl);
+  const ast = safeParseSdl(sdl);
+  if (!ast) return "";
 
   const updatedAst = visit(ast, {
     ObjectTypeDefinition: (node) => {

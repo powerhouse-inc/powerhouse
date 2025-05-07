@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "1.29.12-staging.1",
+  "version": "1.29.12",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -73,7 +73,7 @@
     "msw": "^2.3.1",
     "typescript": "^5.7.3",
     "vite": "^6.2.2",
-    "vitest": "^3.0.7",
+    "vitest": "^3.1.2",
     "vitest-fetch-mock": "^0.4.5",
     "webdriverio": "^9.0.9"
   }
