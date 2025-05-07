@@ -1,16 +1,16 @@
+import { safeParseSdl } from "#document-model-editor/context/schema-context";
 import { type Diagnostic } from "@codemirror/lint";
-import { isDocumentString } from "@graphql-tools/utils";
 import { pascalCase, sentenceCase } from "change-case";
-import { parse, Kind } from "graphql";
+import { Kind } from "graphql";
 
 export function ensureDocumentContainsNodeWithNameAndType(
   doc: string,
   nodeName: string,
   nodeType: keyof typeof Kind,
 ): boolean {
-  if (!doc || !isDocumentString(doc)) return true;
+  const parsedDoc = safeParseSdl(doc);
 
-  const parsedDoc = parse(doc);
+  if (!parsedDoc) return true;
 
   return parsedDoc.definitions.some((def) => {
     const hasMatchingType = def.kind === Kind[nodeType];
@@ -23,9 +23,9 @@ export function createNodeTypeAndNameDiagnostic(
   doc: string,
   errorMessage: string,
 ): Diagnostic | undefined {
-  if (!doc || !isDocumentString(doc)) return;
+  const parsedDoc = safeParseSdl(doc);
+  if (!parsedDoc) return undefined;
 
-  const parsedDoc = parse(doc);
   const firstNode = parsedDoc.definitions[0];
 
   const nameNode = "name" in firstNode ? firstNode.name : null;
@@ -43,7 +43,7 @@ export function ensureValidStateSchemaName(
   modelName: string,
   scope: string,
 ) {
-  if (!doc || !isDocumentString(doc)) return [];
+  if (!safeParseSdl(doc)) return [];
   const requiredTypeName = `${pascalCase(modelName)}${scope === "local" ? "Local" : ""}State`;
   if (
     !ensureDocumentContainsNodeWithNameAndType(
@@ -67,7 +67,7 @@ export function ensureValidOperationSchemaInputName(
   doc: string | undefined,
   operationName: string,
 ) {
-  if (!doc || !isDocumentString(doc)) return [];
+  if (!doc || !safeParseSdl(doc)) return [];
 
   const requiredTypeName = `${pascalCase(operationName)}Input`;
   if (

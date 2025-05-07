@@ -1,4 +1,4 @@
-import { createDefaultRules, isDocumentString } from "@graphql-tools/utils";
+import { createDefaultRules } from "@graphql-tools/utils";
 import {
   buildASTSchema,
   buildSchema,
@@ -18,9 +18,11 @@ import {
 } from "../constants/documents.js";
 
 /* Required to make the schema "count" as an actual schema */
-const hiddenQueryTypeDefinitions = parse(hiddenQueryTypeDefDoc).definitions;
+const hiddenQueryTypeDefinitions =
+  safeParseSdl(hiddenQueryTypeDefDoc)?.definitions ?? [];
 /* Scalar definitions from the Powerhouse standard library */
-const standardLibCustomScalarDefinitions = parse(typeDefsDoc).definitions;
+const standardLibCustomScalarDefinitions =
+  safeParseSdl(typeDefsDoc)?.definitions ?? [];
 /* These are always included when updating the shared schema, because they do not change */
 const alwaysIncludedDefinitions = [
   ...hiddenQueryTypeDefinitions,
@@ -120,9 +122,9 @@ function safeValidateAst(schema: GraphQLSchema, ast: DocumentNode) {
  Parses an SDL string into an ast
  Uses try catch abd checks if the SDL is a valid document string to prevent errors from breaking the editor
 */
-function safeParseSdl(sdl: string) {
+export function safeParseSdl(sdl: string) {
   try {
-    if (!sdl || !isDocumentString(sdl)) return null;
+    if (!sdl) return null;
     return parse(sdl);
   } catch (error) {
     return null;

@@ -2,14 +2,16 @@ import { type Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { updateHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
   findContainerDirectory,
   getPackageManagerFromLockfile,
   getProjectInfo,
   packageManagers,
+  withCustomHelp,
   type PackageManager,
-} from "../utils.js";
+} from "../utils/index.js";
 import {
   ENV_MAP,
   PH_PROJECT_DEPENDENCIES,
@@ -88,22 +90,21 @@ const getInstalledDependencies = (projectPath: string) => {
   return installedDeps;
 };
 
-export const update: CommandActionType<
-  [
-    {
-      force?: string;
-      debug?: boolean;
-      packageManager?: string;
-    },
-  ]
-> = (options) => {
+// Extract the type parameters for reuse
+export type UpdateOptions = {
+  force?: string;
+  debug?: boolean;
+  packageManager?: string;
+};
+
+export const update: CommandActionType<[UpdateOptions]> = async (options) => {
   const { force, packageManager, debug } = options;
 
   if (debug) {
     console.log(">>> options", options);
   }
 
-  const projectInfo = getProjectInfo();
+  const projectInfo = await getProjectInfo();
   const pkgManagerName = (packageManager ||
     getPackageManagerFromLockfile(projectInfo.path)) as PackageManager;
 
@@ -128,7 +129,7 @@ export const update: CommandActionType<
     }
 
     const env = force as Environment;
-    updatePackageJson(env, undefined, pkgManagerName, debug);
+    await updatePackageJson(env, undefined, pkgManagerName, debug);
     return;
   }
 
@@ -158,8 +159,8 @@ export const update: CommandActionType<
   });
 };
 
-export function updateCommand(program: Command) {
-  program
+export function updateCommand(program: Command): Command {
+  const updateCmd = program
     .command("update")
     .alias("up")
     .description(
@@ -173,18 +174,8 @@ export function updateCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
-    .option("--debug", "Show additional logs")
-    .addHelpText(
-      "after",
-      `
-Examples:
-  $ ph update                          # Update dependencies based on package.json ranges
-  $ ph update --force dev              # Force update to latest dev version available
-  $ ph update --force prod             # Force update to latest stable version available (same as latest)
-  $ ph update --force latest           # Force update to latest stable version available (same as prod)
-  $ ph update --package-manager pnpm   # Specify package manager to use
-  $ ph update --debug                  # Show debug information during update
-    `,
-    )
-    .action(update);
+    .option("--debug", "Show additional logs");
+
+  // Use withCustomHelp instead of withHelpAction and addHelpText
+  return withCustomHelp<[UpdateOptions]>(updateCmd, update, updateHelp);
 }

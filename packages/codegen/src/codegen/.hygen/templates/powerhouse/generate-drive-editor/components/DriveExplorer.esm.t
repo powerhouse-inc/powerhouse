@@ -21,7 +21,7 @@ import { EditorContainer } from "./EditorContainer.js";
 import type { EditorContext, DocumentModelModule } from "document-model";
 import { CreateDocumentModal } from "@powerhousedao/design-system";
 import { CreateDocument } from "./CreateDocument.js";
-import { useDriveContext } from "@powerhousedao/reactor-browser";
+import { type DriveEditorContext, useDriveContext } from "@powerhousedao/reactor-browser";
 
 interface DriveExplorerProps {
   driveId: string;
@@ -30,7 +30,7 @@ interface DriveExplorerProps {
   onDeleteNode: (nodeId: string) => void;
   renameNode: (nodeId: string, name: string) => void;
   onCopyNode: (nodeId: string, targetName: string, parentId?: string) => void;
-  context: EditorContext;
+  context: DriveEditorContext;
 }
 
 export function DriveExplorer({
@@ -134,6 +134,14 @@ export function DriveExplorer({
     ? files.find((file) => file.id === activeDocumentId)
     : undefined;
 
+  const documentModelModule = activeDocument
+    ? context.getDocumentModelModule(activeDocument.documentType)
+    : null;
+
+  const editorModule = activeDocument
+    ? context.getEditor(activeDocument.documentType)
+    : null;
+
   return (
     <div className="flex h-full">
       {/* Sidebar */}
@@ -148,7 +156,7 @@ export function DriveExplorer({
 
       {/* Main Content */}
       <div className="flex-1 p-4 overflow-y-auto">
-        {activeDocument ? (
+        {activeDocument && documentModelModule && editorModule ? (
           <EditorContainer
             context={context}
             documentId={activeDocumentId!}
@@ -156,6 +164,8 @@ export function DriveExplorer({
             driveId={driveId}
             onClose={handleEditorClose}
             title={activeDocument.name}
+            documentModelModule={documentModelModule}
+            editorModule={editorModule}
           />
         ) : (
           <>
