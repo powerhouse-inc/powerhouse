@@ -3,9 +3,7 @@
   "compilerOptions": {
     "types": [
       "node",
-      "vitest/globals",
-      "@types/wicg-file-system-access",
-      "@storybook/types"
+      "@types/wicg-file-system-access"
     ],
     "outDir": "./dist",
     "jsx": "react-jsx",
