@@ -1,3 +1,49 @@
+## 1.28.0 (2025-05-07)
+
+### 🚀 Features
+
+- **design-system:** add autocomplete option to package manager ([2bc7396d1](https://github.com/powerhouse-inc/powerhouse/commit/2bc7396d1))
+- **config:** allow ph config to specify storage layer of reactor ([6305f7f3b](https://github.com/powerhouse-inc/powerhouse/commit/6305f7f3b))
+- **config:** export loglevel type ([f65f5a9ee](https://github.com/powerhouse-inc/powerhouse/commit/f65f5a9ee))
+- **design-system:** update snapshots ([77b8c05c9](https://github.com/powerhouse-inc/powerhouse/commit/77b8c05c9))
+- **connect:** use css based design system theme ([edda94703](https://github.com/powerhouse-inc/powerhouse/commit/edda94703))
+- **config:** added https config for switchboard ([f48e19dcd](https://github.com/powerhouse-inc/powerhouse/commit/f48e19dcd))
+- **monorepo:** unify linting and build ([542313e91](https://github.com/powerhouse-inc/powerhouse/commit/542313e91))
+- **document-drive:** child loggers, ability to follow env in connect and reactor ([af3e68a89](https://github.com/powerhouse-inc/powerhouse/commit/af3e68a89))
+- **connect:** finish type rename ([865be799e](https://github.com/powerhouse-inc/powerhouse/commit/865be799e))
+- **document-model-editor:** move editor to builder tooling ([c4616ffc4](https://github.com/powerhouse-inc/powerhouse/commit/c4616ffc4))
+- **reactor-api:** fix document drive importsx ([e65f4c6da](https://github.com/powerhouse-inc/powerhouse/commit/e65f4c6da))
+- **codegen:** handle codegen path ([39b0aca84](https://github.com/powerhouse-inc/powerhouse/commit/39b0aca84))
+- **document-model:** update generics ([211dfe954](https://github.com/powerhouse-inc/powerhouse/commit/211dfe954))
+- **reactor-local:** watch config file for external packages ([40dc9c3c1](https://github.com/powerhouse-inc/powerhouse/commit/40dc9c3c1))
+- **config:** added import scripts dir ([66995ca1a](https://github.com/powerhouse-inc/powerhouse/commit/66995ca1a))
+- **ph-cli:** rename reactor to switchboard ([#947](https://github.com/powerhouse-inc/powerhouse/pull/947))
+- **config:** allow passing path to read config ([f3923c013](https://github.com/powerhouse-inc/powerhouse/commit/f3923c013))
+- **ph-cli:** added https support for connect ([a9335a4df](https://github.com/powerhouse-inc/powerhouse/commit/a9335a4df))
+- **config:** added host in ph config ([#899](https://github.com/powerhouse-inc/powerhouse/pull/899))
+- update install command ([#881](https://github.com/powerhouse-inc/powerhouse/pull/881))
+- **ph-cli:** default to root project when installing a dep globally ([#840](https://github.com/powerhouse-inc/powerhouse/pull/840))
+- **ph-cli:** added install command ([#831](https://github.com/powerhouse-inc/powerhouse/pull/831))
+- merge main into dspot-branch ([#769](https://github.com/powerhouse-inc/powerhouse/pull/769))
+- **config:** trigger release ([9df86bc45](https://github.com/powerhouse-inc/powerhouse/commit/9df86bc45))
+- **reactor-api:** Added support for processors ([#655](https://github.com/powerhouse-inc/powerhouse/pull/655))
+- **monorepo:** handle project references ([3b6c046f2](https://github.com/powerhouse-inc/powerhouse/commit/3b6c046f2))
+
+### 🩹 Fixes
+
+- **connect:** fix ph connect ([a640ce866](https://github.com/powerhouse-inc/powerhouse/commit/a640ce866))
+- **config:** use reactor object instead of switchboard ([371529f74](https://github.com/powerhouse-inc/powerhouse/commit/371529f74))
+- **config:** added build ([aaeb785fc](https://github.com/powerhouse-inc/powerhouse/commit/aaeb785fc))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank @froid1911
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- ryanwolhuter @ryanwolhuter
+
 ## 1.27.0-staging.3 (2025-04-17)
 
 ### 🩹 Fixes
