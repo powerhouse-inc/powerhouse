@@ -1,3 +1,21 @@
+## 1.33.1-dev.8 (2025-05-07)
+
+### 🚀 Features
+
+- **scripts:** added setup environment ([9459aa5e5](https://github.com/powerhouse-inc/powerhouse/commit/9459aa5e5))
+- **scripts:** added install tools ([2f6798c9c](https://github.com/powerhouse-inc/powerhouse/commit/2f6798c9c))
+- **connect:** added bin which serves connect ([6b731c703](https://github.com/powerhouse-inc/powerhouse/commit/6b731c703))
+- **switchboard:** use package manager from reactor api ([a0a15417b](https://github.com/powerhouse-inc/powerhouse/commit/a0a15417b))
+
+### 🩹 Fixes
+
+- all builds should first clean their dist directories -- this does not affect the build cache ([7acffd6b0](https://github.com/powerhouse-inc/powerhouse/commit/7acffd6b0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
 ## 1.33.1-dev.7 (2025-05-03)
 
 ### 🚀 Features
