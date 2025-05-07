@@ -33,7 +33,7 @@
     "migrate": "prisma generate && prisma db push",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prebuild:tsc": "prisma generate --no-hints",
-    "prebuild": "prisma generate --no-hints",
+    "prebuild": "npm run clean && prisma generate --no-hints",
     "prelint:nx": "prisma generate --no-hints"
   },
   "optionalDependencies": {

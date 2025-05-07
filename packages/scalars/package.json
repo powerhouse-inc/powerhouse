@@ -18,6 +18,7 @@
     "lint:fix": "eslint --fix",
     "build": "tsc --build",
     "build:watch": "tsc --build --watch",
+    "prebuild": "npm run clean",
     "test": "vitest run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"

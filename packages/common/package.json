@@ -22,6 +22,7 @@
     "build:tsc": "tsc --build",
     "lint": "eslint",
     "build": "npm run build:css && npm run build:tsc",
+    "prebuild": "npm run clean",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "prepublishOnly": "npm run build",

@@ -20,7 +20,7 @@
     "clean": "rimraf dist/",
     "copy-templates": "copyfiles src/codegen/.hygen/templates/**/*.esm.t dist/",
     "copy-hygen-pkg": "copyfiles src/codegen/.hygen/package.json dist/",
-    "prebuild": "rimraf dist/src/codegen/.hygen/**/*.esm.t",
+    "prebuild": "npm run clean",
     "build": "tsc --build",
     "postbuild": "npm run copy-templates && npm run copy-hygen-pkg",
     "prepublishOnly": "npm run build",

@@ -42,7 +42,7 @@
     "create-icon-components": "tsx scripts/create-icon-components.ts",
     "build": "npx @tailwindcss/cli -i style.css -o dist/style.css && mkdir -p dist/src/assets && cp -r src/assets dist/src && tsc --build",
     "build:watch": "build --watch",
-    "prebuild": "npm run create-icon-components",
+    "prebuild": "npm run clean && npm run create-icon-components",
     "storybook": "storybook dev -p 6006",
     "prestorybook": "npm run build",
     "build-storybook": "storybook build",
