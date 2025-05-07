@@ -40,8 +40,8 @@ export const StringField = React.forwardRef<
 
     return (
       <TextField
-        {...(props as TextFieldProps)}
         diffMode={diffModeSentences}
+        {...(props as TextFieldProps)}
         ref={ref as React.ForwardedRef<HTMLInputElement>}
       />
     );
