@@ -64,6 +64,7 @@
   "release": {
     "projects": ["packages/*", "clis/*", "apps/*"],
     "projectsRelationship": "independent",
+    "releaseTagPattern": "{production}/{projectName}/{version}",
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {
