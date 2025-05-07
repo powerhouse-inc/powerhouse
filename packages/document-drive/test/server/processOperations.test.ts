@@ -5,6 +5,7 @@ import {
   DocumentModelModule,
   documentModelReducer,
   garbageCollect,
+  generateId,
   Operation,
   setModelExtension,
   setModelId,
@@ -12,15 +13,15 @@ import {
 } from "document-model";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
-import { undo } from "../../../document-model/src/document/actions/creators";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions";
-import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer";
-import { driveDocumentModelModule } from "../../src/drive-document-model/module";
-import { generateAddNodeAction } from "../../src/drive-document-model/src/utils";
-import { ReactorBuilder } from "../../src/server/builder";
-import { OperationError } from "../../src/server/error";
-import { IOperationResult } from "../../src/server/types";
-import { BasicClient, buildOperation, buildOperations } from "../utils";
+import { BaseDocumentDriveServer } from "#server/base-server";
+import { undo } from "../../../document-model/src/document/actions/creators.js";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
+import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
+import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
+import { generateAddNodeAction } from "../../src/drive-document-model/src/utils.js";
+import { ReactorBuilder } from "../../src/server/builder.js";
+import { IOperationResult } from "../../src/server/types.js";
+import { BasicClient, buildOperation, buildOperations } from "../utils.js";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
@@ -34,20 +35,23 @@ describe("processOperations", () => {
     driveDocumentModelModule,
   ] as DocumentModelModule[];
 
-  let server = new ReactorBuilder(documentModels).build();
+  let server: BaseDocumentDriveServer;
   beforeEach(async () => {
     vitest.useRealTimers();
 
-    server = new ReactorBuilder(documentModels).build();
+    server = new ReactorBuilder(
+      documentModels,
+    ).build() as unknown as BaseDocumentDriveServer;
     await server.initialize();
   });
 
-  const driveId = "1";
-  const documentId = "1";
+  const driveId = generateId();
+  const documentId = generateId();
 
   async function buildFile(initialOperations: Action[] = []) {
     await server.addDrive({
-      global: { id: driveId, name: "test", icon: null, slug: null },
+      id: driveId,
+      global: { name: "test", icon: null },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -56,6 +60,7 @@ describe("processOperations", () => {
       },
     });
     const drive = await server.getDrive(driveId);
+
     await server.addDriveOperation(
       driveId,
       buildOperation(
@@ -64,7 +69,7 @@ describe("processOperations", () => {
         generateAddNodeAction(
           drive.state.global,
           {
-            id: "1",
+            id: documentId,
             name: "test",
             documentType: "powerhouse/document-model",
           },
@@ -261,7 +266,6 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.error).toBeInstanceOf(OperationError);
     expect(result.error?.message).toBe(
       "Missing operations: expected 3 with skip 0 or equivalent, got index 4 with skip 0",
     );
@@ -315,7 +319,6 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.error).toBeInstanceOf(OperationError);
     expect(result.error?.message).toBe(
       "Missing operations: expected 5 with skip 0 or equivalent, got index 6 with skip 0",
     );

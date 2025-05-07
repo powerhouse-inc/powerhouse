@@ -1,5 +1,10 @@
 import { useWindowSize, type TUiNodes } from '#hooks';
-import { FileItem, type UiFileNode } from '@powerhousedao/design-system';
+import {
+    FileItem,
+    type BaseUiFileNode,
+    type UiFileNode,
+    type UiNode,
+} from '@powerhousedao/design-system';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +25,40 @@ export function FileContentView(props: Props) {
     const windowSize = useWindowSize();
     const { fileNodes } = props;
     const availableWidth = windowSize.innerWidth - USED_SPACE;
+
+    const handleSelectNode = (node: BaseUiFileNode) => {
+        props.setSelectedNode(node as unknown as UiFileNode);
+    };
+
+    const handleRenameNode = (name: string, node: BaseUiFileNode) => {
+        props.onRenameNode(name, node as unknown as UiFileNode);
+    };
+
+    const handleDuplicateNode = (node: BaseUiFileNode) => {
+        props.onDuplicateNode(node as unknown as UiFileNode);
+    };
+
+    const handleDeleteNode = (node: BaseUiFileNode) => {
+        props.onDeleteNode(node as unknown as UiFileNode);
+    };
+
+    const handleAddFile = (file: File, parentNode: BaseUiFileNode | null) => {
+        props.onAddFile(file, parentNode as UiNode | null);
+    };
+
+    const handleCopyNode = (
+        node: BaseUiFileNode,
+        targetNode: BaseUiFileNode,
+    ) => {
+        props.onCopyNode(node as UiNode, targetNode as UiNode);
+    };
+
+    const handleMoveNode = (
+        node: BaseUiFileNode,
+        targetNode: BaseUiFileNode,
+    ) => {
+        props.onMoveNode(node as UiNode, targetNode as UiNode);
+    };
 
     const columnCount = Math.floor(availableWidth / (ITEM_WIDTH + GAP)) || 1;
     const rowCount = Math.ceil(fileNodes.length / columnCount);
@@ -82,10 +121,12 @@ export function FileContentView(props: Props) {
                 }}
             >
                 <FileItem
-                    {...props}
                     key={fileNode.id}
                     uiNode={fileNode}
-                    onSelectNode={props.setSelectedNode}
+                    onSelectNode={handleSelectNode}
+                    onRenameNode={handleRenameNode}
+                    onDuplicateNode={handleDuplicateNode}
+                    onDeleteNode={handleDeleteNode}
                     isAllowedToCreateDocuments={
                         props.isAllowedToCreateDocuments ?? false
                     }

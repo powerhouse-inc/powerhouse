@@ -16,9 +16,7 @@ export function useSyncStatus(
             return unsub;
         },
         () => {
-            const drive = documentDrives.find(
-                _drive => _drive.state.global.id === driveId,
-            );
+            const drive = documentDrives.find(_drive => _drive.id === driveId);
 
             if (!drive) return;
             const isReadDrive = 'readContext' in drive;

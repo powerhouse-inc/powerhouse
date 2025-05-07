@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/common",
-  "version": "1.9.1",
+  "version": "1.10.40-dev.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "files": [
@@ -22,9 +22,12 @@
     "build:tsc": "tsc --build",
     "lint": "eslint",
     "build": "npm run build:css && npm run build:tsc",
+    "prebuild": "npm run clean",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "peerDependencies": {
     "@powerhousedao/reactor-browser": "workspace:*",
@@ -59,7 +62,7 @@
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.9",
     "uuid": "^11.0.5",
-    "vite": "^6.2.0",
+    "vite": "^6.2.2",
     "zod": "^3.24.1"
   }
 }

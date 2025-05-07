@@ -1,6 +1,4 @@
-import { v4 as generateUUID } from "uuid";
-
-import { type OperationScope } from "document-model";
+import { generateId, type OperationScope } from "document-model";
 import {
   type AddFileAction,
   type CopyNodeAction,
@@ -127,7 +125,7 @@ export function generateSynchronizationUnitId(
         node.synchronizationUnits.find((unit) => unit.syncId === syncId),
     )
   ) {
-    syncId = generateUUID();
+    syncId = generateId();
   }
   return syncId;
 }

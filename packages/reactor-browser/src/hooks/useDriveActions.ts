@@ -127,7 +127,7 @@ function createDriveActions(
   context: IDriveContext,
 ): IDriveActions {
   const drive = document;
-  const { id: driveId } = drive.state.global;
+  const driveId = drive.id;
 
   const { selectedNode } = context;
 
@@ -210,7 +210,7 @@ function createDriveActions(
     targetFolderId: string | undefined,
   ) => {
     const target = targetFolderId ? getNode(targetFolderId, drive) : undefined;
-    if (targetFolderId && !target) {
+    if (targetFolderId && !target && targetFolderId !== driveId) {
       throw new Error(`Target node with id "${targetFolderId}" not found`);
     }
     if (target && !isFolderNode(target)) {

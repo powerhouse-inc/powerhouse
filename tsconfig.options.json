@@ -4,6 +4,7 @@
     "composite": true,
     "declaration": true,
     "declarationMap": true,
+    "sourceMap": true,
     "incremental": true,
     "skipLibCheck": true,
     // required configs for esm interoperability

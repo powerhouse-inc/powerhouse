@@ -226,6 +226,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         baseValue={baseValue}
         multiline={multiline}
         rows={rows}
+        hasPadding={true}
       />
     );
   },

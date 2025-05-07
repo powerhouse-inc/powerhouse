@@ -1,4 +1,5 @@
 import {
+    useDocumentAdminStorage,
     useGetDocumentModelModule,
     useUnwrappedReactor,
     useUser,
@@ -21,7 +22,7 @@ import {
     type DocumentDriveDocument,
     type DriveInput,
     PullResponderTransmitter,
-    PullResponderTrigger,
+    type PullResponderTrigger,
     type RemoteDriveOptions,
     type StrandUpdate,
     type SyncStatus,
@@ -36,7 +37,6 @@ import {
     documentDriveReducer,
     generateAddNodeAction,
     generateNodesCopy,
-    generateUUID,
     isDocumentDrive,
     isFileNode,
     isFolderNode,
@@ -48,8 +48,11 @@ import {
     updateFile,
     updateNode,
 } from 'document-drive';
-import { Listener } from 'document-drive/server/types';
-import { type Operation, type PHDocument, hashKey } from 'document-model';
+import {
+    type GetDocumentOptions,
+    type Listener,
+} from 'document-drive/server/types';
+import { type Operation, type PHDocument, generateId } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useDocumentDrives } from './useDocumentDrives.js';
@@ -75,6 +78,7 @@ export function useDocumentDriveServer() {
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const reactor = useUnwrappedReactor();
+    const storage = useDocumentAdminStorage();
 
     const getDocumentModelModule = useGetDocumentModelModule();
 
@@ -82,11 +86,11 @@ export function useDocumentDriveServer() {
         useDocumentDrives();
 
     const openFile = useCallback(
-        async (drive: string, id: string) => {
+        async (drive: string, id: string, options?: GetDocumentOptions) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
-            const document = await reactor.getDocument(drive, id);
+            const document = await reactor.getDocument(drive, id, options);
             if (!document) {
                 throw new Error(
                     `There was an error opening file with id ${id} on drive ${drive}`,
@@ -115,9 +119,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            let drive = documentDrives.find(
-                drive => drive.state.global.id === driveId,
-            );
+            let drive = documentDrives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -194,17 +196,16 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create documents');
             }
 
-            const id = hashKey();
-
-            let drive = documentDrives.find(d => d.state.global.id === driveId);
+            let drive = documentDrives.find(d => d.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
 
+            const documentId = generateId();
             const action = generateAddNodeAction(
                 drive.state.global,
                 {
-                    id,
+                    id: documentId,
                     name,
                     parentFolder: parentFolder ?? null,
                     documentType,
@@ -215,7 +216,9 @@ export function useDocumentDriveServer() {
 
             drive = await _addDriveOperation(driveId, action);
 
-            const node = drive?.state.global.nodes.find(node => node.id === id);
+            const node = drive?.state.global.nodes.find(
+                node => node.id === documentId,
+            );
             if (!node || !isFileNode(node)) {
                 throw new Error('There was an error adding document');
             }
@@ -239,9 +242,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(
-                drive => drive.state.global.id === driveId,
-            );
+            const drive = documentDrives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -302,7 +303,7 @@ export function useDocumentDriveServer() {
 
             // then add all the operations
             const driveDocument = documentDrives.find(
-                documentDrive => documentDrive.state.global.id === drive,
+                documentDrive => documentDrive.id === drive,
             );
             const waitForSync =
                 driveDocument && driveDocument.state.local.listeners.length > 0;
@@ -362,17 +363,19 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create folders');
             }
-            const id = hashKey();
+            const folderId = generateId();
             const drive = await _addDriveOperation(
                 driveId,
                 addFolder({
-                    id,
+                    id: folderId,
                     name,
                     parentFolder,
                 }),
             );
 
-            const node = drive?.state.global.nodes.find(node => node.id === id);
+            const node = drive?.state.global.nodes.find(
+                node => node.id === folderId,
+            );
             if (!node || !isFolderNode(node)) {
                 throw new Error('There was an error adding folder');
             }
@@ -449,12 +452,10 @@ export function useDocumentDriveServer() {
             if (target.kind === FILE) return;
 
             const drive = documentDrives.find(
-                drive => drive.state.global.id === src.driveId,
+                drive => drive.id === src.driveId,
             );
 
             if (!drive) return;
-
-            const generateId = () => hashKey();
 
             const copyNodesInput = generateNodesCopy(
                 {
@@ -462,7 +463,7 @@ export function useDocumentDriveServer() {
                     targetParentFolder: target.id,
                     targetName: src.name,
                 },
-                generateId,
+                () => generateId(),
                 drive.state.global.nodes,
             );
 
@@ -501,9 +502,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(
-                drive => drive.state.global.id === driveId,
-            );
+            const drive = documentDrives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -527,12 +526,13 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create drives');
             }
-            const id = drive.global.id || hashKey();
+            const id = drive.id || generateId();
             drive = createDriveState(drive);
             const newDrive = await reactor.addDrive(
                 {
-                    global: { ...drive.global, id },
+                    global: drive.global,
                     local: drive.local,
+                    id,
                 },
                 preferredEditor,
             );
@@ -564,9 +564,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(
-                drive => drive.state.global.id === id,
-            );
+            const drive = documentDrives.find(drive => drive.id === id);
             if (!drive) {
                 throw new Error(`Drive with id ${id} not found`);
             }
@@ -683,12 +681,14 @@ export function useDocumentDriveServer() {
     );
 
     const clearStorage = useCallback(async () => {
+        // reactor may have not loaded yet
         if (!reactor) {
             return;
         }
-        await reactor.clearStorage();
+
+        await storage.clear();
         await refreshDocumentDrives();
-    }, [refreshDocumentDrives, reactor]);
+    }, [refreshDocumentDrives, reactor, storage]);
 
     const handleRemoveTrigger = useCallback(
         async (driveId: string, triggerId: string) => {
@@ -720,7 +720,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const uuid = generateUUID();
+            const uuid = generateId();
             const listener: Listener = {
                 driveId,
                 listenerId: uuid,
@@ -757,6 +757,8 @@ export function useDocumentDriveServer() {
 
             // for backwards compatibility: return everything but the transmitter
             return {
+                driveId,
+                filter: listener.filter,
                 data: {
                     interval: `${options.pullInterval}` || '1000',
                     listenerId: uuid,

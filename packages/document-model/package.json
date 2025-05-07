@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "2.26.0",
+  "version": "2.28.1-dev.9",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -17,11 +17,12 @@
     }
   },
   "scripts": {
-    "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
+    "build:tsc": "tsc --build",
     "build:watch": "tsc --build --watch",
+    "prebuild": "npm run clean",
     "test": "vitest run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"

@@ -1,4 +1,6 @@
 import {
+  type BaseUiFolderNode,
+  type BaseUiNode,
   ConnectDropdownMenu,
   defaultFolderOptions,
   DELETE,
@@ -10,7 +12,6 @@ import {
   RENAME,
   SyncStatusIcon,
   type UiFolderNode,
-  type UiNode,
   useDrag,
   useDrop,
   WRITE,
@@ -20,15 +21,15 @@ import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type FolderItemProps = {
-  readonly uiNode: UiFolderNode;
+  readonly uiNode: BaseUiFolderNode;
   readonly className?: string;
-  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
-  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
-  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
-  onSelectNode: (uiNode: UiFolderNode) => void;
-  onRenameNode: (name: string, uiNode: UiFolderNode) => void;
-  onDuplicateNode: (uiNode: UiFolderNode) => void;
-  onDeleteNode: (uiNode: UiFolderNode) => void;
+  onAddFile: (file: File, parentNode: BaseUiNode | null) => Promise<void>;
+  onCopyNode: (uiNode: BaseUiNode, targetNode: BaseUiNode) => Promise<void>;
+  onMoveNode: (uiNode: BaseUiNode, targetNode: BaseUiNode) => Promise<void>;
+  onSelectNode: (uiNode: BaseUiFolderNode) => void;
+  onRenameNode: (name: string, uiNode: BaseUiFolderNode) => void;
+  onDuplicateNode: (uiNode: BaseUiFolderNode) => void;
+  onDeleteNode: (uiNode: BaseUiFolderNode) => void;
   isAllowedToCreateDocuments: boolean;
 };
 
@@ -47,9 +48,9 @@ export function FolderItem(props: FolderItemProps) {
   } = props;
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag(props);
+  const { dragProps } = useDrag({ ...props, uiNode: uiNode as UiFolderNode });
   const { isDropTarget, dropProps } = useDrop({
-    uiNode,
+    uiNode: uiNode as UiFolderNode,
     onAddFile,
     onCopyNode,
     onMoveNode,
@@ -63,6 +64,7 @@ export function FolderItem(props: FolderItemProps) {
 
   function onSubmit(name: string) {
     onRenameNode(name, uiNode);
+    setMode(READ);
   }
 
   function onClick() {

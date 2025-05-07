@@ -1,10 +1,11 @@
-import { CookieBanner, ModalManager } from '#components';
+import { CookieBanner } from '#components';
 import { ReadModeContextProvider, RootProvider } from '#context';
 import { atoms, atomStore } from '#store';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Provider, useAtomValue } from 'jotai';
-import React, { Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
+import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
 
 const Router = React.lazy(async () => {
@@ -17,8 +18,13 @@ const Preloader = () => {
     for (const atom of Object.values(atoms)) {
         useAtomValue(atom);
     }
+    useProcessorManager();
     return null;
 };
+
+const ReactorAnalyticsProvider = lazy(
+    () => import('../context/reactor-analytics.js'),
+);
 
 const App = () => (
     <React.StrictMode>
@@ -28,14 +34,17 @@ const App = () => (
                 <WagmiContext>
                     <RootProvider>
                         <ReadModeContextProvider>
-                            <UiNodesContextProvider>
-                                <ToastContainer position="bottom-right" />
-                                <ModalManager>
+                            <ReactorAnalyticsProvider>
+                                <ToastContainer
+                                    position="bottom-right"
+                                    containerId="connect"
+                                />
+                                <UiNodesContextProvider>
                                     <Router />
                                     <CookieBanner />
                                     <Analytics />
-                                </ModalManager>
-                            </UiNodesContextProvider>
+                                </UiNodesContextProvider>
+                            </ReactorAnalyticsProvider>
                         </ReadModeContextProvider>
                     </RootProvider>
                 </WagmiContext>

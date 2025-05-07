@@ -7,13 +7,13 @@ import {
     ERROR,
     LOCAL,
     SUCCESS,
-    toast,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
-import { type DocumentDriveDocument } from 'document-drive';
+import { logger, type DocumentDriveDocument } from 'document-drive';
 import { type TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from '../services/toast.js';
 import { useClientErrorHandler } from './useClientErrorHandler.js';
 import { useConnectConfig } from './useConnectConfig.js';
 import { useDocumentDrives } from './useDocumentDrives.js';
@@ -48,7 +48,7 @@ export const useLoadInitialData = () => {
             connectConfig.studioMode ||
             !connectConfig.warnOutdatedApp
         ) {
-            console.warn(
+            logger.warn(
                 `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,
             );
         } else {

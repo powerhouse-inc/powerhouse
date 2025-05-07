@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.44.0",
+  "version": "0.49.5-dev.2",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -20,14 +20,15 @@
     "clean": "rimraf dist/",
     "copy-templates": "copyfiles src/codegen/.hygen/templates/**/*.esm.t dist/",
     "copy-hygen-pkg": "copyfiles src/codegen/.hygen/package.json dist/",
-    "prebuild": "rimraf dist/src/codegen/.hygen/**/*.esm.t",
+    "prebuild": "npm run clean",
     "build": "tsc --build",
     "postbuild": "npm run copy-templates && npm run copy-hygen-pkg",
     "prepublishOnly": "npm run build",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
-    "clean:node_modules": "rimraf node_modules"
+    "clean:node_modules": "rimraf node_modules",
+    "test": "vitest run"
   },
   "dependencies": {
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
@@ -35,8 +36,8 @@
     "@faker-js/faker": "^8.3.1",
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/typescript": "^4.0.1",
-    "@powerhousedao/scalars": "workspace:*",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/scalars": "workspace:*",
     "@types/node": "^20.11.2",
     "arg": "^5.0.2",
     "change-case": "^4.1.2",
@@ -47,6 +48,7 @@
     "prettier": "^3.4.2"
   },
   "devDependencies": {
+    "@graphql-codegen/core": "^4.0.2",
     "copyfiles": "^2.4.1",
     "esbuild-fix-imports-plugin": "^1.0.7",
     "graphql": "^16.8.1",

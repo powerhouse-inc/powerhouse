@@ -2,12 +2,14 @@ import { type Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 
+import { installHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   type PackageManager,
   packageManagers,
+  setCustomHelp,
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,
 } from "../utils.js";
@@ -119,7 +121,7 @@ export const install: CommandActionType<
 };
 
 export function installCommand(program: Command) {
-  program
+  const command = program
     .command("install")
     .alias("add")
     .alias("i")
@@ -136,4 +138,6 @@ export function installCommand(program: Command) {
       "force package manager to use",
     )
     .action(install);
+
+  setCustomHelp(command, installHelp);
 }

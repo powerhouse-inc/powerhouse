@@ -71,7 +71,7 @@ export function ConnectConfirmationModal(props: ConfirmationModalProps) {
         <div
           {...mergeClassNameProps(
             bodyProps,
-            "my-6 rounded-md bg-slate-50 p-4 text-center text-slate-200",
+            "my-6 rounded-md bg-slate-50 p-4 text-center",
           )}
         >
           {body}

@@ -6,23 +6,16 @@ import {
   type PHDocument,
 } from "document-model";
 
+import { type IProcessor } from "#processors/types";
 import {
-  IDocumentDriveServer,
   type GetDocumentOptions,
   type IBaseDocumentDriveServer,
-  type Listener,
+  type IDocumentDriveServer,
   type ListenerRevision,
   type StrandUpdate,
 } from "#server/types";
 import { logger } from "#utils/logger";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
-
-export interface IReceiver {
-  onStrands: <TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ) => Promise<void>;
-  onDisconnect: () => Promise<void>;
-}
 
 export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
   OperationFromDocument<TDocument>,
@@ -45,13 +38,11 @@ export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
-  protected listener: Listener;
-  protected receiver: IReceiver;
+  protected processor: IProcessor;
 
-  constructor(listener: Listener, drive: IDocumentDriveServer, receiver: IReceiver) {
-    this.listener = listener;
+  constructor(drive: IDocumentDriveServer, processor: IProcessor) {
     this.drive = drive;
-    this.receiver = receiver;
+    this.processor = processor;
   }
 
   async #buildInternalOperationUpdate<TDocument extends PHDocument>(
@@ -114,9 +105,9 @@ export class InternalTransmitter implements ITransmitter {
         state,
       });
     }
-    
+
     try {
-      await this.receiver.onStrands(updates);
+      await this.processor.onStrands(updates);
       return strands.map(({ operations, ...s }) => ({
         ...s,
         status: "SUCCESS",
@@ -134,6 +125,6 @@ export class InternalTransmitter implements ITransmitter {
   }
 
   async disconnect(): Promise<void> {
-    await this.receiver?.onDisconnect();
+    await this.processor.onDisconnect();
   }
 }

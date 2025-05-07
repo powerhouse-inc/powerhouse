@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "strictNullChecks": true,
+    "outDir": "./src/__tests__/dist",
+    "types": ["vitest/globals"],
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "references": [{ "path": "./tsconfig.lib.json" }],
+  "include": [
+    "vitest.config.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/__tests__/**/*"
+  ]
+}

@@ -4,7 +4,10 @@ import { type ICache } from "../cache/types.js";
 import { BaseQueueManager } from "../queue/base.js";
 import { type IQueueManager } from "../queue/types.js";
 import { MemoryStorage } from "../storage/memory.js";
-import { type IDriveStorage } from "../storage/types.js";
+import {
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "../storage/types.js";
 import { DocumentDriveServer } from "./base-server.js";
 import { DefaultEventEmitter } from "./event-emitter.js";
 import { ListenerManager } from "./listener/listener-manager.js";
@@ -12,8 +15,8 @@ import TransmitterFactory from "./listener/transmitter/factory.js";
 import SynchronizationManager from "./sync-manager.js";
 import {
   DefaultListenerManagerOptions,
-  IDocumentDriveServer,
   type DocumentDriveServerOptions,
+  type IDocumentDriveServer,
   type IEventEmitter,
   type IListenerManager,
   type ISynchronizationManager,
@@ -26,7 +29,7 @@ import {
 export class ReactorBuilder {
   public documentModelModules: DocumentModelModule[] = [];
 
-  public storage?: IDriveStorage;
+  public storage?: IDriveOperationStorage;
   public cache?: ICache;
   public queueManager?: IQueueManager;
   public eventEmitter?: IEventEmitter;
@@ -39,7 +42,7 @@ export class ReactorBuilder {
     this.documentModelModules = documentModelModules;
   }
 
-  public withStorage(storage: IDriveStorage): this {
+  public withStorage(storage: IDriveOperationStorage): this {
     this.storage = storage;
     return this;
   }
@@ -82,10 +85,6 @@ export class ReactorBuilder {
   }
 
   public build(): IDocumentDriveServer {
-    if (!this.documentModelModules.length) {
-      throw new Error("Document models are required to build the server");
-    }
-
     if (!this.storage) {
       this.storage = new MemoryStorage();
     }
@@ -105,6 +104,8 @@ export class ReactorBuilder {
     if (!this.synchronizationManager) {
       this.synchronizationManager = new SynchronizationManager(
         this.storage,
+        // as we refactor, we're secretly making all the IStorage implementations also implement IDocumentStorage
+        this.storage as unknown as IDocumentStorage,
         this.cache,
         this.documentModelModules,
         this.eventEmitter,
@@ -130,6 +131,8 @@ export class ReactorBuilder {
     return new DocumentDriveServer(
       this.documentModelModules,
       this.storage,
+      // as we refactor, we're secretly making all the IStorage implementations also implement IDocumentStorage
+      this.storage as unknown as IDocumentStorage,
       this.cache,
       this.queueManager,
       this.eventEmitter,

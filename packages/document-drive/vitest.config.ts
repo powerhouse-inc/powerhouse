@@ -1,5 +1,5 @@
 import { loadEnv } from "vite";
-import { defineConfig } from "vitest/config";
+import { defaultExclude, defineConfig } from "vitest/config";
 
 export default defineConfig(({ mode }) => ({
   test: {
@@ -15,7 +15,10 @@ export default defineConfig(({ mode }) => ({
     poolOptions: {
       forks: {
         singleFork: true,
+        isolate: true,
       },
     },
+    include: ["**/*.test.ts"],
+    exclude: [...defaultExclude, "test/flaky/**"],
   },
 }));

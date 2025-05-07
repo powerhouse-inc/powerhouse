@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import {
   DocumentModelDocument,
   DocumentModelModule,
@@ -17,12 +16,6 @@ import {
   it,
   vi,
 } from "vitest";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
-import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { Trigger } from "../../src/drive-document-model/gen/types.js";
-import { DocumentDriveServer } from "../../src/server/base.js";
-import { ConflictOperationError } from "../../src/server/error.js";
-import { StrandUpdateGraphQL } from "../../src/server/listener/transmitter/pull-responder.js";
 import {
   ListenerRevision,
   ReactorBuilder,
@@ -31,6 +24,13 @@ import {
 } from "../../../../src/server/types.js";
 import { MemoryStorage } from "../../../src/storage/memory.js";
 import { PrismaStorage } from "../../../src/storage/prisma.js";
+import InMemoryCache from "../../src/cache/memory.js";
+import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
+import { reducer } from "../../src/drive-document-model/gen/reducer.js";
+import { Trigger } from "../../src/drive-document-model/gen/types.js";
+import { ConflictOperationError } from "../../src/server/error.js";
+import { StrandUpdateGraphQL } from "../../src/server/listener/transmitter/pull-responder.js";
+import { PrismaClient } from "../../src/storage/prisma/client";
 
 describe("Document Drive Server with %s", () => {
   const documentModels = [
@@ -782,8 +782,10 @@ describe("Document Drive Server with %s", () => {
   it("should not store operation with repeated index", async ({ expect }) => {
     vi.useRealTimers();
     const prismaClient = new PrismaClient();
+    const cache = new InMemoryCache();
     const server = new ReactorBuilder(documentModels)
-      .withStorage(new PrismaStorage(prismaClient))
+      .withStorage(new PrismaStorage(prismaClient, cache))
+      .withCache(cache)
       .build();
 
     await server.initialize();

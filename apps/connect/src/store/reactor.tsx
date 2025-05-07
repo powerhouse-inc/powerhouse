@@ -1,7 +1,8 @@
 import connectConfig from '#connect-config';
-import { createBrowserDocumentDriveServer } from '#utils';
+import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
 import { type IDocumentDriveServer, logger } from 'document-drive';
-import { hashKey } from 'document-model';
+import { IDocumentAdminStorage, IDocumentOperationStorage, IDocumentStorage, IDriveOperationStorage } from 'document-drive/storage/types';
+import { generateId } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, unwrap } from 'jotai/utils';
 import {
@@ -19,13 +20,13 @@ async function initReactor(reactor: IDocumentDriveServer) {
 
     const drives = await reactor.getDrives();
     if (!drives.length && connectConfig.drives.sections.LOCAL.enabled) {
-        reactor
+        return reactor
             .addDrive({
+                id: generateId(),
+                slug: 'my-local-drive',
                 global: {
-                    id: hashKey(),
                     name: 'My Local Drive',
                     icon: null,
-                    slug: 'my-local-drive',
                 },
                 local: {
                     availableOffline: false,
@@ -39,26 +40,37 @@ async function initReactor(reactor: IDocumentDriveServer) {
 }
 
 async function createReactor() {
+    // get storage
+    const storage = atomStore.get(storageAtom);
+
     // waits for document models to be loaded
     const documentModels = await atomStore.get(documentModelsAtom);
     const server =
         (window.electronAPI?.documentDrive as unknown as
             | IDocumentDriveServer
             | undefined) ??
-        createBrowserDocumentDriveServer(
-            documentModels,
-            connectConfig.routerBasename,
-        );
+        createBrowserDocumentDriveServer(documentModels, storage);
     await initReactor(server);
     return server;
 }
 
-const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(createReactor);
-const unwrappedReactor = unwrap(reactorAtom);
+export const storageAtom = atom<
+    IDriveOperationStorage &
+    IDocumentOperationStorage &
+    IDocumentStorage &
+    IDocumentAdminStorage
+>(createBrowserStorage(connectConfig.routerBasename));
+export const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(
+    () => createReactor(),
+);
+export const unwrappedReactor = unwrap(reactorAtom);
 
 // blocks rendering until reactor is initialized.
 export const useReactor = (): IDocumentDriveServer | undefined =>
     useAtomValue(reactorAtom);
+
+export const useDocumentAdminStorage = (): IDocumentAdminStorage =>
+    useAtomValue(storageAtom);
 
 // will return undefined until reactor is initialized. Does not block rendering.
 export const useUnwrappedReactor = (): IDocumentDriveServer | undefined =>
