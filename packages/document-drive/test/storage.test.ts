@@ -424,6 +424,29 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     }
   });
 
+  it("should allow removing a document and then adding a new document with the same id and slug", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const document = createDocument();
+
+    const slug = (document.slug = "test-slug");
+    const id = document.id;
+
+    await storage.create(document);
+
+    await storage.delete(id);
+
+    const newDocument = createDocument();
+    newDocument.slug = slug;
+    newDocument.id = id;
+    await storage.create(newDocument);
+
+    const result = await storage.getBySlug<DocumentDriveDocument>(slug);
+    expect(result).toBeTruthy();
+  });
+
   it("should return documents with matching document model type", async ({
     expect,
   }) => {
