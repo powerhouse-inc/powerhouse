@@ -118,6 +118,7 @@ const PHIDInputDiff = ({
             value={value}
             viewMode={viewMode}
             diffMode={diffMode}
+            showCopyIcon={true}
           />
         </div>
 

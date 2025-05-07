@@ -42,7 +42,7 @@ const SplittedTextareaDiff = ({
           value={value}
           viewMode={viewMode}
           diffMode={diffMode}
-          className={cn("flex-1")}
+          className={cn("min-h-9 flex-1")}
         />
       </InputDiff>
     </FormGroup>
