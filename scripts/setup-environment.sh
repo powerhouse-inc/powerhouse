@@ -249,8 +249,10 @@ if ! command -v pm2 &> /dev/null; then
 fi
 
 cd $HOME/.ph
+mkdir .ph
 ph use dev # workaround: staging is broken
 pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
+pnpm add @powerhousedao/switchboard@dev
 
 # Start services with PM2
 echo "Starting services with PM2..."
@@ -260,8 +262,8 @@ if [ "$ssl_choice" = "2" ]; then
     pm2 start pnpm switchboard --name "switchboard" -- --base-path /switchboard
 else
     # Let's Encrypt - no base paths needed
-    pm2 start pnpm connect --name "connect"
-    pm2 start pnpm switchboard --name "switchboard" 
+    pm2 start "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=\"$connect_domain\" pnpm connect" --name "connect"
+    pm2 start "pnpm switchboard" --name "switchboard" 
 fi
 
 # Save PM2 process list and setup startup script
