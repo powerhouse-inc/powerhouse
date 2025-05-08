@@ -1,3 +1,18 @@
+## 3.0.1 (2025-05-08)
+
+### 🚀 Features
+
+- **switchboard, reactor-api:** merged from main ([4bb2ac063](https://github.com/powerhouse-inc/powerhouse/commit/4bb2ac063))
+
+### 🩹 Fixes
+
+- pnpm-lock file ([aacf5f121](https://github.com/powerhouse-inc/powerhouse/commit/aacf5f121))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+
 # 3.0.0 (2025-05-07)
 
 ### 🚀 Features
