@@ -43,14 +43,14 @@ EOF
     sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/" /etc/postgresql/*/main/postgresql.conf
     
     # Set DATABASE_URL for local database
-    DATABASE_URL="postgres://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME"
+    DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME"
     
     echo "Local database configured successfully!"
     echo "Database URL: $DATABASE_URL"
     echo "Please save these credentials securely!"
 else
-    echo "Enter remote PostgreSQL URL (format: postgres://user:password@host:port/db)"
-    echo "Example: postgres://powerhouse:password@db.example.com:5432/powerhouse"
+    echo "Enter remote PostgreSQL URL (format: postgresql://user:password@host:port/db)"
+    echo "Example: postgresql://powerhouse:password@db.example.com:5432/powerhouse"
     read -p "DATABASE_URL: " DATABASE_URL
 fi
 
