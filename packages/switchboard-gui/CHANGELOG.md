@@ -1,3 +1,44 @@
+## 0.25.0-dev.8 (2025-05-08)
+
+### 🚀 Features
+
+- **connect:** handle imports ([d22b08138](https://github.com/powerhouse-inc/powerhouse/commit/d22b08138))
+- **monorepo:** enable type import lint rule ([5fd802021](https://github.com/powerhouse-inc/powerhouse/commit/5fd802021))
+- **design-system:** use design system styles from src instead of dist ([e866c3f6d](https://github.com/powerhouse-inc/powerhouse/commit/e866c3f6d))
+- **switchboard-gui:** use tailwind v4 ([ee3d41757](https://github.com/powerhouse-inc/powerhouse/commit/ee3d41757))
+- **design-system:** update snapshots ([77b8c05c9](https://github.com/powerhouse-inc/powerhouse/commit/77b8c05c9))
+- **monorepo:** unify linting and build ([542313e91](https://github.com/powerhouse-inc/powerhouse/commit/542313e91))
+- **monorepo:** fix top level type errors ([c2d935805](https://github.com/powerhouse-inc/powerhouse/commit/c2d935805))
+- **monorepo:** include global check-types ([f4b042227](https://github.com/powerhouse-inc/powerhouse/commit/f4b042227))
+- **connect:** finish type rename ([865be799e](https://github.com/powerhouse-inc/powerhouse/commit/865be799e))
+- **builder-tools:** move connect studio ([1a6011eaa](https://github.com/powerhouse-inc/powerhouse/commit/1a6011eaa))
+- **reactor-api:** fix document drive importsx ([e65f4c6da](https://github.com/powerhouse-inc/powerhouse/commit/e65f4c6da))
+- merge main into dspot-branch ([#769](https://github.com/powerhouse-inc/powerhouse/pull/769))
+- **reactor-api:** Added support for processors ([#655](https://github.com/powerhouse-inc/powerhouse/pull/655))
+- **monorepo:** simplify parallel task execution ([0ed8df13a](https://github.com/powerhouse-inc/powerhouse/commit/0ed8df13a))
+- **monorepo:** handle project references ([3b6c046f2](https://github.com/powerhouse-inc/powerhouse/commit/3b6c046f2))
+- **document-model-libs:** remove wrong peer deps ([5fd7ef670](https://github.com/powerhouse-inc/powerhouse/commit/5fd7ef670))
+- **monorepo:** add linting for switchboard gui ([dc56c561b](https://github.com/powerhouse-inc/powerhouse/commit/dc56c561b))
+- **monorepo:** gitignore tsbuildinfo files ([d676a703f](https://github.com/powerhouse-inc/powerhouse/commit/d676a703f))
+- **switchboard-gui:** updated gitignore ([1fd60a3bd](https://github.com/powerhouse-inc/powerhouse/commit/1fd60a3bd))
+- **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
+- **switchboard-gui:** init ([#405](https://github.com/powerhouse-inc/powerhouse/pull/405))
+
+### 🩹 Fixes
+
+- all builds should first clean their dist directories -- this does not affect the build cache ([7acffd6b0](https://github.com/powerhouse-inc/powerhouse/commit/7acffd6b0))
+- **switchboard-gui:** restore prev vite version ([#614](https://github.com/powerhouse-inc/powerhouse/pull/614))
+- **switchboard-gui:** restore prev vite version ([57273e5db](https://github.com/powerhouse-inc/powerhouse/commit/57273e5db))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- frankp.eth @froid1911
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- ryanwolhuter @ryanwolhuter
+
 ## 0.25.0-dev.7 (2025-05-07)
 
 ### 🚀 Features
