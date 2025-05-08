@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 import { startAPI } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
-import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
+import {
+  InMemoryCache,
+  ReactorBuilder,
+  driveDocumentModelModule,
+} from "document-drive";
 import RedisCache from "document-drive/cache/redis";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
   type DocumentModelModule,
@@ -10,9 +15,10 @@ import {
 } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
+import path from "path";
+import { type RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initProfilerFromEnv } from "./profiler.js";
-import { PackagesManager } from "./utils/package-manager.js";
 
 dotenv.config();
 
@@ -42,36 +48,32 @@ const main = async () => {
   }
 
   try {
-    const packages =
-      process.env.PH_PACKAGES && process.env.PH_PACKAGES !== ""
-        ? process.env.PH_PACKAGES.split(",")
-        : [];
-    const pkgManager = new PackagesManager({
-      packages,
-    });
-    const { documentModels, subgraphs } = await pkgManager.init();
-    const redis = await initRedis();
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error("Please set env var DATABASE_URL");
+    const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
+    let redis: RedisClientType | undefined;
+    if (redisUrl) {
+      redis = await initRedis(redisUrl);
     }
+    const connectionString = process.env.DATABASE_URL ?? "./.ph/drive-storage";
     const dbUrl =
       connectionString.includes("amazonaws") &&
       !connectionString.includes("sslmode=no-verify")
         ? connectionString + "?sslmode=no-verify"
         : connectionString;
 
-    const redisCache = new RedisCache(redis);
-    const storageFactory = new PrismaStorageFactory(dbUrl, redisCache);
-    const storage = storageFactory.build();
+    const cache = redis ? new RedisCache(redis) : new InMemoryCache();
+    const storageFactory = dbUrl.startsWith("postgres")
+      ? new PrismaStorageFactory(dbUrl, cache)
+      : undefined;
+    const storage = storageFactory
+      ? storageFactory.build()
+      : new FilesystemStorage(path.join(process.cwd(), dbUrl));
 
     const reactor = new ReactorBuilder([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
-      ...documentModels,
     ] as DocumentModelModule[])
       .withStorage(storage)
-      .withCache(redisCache)
+      .withCache(cache)
       .build();
 
     // init drive server
@@ -81,8 +83,8 @@ const main = async () => {
     await startAPI(reactor, {
       express: app,
       port: serverPort,
-      dbPath: dbUrl,
-      packages,
+      dbPath: dbUrl.startsWith("postgres") ? dbUrl : "./.ph/read-storage",
+      configFile: path.join(process.cwd(), "powerhouse.config.json"),
     });
   } catch (e) {
     Sentry.captureException(e);
