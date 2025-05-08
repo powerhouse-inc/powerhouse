@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "types": [
+      "node",
+      "vitest/globals",
+    ],
+    "outDir": "test/dist",
+    "isolatedModules": true,
+    "strict": true
+  },
+  "references": [
+    {
+      "path": "tsconfig.lib.json"
+    }
+  ],
+  "include": ["test", "vitest.config.ts"]
+}
