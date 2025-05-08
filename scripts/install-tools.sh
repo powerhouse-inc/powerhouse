@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Update and upgrade system packages
+sudo apt update
+sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y
+
 # Check and install nvm if not present
 if ! command -v nvm &> /dev/null; then
     echo "Installing nvm..."
@@ -91,7 +95,7 @@ if ! command -v ph &> /dev/null; then
     exit 1
 fi
 
-ph setup-globals --$version_choice
+ph init --$version_choice
 
 echo ""
 echo "  🎉 Setup Complete! 🎉"

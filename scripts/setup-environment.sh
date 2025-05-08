@@ -1,14 +1,5 @@
 #!/usr/bin/env bash
 
-# Initialize global ph project if not already initialized
-if [ ! -d "$HOME/.ph" ]; then
-    ph setup-globals
-fi
-
-# Update and upgrade system packages
-sudo apt update
-sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y
-
 # Install required packages
 sudo apt install -y postgresql postgresql-contrib nginx
 
