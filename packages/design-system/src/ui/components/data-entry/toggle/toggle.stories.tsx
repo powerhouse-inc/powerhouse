@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
+  PrebuiltArgTypes,
+  StorybookControlCategory,
 } from "../../../../scalars/lib/storybook-arg-types.js";
 import { Toggle } from "./toggle.js";
 
@@ -42,6 +44,16 @@ const meta = {
         showErrorOnChange: false,
       },
     }),
+    optionalLabel: {
+      control: "text",
+      description: "The label of the optional field",
+      table: {
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    ...PrebuiltArgTypes.viewMode,
+    ...PrebuiltArgTypes.diffMode,
+    ...PrebuiltArgTypes.baseValue,
   },
 } satisfies Meta<typeof Toggle>;
 
