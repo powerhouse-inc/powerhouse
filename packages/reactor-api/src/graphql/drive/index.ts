@@ -232,10 +232,13 @@ export class DriveSubgraph extends Subgraph {
     },
     Query: {
       drive: async (_: unknown, args: unknown, ctx: Context) => {
-        this.logger.verbose(`drive()`, args);
+        this.logger.verbose(`drive()`, JSON.stringify(args));
+
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const drive = await this.reactor.getDrive(ctx.driveId);
         return {
+          id: drive.id,
+          slug: drive.slug,
           meta: drive.meta,
           ...drive.state.global,
           nodes: drive.state.global.nodes,
@@ -418,9 +421,10 @@ export class DriveSubgraph extends Subgraph {
         }: { listenerId: string; since: string | undefined },
         ctx: Context,
       ) => {
-        this.logger.verbose(
+        this.logger.debug(
           `strands(drive: ${ctx.driveId}, listenerId: ${listenerId}, since:${since})`,
         );
+
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
         // get the requested strand updates

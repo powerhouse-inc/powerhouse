@@ -1,8 +1,10 @@
 import { Subgraph } from "#graphql/base/index.js";
-import { type DriveInput } from "document-drive";
+import { childLogger, type DriveInput } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { type SystemContext } from "./types.js";
+
+const logger = childLogger(["reactor", "system-subgraph"]);
 
 export class SystemSubgraph extends Subgraph {
   name = "system";
@@ -42,18 +44,27 @@ export class SystemSubgraph extends Subgraph {
         args: DriveInput & { preferredEditor?: string },
         ctx: SystemContext,
       ) => {
+        logger.info("addDrive", JSON.stringify(args, null, 2));
+
         try {
           const isAdmin = ctx.isAdmin(ctx);
           if (!isAdmin) {
             throw new GraphQLError("Unauthorized");
           }
+
           const drive = await this.reactor.addDrive(
-            { global: args.global, local: args.local },
+            {
+              ...args,
+              global: args.global,
+              local: args.local,
+            },
             args.preferredEditor,
           );
+
           return drive.state.global;
         } catch (e) {
-          console.error(e);
+          logger.error(e);
+
           throw new Error(e as string);
         }
       },
