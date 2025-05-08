@@ -4,7 +4,9 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pm2, { type StartOptions } from "pm2";
+import { serviceHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
+import { setCustomHelp } from "../utils.js";
 
 const actions = ["start", "stop", "status", "list", "startup", "unstartup"];
 const services = ["switchboard", "connect", "all"];
@@ -49,7 +51,7 @@ export const manageService: CommandActionType<[string, string]> = async (
 };
 
 export function serviceCommand(program: Command) {
-  program
+  const command = program
     .command("service")
     .description("Manage services")
     .addArgument(new Argument("action").choices(actions).default("list"))
@@ -57,6 +59,8 @@ export function serviceCommand(program: Command) {
       new Argument("service").choices(services).argOptional().default("all"),
     )
     .action(manageService);
+
+  setCustomHelp(command, serviceHelp);
 }
 
 function startServices(service: string) {

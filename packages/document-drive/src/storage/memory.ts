@@ -230,8 +230,7 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     );
 
     // Delete the drive manifest and the drive itself
-    delete this.driveManifests[id];
-    delete this.documents[id];
+    await this.delete(id);
   }
 
   async getSynchronizationUnitsRevision(

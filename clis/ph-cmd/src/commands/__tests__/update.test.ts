@@ -8,7 +8,7 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   type ProjectInfo,
-} from "../../utils.js";
+} from "../../utils/index.js";
 import { updateCommand } from "../update.js";
 
 // Mock dependencies
@@ -16,9 +16,9 @@ vi.mock("node:fs");
 vi.mock("node:child_process");
 
 // Import installDependency after mocking
-import { installDependency } from "../../utils.js";
+import { installDependency } from "../../utils/index.js";
 
-vi.mock("../../utils.js", () => ({
+vi.mock("../../utils/index.js", () => ({
   packageManagers: {
     pnpm: {
       buildAffected: "pnpm run build:affected",
@@ -45,7 +45,7 @@ describe("updateCommand", () => {
 
     // Mock utils functions
     vi.mocked(getPackageManagerFromLockfile).mockReturnValue("pnpm");
-    vi.mocked(getProjectInfo).mockReturnValue({
+    vi.mocked(getProjectInfo).mockResolvedValue({
       path: "/test/project",
     } as ProjectInfo);
     vi.mocked(findContainerDirectory).mockReturnValue(

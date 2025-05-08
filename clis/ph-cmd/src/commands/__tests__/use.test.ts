@@ -6,16 +6,16 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   type ProjectInfo,
-} from "../../utils.js";
+} from "../../utils/index.js";
 import { useCommand } from "../use.js";
 
 // Mock dependencies
 vi.mock("node:fs");
 
 // Import installDependency after mocking
-import { installDependency } from "../../utils.js";
+import { installDependency } from "../../utils/index.js";
 
-vi.mock("../../utils.js", () => ({
+vi.mock("../../utils/index.js", () => ({
   packageManagers: {
     pnpm: {
       buildAffected: "pnpm run build:affected",
@@ -41,7 +41,7 @@ describe("useCommand", () => {
 
     // Mock utils functions
     vi.mocked(getPackageManagerFromLockfile).mockReturnValue("pnpm");
-    vi.mocked(getProjectInfo).mockReturnValue({
+    vi.mocked(getProjectInfo).mockResolvedValue({
       path: "/test/project",
     } as ProjectInfo);
 

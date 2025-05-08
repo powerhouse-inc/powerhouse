@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.40.54-staging.0",
+  "version": "0.40.55-staging.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -14,6 +14,9 @@
     "dist"
   ],
   "scripts": {
+    "generate-commands-md": "tsx scripts/generate-commands-md.ts",
+    "generate-version": "tsx scripts/generate-version.ts",
+    "prebuild": "npm run generate-commands-md && npm run generate-version",
     "build": "tsc --build",
     "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "prepublishOnly": "npm run build",

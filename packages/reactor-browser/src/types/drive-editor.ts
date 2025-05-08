@@ -4,6 +4,7 @@ import {
   type ActionErrorCallback,
   type DocumentModelModule,
   type EditorContext,
+  type EditorModule,
   type EditorProps,
   type PHDocument,
 } from "document-model";
@@ -120,6 +121,22 @@ export interface DriveEditorContext extends EditorContext {
     driveId: string;
     documentId: string;
   }) => PHDocument["state"] | undefined;
+
+  /**
+   * Retrieves the document model module for a given document type
+   * @param documentType - The type of document to retrieve the model for
+   * @returns The document model module for the given document type, or undefined if not found
+   */
+  getDocumentModelModule: (
+    documentType: string,
+  ) => DocumentModelModule<PHDocument> | undefined;
+
+  /**
+   * Retrieves the editor module for a given document type
+   * @param documentType - The type of document to retrieve the editor for
+   * @returns The editor module for the given document type, or null if not found
+   */
+  getEditor: (documentType: string) => EditorModule | null | undefined;
 }
 
 export interface DriveEditorProps<TDocument extends PHDocument>

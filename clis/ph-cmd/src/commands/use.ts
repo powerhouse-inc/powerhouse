@@ -1,13 +1,15 @@
 import { type Command } from "commander";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { useHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   installDependency,
   type PackageManager,
-} from "../utils.js";
+  withCustomHelp,
+} from "../utils/index.js";
 
 export const ORG = "@powerhousedao";
 
@@ -59,13 +61,13 @@ export const ENV_MAP = {
 // create type with the keys of ENV_MAP
 export type Environment = keyof typeof ENV_MAP;
 
-export const updatePackageJson = (
+export const updatePackageJson = async (
   env: Environment,
   localPath?: string,
   packageManager?: PackageManager,
   debug?: boolean,
 ) => {
-  const projectInfo = getProjectInfo();
+  const projectInfo = await getProjectInfo();
   const pkgManager =
     packageManager || getPackageManagerFromLockfile(projectInfo.path);
 
@@ -129,21 +131,20 @@ export const updatePackageJson = (
   }
 };
 
+// Extract the type parameters for reuse
+export type UseOptions = {
+  dev?: boolean;
+  prod?: boolean;
+  local?: string;
+  debug?: boolean;
+  latest?: boolean;
+  force?: boolean;
+  packageManager?: string;
+};
+
 export const use: CommandActionType<
-  [
-    string | undefined,
-    string | undefined,
-    {
-      dev?: boolean;
-      prod?: boolean;
-      local?: string;
-      debug?: boolean;
-      latest?: boolean;
-      force?: boolean;
-      packageManager?: string;
-    },
-  ]
-> = (environment, localPath, options) => {
+  [string | undefined, string | undefined, UseOptions]
+> = async (environment, localPath, options) => {
   if (
     !environment ||
     (!options.force &&
@@ -169,17 +170,22 @@ export const use: CommandActionType<
     console.log(">>> options", options);
   }
 
-  updatePackageJson(env, localPath, packageManager as PackageManager, debug);
+  await updatePackageJson(
+    env,
+    localPath,
+    packageManager as PackageManager,
+    debug,
+  );
 };
 
-export function useCommand(program: Command) {
-  program
+export function useCommand(program: Command): Command {
+  const useCmd = program
     .command("use")
     .description(
       "Allows you to change your environment (latest, development, production, local)",
     )
     .argument(
-      "<environment>",
+      "[environment]",
       "The environment to use (latest, dev, prod, local)",
     )
     .argument(
@@ -191,6 +197,24 @@ export function useCommand(program: Command) {
       "--package-manager <packageManager>",
       "force package manager to use",
     )
-    .option("--debug", "Show additional logs")
-    .action(use);
+    .option("--debug", "Show additional logs");
+
+  // Use withCustomHelp instead of withHelpAction and addHelpText
+  return withCustomHelp<[string | undefined, string | undefined, UseOptions]>(
+    useCmd,
+    use,
+    useHelp,
+    // Pre-check function to validate environment before running the action
+    (environment) => {
+      if (
+        !environment &&
+        !process.argv.includes("--help") &&
+        !process.argv.includes("-h")
+      ) {
+        console.error('Error: Missing required argument "environment"');
+        process.exit(1);
+        return false;
+      }
+    },
+  );
 }

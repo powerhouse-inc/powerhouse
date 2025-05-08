@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "1.29.21-staging.3",
+  "version": "1.29.22-staging.0",
   "description": "",
   "type": "module",
   "types": "./dist/index.d.ts",
