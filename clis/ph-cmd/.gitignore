@@ -4,3 +4,4 @@ processors
 *.zip
 *.db
 .ph
+src/version.ts
