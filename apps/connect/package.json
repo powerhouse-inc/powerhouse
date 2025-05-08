@@ -8,9 +8,6 @@
     "engines": {
         "node": ">=20.0.0"
     },
-    "bin": {
-        "connect": "serve ./dist"
-    },
     "files": [
         "dist",
         "nginx.conf",
@@ -76,7 +73,7 @@
         "@sentry/vite-plugin": "^2.22.2",
         "@tailwindcss/vite": "^4.0.9",
         "@tanstack/react-virtual": "^3.8.1",
-        "@types/node": "^22.13.10",
+        "@types/node": "^22.15.17",
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.18",
         "@types/uuid": "^9.0.7",
@@ -123,8 +120,5 @@
     "optionalDependencies": {
         "@esbuild/linux-x64": "^0.21.4",
         "@rollup/rollup-linux-x64-musl": "4.14.3"
-    },
-    "dependencies": {
-        "serve": "^14.2.4"
     }
 }

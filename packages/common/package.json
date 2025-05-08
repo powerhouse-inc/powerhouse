@@ -47,7 +47,7 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@tailwindcss/cli": "^4.0.9",
     "@tailwindcss/vite": "^4.0.9",
-    "@types/node": "^22.10.9",
+    "@types/node": "^22.15.17",
     "@types/react": "^18.3.18",
     "@types/wicg-file-system-access": "^2020.9.6",
     "autoprefixer": "^10.4.20",

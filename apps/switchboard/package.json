@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/node": "^22.13.9",
+    "@types/node": "^22.15.17",
     "concurrently": "^9.1.2",
     "nodemon": "^3.1.9",
     "typescript": "^5.7.3"
