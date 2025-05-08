@@ -37,7 +37,7 @@ if [ "$db_choice" = "1" ]; then
     echo "Setting up local PostgreSQL database..."
     
     # Generate a random password for the database user
-    DB_PASSWORD=$(openssl rand -base64 32)
+    DB_PASSWORD="powerhouse"
     DB_USER="powerhouse"
     DB_NAME="powerhouse"
     

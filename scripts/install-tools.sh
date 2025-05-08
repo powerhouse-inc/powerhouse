@@ -91,7 +91,7 @@ if ! command -v ph &> /dev/null; then
     exit 1
 fi
 
-ph setup-globals
+ph setup-globals --$version_choice
 
 echo ""
 echo "  🎉 Setup Complete! 🎉"
