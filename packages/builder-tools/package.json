@@ -81,7 +81,7 @@
     "dspot-powerhouse-components": "^1.1.0",
     "esbuild": "^0.24.0",
     "fast-glob": "^3.3.3",
-    "graphql": "^16.10.0",
+    "graphql": "^16.11.0",
     "magic-string": "^0.30.17",
     "react-hook-form": "^7.56.1",
     "resolve.exports": "^2.0.3",

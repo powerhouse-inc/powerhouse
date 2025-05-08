@@ -34,7 +34,7 @@
     "document-model": "workspace:*",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
-    "graphql": "^16.9.0",
+    "graphql": "^16.11.0",
     "graphql-request": "^6.1.0",
     "json-stringify-deterministic": "^1.0.12",
     "ms": "^2.1.3",

@@ -1,14 +1,13 @@
 import { safeParseSdl } from "#document-model-editor/context/schema-context";
 import * as customScalars from "@powerhousedao/scalars";
+import { type Serializable } from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
 import {
-  buildASTSchema,
-  extendSchema,
+  type DocumentNode,
+  type FieldDefinitionNode,
   getNullableType,
-  GraphQLScalarType,
   type GraphQLSchema,
   type GraphQLType,
-  type InputObjectTypeDefinitionNode,
   isEnumType,
   isListType,
   isObjectType,
@@ -16,96 +15,36 @@ import {
   Kind,
   type ObjectTypeDefinitionNode,
   print,
+  type TypeNode,
   visit,
 } from "graphql";
+import { z } from "zod";
 import { type Scope } from "../types/documents.js";
 
-export function makeStateObject(modelName: string, scope: Scope) {
-  const name = `${pascalCase(modelName)}${scope === "local" ? "Local" : ""}State`;
-
-  const inputNode: ObjectTypeDefinitionNode = {
-    kind: Kind.OBJECT_TYPE_DEFINITION,
-    name: {
-      kind: Kind.NAME,
-      value: name,
-    },
-    fields: [
-      {
-        description: {
-          kind: Kind.STRING,
-          value: `Add your ${scope} state fields here`,
-          block: false,
-        },
-        kind: Kind.FIELD_DEFINITION,
-        name: { kind: Kind.NAME, value: "_placeholder" },
-        type: {
-          kind: Kind.NAMED_TYPE,
-          name: { kind: Kind.NAME, value: "String" },
-        },
-      },
-    ],
-  };
-
-  return print(inputNode);
+export function makeStateSchemaNameForScope(modelName: string, scope: string) {
+  const modelNamePascalCase = pascalCase(modelName);
+  const scopePascalCase = pascalCase(scope);
+  const scopeStateTypeNamePrefix =
+    scopePascalCase === "Global" ? "" : scopePascalCase;
+  const name = `${scopeStateTypeNamePrefix}${modelNamePascalCase}State`;
+  return name;
 }
 
-export function makeOperationInputName(operationName: string) {
-  return `${pascalCase(operationName)}Input`;
+export function makeInitialSchemaDoc(modelName: string, scope: string) {
+  const name = makeStateSchemaNameForScope(modelName, scope);
+  const stateSchemaSdl = `type ${name} {
+  "Add your ${scope} state fields here"
+  _placeholder: String
+}`;
+  return stateSchemaSdl;
 }
+
 export function makeOperationInitialDoc(name: string) {
-  const inputName = `${pascalCase(name)}Input`;
-  const inputNode: InputObjectTypeDefinitionNode = {
-    kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
-    name: {
-      kind: Kind.NAME,
-      value: inputName,
-    },
-    fields: [
-      {
-        description: {
-          kind: Kind.STRING,
-          value: "Add your inputs here",
-          block: false,
-        },
-        kind: Kind.INPUT_VALUE_DEFINITION,
-        name: { kind: Kind.NAME, value: "_placeholder" },
-        type: {
-          kind: Kind.NAMED_TYPE,
-          name: { kind: Kind.NAME, value: "String" },
-        },
-      },
-    ],
-  };
-  const inputSdl = print(inputNode);
+  const inputSdl = `input ${pascalCase(name)}Input {
+  "Add your inputs here"
+  _placeholder: String
+}`;
   return inputSdl;
-}
-
-export function makeInitialSchemaDoc(modelName: string, scope: Scope) {
-  const stateObject = makeStateObject(modelName, scope);
-  return stateObject;
-}
-
-function isValidScalarValue(typeName: string, value: any) {
-  if (typeName in customScalars) {
-    const scalar = customScalars[typeName as keyof typeof customScalars];
-    if (scalar instanceof GraphQLScalarType) {
-      return scalar.parseValue(value) !== undefined;
-    }
-  }
-  switch (typeName) {
-    case "Int":
-      return Number.isInteger(value);
-    case "Float":
-      return typeof value === "number";
-    case "Boolean":
-      return typeof value === "boolean";
-    case "DateTime":
-      return typeof value === "string" && !isNaN(Date.parse(value));
-    case "ID":
-    case "String":
-    default:
-      return typeof value === "string";
-  }
 }
 
 function getMinimalValue(
@@ -117,10 +56,7 @@ function getMinimalValue(
 
   if (isScalarType(nullableType)) {
     const typeName = nullableType.name;
-    if (
-      existingValue !== undefined &&
-      isValidScalarValue(typeName, existingValue)
-    ) {
+    if (existingValue !== undefined) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return existingValue;
     }
@@ -183,51 +119,177 @@ function getMinimalValue(
   return null;
 }
 
-export function makeMinimalObjectFromSDL(
-  schemaSdl: string,
-  sdl: string,
-  existingValue?: any,
-) {
+export function makeInitialStateJson(args: {
+  schemaSdl: string;
+  modelName: string;
+  scope: string;
+  existingValue: string;
+}) {
+  const { schemaSdl, modelName, scope, existingValue } = args;
+
   const parsedSchema = safeParseSdl(schemaSdl);
-  const typeAST = safeParseSdl(sdl);
+  if (!parsedSchema) return existingValue;
+  const stateSchemaTypeName = `${pascalCase(modelName)}${pascalCase(scope)}State`;
+  const stateSchema = parsedSchema.definitions.find(
+    (def) =>
+      def.kind === Kind.OBJECT_TYPE_DEFINITION &&
+      def.name.value === stateSchemaTypeName,
+  );
+  if (!stateSchema) return existingValue;
+  // const emptyObject = makeEmptyObjectForDefinitionNode(
+  //   parsedSchema,
+  //   stateSchema,
+  // );
+  // if (!customScalars.isSerializable(emptyObject)) return existingValue;
+  // return JSON.stringify(emptyObject, null, 2);
+}
 
-  if (!parsedSchema || !typeAST) return "{}";
+export function syncInitialStateJsonWithSchema(args: {
+  existingJson: string;
+  schemaDocumentNode: DocumentNode;
+  definitionNode: ObjectTypeDefinitionNode;
+}) {
+  const { existingJson, schemaDocumentNode, definitionNode } = args;
+  const existingValueObjectResult = z
+    .record(z.string(), customScalars.SerializableSchema)
+    .safeParse(existingJson);
+  if (!existingValueObjectResult.success) return existingJson;
+  const existingValueObject = existingValueObjectResult.data;
+  const newJson: Record<string, Serializable> = {};
+  const definitionNodeFields = definitionNode.fields;
+  if (!definitionNodeFields?.length) return existingJson;
+  for (const field of definitionNodeFields) {
+    const fieldName = field.name.value;
+    const existingFieldValue = existingValueObject[fieldName];
+    if (existingFieldValue) continue;
+    const fieldTypeNode = field.type;
+    const minimalValue = getMinimalValueForTypeNode(
+      fieldTypeNode,
+      schemaDocumentNode,
+    );
+  }
+}
 
-  const schema = buildASTSchema(parsedSchema);
+export function getMinimalValueForTypeNode(
+  typeNode: TypeNode,
+  schemaDocumentNode: DocumentNode,
+): Serializable {
+  if (typeNode.kind !== Kind.NON_NULL_TYPE) return null;
+  const nullableTypeNode = typeNode.type;
+  if (nullableTypeNode.kind === Kind.LIST_TYPE) return [];
+  const typeDefinitionNodeFromSchema = schemaDocumentNode.definitions.find(
+    (def) =>
+      "name" in def &&
+      "kind" in def &&
+      def.name?.value === nullableTypeNode.name.value,
+  );
+  if (!typeDefinitionNodeFromSchema) return null;
 
-  const typeNames: string[] = [];
-  typeAST.definitions.forEach((def) => {
-    if (
-      def.kind === Kind.OBJECT_TYPE_DEFINITION ||
-      def.kind === Kind.OBJECT_TYPE_EXTENSION
-    ) {
-      typeNames.push(def.name.value);
-    }
+  if (
+    typeDefinitionNodeFromSchema.kind === Kind.ENUM_TYPE_DEFINITION ||
+    typeDefinitionNodeFromSchema.kind === Kind.ENUM_TYPE_EXTENSION
+  ) {
+    return "";
+  }
+
+  if (
+    typeDefinitionNodeFromSchema.kind === Kind.SCALAR_TYPE_DEFINITION ||
+    typeDefinitionNodeFromSchema.kind === Kind.SCALAR_TYPE_EXTENSION
+  ) {
+    return null;
+  }
+}
+
+function safeParseJsonRecord(json: string) {
+  try {
+    return JSON.parse(json) as Record<string, Serializable>;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export function makeMinimalObjectFromSDL(args: {
+  sharedSchemaSdl: string;
+  modelName: string;
+  scope: string;
+  initialValue: string;
+}) {
+  const { sharedSchemaSdl, modelName, scope, initialValue } = args;
+  const existingValue = initialValue || "{}";
+  console.log({
+    sharedSchemaSdl,
+    modelName,
+    scope,
+    initialValue,
   });
-
-  if (typeNames.length === 0) {
-    return "{}";
+  const parsedSchema = safeParseSdl(sharedSchemaSdl);
+  console.log({
+    parsedSchema,
+  });
+  if (!parsedSchema) return existingValue;
+  const stateTypeName = makeStateSchemaNameForScope(modelName, scope);
+  console.log({
+    stateTypeName,
+  });
+  if (!stateTypeName) return existingValue;
+  const stateTypeDefinition = parsedSchema.definitions.find(
+    (def) =>
+      def.kind === Kind.OBJECT_TYPE_DEFINITION &&
+      def.name.value === stateTypeName,
+  );
+  console.log({
+    stateTypeDefinition,
+  });
+  if (
+    !stateTypeDefinition ||
+    stateTypeDefinition.kind !== Kind.OBJECT_TYPE_DEFINITION
+  )
+    return existingValue;
+  const existingValueObject = safeParseJsonRecord(existingValue);
+  console.log({
+    existingValueObject,
+  });
+  if (!existingValueObject) return existingValue;
+  const stateTypeDefinitionFields = stateTypeDefinition.fields;
+  console.log({
+    stateTypeDefinitionFields,
+  });
+  if (!stateTypeDefinitionFields?.length) return existingValue;
+  const newJson: Record<string, Serializable> = {};
+  for (const field of stateTypeDefinitionFields) {
+    const fieldName = field.name.value;
+    const fieldType = field.type;
+    const fieldTypeNode = field.type;
+    const existingFieldValue = existingValueObject[fieldName];
+    console.log({
+      fieldName,
+      fieldType,
+      fieldTypeNode,
+      existingFieldValue,
+    });
   }
+  return initialValue;
+}
 
-  // Assuming there's only one type definition in the SDL
-  const stateTypeName = typeNames[0];
-  let type = schema.getType(stateTypeName);
-
-  let effectiveSchema = schema;
-
-  if (!type || !isObjectType(type)) {
-    // Type doesn't exist in the schema, extend the schema
-    effectiveSchema = extendSchema(schema, typeAST);
-    type = effectiveSchema.getType(stateTypeName);
+export function recursivelyMakeMinimalObject(args: {
+  existingValueObject: Record<string, Serializable> | null;
+  stateTypeDefinitionFields: readonly FieldDefinitionNode[];
+}) {
+  const { existingValueObject, stateTypeDefinitionFields } = args;
+  const newJson: Record<string, Serializable> = {};
+  for (const field of stateTypeDefinitionFields) {
+    const fieldName = field.name.value;
+    const fieldType = field.type;
+    const fieldTypeNode = field.type;
+    const existingFieldValue = existingValueObject?.[fieldName] ?? null;
+    console.log({
+      fieldName,
+      fieldType,
+      fieldTypeNode,
+      existingFieldValue,
+    });
   }
-
-  if (!type || !isObjectType(type)) {
-    throw new Error(`Type "${stateTypeName}" is not a valid ObjectType.`);
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const minimalObject = getMinimalValue(type, effectiveSchema, existingValue);
-  return JSON.stringify(minimalObject, null, 2);
 }
 
 function removeWhitespace(str: string) {

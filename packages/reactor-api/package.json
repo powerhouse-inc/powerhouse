@@ -63,7 +63,7 @@
     "drizzle-orm": "^0.34.1",
     "ethers": "^6.0.8",
     "express": "^4.21.1",
-    "graphql": "^16.9.0",
+    "graphql": "^16.11.0",
     "graphql-request": "^6.1.0",
     "graphql-type-json": "^0.3.2",
     "jsonwebtoken": "^9.0.2",

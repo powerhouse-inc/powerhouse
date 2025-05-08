@@ -52,7 +52,7 @@
     "change-case": "^5.4.4",
     "document-model": "workspace:*",
     "exponential-backoff": "^3.1.1",
-    "graphql": "^16.9.0",
+    "graphql": "^16.11.0",
     "graphql-request": "^6.1.0",
     "helia": "^5.3.0",
     "json-stringify-deterministic": "^1.0.12",

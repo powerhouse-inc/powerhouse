@@ -63,13 +63,14 @@ function StateEditor({
   );
 
   const handleSyncWithSchema = useCallback(() => {
-    const updatedStateDoc = makeMinimalObjectFromSDL(
+    const updatedStateDoc = makeMinimalObjectFromSDL({
       sharedSchemaSdl,
-      stateSchema,
-      initialValue ? JSON.parse(initialValue) : {},
-    );
+      modelName,
+      scope,
+      initialValue,
+    });
     setInitialState(updatedStateDoc, scope);
-  }, [sharedSchemaSdl, stateSchema, initialValue, setInitialState, scope]);
+  }, [sharedSchemaSdl, initialValue, setInitialState, scope]);
 
   return (
     <div className="grid grid-cols-2 gap-4">
