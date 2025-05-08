@@ -3,6 +3,12 @@
 # Install required packages
 sudo apt install -y postgresql postgresql-contrib nginx
 
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Setting up global project"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+ph setup-globals
+
 # Interactive package installation loop
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Package Installation"
@@ -249,10 +255,8 @@ if ! command -v pm2 &> /dev/null; then
 fi
 
 cd $HOME/.ph
-mkdir .ph
-ph use dev # workaround: staging is broken
 pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
-pnpm add @powerhousedao/switchboard@dev
+pnpm add @powerhousedao/switchboard
 
 # Start services with PM2
 echo "Starting services with PM2..."

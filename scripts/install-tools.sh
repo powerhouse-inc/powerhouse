@@ -95,14 +95,12 @@ if ! command -v ph &> /dev/null; then
     exit 1
 fi
 
-ph init --$version_choice
-
 echo ""
 echo "  🎉 Setup Complete! 🎉"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Please try running: source $SHELL_CONFIG"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Afterwards you can use Powerhouse by typing:"
-echo "  ph version"
+echo "  ph --version"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
