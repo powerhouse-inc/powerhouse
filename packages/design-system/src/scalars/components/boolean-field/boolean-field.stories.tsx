@@ -3,6 +3,7 @@ import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
+  PrebuiltArgTypes,
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { BooleanField } from "./boolean-field.js";
@@ -39,7 +40,9 @@ const meta = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-
+    ...PrebuiltArgTypes.diffMode,
+    ...PrebuiltArgTypes.viewMode,
+    ...PrebuiltArgTypes.baseValue,
     ...getValidationArgTypes({
       enabledArgTypes: {
         validators: false,
