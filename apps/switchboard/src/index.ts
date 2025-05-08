@@ -61,7 +61,7 @@ const main = async () => {
         : connectionString;
 
     const cache = redis ? new RedisCache(redis) : new InMemoryCache();
-    const storageFactory = dbUrl.startsWith("postgres")
+    const storageFactory = dbUrl.startsWith("postgresql")
       ? new PrismaStorageFactory(dbUrl, cache)
       : undefined;
     const storage = storageFactory
@@ -83,7 +83,7 @@ const main = async () => {
     await startAPI(reactor, {
       express: app,
       port: serverPort,
-      dbPath: dbUrl.startsWith("postgres") ? dbUrl : "./.ph/read-storage",
+      dbPath: dbUrl.startsWith("postgresql") ? dbUrl : "./.ph/read-storage",
       configFile: path.join(process.cwd(), "powerhouse.config.json"),
     });
   } catch (e) {
