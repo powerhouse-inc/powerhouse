@@ -8,7 +8,7 @@
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
     "lint": "tsc --noEmit",
-    "test": "playwright test"
+    "test:e2e": "playwright test"
   },
   "keywords": [],
   "author": "",
