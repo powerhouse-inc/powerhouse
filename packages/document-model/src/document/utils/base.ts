@@ -175,10 +175,8 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
   >,
   createState?: CreateState<TDocument>,
 ): ExtendedStateFromDocument<TDocument> {
-  const id = generateUUID();
+  const id = initialState?.id ?? generateUUID();
   return {
-    id,
-    slug: id,
     name: "",
     documentType: "",
     revision: {
@@ -189,6 +187,8 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
     lastModified: new Date().toISOString(),
     attachments: {},
     ...initialState,
+    id: id,
+    slug: initialState?.slug ?? id,
     state:
       createState?.(initialState?.state) ??
       ((initialState?.state ?? {
