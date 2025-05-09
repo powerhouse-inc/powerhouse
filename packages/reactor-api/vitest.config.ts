@@ -1,8 +1,5 @@
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
-
-const srcPath = fileURLToPath(new URL("./src", import.meta.url));
 
 export default defineConfig({
   plugins: [
@@ -27,8 +24,9 @@ export default defineConfig({
       },
     },
   ],
-  test: {},
-  resolve: {
-    alias: [{ find: /^#(.*)$/, replacement: `${srcPath}/$1` }],
+  test: {
+    alias: {
+      "#": new URL("./src/", import.meta.url).pathname,
+    },
   },
 });

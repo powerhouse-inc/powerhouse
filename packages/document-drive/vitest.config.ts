@@ -20,5 +20,8 @@ export default defineConfig(({ mode }) => ({
     },
     include: ["**/*.test.ts"],
     exclude: [...defaultExclude, "test/flaky/**"],
+    alias: {
+      "#": new URL("./src/", import.meta.url).pathname,
+    },
   },
 }));
