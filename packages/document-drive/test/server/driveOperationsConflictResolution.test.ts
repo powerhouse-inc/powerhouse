@@ -47,7 +47,7 @@ describe("Drive Operations", () => {
   async function buildDrive() {
     await server.addDrive({
       id: driveId,
-      global: { name: "test", icon: null },
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",

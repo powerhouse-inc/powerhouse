@@ -2,6 +2,24 @@ import { expect, test } from "@playwright/test";
 import request, { gql } from "graphql-request";
 import { CONNECT_URL, REACTOR_URL } from "../playwright.config.js";
 
+test.use({
+  storageState: {
+    cookies: [],
+    origins: [
+      {
+        origin: "http://127.0.0.1:3000",
+        localStorage: [
+          { name: "/:display-cookie-banner", value: "false" },
+          {
+            name: "/:acceptedCookies",
+            value: '{"analytics":true,"marketing":false,"functional":false}',
+          },
+        ],
+      },
+    ],
+  },
+});
+
 test("has title", async ({ page }) => {
   await page.goto(CONNECT_URL);
 
@@ -10,10 +28,6 @@ test("has title", async ({ page }) => {
 });
 
 test("has local drive", async ({ page }) => {
-  await page.goto(CONNECT_URL);
-
-  await page.getByText("Accept configured cookies").click();
-
   // Click on the local drive
   const localDrive = page.getByText("My Local Drive");
   await localDrive.click();
@@ -23,13 +37,11 @@ test("has local drive", async ({ page }) => {
 });
 
 test("adds remote drive", async ({ page }) => {
-  await page.goto(`${REACTOR_URL}/graphql`);
-
   const response = await request(
     `${REACTOR_URL}/graphql`,
     gql`
-      mutation Mutation($global: DocumentDriveStateInput!) {
-        addDrive(global: $global) {
+      mutation Mutation($id: String, $name: String!, $slug: String) {
+        addDrive(id: $id, name: $name, slug: $slug) {
           id
           name
           slug
@@ -37,16 +49,20 @@ test("adds remote drive", async ({ page }) => {
       }
     `,
     {
-      global: {
-        id: "test",
-        name: "test",
-        slug: "test",
-      },
+      id: "test",
+      name: "test",
+      slug: "test",
     },
   );
-  expect(response).toStrictEqual({});
+  expect(response).toStrictEqual({
+    addDrive: {
+      id: "test",
+      name: "test",
+      slug: "test",
+    },
+  });
 
-  await page.getByText("Accept configured cookies").click();
+  await page.goto(CONNECT_URL);
 
   // Click on the local drive
   const localDrive = page.getByText("My Local Drive");

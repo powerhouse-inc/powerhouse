@@ -603,17 +603,16 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     const document = createDocument({
-      state: input,
+      id: input.id,
+      slug: input.slug,
+      state: {
+        global: {
+          icon: input.global.icon ?? null,
+          name: input.global.name,
+        },
+        local: input.local,
+      },
     });
-
-    if (input.id && input.id.length > 0) {
-      document.id = document.initialState.id = input.id;
-      document.slug = document.initialState.slug = input.id;
-    }
-
-    if (input.slug && input.slug.length > 0) {
-      document.slug = document.initialState.slug = input.slug;
-    }
 
     document.meta = {
       preferredEditor: preferredEditor,
@@ -660,7 +659,7 @@ export class BaseDocumentDriveServer
         slug,
         global: {
           name,
-          icon: icon ?? null,
+          icon,
         },
         local: {
           triggers: [...triggers, pullTrigger],

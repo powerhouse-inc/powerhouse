@@ -2,7 +2,6 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
-  type DocumentDriveState,
   type ListenerCallInfo,
   type ListenerFilter,
   type Trigger,
@@ -14,7 +13,6 @@ import { type RunAsap } from "#utils/run-asap";
 import {
   type Action,
   type ActionContext,
-  type BaseState,
   type CreateChildDocumentInput,
   type DocumentModelModule,
   type Operation,
@@ -46,10 +44,16 @@ export type DocumentDriveServerMixin<I> = Mixin<
   I
 >;
 
-export type DriveInput = BaseState<
-  Omit<DocumentDriveState, "__typename" | "id" | "nodes">,
-  DocumentDriveLocalState
-> & { id?: string; slug?: string };
+export type DriveInput = {
+  global: {
+    name: string;
+    icon?: string | null;
+  };
+  id?: string;
+  slug?: string;
+  preferredEditor?: string;
+  local: Partial<DocumentDriveLocalState>;
+};
 
 export type RemoteDriveAccessLevel = "READ" | "WRITE";
 

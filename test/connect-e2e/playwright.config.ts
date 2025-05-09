@@ -67,12 +67,14 @@ export default defineConfig({
   webServer: [
     {
       command: "pnpm connect",
-      url: "http://127.0.0.1:3000",
+      url: CONNECT_URL,
+      stderr: "pipe",
       reuseExistingServer: !process.env.CI,
     },
     {
       command: "pnpm reactor",
-      url: "http://127.0.0.1:4001",
+      url: `${REACTOR_URL}/graphql`,
+      stderr: "pipe",
       reuseExistingServer: !process.env.CI,
     },
   ],

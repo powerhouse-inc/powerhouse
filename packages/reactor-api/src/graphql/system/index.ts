@@ -1,5 +1,5 @@
 import { Subgraph } from "#graphql/base/index.js";
-import { childLogger, type DriveInput } from "document-drive";
+import { childLogger } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { type SystemContext } from "./types.js";
@@ -17,11 +17,22 @@ export class SystemSubgraph extends Subgraph {
 
     type Mutation {
       addDrive(
-        global: DocumentDriveStateInput!
+        name: String!
+        icon: String
+        id: String
+        slug: String
         preferredEditor: String
-      ): DocumentDrive_DocumentDriveState
+      ): AddDriveResult
       setDriveIcon(id: String!, icon: String!): Boolean
       setDriveName(id: String!, name: String!): Boolean
+    }
+
+    type AddDriveResult {
+      id: String!
+      slug: String!
+      name: String!
+      icon: String
+      preferredEditor: String
     }
 
     input DocumentDriveStateInput {
@@ -41,31 +52,48 @@ export class SystemSubgraph extends Subgraph {
     Mutation: {
       addDrive: async (
         parent: unknown,
-        args: DriveInput & { preferredEditor?: string },
+        args: {
+          name: string;
+          icon?: string;
+          id?: string;
+          slug?: string;
+          preferredEditor?: string;
+        },
         ctx: SystemContext,
-      ) => {
-        logger.info("addDrive", JSON.stringify(args, null, 2));
-
+      ): Promise<{
+        id: string;
+        slug: string;
+        name: string;
+        icon: string | null;
+        preferredEditor?: string;
+      }> => {
         try {
           const isAdmin = ctx.isAdmin(ctx);
           if (!isAdmin) {
             throw new GraphQLError("Unauthorized");
           }
 
-          const drive = await this.reactor.addDrive(
-            {
-              ...args,
-              global: args.global,
-              local: args.local,
-            },
-            args.preferredEditor,
-          );
+          const { name, icon, ...driveInput } = args;
 
-          return drive.state.global;
+          const drive = await this.reactor.addDrive({
+            ...driveInput,
+            global: { name, icon },
+            local: {},
+          });
+
+          const driveAdded = {
+            id: drive.id,
+            slug: drive.slug,
+            name: drive.state.global.name,
+            icon: drive.state.global.icon,
+            preferredEditor: drive.meta?.preferredEditor,
+          };
+          logger.info("Drive added", driveAdded);
+
+          return driveAdded;
         } catch (e) {
           logger.error(e);
-
-          throw new Error(e as string);
+          throw e instanceof Error ? e : new Error(e as string);
         }
       },
     },

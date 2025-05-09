@@ -57,7 +57,7 @@ describe("Drive operations", () => {
     const id = generateId();
     await server.addDrive({
       id,
-      global: { name: "test", icon: null },
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -78,7 +78,7 @@ describe("Drive operations", () => {
     await storage.clear();
     await server.addDrive({
       id,
-      global: { name: "test", icon: null },
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -106,7 +106,7 @@ describe("Drive operations", () => {
     const id = generateId();
     await server.addDrive({
       id,
-      global: { name: "test", icon: null },
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -134,7 +134,7 @@ describe("Drive operations", () => {
     const id = generateId();
     await server.addDrive({
       id,
-      global: { name: "test", icon: null },
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -170,7 +170,7 @@ describe("Drive operations", () => {
     const id = generateId();
     await server.addDrive({
       id,
-      global: { name: "test", icon: null },
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
