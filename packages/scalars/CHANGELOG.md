@@ -1,3 +1,18 @@
+## 1.33.1-dev.10 (2025-05-09)
+
+### 🩹 Fixes
+
+- setup global project and remove init from install-tools ([61af7eb11](https://github.com/powerhouse-inc/powerhouse/commit/61af7eb11))
+- **scripts:** added connect domain to allowed hosts ([dbb08f51b](https://github.com/powerhouse-inc/powerhouse/commit/dbb08f51b))
+- **scripts:** work with postgresql prefix ([b53848a40](https://github.com/powerhouse-inc/powerhouse/commit/b53848a40))
+- **scripts:** improved project init ([35dd55ec9](https://github.com/powerhouse-inc/powerhouse/commit/35dd55ec9))
+- **scripts:** improved db setup ([1db384e79](https://github.com/powerhouse-inc/powerhouse/commit/1db384e79))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente
+
 ## 1.33.1-dev.9 (2025-05-08)
 
 ### 🚀 Features
