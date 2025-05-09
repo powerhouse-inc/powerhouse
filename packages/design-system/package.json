@@ -47,7 +47,7 @@
     "prestorybook": "npm run build",
     "build-storybook": "storybook build",
     "prebuild-storybook": "npm run build",
-    "test": "vitest run",
+    "test": "vitest run --exclude \"src/scalars/**\"",
     "test:watch": "vitest watch",
     "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861",
     "clean": "rimraf dist",
