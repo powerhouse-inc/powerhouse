@@ -1,3 +1,4 @@
+import { type Manifest } from "document-model";
 import fs from "node:fs";
 import { getProjectInfo } from "../utils.js";
 
@@ -21,14 +22,7 @@ export async function startInspect(
 
   try {
     const loadManifest = (path: string) =>
-      JSON.parse(fs.readFileSync(path, "utf-8")) as {
-        editors: { name: string; id: string }[];
-        documentModels: { name: string; id: string }[];
-        processors: { name: string; id: string }[];
-        subgraphs: { name: string; id: string }[];
-        default: { name: string };
-        name: string;
-      };
+      JSON.parse(fs.readFileSync(path, "utf-8")) as Manifest;
     const manifest = loadManifest(
       `${process.cwd()}/node_modules/${packageName}/dist/powerhouse.manifest.json`,
     );

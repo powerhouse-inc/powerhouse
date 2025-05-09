@@ -458,6 +458,10 @@ export type Manifest = {
     name: string;
     documentTypes: string[];
   }[];
+  processors?: {
+    id: string;
+    name: string;
+  }[];
   subgraphs?: {
     id: string;
     name: string;
