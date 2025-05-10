@@ -1,3 +1,16 @@
+## 2.28.1-dev.13 (2025-05-10)
+
+### 🩹 Fixes
+
+- **document-drive,reactor-api:** updated addDrive mutation and improved createDrive method ([440054262](https://github.com/powerhouse-inc/powerhouse/commit/440054262))
+- **document-model:** override document id when provided as undefined ([a960e9309](https://github.com/powerhouse-inc/powerhouse/commit/a960e9309))
+- **ph-cli:** remove ts ignore ([0a212419c](https://github.com/powerhouse-inc/powerhouse/commit/0a212419c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 2.28.1-dev.12 (2025-05-09)
 
 ### 🩹 Fixes
