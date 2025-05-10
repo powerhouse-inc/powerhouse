@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
-  PrebuiltArgTypes,
   StorybookControlCategory,
 } from "../../../../scalars/lib/storybook-arg-types.js";
 import { Toggle } from "./toggle.js";
@@ -51,9 +50,31 @@ const meta = {
         category: StorybookControlCategory.DIFF,
       },
     },
-    ...PrebuiltArgTypes.viewMode,
-    ...PrebuiltArgTypes.diffMode,
-    ...PrebuiltArgTypes.baseValue,
+    viewMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["edition", "addition", "removal"],
+      table: {
+        type: { summary: "edition | addition | removal" },
+        defaultValue: { summary: "edition" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    baseValue: {
+      control: "boolean",
+      description: "The base value of the input field",
+      table: {
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["sentences"],
+      table: {
+        type: { summary: "sentences" },
+      },
+    },
   },
 } satisfies Meta<typeof Toggle>;
 

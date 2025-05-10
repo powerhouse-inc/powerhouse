@@ -3,10 +3,11 @@ import React, { useId } from "react";
 import { FormLabel } from "../../../../scalars/components/fragments/form-label/index.js";
 import { FormMessageList } from "../../../../scalars/components/fragments/form-message/index.js";
 import {
-  type DiffMode,
   type InputBaseProps,
+  type ViewMode,
   type WithDifference,
 } from "../../../../scalars/components/types.js";
+import ToggleDiff from "./subcomponents/toogle-diff.js";
 import { ToggleBase } from "./toggle-base.js";
 
 type ToggleBaseProps = Omit<
@@ -16,11 +17,11 @@ type ToggleBaseProps = Omit<
 
 interface ToggleProps
   extends ToggleBaseProps,
-    Omit<WithDifference<boolean>, "diffMode">,
+    Omit<WithDifference<boolean>, "diffMode" | "viewMode">,
     InputBaseProps<boolean> {
   onChange?: (checked: boolean) => void;
-  diffMode?: Extract<DiffMode, "sentences">;
   optionalLabel?: string;
+  viewMode?: Extract<ViewMode, "edition" | "addition" | "removal">;
 }
 
 const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
@@ -40,7 +41,6 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
       description,
       viewMode = "edition",
       optionalLabel,
-      diffMode,
       baseValue,
       ...props
     },
@@ -48,7 +48,7 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
   ) => {
     const generatedId = useId();
     const id = idProp ?? generatedId;
-
+    console.log("baseValue", baseValue);
     if (viewMode === "edition") {
       return (
         <div
@@ -58,7 +58,7 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
           <div className="flex items-center">
             {optionalLabel && (
               <FormLabel
-                className="ml-2"
+                className={cn("mr-2")}
                 disabled={disabled}
                 required={required}
                 inline
@@ -81,7 +81,7 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
             {label && (
               <FormLabel
                 htmlFor={id}
-                className="ml-2"
+                className={cn("ml-2")}
                 disabled={disabled}
                 required={required}
                 description={description}
@@ -107,7 +107,13 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
         data-testid="custom-class"
       >
         {/* WIP */}
-        <div>Diff component</div>
+        <ToggleDiff
+          viewMode={viewMode}
+          baseValue={baseValue}
+          value={value}
+          label={label}
+          optionalLabel={optionalLabel}
+        />
       </div>
     );
   },
