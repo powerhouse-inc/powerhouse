@@ -67,14 +67,6 @@ const meta = {
         category: StorybookControlCategory.DIFF,
       },
     },
-    diffMode: {
-      control: "select",
-      description: "The mode of the input field",
-      options: ["sentences"],
-      table: {
-        type: { summary: "sentences" },
-      },
-    },
   },
 } satisfies Meta<typeof Toggle>;
 
