@@ -1,6 +1,8 @@
 ## Context / Background
 
-> Describe the context and motivation for this issue. Why is it being created? Link to any related discussions, documents, Slack threads, or demo scenarios.
+> Describe the context and motivation for this issue.   
+Why is it being created?    
+Link to any related discussions, documents, Slack threads, or demo scenarios.
 
 ## Goals / What We Want to Achieve
 
