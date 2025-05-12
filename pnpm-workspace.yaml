@@ -1,3 +1,4 @@
+injectWorkspacePackages: true
 packages:
   - "apps/*"
   - "clis/*"
