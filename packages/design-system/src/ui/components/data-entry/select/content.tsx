@@ -4,15 +4,16 @@ import { type SelectProps } from "#scalars";
 import { useCommandState } from "cmdk";
 import type React from "react";
 import { useEffect } from "react";
-import { cn } from "../../../lib/utils.js";
 import {
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "../command/command.js";
-import { CommandItemList } from "./subcomponents/CommandItemList.js";
+} from "../../../../scalars/components/fragments/command/index.js";
+import { cn } from "../../../../scalars/lib/utils.js";
+import { CommandListItem } from "./command-list-item.js";
+
 interface ContentProps {
   searchable?: boolean;
   commandListRef: React.RefObject<HTMLDivElement>;
@@ -135,7 +136,7 @@ export const Content: React.FC<ContentProps> = ({
         <CommandGroup
           className={multiple && cmdkSearch === "" ? "pt-0" : undefined}
         >
-          <CommandItemList
+          <CommandListItem
             options={favoriteOptions}
             selectedValues={selectedValues}
             multiple={multiple}
@@ -149,7 +150,7 @@ export const Content: React.FC<ContentProps> = ({
           {favoriteOptions.length > 0 && (
             <div className="my-1 border-b border-gray-300 dark:border-gray-600" />
           )}
-          <CommandItemList
+          <CommandListItem
             options={options}
             selectedValues={selectedValues}
             multiple={multiple}

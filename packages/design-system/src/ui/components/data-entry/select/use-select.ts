@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SelectProps } from "../../enum-field/types.js";
+import type { SelectProps } from "./types.js";
 
-interface UseSelectFieldProps {
+interface UseSelectProps {
   options?: SelectProps["options"];
   multiple?: boolean;
   defaultValue?: string | string[];
@@ -9,13 +9,13 @@ interface UseSelectFieldProps {
   onChange?: (value: string | string[]) => void;
 }
 
-export function useSelectField({
+export function useSelect({
   options = [],
   multiple = false,
   defaultValue,
   value,
   onChange,
-}: UseSelectFieldProps) {
+}: UseSelectProps) {
   const isInternalChange = useRef(false);
   const commandListRef = useRef<HTMLDivElement>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
