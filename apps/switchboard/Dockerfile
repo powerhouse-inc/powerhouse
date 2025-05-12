@@ -31,7 +31,7 @@ ENV NX_SOCKET_DIR=${NX_SOCKET_DIR}
 ENV NX_DAEMON=false
 RUN pnpm install --filter @powerhousedao/switchboard... 
 RUN pnpm nx run @powerhousedao/switchboard:build
-RUN pnpm --filter "@powerhousedao/switchboard" deploy --prod pruned
+RUN pnpm --filter "@powerhousedao/switchboard" deploy --prod pruned --legacy
 RUN rm -rf pruned/node_modules/.pnpm/@prisma+client@5.17.0_prisma@5.17.0 && cp -R ./node_modules/.pnpm/@prisma+client@5.17.0_prisma@5.17.0 pruned/node_modules/.pnpm
 
 # Final production image
