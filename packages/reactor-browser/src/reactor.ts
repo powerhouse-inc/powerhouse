@@ -70,7 +70,7 @@ export function createBrowserDocumentDriveServer(
   const builder = new ReactorBuilder(documentModelModules)
     .withStorage(new BrowserStorage(routerBasename))
     .withCache(new InMemoryCache())
-    .withQueueManager(new BaseQueueManager(1, 10));
+    .withQueueManager(new BaseQueueManager());
 
   if (documentDriveServerOptions) {
     builder.withOptions(documentDriveServerOptions);

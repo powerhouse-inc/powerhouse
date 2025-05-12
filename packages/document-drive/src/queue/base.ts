@@ -81,7 +81,7 @@ export class MemoryQueue<T> implements IQueue<T> {
   }
 }
 
-export class BaseQueueManager implements IQueueManager {
+export class LegacyBaseQueueManager implements IQueueManager {
   protected emitter = createNanoEvents<QueueEvents>();
   protected ticker = 0;
   protected queues: IJobQueue[] = [];

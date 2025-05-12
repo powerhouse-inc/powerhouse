@@ -8,6 +8,7 @@ import { MemoryQueue } from "./base.js";
 import {
   type IJob,
   type IJobQueue,
+  type IQueueManager,
   type IServerDelegate,
   isOperationJob,
   type Job,
@@ -28,16 +29,17 @@ interface EnqueuedJob {
  *  - Separate priority scheduler class
  *  - Separate dependencies manager (isBlocked)
  */
-export class EventQueueManager {
+export class EventQueueManager implements IQueueManager {
   protected logger = childLogger(["EventQueueManager"]);
   protected emitter = createNanoEvents<QueueEvents>();
   protected queues = new Map<DocId, Map<OperationScope, IJobQueue>>();
   protected globalQueue = new Array<EnqueuedJob>();
+  protected isFindingJob = false;
   protected maxWorkers: number;
   protected workers: number;
   protected runningJobs = new Array<IJob<Job>>();
   protected timeout: number;
-  private delegate: IServerDelegate | undefined;
+  protected delegate: IServerDelegate | undefined;
   protected onError: ((error: Error) => void) | undefined;
 
   constructor(maxWorkers = 1, timeout = 0) {
@@ -78,9 +80,10 @@ export class EventQueueManager {
 
     this.emitter.on(
       "jobStarted",
-      wrapErrorHandler((job) => {
+      wrapErrorHandler(async (job) => {
         this.logger.debug("Started job", job.jobId);
         this.runningJobs.push(job);
+        await this.processNextJob();
       }),
     );
 
@@ -201,7 +204,7 @@ export class EventQueueManager {
     });
   }
 
-  private removeJob(job: IJob<Job>) {
+  protected removeJob(job: IJob<Job>) {
     const indexRunning = this.runningJobs.findIndex(
       (j) => j.jobId === job.jobId,
     );
@@ -219,7 +222,7 @@ export class EventQueueManager {
     this.globalQueue.splice(indexGlobal, 1);
   }
 
-  private async handleJobCompleted(job: IJob<Job>, result: IOperationResult) {
+  protected async handleJobCompleted(job: IJob<Job>, result: IOperationResult) {
     this.removeJob(job);
 
     for (const signal of result.signals) {
@@ -229,7 +232,7 @@ export class EventQueueManager {
     return this.processNextJob();
   }
 
-  private async handleJobSignal(job: IJob<Job>, s: SignalResult) {
+  protected async handleJobSignal(job: IJob<Job>, s: SignalResult) {
     switch (s.signal.type) {
       case "CREATE_CHILD_DOCUMENT": {
         const id =
@@ -256,7 +259,7 @@ export class EventQueueManager {
     }
   }
 
-  private async getAddFileJob(driveId: string, documentId: string) {
+  protected async getAddFileJob(driveId: string, documentId: string) {
     const driveQueue = this.getQueue(driveId, "global");
     const jobs = await driveQueue.getJobs();
     for (const driveJob of jobs) {
@@ -278,7 +281,12 @@ export class EventQueueManager {
     return this.workers >= this.maxWorkers;
   }
 
-  private async processNextJob() {
+  protected async processNextJob() {
+    // if there is already a worker looking for a job then waits for it to finish
+    if (this.isFindingJob) {
+      return;
+    }
+
     if (!this.delegate) {
       throw new Error("No server delegate defined");
     }
@@ -293,6 +301,7 @@ export class EventQueueManager {
       return;
     }
 
+    this.isFindingJob = true;
     this.workers++;
     let queue: IJobQueue | undefined;
     let job: IJob<Job> | undefined;
@@ -305,18 +314,14 @@ export class EventQueueManager {
     }
     if (!queue || !job) {
       this.workers--;
+      this.isFindingJob = false;
       return;
     }
 
     try {
       await queue.setRunning(true);
+      this.isFindingJob = false;
       this.emit("jobStarted", job);
-      if ("operations" in job) {
-        this.logger.debug(
-          "Running Operations",
-          JSON.stringify(job.operations, null, 2),
-        );
-      }
       const result = await this.delegate.processJob(job);
       this.workers--;
       await queue.setRunning(false);
@@ -324,6 +329,7 @@ export class EventQueueManager {
     } catch (error) {
       logger.error("Job failed", error);
       this.workers--;
+      this.isFindingJob = false;
       await queue.setRunning(false);
       this.emit(
         "jobFailed",
@@ -333,12 +339,18 @@ export class EventQueueManager {
     }
   }
 
-  private async findNextJob(): Promise<
+  protected async findNextJob(): Promise<
     { queue: IJobQueue; job: IJob<Job> } | undefined
   > {
+    const skippedQueues = new Set<string>();
     for (const job of this.globalQueue) {
       const queue = this.getQueue(job.documentId, job.scope);
+      const queueId = queue.getId();
+      if (skippedQueues.has(queueId)) {
+        continue;
+      }
       if (await queue.isBlocked()) {
+        skippedQueues.add(queue.getId());
         continue;
       }
       const queueJob = await queue.getNextJob();

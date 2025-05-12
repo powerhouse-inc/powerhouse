@@ -44,7 +44,7 @@ export {
   isFolderNode,
 } from "#drive-document-model/src/utils";
 export type { IProcessor } from "#processors/types";
-export { BaseQueueManager } from "#queue/base";
+export { EventQueueManager as BaseQueueManager } from "#queue/event";
 export {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,

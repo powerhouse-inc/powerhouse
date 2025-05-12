@@ -30,7 +30,7 @@ export default (
     const documentDrive = new ReactorBuilder(documentModels)
         .withStorage(storage)
         .withCache(new InMemoryCache())
-        .withQueueManager(new BaseQueueManager(1, 10))
+        .withQueueManager(new BaseQueueManager())
         .withOptions({ ...getReactorDefaultDrivesConfig() })
         .build();
 

@@ -22,7 +22,6 @@ import {
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
-import { BaseQueueManager } from "../src/queue/base.js";
 import { EventQueueManager } from "../src/queue/event.js";
 import { IQueueManager } from "../src/queue/types.js";
 import { ReactorBuilder } from "../src/server/builder.js";
@@ -41,8 +40,8 @@ const documentModels = [
 ] as DocumentModelModule[];
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
-  // ["Memory Queue", () => Promise.resolve(new BaseQueueManager())],
-  ["Memory Event Queue", () => Promise.resolve(new EventQueueManager())],
+  // ["Memory Queue", () => Promise.resolve(new BaseQueueManager(3))],
+  ["Memory Event Queue", () => Promise.resolve(new EventQueueManager(2))],
   /*[
     "Redis Queue",
     async () => {

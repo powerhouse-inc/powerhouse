@@ -1,7 +1,7 @@
 import { type DocumentModelModule } from "document-model";
 import InMemoryCache from "../cache/memory.js";
 import { type ICache } from "../cache/types.js";
-import { BaseQueueManager } from "../queue/base.js";
+import { EventQueueManager } from "../queue/event.js";
 import { type IQueueManager } from "../queue/types.js";
 import { MemoryStorage } from "../storage/memory.js";
 import {
@@ -94,7 +94,7 @@ export class ReactorBuilder {
     }
 
     if (!this.queueManager) {
-      this.queueManager = new BaseQueueManager();
+      this.queueManager = new EventQueueManager();
     }
 
     if (!this.eventEmitter) {

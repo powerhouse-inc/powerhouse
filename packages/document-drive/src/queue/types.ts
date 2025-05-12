@@ -36,10 +36,6 @@ export interface IServerDelegate {
 
 export interface IQueueManager {
   addJob: (job: Job) => Promise<JobId>;
-  getQueue: (driveId: string, documentId?: string) => IQueue<Job>;
-  removeQueue: (driveId: string, documentId?: string) => void;
-  getQueueByIndex: (index: number) => IQueue<Job> | null;
-  getQueues: () => string[];
   init: (
     delegate: IServerDelegate,
     onError: (error: Error) => void,

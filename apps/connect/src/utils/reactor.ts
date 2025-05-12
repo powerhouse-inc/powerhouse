@@ -8,10 +8,10 @@ import {
 } from 'document-drive';
 import { BrowserStorage } from 'document-drive/storage/browser';
 import {
-    IDocumentAdminStorage,
-    IDocumentOperationStorage,
-    IDocumentStorage,
-    IDriveOperationStorage,
+    type IDocumentAdminStorage,
+    type IDocumentOperationStorage,
+    type IDocumentStorage,
+    type IDriveOperationStorage,
 } from 'document-drive/storage/types';
 import { type DocumentModelModule } from 'document-model';
 
@@ -86,7 +86,7 @@ export function createBrowserDocumentDriveServer(
     return new ReactorBuilder(documentModels)
         .withStorage(storage)
         .withCache(new InMemoryCache())
-        .withQueueManager(new BaseQueueManager(1, 10))
+        .withQueueManager(new BaseQueueManager())
         .withOptions({ ...getReactorDefaultDrivesConfig() })
         .build();
 }

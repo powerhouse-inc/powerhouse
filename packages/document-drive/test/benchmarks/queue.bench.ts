@@ -75,10 +75,30 @@ describe("Process Operations", () => {
   );
 
   bench(
+    "BaseQueueManager with 10 workers",
+    () => {
+      return new Promise<void>((resolve, reject) => {
+        processStrands(new BaseQueueManager(10), resolve, reject);
+      });
+    },
+    BENCH_OPTIONS,
+  );
+
+  bench(
     "EventQueueManager",
     () => {
       return new Promise<void>((resolve, reject) => {
-        processStrands(new EventQueueManager(1) as any, resolve, reject);
+        processStrands(new EventQueueManager(1), resolve, reject);
+      });
+    },
+    BENCH_OPTIONS,
+  );
+
+  bench(
+    "EventQueueManager with 10 workers",
+    () => {
+      return new Promise<void>((resolve, reject) => {
+        processStrands(new EventQueueManager(10), resolve, reject);
       });
     },
     BENCH_OPTIONS,
