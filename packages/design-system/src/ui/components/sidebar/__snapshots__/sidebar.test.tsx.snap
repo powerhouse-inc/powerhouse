@@ -4,7 +4,6 @@ exports[`Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <aside
     class="group peer relative flex h-svh max-h-screen flex-col bg-gray-50 shadow-lg transition-[width] duration-75 ease-linear dark:bg-slate-600"
-    style="width: min(100%, var(--sidebar-width));"
   >
     <header
       class="flex items-center justify-between gap-2 border-b border-gray-300 bg-gray-50 p-4 dark:border-gray-800 dark:bg-slate-600"
@@ -12,10 +11,20 @@ exports[`Sidebar Component > should match snapshot 1`] = `
       <div
         class="flex items-center gap-2 truncate"
       >
-        <div
-          data-testid="icon-fallback"
+        <svg
+          fill="none"
           style="width: 16px; height: 16px;"
-        />
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M1.88134 8.65644V18.3251H0V7.09336C0 6.19326 1.03474 5.68003 1.75748 6.22134L10.6938 12.912C10.9698 13.1179 11.1313 13.4409 11.1313 13.784V18.3235H9.24992V14.174L1.88134 8.65644Z"
+            fill="currentcolor"
+          />
+          <path
+            d="M22.0605 18.3251V8.65599L14.4616 14.1738V18.3251H12.5215V13.7854C12.5215 13.4422 12.688 13.1193 12.9726 12.9133L22.1882 6.22233C22.9335 5.67944 24.0006 6.19269 24.0006 7.09283V18.3251H22.0605Z"
+            fill="currentcolor"
+          />
+        </svg>
         <div
           class="truncate text-sm font-semibold text-gray-700 dark:text-gray-300"
         >
@@ -59,20 +68,6 @@ exports[`Sidebar Component > should match snapshot 1`] = `
             tabindex="0"
           />
         </div>
-        <div
-          class="resize-triggers"
-        >
-          <div
-            class="expand-trigger"
-          >
-            <div
-              style="width: 1px; height: 1px;"
-            />
-          </div>
-          <div
-            class="contract-trigger"
-          />
-        </div>
       </div>
     </div>
     <div
@@ -82,7 +77,7 @@ exports[`Sidebar Component > should match snapshot 1`] = `
         class="relative flex-1"
       >
         <input
-          class="flex h-9 rounded-md text-sm font-normal leading-5 text-gray-900 dark:text-gray-50 dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white px-3 py-2 font-sans placeholder:text-gray-500 dark:placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 dark:focus:bg-charcoal-900 focus:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-white disabled:text-gray-700 disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300 w-full appearance-none !pl-8 [&::-webkit-search-cancel-button]:hidden"
+          class="flex h-9 rounded-md text-sm font-normal leading-5 text-gray-900 dark:text-gray-50 dark:border-charcoal-700 dark:bg-charcoal-900 border border-gray-300 bg-white px-3 py-2 font-sans placeholder:text-gray-500 dark:placeholder:text-gray-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-900 focus-visible:ring-offset-0 focus-visible:ring-offset-white dark:focus-visible:ring-charcoal-300 dark:focus-visible:ring-offset-charcoal-900 dark:focus:bg-charcoal-900 focus:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-700 disabled:dark:border-charcoal-800 disabled:dark:bg-charcoal-900 disabled:dark:text-gray-300 w-full appearance-none !pl-8 [&::-webkit-search-cancel-button]:hidden"
           placeholder="Search"
           style="padding-right: 16px;"
           tabindex="1"
@@ -112,10 +107,16 @@ exports[`Sidebar Component > should match snapshot 1`] = `
           class="absolute right-0 top-14 size-4 translate-x-1/2 rounded-full bg-gray-500 dark:bg-gray-900 opacity-0 transition-opacity group-hover/sidebar-resizer:opacity-100"
           type="button"
         >
-          <div
-            data-testid="icon-fallback"
+          <svg
+            class="min-w-4 text-gray-50 dark:text-gray-500 -rotate-180"
+            fill="currentcolor"
             style="width: 16px; height: 16px;"
-          />
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M10 16L10 12.8L10 11.2L10 8L14 12L10 16Z"
+            />
+          </svg>
         </button>
       </div>
     </div>

@@ -13,9 +13,7 @@ export function useDocumentDriveById(driveId: string | undefined) {
             isRemoteDrive: false,
         };
 
-    const drive = documentDrives.find(
-        drive => drive.state.global.id === driveId,
-    );
+    const drive = documentDrives.find(drive => drive.id === driveId);
 
     const pullResponder = drive?.state.local.triggers.find(
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

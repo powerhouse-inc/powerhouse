@@ -1,10 +1,9 @@
 import {
-  type BaseDocumentDriveServer,
   BaseQueueManager,
   type DefaultRemoteDriveInput,
   type DocumentDriveServerOptions,
+  type IDocumentDriveServer,
   InMemoryCache,
-  type IReadModeDriveServer,
   ReactorBuilder,
 } from "document-drive";
 import { BrowserStorage } from "document-drive/storage/browser";
@@ -67,15 +66,15 @@ export function createBrowserDocumentDriveServer(
   documentModelModules: DocumentModelModule[],
   routerBasename: string,
   documentDriveServerOptions?: DocumentDriveServerOptions,
-): BaseDocumentDriveServer & IReadModeDriveServer {
+): IDocumentDriveServer {
   const builder = new ReactorBuilder(documentModelModules)
     .withStorage(new BrowserStorage(routerBasename))
     .withCache(new InMemoryCache())
     .withQueueManager(new BaseQueueManager(1, 10));
+
   if (documentDriveServerOptions) {
     builder.withOptions(documentDriveServerOptions);
   }
 
-  return builder.build() as unknown as BaseDocumentDriveServer &
-    IReadModeDriveServer;
+  return builder.build();
 }

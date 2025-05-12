@@ -5,17 +5,17 @@ force: true
 import { BaseDocumentClass<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model';
 import {
 <% actions.filter(action => action.hasInput).forEach(action => { _%>
-    <%= h.changeCase.pascal(action.name) %>Input,
+    <%= 'type ' + h.changeCase.pascal(action.name) %>Input,
 <% }); _%>
-    <%= h.changeCase.pascal(documentType) %>State,
-    <%= h.changeCase.pascal(documentType) %>LocalState
-} from '../types';
+    <%= 'type ' + h.changeCase.pascal(documentType) %>State,
+    <%= 'type ' + h.changeCase.pascal(documentType) %>LocalState
+} from '../types.js';
 import {
 <% actions.forEach(action => { _%>
     <%= h.changeCase.camel(action.name) %>,
 <% }); _%>
-} from './creators';
-import { <%= h.changeCase.pascal(documentType) %>Action } from '../actions';
+} from './creators.js';
+import { <%= 'type ' + h.changeCase.pascal(documentType) %>Action } from '../actions.js';
 
 export default class <%= h.changeCase.pascal(documentType) %>_<%= h.changeCase.pascal(module) %> extends BaseDocumentClass<
     <%= h.changeCase.pascal(documentType) %>State,

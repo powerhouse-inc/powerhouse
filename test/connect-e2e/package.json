@@ -1,0 +1,27 @@
+{
+  "name": "connect-e2e",
+  "version": "1.0.14-dev.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "connect": "ph-cli connect",
+    "reactor": "ph-cli reactor",
+    "lint": "tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.12",
+    "@playwright/test": "^1.41.2",
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@types/node": "^22.15.17",
+    "graphql-request": "^6.1.0",
+    "react": "18",
+    "react-dom": "18",
+    "vite": "^6.2.2"
+  }
+}

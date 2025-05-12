@@ -1,6 +1,6 @@
 {
   "name": "ph-cmd",
-  "version": "0.40.0",
+  "version": "0.43.18-dev.3",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -14,13 +14,19 @@
     "dist"
   ],
   "scripts": {
+    "generate-commands-md": "tsx scripts/generate-commands-md.ts",
+    "generate-version": "tsx scripts/generate-version.ts",
+    "prebuild": "npm run clean && npm run generate-commands-md && npm run generate-version",
     "build": "tsc --build",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "lint:fix": "eslint --fix",
-    "postinstall": "npx shx test -f ./.skippostinstall || ph setup-globals"
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
   },
   "keywords": [],
   "author": "",

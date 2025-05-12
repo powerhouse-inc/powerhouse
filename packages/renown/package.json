@@ -1,6 +1,6 @@
 {
   "name": "@renown/sdk",
-  "version": "0.13.0",
+  "version": "0.15.4-dev.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
@@ -34,6 +34,7 @@
     "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.browser.json",
     "build:browser": "tsc -p tsconfig.browser.json",
     "build:node": "tsc -p tsconfig.node.json",
+    "prebuild": "npm run clean",
     "clean": "rimraf dist/",
     "clean:node_modules": "rimraf node_modules"
   },

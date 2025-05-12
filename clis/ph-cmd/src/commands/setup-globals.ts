@@ -1,60 +1,26 @@
-import { createProject, parseVersion } from "@powerhousedao/codegen";
 import { type Command } from "commander";
-import fs from "node:fs";
+import { setupGlobalsHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
-import {
-  getPackageManagerFromPath,
-  HOME_DIR,
-  PH_BIN_PATH,
-  PH_GLOBAL_PROJECT_NAME,
-  POWERHOUSE_GLOBAL_DIR,
-} from "../utils.js";
+import { createGlobalProject, withCustomHelp } from "../utils/index.js";
 
-export const setupGlobals: CommandActionType<
-  [
-    string | undefined,
-    {
-      project?: string;
-      interactive?: boolean;
-      version?: string;
-      dev?: boolean;
-      staging?: boolean;
-      packageManager?: string;
-    },
-  ]
-> = async (projectName, options) => {
-  // check if the global project already exists
-  const globalProjectExists = fs.existsSync(POWERHOUSE_GLOBAL_DIR);
-
-  if (globalProjectExists) {
-    console.log(
-      `📦 Global project already exists at: ${POWERHOUSE_GLOBAL_DIR}`,
-    );
-    return;
-  }
-
-  console.log("📦 Initializing global project...");
-  process.chdir(HOME_DIR);
-
-  try {
-    await createProject({
-      name: PH_GLOBAL_PROJECT_NAME,
-      interactive: false,
-      version: parseVersion(options),
-      packageManager:
-        options.packageManager ?? getPackageManagerFromPath(PH_BIN_PATH),
-    });
-
-    console.log(
-      `🚀 Global project initialized successfully: ${POWERHOUSE_GLOBAL_DIR}`,
-    );
-  } catch (error) {
-    console.error("❌ Failed to initialize the global project", error);
-  }
+// Extract the type parameters for reuse
+export type SetupGlobalsOptions = {
+  project?: string;
+  interactive?: boolean;
+  version?: string;
+  dev?: boolean;
+  staging?: boolean;
+  packageManager?: string;
 };
 
-export function setupGlobalsCommand(program: Command) {
-  program
+export const setupGlobals: CommandActionType<
+  [string | undefined, SetupGlobalsOptions]
+> = async (projectName, options) => {
+  await createGlobalProject(projectName, options);
+};
+
+export function setupGlobalsCommand(program: Command): Command {
+  const setupGlobalsCmd = program
     .command("setup-globals")
     .description("Initialize a new project")
     .argument("[project-name]", "Name of the project")
@@ -69,6 +35,12 @@ export function setupGlobalsCommand(program: Command) {
     .option(
       "--package-manager <packageManager>",
       "force package manager to use",
-    )
-    .action(setupGlobals);
+    );
+
+  // Use withCustomHelp instead of withHelpAction and addHelpText
+  return withCustomHelp<[string | undefined, SetupGlobalsOptions]>(
+    setupGlobalsCmd,
+    setupGlobals,
+    setupGlobalsHelp,
+  );
 }

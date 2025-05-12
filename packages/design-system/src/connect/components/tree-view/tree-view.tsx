@@ -91,11 +91,6 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
 
   const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
     [DUPLICATE]: () => onDuplicateNode(uiNode),
-    [NEW_FOLDER]: () => {
-      setSelectedNode(uiNode);
-      setInternalExpandedState(true);
-      setMode(CREATE);
-    },
     [RENAME]: () => setMode(WRITE),
     [DELETE]: () => {
       if (uiNode.kind === DRIVE) {

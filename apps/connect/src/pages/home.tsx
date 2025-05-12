@@ -47,7 +47,7 @@ export function Home() {
         <HomeScreen>
             {driveNodes.map(driveNode => {
                 const drive = documentDrives.find(
-                    d => d.state.global.id === driveNode.id,
+                    d => d.id === driveNode.id,
                 );
                 const editorId = drive?.meta?.preferredEditor;
                 const appName = editorId

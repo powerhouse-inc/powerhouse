@@ -210,10 +210,8 @@ describe("DocumentDrive Utils", () => {
     it("should generate uuid sync id", () => {
       const state: DocumentDriveState = {
         icon: null,
-        id: "",
         name: "",
         nodes: [],
-        slug: null,
       };
       const id = generateSynchronizationUnitId(state.nodes);
       expect(validate(id)).toBe(true);
@@ -222,10 +220,8 @@ describe("DocumentDrive Utils", () => {
     it("should generate a sync unit for each scope", () => {
       const state: DocumentDriveState = {
         icon: null,
-        id: "",
         name: "",
         nodes: [],
-        slug: null,
       };
       const units = generateSynchronizationUnits(state, ["global", "local"]);
       expect(units).toStrictEqual([

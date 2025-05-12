@@ -8,12 +8,12 @@ const documentModels = [
   documentModelDocumentModelModule,
 ] as DocumentModelModule[];
 
-describe("Reactor Router", () => {
+describe.skip("Reactor Router", () => {
   it("should be initialized", () => {
     // const app = express();
     // const knex = getDbClient();
     // const reactor = new ReactorBuilder(documentModels).build();
-    // const reactorRouter = new SubgraphManager("/", app, reactor, knex);
+    // const reactorRouter = new GraphQLManager("/", app, reactor, knex);
     expect(true).toBe(true);
   });
 

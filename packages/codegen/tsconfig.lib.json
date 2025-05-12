@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": ["**/*"],
+  "exclude": [
+    "**/.hygen/**/*",
+    "**/__tests__/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "vitest.config.ts",
+    "dist",
+    "node_modules"
+  ],
+  "references": [
+    { "path": "../document-model" },
+    { "path": "../scalars" },
+    { "path": "../config" },
+    { "path": "./tsconfig.hygen.json" }
+  ]
+}

@@ -2,12 +2,14 @@ import { type Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 
+import { uninstallHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   type PackageManager,
   packageManagers,
+  setCustomHelp,
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,
 } from "../utils.js";
@@ -58,6 +60,17 @@ export const uninstall: CommandActionType<
 
   if (!dependencies || dependencies.length === 0) {
     throw new Error("❌ Dependency name is required");
+  }
+
+  // Adapt dependencies to the format expected by updateConfigFile
+  const parsedDependencies = dependencies.map((dep) => ({
+    name: dep,
+    version: undefined,
+    full: dep,
+  }));
+
+  if (options.debug) {
+    console.log(">>> parsedDependencies", parsedDependencies);
   }
 
   if (
@@ -111,7 +124,7 @@ export const uninstall: CommandActionType<
 
   try {
     console.log("⚙️ Updating powerhouse config file...");
-    updateConfigFile(dependencies, projectInfo.path, "uninstall");
+    updateConfigFile(parsedDependencies, projectInfo.path, "uninstall");
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");
@@ -120,7 +133,7 @@ export const uninstall: CommandActionType<
 };
 
 export function uninstallCommand(program: Command) {
-  program
+  const command = program
     .command("uninstall")
     .alias("remove")
     .description("Uninstall a powerhouse dependency")
@@ -129,11 +142,13 @@ export function uninstallCommand(program: Command) {
     .option("--debug", "Show additional logs")
     .option(
       "-w, --workspace",
-      "Remove the dependency in the workspace (use this option for monorepos)",
+      "Uninstall the dependency in the workspace (use this option for monorepos)",
     )
     .option(
       "--package-manager <packageManager>",
       "force package manager to use",
     )
     .action(uninstall);
+
+  setCustomHelp(command, uninstallHelp);
 }

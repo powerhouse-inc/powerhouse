@@ -65,7 +65,7 @@ export type DriveInfo = {
   };
 };
 
-function getFields(type: GraphQLOutputType): string {
+function getFields(type: GraphQLOutputType, prefix: string): string {
   if (type instanceof GraphQLObjectType) {
     return Object.entries(type.getFields())
       .map(([fieldName, field]) => {
@@ -76,7 +76,7 @@ function getFields(type: GraphQLOutputType): string {
           fieldType instanceof GraphQLObjectType ||
           fieldType instanceof GraphQLUnionType
         ) {
-          return `${fieldName} { ${getFields(fieldType)} }`;
+          return `${fieldName} { ${getFields(fieldType, prefix)} }`;
         }
 
         if (fieldType instanceof GraphQLList) {
@@ -91,7 +91,7 @@ function getFields(type: GraphQLOutputType): string {
             listItemType instanceof GraphQLObjectType ||
             listItemType instanceof GraphQLUnionType
           ) {
-            return `${fieldName} { ${getFields(listItemType)} }`;
+            return `${fieldName} { ${getFields(listItemType, prefix)} }`;
           } else {
             throw new Error(
               `List item type ${listItemType.toString()} is not handled`,
@@ -106,7 +106,7 @@ function getFields(type: GraphQLOutputType): string {
     return type
       .getTypes()
       .map((unionType) => {
-        return `... on ${unionType.name} { ${getFields(unionType)} }`;
+        return `... on ${prefix ? `${prefix}_` : ""}${unionType.name} { ${getFields(unionType, prefix)} }`;
       })
       .join(" ");
   }
@@ -115,6 +115,7 @@ function getFields(type: GraphQLOutputType): string {
 
 export function generateDocumentStateQueryFields(
   documentModelState: DocumentModelState,
+  prefix: string,
   options?: BuildSchemaOptions & ParseOptions,
 ): string {
   const name = pascalCase(documentModelState.name);
@@ -135,7 +136,7 @@ export function generateDocumentStateQueryFields(
     throw new Error("No state query found");
   }
 
-  const queryFields = getFields(stateQuery.type);
+  const queryFields = getFields(stateQuery.type, prefix);
   return queryFields;
 }
 
@@ -191,8 +192,8 @@ export async function fetchDocument<TDocument extends PHDocument>(
   }>
 > {
   const { documentModel, utils } = documentModelModule;
-  const stateFields = generateDocumentStateQueryFields(documentModel);
   const name = pascalCase(documentModel.name);
+  const stateFields = generateDocumentStateQueryFields(documentModel, name);
   const result = await requestGraphql<{
     document: DocumentGraphQLResult<TDocument>;
   }>(
@@ -261,14 +262,18 @@ export async function fetchDocument<TDocument extends PHDocument>(
           local: [],
         },
         attachments: {},
-        initialState: utils.createExtendedState({
-          // TODO: getDocument should return all the initial state fields
-          created: result.document.created,
-          lastModified: result.document.created,
-          state: utils.createState({
-            global: result.document.initialState.state.global,
+        initialState: {
+          ...utils.createExtendedState({
+            // TODO: getDocument should return all the initial state fields
+            created: result.document.created,
+            lastModified: result.document.created,
+            state: utils.createState({
+              global: result.document.initialState.state.global,
+            }),
           }),
-        }),
+          id: result.document.id,
+          slug: result.document.slug,
+        },
         clipboard: [],
       }
     : null;

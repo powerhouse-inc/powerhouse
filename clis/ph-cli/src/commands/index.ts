@@ -9,7 +9,6 @@ import { listCommand } from "./list.js";
 import { serviceCommand } from "./service.js";
 import { reactorCommand } from "./switchboard.js";
 import { uninstallCommand } from "./uninstall.js";
-import { versionCommand } from "./version.js";
 
 export const commands = [
   // devCommand,
@@ -22,7 +21,6 @@ export const commands = [
   serviceCommand,
   listCommand,
   inspectCommand,
-  versionCommand,
 ];
 
 export default function registerCommands(program: Command) {

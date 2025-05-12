@@ -3,7 +3,6 @@ import {
     BaseQueueManager,
     type DocumentDriveAction,
     type DriveInput,
-    generateUUID,
     type IDocumentDriveServer,
     InMemoryCache,
     logger,
@@ -11,11 +10,12 @@ import {
     ReactorBuilder,
     type RemoteDriveOptions,
 } from 'document-drive';
-import { Listener } from 'document-drive/server/types';
+import { type Listener } from 'document-drive/server/types';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import {
     type DocumentAction,
     type DocumentModelModule,
+    generateId,
     type Operation,
 } from 'document-model';
 import { type IpcMain, webContents } from 'electron';
@@ -26,8 +26,9 @@ export default (
     path: string,
     ipcMain: IpcMain,
 ) => {
+    const storage = new FilesystemStorage(join(path, 'Document Drives'));
     const documentDrive = new ReactorBuilder(documentModels)
-        .withStorage(new FilesystemStorage(join(path, 'Document Drives')))
+        .withStorage(storage)
         .withCache(new InMemoryCache())
         .withQueueManager(new BaseQueueManager(1, 10))
         .withOptions({ ...getReactorDefaultDrivesConfig() })
@@ -152,9 +153,15 @@ export default (
             }),
     );
 
-    ipcMain.handle('documentDrive:clearStorage', () =>
-        documentDrive.clearStorage(),
-    );
+    ipcMain.handle('documentDrive:clearStorage', async () => {
+        // delete all drives so events are emitted
+        for (const drive of await documentDrive.getDrives()) {
+            await documentDrive.deleteDrive(drive);
+        }
+
+        // clear everything else
+        await storage.clear();
+    });
 
     ipcMain.handle('documentDrive:getSyncStatus', (_e, drive: string) =>
         documentDrive.getSyncStatus(drive),
@@ -168,7 +175,7 @@ export default (
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
         ) => {
-            const uuid = generateUUID();
+            const uuid = generateId();
             const listener: Listener = {
                 driveId: drive,
                 listenerId: uuid,

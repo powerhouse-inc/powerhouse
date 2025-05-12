@@ -11,7 +11,7 @@
             "options": {
                 "outputPath": "dist/tools/scalar-generator",
                 "main": "tools/scalar-generator/src/index.ts",
-                "tsConfig": "tools/scalar-generator/tsconfig.lib.json",
+                "tsConfig": "tools/scalar-generator/tsconfig.json",
                 "assets": [
                     "tools/scalar-generator/*.md",
                     {

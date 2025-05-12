@@ -81,15 +81,15 @@ function buildIndex(
 ) {
   fs.writeFileSync(
     path.join(appPath, "index.ts"),
-    `import { Manifest } from "document-model";
-        import manifestJson from "./powerhouse.manifest.json" assert { type: "json" };
-        import * as documentModelsExports from '${documentModelsDir}';
-        import * as editorsExports from '${editorsDir}';
+    `import type { Manifest } from "document-model";
+import manifestJson from "./powerhouse.manifest.json" with { type: "json" };
+import * as documentModelsExports from '${documentModelsDir}/index.js';
+import * as editorsExports from '${editorsDir}/index.js';
 
-        export const manifest: Manifest = manifestJson;
-        export const documentModels = Object.values(documentModelsExports);
-        export const editors = Object.values(editorsExports);
-        `,
+export const manifest: Manifest = manifestJson;
+export const documentModels = Object.values(documentModelsExports);
+export const editors = Object.values(editorsExports);
+`,
     "utf8",
   );
 }

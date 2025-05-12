@@ -4,7 +4,10 @@ import {
   type FileNode,
 } from "#drive-document-model/gen/types";
 import { isFileNode } from "#drive-document-model/src/utils";
-import { type IDriveStorage } from "#storage/types";
+import {
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "#storage/types";
 import { childLogger } from "#utils/logger";
 import { isBefore, isDocumentDrive } from "#utils/misc";
 import {
@@ -32,7 +35,8 @@ export default class SynchronizationManager implements ISynchronizationManager {
   private logger = childLogger(["SynchronizationManager"]);
 
   constructor(
-    private readonly storage: IDriveStorage,
+    private readonly storage: IDriveOperationStorage,
+    private readonly documentStorage: IDocumentStorage,
     private readonly cache: ICache,
     private documentModelModules: DocumentModelModule[],
     private readonly eventEmitter?: IEventEmitter,
@@ -53,6 +57,10 @@ export default class SynchronizationManager implements ISynchronizationManager {
       documentType,
     );
 
+    this.logger.verbose(
+      `getSynchronizationUnits query: ${JSON.stringify(synchronizationUnitsQuery)}`,
+    );
+
     return this.getSynchronizationUnitsRevision(
       driveId,
       synchronizationUnitsQuery,
@@ -68,6 +76,10 @@ export default class SynchronizationManager implements ISynchronizationManager {
     const revisions =
       await this.storage.getSynchronizationUnitsRevision(syncUnitsQuery);
 
+    this.logger.verbose(
+      `getSynchronizationUnitsRevision: ${JSON.stringify(revisions)}`,
+    );
+
     const synchronizationUnits: SynchronizationUnit[] = syncUnitsQuery.map(
       (s) => ({
         ...s,
@@ -75,19 +87,22 @@ export default class SynchronizationManager implements ISynchronizationManager {
         revision: -1,
       }),
     );
+
     for (const revision of revisions) {
       const syncUnit = synchronizationUnits.find(
         (s) =>
-          revision.driveId === s.driveId &&
           revision.documentId === s.documentId &&
           revision.scope === s.scope &&
           revision.branch === s.branch,
       );
+
       if (syncUnit) {
         syncUnit.revision = revision.revision;
+
         syncUnit.lastUpdated = revision.lastUpdated;
       }
     }
+
     return synchronizationUnits;
   }
 
@@ -118,7 +133,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
         documentType.includes("*"))
     ) {
       nodes.unshift({
-        id: "",
+        id: driveId,
         documentType: "powerhouse/document-drive",
         synchronizationUnits: [
           {
@@ -190,7 +205,6 @@ export default class SynchronizationManager implements ISynchronizationManager {
       syncId,
       scope: syncUnit.scope,
       branch: syncUnit.branch,
-      driveId,
       documentId: node.id,
       documentType: node.documentType,
     };
@@ -217,7 +231,6 @@ export default class SynchronizationManager implements ISynchronizationManager {
       syncId,
       scope,
       branch,
-      driveId,
       documentId,
       documentType,
       lastUpdated: lastOperation.timestamp ?? document.lastModified,
@@ -230,22 +243,41 @@ export default class SynchronizationManager implements ISynchronizationManager {
     syncId: string,
     filter: GetStrandsOptions,
   ): Promise<OperationUpdate[]> {
+    this.logger.verbose(
+      `[SYNC DEBUG] SynchronizationManager.getOperationData called for drive: ${driveId}, syncId: ${syncId}, filter: ${JSON.stringify(filter)}`,
+    );
+
     const syncUnit =
       syncId === "0"
         ? { documentId: "", scope: "global" }
         : await this.getSynchronizationUnitIdInfo(driveId, syncId);
 
     if (!syncUnit) {
+      this.logger.error(
+        `SYNC DEBUG] Invalid Sync Id ${syncId} in drive ${driveId}`,
+      );
       throw new Error(`Invalid Sync Id ${syncId} in drive ${driveId}`);
     }
+
+    this.logger.verbose(
+      `[SYNC DEBUG] Found sync unit: documentId: ${syncUnit.documentId}, scope: ${syncUnit.scope}`,
+    );
 
     const document =
       syncId === "0"
         ? await this.getDrive(driveId)
         : await this.getDocument(driveId, syncUnit.documentId); // TODO replace with getDocumentOperations
 
+    this.logger.verbose(
+      `[SYNC DEBUG] Retrieved document ${syncUnit.documentId} with type: ${document.documentType}`,
+    );
+
     const operations =
       document.operations[syncUnit.scope as OperationScope] ?? []; // TODO filter by branch also
+
+    this.logger.verbose(
+      `[SYNC DEBUG] Found ${operations.length} total operations in scope ${syncUnit.scope}`,
+    );
 
     const filteredOperations = operations.filter(
       (operation) =>
@@ -256,9 +288,31 @@ export default class SynchronizationManager implements ISynchronizationManager {
             operation.index > filter.fromRevision)),
     );
 
+    this.logger.verbose(
+      `[SYNC DEBUG] Filtered to ${filteredOperations.length} operations based on filter criteria` +
+        (filter.fromRevision !== undefined
+          ? ` (fromRevision: ${filter.fromRevision})`
+          : ""),
+    );
+
     const limitedOperations = filter.limit
       ? filteredOperations.slice(0, filter.limit)
       : filteredOperations;
+
+    this.logger.verbose(
+      `[SYNC DEBUG] Returning ${limitedOperations.length} operations after applying limit`,
+    );
+
+    if (limitedOperations.length > 0) {
+      const firstOp = limitedOperations[0];
+      const lastOp = limitedOperations[limitedOperations.length - 1];
+      this.logger.verbose(
+        `[SYNC DEBUG] First operation: index=${firstOp.index}, type=${firstOp.type}`,
+      );
+      this.logger.verbose(
+        `[SYNC DEBUG] Last operation: index=${lastOp.index}, type=${lastOp.type}`,
+      );
+    }
 
     return limitedOperations.map((operation) => ({
       hash: operation.hash,
@@ -274,14 +328,15 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
   private async getDrive(driveId: string): Promise<DocumentDriveDocument> {
     try {
-      const cachedDocument = await this.cache.getDocument("drives", driveId);
+      const cachedDocument = await this.cache.getDrive(driveId);
       if (cachedDocument && isDocumentDrive(cachedDocument)) {
         return cachedDocument;
       }
     } catch (e) {
       this.logger.error("Error getting drive from cache", e);
     }
-    const driveStorage = await this.storage.getDrive(driveId);
+    const driveStorage =
+      await this.documentStorage.get<DocumentDriveDocument>(driveId);
     const result = this._buildDocument(driveStorage);
     if (!isDocumentDrive(result)) {
       throw new Error(`Document with id ${driveId} is not a Document Drive`);
@@ -294,14 +349,14 @@ export default class SynchronizationManager implements ISynchronizationManager {
     documentId: string,
   ): Promise<PHDocument> {
     try {
-      const cachedDocument = await this.cache.getDocument(driveId, documentId);
+      const cachedDocument = await this.cache.getDocument(documentId);
       if (cachedDocument) {
         return cachedDocument;
       }
     } catch (e) {
       this.logger.error("Error getting document from cache", e);
     }
-    const documentStorage = await this.storage.getDocument(driveId, documentId);
+    const documentStorage = await this.documentStorage.get(documentId);
     return this._buildDocument(documentStorage);
   }
 

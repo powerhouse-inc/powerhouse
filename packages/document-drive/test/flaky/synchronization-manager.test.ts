@@ -1,20 +1,10 @@
-import { PrismaClient } from "@prisma/client";
-import { DocumentModelModule, Operation } from "document-model";
+import { DocumentModelModule, Operation, generateId } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  PullResponderTransmitter,
-  ReactorBuilder,
-  generateUUID,
-} from "../../src";
+import { PullResponderTransmitter, ReactorBuilder } from "../../src";
 import InMemoryCache from "../../src/cache/memory";
 import { MemoryStorage } from "../../src/storage/memory";
 import { PrismaStorage } from "../../src/storage/prisma";
-import InMemoryCache from "../../src/cache/memory.js";
-import { DocumentDriveServer } from "../../src/server/base.js";
-import { PullResponderTransmitter } from "../../src/server/listener/transmitter/pull-responder.js";
-import { MemoryStorage } from "../../src/storage/memory.js";
-import { PrismaStorage } from "../../src/storage/prisma.js";
-import { generateUUID } from "../../src/utils/misc.js";
+import { PrismaClient } from "../../src/storage/prisma/client";
 import {
   buildOperation,
   buildOperations,
@@ -385,7 +375,7 @@ describe("Synchronization Units", () => {
             documentType: "powerhouse/document-model",
             synchronizationUnits: [
               {
-                syncId: generateUUID(),
+                syncId: generateId(),
                 branch: "main",
                 scope: "global",
               },
@@ -474,8 +464,9 @@ describe("Synchronization Units", () => {
 
   describe("PrismaStorage", () => {
     beforeEach(async () => {
-      const storage = new PrismaStorage(new PrismaClient());
       const cache = new InMemoryCache();
+      const storage = new PrismaStorage(new PrismaClient(), cache);
+
       const server = new ReactorBuilder(documentModels)
         .withStorage(storage)
         .withCache(cache)
@@ -487,8 +478,8 @@ describe("Synchronization Units", () => {
     });
 
     it("should return drive synchronizationUnit", async () => {
-      const storage = new PrismaStorage(new PrismaClient());
       const cache = new InMemoryCache();
+      const storage = new PrismaStorage(new PrismaClient(), cache);
       const server = new ReactorBuilder(documentModels)
         .withStorage(storage)
         .withCache(cache)
@@ -834,7 +825,7 @@ describe("Synchronization Units", () => {
             documentType: "powerhouse/document-model",
             synchronizationUnits: [
               {
-                syncId: generateUUID(),
+                syncId: generateId(),
                 branch: "main",
                 scope: "global",
               },

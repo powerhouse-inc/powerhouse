@@ -4,7 +4,7 @@
 //   generateAddNodeAction,
 //   generateUUID,
 //   InternalTransmitterUpdate,
-//   IReceiver,
+//   IProcessor,
 //   ListenerFilter,
 //   ReactorBuilder,
 // } from "document-drive";
@@ -12,7 +12,7 @@
 
 // import { beforeAll, bench, describe } from "vitest";
 
-// class TestReceiver implements IReceiver {
+// class TestReceiver implements IProcessor {
 //   async onStrands(strands: InternalTransmitterUpdate<PHDocument>[]) {
 //     return Promise.resolve();
 //   }

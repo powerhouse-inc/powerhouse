@@ -3,24 +3,14 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
     "jsx": "react-jsx",
-    "outDir": "./dist",
-    "types": ["vitest/globals"],
-    "resolveJsonModule": true,
-    "experimentalDecorators": true,
   },
-  "include": [
-    "**/*",
-    "package.json"
-  ],
+  "files": [],
   "references": [
     {
-      "path": "../document-drive"
+      "path": "tsconfig.lib.json"
     },
     {
-      "path": "../document-model"
-    },
-    {
-      "path": "../config"
+      "path": "tsconfig.test.json"
     }
   ]
 }

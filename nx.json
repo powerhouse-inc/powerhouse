@@ -1,16 +1,11 @@
 {
   "namedInputs": {
-    "noMarkdown": [
-      "!{projectRoot}/**/*.md"
-    ],
+    "noMarkdown": ["!{projectRoot}/**/*.md"],
     "noStories": [
       "!{projectRoot}/**/*.stories.tsx",
       "!{projectRoot}/.storybook/**/*"
     ],
-    "noLicenses": [
-      "!{projectRoot}/LICENSE",
-      "!{projectRoot}/LICENSE.md"
-    ],
+    "noLicenses": ["!{projectRoot}/LICENSE", "!{projectRoot}/LICENSE.md"],
     "noTests": [
       "!{projectRoot}/**/*.spec.ts",
       "!{projectRoot}/**/*.spec.tsx",
@@ -20,44 +15,35 @@
       "!{projectRoot}/e2e/**/*",
       "!{projectRoot}/coverage/**/*",
       "!{projectRoot}/test/**/*"
-    ]
+    ],
+    "sharedGlobals": ["{workspaceRoot}/.github/workflows/check-commit-nx.yml"],
+    "default": ["sharedGlobals"]
   },
   "targetDefaults": {
     "build-storybook": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "lint": {
-      "dependsOn": [
-        "^build"
-      ]
+      "cache": true,
+      "dependsOn": ["^build"]
     },
     "lint:nx": {
-      "dependsOn": [
-        "^build"
-      ]
+      "cache": true,
+      "dependsOn": ["^build"]
     },
     "generate": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "dev": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ]
+      "cache": true,
+      "dependsOn": ["build"]
     },
     "build": {
       "cache": true,
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "inputs": [
         "noMarkdown",
         "^noMarkdown",
@@ -71,22 +57,14 @@
     },
     "@nx/js:tsc": {
       "cache": true,
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "default",
-        "^default"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^default"]
     }
   },
   "release": {
-    "projects": [
-      "packages/*",
-      "clis/*",
-      "apps/*"
-    ],
+    "projects": ["packages/*", "clis/*", "apps/*"],
     "projectsRelationship": "independent",
+    "releaseTagPattern": "dev/{projectName}/{version}",
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {

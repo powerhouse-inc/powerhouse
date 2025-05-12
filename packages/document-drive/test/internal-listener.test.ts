@@ -1,4 +1,4 @@
-import { DocumentModelModule, setModelName } from "document-model";
+import { DocumentModelModule, generateId, setModelName } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
@@ -6,33 +6,31 @@ import { ReactorBuilder } from "../src/server/builder.js";
 import {
   InternalTransmitter,
   InternalTransmitterUpdate,
-  IReceiver,
 } from "../src/server/listener/transmitter/internal.js";
-import { expectUTCTimestamp, expectUUID } from "./utils";
+import { expectUTCTimestamp, expectUUID } from "./utils.js";
 
+import { IProcessor } from "#processors/types";
 import { documentModelDocumentModelModule } from "document-model";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { Listener } from "../src/server/types.js";
-import { generateUUID } from "../src/utils/misc.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ] as DocumentModelModule[];
+  const driveId = generateId();
 
-  async function buildServer(receiver: IReceiver) {
+  async function buildServer(processor: IProcessor) {
     const builder = new ReactorBuilder(documentModels);
     const server = builder.build();
     await server.initialize();
 
-    const driveId = "drive";
     await server.addDrive({
+      id: driveId,
       global: {
-        id: driveId,
         name: "Global Drive",
         icon: "",
-        slug: "global",
       },
       local: {
         availableOffline: false,
@@ -45,8 +43,8 @@ describe("Internal Listener", () => {
     const listenerManager = builder.listenerManager;
 
     // Create the listener and transmitter
-    const uuid = generateUUID();
-    const listener:Listener = {
+    const uuid = generateId();
+    const listener: Listener = {
       driveId,
       listenerId: uuid,
       block: false,
@@ -64,9 +62,9 @@ describe("Internal Listener", () => {
         transmitterType: "Internal",
       },
     };
-    
+
     // TODO: circular reference
-    listener.transmitter = new InternalTransmitter(listener, server, receiver);
+    listener.transmitter = new InternalTransmitter(server, processor);
 
     await listenerManager?.setListener(driveId, listener);
 
@@ -86,24 +84,25 @@ describe("Internal Listener", () => {
       onStrands: transmitFn,
       onDisconnect: () => Promise.resolve(),
     });
-    const drive = await server.getDrive("drive");
+    const drive = await server.getDrive(driveId);
 
+    const documentId = generateId();
     const action = generateAddNodeAction(
       drive.state.global,
       {
-        id: "1",
+        id: documentId,
         name: "test",
         documentType: "powerhouse/document-model",
       },
       ["global", "local"],
     );
-    await server.addDriveAction("drive", action);
+    await server.addDriveAction(driveId, action);
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
 
     const update: InternalTransmitterUpdate<DocumentDriveDocument> = {
       branch: "main",
-      documentId: "",
-      driveId: "drive",
+      documentId: driveId,
+      driveId,
       operations: [
         {
           hash: expect.any(String) as string,
@@ -116,12 +115,11 @@ describe("Internal Listener", () => {
           type: "ADD_FILE",
           state: {
             icon: "",
-            id: "drive",
             name: "Global Drive",
             nodes: [
               {
                 documentType: "powerhouse/document-model",
-                id: "1",
+                id: documentId,
                 kind: "file",
                 name: "test",
                 parentFolder: null,
@@ -139,25 +137,21 @@ describe("Internal Listener", () => {
                 ],
               },
             ],
-            slug: "global",
           },
           previousState: {
             icon: "",
-            id: "drive",
             name: "Global Drive",
             nodes: [],
-            slug: "global",
           },
         },
       ],
       state: {
         icon: "",
-        id: "drive",
         name: "Global Drive",
         nodes: [
           {
             documentType: "powerhouse/document-model",
-            id: "1",
+            id: documentId,
             kind: "file",
             name: "test",
             parentFolder: null,
@@ -175,13 +169,12 @@ describe("Internal Listener", () => {
             ],
           },
         ],
-        slug: "global",
       },
       scope: "global",
     };
     expect(transmitFn).toHaveBeenCalledWith([update]);
 
-    await server.addAction("drive", "1", setModelName({ name: "test" }));
+    await server.addAction(driveId, documentId, setModelName({ name: "test" }));
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
 
@@ -217,13 +210,13 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenLastCalledWith([
       {
         branch: "main",
-        documentId: "1",
-        driveId: "drive",
+        documentId,
+        driveId,
         operations: [
           {
             hash: "nWKpqR6ns0l8C/Khwrl+SyKy0sA=",
             context: undefined,
-            id: expectUUID(expect),
+            id: expectUUID(expect) as string,
             index: 0,
             input: {
               name: "test",
@@ -240,19 +233,23 @@ describe("Internal Listener", () => {
       },
     ]);
 
-    await server.addAction("drive", "1", setModelName({ name: "test 2" }));
+    await server.addAction(
+      driveId,
+      documentId,
+      setModelName({ name: "test 2" }),
+    );
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
     expect(transmitFn).toHaveBeenLastCalledWith([
       {
         branch: "main",
-        documentId: "1",
-        driveId: "drive",
+        documentId,
+        driveId,
         operations: [
           {
             hash: "s7RBcer0JqjSGvNb12gqpeeJGRY=",
             context: undefined,
-            id: expectUUID(expect),
+            id: expectUUID(expect) as string,
             index: 1,
             input: {
               name: "test 2",
@@ -298,14 +295,14 @@ describe("Internal Listener", () => {
     ]);
   });
 
-  test("should call disconnect function of receiver", async () => {
+  test("should call disconnect function of processor", async () => {
     const disconnectFn = vitest.fn(() => Promise.resolve());
 
     const server = await buildServer({
       onStrands: () => Promise.resolve(),
       onDisconnect: disconnectFn,
     });
-    await server.deleteDrive("drive");
+    await server.deleteDrive(driveId);
     expect(disconnectFn).toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 import {
+  type ListenerFilter,
   type PullResponderTriggerData,
   type Trigger,
 } from "#drive-document-model/gen/types";
@@ -22,6 +23,8 @@ export interface InternalTransmitterService extends ITransmitter {
 }
 
 export type PullResponderTrigger = Omit<Trigger, "data" | "type"> & {
+  driveId: string;
+  filter: ListenerFilter;
   data: PullResponderTriggerData;
   type: "PullResponder";
 };

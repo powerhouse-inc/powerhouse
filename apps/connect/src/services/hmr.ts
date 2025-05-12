@@ -1,5 +1,6 @@
 import { type ExternalPackage } from '#store';
 import type { ViteHotContext } from 'vite/types/hot.js';
+
 export type PackagesUpdate = {
     url: string;
     timestamp: string;
@@ -12,13 +13,10 @@ export async function getHMRModule(): Promise<ViteHotContext | undefined> {
     }
 
     try {
-        const module = await import(
-            '@powerhousedao/builder-tools/connect-studio/hmr'
-        );
+        const module = await import('../hmr.js');
         const hmr = module.hmr;
         return hmr;
-    } catch (error) {
-        console.error(error);
+    } catch (e) {
         return undefined;
     }
 }

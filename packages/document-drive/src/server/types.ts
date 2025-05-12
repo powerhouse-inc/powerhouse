@@ -2,7 +2,6 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
-  type DocumentDriveState,
   type ListenerCallInfo,
   type ListenerFilter,
   type Trigger,
@@ -14,7 +13,6 @@ import { type RunAsap } from "#utils/run-asap";
 import {
   type Action,
   type ActionContext,
-  type BaseState,
   type CreateChildDocumentInput,
   type DocumentModelModule,
   type Operation,
@@ -32,7 +30,7 @@ import {
 } from "./error.js";
 import {
   type ITransmitter,
-  type StrandUpdateSource
+  type StrandUpdateSource,
 } from "./listener/transmitter/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
@@ -46,10 +44,16 @@ export type DocumentDriveServerMixin<I> = Mixin<
   I
 >;
 
-export type DriveInput = BaseState<
-  Omit<DocumentDriveState, "__typename" | "id" | "nodes"> & { id?: string },
-  DocumentDriveLocalState
->;
+export type DriveInput = {
+  global: {
+    name: string;
+    icon?: string | null;
+  };
+  id?: string;
+  slug?: string;
+  preferredEditor?: string;
+  local: Partial<DocumentDriveLocalState>;
+};
 
 export type RemoteDriveAccessLevel = "READ" | "WRITE";
 
@@ -81,7 +85,6 @@ export type DriveOperationResult = IOperationResult<DocumentDriveDocument>;
 
 export type SynchronizationUnit = {
   syncId: string;
-  driveId: string;
   documentId: string;
   documentType: string;
   scope: string;
@@ -334,7 +337,7 @@ export interface IBaseDocumentDriveServer {
   initialize(): Promise<Error[] | null>;
 
   // todo: remove this once we have DI
-  get listeners():IListenerManager;
+  get listeners(): IListenerManager;
 
   setDocumentModelModules(models: DocumentModelModule[]): void;
   getDrives(): Promise<string[]>;
@@ -499,8 +502,6 @@ export interface IBaseDocumentDriveServer {
   /** Internal methods **/
   getDocumentModelModules(): DocumentModelModule[];
 
-  clearStorage(): Promise<void>;
-
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
 }
 
@@ -517,7 +518,7 @@ export type DriveUpdateErrorHandler = (
 export interface IListenerManager {
   initialize(handler: DriveUpdateErrorHandler): Promise<void>;
 
-  removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
+  removeDrive(driveId: DocumentDriveDocument["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
 
   setListener(driveId: string, listener: Listener): Promise<void>;
