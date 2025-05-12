@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import { describe, it } from "vitest";
 import {
   DocumentModelDocument,
@@ -22,6 +23,7 @@ import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js"
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
 import { BaseQueueManager } from "../src/queue/base.js";
+import { EventQueueManager } from "../src/queue/event.js";
 import { IQueueManager } from "../src/queue/types.js";
 import { ReactorBuilder } from "../src/server/builder.js";
 import {
@@ -39,7 +41,8 @@ const documentModels = [
 ] as DocumentModelModule[];
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
-  ["Memory Queue", () => Promise.resolve(new BaseQueueManager())],
+  // ["Memory Queue", () => Promise.resolve(new BaseQueueManager())],
+  ["Memory Event Queue", () => Promise.resolve(new EventQueueManager())],
   /*[
     "Redis Queue",
     async () => {
@@ -232,9 +235,12 @@ describe.each(queueLayers)(
         }),
       );
 
-      const results = await Promise.all([
+      const results = [
         server.queueOperations(driveId, fileId, [mutation]),
         server.queueDriveOperations(driveId, driveOperations),
+      ];
+      await setTimeout();
+      results.push(
         server.queueDriveOperations(driveId, [
           buildOperation(
             reducer,
@@ -245,9 +251,9 @@ describe.each(queueLayers)(
             }),
           ),
         ]),
-      ]);
+      );
 
-      const errors = results
+      const errors = (await Promise.all(results))
         .flat()
         .filter((r) => !!(r as IOperationResult).error);
       if (errors.length) {
@@ -286,6 +292,13 @@ describe.each(queueLayers)(
       // add file 1 operation has to be processed after add folder 1
       expect(
         drive.state.global.nodes.findIndex((n) => n.id === fileId),
+      ).toBeGreaterThan(
+        drive.state.global.nodes.findIndex((n) => n.id === folderId),
+      );
+
+      // add folder 2 operation has to be processed before add folder 1
+      expect(
+        drive.state.global.nodes.findIndex((n) => n.id === folderId2),
       ).toBeGreaterThan(
         drive.state.global.nodes.findIndex((n) => n.id === folderId),
       );
@@ -331,9 +344,10 @@ describe.each(queueLayers)(
       );
 
       // add file op
+      const nodeId = generateId();
       const driveOperations = buildOperations(reducer, drive, [
         addFile({
-          id: "file 1",
+          id: nodeId,
           name: "file 1",
           parentFolder: "folder 1",
           documentType: documentModelDocumentModelModule.documentModel.id,
@@ -346,7 +360,7 @@ describe.each(queueLayers)(
       // queue addFile and first doc op
       const results1 = await Promise.all([
         server.queueDriveOperations(driveId, driveOperations),
-        server.queueOperations(driveId, "file 1", [mutation]),
+        server.queueOperations(driveId, nodeId, [mutation]),
       ]);
 
       const errors = results1
@@ -359,7 +373,7 @@ describe.each(queueLayers)(
       // delete node op
       drive = await server.getDrive(driveId);
       const deleteNodeOps = buildOperations(documentDriveReducer, drive, [
-        deleteNode({ id: "file 1" }),
+        deleteNode({ id: nodeId }),
       ]);
 
       // queue delete node op
@@ -367,8 +381,8 @@ describe.each(queueLayers)(
       // ==> receives deleteNode and addFile operation?
 
       await expect(
-        server.queueOperations(driveId, "file 1", [mutation2]),
-      ).rejects.toThrowError("Queue is deleted");
+        server.queueOperations(driveId, nodeId, [mutation2]),
+      ).rejects.toThrowError("Document queue is deleted");
 
       drive = await server.getDrive(driveId);
       expect(drive.state.global.nodes).toStrictEqual([]);

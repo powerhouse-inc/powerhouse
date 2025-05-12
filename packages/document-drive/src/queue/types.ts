@@ -1,5 +1,5 @@
 import { type AddOperationOptions, type IOperationResult } from "#server/types";
-import type { Action, Operation } from "document-model";
+import type { Action, Operation, OperationScope } from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {
@@ -22,9 +22,11 @@ export type Job = OperationJob | ActionJob;
 export type JobId = string;
 
 export interface QueueEvents {
+  jobAdded: (job: IJob<Job>) => void;
+  jobStarted: (job: IJob<Job>) => void;
   jobCompleted: (job: IJob<Job>, result: IOperationResult) => void;
   jobFailed: (job: IJob<Job>, error: Error) => void;
-  queueRemoved: (queueId: string) => void;
+  queueRemoved: (queue: { documentId: string; scope: OperationScope }) => void;
 }
 
 export interface IServerDelegate {
@@ -56,13 +58,14 @@ export interface IQueue<T> {
   getNextJob(): Promise<IJob<T> | undefined>;
   amountOfJobs(): Promise<number>;
   getId(): string;
-  setBlocked(blocked: boolean): Promise<void>;
   isBlocked(): Promise<boolean>;
   isDeleted(): Promise<boolean>;
+  isRunning(): Promise<boolean>;
   setDeleted(deleted: boolean): Promise<void>;
+  setRunning(running: boolean): Promise<void>;
   getJobs(): Promise<IJob<T>[]>;
-  addDependencies: (job: IJob<Job>) => Promise<void>;
-  removeDependencies: (job: IJob<Job>) => Promise<void>;
+  addDependency: (job: IJob<Job>) => Promise<void>;
+  removeDependency: (job: IJob<Job>) => Promise<void>;
 }
 
 export type IJobQueue = IQueue<Job>;

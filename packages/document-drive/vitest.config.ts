@@ -3,6 +3,7 @@ import { defaultExclude, defineConfig } from "vitest/config";
 
 export default defineConfig(({ mode }) => ({
   test: {
+    pool: "forks",
     environment: "node",
     env: loadEnv(mode, process.cwd(), ""),
     testTimeout: 5000,

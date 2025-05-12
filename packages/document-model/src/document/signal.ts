@@ -5,6 +5,11 @@ export interface ISignal<TType extends string, TInput> {
   input: TInput;
 }
 
+export type ISignalResult<TTYpe, TInput, TResult> = {
+  signal: { type: TTYpe; input: TInput };
+  result: TResult;
+};
+
 export type SynchronizationUnitInput = {
   syncId: string;
   scope: OperationScope;
@@ -47,7 +52,32 @@ export type CopyChildDocumentSignal = ISignal<
 
 export type Signal =
   | CreateChildDocumentSignal
-  | DeleteChildDocumentSignal
-  | CopyChildDocumentSignal;
+  | CopyChildDocumentSignal
+  | DeleteChildDocumentSignal;
 
 export type SignalDispatch = (signal: Signal) => void;
+
+export type SignalResult =
+  | ISignalResult<
+      CreateChildDocumentSignal["type"],
+      CreateChildDocumentSignal["input"],
+      PHDocument
+    >
+  | ISignalResult<
+      CopyChildDocumentSignal["type"],
+      CopyChildDocumentSignal["input"],
+      boolean
+    >
+  | ISignalResult<
+      DeleteChildDocumentSignal["type"],
+      DeleteChildDocumentSignal["input"],
+      PHDocument
+    >;
+
+export type SignalResults = {
+  CREATE_CHILD_DOCUMENT: PHDocument;
+  COPY_CHILD_DOCUMENT: PHDocument;
+  DELETE_CHILD_DOCUMENT: boolean;
+};
+
+export type SignalType<T extends Signal> = T["type"];

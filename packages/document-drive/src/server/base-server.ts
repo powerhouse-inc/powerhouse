@@ -51,6 +51,7 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
+import { type SignalResult } from "../../../document-model/src/document/signal.js";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
@@ -85,7 +86,6 @@ import {
   type OperationUpdate,
   type RemoteDriveAccessLevel,
   type RemoteDriveOptions,
-  type SignalResult,
   type StrandUpdate,
   type SyncStatus,
   type SyncUnitStatusObject,
@@ -795,6 +795,27 @@ export class BaseDocumentDriveServer
     return this.documentStorage.getChildren(driveId);
   }
 
+  protected async ensureDocument<TDocument extends PHDocument>(
+    driveId: string,
+    input: CreateDocumentInput<TDocument>,
+  ): Promise<TDocument> {
+    try {
+      const document = await this.getDocument<TDocument>(driveId, input.id);
+      // TODO check if this is the document that was intended or if it's a duplicate id
+      return document;
+    } catch (error) {
+      if (
+        !(
+          error instanceof Error &&
+          error.constructor.name === "DocumentNotFoundError"
+        )
+      ) {
+        this.logger.error(error);
+      }
+      return this.createDocument<TDocument>(driveId, input);
+    }
+  }
+
   protected async createDocument<TDocument extends PHDocument>(
     driveId: string,
     input: CreateDocumentInput<TDocument>,
@@ -1141,7 +1162,7 @@ export class BaseDocumentDriveServer
         let handler: (() => Promise<unknown>) | undefined = undefined;
         switch (signal.type) {
           case "CREATE_CHILD_DOCUMENT":
-            handler = () => this.createDocument(driveId, signal.input);
+            handler = () => this.ensureDocument(driveId, signal.input);
             break;
           case "DELETE_CHILD_DOCUMENT":
             handler = () => this.deleteDocument(driveId, signal.input.id);
@@ -1155,7 +1176,7 @@ export class BaseDocumentDriveServer
                     slug: signal.input.newId,
                   };
 
-                  return this.createDocument(driveId, {
+                  return this.ensureDocument(driveId, {
                     id: signal.input.newId,
                     documentType: documentToCopy.documentType,
                     document: doc,
@@ -1167,7 +1188,7 @@ export class BaseDocumentDriveServer
         }
         if (handler) {
           operationSignals.push(() =>
-            handler().then((result) => ({ signal, result })),
+            handler().then((result) => ({ signal, result }) as SignalResult),
           );
         }
       },
@@ -1191,6 +1212,7 @@ export class BaseDocumentDriveServer
       appliedOperation.hash !== operation.hash &&
       !skipHashValidation
     ) {
+      this.logger.warn(JSON.stringify(appliedOperation, null, 2));
       throw new ConflictOperationError(operation, appliedOperation);
     }
 

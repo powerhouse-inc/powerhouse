@@ -20,9 +20,9 @@ import {
   type OperationScope,
   type PHDocument,
   type ReducerOptions,
-  type Signal,
 } from "document-model";
 import { type Unsubscribe } from "nanoevents";
+import { type SignalResult } from "../../../document-model/src/document/signal.js";
 import { type BaseDocumentDriveServer } from "./base-server.js";
 import {
   type OperationError,
@@ -67,11 +67,6 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
 
 export type CreateDocumentInput<TDocument extends PHDocument> =
   CreateChildDocumentInput<TDocument>;
-
-export type SignalResult = {
-  signal: Signal;
-  result: unknown; // infer from return types on document-model
-};
 
 export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
   status: UpdateStatus;
