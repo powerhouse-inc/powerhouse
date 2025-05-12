@@ -6,7 +6,7 @@
     "main": "./dist/index.html",
     "type": "module",
     "engines": {
-        "node": ">=20.0.0"
+        "node": ">=22.0.0"
     },
     "files": [
         "dist",

@@ -77,6 +77,28 @@ export default defineConfig(({ mode }) => {
     const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
     const phPackages = phPackagesStr?.split(',') || [];
 
+    const wrapViteEnvs = (): PluginOption => {
+        const viteEnvsPlugin = viteEnvs({
+            computedEnv() {
+                return {
+                    APP_VERSION,
+                    REQUIRES_HARD_REFRESH,
+                    SENTRY_RELEASE: release,
+                };
+            },
+        });
+        return {
+            ...viteEnvsPlugin,
+            closeBundle() {
+                try {
+                    return viteEnvsPlugin.closeBundle();
+                } catch (error) {
+                    console.error(error);
+                }
+            },
+        };
+    };
+
     const plugins: PluginOption[] = [
         nodeResolve(),
         tailwind(),
@@ -116,15 +138,7 @@ export default defineConfig(({ mode }) => {
                 ],
             },
         }),
-        viteEnvs({
-            computedEnv() {
-                return {
-                    APP_VERSION,
-                    REQUIRES_HARD_REFRESH,
-                    SENTRY_RELEASE: release,
-                };
-            },
-        }),
+        wrapViteEnvs(),
     ] as const;
 
     if (uploadSentrySourcemaps) {

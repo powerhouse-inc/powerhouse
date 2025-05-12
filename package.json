@@ -80,7 +80,7 @@
     "@nx/plugin": "^20.4.6"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "commitlint": {
     "rules": {

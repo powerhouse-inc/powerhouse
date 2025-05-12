@@ -12,21 +12,21 @@ First, ensure your node version is compatible:
 
 ```
 "engines": {
-  "node": ">=20"
+  "node": ">=22"
 }
 ```
 
-For example, to use `20.10.0`:
+For example, to use `22.14.0`:
 
 ```
-npx install 20.10.0
-npx use 20.10.0
+npx install 22.14.0
+npx use 22.14.0
 ```
 
-Next, ensure you have PNPM 9 installed, _which is not the latest version_, and install packages
+Next, ensure you have PNPM 10 installed and install packages
 
 ```
-npx pnpm@9 install
+npx pnpm@10 install
 pnpm install
 ```
 

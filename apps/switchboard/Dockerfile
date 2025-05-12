@@ -22,7 +22,7 @@ FROM node:22-alpine AS build
 RUN apk update && apk add git
 WORKDIR /app
 RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || echo "Link already exists"
-RUN npm install --global pnpm@9 husky
+RUN npm install --global pnpm@10 husky
 COPY . .
 ARG PH_PACKAGES
 ENV PH_PACKAGES=${PH_PACKAGES}
