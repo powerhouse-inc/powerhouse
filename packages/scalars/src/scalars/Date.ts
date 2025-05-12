@@ -46,3 +46,5 @@ export const config: GraphQLScalarTypeConfig<string, string> = {
 };
 
 export const scalar = new GraphQLScalarType(config);
+
+export const getDefaultValue = () => new Date().toISOString();

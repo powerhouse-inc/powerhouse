@@ -1,10 +1,12 @@
+import { Kind } from "graphql";
 import { useCallback, useState } from "react";
 import { typeDefsDoc } from "../constants/documents.js";
-import { useSchemaContext } from "../context/schema-context.js";
+import { safeParseSdl, useSchemaContext } from "../context/schema-context.js";
 import { type Scope } from "../types/documents.js";
 import {
   makeInitialSchemaDoc,
-  makeMinimalObjectFromSDL,
+  makeMinimalObjectForStateType,
+  makeStateSchemaNameForScope,
 } from "../utils/helpers.js";
 import { ensureValidStateSchemaName } from "../utils/linting.js";
 import { cn } from "../utils/style.js";
@@ -63,11 +65,27 @@ function StateEditor({
   );
 
   const handleSyncWithSchema = useCallback(() => {
-    const updatedStateDoc = makeMinimalObjectFromSDL({
-      sharedSchemaSdl,
-      modelName,
-      scope,
-      initialValue,
+    const existingValue = initialValue || "{}";
+    const sharedSchemaDocumentNode = safeParseSdl(sharedSchemaSdl);
+    if (!sharedSchemaDocumentNode) return;
+    const stateEditorDocumentNode = safeParseSdl(stateSchema);
+    if (!stateEditorDocumentNode) return;
+    const stateTypeName = makeStateSchemaNameForScope(modelName, scope);
+    if (!stateTypeName) return;
+    const stateTypeDefinitionNode = stateEditorDocumentNode.definitions.find(
+      (def) =>
+        def.kind === Kind.OBJECT_TYPE_DEFINITION &&
+        def.name.value === stateTypeName,
+    );
+    if (
+      !stateTypeDefinitionNode ||
+      stateTypeDefinitionNode.kind !== Kind.OBJECT_TYPE_DEFINITION
+    )
+      return;
+    const updatedStateDoc = makeMinimalObjectForStateType({
+      sharedSchemaDocumentNode,
+      stateTypeDefinitionNode,
+      existingValue,
     });
     setInitialState(updatedStateDoc, scope);
   }, [sharedSchemaSdl, initialValue, setInitialState, scope]);

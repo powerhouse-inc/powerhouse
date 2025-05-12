@@ -17,4 +17,5 @@ export type BasePHScalar<TInput> = {
   stringSchema: string;
   config: GraphQLScalarTypeConfig<TInput, Serializable>;
   scalar: GraphQLScalarType<TInput, Serializable>;
+  getDefaultValue?: (value?: TInput) => Serializable;
 };

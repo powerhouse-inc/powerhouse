@@ -1,21 +1,32 @@
+import {
+  BOOLEAN_GQL_PRIMITIVE_NAME,
+  FLOAT_GQL_PRIMITIVE_NAME,
+  type GqlPrimitiveNodeName,
+  gqlPrimitiveNodeNamesList,
+  ID_GQL_PRIMITIVE_NAME,
+  INT_GQL_PRIMITIVE_NAME,
+  STRING_GQL_PRIMITIVE_NAME,
+} from "#document-model-editor/constants/graphql-kinds";
 import { safeParseSdl } from "#document-model-editor/context/schema-context";
-import * as customScalars from "@powerhousedao/scalars";
-import { type Serializable } from "@powerhousedao/scalars";
+import {
+  getPHCustomScalarByTypeName,
+  type Serializable,
+} from "@powerhousedao/scalars";
 import { pascalCase } from "change-case";
 import {
+  type ASTNode,
+  type DefinitionNode,
   type DocumentNode,
+  type EnumTypeDefinitionNode,
   type FieldDefinitionNode,
-  getNullableType,
-  type GraphQLSchema,
-  type GraphQLType,
-  isEnumType,
-  isListType,
-  isObjectType,
-  isScalarType,
   Kind,
+  type ListTypeNode,
+  type NamedTypeNode,
+  type NonNullTypeNode,
   type ObjectTypeDefinitionNode,
   print,
-  type TypeNode,
+  type ScalarTypeDefinitionNode,
+  type UnionTypeDefinitionNode,
   visit,
 } from "graphql";
 import { z } from "zod";
@@ -47,249 +58,401 @@ export function makeOperationInitialDoc(name: string) {
   return inputSdl;
 }
 
-function getMinimalValue(
-  type: GraphQLType,
-  schema: GraphQLSchema,
-  existingValue?: any,
-) {
-  const nullableType = getNullableType(type);
-
-  if (isScalarType(nullableType)) {
-    const typeName = nullableType.name;
-    if (existingValue !== undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return existingValue;
-    }
-    switch (typeName) {
-      case "Int":
-      case "Float":
-        return 0;
-      case "Boolean":
-        return false;
-      case "DateTime":
-        return new Date().toISOString();
-      case "ID":
-      case "String":
-      default:
-        return ""; // Return empty string for custom scalars and String/ID types
-    }
-  }
-
-  if (isEnumType(nullableType)) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    const enumValues = nullableType.getValues().map((v) => v.value);
-    if (existingValue !== undefined && enumValues.includes(existingValue)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return existingValue;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return enumValues[0] || null;
-  }
-
-  if (isListType(nullableType)) {
-    if (existingValue !== undefined && Array.isArray(existingValue)) {
-      // Optionally, validate each element in the array
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return existingValue;
-    }
-    return [];
-  }
-
-  if (isObjectType(nullableType)) {
-    const result: Record<string, any> = {};
-    const fields = nullableType.getFields();
-    const _existingValue = existingValue as Record<string, any> | undefined;
-    for (const fieldName in fields) {
-      const field = fields[fieldName];
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const existingFieldValue = _existingValue
-        ? _existingValue[fieldName]
-        : undefined;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      result[fieldName] = getMinimalValue(
-        field.type,
-        schema,
-        existingFieldValue,
-      );
-    }
-    return result;
-  }
-
-  // Handle other types like InterfaceType, UnionType as needed
-  return null;
-}
-
-export function makeInitialStateJson(args: {
-  schemaSdl: string;
-  modelName: string;
-  scope: string;
-  existingValue: string;
-}) {
-  const { schemaSdl, modelName, scope, existingValue } = args;
-
-  const parsedSchema = safeParseSdl(schemaSdl);
-  if (!parsedSchema) return existingValue;
-  const stateSchemaTypeName = `${pascalCase(modelName)}${pascalCase(scope)}State`;
-  const stateSchema = parsedSchema.definitions.find(
-    (def) =>
-      def.kind === Kind.OBJECT_TYPE_DEFINITION &&
-      def.name.value === stateSchemaTypeName,
-  );
-  if (!stateSchema) return existingValue;
-  // const emptyObject = makeEmptyObjectForDefinitionNode(
-  //   parsedSchema,
-  //   stateSchema,
-  // );
-  // if (!customScalars.isSerializable(emptyObject)) return existingValue;
-  // return JSON.stringify(emptyObject, null, 2);
-}
-
-export function syncInitialStateJsonWithSchema(args: {
-  existingJson: string;
-  schemaDocumentNode: DocumentNode;
-  definitionNode: ObjectTypeDefinitionNode;
-}) {
-  const { existingJson, schemaDocumentNode, definitionNode } = args;
-  const existingValueObjectResult = z
-    .record(z.string(), customScalars.SerializableSchema)
-    .safeParse(existingJson);
-  if (!existingValueObjectResult.success) return existingJson;
-  const existingValueObject = existingValueObjectResult.data;
-  const newJson: Record<string, Serializable> = {};
-  const definitionNodeFields = definitionNode.fields;
-  if (!definitionNodeFields?.length) return existingJson;
-  for (const field of definitionNodeFields) {
-    const fieldName = field.name.value;
-    const existingFieldValue = existingValueObject[fieldName];
-    if (existingFieldValue) continue;
-    const fieldTypeNode = field.type;
-    const minimalValue = getMinimalValueForTypeNode(
-      fieldTypeNode,
-      schemaDocumentNode,
-    );
-  }
-}
-
-export function getMinimalValueForTypeNode(
-  typeNode: TypeNode,
-  schemaDocumentNode: DocumentNode,
-): Serializable {
-  if (typeNode.kind !== Kind.NON_NULL_TYPE) return null;
-  const nullableTypeNode = typeNode.type;
-  if (nullableTypeNode.kind === Kind.LIST_TYPE) return [];
-  const typeDefinitionNodeFromSchema = schemaDocumentNode.definitions.find(
-    (def) =>
-      "name" in def &&
-      "kind" in def &&
-      def.name?.value === nullableTypeNode.name.value,
-  );
-  if (!typeDefinitionNodeFromSchema) return null;
-
-  if (
-    typeDefinitionNodeFromSchema.kind === Kind.ENUM_TYPE_DEFINITION ||
-    typeDefinitionNodeFromSchema.kind === Kind.ENUM_TYPE_EXTENSION
-  ) {
-    return "";
-  }
-
-  if (
-    typeDefinitionNodeFromSchema.kind === Kind.SCALAR_TYPE_DEFINITION ||
-    typeDefinitionNodeFromSchema.kind === Kind.SCALAR_TYPE_EXTENSION
-  ) {
-    return null;
-  }
-}
-
-function safeParseJsonRecord(json: string) {
+export function safeParseJsonRecord(json: string) {
   try {
     return JSON.parse(json) as Record<string, Serializable>;
   } catch (error) {
-    console.error(error);
     return null;
   }
 }
 
-export function makeMinimalObjectFromSDL(args: {
-  sharedSchemaSdl: string;
-  modelName: string;
-  scope: string;
-  initialValue: string;
+export function makeMinimalObjectForStateType(args: {
+  sharedSchemaDocumentNode: DocumentNode;
+  stateTypeDefinitionNode: ObjectTypeDefinitionNode;
+  existingValue: string;
 }) {
-  const { sharedSchemaSdl, modelName, scope, initialValue } = args;
-  const existingValue = initialValue || "{}";
-  console.log({
-    sharedSchemaSdl,
-    modelName,
-    scope,
-    initialValue,
-  });
-  const parsedSchema = safeParseSdl(sharedSchemaSdl);
-  console.log({
-    parsedSchema,
-  });
-  if (!parsedSchema) return existingValue;
-  const stateTypeName = makeStateSchemaNameForScope(modelName, scope);
-  console.log({
-    stateTypeName,
-  });
-  if (!stateTypeName) return existingValue;
-  const stateTypeDefinition = parsedSchema.definitions.find(
-    (def) =>
-      def.kind === Kind.OBJECT_TYPE_DEFINITION &&
-      def.name.value === stateTypeName,
-  );
-  console.log({
-    stateTypeDefinition,
-  });
-  if (
-    !stateTypeDefinition ||
-    stateTypeDefinition.kind !== Kind.OBJECT_TYPE_DEFINITION
-  )
-    return existingValue;
+  const { sharedSchemaDocumentNode, stateTypeDefinitionNode, existingValue } =
+    args;
   const existingValueObject = safeParseJsonRecord(existingValue);
-  console.log({
+  if (!existingValueObject) {
+    return existingValue;
+  }
+  const stateTypeDefinitionFields = stateTypeDefinitionNode.fields;
+  if (!stateTypeDefinitionFields?.length) {
+    return existingValue;
+  }
+  const minimalObject = makeMinimalValuesForObjectFields({
+    schemaDocumentNode: sharedSchemaDocumentNode,
+    fieldDefinitionNodes: stateTypeDefinitionFields,
     existingValueObject,
   });
-  if (!existingValueObject) return existingValue;
-  const stateTypeDefinitionFields = stateTypeDefinition.fields;
-  console.log({
-    stateTypeDefinitionFields,
-  });
-  if (!stateTypeDefinitionFields?.length) return existingValue;
-  const newJson: Record<string, Serializable> = {};
-  for (const field of stateTypeDefinitionFields) {
-    const fieldName = field.name.value;
-    const fieldType = field.type;
-    const fieldTypeNode = field.type;
-    const existingFieldValue = existingValueObject[fieldName];
-    console.log({
-      fieldName,
-      fieldType,
-      fieldTypeNode,
-      existingFieldValue,
-    });
-  }
-  return initialValue;
+  return JSON.stringify(minimalObject, null, 2);
 }
 
-export function recursivelyMakeMinimalObject(args: {
+export function makeMinimalValuesForObjectFields(args: {
+  schemaDocumentNode: DocumentNode;
   existingValueObject: Record<string, Serializable> | null;
-  stateTypeDefinitionFields: readonly FieldDefinitionNode[];
+  fieldDefinitionNodes: readonly FieldDefinitionNode[];
 }) {
-  const { existingValueObject, stateTypeDefinitionFields } = args;
+  const { schemaDocumentNode, existingValueObject, fieldDefinitionNodes } =
+    args;
   const newJson: Record<string, Serializable> = {};
-  for (const field of stateTypeDefinitionFields) {
-    const fieldName = field.name.value;
-    const fieldType = field.type;
-    const fieldTypeNode = field.type;
-    const existingFieldValue = existingValueObject?.[fieldName] ?? null;
-    console.log({
+
+  for (const astNode of fieldDefinitionNodes) {
+    const fieldName = getASTNodeName(astNode);
+    if (!fieldName) {
+      continue;
+    }
+    const minimalValue = makeMinimalValueForASTNode({
       fieldName,
-      fieldType,
-      fieldTypeNode,
-      existingFieldValue,
+      astNode,
+      schemaDocumentNode,
+      existingValueObject,
     });
+    newJson[astNode.name.value] = minimalValue;
   }
+
+  return newJson;
+}
+
+function makeMinimalValueForASTNode(args: {
+  fieldName: string;
+  astNode: ASTNode;
+  schemaDocumentNode: DocumentNode;
+  existingValueObject: Record<string, Serializable> | null;
+}) {
+  const { fieldName, astNode, schemaDocumentNode, existingValueObject } = args;
+  const existingFieldValue = existingValueObject?.[fieldName];
+  let node: ASTNode | null = astNode;
+
+  if (isFieldDefinitionNode(astNode)) {
+    node = getASTNodeTypeNode(node);
+  }
+  const isNonNull = isNonNullNode(node);
+  if (isNonNull) {
+    node = getASTNodeTypeNode(node);
+  }
+
+  if (isListTypeNode(node)) {
+    return makeMinimalValueForGqlListNode(node, existingFieldValue, isNonNull);
+  }
+  if (isGqlPrimitiveNode(node)) {
+    return makeMinimalValueForGQLPrimitiveNode(
+      node,
+      existingFieldValue,
+      isNonNull,
+    );
+  }
+
+  const namedTypeDefinitionNode = getNamedTypeDefinitionNode(
+    node,
+    schemaDocumentNode,
+  );
+
+  if (isEnumTypeDefinitionNode(namedTypeDefinitionNode)) {
+    return makeMinimalValueForGqlEnum(
+      namedTypeDefinitionNode,
+      existingFieldValue,
+      isNonNull,
+    );
+  }
+  if (isScalarTypeDefinitionNode(namedTypeDefinitionNode)) {
+    return makeMinimalValueForGqlScalar(
+      namedTypeDefinitionNode,
+      existingFieldValue,
+      isNonNull,
+    );
+  }
+  if (isUnionTypeDefinitionNode(namedTypeDefinitionNode)) {
+    return makeMinimalValueForGqlUnion(
+      namedTypeDefinitionNode,
+      existingFieldValue,
+      schemaDocumentNode,
+      existingValueObject,
+      isNonNull,
+    );
+  }
+  if (isObjectTypeDefinitionNode(namedTypeDefinitionNode)) {
+    return makeMinimalValueForGqlObject(
+      namedTypeDefinitionNode,
+      schemaDocumentNode,
+      existingValueObject,
+      existingFieldValue,
+      isNonNull,
+    );
+  }
+
+  return existingFieldValue;
+}
+
+function isFieldDefinitionNode(
+  astNodeTypeNode: ASTNode | null,
+): astNodeTypeNode is FieldDefinitionNode {
+  if (!astNodeTypeNode) return false;
+  return astNodeTypeNode.kind === Kind.FIELD_DEFINITION;
+}
+
+function isNonNullNode(astNode: ASTNode | null): astNode is NonNullTypeNode {
+  if (!astNode) return false;
+  return astNode.kind === Kind.NON_NULL_TYPE;
+}
+
+export function isGqlPrimitiveNode(
+  astNodeTypeNode: ASTNode | null,
+): astNodeTypeNode is NamedTypeNode {
+  if (!astNodeTypeNode) return false;
+  const name = getASTNodeName(astNodeTypeNode);
+  return gqlPrimitiveNodeNamesList.includes(name as GqlPrimitiveNodeName);
+}
+
+function isListTypeNode(
+  astNodeTypeNode: ASTNode | null,
+): astNodeTypeNode is ListTypeNode {
+  if (!astNodeTypeNode) return false;
+  return astNodeTypeNode.kind === Kind.LIST_TYPE;
+}
+
+function isEnumTypeDefinitionNode(
+  definitionNode: DefinitionNode | null,
+): definitionNode is EnumTypeDefinitionNode {
+  if (!definitionNode) return false;
+  return definitionNode.kind === Kind.ENUM_TYPE_DEFINITION;
+}
+
+function isScalarTypeDefinitionNode(
+  definitionNode: DefinitionNode | null,
+): definitionNode is ScalarTypeDefinitionNode {
+  if (!definitionNode) return false;
+  return definitionNode.kind === Kind.SCALAR_TYPE_DEFINITION;
+}
+
+function isUnionTypeDefinitionNode(
+  definitionNode: DefinitionNode | null,
+): definitionNode is UnionTypeDefinitionNode {
+  if (!definitionNode) return false;
+  return definitionNode.kind === Kind.UNION_TYPE_DEFINITION;
+}
+
+function isObjectTypeDefinitionNode(
+  definitionNode: DefinitionNode | null,
+): definitionNode is ObjectTypeDefinitionNode {
+  if (!definitionNode) return false;
+  return definitionNode.kind === Kind.OBJECT_TYPE_DEFINITION;
+}
+
+function getASTNodeName(astNode: ASTNode | null) {
+  if (!astNode) {
+    return null;
+  }
+  if (!("name" in astNode)) {
+    return null;
+  }
+  if (!astNode.name) {
+    return null;
+  }
+  if (!("value" in astNode.name)) {
+    return null;
+  }
+  return astNode.name.value;
+}
+
+function getASTNodeTypeNode(astNode: ASTNode | null) {
+  if (!astNode) {
+    return null;
+  }
+  if (!("type" in astNode)) {
+    return null;
+  }
+  return astNode.type;
+}
+
+function makeMinimalValueForGQLPrimitiveNode(
+  primitiveTypeNode: NamedTypeNode,
+  existingFieldValue: Serializable,
+  isNonNull: boolean,
+) {
+  const name = getASTNodeName(primitiveTypeNode);
+  if (!name) {
+    return null;
+  }
+  switch (name) {
+    case ID_GQL_PRIMITIVE_NAME: {
+      if (z.string().safeParse(existingFieldValue).success) {
+        return existingFieldValue;
+      }
+      return isNonNull ? "placeholder-id" : null;
+    }
+    case BOOLEAN_GQL_PRIMITIVE_NAME: {
+      if (z.boolean().safeParse(existingFieldValue).success) {
+        return existingFieldValue;
+      }
+      return isNonNull ? false : null;
+    }
+    case INT_GQL_PRIMITIVE_NAME: {
+      if (z.number().safeParse(existingFieldValue).success) {
+        return existingFieldValue;
+      }
+      return isNonNull ? 0 : null;
+    }
+    case FLOAT_GQL_PRIMITIVE_NAME: {
+      if (z.number().safeParse(existingFieldValue).success) {
+        return existingFieldValue;
+      }
+      return isNonNull ? 0.0 : null;
+    }
+    case STRING_GQL_PRIMITIVE_NAME: {
+      if (z.string().safeParse(existingFieldValue).success) {
+        return existingFieldValue;
+      }
+      return isNonNull ? "" : null;
+    }
+  }
+
+  return isNonNull ? existingFieldValue : null;
+}
+
+function makeMinimalValueForGqlEnum(
+  namedTypeDefinitionNode: EnumTypeDefinitionNode,
+  existingFieldValue: Serializable,
+  isNonNull: boolean,
+) {
+  const enumValues =
+    namedTypeDefinitionNode.values?.map((value) => value.name.value) ?? [];
+  if (
+    typeof existingFieldValue === "string" &&
+    enumValues.includes(existingFieldValue)
+  ) {
+    return existingFieldValue;
+  }
+  if (isNonNull) {
+    return enumValues[0];
+  }
+  return null;
+}
+
+function makeMinimalValueForGqlScalar(
+  scalarTypeDefinitionNode: ScalarTypeDefinitionNode,
+  existingFieldValue: Serializable,
+  isNonNull: boolean,
+) {
+  if (!isNonNull && !existingFieldValue) {
+    return null;
+  }
+  const name = getASTNodeName(scalarTypeDefinitionNode);
+  if (!name) {
+    console.error(
+      "No name for scalar type definition node",
+      scalarTypeDefinitionNode,
+    );
+    return null;
+  }
+  const scalar = getPHCustomScalarByTypeName(name);
+  if (!scalar) {
+    return null;
+  }
+  const existingValueIsValid = scalar.schema.safeParse(existingFieldValue);
+  if (existingValueIsValid.success) {
+    return existingFieldValue;
+  }
+  if (!isNonNull) {
+    return null;
+  }
+  const minimalValue = scalar.getDefaultValue?.();
+  if (minimalValue) {
+    return minimalValue;
+  }
+  return existingFieldValue;
+}
+
+function makeMinimalValueForGqlUnion(
+  namedTypeDefinitionNode: UnionTypeDefinitionNode,
+  existingFieldValue: Serializable,
+  schemaDocumentNode: DocumentNode,
+  existingValueObject: Record<string, Serializable> | null,
+  isNonNull: boolean,
+) {
+  if (!isNonNull && !existingFieldValue) {
+    return null;
+  }
+
+  const types = namedTypeDefinitionNode.types;
+  if (!types?.length) {
+    return null;
+  }
+
+  const firstNamedTypeDefinitionNode = namedTypeDefinitionNode.types?.at(0);
+  if (!firstNamedTypeDefinitionNode) {
+    return null;
+  }
+  const firstNamedTypeObjectDefinitionNode = getNamedTypeDefinitionNode(
+    firstNamedTypeDefinitionNode,
+    schemaDocumentNode,
+  );
+  if (!isObjectTypeDefinitionNode(firstNamedTypeObjectDefinitionNode)) {
+    return null;
+  }
+  return makeMinimalValueForGqlObject(
+    firstNamedTypeObjectDefinitionNode,
+    schemaDocumentNode,
+    existingValueObject,
+    existingFieldValue,
+    isNonNull,
+  );
+}
+
+function makeMinimalValueForGqlListNode(
+  listTypeNode: ListTypeNode,
+  existingFieldValue: Serializable,
+  isNonNull: boolean,
+) {
+  if (!isNonNull && !Array.isArray(existingFieldValue)) {
+    return null;
+  }
+  if (isNonNull && !Array.isArray(existingFieldValue)) {
+    return [];
+  }
+  return existingFieldValue;
+}
+
+function makeMinimalValueForGqlObject(
+  objectTypeDefinitionNode: ObjectTypeDefinitionNode,
+  schemaDocumentNode: DocumentNode,
+  existingValueObject: Record<string, Serializable> | null,
+  existingFieldValue: Serializable,
+  isNonNull: boolean,
+) {
+  if (!isNonNull && !existingFieldValue) {
+    return null;
+  }
+  const fields = objectTypeDefinitionNode.fields;
+  if (!fields?.length) {
+    return {};
+  }
+  return makeMinimalValuesForObjectFields({
+    schemaDocumentNode,
+    existingValueObject,
+    fieldDefinitionNodes: fields,
+  });
+}
+
+function getNamedTypeDefinitionNode(
+  astNodeTypeNode: ASTNode | null,
+  schemaDocumentNode: DocumentNode,
+) {
+  if (!astNodeTypeNode) {
+    return null;
+  }
+  const name = getASTNodeName(astNodeTypeNode);
+  if (!name) {
+    return null;
+  }
+  const definitionNode = schemaDocumentNode.definitions.find(
+    (def) => "kind" in def && "name" in def && def.name?.value === name,
+  );
+  if (!definitionNode) {
+    return null;
+  }
+  return definitionNode;
 }
 
 function removeWhitespace(str: string) {
