@@ -1,29 +1,41 @@
 import { createClient, type RedisClientType } from "redis";
 
-export let redisClient: RedisClientType;
-export const initRedis = async (url: string) => {
-  if (!redisClient) {
+export let redisClient: RedisClientType | undefined;
+export const initRedis = async (
+  url: string,
+): Promise<RedisClientType | undefined> => {
+  if (redisClient) {
+    return redisClient;
+  }
+
+  return new Promise((resolve, reject) => {
     const socket = url.includes("rediss")
       ? {
           tls: true,
           rejectUnauthorized: false,
         }
       : undefined;
-
     redisClient = createClient({
       url,
       socket,
     });
 
-    redisClient.on("error", (err: string) => {
-      console.log("Redis Client Error", err);
-      throw new Error("Redis Client Error");
-    });
+    redisClient
+      .connect()
+      .then((client) => {
+        redisClient = client;
 
-    redisClient.connect();
-  }
-
-  return redisClient;
+        client.on("error", (err) => {
+          console.warn("Redis Client Error", err);
+        });
+        resolve(client);
+      })
+      .catch(async (e: unknown) => {
+        reject(e instanceof Error ? e : new Error(JSON.stringify(e)));
+        // await redisClient.disconnect();
+        // console.warn("Redis Client Error", e);
+      });
+  });
 };
 
 const timer = setInterval(
@@ -42,5 +54,5 @@ const timer = setInterval(
 export const closeRedis = () => {
   clearInterval(timer);
 
-  redisClient.disconnect();
+  return redisClient?.disconnect();
 };

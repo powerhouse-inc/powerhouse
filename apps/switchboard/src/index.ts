@@ -51,7 +51,11 @@ const main = async () => {
     const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
     let redis: RedisClientType | undefined;
     if (redisUrl) {
-      redis = await initRedis(redisUrl);
+      try {
+        redis = await initRedis(redisUrl);
+      } catch (e) {
+        console.error(e);
+      }
     }
     const connectionString = process.env.DATABASE_URL ?? "./.ph/drive-storage";
     const dbUrl =
