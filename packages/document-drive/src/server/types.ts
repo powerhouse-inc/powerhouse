@@ -356,6 +356,7 @@ export interface IBaseDocumentDriveServer {
   ): Promise<DocumentDriveDocument>;
 
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
+  getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]>;
 
   getDocuments(driveId: string): Promise<string[]>;
   getDocument<TDocument extends PHDocument>(

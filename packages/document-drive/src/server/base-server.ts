@@ -752,6 +752,19 @@ export class BaseDocumentDriveServer
     }
   }
 
+  async getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]> {
+    try {
+      const drive = await this.cache.getDriveBySlug(slug);
+      if (drive) {
+        return drive.id;
+      }
+    } catch (e) {
+      this.logger.error("Error getting drive from cache", e);
+    }
+    const driveStorage = await this.documentStorage.getBySlug(slug);
+    return driveStorage.id;
+  }
+
   async getDocument<TDocument extends PHDocument>(
     driveId: string,
     documentId: string,
