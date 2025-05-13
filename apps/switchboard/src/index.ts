@@ -87,7 +87,7 @@ const main = async () => {
     await startAPI(reactor, {
       express: app,
       port: serverPort,
-      dbPath: dbUrl.startsWith("postgresql") ? dbUrl : "./.ph/read-storage",
+      dbPath: dbUrl.startsWith("postgresql") ? dbUrl : ".ph/read-storage",
       configFile: path.join(process.cwd(), "powerhouse.config.json"),
     });
   } catch (e) {
