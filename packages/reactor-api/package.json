@@ -30,7 +30,6 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "devDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
@@ -52,6 +51,7 @@
     "@powerhousedao/analytics-engine-graphql": "^0.3.0",
     "@powerhousedao/analytics-engine-knex": "^0.5.1",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/document-engineering": "^1.0.2",
     "body-parser": "^1.20.3",
     "change-case": "^5.4.4",
     "cors": "^2.8.5",

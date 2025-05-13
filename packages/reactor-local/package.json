@@ -27,7 +27,6 @@
     "@libsql/client": "^0.14.0",
     "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@powerhousedao/reactor-api": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
     "change-case": "^5.4.4",
     "commander": "^12.1.0",
     "document-drive": "workspace:*",

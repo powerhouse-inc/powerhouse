@@ -65,7 +65,6 @@
         "@powerhousedao/config": "workspace:*",
         "@powerhousedao/design-system": "workspace:*",
         "@powerhousedao/reactor-browser": "workspace:*",
-        "@powerhousedao/scalars": "workspace:*",
         "@rollup/plugin-node-resolve": "^15.2.3",
         "@sentry/browser": "^9.1.0",
         "@sentry/react": "^7.109.0",

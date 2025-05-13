@@ -37,7 +37,6 @@
     "prelint:nx": "prisma generate --no-hints"
   },
   "optionalDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
     "localforage": "^1.10.0",
     "redis": "^4.6.15",
@@ -47,7 +46,6 @@
   "dependencies": {
     "@helia/mfs": "^4.0.3",
     "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
     "change-case": "^5.4.4",
     "document-model": "workspace:*",
