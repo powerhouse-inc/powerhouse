@@ -1,6 +1,5 @@
 /* eslint-disable react/jsx-max-depth */
 import { Icon } from "#powerhouse";
-import { type SelectProps } from "#scalars";
 import { useCommandState } from "cmdk";
 import type React from "react";
 import { useEffect } from "react";
@@ -13,6 +12,7 @@ import {
 } from "../../../../scalars/components/fragments/command/index.js";
 import { cn } from "../../../../scalars/lib/utils.js";
 import { CommandListItem } from "./command-list-item.js";
+import type { SelectProps } from "./types.js";
 
 interface ContentProps {
   searchable?: boolean;

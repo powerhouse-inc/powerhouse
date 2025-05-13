@@ -1,7 +1,7 @@
 import { Icon, type IconName } from "#powerhouse";
-import type { SelectProps } from "#scalars";
 import React from "react";
 import { cn } from "../../../../scalars/lib/utils.js";
+import type { SelectProps } from "./types.js";
 
 interface SelectedContentProps {
   selectedValues: string[];
