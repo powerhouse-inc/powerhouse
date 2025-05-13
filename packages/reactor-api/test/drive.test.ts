@@ -76,6 +76,7 @@ describe("DriveSubgraph", () => {
       listeners: {
         setListener: vi.fn(),
       },
+      getDriveIdBySlug: vi.fn().mockResolvedValue("test-drive-id"),
     };
 
     const mockSubgraphArgs = {
@@ -122,6 +123,7 @@ describe("DriveSubgraph", () => {
       listeners: {
         setListener: vi.fn(),
       },
+      getDriveIdBySlug: vi.fn().mockResolvedValue("test-drive-id"),
     };
 
     const mockSubgraphArgs = {
