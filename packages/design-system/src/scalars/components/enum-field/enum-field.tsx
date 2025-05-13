@@ -2,13 +2,13 @@ import React from "react";
 import {
   RadioGroupField,
   type RadioGroupFieldProps,
-} from "../fragments/radio-group-field/radio-group-field.js";
+} from "../fragments/radio-group-field/index.js";
 import {
   SelectField,
   type SelectFieldProps,
-} from "../fragments/select-field/select-field.js";
+} from "../fragments/select-field/index.js";
 
-export type EnumFieldProps =
+type EnumFieldProps =
   | ({
       variant?: "auto";
     } & (RadioGroupFieldProps | SelectFieldProps))
@@ -19,7 +19,7 @@ export type EnumFieldProps =
       variant: "Select";
     } & SelectFieldProps);
 
-export const EnumField = React.forwardRef<
+const EnumField = React.forwardRef<
   HTMLDivElement | HTMLButtonElement,
   EnumFieldProps
 >(({ variant = "auto", options = [], ...props }, ref) => {
@@ -49,3 +49,5 @@ export const EnumField = React.forwardRef<
 });
 
 EnumField.displayName = "EnumField";
+
+export { EnumField, type EnumFieldProps };
