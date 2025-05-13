@@ -7,6 +7,7 @@ import { pascalCase } from "change-case";
 import {
   type DocumentModelModule,
   type DocumentModelState,
+  type GlobalStateFromDocument,
   type OperationFromDocument,
   type PHDocument,
 } from "document-model";
@@ -177,6 +178,9 @@ export type DriveState = DriveInfo &
   };
 
 export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
+  revision: number;
+  state: GlobalStateFromDocument<TDocument>;
+  initialState: GlobalStateFromDocument<TDocument>;
   operations: (OperationFromDocument<TDocument> & {
     inputText: string;
   })[];
@@ -248,7 +252,7 @@ export async function fetchDocument<TDocument extends PHDocument>(
     ? {
         ...result.document,
         revision: {
-          global: result.document.revision.global,
+          global: result.document.revision,
           local: 0,
         },
         state: result.document.state,
@@ -268,7 +272,7 @@ export async function fetchDocument<TDocument extends PHDocument>(
             created: result.document.created,
             lastModified: result.document.created,
             state: utils.createState({
-              global: result.document.initialState.state.global,
+              global: result.document.initialState,
             }),
           }),
           id: result.document.id,
