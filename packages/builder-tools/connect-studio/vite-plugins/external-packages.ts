@@ -125,19 +125,21 @@ export const viteLoadExternalPackages = (
   targetDir: string,
 ): PluginOption[] => {
   const importPath = join(targetDir, IMPORT_SCRIPT_FILE);
+  packages = packages?.filter((p) => p.trim().length) ?? [];
+
   return [
     {
       name: "vite-plugin-ph-external-packages",
       config() {
         if (!localPackage) {
-          generateImportScript(packages ?? [], importPath, localPackage);
+          generateImportScript(packages, importPath, localPackage);
         }
       },
       closeBundle() {
-        generateImportScript(packages ?? [], importPath, localPackage);
+        generateImportScript(packages, importPath, localPackage);
       },
       configureServer(server) {
-        generateImportScript(packages ?? [], importPath, localPackage);
+        generateImportScript(packages, importPath, localPackage);
         handleExternalPackageEvents(server);
       },
       handleHotUpdate({ file, server, modules, timestamp }) {

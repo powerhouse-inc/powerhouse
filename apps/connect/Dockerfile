@@ -11,9 +11,10 @@ RUN npm install --global pnpm@10
 COPY . .
 RUN pnpm install --frozen-lockfile --filter @powerhousedao/connect...
 ENV NX_DAEMON=false
-ARG BASE_PATH=""
+ENV NX_ISOLATE_PLUGINS=false
+ARG BASE_PATH="/"
 ENV BASE_PATH=${BASE_PATH}
-ARG PH_PACKAGES=""
+ARG PH_PACKAGES
 ENV PH_PACKAGES=${PH_PACKAGES}
 RUN if [ -n "${PH_PACKAGES}" ]; then pnpm add --filter @powerhousedao/connect ${PH_PACKAGES//,/ }; fi
 RUN pnpm nx run @powerhousedao/connect:build --base ${BASE_PATH}
@@ -27,6 +28,7 @@ ARG PORT=80
 ENV PORT=${PORT}
 ARG BASE_PATH=""
 ENV BASE_PATH=${BASE_PATH}
+ARG PH_CONNECT_ROUTER_BASENAME
 ENV PH_CONNECT_ROUTER_BASENAME=${PH_CONNECT_ROUTER_BASENAME}
 ARG PH_CONNECT_SENTRY_DSN=""
 ENV PH_CONNECT_SENTRY_DSN=${PH_CONNECT_SENTRY_DSN}
