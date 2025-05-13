@@ -124,7 +124,12 @@ export default (
             drive: string,
             operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
-        ) => documentDrive.addDriveOperations(drive, operations, { forceSync }),
+        ) =>
+            documentDrive.addDriveOperations(
+                drive,
+                operations as Operation<DocumentDriveAction>[],
+                { forceSync },
+            ),
     );
 
     ipcMain.handle(
@@ -135,9 +140,13 @@ export default (
             operation: Operation<DocumentDriveAction | DocumentAction>,
             forceSync?: boolean,
         ) =>
-            documentDrive.queueDriveOperations(drive, [operation], {
-                forceSync,
-            }),
+            documentDrive.queueDriveOperations(
+                drive,
+                [operation] as Operation<DocumentDriveAction>[],
+                {
+                    forceSync,
+                },
+            ),
     );
 
     ipcMain.handle(
@@ -148,9 +157,13 @@ export default (
             operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
-            documentDrive.queueDriveOperations(drive, operations, {
-                forceSync,
-            }),
+            documentDrive.queueDriveOperations(
+                drive,
+                operations as Operation<DocumentDriveAction>[],
+                {
+                    forceSync,
+                },
+            ),
     );
 
     ipcMain.handle('documentDrive:clearStorage', async () => {
