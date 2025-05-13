@@ -46,9 +46,6 @@ function generateImportScript(
       fs.existsSync(resolve(targetDir, LOCAL_JS.replace(".js", ".ts")));
     const hasStyles = fs.existsSync(resolve(targetDir, LOCAL_CSS));
     if (hasStyles) {
-      console.log(
-        `Import local styles in ${resolve(targetDir, LOCAL_CSS)} from ${targetDir}`,
-      );
       imports.push(`import '${LOCAL_CSS}';`);
     }
     if (hasModule) {
