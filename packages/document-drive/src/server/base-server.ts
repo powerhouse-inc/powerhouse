@@ -610,7 +610,7 @@ export class BaseDocumentDriveServer
           icon: input.global.icon ?? null,
           name: input.global.name,
         },
-        local: input.local,
+        local: input.local ?? {},
       },
     });
 

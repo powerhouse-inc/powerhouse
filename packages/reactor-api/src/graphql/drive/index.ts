@@ -18,6 +18,7 @@ import {
   type StrandUpdateGraphQL,
 } from "document-drive";
 import { type Listener } from "document-drive/server/types";
+import { type DriveInfo } from "document-drive/utils/graphql";
 import {
   type DocumentModelInput,
   generateId,
@@ -59,7 +60,7 @@ export class DriveSubgraph extends Subgraph {
 
     type Query {
       system: System
-      drive: DocumentDrive_DocumentDriveState
+      drive: DriveInfo
       document(id: String!): IDocument
       documents: [String!]!
     }
@@ -198,9 +199,17 @@ export class DriveSubgraph extends Subgraph {
     type Sync {
       strands(listenerId: ID!, since: String): [StrandUpdate!]!
     }
+
+    type DriveInfo {
+      id: string!
+      name: String!
+      slug: string!
+      meta: DriveMeta
+      icon: String
+    }
   `;
 
-  private async getDriveIdBySlugId(slugOrId: string): Promise<string> {
+  private async getDriveIdBySlugOrId(slugOrId: string): Promise<string> {
     try {
       return await this.reactor.getDriveIdBySlug(slugOrId);
     } catch {
@@ -209,7 +218,7 @@ export class DriveSubgraph extends Subgraph {
     }
   }
 
-  private async getDriveBySlugId(
+  private async getDriveBySlugOrId(
     slugOrId: string,
   ): Promise<DocumentDriveDocument> {
     try {
@@ -252,31 +261,35 @@ export class DriveSubgraph extends Subgraph {
       },
     },
     Query: {
-      drive: async (_: unknown, args: unknown, ctx: Context) => {
+      drive: async (
+        _: unknown,
+        args: unknown,
+        ctx: Context,
+      ): Promise<DriveInfo> => {
         this.logger.verbose(`drive()`, JSON.stringify(args));
 
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const drive = await this.getDriveBySlugId(ctx.driveId);
+        const drive = await this.getDriveBySlugOrId(ctx.driveId);
 
         return {
           id: drive.id,
           slug: drive.slug,
           meta: drive.meta,
-          ...drive.state.global,
-          nodes: drive.state.global.nodes,
+          name: drive.state.global.name,
+          icon: drive.state.global.icon ?? undefined,
         };
       },
       documents: async (_: unknown, args: unknown, ctx: Context) => {
         this.logger.verbose(`documents(drive: ${ctx.driveId})`, args);
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const driveId = await this.getDriveIdBySlugId(ctx.driveId);
+        const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         const documents = await this.reactor.getDocuments(driveId);
         return documents;
       },
       document: async (_: unknown, { id }: { id: string }, ctx: Context) => {
         this.logger.verbose(`document(drive: ${ctx.driveId}, id: ${id})`);
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const driveId = await this.getDriveIdBySlugId(ctx.driveId);
+        const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         const document = await (driveId === id
           ? this.reactor.getDrive(driveId)
           : this.reactor.getDocument(driveId, id));
@@ -324,7 +337,7 @@ export class DriveSubgraph extends Subgraph {
         if (!ctx.driveId) {
           throw new Error("Drive ID is required");
         }
-        const driveId = await this.getDriveIdBySlugId(ctx.driveId);
+        const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
 
         // Create the listener and transmitter
         const uuid = listenerId ?? generateId();
@@ -375,7 +388,7 @@ export class DriveSubgraph extends Subgraph {
         ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const driveId = await this.getDriveIdBySlugId(ctx.driveId);
+        const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         this.logger.verbose(
           `pushUpdates(drive: slug:${ctx.driveId} id:${driveId})`,
           strandsGql,
@@ -414,7 +427,7 @@ export class DriveSubgraph extends Subgraph {
         if (!listenerId || !revisions) return false;
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
-        const driveId = await this.getDriveIdBySlugId(ctx.driveId);
+        const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         this.logger.verbose(
           `acknowledge(drive: ${ctx.driveId}/${driveId}, listenerId: ${listenerId})`,
           revisions,
@@ -452,7 +465,7 @@ export class DriveSubgraph extends Subgraph {
         ctx: Context,
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
-        const driveId = await this.getDriveIdBySlugId(ctx.driveId);
+        const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         this.logger.debug(
           `strands(drive: ${ctx.driveId}/${driveId}, listenerId: ${listenerId}, since:${since})`,
         );

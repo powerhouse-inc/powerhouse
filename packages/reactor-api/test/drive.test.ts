@@ -1,54 +1,46 @@
 import { DriveSubgraph } from "#graphql/drive/index.js";
-import { driveDocumentModelModule } from "document-drive";
+import { driveDocumentModelModule, ReactorBuilder } from "document-drive";
+import { documentModelDocumentModelModule, generateId } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 
 describe("DriveSubgraph", () => {
   it("should be able to instantiate", () => {
-    const mockReactor = {
-      getDrive: vi.fn(),
-      getDocuments: vi.fn(),
-      getDocument: vi.fn(),
-      getDocumentModelModules: vi.fn(),
-      listeners: {
-        setListener: vi.fn(),
-      },
-    };
+    const reactor = new ReactorBuilder([
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+    ] as any).build();
 
-    const mockSubgraphArgs = {
-      reactor: mockReactor,
-    };
-
-    const driveSubgraph = new DriveSubgraph(mockSubgraphArgs as any);
+    const driveSubgraph = new DriveSubgraph({ reactor } as any);
 
     expect(driveSubgraph).toBeInstanceOf(DriveSubgraph);
   });
 
   it("should return drive data", async () => {
+    const reactor = new ReactorBuilder([
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+    ] as any).build();
+
+    const reactorSpy = vi.spyOn(reactor, "getDrive");
+
+    const driveId = generateId();
     const mockDriveData = {
+      id: driveId,
       meta: {
         preferredEditor: "test-editor",
       },
-      state: driveDocumentModelModule.utils.createState(),
-    };
-
-    const mockReactor = {
-      getDrive: vi.fn().mockResolvedValue(mockDriveData),
-      getDocuments: vi.fn(),
-      getDocument: vi.fn(),
-      getDocumentModelModules: vi.fn(),
-      listeners: {
-        setListener: vi.fn(),
+      global: {
+        name: "test-drive",
+        icon: undefined,
       },
     };
 
-    const mockSubgraphArgs = {
-      reactor: mockReactor,
-    };
+    const createdDrive = await reactor.addDrive(mockDriveData);
 
-    const driveSubgraph = new DriveSubgraph(mockSubgraphArgs as any);
+    const driveSubgraph = new DriveSubgraph({ reactor } as any);
 
     const context = {
-      driveId: "test-drive-id",
+      driveId,
     };
 
     const drive = await (driveSubgraph.resolvers.Query as any)?.drive(
@@ -58,11 +50,54 @@ describe("DriveSubgraph", () => {
     );
 
     expect(drive).toEqual({
-      meta: mockDriveData.meta,
-      ...mockDriveData.state.global,
-      nodes: mockDriveData.state.global.nodes,
+      id: createdDrive.id,
+      slug: createdDrive.slug,
+      meta: createdDrive.meta,
+      name: createdDrive.state.global.name,
+      icon: createdDrive.state.global.icon ?? undefined,
     });
-    expect(mockReactor.getDrive).toHaveBeenCalledWith(context.driveId);
+    expect(reactorSpy).toHaveBeenCalledWith(context.driveId);
+  });
+
+  it("should return drive data with slug", async () => {
+    const reactor = new ReactorBuilder([
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+    ] as any).build();
+
+    const getBySlugSpy = vi.spyOn(reactor, "getDriveBySlug");
+    const getByIdSpy = vi.spyOn(reactor, "getDrive");
+    const driveSubgraph = new DriveSubgraph({ reactor } as any);
+
+    const driveId = generateId();
+    const createdDrive = await reactor.addDrive({
+      id: driveId,
+      slug: "test-drive",
+      global: {
+        name: "test-drive",
+        icon: undefined,
+      },
+    });
+
+    const context = {
+      driveId: "test-drive",
+    };
+
+    const drive = await (driveSubgraph.resolvers.Query as any)?.drive(
+      null,
+      {},
+      context as any,
+    );
+
+    expect(drive).toStrictEqual({
+      id: createdDrive.id,
+      slug: createdDrive.slug,
+      meta: createdDrive.meta,
+      name: createdDrive.state.global.name,
+      icon: createdDrive.state.global.icon ?? undefined,
+    });
+    expect(getBySlugSpy).toHaveBeenCalledWith("test-drive");
+    expect(getByIdSpy).toHaveBeenCalledWith(driveId);
   });
 
   it("should return documents data", async () => {

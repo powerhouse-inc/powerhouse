@@ -52,7 +52,7 @@ export type DriveInput = {
   id?: string;
   slug?: string;
   preferredEditor?: string;
-  local: Partial<DocumentDriveLocalState>;
+  local?: Partial<DocumentDriveLocalState>;
 };
 
 export type RemoteDriveAccessLevel = "READ" | "WRITE";
