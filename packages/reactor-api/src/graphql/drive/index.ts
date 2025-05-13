@@ -201,9 +201,9 @@ export class DriveSubgraph extends Subgraph {
     }
 
     type DriveInfo {
-      id: string!
+      id: String!
       name: String!
-      slug: string!
+      slug: String!
       meta: DriveMeta
       icon: String
     }
