@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "1.27.39-staging.0",
+  "version": "1.27.39-staging.1",
   "main": "dist/server.js",
   "publishConfig": {
     "access": "public"

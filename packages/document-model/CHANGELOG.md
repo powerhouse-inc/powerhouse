@@ -1,3 +1,21 @@
+## 2.28.1-staging.5 (2025-05-13)
+
+### 🚀 Features
+
+- removed scalars dependencies ([596aedbd5](https://github.com/powerhouse-inc/powerhouse/commit/596aedbd5))
+- **builder-tools:** handle recursive objects in initial state generator ([c9eedcc43](https://github.com/powerhouse-inc/powerhouse/commit/c9eedcc43))
+- **monorepo:** bump graphql lib ([ba9d5d338](https://github.com/powerhouse-inc/powerhouse/commit/ba9d5d338))
+
+### 🩹 Fixes
+
+- **document-drive:** fix type issue on browser storage ([240a78b41](https://github.com/powerhouse-inc/powerhouse/commit/240a78b41))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+- ryanwolhuter
+
 ## 2.28.1-staging.4 (2025-04-24)
 
 ### 🚀 Features
