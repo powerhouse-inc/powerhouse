@@ -298,7 +298,10 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
         this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
         this.delegate.emit("ADDING", this.defaultRemoteDrives, remoteDriveInfo);
 
-        if ((!hasAccessLevel && readServer) || readMode) {
+        if (
+          (remoteDrive.options.accessLevel === "READ" && readServer) ||
+          readMode
+        ) {
           await readServer.addReadDrive(remoteDrive.url, {
             ...remoteDrive.options,
             expectedDriveInfo: driveInfo,
