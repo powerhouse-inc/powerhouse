@@ -49,6 +49,12 @@ export {
   type SelectOption,
   type SelectProps,
 } from "./data-entry/select/index.js";
+export {
+  CustomizableRadioGroup,
+  RadioGroup,
+  type CustomizableRadioGroupProps,
+  type RadioGroupProps,
+} from "./data-entry/radio-group/index.js";
 
 // dropdown
 export {
