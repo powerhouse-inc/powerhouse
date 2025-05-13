@@ -1,15 +1,18 @@
-import { SignalDispatch } from "document-model";
-import { DocumentDriveLocalState, DocumentDriveState } from "../types.js";
+import { type SignalDispatch } from "document-model";
 import {
-  AddListenerAction,
-  AddTriggerAction,
-  RemoveListenerAction,
-  RemoveTriggerAction,
-  SetAvailableOfflineAction,
-  SetDriveIconAction,
-  SetDriveNameAction,
-  SetSharingTypeAction,
+  type SetDriveNameAction,
+  type SetDriveIconAction,
+  type SetSharingTypeAction,
+  type SetAvailableOfflineAction,
+  type AddListenerAction,
+  type RemoveListenerAction,
+  type AddTriggerAction,
+  type RemoveTriggerAction,
 } from "./actions.js";
+import {
+  type DocumentDriveState,
+  type DocumentDriveLocalState,
+} from "../types.js";
 
 export interface DocumentDriveDriveOperations {
   setDriveNameOperation: (

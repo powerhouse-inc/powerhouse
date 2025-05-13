@@ -1,4 +1,7 @@
 import InMemoryCache from "#cache/memory";
+import DriveUtils from "#drive-document-model/gen/utils";
+import { type DocumentDriveDocument } from "#drive-document-model/module";
+import { type CreateState } from "document-model";
 export type { DocumentDriveAction } from "#drive-document-model/gen/actions";
 export {
   addFile,
@@ -33,8 +36,7 @@ export type {
   DocumentDriveState,
   Node,
 } from "#drive-document-model/gen/types";
-export { createState as createDriveState } from "#drive-document-model/gen/utils";
-export { driveDocumentModelModule } from "#drive-document-model/module";
+export { module as driveDocumentModelModule } from "#drive-document-model/module";
 export {
   generateAddNodeAction,
   generateNodesCopy,
@@ -92,3 +94,5 @@ export {
 export type { ILogger } from "#utils/logger";
 export { isDocumentDrive } from "#utils/misc";
 export { InMemoryCache };
+export const createDriveState: CreateState<DocumentDriveDocument> =
+  DriveUtils.createState;

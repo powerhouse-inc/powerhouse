@@ -4,8 +4,11 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { initialGlobalState, initialLocalState } from "../../gen/constants.js";
-import { createDocument } from "../../gen/utils.js";
+import {
+  createDocument,
+  initialGlobalState,
+  initialLocalState,
+} from "../../gen/utils.js";
 
 describe("Document Drive Document Model", () => {
   it("should create a new Document Drive document", () => {
