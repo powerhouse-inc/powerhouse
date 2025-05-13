@@ -1,7 +1,7 @@
-import React, { useId } from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
+import React, { useId } from "react";
 
-export interface CustomizableRadioGroupProps
+interface CustomizableRadioGroupProps
   extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root> {
   children: React.ReactNode;
   className?: string;
@@ -9,7 +9,7 @@ export interface CustomizableRadioGroupProps
   name?: string;
 }
 
-export const RadioGroup = React.forwardRef<
+const CustomizableRadioGroup = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Root>,
   CustomizableRadioGroupProps
 >(({ children, className, id: propId, name, ...props }, ref) => {
@@ -29,4 +29,6 @@ export const RadioGroup = React.forwardRef<
   );
 });
 
-RadioGroup.displayName = "RadioGroup";
+CustomizableRadioGroup.displayName = "CustomizableRadioGroup";
+
+export { CustomizableRadioGroup, type CustomizableRadioGroupProps };

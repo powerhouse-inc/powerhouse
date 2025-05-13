@@ -1,18 +1,43 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "../../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "../../../lib/storybook-arg-types.js";
-import { RadioGroupField } from "./radio-group-field.js";
+} from "../../../../scalars/lib/storybook-arg-types.js";
+import { RadioGroup } from "./radio-group.js";
 
-const meta: Meta<typeof RadioGroupField> = {
-  title: "Document Engineering/Fragments/RadioGroupField",
-  component: RadioGroupField,
-  decorators: [withForm],
+/**
+ * The `RadioGroup` component provides a group of radio button options.
+ * It supports multiple configuration properties like:
+ * - label
+ * - description
+ * - options
+ * - required
+ * - disabled
+ *
+ * Features include:
+ * - Default value selection
+ * - Option descriptions
+ * - Disabled options support
+ * - Error and warning message display
+ *
+ * > **Note:** This component does not have built-in validation. If you need built-in validation
+ * > you can use the [RadioGroupField](?path=/docs/document-engineering-fragments-selectfield--readme)
+ * > component.
+ */
+
+const meta: Meta<typeof RadioGroup> = {
+  title: "Document Engineering/Data Entry/Radio Group",
+  component: RadioGroup,
+  decorators: [
+    (Story) => (
+      <div style={{ width: "280px", margin: "1rem auto 0" }}>
+        <Story />
+      </div>
+    ),
+  ],
   parameters: {
-    layout: "centered",
+    layout: "padded",
     chromatic: {
       disableSnapshot: true,
     },
@@ -35,17 +60,23 @@ const meta: Meta<typeof RadioGroupField> = {
       },
     },
 
-    ...getValidationArgTypes(),
+    ...getValidationArgTypes({
+      enabledArgTypes: {
+        validators: false,
+        showErrorOnBlur: false,
+        showErrorOnChange: false,
+      },
+    }),
   },
   args: {
     name: "radio-group",
     errors: [],
     warnings: [],
   },
-} satisfies Meta<typeof RadioGroupField>;
+} satisfies Meta<typeof RadioGroup>;
 
 export default meta;
-type Story = StoryObj<typeof RadioGroupField>;
+type Story = StoryObj<typeof RadioGroup>;
 
 const defaultOptions = [
   { label: "Option 1", value: "1" },

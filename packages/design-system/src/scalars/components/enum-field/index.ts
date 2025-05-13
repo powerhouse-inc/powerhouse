@@ -1,2 +1,1 @@
-export * from "./enum-field.js";
-export * from "./types.js";
+export { EnumField, type EnumFieldProps } from "./enum-field.js";

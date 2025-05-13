@@ -1,6 +1,5 @@
 // export all components accessible outside the package
-
-// data entry
+// data-entry
 export {
   AIDInput,
   type AIDInputProps,
@@ -40,11 +39,22 @@ export {
   type TimePickerProps,
 } from "./data-entry/time-picker/index.js";
 export { Toggle, type ToggleProps } from "./data-entry/toggle/index.js";
-
 export {
   AmountInput,
   type AmountInputProps,
 } from "./data-entry/amount-input/index.js";
+export {
+  Select,
+  type SelectBaseProps,
+  type SelectOption,
+  type SelectProps,
+} from "./data-entry/select/index.js";
+export {
+  CustomizableRadioGroup,
+  RadioGroup,
+  type CustomizableRadioGroupProps,
+  type RadioGroupProps,
+} from "./data-entry/radio-group/index.js";
 
 // dropdown
 export {

@@ -1,9 +1,8 @@
+import { cn, FormLabel } from "#scalars";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import React, { useId } from "react";
-import { cn } from "../../../lib/utils.js";
-import { FormLabel } from "../form-label/index.js";
 
-export interface RadioProps
+interface RadioProps
   extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item> {
   className?: string;
   description?: string;
@@ -14,7 +13,7 @@ export interface RadioProps
   value: string;
 }
 
-export const Radio = React.forwardRef<
+const Radio = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Item>,
   RadioProps
 >(
@@ -95,3 +94,7 @@ export const Radio = React.forwardRef<
     );
   },
 );
+
+Radio.displayName = "Radio";
+
+export { Radio, type RadioProps };

@@ -1,14 +1,11 @@
 import type * as React from "react";
 
-import {
-  SelectFieldRaw,
-  type SelectBaseProps,
-  type SelectFieldProps,
-} from "#scalars";
+import { Select, type SelectBaseProps, type SelectProps } from "#ui";
 import { Button } from "../../../../../scalars/components/fragments/button/button.js";
 import { type TimePeriod } from "../type.js";
 import TimePeriodSelector from "./time-period-selector.js";
 import TimeSelector from "./time-selector.js";
+
 interface TimePickerContentProps {
   onSave?: (time: string) => void;
   onCancel?: () => void;
@@ -21,7 +18,7 @@ interface TimePickerContentProps {
   hours: string[];
   minutes: string[];
   timeZonesOptions: SelectBaseProps["options"];
-  selectProps?: Omit<SelectFieldProps, "name" | "options" | "selectionIcon">;
+  selectProps?: Omit<SelectProps, "name" | "options" | "selectionIcon">;
   is12HourFormat: boolean;
   selectedTimeZone?: string;
   setSelectedTimeZone?: (timeZone: string | string[]) => void;
@@ -50,7 +47,7 @@ const TimePickerContent: React.FC<TimePickerContentProps> = ({
 }) => {
   return (
     <div className="relative mx-auto w-full">
-      <SelectFieldRaw
+      <Select
         name=""
         options={timeZonesOptions}
         disabled={isDisableSelect}

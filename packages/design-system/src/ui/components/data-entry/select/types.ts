@@ -1,23 +1,15 @@
 import type { IconName } from "#powerhouse";
+import type { InputBaseProps } from "#scalars";
+import type React from "react";
 
-export interface RadioGroupProps {
-  options?: {
-    value: string;
-    label: string;
-    description?: string;
-    disabled?: boolean;
-  }[];
-  onChange?: (value: string) => void;
-}
-
-export interface SelectOption {
+interface SelectOption {
   icon?: IconName | React.ComponentType<{ className?: string }>;
   value: string;
   label: string;
   disabled?: boolean;
 }
 
-export interface SelectBaseProps {
+interface SelectBaseProps {
   options?: SelectOption[];
   favoriteOptions?: SelectOption[];
   placeholder?: string;
@@ -28,7 +20,7 @@ export interface SelectBaseProps {
   contentAlign?: "start" | "end" | "center";
 }
 
-export type SelectProps =
+type SelectConfigProps =
   | (SelectBaseProps & {
       selectionIcon?: "auto";
       selectionIconPosition?: "left";
@@ -37,3 +29,12 @@ export type SelectProps =
       selectionIcon: "checkmark";
       selectionIconPosition?: "left" | "right";
     });
+
+type SelectProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  keyof InputBaseProps<string | string[]> | keyof SelectConfigProps
+> &
+  InputBaseProps<string | string[]> &
+  SelectConfigProps;
+
+export type { SelectBaseProps, SelectOption, SelectProps };
