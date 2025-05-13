@@ -48,7 +48,6 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
   ) => {
     const generatedId = useId();
     const id = idProp ?? generatedId;
-    console.log("baseValue", baseValue);
     if (viewMode === "edition") {
       return (
         <div
