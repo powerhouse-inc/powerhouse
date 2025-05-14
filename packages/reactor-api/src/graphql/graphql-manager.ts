@@ -22,14 +22,12 @@ import { type GraphQLSchema } from "graphql";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { AnalyticsSubgraph } from "./analytics/index.js";
-import { AuthSubgraph } from "./auth/index.js";
 import { DriveSubgraph } from "./drive/index.js";
 import { type Subgraph, type SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
 import { type Context } from "./types.js";
 
 export const DefaultCoreSubgraphs = [
-  AuthSubgraph,
   SystemSubgraph,
   AnalyticsSubgraph,
 ] as const;
@@ -127,6 +125,12 @@ export class GraphQLManager {
     const newRouter = Router();
     newRouter.use(cors());
     newRouter.use(bodyParser.json());
+
+    // @todo:
+    // if auth enabled, subgraphs are only available to guests, users and admins
+    // if auth enabled, set req user to the graphql context
+    // if auth disabled, subgraphs are available to all
+
     await this.#setupSubgraphs(this.subgraphs, newRouter);
     this.reactorRouter = newRouter;
     await this.#createApolloGateway();

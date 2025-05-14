@@ -52,6 +52,7 @@
     "@powerhousedao/analytics-engine-graphql": "^0.3.0",
     "@powerhousedao/analytics-engine-knex": "^0.5.1",
     "@powerhousedao/config": "workspace:*",
+    "@renown/sdk": "workspace:*",
     "body-parser": "^1.20.3",
     "change-case": "^5.4.4",
     "cors": "^2.8.5",

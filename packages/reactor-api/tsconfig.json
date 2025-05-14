@@ -3,7 +3,9 @@
   "compilerOptions": {
     "composite": true
   },
-  "files": [],
+  "files": [
+    "src/custom.d.ts"
+  ],
   "references": [
     {
       "path": "tsconfig.lib.json"

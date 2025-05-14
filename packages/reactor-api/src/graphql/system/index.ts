@@ -101,18 +101,5 @@ export class SystemSubgraph extends Subgraph {
 
   async onSetup() {
     await super.onSetup();
-    this.graphqlManager.setAdditionalContextFields({
-      isAdmin: (ctx: SystemContext) => {
-        const adminUsers =
-          process.env.ADMIN_USERS?.split(",")
-            .map((user) => user.trim())
-            .filter(Boolean) ?? [];
-        return (
-          adminUsers.length === 0 ||
-          (ctx.session.address &&
-            adminUsers.includes(ctx.session.address.toLocaleLowerCase()))
-        );
-      },
-    });
   }
 }

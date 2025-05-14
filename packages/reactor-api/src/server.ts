@@ -13,6 +13,7 @@ import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
+import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
 import {
   childLogger,
@@ -43,6 +44,12 @@ type Options = {
   client?: PGlite | typeof Pool | undefined;
   configFile?: string;
   packages?: string[];
+  auth?: {
+    enabled: boolean;
+    guests: string[];
+    users: string[];
+    admins: string[];
+  };
   https?:
     | {
         keyPath: string;
@@ -215,6 +222,59 @@ export async function startAPI(
 ): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
+  const admins = options.auth?.admins.map((a) => a.toLowerCase()) ?? [];
+  const users = options.auth?.users.map((u) => u.toLowerCase()) ?? [];
+  const guests = options.auth?.guests.map((g) => g.toLowerCase()) ?? [];
+
+  // add auth middleware if auth is enabled
+  if (options.auth?.enabled) {
+
+    // set admin, users and guest list
+    app.use(async (req, res, next) => {
+      if (!options.auth) {
+        next();
+        return;
+      }
+
+      req.admins = admins;
+      req.users = users;
+      req.guests = guests;
+      next();
+    });
+
+    // verify auth token
+    app.use(async (req, res, next): Promise<void> => {
+      const token = req.headers.authorization?.split(" ")[1];
+      if (!token) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const verified = await verifyAuthBearerToken(token);
+      if (!verified) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+
+      const { address, chainId, networkId } = verified.verifiableCredential
+        .credentialSubject as {
+        address: string;
+        chainId: number;
+        networkId: string;
+      };
+      if (!address || !chainId || !networkId) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      req.user = {
+        address,
+        chainId,
+        networkId,
+      };
+
+      next();
+    });
+  }
 
   const defaultRouter = express.Router();
   setupGraphQlExplorer(defaultRouter);
