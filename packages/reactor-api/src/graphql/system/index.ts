@@ -68,8 +68,8 @@ export class SystemSubgraph extends Subgraph {
         preferredEditor?: string;
       }> => {
         try {
-          const isAdmin = ctx.isAdmin(ctx);
-          if (!isAdmin) {
+          const isAdmin = ctx.isAdmin?.(ctx);
+          if (ctx.isAdmin && !isAdmin) {
             throw new GraphQLError("Unauthorized");
           }
 
