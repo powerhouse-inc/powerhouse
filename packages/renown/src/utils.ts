@@ -4,7 +4,7 @@ import {
   type Issuer,
   type JwtCredentialPayload,
 } from "did-jwt-vc";
-import { Resolver, type ResolverRegistry } from "did-resolver";
+import { Resolver } from "did-resolver";
 import { getResolver as keyDidResolver } from "key-did-resolver";
 export type PKHDid = {
   networkId: string;
@@ -35,10 +35,14 @@ export function parsePkhDid(did: string): PKHDid {
   };
 }
 
-export function verifyAuthBearerToken(token: string) {
+export async function verifyAuthBearerToken(token: string) {
   const jwt = Buffer.from(token, "base64").toString();
-  const verified = verifyCredential(jwt, getResolver());
-  return verified;
+  try {
+    const verified = await verifyCredential(jwt, getResolver());
+    return verified;
+  } catch (e) {
+    return false;
+  }
 }
 
 export async function createAuthBearerToken(
@@ -64,7 +68,7 @@ export async function createAuthBearerToken(
   return Buffer.from(jwt).toString("base64");
 }
 export const getResolver = () => {
-  const keyResolver = keyDidResolver() as ResolverRegistry;
+  const keyResolver = keyDidResolver();
   if (!keyResolver) {
     throw new Error("Failed to get key resolver");
   }

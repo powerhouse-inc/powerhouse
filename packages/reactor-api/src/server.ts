@@ -254,11 +254,7 @@ export async function startAPI(
       req.admins = admins;
       req.users = users;
       req.guests = guests;
-      next();
-    });
 
-    // verify auth token
-    app.use(async (req, res, next): Promise<void> => {
       const token = req.headers.authorization?.split(" ")[1];
       if (!token) {
         res.status(400).json({ error: "Missing authorization token" });
