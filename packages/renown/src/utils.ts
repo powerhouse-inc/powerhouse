@@ -38,7 +38,6 @@ export function parsePkhDid(did: string): PKHDid {
 export function verifyAuthBearerToken(token: string) {
   const jwt = Buffer.from(token, "base64").toString();
   const verified = verifyCredential(jwt, getResolver());
-  console.log(verified);
   return verified;
 }
 
@@ -60,6 +59,7 @@ export async function createAuthBearerToken(
       },
     },
   };
+
   const jwt = await createVerifiableCredentialJwt(vcPayload, issuer);
   return Buffer.from(jwt).toString("base64");
 }
@@ -68,5 +68,6 @@ export const getResolver = () => {
   if (!keyResolver) {
     throw new Error("Failed to get key resolver");
   }
+
   return new Resolver(keyResolver);
 };
