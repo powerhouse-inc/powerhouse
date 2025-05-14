@@ -5,9 +5,9 @@ import {
   FormLabel,
   FormMessageList,
   type InputBaseProps,
-  type SelectFieldProps,
 } from "#scalars";
 import { forwardRef } from "react";
+import { type SelectFieldProps } from "../../../../scalars/components/fragments/select-field/index.js";
 import { type InputNumberProps } from "../../../../scalars/components/number-field/types.js";
 import { BasePickerField } from "../date-time-picker/base-picker.js";
 import TimePickerContent from "./subcomponents/time-picker-content.js";

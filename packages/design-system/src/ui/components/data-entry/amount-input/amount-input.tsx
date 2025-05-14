@@ -7,10 +7,10 @@ import {
   FormMessageList,
   type NumberFieldProps,
   NumberFieldRaw,
-  type SelectFieldProps,
 } from "#scalars";
 import { forwardRef, useId } from "react";
 import { CurrencyCodeFieldRaw } from "../../../../scalars/components/currency-code-field/currency-code-field.js";
+import { type SelectFieldProps } from "../../../../scalars/components/fragments/select-field/index.js";
 import { type InputNumberProps } from "../../../../scalars/components/number-field/types.js";
 import type { AmountInputPropsGeneric, AmountValue } from "./types.js";
 import { useAmountInput } from "./use-amount-input.js";

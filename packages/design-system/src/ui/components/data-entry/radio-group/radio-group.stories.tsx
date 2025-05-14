@@ -22,7 +22,7 @@ import { RadioGroup } from "./radio-group.js";
  * - Error and warning message display
  *
  * > **Note:** This component does not have built-in validation. If you need built-in validation
- * > you can use the [RadioGroupField](?path=/docs/document-engineering-fragments-selectfield--readme)
+ * > you can use the [EnumField](?path=/docs/document-engineering-scalars-enum-field--readme)
  * > component.
  */
 

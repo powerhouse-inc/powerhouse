@@ -30,7 +30,7 @@ import { Select } from "./select.js";
  * - Disabled options support
  *
  * > **Note:** This component does not have built-in validation. If you need built-in validation
- * > you can use the [SelectField](?path=/docs/document-engineering-fragments-selectfield--readme)
+ * > you can use the [EnumField](?path=/docs/document-engineering-scalars-enum-field--readme)
  * > component.
  */
 
@@ -130,6 +130,7 @@ const meta: Meta<typeof Select> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
+
     ...getValidationArgTypes({
       enabledArgTypes: {
         validators: false,
@@ -137,6 +138,19 @@ const meta: Meta<typeof Select> = {
         showErrorOnChange: false,
       },
     }),
+
+    ...PrebuiltArgTypes.viewMode,
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["sentences"],
+      table: {
+        type: { summary: "sentences" },
+        defaultValue: { summary: "sentences" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    ...PrebuiltArgTypes.baseValue,
   },
   args: {
     name: "select",
