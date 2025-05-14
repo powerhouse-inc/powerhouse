@@ -13,7 +13,6 @@ import { type RunAsap } from "#utils/run-asap";
 import {
   type Action,
   type ActionContext,
-  type CreateChildDocumentInput,
   type DocumentModelModule,
   type Operation,
   type OperationFromDocument,
@@ -64,10 +63,6 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
   expectedDriveInfo?: DriveInfo;
   accessLevel?: RemoteDriveAccessLevel;
 };
-
-export type CreateDocumentInput<TDocument extends PHDocument> =
-  CreateChildDocumentInput<TDocument>;
-
 export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
   status: UpdateStatus;
   error?: OperationError;
@@ -79,7 +74,7 @@ export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
 export type DriveOperationResult = IOperationResult<DocumentDriveDocument>;
 
 export type SynchronizationUnit = {
-  syncId: string;
+  syncId: string; // TODO type as `${documentId}:${scope}:`${branch}`
   documentId: string;
   documentType: string;
   scope: string;

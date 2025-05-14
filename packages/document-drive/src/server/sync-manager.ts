@@ -1,12 +1,10 @@
 import { type ICache } from "#cache/types";
-import {
-  type DocumentDriveDocument,
-  type FileNode,
-} from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { isFileNode } from "#drive-document-model/src/utils";
 import {
   type IDocumentStorage,
   type IDriveOperationStorage,
+  type IStorageUnit,
 } from "#storage/types";
 import { childLogger } from "#utils/logger";
 import { isBefore, isDocumentDrive } from "#utils/misc";
@@ -113,17 +111,21 @@ export default class SynchronizationManager implements ISynchronizationManager {
     branch?: string[],
     documentType?: string[],
   ): Promise<SynchronizationUnitQuery[]> {
-    const drive = await this.getDrive(driveId);
-    const nodes = drive.state.global.nodes.filter(
-      (node) =>
-        isFileNode(node) &&
-        (!documentId?.length ||
-          documentId.includes(node.id) ||
-          documentId.includes("*")) &&
-        (!documentType?.length ||
-          documentType.includes(node.documentType) ||
-          documentType.includes("*")),
-    ) as Pick<FileNode, "id" | "documentType" | "synchronizationUnits">[];
+    const filter = {
+      parentId: [driveId],
+      documentModelType: documentType,
+      scope,
+      branch,
+    };
+
+    let cursor: string | undefined;
+    const units: IStorageUnit[] = [];
+    do {
+      const { units: newUnits, nextCursor } =
+        await this.documentStorage.findStorageUnitsBy(filter, 100, cursor);
+      units.push(...newUnits);
+      cursor = nextCursor;
+    } while (cursor);
 
     // checks if document drive synchronization unit should be added
     if (
@@ -132,51 +134,22 @@ export default class SynchronizationManager implements ISynchronizationManager {
         documentType.includes("powerhouse/document-drive") ||
         documentType.includes("*"))
     ) {
-      nodes.unshift({
-        id: driveId,
-        documentType: "powerhouse/document-drive",
-        synchronizationUnits: [
-          {
-            syncId: "0",
-            scope: "global",
-            branch: "main",
-          },
-        ],
-      });
-    }
-
-    const synchronizationUnitsQuery: Omit<
-      SynchronizationUnit,
-      "revision" | "lastUpdated"
-    >[] = [];
-    for (const node of nodes) {
-      const nodeUnits =
-        scope?.length || branch?.length
-          ? node.synchronizationUnits.filter(
-              (unit) =>
-                (!scope?.length ||
-                  scope.includes(unit.scope) ||
-                  scope.includes("*")) &&
-                (!branch?.length ||
-                  branch.includes(unit.branch) ||
-                  branch.includes("*")),
-            )
-          : node.synchronizationUnits;
-      if (!nodeUnits.length) {
-        continue;
-      }
-      synchronizationUnitsQuery.push(
-        ...nodeUnits.map((n) => ({
-          driveId,
-          documentId: node.id,
-          syncId: n.syncId,
-          documentType: node.documentType,
-          scope: n.scope,
-          branch: n.branch,
-        })),
+      const driveUnits = await this.documentStorage.findStorageUnitsBy(
+        {
+          documentId: [driveId],
+          scope,
+          branch,
+        },
+        100,
       );
+      // TODO exhaust cursor
+      units.unshift(...driveUnits.units);
     }
-    return synchronizationUnitsQuery;
+    return units.map(({ documentModelType, ...u }) => ({
+      ...u,
+      documentType: documentModelType,
+      syncId: `${u.documentId}:${u.scope}:${u.branch}`,
+    }));
   }
 
   async getSynchronizationUnitIdInfo(

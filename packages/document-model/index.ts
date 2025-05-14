@@ -93,7 +93,6 @@ export type {
   SignalDispatch,
   Signature,
   StateReducer,
-  SynchronizationUnitInput,
   User,
   ValidationError,
 } from "#document/types.js";
@@ -152,3 +151,4 @@ export {
   skipHeaderOperations,
   sortOperations,
 } from "#document/utils/document-helpers.js";
+

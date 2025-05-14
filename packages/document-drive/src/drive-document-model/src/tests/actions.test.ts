@@ -1,10 +1,8 @@
 import { generateId } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addFile, addFolder, copyNode, moveNode } from "../../gen/creators.js";
+import { addFolder, copyNode, moveNode } from "../../gen/creators.js";
 import { reducer } from "../../gen/reducer.js";
-import { FileNode } from "../../gen/types.js";
 import { createDocument } from "../../gen/utils.js";
-import { generateSynchronizationUnits } from "../utils.js";
 
 describe("DocumentDrive Actions", () => {
   let documentDrive = createDocument();
@@ -329,53 +327,6 @@ describe("DocumentDrive Actions", () => {
       );
       expect(copiedNode?.name).toBe("Folder 1.1");
       expect(copiedNode?.parentFolder).toBe(targetParentFolder);
-    });
-
-    it("should set sync units when copying a file node", () => {
-      const synchronizationUnits = generateSynchronizationUnits(
-        documentDrive.state.global,
-        ["global", "local"],
-      );
-
-      documentDrive = reducer(
-        documentDrive,
-        addFile({
-          id: "testFile",
-          documentType: "",
-          name: "Test File",
-          synchronizationUnits,
-        }),
-      );
-
-      const initialNodesLength = documentDrive.state.global.nodes.length;
-
-      const newSynchronizationUnits = generateSynchronizationUnits(
-        documentDrive.state.global,
-        ["global", "local"],
-      );
-      documentDrive = reducer(
-        documentDrive,
-        copyNode({
-          srcId: "testFile",
-          targetId: "testFile-copy",
-          targetName: null,
-          synchronizationUnits: newSynchronizationUnits,
-        }),
-      );
-
-      const copiedNode = documentDrive.state.global.nodes.find(
-        (node) => node.id === "testFile-copy",
-      );
-
-      expect(documentDrive.state.global.nodes.length).toBe(
-        initialNodesLength + 1,
-      );
-      expect((copiedNode as FileNode).synchronizationUnits).toStrictEqual(
-        newSynchronizationUnits,
-      );
-      expect(newSynchronizationUnits).to.not.toStrictEqual(
-        synchronizationUnits,
-      );
     });
   });
 });

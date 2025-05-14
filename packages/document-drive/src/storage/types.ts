@@ -7,6 +7,17 @@ import type {
   PHDocument,
 } from "document-model";
 
+export type IStorageUnit = {
+  /** The id of the document. If '*' then select all. */
+  documentId: string;
+  /** The type of the document model. If '*' then select all. */
+  documentModelType: string;
+  /** The scope of the document. If '*' then select all. */
+  scope: string;
+  /** The branch of the document. If '*' then select all. */
+  branch: string;
+};
+
 /**
  * Describes the storage interface for documents.
  */
@@ -61,6 +72,33 @@ export interface IDocumentStorage {
   ): Promise<{
     documents: string[];
     nextCursor: string | undefined;
+  }>;
+
+  /**
+   * Finds storage units based on the provided filter.
+   *
+   * @param filter - The filter to apply.
+   * @param limit - The maximum number of documents to return.
+   * @param cursor - The cursor to start the search from.
+   */
+  findStorageUnitsBy: (
+    filter: {
+      /** The ids of the parent documents. If '*' then select all. */
+      parentId?: string[];
+      /** The ids of the documents. If '*' then select all. */
+      documentId?: string[];
+      /** The types of the document models. If '*' then select all. */
+      documentModelType?: string[];
+      /** The scopes of the documents. If '*' then select all. */
+      scope?: string[];
+      /** The branches of the documents. If '*' then select all. */
+      branch?: string[];
+    },
+    limit: number,
+    cursor?: string,
+  ) => Promise<{
+    units: IStorageUnit[];
+    nextCursor?: string;
   }>;
 
   /**

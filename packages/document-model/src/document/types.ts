@@ -7,7 +7,6 @@ import type {
   CreateChildDocumentInput,
   Signal,
   SignalDispatch,
-  SynchronizationUnitInput,
 } from "./signal.js";
 import { type FileInput } from "./utils/file.js";
 export type { NOOPAction } from "./schema/types.js";
@@ -18,7 +17,6 @@ export type {
   Immutable,
   Signal,
   SignalDispatch,
-  SynchronizationUnitInput,
 };
 //  [
 //     signerAddress,

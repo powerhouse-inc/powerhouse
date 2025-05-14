@@ -38,7 +38,6 @@ export type {
 } from "#drive-document-model/gen/types";
 export { module as driveDocumentModelModule } from "#drive-document-model/module";
 export {
-  generateAddNodeAction,
   generateNodesCopy,
   isFileNode,
   isFolderNode,

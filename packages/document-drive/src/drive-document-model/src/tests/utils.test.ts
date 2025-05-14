@@ -1,11 +1,8 @@
-import { validate } from "uuid";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CopyNodeInput, DocumentDriveState } from "../../gen/types.js";
 
 import {
   generateNodesCopy,
-  generateSynchronizationUnitId,
-  generateSynchronizationUnits,
   getNextCopyNumber,
   handleTargetNameCollisions,
 } from "../utils.js";
@@ -205,41 +202,6 @@ describe("DocumentDrive Utils", () => {
       expect(() =>
         generateNodesCopy({ srcId: "invalid" }, generateId, nodes),
       ).toThrowError(`Node with id invalid not found`);
-    });
-
-    it("should generate uuid sync id", () => {
-      const state: DocumentDriveState = {
-        icon: null,
-        name: "",
-        nodes: [],
-      };
-      const id = generateSynchronizationUnitId(state.nodes);
-      expect(validate(id)).toBe(true);
-    });
-
-    it("should generate a sync unit for each scope", () => {
-      const state: DocumentDriveState = {
-        icon: null,
-        name: "",
-        nodes: [],
-      };
-      const units = generateSynchronizationUnits(state, ["global", "local"]);
-      expect(units).toStrictEqual([
-        {
-          scope: "global",
-          branch: "main",
-          syncId: expect.stringMatching(
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-          ) as string,
-        },
-        {
-          scope: "local",
-          branch: "main",
-          syncId: expect.stringMatching(
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-          ) as string,
-        },
-      ]);
     });
   });
 });

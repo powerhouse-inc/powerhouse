@@ -60,10 +60,6 @@ describe("DocumentDrive Class", () => {
       id: "1",
       documentType: "test",
       name: "document",
-      synchronizationUnits: [
-        { syncId: "1", scope: "global", branch: "main" },
-        { syncId: "2", scope: "local", branch: "main" },
-      ],
     });
 
     expect(documentDrive.state.global.nodes).toStrictEqual([
@@ -73,18 +69,6 @@ describe("DocumentDrive Class", () => {
         parentFolder: null,
         documentType: "test",
         name: "document",
-        synchronizationUnits: [
-          {
-            syncId: "1",
-            scope: "global",
-            branch: "main",
-          },
-          {
-            syncId: "2",
-            scope: "local",
-            branch: "main",
-          },
-        ],
       },
     ]);
   });
@@ -98,10 +82,6 @@ describe("DocumentDrive Class", () => {
       id: "1",
       documentType: "test",
       name: "document",
-      synchronizationUnits: [
-        { syncId: "1", scope: "global", branch: "main" },
-        { syncId: "2", scope: "local", branch: "main" },
-      ],
     });
 
     expect(spy).toHaveBeenCalledOnce();
@@ -111,18 +91,6 @@ describe("DocumentDrive Class", () => {
         id: "1",
         document: undefined,
         documentType: "test",
-        synchronizationUnits: [
-          {
-            branch: "main",
-            scope: "global",
-            syncId: "1",
-          },
-          {
-            branch: "main",
-            scope: "local",
-            syncId: "2",
-          },
-        ],
       },
     });
   });

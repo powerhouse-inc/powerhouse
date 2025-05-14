@@ -1,12 +1,13 @@
 import {
   type StateReducer,
-  isDocumentAction,
   createReducer,
+  isDocumentAction,
+  Reducer,
 } from "document-model";
 import { type DocumentDriveDocument, z } from "./types.js";
 
-import { reducer as NodeReducer } from "../src/reducers/node.js";
 import { reducer as DriveReducer } from "../src/reducers/drive.js";
+import { reducer as NodeReducer } from "../src/reducers/node.js";
 
 const stateReducer: StateReducer<DocumentDriveDocument> = (
   state,
@@ -114,4 +115,6 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
   }
 };
 
-export const reducer = createReducer<DocumentDriveDocument>(stateReducer);
+export const reducer: Reducer<DocumentDriveDocument> =
+  createReducer<DocumentDriveDocument>(stateReducer);
+

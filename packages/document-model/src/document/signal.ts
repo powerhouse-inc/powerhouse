@@ -1,4 +1,4 @@
-import { type OperationScope, type PHDocument } from "./types.js";
+import { type PHDocument } from "./types.js";
 
 export interface ISignal<TType extends string, TInput> {
   type: TType;
@@ -10,19 +10,9 @@ export type ISignalResult<TTYpe, TInput, TResult> = {
   result: TResult;
 };
 
-export type SynchronizationUnitInput = {
-  syncId: string;
-  scope: OperationScope;
-  branch: string;
-};
-
-export type CreateChildDocumentInput<
-  TDocument extends PHDocument = PHDocument,
-> = {
+export type CreateChildDocumentInput = {
   id: string;
   documentType: string;
-  document?: TDocument;
-  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CreateChildDocumentSignal = ISignal<
@@ -42,7 +32,6 @@ export type DeleteChildDocumentSignal = ISignal<
 export type CopyChildDocumentInput = {
   id: string;
   newId: string;
-  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CopyChildDocumentSignal = ISignal<
