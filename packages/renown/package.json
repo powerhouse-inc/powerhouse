@@ -43,5 +43,10 @@
   },
   "devDependencies": {
     "document-model": "workspace:*"
+  },
+  "dependencies": {
+    "did-jwt-vc": "^4.0.12",
+    "did-resolver": "^4.1.0",
+    "key-did-resolver": "^4.0.0"
   }
 }

@@ -1,13 +1,18 @@
-import {
-  IRenown,
-  PowerhouseVerifiableCredential,
-  RenownEventEmitter,
-  RenownEvents,
-  RenownStorage,
-  User,
-} from "./types.js";
+import { type Issuer } from "did-jwt-vc";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
-import { parsePkhDid } from "./utils.js";
+import {
+  type IRenown,
+  type PowerhouseVerifiableCredential,
+  type RenownEventEmitter,
+  type RenownEvents,
+  type RenownStorage,
+  type User,
+} from "./types.js";
+import {
+  createAuthBearerToken,
+  parsePkhDid,
+  verifyAuthBearerToken,
+} from "./utils.js";
 
 export class Renown implements IRenown {
   #baseUrl: string;
@@ -132,5 +137,16 @@ export class Renown implements IRenown {
     } else {
       throw new Error("Failed to get credential");
     }
+  }
+
+  async verifyBearerToken(token: string) {
+    return verifyAuthBearerToken(token);
+  }
+
+  async createBearerToken(address: string, chainId: number, issuer: Issuer) {
+    if (!this.user) {
+      throw new Error("User not found");
+    }
+    return createAuthBearerToken(chainId, this.#connectId, address, issuer);
   }
 }
