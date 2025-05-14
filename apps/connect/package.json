@@ -1,12 +1,12 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.23-staging.1",
+    "version": "1.0.25-dev.1",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "type": "module",
     "engines": {
-        "node": ">=20.0.0"
+        "node": ">=22.0.0"
     },
     "files": [
         "dist",
@@ -40,7 +40,7 @@
         "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
         "dev": "vite -c vite.renderer.config.mts",
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev",
-        "prebuild": "tsc --build --noEmit",
+        "prebuild": "npm run clean && tsc --build --noEmit",
         "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
         "preview:web": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
@@ -64,6 +64,7 @@
         "@powerhousedao/common": "workspace:*",
         "@powerhousedao/config": "workspace:*",
         "@powerhousedao/design-system": "workspace:*",
+        "@powerhousedao/diff-analyzer": "^0.0.0-dev.4",
         "@powerhousedao/reactor-browser": "workspace:*",
         "@powerhousedao/scalars": "workspace:*",
         "@rollup/plugin-node-resolve": "^16.0.1",
@@ -72,7 +73,7 @@
         "@sentry/vite-plugin": "^2.23.0",
         "@tailwindcss/vite": "^4.1.4",
         "@tanstack/react-virtual": "^3.8.1",
-        "@types/node": "^22.13.10",
+        "@types/node": "^22.15.17",
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.18",
         "@types/uuid": "^9.0.7",

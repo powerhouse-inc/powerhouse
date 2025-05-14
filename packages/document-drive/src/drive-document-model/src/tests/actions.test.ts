@@ -1,12 +1,19 @@
+import { generateId } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { addFile, addFolder, copyNode, moveNode } from "../../gen/creators.js";
+import { reducer } from "../../gen/reducer.js";
 import { FileNode } from "../../gen/types.js";
 import { createDocument } from "../../gen/utils.js";
 import { generateSynchronizationUnits } from "../utils.js";
-import { reducer } from "../../gen/reducer.js";
 
 describe("DocumentDrive Actions", () => {
   let documentDrive = createDocument();
+
+  const folder1Id = generateId();
+  const folder1_1Id = generateId();
+  const folder1_1_1Id = generateId();
+  const folder2Id = generateId();
+  const folder3Id = generateId();
 
   beforeEach(() => {
     documentDrive = createDocument();
@@ -14,7 +21,7 @@ describe("DocumentDrive Actions", () => {
     documentDrive = reducer(
       documentDrive,
       addFolder({
-        id: "1",
+        id: folder1Id,
         name: "Folder 1",
       }),
     );
@@ -22,25 +29,25 @@ describe("DocumentDrive Actions", () => {
     documentDrive = reducer(
       documentDrive,
       addFolder({
-        id: "1.1",
+        id: folder1_1Id,
         name: "Folder 1.1",
-        parentFolder: "1",
+        parentFolder: folder1Id,
       }),
     );
 
     documentDrive = reducer(
       documentDrive,
       addFolder({
-        id: "1.1.1",
+        id: folder1_1_1Id,
         name: "Folder 1.1.1",
-        parentFolder: "1.1",
+        parentFolder: folder1_1Id,
       }),
     );
 
     documentDrive = reducer(
       documentDrive,
       addFolder({
-        id: "2",
+        id: folder2Id,
         name: "Folder 2",
       }),
     );
@@ -48,7 +55,7 @@ describe("DocumentDrive Actions", () => {
     documentDrive = reducer(
       documentDrive,
       addFolder({
-        id: "3",
+        id: folder3Id,
         name: "Folder 3",
       }),
     );
@@ -56,8 +63,8 @@ describe("DocumentDrive Actions", () => {
 
   describe("moveNode", () => {
     it("should move a node to a different parent", () => {
-      const srcFolder = "1.1";
-      const targetParentFolder = "2";
+      const srcFolder = folder1_1Id;
+      const targetParentFolder = folder2Id;
 
       documentDrive = reducer(
         documentDrive,
@@ -75,7 +82,7 @@ describe("DocumentDrive Actions", () => {
     });
 
     it("should move a node to the root of the drive when parentFolder is not provided", () => {
-      const srcFolder = "1.1";
+      const srcFolder = folder1_1Id;
 
       documentDrive = reducer(
         documentDrive,
@@ -92,7 +99,7 @@ describe("DocumentDrive Actions", () => {
     });
 
     it("should move a node to the root of the drive when parentFolder is null", () => {
-      const srcFolder = "1.1";
+      const srcFolder = folder1_1Id;
 
       documentDrive = reducer(
         documentDrive,
@@ -111,7 +118,7 @@ describe("DocumentDrive Actions", () => {
 
     it("should throw an error when the srcFolder node does not exist", () => {
       const srcFolder = "invalid";
-      const targetParentFolder = "2";
+      const targetParentFolder = folder2Id;
 
       const document = reducer(
         documentDrive,
@@ -124,7 +131,7 @@ describe("DocumentDrive Actions", () => {
       expect(document.operations.global).toHaveLength(6);
       expect(document.operations.global[5]).toMatchObject({
         type: "MOVE_NODE",
-        input: { srcFolder: "invalid", targetParentFolder: "2" },
+        input: { srcFolder: "invalid", targetParentFolder: folder2Id },
         scope: "global",
         index: 5,
         skip: 0,
@@ -139,9 +146,9 @@ describe("DocumentDrive Actions", () => {
 
   describe("copyNode", () => {
     it("should copy a node to a different parent", () => {
-      const srcId = "1.1";
-      const targetId = "1.1-copy";
-      const targetParentFolder = "2";
+      const srcId = folder1_1Id;
+      const targetId = folder1_1Id + "-copy";
+      const targetParentFolder = folder2Id;
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
       documentDrive = reducer(
@@ -164,8 +171,8 @@ describe("DocumentDrive Actions", () => {
     });
 
     it("should copy a node to the root of the drive when parentFolder is not provided", () => {
-      const srcId = "1.1";
-      const targetId = "1.1-copy";
+      const srcId = folder1_1Id;
+      const targetId = folder1_1Id + "-copy";
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
       documentDrive = reducer(
@@ -187,8 +194,8 @@ describe("DocumentDrive Actions", () => {
     });
 
     it("should copy a node to the root of the drive when parentFolder is null", () => {
-      const srcId = "1.1";
-      const targetId = "1.1-copy";
+      const srcId = folder1_1Id;
+      const targetId = folder1_1Id + "-copy";
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
       documentDrive = reducer(
@@ -212,8 +219,8 @@ describe("DocumentDrive Actions", () => {
 
     it("should throw an error when the srcId node does not exist", () => {
       const srcId = "invalid";
-      const targetId = "1.1-copy";
-      const targetParentFolder = "2";
+      const targetId = folder1_1Id + "-copy";
+      const targetParentFolder = folder2Id;
 
       const document = reducer(
         documentDrive,
@@ -229,8 +236,8 @@ describe("DocumentDrive Actions", () => {
         type: "COPY_NODE",
         input: {
           srcId: "invalid",
-          targetId: "1.1-copy",
-          targetParentFolder: "2",
+          targetId: folder1_1Id + "-copy",
+          targetParentFolder: folder2Id,
         },
         scope: "global",
         index: 5,
@@ -244,10 +251,10 @@ describe("DocumentDrive Actions", () => {
     });
 
     it("should copy a node when a new name when targetName is provided", () => {
-      const srcId = "1.1";
-      const targetId = "1.1-copy";
+      const srcId = folder1_1Id;
+      const targetId = folder1_1Id + "-copy";
       const targetName = "New Name";
-      const targetParentFolder = "2";
+      const targetParentFolder = folder2Id;
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
       documentDrive = reducer(
@@ -272,9 +279,9 @@ describe("DocumentDrive Actions", () => {
     });
 
     it("should copy a node with src name if targetName is not provided", () => {
-      const srcId = "1.1";
-      const targetId = "1.1-copy";
-      const targetParentFolder = "2";
+      const srcId = folder1_1Id;
+      const targetId = folder1_1Id + "-copy";
+      const targetParentFolder = folder2Id;
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
       documentDrive = reducer(
@@ -298,9 +305,9 @@ describe("DocumentDrive Actions", () => {
     });
 
     it("should copy a node with src name if targetName is null", () => {
-      const srcId = "1.1";
-      const targetId = "1.1-copy";
-      const targetParentFolder = "2";
+      const srcId = folder1_1Id;
+      const targetId = folder1_1Id + "-copy";
+      const targetParentFolder = folder2Id;
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
       documentDrive = reducer(

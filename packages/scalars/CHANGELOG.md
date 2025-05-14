@@ -1,34 +1,183 @@
-## 1.33.1-staging.4 (2025-04-24)
-
-### 🚀 Features
-
-- **monorepo:** handle updating monorepo build deps ([db2ac2316](https://github.com/powerhouse-inc/powerhouse/commit/db2ac2316))
-- **monorepo:** regenerate lockfile ([a6c390b4e](https://github.com/powerhouse-inc/powerhouse/commit/a6c390b4e))
-- **builder-tools:** fix wrong value used for field id ([a6c6142e0](https://github.com/powerhouse-inc/powerhouse/commit/a6c6142e0))
-- **reactor-api,reactor-local:** updated analytics dependencies ([cbeace573](https://github.com/powerhouse-inc/powerhouse/commit/cbeace573))
+## 1.33.1-dev.10 (2025-05-09)
 
 ### 🩹 Fixes
 
-- **ph-cli:** ph add does not remove installed packages ([aedfbf56e](https://github.com/powerhouse-inc/powerhouse/commit/aedfbf56e))
+- setup global project and remove init from install-tools ([61af7eb11](https://github.com/powerhouse-inc/powerhouse/commit/61af7eb11))
+- **scripts:** added connect domain to allowed hosts ([dbb08f51b](https://github.com/powerhouse-inc/powerhouse/commit/dbb08f51b))
+- **scripts:** work with postgresql prefix ([b53848a40](https://github.com/powerhouse-inc/powerhouse/commit/b53848a40))
+- **scripts:** improved project init ([35dd55ec9](https://github.com/powerhouse-inc/powerhouse/commit/35dd55ec9))
+- **scripts:** improved db setup ([1db384e79](https://github.com/powerhouse-inc/powerhouse/commit/1db384e79))
 
 ### ❤️ Thank You
 
-- acaldas @acaldas
-- ryanwolhuter @ryanwolhuter
+- Frank
+- Guillermo Puente
 
-## 1.33.1-staging.3 (2025-04-17)
+## 1.33.1-dev.9 (2025-05-08)
+
+### 🚀 Features
+
+- **scalars:** use zod type for scalar schema ([7f6d4ecac](https://github.com/powerhouse-inc/powerhouse/commit/7f6d4ecac))
+- **scalars:** add base scalar type definition ([4315f258b](https://github.com/powerhouse-inc/powerhouse/commit/4315f258b))
+- added new amount scalars ([#1283](https://github.com/powerhouse-inc/powerhouse/pull/1283))
+- removed default supported units ([9bf6769a1](https://github.com/powerhouse-inc/powerhouse/commit/9bf6769a1))
+- added new amount scalars ([fd1eac1d9](https://github.com/powerhouse-inc/powerhouse/commit/fd1eac1d9))
+- **monorepo:** enable type import lint rule ([5fd802021](https://github.com/powerhouse-inc/powerhouse/commit/5fd802021))
+- **scalars:** support trigger submit form programatically ([16e2773a5](https://github.com/powerhouse-inc/powerhouse/commit/16e2773a5))
+- **monorepo:** unify linting and build ([542313e91](https://github.com/powerhouse-inc/powerhouse/commit/542313e91))
+- **monorepo:** remove global dev deps ([ac51963c4](https://github.com/powerhouse-inc/powerhouse/commit/ac51963c4))
+- **scalars:** uilgu;gou'ihp ([793770e91](https://github.com/powerhouse-inc/powerhouse/commit/793770e91))
+- **connect:** finish type rename ([865be799e](https://github.com/powerhouse-inc/powerhouse/commit/865be799e))
+- **common:** improved drive story ([ec96a6b7e](https://github.com/powerhouse-inc/powerhouse/commit/ec96a6b7e))
+- **builder-tools:** move editor utils to builder tools ([d115e257d](https://github.com/powerhouse-inc/powerhouse/commit/d115e257d))
+- **document-model:** update generics ([211dfe954](https://github.com/powerhouse-inc/powerhouse/commit/211dfe954))
+- **scalars:** add sidebar item status ([594381135](https://github.com/powerhouse-inc/powerhouse/commit/594381135))
+- **scalars:** added sidebar provider extra functions ([266b53c55](https://github.com/powerhouse-inc/powerhouse/commit/266b53c55))
+- **document-model-libs:** park for now ([36a2fcc3b](https://github.com/powerhouse-inc/powerhouse/commit/36a2fcc3b))
+- **scalars:** pinned items hover ([55929ebc0](https://github.com/powerhouse-inc/powerhouse/commit/55929ebc0))
+- **scalars:** allow to use custom icons in the sidebar items ([cc95e0ffc](https://github.com/powerhouse-inc/powerhouse/commit/cc95e0ffc))
+- **monorepo:** bump deps ([7a898f66f](https://github.com/powerhouse-inc/powerhouse/commit/7a898f66f))
+- **document-model-libs:** remove rwa ([0516b2e7f](https://github.com/powerhouse-inc/powerhouse/commit/0516b2e7f))
+- **ph-cli:** setup improvements ([0d52ebeac](https://github.com/powerhouse-inc/powerhouse/commit/0d52ebeac))
+- **scalars:** preserve react directives ([b15888e76](https://github.com/powerhouse-inc/powerhouse/commit/b15888e76))
+- **scalars:** allow to collapse/expand the sidebar ([617c41688](https://github.com/powerhouse-inc/powerhouse/commit/617c41688))
+- **scalars:** add sidebar base ([16fc46307](https://github.com/powerhouse-inc/powerhouse/commit/16fc46307))
+- merge main into dspot-branch ([#769](https://github.com/powerhouse-inc/powerhouse/pull/769))
+- **scalars:** added missing resolvers ([#578](https://github.com/powerhouse-inc/powerhouse/pull/578))
+- **reactor-api:** Added support for processors ([#655](https://github.com/powerhouse-inc/powerhouse/pull/655))
+- **monorepo:** simplify parallel task execution ([0ed8df13a](https://github.com/powerhouse-inc/powerhouse/commit/0ed8df13a))
+- **monorepo:** handle project references ([3b6c046f2](https://github.com/powerhouse-inc/powerhouse/commit/3b6c046f2))
+- use unified deps ([38c759a97](https://github.com/powerhouse-inc/powerhouse/commit/38c759a97))
+- **monorepo:** fix export declarations ([589087793](https://github.com/powerhouse-inc/powerhouse/commit/589087793))
+- **monorepo:** remove . in eslint invocation ([935f18eac](https://github.com/powerhouse-inc/powerhouse/commit/935f18eac))
+- **monorepo:** make scalar package linting match rest of monorepo ([af80a4a16](https://github.com/powerhouse-inc/powerhouse/commit/af80a4a16))
+- **scalars:** add single/multi select fields with all props & base styles ([e38ef0552](https://github.com/powerhouse-inc/powerhouse/commit/e38ef0552))
+- **ph-cli,reactor-local:** integrate local reactor into ph-cli ([92f2f5300](https://github.com/powerhouse-inc/powerhouse/commit/92f2f5300))
+- **scalars, design-system:** added EthereumAddress and AmountTokens scalars ([e5124e193](https://github.com/powerhouse-inc/powerhouse/commit/e5124e193))
+- **scalars:** add form example ([91e9fa31a](https://github.com/powerhouse-inc/powerhouse/commit/91e9fa31a))
+- **scalars:** added built-in form & fields validation ([8cf3a9951](https://github.com/powerhouse-inc/powerhouse/commit/8cf3a9951))
+- **document-model-libs:** address initial QA feedback ([7513155e3](https://github.com/powerhouse-inc/powerhouse/commit/7513155e3))
+- **scalars:** added default scalars ([#444](https://github.com/powerhouse-inc/powerhouse/pull/444))
+- **scalars:** add checkbox support for warnings and errors messages ([3279c8d8c](https://github.com/powerhouse-inc/powerhouse/commit/3279c8d8c))
+- **scalars:** add a checkbox field ([2d9e11fb1](https://github.com/powerhouse-inc/powerhouse/commit/2d9e11fb1))
+- **scalars:** added exports for codegen ([#434](https://github.com/powerhouse-inc/powerhouse/pull/434))
+- **scalars:** added exports for codegen ([#434](https://github.com/powerhouse-inc/powerhouse/pull/434))
+- **scalars:** added amount percentage scalar ([#433](https://github.com/powerhouse-inc/powerhouse/pull/433))
+- **scalars:** boolean fields scafolding ([217683dec](https://github.com/powerhouse-inc/powerhouse/commit/217683dec))
+- **document-model-libs:** fix lint error ([37d4061d9](https://github.com/powerhouse-inc/powerhouse/commit/37d4061d9))
+- **scalars:** setup scalars project ([#370](https://github.com/powerhouse-inc/powerhouse/pull/370))
 
 ### 🩹 Fixes
 
-- remove .env and add to .gitignore ([0d2d48684](https://github.com/powerhouse-inc/powerhouse/commit/0d2d48684))
-- **switchboard,reactor-local:** latest version of sky atlas was not being installed ([72bf72fd4](https://github.com/powerhouse-inc/powerhouse/commit/72bf72fd4))
+- all builds should first clean their dist directories -- this does not affect the build cache ([7acffd6b0](https://github.com/powerhouse-inc/powerhouse/commit/7acffd6b0))
+- **scalars:** fix the modify files in the package ([e4c7cddaf](https://github.com/powerhouse-inc/powerhouse/commit/e4c7cddaf))
+- keep consistent zod version across projects ([97cdadab3](https://github.com/powerhouse-inc/powerhouse/commit/97cdadab3))
+- **scalars:** navigating/expanding/collapsing to new nodes while searching ([71c3a5ceb](https://github.com/powerhouse-inc/powerhouse/commit/71c3a5ceb))
+- **sclars:** dropdown export ([883649f48](https://github.com/powerhouse-inc/powerhouse/commit/883649f48))
+- **document-drive:** unit test failure from zod fixes ([d31367cc3](https://github.com/powerhouse-inc/powerhouse/commit/d31367cc3))
+- **scalars:** sidebar test snapshot ([51cfa4eef](https://github.com/powerhouse-inc/powerhouse/commit/51cfa4eef))
+- **scalars:** ensure that onchange is called with the latest value ([70da875ac](https://github.com/powerhouse-inc/powerhouse/commit/70da875ac))
+- **scalars:** prevent multiple unnecessary  calls to onChange ([1779dd360](https://github.com/powerhouse-inc/powerhouse/commit/1779dd360))
+- **scalars:** lint ([1dd6dd5aa](https://github.com/powerhouse-inc/powerhouse/commit/1dd6dd5aa))
+- **connect:** lint ([4ada26501](https://github.com/powerhouse-inc/powerhouse/commit/4ada26501))
+- **scalars:** change warning colors ([c1405294d](https://github.com/powerhouse-inc/powerhouse/commit/c1405294d))
+- **scalars:** validate on blur when specified dynamically ([5e0c621d1](https://github.com/powerhouse-inc/powerhouse/commit/5e0c621d1))
+- **scalars:** revalidate field on required prop change ([41d2f7d7b](https://github.com/powerhouse-inc/powerhouse/commit/41d2f7d7b))
+- **scalars:** merge branch 'dspot-scalars' into feat/amount-with-currencies-token ([bb8118f80](https://github.com/powerhouse-inc/powerhouse/commit/bb8118f80))
+- **scalars:** import path ([44ed009d2](https://github.com/powerhouse-inc/powerhouse/commit/44ed009d2))
+- **scalars:** windows paths ([2bbe727b9](https://github.com/powerhouse-inc/powerhouse/commit/2bbe727b9))
+- **scalars:** tests ([5a5a4a589](https://github.com/powerhouse-inc/powerhouse/commit/5a5a4a589))
+- **scalars:** windows paths ([c7c21bfed](https://github.com/powerhouse-inc/powerhouse/commit/c7c21bfed))
+- **scalars:** generic validation ([a7c80ba8d](https://github.com/powerhouse-inc/powerhouse/commit/a7c80ba8d))
+- **scalars:** fix the test when change type to number ([453348ed7](https://github.com/powerhouse-inc/powerhouse/commit/453348ed7))
+- **scalars:** tests ([21bf584b4](https://github.com/powerhouse-inc/powerhouse/commit/21bf584b4))
+- **scalars:** move Radio & Radio Group to Fragments & add warnings support ([33b091738](https://github.com/powerhouse-inc/powerhouse/commit/33b091738))
+- **scalars:** package.json windows paths ([0a50b7a2a](https://github.com/powerhouse-inc/powerhouse/commit/0a50b7a2a))
+- **scalars:** test & lint ([cfb050b8c](https://github.com/powerhouse-inc/powerhouse/commit/cfb050b8c))
+- **scalars:** package.json exports paths ([366a66e5a](https://github.com/powerhouse-inc/powerhouse/commit/366a66e5a))
+- **scalars:** package.json exports paths ([f89002840](https://github.com/powerhouse-inc/powerhouse/commit/f89002840))
+
+### ❤️ Thank You
+
+- acaldas
+- alejandrocabriales
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- nestor
+- ryanwolhuter
+- Yasiel Cabrera
+
+## 1.33.1-dev.8 (2025-05-07)
+
+### 🚀 Features
+
+- **scripts:** added setup environment ([9459aa5e5](https://github.com/powerhouse-inc/powerhouse/commit/9459aa5e5))
+- **scripts:** added install tools ([2f6798c9c](https://github.com/powerhouse-inc/powerhouse/commit/2f6798c9c))
+- **connect:** added bin which serves connect ([6b731c703](https://github.com/powerhouse-inc/powerhouse/commit/6b731c703))
+- **switchboard:** use package manager from reactor api ([a0a15417b](https://github.com/powerhouse-inc/powerhouse/commit/a0a15417b))
+
+### 🩹 Fixes
+
+- all builds should first clean their dist directories -- this does not affect the build cache ([7acffd6b0](https://github.com/powerhouse-inc/powerhouse/commit/7acffd6b0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
+## 1.33.1-dev.7 (2025-05-03)
+
+### 🚀 Features
+
+- moved log levels definition to config and set default level to "info" ([ef6040210](https://github.com/powerhouse-inc/powerhouse/commit/ef6040210))
+- **document-drive:** implemented LRU in memory cache ([9f6347b58](https://github.com/powerhouse-inc/powerhouse/commit/9f6347b58))
+
+### 🩹 Fixes
+
+- added script for testing end-to-end codegen pipeline ([8668f82b4](https://github.com/powerhouse-inc/powerhouse/commit/8668f82b4))
 
 ### ❤️ Thank You
 
 - acaldas
 - Benjamin Jordan
 
-## 1.33.1-staging.2 (2025-04-17)
+## 1.33.1-dev.6 (2025-04-29)
+
+### 🚀 Features
+
+- **reactor-browser,connect:** use global analytics store ([213059fcd](https://github.com/powerhouse-inc/powerhouse/commit/213059fcd))
+- **reactor-api,reactor-local:** updated analytics dependencies ([34ba69ba4](https://github.com/powerhouse-inc/powerhouse/commit/34ba69ba4))
+- **connect,reactor-browser:** implemented analytics demo on connect ([d71c42400](https://github.com/powerhouse-inc/powerhouse/commit/d71c42400))
+- **reactor-browser:** added analytics engine support ([50067856f](https://github.com/powerhouse-inc/powerhouse/commit/50067856f))
+
+### 🩹 Fixes
+
+- updating launch confituration to fix reactor local debug source mapping ([32af5af15](https://github.com/powerhouse-inc/powerhouse/commit/32af5af15))
+- **switchboard:** add analytics-engine-core as a dependency of switchboard ([bded7cbab](https://github.com/powerhouse-inc/powerhouse/commit/bded7cbab))
+- **ph-cli:** ph add does not remove installed packages ([1109ef2ed](https://github.com/powerhouse-inc/powerhouse/commit/1109ef2ed))
+- **connect:** fixed diff analyzer dependency version ([c4119416f](https://github.com/powerhouse-inc/powerhouse/commit/c4119416f))
+- **connect:** updated diff analyzer dependency ([012eb867c](https://github.com/powerhouse-inc/powerhouse/commit/012eb867c))
+- **connect,document-drive,reactor-browser:** build issues ([d8142a0e3](https://github.com/powerhouse-inc/powerhouse/commit/d8142a0e3))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 1.33.1-dev.5 (2025-04-17)
+
+### 🩹 Fixes
+
+- remove .env and add to .gitignore ([5ca95a8ee](https://github.com/powerhouse-inc/powerhouse/commit/5ca95a8ee))
+- **switchboard,reactor-local:** latest version of sky atlas was not being installed ([7245bb133](https://github.com/powerhouse-inc/powerhouse/commit/7245bb133))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 1.33.1-dev.4 (2025-04-15)
 
 ### 🩹 Fixes
 

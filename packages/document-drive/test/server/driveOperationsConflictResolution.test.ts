@@ -2,25 +2,27 @@ import {
   BaseAction,
   documentModelDocumentModelModule,
   DocumentModelModule,
+  generateId,
   Operation,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   addFolder,
   copyNode,
-} from "../../src/drive-document-model/gen/node/creators";
-import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer";
+} from "../../src/drive-document-model/gen/node/creators.js";
+import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
 import {
   DocumentDriveAction,
   DocumentDriveDocument,
   Node,
-} from "../../src/drive-document-model/gen/types";
-import { createDocument } from "../../src/drive-document-model/gen/utils";
-import { driveDocumentModelModule } from "../../src/drive-document-model/module";
-import { generateNodesCopy } from "../../src/drive-document-model/src/utils";
-import { ReactorBuilder } from "../../src/server/builder";
-import { IOperationResult } from "../../src/server/types";
-import { DriveBasicClient } from "../utils";
+} from "../../src/drive-document-model/gen/types.js";
+import { createDocument } from "../../src/drive-document-model/gen/utils.js";
+import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
+import { generateNodesCopy } from "../../src/drive-document-model/src/utils.js";
+import { BaseDocumentDriveServer } from "../../src/server/base-server.js";
+import { ReactorBuilder } from "../../src/server/builder.js";
+import { IOperationResult } from "../../src/server/types.js";
+import { DriveBasicClient } from "../utils.js";
 
 function sortNodes(nodes: Node[]) {
   return nodes.sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -32,17 +34,20 @@ describe("Drive Operations", () => {
     driveDocumentModelModule,
   ] as DocumentModelModule[];
 
-  let server = new ReactorBuilder(documentModels).build();
+  let server: BaseDocumentDriveServer;
   beforeEach(async () => {
-    server = new ReactorBuilder(documentModels).build();
+    server = new ReactorBuilder(
+      documentModels,
+    ).build() as unknown as BaseDocumentDriveServer;
     await server.initialize();
   });
 
-  const driveId = "1";
+  const driveId = generateId();
 
   async function buildDrive() {
     await server.addDrive({
-      global: { id: driveId, name: "test", icon: null, slug: null },
+      id: driveId,
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",

@@ -7,6 +7,9 @@ import type {
   PHDocument,
 } from "document-model";
 
+/**
+ * Describes the storage interface for documents.
+ */
 export interface IDocumentStorage {
   /**
    * Returns true if and only if the document exists.
@@ -21,24 +24,9 @@ export interface IDocumentStorage {
    * @param documentId - The id of the document to create.
    * @param document - The document to create.
    *
-   * @throws Error if the document already exists.
+   * @throws Error if the document with a matching id OR slug already exists.
    */
-  create(documentId: string, document: PHDocument): Promise<void>;
-
-  /**
-   * Creates a new document with the given id and slug.
-   *
-   * @param documentId - The id of the document to create.
-   * @param slug - The slug of the document to create.
-   * @param document - The document to create.
-   *
-   * @throws Error if the document already exists.
-   */
-  // createWithSlug(
-  //   documentId: string,
-  //   slug: string,
-  //   document: PHDocument,
-  // ): Promise<void>;
+  create(document: PHDocument): Promise<void>;
 
   /**
    * Returns the document with the given id.
@@ -53,24 +41,31 @@ export interface IDocumentStorage {
    * Returns the document with the given slug.
    *
    * @param slug - The slug of the document to get.
+   *
+   * @throws Error if the document does not exist.
    */
   getBySlug<TDocument extends PHDocument>(slug: string): Promise<TDocument>;
 
   /**
-   * Returns all documents of the given document-model type.
+   * Returns ids of all documents of the given document-model type.
    *
    * @param documentModelType - The type of the documents to get.
+   * @param limit - The maximum number of documents to return.
+   * @param cursor - The cursor to start the search from.
+   *
    */
-  // getByType<TDocument extends PHDocument>(
-  //   documentModelType: string,
-  //   cursor?: string,
-  // ): Promise<{
-  //   documents: TDocument[];
-  //   nextCursor: string | undefined;
-  // }>;
+  findByType(
+    documentModelType: string,
+    limit?: number,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }>;
 
   /**
-   * Deletes the document with the given id.
+   * Deletes the document with the given id. Also deletes any child documents
+   * that are only children of this document.
    *
    * @param documentId - The id of the document to delete.
    *
@@ -107,10 +102,28 @@ export interface IDocumentStorage {
    */
   getChildren(parentId: string): Promise<string[]>;
 
-  //getParent(childId: string): Promise<string | undefined>;
+  /**
+   * Returns all parent documents of the child document with the given id.
+   *
+   * @param childId - The id of the child document.
+   */
+  getParents(childId: string): Promise<string[]>;
 }
 
-export interface IStorage {
+/**
+ * Storage interface that allows for deletion.
+ */
+export interface IDocumentAdminStorage extends IDocumentStorage {
+  /**
+   * Clears the storage.
+   */
+  clear(): Promise<void>;
+}
+
+/**
+ * Describes the storage interface for document operations.
+ */
+export interface IDocumentOperationStorage {
   addDocumentOperations<TDocument extends PHDocument>(
     drive: string,
     id: string,
@@ -143,11 +156,10 @@ export interface IStorage {
   >;
 }
 
-export interface IDriveStorage extends IStorage {
-  getDrives(): Promise<string[]>;
-  createDrive(id: string, drive: DocumentDriveDocument): Promise<void>;
-  deleteDrive(id: string): Promise<void>;
-  clearStorage?(): Promise<void>;
+/**
+ * Describes the storage interface for drive operations.
+ */
+export interface IDriveOperationStorage extends IDocumentOperationStorage {
   addDriveOperations(
     id: string,
     operations: Operation[],

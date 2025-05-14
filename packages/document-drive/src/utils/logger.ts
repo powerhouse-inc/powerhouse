@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-type LogLevel = "verbose" | "debug" | "info" | "warn" | "error" | "silent";
+import { isLogLevel, type LogLevel, LogLevels } from "@powerhousedao/config";
+
+export { isLogLevel, LogLevel, LogLevels };
 
 export type ILogger = Pick<
   Console,
@@ -13,15 +15,6 @@ export type ILogger = Pick<
 };
 
 export type LoggerErrorHandler = (...data: any[]) => void;
-
-const LEVELS = {
-  verbose: 1,
-  debug: 2,
-  info: 3,
-  warn: 4,
-  error: 5,
-  silent: 6,
-} as const;
 
 export class ConsoleLogger implements ILogger {
   #tags: string[];
@@ -46,6 +39,10 @@ export class ConsoleLogger implements ILogger {
   }
 
   set level(level: LogLevel | "env") {
+    if (level !== "env" && !isLogLevel(level)) {
+      throw new Error(`Invalid log level: ${JSON.stringify(level)}.
+        Must be one of ${Object.keys(LogLevels).concat(["env"]).join(", ")}.`);
+    }
     this.#levelString = level;
   }
 
@@ -60,19 +57,21 @@ export class ConsoleLogger implements ILogger {
   get #levelValue(): number {
     if (this.#levelString === "env") {
       const envLevel =
-        typeof process !== "undefined" ? process.env.LOG_LEVEL : undefined;
+        typeof process !== "undefined" && "env" in process
+          ? process.env.LOG_LEVEL
+          : undefined;
       if (!envLevel) {
-        return LEVELS.debug;
+        return LogLevels.debug;
       }
 
-      if (!(envLevel in LEVELS)) {
-        return LEVELS.debug;
+      if (!(envLevel in LogLevels)) {
+        return LogLevels.debug;
       }
 
-      return LEVELS[envLevel as LogLevel];
+      return LogLevels[envLevel as LogLevel];
     }
 
-    return LEVELS[this.#levelString];
+    return LogLevels[this.#levelString];
   }
 
   log(...data: any[]): void {
@@ -80,7 +79,7 @@ export class ConsoleLogger implements ILogger {
   }
 
   verbose(...data: any[]): void {
-    if (this.#levelValue > LEVELS.verbose) {
+    if (this.#levelValue > LogLevels.verbose) {
       return;
     }
 
@@ -88,7 +87,7 @@ export class ConsoleLogger implements ILogger {
   }
 
   debug(...data: any[]): void {
-    if (this.#levelValue > LEVELS.debug) {
+    if (this.#levelValue > LogLevels.debug) {
       return;
     }
 
@@ -96,7 +95,7 @@ export class ConsoleLogger implements ILogger {
   }
 
   info(...data: any[]): void {
-    if (this.#levelValue > LEVELS.info) {
+    if (this.#levelValue > LogLevels.info) {
       return;
     }
 
@@ -104,7 +103,7 @@ export class ConsoleLogger implements ILogger {
   }
 
   warn(...data: any[]): void {
-    if (this.#levelValue > LEVELS.warn) {
+    if (this.#levelValue > LogLevels.warn) {
       return;
     }
 
@@ -112,7 +111,7 @@ export class ConsoleLogger implements ILogger {
   }
 
   error(...data: any[]): void {
-    if (this.#levelValue > LEVELS.error) {
+    if (this.#levelValue > LogLevels.error) {
       return;
     }
 

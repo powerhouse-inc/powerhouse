@@ -2,6 +2,19 @@ import type {
   IdAutocompleteOption,
   IdAutocompleteProps,
 } from "../../../../scalars/components/fragments/id-autocomplete/types.js";
+import type {
+  DiffMode,
+  WithDifference,
+} from "../../../../scalars/components/types.js";
+
+export interface PHIDInputWithDifference
+  extends Omit<WithDifference<string>, "diffMode"> {
+  diffMode?: Extract<DiffMode, "sentences">;
+  basePreviewIcon?: string | React.ReactElement;
+  basePreviewTitle?: string;
+  basePreviewPath?: string;
+  basePreviewDescription?: string;
+}
 
 type PHIDOption = IdAutocompleteOption;
 
@@ -43,6 +56,7 @@ type PHIDInputProps = PHIDInputBaseProps &
         ) => Promise<PHIDOption | undefined> | PHIDOption | undefined;
         previewPlaceholder?: PHIDOption;
       }
-  );
+  ) &
+  PHIDInputWithDifference;
 
 export type { PHIDInputProps, PHIDOption };

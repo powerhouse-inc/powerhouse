@@ -107,6 +107,17 @@ const meta: Meta<typeof PHIDField> = {
       if: { arg: "autoComplete", neq: false },
     },
 
+    initialOptions: {
+      control: "object",
+      description:
+        "Array of options to initially populate the autocomplete dropdown",
+      table: {
+        type: { summary: "PHIDOption[]" },
+        category: StorybookControlCategory.COMPONENT_SPECIFIC,
+      },
+      if: { arg: "autoComplete", neq: false },
+    },
+
     previewPlaceholder: {
       control: "object",
       description:
@@ -142,6 +153,51 @@ const meta: Meta<typeof PHIDField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
       if: { arg: "autoComplete", neq: false },
+    },
+
+    ...PrebuiltArgTypes.viewMode,
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["sentences"],
+      table: {
+        type: { summary: "sentences" },
+        defaultValue: { summary: "sentences" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    ...PrebuiltArgTypes.baseValue,
+    basePreviewIcon: {
+      control: "text",
+      description: "The icon of the base preview",
+      table: {
+        type: { summary: "IconName | React.ReactElement" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    basePreviewTitle: {
+      control: "text",
+      description: "The title of the base preview",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    basePreviewPath: {
+      control: "text",
+      description: "The path of the base preview",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    basePreviewDescription: {
+      control: "text",
+      description: "The description of the base preview",
+      table: {
+        type: { summary: "string" },
+        category: StorybookControlCategory.DIFF,
+      },
     },
 
     ...getValidationArgTypes(),

@@ -1,10 +1,6 @@
-import { DocumentModelModule, Operation } from "document-model";
+import { DocumentModelModule, Operation, generateId } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  PullResponderTransmitter,
-  ReactorBuilder,
-  generateUUID,
-} from "../../src";
+import { PullResponderTransmitter, ReactorBuilder } from "../../src";
 import InMemoryCache from "../../src/cache/memory";
 import { MemoryStorage } from "../../src/storage/memory";
 import { PrismaStorage } from "../../src/storage/prisma";
@@ -379,7 +375,7 @@ describe("Synchronization Units", () => {
             documentType: "powerhouse/document-model",
             synchronizationUnits: [
               {
-                syncId: generateUUID(),
+                syncId: generateId(),
                 branch: "main",
                 scope: "global",
               },
@@ -829,7 +825,7 @@ describe("Synchronization Units", () => {
             documentType: "powerhouse/document-model",
             synchronizationUnits: [
               {
-                syncId: generateUUID(),
+                syncId: generateId(),
                 branch: "main",
                 scope: "global",
               },

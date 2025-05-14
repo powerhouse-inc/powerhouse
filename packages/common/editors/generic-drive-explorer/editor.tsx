@@ -33,11 +33,7 @@ export type IProps = DriveEditorProps<DocumentDriveDocument> &
 export function BaseEditor(props: IProps) {
   const { document, dispatch, className, children } = props;
 
-  const {
-    state: {
-      global: { id: driveId },
-    },
-  } = document;
+  const { id: driveId } = document;
   const {
     showSearchBar,
     isAllowedToCreateDocuments,

@@ -143,6 +143,7 @@ export const Content: React.FC<ContentProps> = ({
             selectionIconPosition={selectionIconPosition}
             hasAnyIcon={hasAnyIcon}
             toggleOption={toggleOption}
+            tabIndex={!searchable ? 0 : undefined}
           />
 
           {favoriteOptions.length > 0 && (
@@ -156,6 +157,7 @@ export const Content: React.FC<ContentProps> = ({
             selectionIconPosition={selectionIconPosition}
             hasAnyIcon={hasAnyIcon}
             toggleOption={toggleOption}
+            tabIndex={!searchable ? 0 : undefined}
           />
         </CommandGroup>
       </CommandList>

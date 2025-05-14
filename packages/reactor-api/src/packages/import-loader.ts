@@ -2,7 +2,7 @@ import { type SubgraphClass } from "#graphql/index.js";
 import { childLogger } from "document-drive";
 import { type ProcessorFactory } from "document-drive/processors/types";
 import { type DocumentModelModule } from "document-model";
-import { type IPackageLoader } from "./types.js";
+import { type IPackageLoader, type IProcessorHostModule } from "./types.js";
 import { loadDependency } from "./util.js";
 
 /**
@@ -53,11 +53,11 @@ export class ImportPackageLoader implements IPackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<((module: any) => ProcessorFactory) | null> {
+  ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null> {
     this.logger.verbose("Loading processors from package:", identifier);
 
     const pkgModule = (await loadDependency(identifier, "processors")) as {
-      processorFactory: (module: any) => ProcessorFactory;
+      processorFactory: (module: IProcessorHostModule) => ProcessorFactory;
     } | null;
     if (pkgModule?.processorFactory) {
       if (!(typeof pkgModule.processorFactory === "function")) {

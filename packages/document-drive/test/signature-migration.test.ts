@@ -1,12 +1,12 @@
-import { ActionContext, Operation } from "document-model";
+import { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { ActionContext, Operation, generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
 import { addFile } from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
 import { createDocument } from "../src/drive-document-model/gen/utils.js";
 import { BrowserStorage } from "../src/storage/browser.js";
-import { PrismaClient } from "../src/storage/prisma/client";
+import { PrismaClient } from "../src/storage/prisma/client/index.js";
 import { migrateLegacyOperationSignature } from "../src/utils/migrations.js";
-import { generateUUID } from "../src/utils/misc.js";
 import { buildOperation } from "./utils.js";
 
 const prismaClient = new PrismaClient();
@@ -83,7 +83,7 @@ describe("Signature migration", () => {
 describe.each(storageLayers)(
   "should migrate operations in %s",
   async (_storageName, buildStorage) => {
-    const driveId = generateUUID();
+    const driveId = generateId();
     beforeEach(async () => {
       //const storage = storageLayers[1][1]();
       //return storage.deleteDrive(driveId);
@@ -92,13 +92,13 @@ describe.each(storageLayers)(
     it("should migrate operation without context", async ({ expect }) => {
       const storage = await buildStorage();
       const drive = createDocument({
+        id: driveId,
+        slug: driveId,
         state: {
           global: {
             icon: null,
-            id: driveId,
             name: "name",
             nodes: [],
-            slug: null,
           },
           local: {
             availableOffline: false,
@@ -107,7 +107,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.createDrive(driveId, drive);
+      await storage.create(drive);
 
       const driveOperation = buildOperation(
         reducer,
@@ -142,13 +142,12 @@ describe.each(storageLayers)(
     }) => {
       const storage = await buildStorage();
       const drive = createDocument({
+        id: driveId,
         state: {
           global: {
             icon: null,
-            id: driveId,
             name: "name",
             nodes: [],
-            slug: null,
           },
           local: {
             availableOffline: false,
@@ -157,7 +156,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.createDrive(driveId, drive);
+      await storage.create(drive);
 
       const driveOperation = buildOperation(
         reducer,
@@ -218,13 +217,12 @@ describe.each(storageLayers)(
     it("should migrate operation with a signature", async ({ expect }) => {
       const storage = await buildStorage();
       const drive = createDocument({
+        id: driveId,
         state: {
           global: {
             icon: null,
-            id: driveId,
             name: "name",
             nodes: [],
-            slug: null,
           },
           local: {
             availableOffline: false,
@@ -233,7 +231,7 @@ describe.each(storageLayers)(
           },
         },
       });
-      await storage.createDrive(driveId, drive);
+      await storage.create(drive);
 
       const driveOperation = buildOperation(
         reducer,

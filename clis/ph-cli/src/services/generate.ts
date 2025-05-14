@@ -7,7 +7,7 @@ import {
   generateProcessor,
   generateSubgraph,
 } from "@powerhousedao/codegen";
-import { getConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config/utils";
 
 export type GenerateOptions = {
   interactive?: boolean;

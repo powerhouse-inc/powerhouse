@@ -125,6 +125,6 @@ export class InternalTransmitter implements ITransmitter {
   }
 
   async disconnect(): Promise<void> {
-    await this.processor?.onDisconnect();
+    await this.processor.onDisconnect();
   }
 }

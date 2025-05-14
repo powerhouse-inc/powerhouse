@@ -4,7 +4,7 @@ import {
   type GraphQLResolverMap,
   type GraphQLSchemaModule,
 } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
-import { typeDefs as scalarsTypeDefs } from "@powerhousedao/scalars";
+import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import { pascalCase } from "change-case";
 import { type IDocumentDriveServer } from "document-drive";
 import { type DocumentNode } from "graphql";

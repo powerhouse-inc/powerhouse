@@ -1,4 +1,4 @@
-import { getConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config/utils";
 import { Argument, type Command } from "commander";
 import { execSync } from "node:child_process";
 import path from "node:path";

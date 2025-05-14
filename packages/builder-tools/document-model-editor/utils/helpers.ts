@@ -11,7 +11,7 @@ import { safeParseSdl } from "#document-model-editor/context/schema-context";
 import {
   getPHCustomScalarByTypeName,
   type Serializable,
-} from "@powerhousedao/scalars";
+} from "@powerhousedao/document-engineering/graphql";
 import { pascalCase } from "change-case";
 import {
   type ASTNode,

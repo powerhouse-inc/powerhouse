@@ -6,21 +6,19 @@ import { describe, expect, it } from "vitest";
 import { createBrowserDocumentDriveServer } from "../src/reactor.js";
 
 describe("reactor", () => {
-  describe("createBrowserDocumentDriveServer", () => {
-    it("should create a reactor instance with minimal config", async () => {
-      const documentModels = [
-        documentModelDocumentModelModule as DocumentModelModule,
-      ];
-      const routerBasename = "/test";
+  it("should create a reactor instance with minimal config", async () => {
+    const documentModels = [
+      documentModelDocumentModelModule as DocumentModelModule,
+    ];
+    const routerBasename = "/test";
 
-      const reactor = createBrowserDocumentDriveServer(
-        documentModels,
-        routerBasename,
-      );
+    const reactor = createBrowserDocumentDriveServer(
+      documentModels,
+      routerBasename,
+    );
 
-      expect(reactor).toBeDefined();
-      await expect(reactor.initialize()).resolves.toBeNull();
-      await expect(reactor.getDrives()).resolves.toEqual([]);
-    });
+    expect(reactor).toBeDefined();
+    await expect(reactor.initialize()).resolves.toBeNull();
+    await expect(reactor.getDrives()).resolves.toEqual([]);
   });
 });

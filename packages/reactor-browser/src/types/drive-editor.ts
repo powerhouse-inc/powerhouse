@@ -1,4 +1,9 @@
-import { type FileNode, type Node, type SyncStatus } from "document-drive";
+import {
+  type FileNode,
+  type GetDocumentOptions,
+  type Node,
+  type SyncStatus,
+} from "document-drive";
 import {
   type Action,
   type ActionErrorCallback,
@@ -14,7 +19,8 @@ import { type HookState } from "../hooks/document-state.js";
 import { type User } from "../renown/types.js";
 import type { UiNode } from "../uiNodes/types.js";
 
-export interface DriveEditorContext extends EditorContext {
+export interface DriveEditorContext
+  extends Omit<EditorContext, "getDocumentRevision"> {
   /** Controls the visibility of the search bar in the drive interface */
   showSearchBar: boolean;
 
@@ -23,6 +29,7 @@ export interface DriveEditorContext extends EditorContext {
 
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
+
   /** Currently selected node (file/folder) in the drive */
   selectedNode: Node | null;
 
@@ -123,6 +130,22 @@ export interface DriveEditorContext extends EditorContext {
   }) => PHDocument["state"] | undefined;
 
   /**
+   * Retrieves a document from a specific revision
+   * @param documentId - ID of the document to retrieve
+   * @param options - Optional configuration options for the retrieval
+   * @returns Promise resolving to the document at the specified revision
+   */
+  getDocumentRevision?: (
+    documentId: string,
+    options?: GetDocumentOptions,
+  ) => Promise<PHDocument> | undefined;
+
+  /**
+   * The name of the analytics database to use for the drive editor
+   */
+  analyticsDatabaseName: string;
+
+  /**
    * Retrieves the document model module for a given document type
    * @param documentType - The type of document to retrieve the model for
    * @returns The document model module for the given document type, or undefined if not found
@@ -138,7 +161,6 @@ export interface DriveEditorContext extends EditorContext {
    */
   getEditor: (documentType: string) => EditorModule | null | undefined;
 }
-
 export interface DriveEditorProps<TDocument extends PHDocument>
   extends Omit<EditorProps<TDocument>, "context"> {
   context: DriveEditorContext;

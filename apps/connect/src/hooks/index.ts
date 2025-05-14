@@ -12,6 +12,7 @@ export * from './useDocumentEditor.js';
 export * from './useEditorProps.js';
 export * from './useEnsInfo.js';
 export * from './useFeatureFlags/index.js';
+export * from './useGetDocument.js';
 export * from './useGetDocumentById.js';
 export * from './useInitSentry.js';
 export * from './useLoadInitialData.js';
@@ -27,3 +28,4 @@ export * from './useUndoRedoShortcuts.js';
 export * from './useUserPermissions.js';
 export * from './useWindowSize.js';
 export * from './utils.js';
+

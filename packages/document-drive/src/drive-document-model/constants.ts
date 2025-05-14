@@ -1,1 +1,3 @@
-export { documentType as driveDocumentType } from "./gen/constants.js";
+import { documentModel } from "./gen/document-model.js";
+
+export const driveDocumentType = documentModel.id;

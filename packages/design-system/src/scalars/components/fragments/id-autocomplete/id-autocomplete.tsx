@@ -46,7 +46,7 @@ const IdAutocomplete = React.forwardRef<HTMLInputElement, IdAutocompleteProps>(
       fetchOptionsCallback,
       fetchSelectedOptionCallback,
       isOpenByDefault, // to be used only in stories
-      initialOptions, // to be used only in stories
+      initialOptions,
       renderOption,
       previewPlaceholder,
       ...props

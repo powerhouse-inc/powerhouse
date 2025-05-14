@@ -1,5 +1,5 @@
 import { FormInput } from "#connect";
-import { EthereumAddress as EthereumAddressScalar } from "@powerhousedao/scalars";
+import { EthereumAddress as EthereumAddressScalar } from "@powerhousedao/document-engineering/graphql";
 import { useState } from "react";
 
 export interface EthereumAddressProps {

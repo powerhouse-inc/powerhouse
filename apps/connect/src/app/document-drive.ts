@@ -3,7 +3,6 @@ import {
     BaseQueueManager,
     type DocumentDriveAction,
     type DriveInput,
-    generateUUID,
     type IDocumentDriveServer,
     InMemoryCache,
     logger,
@@ -16,6 +15,7 @@ import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import {
     type DocumentAction,
     type DocumentModelModule,
+    generateId,
     type Operation,
 } from 'document-model';
 import { type IpcMain, webContents } from 'electron';
@@ -26,8 +26,9 @@ export default (
     path: string,
     ipcMain: IpcMain,
 ) => {
+    const storage = new FilesystemStorage(join(path, 'Document Drives'));
     const documentDrive = new ReactorBuilder(documentModels)
-        .withStorage(new FilesystemStorage(join(path, 'Document Drives')))
+        .withStorage(storage)
         .withCache(new InMemoryCache())
         .withQueueManager(new BaseQueueManager(1, 10))
         .withOptions({ ...getReactorDefaultDrivesConfig() })
@@ -123,7 +124,12 @@ export default (
             drive: string,
             operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
-        ) => documentDrive.addDriveOperations(drive, operations, { forceSync }),
+        ) =>
+            documentDrive.addDriveOperations(
+                drive,
+                operations as Operation<DocumentDriveAction>[],
+                { forceSync },
+            ),
     );
 
     ipcMain.handle(
@@ -134,9 +140,13 @@ export default (
             operation: Operation<DocumentDriveAction | DocumentAction>,
             forceSync?: boolean,
         ) =>
-            documentDrive.queueDriveOperations(drive, [operation], {
-                forceSync,
-            }),
+            documentDrive.queueDriveOperations(
+                drive,
+                [operation] as Operation<DocumentDriveAction>[],
+                {
+                    forceSync,
+                },
+            ),
     );
 
     ipcMain.handle(
@@ -147,14 +157,24 @@ export default (
             operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
-            documentDrive.queueDriveOperations(drive, operations, {
-                forceSync,
-            }),
+            documentDrive.queueDriveOperations(
+                drive,
+                operations as Operation<DocumentDriveAction>[],
+                {
+                    forceSync,
+                },
+            ),
     );
 
-    ipcMain.handle('documentDrive:clearStorage', () =>
-        documentDrive.clearStorage(),
-    );
+    ipcMain.handle('documentDrive:clearStorage', async () => {
+        // delete all drives so events are emitted
+        for (const drive of await documentDrive.getDrives()) {
+            await documentDrive.deleteDrive(drive);
+        }
+
+        // clear everything else
+        await storage.clear();
+    });
 
     ipcMain.handle('documentDrive:getSyncStatus', (_e, drive: string) =>
         documentDrive.getSyncStatus(drive),
@@ -168,7 +188,7 @@ export default (
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
         ) => {
-            const uuid = generateUUID();
+            const uuid = generateId();
             const listener: Listener = {
                 driveId: drive,
                 listenerId: uuid,

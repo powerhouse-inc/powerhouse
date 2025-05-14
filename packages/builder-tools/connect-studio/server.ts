@@ -162,7 +162,7 @@ function runShellScriptPlugin(scriptName: string, connectPath: string): Plugin {
 
 export async function startServer(
   options: StartServerOptions = {
-    logLevel: "debug",
+    logLevel: "info",
   },
 ) {
   // set from options, as they are dynamically loaded
@@ -205,6 +205,14 @@ export async function startServer(
       port: PORT,
       open: options.open ?? OPEN_BROWSER,
       host: HOST,
+    },
+    build: {
+      rollupOptions: {
+        external: ["@electric-sql/pglite"],
+      },
+    },
+    optimizeDeps: {
+      exclude: ["@electric-sql/pglite"],
     },
     resolve: {
       alias: [

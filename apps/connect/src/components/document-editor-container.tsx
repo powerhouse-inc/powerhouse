@@ -1,4 +1,10 @@
-import { type Operation, type PHDocument } from 'document-model';
+import { useGetDocument } from '#hooks';
+import { type GetDocumentOptions } from 'document-drive';
+import {
+    type EditorContext,
+    type Operation,
+    type PHDocument,
+} from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
@@ -23,6 +29,8 @@ export function DocumentEditorContainer() {
         renameNode,
         getDocumentModelModule,
     } = useUiNodes();
+
+    const getDocument = useGetDocument();
 
     const handleAddOperationToSelectedDocument = useCallback(
         async (operation: Operation) => {
@@ -102,6 +110,22 @@ export function DocumentEditorContainer() {
         [getDocumentModelModule, showModal, t],
     );
 
+    const onGetDocumentRevision: EditorContext['getDocumentRevision'] =
+        useCallback(
+            (options?: GetDocumentOptions) => {
+                if (!selectedNode) {
+                    console.error('No selected node');
+                    return Promise.reject(new Error('No selected node'));
+                }
+                return getDocument(
+                    selectedNode.driveId,
+                    selectedNode.id,
+                    options,
+                );
+            },
+            [getDocument, selectedNode],
+        );
+
     const onExport = useCallback(() => {
         if (selectedDocument) {
             return exportDocument(selectedDocument);
@@ -127,6 +151,7 @@ export function DocumentEditorContainer() {
                 onChange={onDocumentChangeHandler}
                 onClose={onClose}
                 onExport={onExport}
+                onGetDocumentRevision={onGetDocumentRevision}
                 onAddOperation={handleAddOperationToSelectedDocument}
                 onOpenSwitchboardLink={onOpenSwitchboardLink}
             />

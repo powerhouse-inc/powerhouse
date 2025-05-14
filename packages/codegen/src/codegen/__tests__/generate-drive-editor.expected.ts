@@ -16,11 +16,13 @@ export const module: DriveEditorModule<DocumentDriveDocument> = {
 export default module;`;
 
 export const EXPECTED_EDITOR_CONTENT = `import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
+import { AnalyticsProvider } from '@powerhousedao/reactor-browser/analytics/context';
 import { DriveContextProvider } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import { type DocumentDriveDocument, addFolder, deleteNode, updateNode, generateNodesCopy, copyNode } from "document-drive";
 import { WagmiContext } from "@powerhousedao/design-system";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { useCallback } from "react";
+import { generateId } from "document-model";
 
 export type IProps = DriveEditorProps<DocumentDriveDocument>;
 
@@ -29,7 +31,7 @@ export function BaseEditor(props: IProps) {
   
   const onAddFolder = useCallback((name: string, parentFolder?: string) => {
     dispatch(addFolder({
-      id: hashKey(),
+      id: generateId(),
       name,
       parentFolder,
     }));
@@ -44,13 +46,11 @@ export function BaseEditor(props: IProps) {
   }, [dispatch]);
 
   const onCopyNode = useCallback((nodeId: string, targetName: string, parentId?: string) => {
-    const generateId = () => hashKey();
-    
     const copyNodesInput = generateNodesCopy({
       srcId: nodeId,
       targetParentFolder: parentId,
       targetName,
-    }, generateId, props.document.state.global.nodes);
+    }, () => generateId(), props.document.state.global.nodes);
 
     const copyNodesAction = copyNodesInput.map(input => {
       return copyNode(input);
@@ -67,7 +67,7 @@ export function BaseEditor(props: IProps) {
       style={{ height: "100%" }}
     >
       <DriveExplorer
-        driveId={props.document.state.global.id}
+        driveId={props.document.id}
         nodes={props.document.state.global.nodes}
         onAddFolder={onAddFolder}
         onDeleteNode={onDeleteNode}
@@ -83,7 +83,9 @@ export default function Editor(props: IProps) {
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>
-        <BaseEditor {...props} />
+        <AnalyticsProvider databaseName={props.context.analyticsDatabaseName}>
+          <BaseEditor {...props} />
+        </AnalyticsProvider>
       </WagmiContext>
     </DriveContextProvider>
   );

@@ -13,18 +13,20 @@ import {
   isOperationJob,
 } from "#queue/types";
 import { ReadModeServer } from "#read-mode/server";
-import { type IDocumentStorage, type IDriveStorage } from "#storage/types";
+import {
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "#storage/types";
 import {
   DefaultDrivesManager,
   type IDefaultDrivesManager,
 } from "#utils/default-drives-manager";
 import { requestPublicDrive } from "#utils/graphql";
-import { generateUUID, isDocumentDrive, runAsapAsync } from "#utils/misc";
+import { isDocumentDrive, runAsapAsync } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
-  type DocumentDriveState,
   type Trigger,
   childLogger,
 } from "document-drive";
@@ -52,7 +54,6 @@ import { type Unsubscribe } from "nanoevents";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
-  DocumentAlreadyExistsError,
   OperationError,
   type SynchronizationUnitNotFoundError,
 } from "./error.js";
@@ -100,7 +101,7 @@ export class BaseDocumentDriveServer
 
   // external dependencies
   private documentModelModules: DocumentModelModule[];
-  private legacyStorage: IDriveStorage;
+  private legacyStorage: IDriveOperationStorage;
   private documentStorage: IDocumentStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
@@ -154,14 +155,14 @@ export class BaseDocumentDriveServer
 
   // internal state
   private triggerMap = new Map<
-    DocumentDriveState["id"],
+    DocumentDriveDocument["id"],
     Map<Trigger["id"], CancelPullLoop>
   >();
   private initializePromise: Promise<Error[] | null>;
 
   constructor(
     documentModelModules: DocumentModelModule[],
-    storage: IDriveStorage,
+    storage: IDriveOperationStorage,
     documentStorage: IDocumentStorage,
     cache: ICache,
     queueManager: IQueueManager,
@@ -440,7 +441,7 @@ export class BaseDocumentDriveServer
     const drive = await this.getDrive(driveId);
 
     this.logger.verbose(
-      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.state.global.slug}"`,
+      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.slug}"`,
     );
 
     await this.synchronizationManager.initializeDriveSyncStatus(driveId, drive);
@@ -474,7 +475,7 @@ export class BaseDocumentDriveServer
         await this.listenerManager
           .setListener(driveId, {
             block: zodListener.block,
-            driveId: drive.state.global.id,
+            driveId: drive.id,
             filter: {
               branch: zodListener.filter.branch ?? [],
               documentId: zodListener.filter.documentId ?? [],
@@ -601,31 +602,29 @@ export class BaseDocumentDriveServer
     input: DriveInput,
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
-    const id = input.global.id || generateUUID();
-    if (!id) {
-      throw new Error("Invalid Drive Id");
-    }
-
-    const drives = await this.legacyStorage.getDrives();
-    if (drives.includes(id)) {
-      throw new DocumentAlreadyExistsError(id);
-    }
-
     const document = createDocument({
-      state: input,
+      id: input.id,
+      slug: input.slug,
+      state: {
+        global: {
+          icon: input.global.icon ?? null,
+          name: input.global.name,
+        },
+        local: input.local ?? {},
+      },
     });
 
     document.meta = {
       preferredEditor: preferredEditor,
     };
 
-    await this.legacyStorage.createDrive(id, document);
+    await this.documentStorage.create(document);
 
-    if (input.global.slug) {
-      await this.cache.deleteDriveBySlug(input.global.slug);
+    if (input.slug && input.slug.length > 0) {
+      await this.cache.deleteDriveBySlug(input.slug);
     }
 
-    await this._initializeDrive(id);
+    await this._initializeDrive(document.id);
 
     this.eventEmitter.emit("driveAdded", document);
 
@@ -656,11 +655,11 @@ export class BaseDocumentDriveServer
 
     return await this.addDrive(
       {
+        id,
+        slug,
         global: {
-          id: id,
           name,
-          slug,
-          icon: icon ?? null,
+          icon,
         },
         local: {
           triggers: [...triggers, pullTrigger],
@@ -678,7 +677,7 @@ export class BaseDocumentDriveServer
       this.stopSyncRemoteDrive(driveId),
       this.listenerManager.removeDrive(driveId),
       this.cache.deleteDrive(driveId),
-      this.legacyStorage.deleteDrive(driveId),
+      this.documentStorage.delete(driveId),
     ]);
 
     this.eventEmitter.emit("driveDeleted", driveId);
@@ -690,8 +689,22 @@ export class BaseDocumentDriveServer
     });
   }
 
-  getDrives() {
-    return this.legacyStorage.getDrives();
+  // TODO: paginate
+  async getDrives() {
+    const drives: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const { documents, nextCursor } = await this.documentStorage.findByType(
+        "powerhouse/document-drive",
+        100,
+        cursor,
+      );
+
+      drives.push(...documents);
+      cursor = nextCursor;
+    } while (cursor);
+
+    return drives;
   }
 
   async getDrive(driveId: string, options?: GetDocumentOptions) {
@@ -737,6 +750,19 @@ export class BaseDocumentDriveServer
       this.cache.setDriveBySlug(slug, document).catch(this.logger.error);
       return document;
     }
+  }
+
+  async getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]> {
+    try {
+      const drive = await this.cache.getDriveBySlug(slug);
+      if (drive) {
+        return drive.id;
+      }
+    } catch (e) {
+      this.logger.error("Error getting drive from cache", e);
+    }
+    const driveStorage = await this.documentStorage.getBySlug(slug);
+    return driveStorage.id;
   }
 
   async getDocument<TDocument extends PHDocument>(
@@ -788,9 +814,15 @@ export class BaseDocumentDriveServer
       input.document ??
       this.getDocumentModelModule(input.documentType).utils.createDocument();
 
+    if (input.id && input.id.length > 0) {
+      document.id = input.id;
+    }
+
     // stores document information
     const documentStorage: PHDocument = {
+      id: document.id,
       name: document.name,
+      slug: document.slug,
       revision: document.revision,
       documentType: document.documentType,
       created: document.created,
@@ -801,7 +833,7 @@ export class BaseDocumentDriveServer
       state: state ?? document.state,
     };
 
-    await this.documentStorage.create(input.id, documentStorage);
+    await this.documentStorage.create(documentStorage);
 
     try {
       await this.documentStorage.addChild(driveId, input.id);
@@ -1117,13 +1149,19 @@ export class BaseDocumentDriveServer
           case "COPY_CHILD_DOCUMENT":
             handler = () =>
               this.getDocument(driveId, signal.input.id).then(
-                (documentToCopy) =>
-                  this.createDocument(driveId, {
+                (documentToCopy) => {
+                  const doc = {
+                    ...documentToCopy,
+                    slug: signal.input.newId,
+                  };
+
+                  return this.createDocument(driveId, {
                     id: signal.input.newId,
                     documentType: documentToCopy.documentType,
-                    document: documentToCopy,
+                    document: doc,
                     synchronizationUnits: signal.input.synchronizationUnits,
-                  }),
+                  });
+                },
               );
             break;
         }
@@ -1364,7 +1402,7 @@ export class BaseDocumentDriveServer
 
   async queueDriveAction(
     driveId: string,
-    action: DocumentDriveAction,
+    action: DocumentDriveAction | Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
     return this.queueDriveActions(driveId, [action], options);
@@ -1372,7 +1410,7 @@ export class BaseDocumentDriveServer
 
   async queueDriveActions(
     driveId: string,
-    actions: DocumentDriveAction[],
+    actions: (DocumentDriveAction | Action)[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
     try {
@@ -1607,14 +1645,6 @@ export class BaseDocumentDriveServer
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
     return this.addDriveOperations(driveId, [operation], options);
-  }
-
-  async clearStorage() {
-    for (const drive of await this.getDrives()) {
-      await this.deleteDrive(drive);
-    }
-
-    await this.legacyStorage.clearStorage?.();
   }
 
   private async _addDriveOperations(
@@ -1958,11 +1988,7 @@ export class BaseDocumentDriveServer
     actions: (DocumentDriveAction | Action)[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
-    return this.queueDriveActions(
-      driveId,
-      actions as DocumentDriveAction[],
-      options,
-    );
+    return this.queueDriveActions(driveId, actions, options);
   }
 
   private async processDriveActions(

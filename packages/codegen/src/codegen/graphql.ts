@@ -1,6 +1,9 @@
 import { type CodegenConfig, generate } from "@graphql-codegen/cli";
 import { type TypeScriptPluginConfig } from "@graphql-codegen/typescript";
-import { generatorTypeDefs, validationSchema } from "@powerhousedao/scalars";
+import {
+  generatorTypeDefs,
+  validationSchema,
+} from "@powerhousedao/document-engineering/graphql";
 import { readdirSync } from "node:fs";
 import { formatWithPrettierBeforeWrite } from "./utils.js";
 

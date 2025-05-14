@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "1.27.39-staging.0",
+  "version": "1.27.48-dev.0",
   "main": "dist/server.js",
   "publishConfig": {
     "access": "public"
@@ -10,6 +10,7 @@
     "start": "vite-node src/index.ts",
     "build:tsc": "tsc --build",
     "build": "tsc --build",
+    "prebuild": "npm run clean",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },
@@ -27,7 +28,6 @@
     "@libsql/client": "^0.14.0",
     "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@powerhousedao/reactor-api": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
     "change-case": "^5.4.4",
     "commander": "^12.1.0",
     "document-drive": "workspace:*",
@@ -50,6 +50,6 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/ms": "^0.7.34",
-    "@types/node": "^22.7.5"
+    "@types/node": "^22.15.17"
   }
 }

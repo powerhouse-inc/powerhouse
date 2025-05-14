@@ -1,8 +1,6 @@
 import { generateFromFile } from "@powerhousedao/codegen";
-import {
-  getConfig,
-  type PowerhouseConfig,
-} from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config/utils";
 import {
   DefaultStartServerOptions,
   startServer,

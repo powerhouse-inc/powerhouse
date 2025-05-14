@@ -1,15 +1,10 @@
-import type {
-  DocumentModelModule,
-  ExtendedState,
-  PHDocument,
-} from "document-model";
+import type { PHDocument, ExtendedState } from "document-model";
+import type { DocumentDriveState } from "./schema/types.js";
+import type { DocumentDriveLocalState } from "./schema/types.js";
 import type { DocumentDriveAction } from "./actions.js";
-import type {
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "./schema/types.js";
+
+export { z } from "./schema/index.js";
 export type * from "./schema/types.js";
-export { DocumentDriveAction, DocumentDriveLocalState, DocumentDriveState };
 export type ExtendedDocumentDriveState = ExtendedState<
   DocumentDriveState,
   DocumentDriveLocalState
@@ -19,6 +14,8 @@ export type DocumentDriveDocument = PHDocument<
   DocumentDriveLocalState,
   DocumentDriveAction
 >;
-
-export type DriveDocumentModelModule =
-  DocumentModelModule<DocumentDriveDocument>;
+export type {
+  DocumentDriveState,
+  DocumentDriveLocalState,
+  DocumentDriveAction,
+};

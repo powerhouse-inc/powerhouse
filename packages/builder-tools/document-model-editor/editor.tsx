@@ -7,7 +7,7 @@ import {
   deleteOperationError,
   type DocumentModelDocument,
   type EditorProps,
-  hashKey,
+  generateId,
   setAuthorName,
   setAuthorWebsite,
   setInitialState,
@@ -20,7 +20,7 @@ import {
   setOperationErrorName,
   setOperationName,
   setOperationSchema,
-  setStateSchema,
+  setStateSchema
 } from "document-model";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Divider } from "./components/divider.js";
@@ -170,7 +170,7 @@ export function DocumentModelEditor(props: EditorProps<DocumentModelDocument>) {
             resolve(undefined);
             return;
           }
-          const id = hashKey();
+          const id = generateId();
           dispatch(addModule({ id, name }));
           resolve(id);
         } catch (error) {
@@ -217,7 +217,7 @@ export function DocumentModelEditor(props: EditorProps<DocumentModelDocument>) {
             resolve(undefined);
             return;
           }
-          const id = hashKey();
+          const id = generateId();
           dispatch(addOperation({ id, moduleId, name }));
           resolve(id);
         } catch (error) {
@@ -295,7 +295,7 @@ export function DocumentModelEditor(props: EditorProps<DocumentModelDocument>) {
             resolve(undefined);
             return;
           }
-          const id = hashKey();
+          const id = generateId();
           dispatch(addOperationError({ id, operationId, errorName }));
           resolve(id);
         } catch (error) {

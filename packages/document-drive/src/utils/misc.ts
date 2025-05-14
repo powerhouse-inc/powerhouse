@@ -4,7 +4,6 @@ import {
   type OperationScope,
   type OperationsFromDocument,
   type PHDocument,
-  generateId,
 } from "document-model";
 
 import { driveDocumentType } from "#drive-document-model/constants";
@@ -50,10 +49,6 @@ export function mergeOperations<TDocument extends PHDocument>(
       const existingOperations = acc[curr.scope] || [];
       return { ...acc, [curr.scope]: [...existingOperations, curr] };
     }, currentOperations);
-}
-
-export function generateUUID(): string {
-  return generateId();
 }
 
 export function isNoopUpdate(

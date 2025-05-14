@@ -9,8 +9,13 @@ import { FormMessageList } from "../../../../scalars/components/fragments/form-m
 import ValueTransformer, {
   type TransformerType,
 } from "../../../../scalars/components/fragments/value-transformer/index.js";
-import type { InputBaseProps } from "../../../../scalars/components/types.js";
+import type {
+  DiffMode,
+  InputBaseProps,
+  WithDifference,
+} from "../../../../scalars/components/types.js";
 import type { CommonTextProps } from "../text-input/types.js";
+import SplittedTextareaDiff from "./subcomponent/splitted-textarea-diff.js";
 
 type TextareaBaseProps = Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -20,9 +25,11 @@ type TextareaBaseProps = Omit<
 interface TextareaProps
   extends TextareaBaseProps,
     InputBaseProps<string>,
-    CommonTextProps {
+    CommonTextProps,
+    Omit<WithDifference<string>, "diffMode"> {
   autoExpand?: boolean;
   multiline?: boolean;
+  diffMode?: Extract<DiffMode, "words">;
 }
 
 const textareaBaseStyles = cn(
@@ -67,6 +74,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       uppercase,
       value,
       warnings,
+      viewMode = "edition",
+      diffMode = "words",
+      baseValue,
       ...props
     },
     ref,
@@ -143,67 +153,81 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       [trim, lowercase, uppercase, multiline],
     );
 
-    return (
-      <FormGroup>
-        {label && (
-          <FormLabel
-            htmlFor={id}
-            disabled={props.disabled}
-            hasError={hasError}
-            required={required}
-          >
-            {label}
-          </FormLabel>
-        )}
-        <div className="relative">
-          <ValueTransformer transformers={transformers}>
-            <textarea
-              aria-invalid={hasError}
-              aria-required={required}
-              autoComplete={autoCompleteValue}
-              className={cn(
-                textareaBaseStyles,
-                // Resize behavior based on autoExpand
-                autoExpand
-                  ? "resize-none overflow-hidden"
-                  : [
-                      "resize-y",
-                      "scrollbar-thin scrollbar-gutter-stable",
-                      "scrollbar-track-transparent",
-                      "scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-300",
-                      "dark:scrollbar-thumb-charcoal-700 dark:hover:scrollbar-thumb-charcoal-700",
-                      "scrollbar-thumb-rounded-md",
-                    ],
-                className,
-              )}
-              ref={mergedRef}
-              id={id}
-              name={name}
-              value={value}
-              defaultValue={defaultValue}
-              minLength={minLength}
-              placeholder={placeholder}
-              rows={multiline ? rows : 1}
-              onChange={onChange}
-              onKeyDown={handleKeyDown}
-              {...props}
-            />
-          </ValueTransformer>
-          {typeof maxLength === "number" && maxLength > 0 && (
-            <div
-              className={cn(
-                "mt-0.5 flex justify-end",
-                hasContentBelow && "-mb-1",
-              )}
+    if (viewMode === "edition") {
+      return (
+        <FormGroup>
+          {label && (
+            <FormLabel
+              htmlFor={id}
+              disabled={props.disabled}
+              hasError={hasError}
+              required={required}
             >
-              <CharacterCounter maxLength={maxLength} value={value ?? ""} />
-            </div>
+              {label}
+            </FormLabel>
           )}
-        </div>
-        {description && <FormDescription>{description}</FormDescription>}
-        {warnings && <FormMessageList messages={warnings} type="warning" />}
-        {errors && <FormMessageList messages={errors} type="error" />}
-      </FormGroup>
+          <div className="relative">
+            <ValueTransformer transformers={transformers}>
+              <textarea
+                aria-invalid={hasError}
+                aria-required={required}
+                autoComplete={autoCompleteValue}
+                className={cn(
+                  textareaBaseStyles,
+                  // Resize behavior based on autoExpand
+                  autoExpand
+                    ? "resize-none overflow-hidden"
+                    : [
+                        "resize-y",
+                        "scrollbar-thin scrollbar-gutter-stable",
+                        "scrollbar-track-transparent",
+                        "scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-300",
+                        "dark:scrollbar-thumb-charcoal-700 dark:hover:scrollbar-thumb-charcoal-700",
+                        "scrollbar-thumb-rounded-md",
+                      ],
+                  className,
+                )}
+                ref={mergedRef}
+                id={id}
+                name={name}
+                value={value}
+                defaultValue={defaultValue}
+                minLength={minLength}
+                placeholder={placeholder}
+                rows={multiline ? rows : 1}
+                onChange={onChange}
+                onKeyDown={handleKeyDown}
+                {...props}
+              />
+            </ValueTransformer>
+            {typeof maxLength === "number" && maxLength > 0 && (
+              <div
+                className={cn(
+                  "mt-0.5 flex justify-end",
+                  hasContentBelow && "-mb-1",
+                )}
+              >
+                <CharacterCounter maxLength={maxLength} value={value ?? ""} />
+              </div>
+            )}
+          </div>
+          {description && <FormDescription>{description}</FormDescription>}
+          {warnings && <FormMessageList messages={warnings} type="warning" />}
+          {errors && <FormMessageList messages={errors} type="error" />}
+        </FormGroup>
+      );
+    }
+    return (
+      <SplittedTextareaDiff
+        label={label}
+        value={value ?? defaultValue ?? ""}
+        viewMode={viewMode}
+        diffMode={diffMode}
+        baseValue={baseValue}
+        multiline={multiline}
+        rows={rows}
+        hasPadding={true}
+      />
     );
   },
 );

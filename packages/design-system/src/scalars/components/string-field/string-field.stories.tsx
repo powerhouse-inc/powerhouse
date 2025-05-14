@@ -44,6 +44,9 @@ const meta: Meta<typeof StringField> = {
     ...PrebuiltArgTypes.trim,
     ...PrebuiltArgTypes.uppercase,
     ...PrebuiltArgTypes.lowercase,
+    ...PrebuiltArgTypes.diffMode,
+    ...PrebuiltArgTypes.viewMode,
+    ...PrebuiltArgTypes.baseValue,
 
     ...getValidationArgTypes(),
     ...PrebuiltArgTypes.minLength,

@@ -26,7 +26,7 @@ export default class TransmitterFactory implements ITransmitterFactory {
           throw new Error("No call info data: " + JSON.stringify(listener));
         }
 
-        return new SwitchboardPushTransmitter(listener.callInfo!.data);
+        return new SwitchboardPushTransmitter(listener.callInfo.data);
       }
       case "Internal": {
         throw new Error("Internal transmitter not implemented");
