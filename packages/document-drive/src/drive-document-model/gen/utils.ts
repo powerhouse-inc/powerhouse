@@ -1,21 +1,18 @@
 import {
-  CreateDocument,
-  CreateExtendedState,
-  CreateState,
   type DocumentModelUtils,
   baseCreateDocument,
   baseCreateExtendedState,
-  baseLoadFromFile,
-  baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
+  baseLoadFromFile,
+  baseLoadFromInput,
 } from "document-model";
-import { reducer } from "./reducer.js";
 import {
   type DocumentDriveDocument,
-  type DocumentDriveLocalState,
   type DocumentDriveState,
+  type DocumentDriveLocalState,
 } from "./types.js";
+import { reducer } from "./reducer.js";
 
 export const initialGlobalState: DocumentDriveState = {
   name: "",
@@ -29,9 +26,7 @@ export const initialLocalState: DocumentDriveLocalState = {
   availableOffline: false,
 };
 
-export type DocumentDriveUtils = DocumentModelUtils<DocumentDriveDocument>;
-
-const utils: DocumentDriveUtils = {
+const utils: DocumentModelUtils<DocumentDriveDocument> = {
   fileExtension: "phdd",
   createState(state) {
     return {
@@ -64,12 +59,5 @@ const utils: DocumentDriveUtils = {
     return baseLoadFromInput(input, reducer);
   },
 };
-
-export const createDocument: CreateDocument<DocumentDriveDocument> =
-  utils.createDocument;
-export const createExtendedState: CreateExtendedState<DocumentDriveDocument> =
-  utils.createExtendedState;
-export const createState: CreateState<DocumentDriveDocument> =
-  utils.createState;
 
 export default utils;

@@ -16,7 +16,7 @@ export const documentModel: DocumentModelState = {
       state: {
         global: {
           schema:
-            "scalar Unknown\n\ntype FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype SynchronizationUnit {\n    syncId: ID!\n    scope: String!\n    branch: String!\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n    synchronizationUnits: [SynchronizationUnit!]!\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    name: String!\n    nodes: [Node!]!\n    icon: String\n}",
+            "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    name: String!\n    nodes: [Node!]!\n    icon: String\n}",
           initialValue: '"{\\"name\\":\\"\\",\\"nodes\\":[],\\"icon\\":null}"',
           examples: [],
         },
@@ -39,7 +39,7 @@ export const documentModel: DocumentModelState = {
               name: "ADD_FILE",
               description: "",
               schema:
-                "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    document: Unknown\n    parentFolder: ID\n    synchronizationUnits: [SynchronizationUnit!]!\n}",
+                "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    parentFolder: ID\n}",
               template: "",
               reducer: "",
               errors: [],
@@ -98,7 +98,7 @@ export const documentModel: DocumentModelState = {
               name: "COPY_NODE",
               description: "",
               schema:
-                "input CopyNodeInput {\n    srcId: ID!\n    targetId: ID!\n    targetName: String\n    targetParentFolder: ID\n    synchronizationUnits: [SynchronizationUnit!]\n}",
+                "input CopyNodeInput {\n    srcId: ID!\n    targetId: ID!\n    targetName: String\n    targetParentFolder: ID\n}",
               template: "",
               reducer: "",
               errors: [],

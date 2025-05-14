@@ -53,16 +53,13 @@ export type Scalars = {
   OLabel: { input: string; output: string };
   PHID: { input: string; output: string };
   URL: { input: string; output: string };
-  Unknown: { input: unknown; output: unknown };
 };
 
 export type AddFileInput = {
-  document?: InputMaybe<Scalars["Unknown"]["input"]>;
   documentType: Scalars["String"]["input"];
   id: Scalars["ID"]["input"];
   name: Scalars["String"]["input"];
   parentFolder?: InputMaybe<Scalars["ID"]["input"]>;
-  synchronizationUnits: Array<SynchronizationUnit>;
 };
 
 export type AddFolderInput = {
@@ -81,7 +78,6 @@ export type AddTriggerInput = {
 
 export type CopyNodeInput = {
   srcId: Scalars["ID"]["input"];
-  synchronizationUnits?: InputMaybe<Array<SynchronizationUnit>>;
   targetId: Scalars["ID"]["input"];
   targetName?: InputMaybe<Scalars["String"]["input"]>;
   targetParentFolder?: InputMaybe<Scalars["ID"]["input"]>;
@@ -110,7 +106,6 @@ export type FileNode = {
   kind: Scalars["String"]["output"];
   name: Scalars["String"]["output"];
   parentFolder: Maybe<Scalars["String"]["output"]>;
-  synchronizationUnits: Array<SynchronizationUnit>;
 };
 
 export type FolderNode = {
@@ -177,12 +172,6 @@ export type SetDriveNameInput = {
 
 export type SetSharingTypeInput = {
   type: Scalars["String"]["input"];
-};
-
-export type SynchronizationUnit = {
-  branch: Scalars["String"]["output"];
-  scope: Scalars["String"]["output"];
-  syncId: Scalars["ID"]["output"];
 };
 
 export type TransmitterType =

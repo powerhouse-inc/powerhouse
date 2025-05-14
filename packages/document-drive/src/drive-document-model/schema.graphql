@@ -7,19 +7,12 @@ type FolderNode {
   parentFolder: String
 }
 
-type SynchronizationUnit {
-  syncId: ID!
-  scope: String!
-  branch: String!
-}
-
 type FileNode {
   id: String!
   name: String!
   kind: String!
   documentType: String!
   parentFolder: String
-  synchronizationUnits: [SynchronizationUnit!]!
 }
 
 union Node = FolderNode | FileNode
@@ -93,8 +86,6 @@ input AddFileInput {
   name: String!
   documentType: String!
   parentFolder: ID
-  synchronizationUnits: [SynchronizationUnit!]!
-  document: Unknown
 }
 
 input AddFolderInput {
@@ -125,7 +116,6 @@ input CopyNodeInput {
   targetId: ID!
   targetName: String
   targetParentFolder: ID
-  synchronizationUnits: [SynchronizationUnit!]
 }
 
 input MoveNodeInput {
