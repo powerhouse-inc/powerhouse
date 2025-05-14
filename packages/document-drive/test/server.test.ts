@@ -1037,11 +1037,11 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .build();
 
     await server.addDrive({
+      id: "test-drive",
+      slug: "test-drive",
       global: {
-        id: "test-drive",
         name: "test-drive",
         icon: "icon",
-        slug: "test-drive",
       },
       local: {
         availableOffline: false,
@@ -1054,11 +1054,11 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await server.deleteDrive("test-drive");
 
     await server.addDrive({
+      id: "test-drive",
+      slug: "test-drive",
       global: {
-        id: "test-drive",
         name: "test-drive",
         icon: "icon",
-        slug: "test-drive",
       },
       local: {
         availableOffline: false,
@@ -1069,6 +1069,6 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
 
     const drive = await server.getDriveBySlug("test-drive");
-    expect(drive.state.global.slug).toBe("test-drive");
+    expect(drive.slug).toBe("test-drive");
   });
 });

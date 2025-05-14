@@ -1402,7 +1402,7 @@ export class BaseDocumentDriveServer
 
   async queueDriveAction(
     driveId: string,
-    action: DocumentDriveAction,
+    action: DocumentDriveAction | Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
     return this.queueDriveActions(driveId, [action], options);
@@ -1410,7 +1410,7 @@ export class BaseDocumentDriveServer
 
   async queueDriveActions(
     driveId: string,
-    actions: DocumentDriveAction[],
+    actions: (DocumentDriveAction | Action)[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult<DocumentDriveDocument>> {
     try {

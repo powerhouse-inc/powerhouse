@@ -22,6 +22,6 @@
     "graphql-request": "^6.1.0",
     "react": "18",
     "react-dom": "18",
-    "vite": "^6.2.2"
+    "vite": "^6.3.3"
   }
 }
