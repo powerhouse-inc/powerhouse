@@ -1,9 +1,15 @@
 import connectConfig from '#connect-config';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
 import { type IDocumentDriveServer, logger } from 'document-drive';
-import { IDocumentAdminStorage, IDocumentOperationStorage, IDocumentStorage, IDriveOperationStorage } from 'document-drive/storage/types';
+import {
+    type IDocumentAdminStorage,
+    type IDocumentOperationStorage,
+    type IDocumentStorage,
+    type IDriveOperationStorage,
+} from 'document-drive/storage/types';
 import { generateId } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
+import { observe } from 'jotai-effect';
 import { atomWithLazy, unwrap } from 'jotai/utils';
 import {
     documentModelsAtom,
@@ -56,12 +62,12 @@ async function createReactor() {
 
 export const storageAtom = atom<
     IDriveOperationStorage &
-    IDocumentOperationStorage &
-    IDocumentStorage &
-    IDocumentAdminStorage
+        IDocumentOperationStorage &
+        IDocumentStorage &
+        IDocumentAdminStorage
 >(createBrowserStorage(connectConfig.routerBasename));
-export const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(
-    () => createReactor(),
+export const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(() =>
+    createReactor(),
 );
 export const unwrappedReactor = unwrap(reactorAtom);
 
@@ -82,16 +88,7 @@ export const useAsyncReactor = (): IDocumentDriveServer | undefined =>
 
 const reactorAsyncAtom = atom<IDocumentDriveServer | undefined>(undefined);
 reactorAsyncAtom.onMount = setAtom => {
-    const baseOnMount = reactorAtom.onMount;
-    reactorAtom.onMount = setReactorAtom => {
-        setReactorAtom(reactorPromise => {
-            reactorPromise
-                .then(reactor => setAtom(reactor))
-                .catch(console.error);
-            return reactorPromise;
-        });
-        return baseOnMount?.(setReactorAtom);
-    };
+    subscribeReactor(setAtom);
 };
 
 // updates the reactor when the available document models change
@@ -110,4 +107,19 @@ reactorAtom.onMount = setAtom => {
         }
         return reactor;
     });
+};
+
+export const subscribeReactor = function (
+    listener: (reactor: IDocumentDriveServer) => void,
+) {
+    // activate the effect on the default store
+    const unobserve = observe(get => {
+        const reactor = get(reactorAtom);
+        reactor.then(listener).catch(e => {
+            throw e;
+        });
+    }, atomStore);
+
+    // Clean up the effect
+    return () => unobserve();
 };
