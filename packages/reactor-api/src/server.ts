@@ -106,6 +106,12 @@ async function setupGraphQLManager(
   db: Knex,
   analyticsStore: IAnalyticsStore,
   subgraphs: Map<string, SubgraphClass[]>,
+  auth?: {
+    enabled: boolean;
+    guests: string[];
+    users: string[];
+    admins: string[];
+  },
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -124,6 +130,14 @@ async function setupGraphQLManager(
   }
 
   await graphqlManager.updateRouter();
+
+  if (auth) {
+    graphqlManager.setAdditionalContextFields({
+      isGuest: (address: string) => auth.guests.includes(address),
+      isUser: (address: string) => auth.users.includes(address),
+      isAdmin: (address: string) => auth.admins.includes(address),
+    });
+  }
   return graphqlManager;
 }
 
@@ -226,9 +240,10 @@ export async function startAPI(
   const users = options.auth?.users.map((u) => u.toLowerCase()) ?? [];
   const guests = options.auth?.guests.map((g) => g.toLowerCase()) ?? [];
 
+  const all = [...admins, ...users, ...guests];
+
   // add auth middleware if auth is enabled
   if (options.auth?.enabled) {
-
     // set admin, users and guest list
     app.use(async (req, res, next) => {
       if (!options.auth) {
@@ -246,13 +261,13 @@ export async function startAPI(
     app.use(async (req, res, next): Promise<void> => {
       const token = req.headers.authorization?.split(" ")[1];
       if (!token) {
-        res.status(401).json({ error: "Unauthorized" });
+        res.status(400).json({ error: "Missing authorization token" });
         return;
       }
 
       const verified = await verifyAuthBearerToken(token);
       if (!verified) {
-        res.status(403).json({ error: "Forbidden" });
+        res.status(401).json({ error: "Verification failed" });
         return;
       }
 
@@ -262,10 +277,24 @@ export async function startAPI(
         chainId: number;
         networkId: string;
       };
+
+      // @todo: check renown eth credential
+
       if (!address || !chainId || !networkId) {
+        res.status(401).json({ error: "Missing credentials" });
+        return;
+      }
+      req.user = {
+        address,
+        chainId,
+        networkId,
+      };
+
+      if (!all.includes(address)) {
         res.status(403).json({ error: "Forbidden" });
         return;
       }
+
       req.user = {
         address,
         chainId,
@@ -357,6 +386,7 @@ export async function startAPI(
     db,
     analyticsStore,
     subgraphs,
+    options.auth,
   );
 
   // Set up event listeners
