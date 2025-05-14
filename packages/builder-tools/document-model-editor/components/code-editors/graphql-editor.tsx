@@ -1,8 +1,8 @@
 import { type Diagnostic, forceLinting } from "@codemirror/lint";
 import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
-import { getSchema, graphql } from "cm6-graphql";
-import { buildSchema, printSchema } from "graphql";
+import { graphql } from "cm6-graphql";
+import { buildSchema } from "graphql";
 import { memo, useEffect, useRef } from "react";
 import { ayuLight } from "thememirror";
 import { useSchemaContext } from "../../context/schema-context.js";
@@ -78,26 +78,20 @@ export const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    // @ts-expect-error
-    const existingSchema = getSchema(view.state);
-    const existingSchemaString = existingSchema
-      ? printSchema(existingSchema)
-      : null;
-    if (!existingSchema || existingSchemaString !== sharedSchema) {
-      try {
-        const newSchema = buildSchema(sharedSchema);
-        view.dispatch({
-          effects: [
-            graphqlCompartment.current.reconfigure(graphql(newSchema)),
-            linterCompartment.current.reconfigure(
-              makeLinter(newSchema, customLinter),
-            ),
-          ],
-        });
-        forceLinting(view);
-      } catch (error) {
-        console.debug("in schema update", error);
-      }
+
+    try {
+      const newSchema = buildSchema(sharedSchema);
+      view.dispatch({
+        effects: [
+          graphqlCompartment.current.reconfigure(graphql(newSchema)),
+          linterCompartment.current.reconfigure(
+            makeLinter(newSchema, customLinter),
+          ),
+        ],
+      });
+      forceLinting(view);
+    } catch (error) {
+      console.debug("in schema update", error);
     }
   }, [sharedSchema, customLinter]);
 

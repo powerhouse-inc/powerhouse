@@ -79,3 +79,10 @@ export const config: GraphQLScalarTypeConfig<AmountCurrency, AmountCurrency> = {
 };
 
 export const scalar = new GraphQLScalarType(config);
+
+export const getDefaultValue = (): AmountCurrency => {
+  return {
+    unit: "USD",
+    value: 0,
+  };
+};

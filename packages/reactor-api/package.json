@@ -31,7 +31,6 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "devDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
@@ -41,7 +40,8 @@
     "@types/pg": "^8.11.10",
     "esbuild": "^0.24.0",
     "graphql-tag": "^2.12.6",
-    "tinybench": "^3.1.1"
+    "tinybench": "^3.1.1",
+    "vitest": "^3.1.2"
   },
   "dependencies": {
     "@apollo/gateway": "^2.10.0",
@@ -52,6 +52,7 @@
     "@powerhousedao/analytics-engine-graphql": "^0.3.0",
     "@powerhousedao/analytics-engine-knex": "^0.5.1",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/document-engineering": "^1.0.2",
     "@renown/sdk": "workspace:*",
     "body-parser": "^1.20.3",
     "change-case": "^5.4.4",
@@ -64,7 +65,7 @@
     "drizzle-orm": "^0.34.1",
     "ethers": "^6.0.8",
     "express": "^4.21.1",
-    "graphql": "^16.9.0",
+    "graphql": "^16.11.0",
     "graphql-request": "^6.1.0",
     "graphql-type-json": "^0.3.2",
     "jsonwebtoken": "^9.0.2",

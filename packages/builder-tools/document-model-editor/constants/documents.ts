@@ -1,5 +1,5 @@
+import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { buildSchema } from "graphql";
-import { typeDefs } from "@powerhousedao/scalars";
 
 export const hiddenQueryTypeDefDoc = `type Query {
   _hidden: String

@@ -1,17 +1,19 @@
-import { useState, useCallback } from "react";
+import { Kind } from "graphql";
+import { useCallback, useState } from "react";
 import { typeDefsDoc } from "../constants/documents.js";
-import { useSchemaContext } from "../context/schema-context.js";
+import { safeParseSdl, useSchemaContext } from "../context/schema-context.js";
 import { type Scope } from "../types/documents.js";
 import {
-  makeMinimalObjectFromSDL,
   makeInitialSchemaDoc,
+  makeMinimalObjectForStateType,
+  makeStateSchemaNameForScope,
 } from "../utils/helpers.js";
 import { ensureValidStateSchemaName } from "../utils/linting.js";
 import { cn } from "../utils/style.js";
 import { Button } from "./button.js";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs.js";
 import { GraphqlEditor } from "./code-editors/graphql-editor.js";
 import { JSONEditor } from "./code-editors/json-editor.js";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs.js";
 
 type Props = {
   modelName: string;
@@ -63,13 +65,30 @@ function StateEditor({
   );
 
   const handleSyncWithSchema = useCallback(() => {
-    const updatedStateDoc = makeMinimalObjectFromSDL(
-      sharedSchemaSdl,
-      stateSchema,
-      initialValue ? JSON.parse(initialValue) : {},
+    const existingValue = initialValue || "{}";
+    const sharedSchemaDocumentNode = safeParseSdl(sharedSchemaSdl);
+    if (!sharedSchemaDocumentNode) return;
+    const stateEditorDocumentNode = safeParseSdl(stateSchema);
+    if (!stateEditorDocumentNode) return;
+    const stateTypeName = makeStateSchemaNameForScope(modelName, scope);
+    if (!stateTypeName) return;
+    const stateTypeDefinitionNode = stateEditorDocumentNode.definitions.find(
+      (def) =>
+        def.kind === Kind.OBJECT_TYPE_DEFINITION &&
+        def.name.value === stateTypeName,
     );
+    if (
+      !stateTypeDefinitionNode ||
+      stateTypeDefinitionNode.kind !== Kind.OBJECT_TYPE_DEFINITION
+    )
+      return;
+    const updatedStateDoc = makeMinimalObjectForStateType({
+      sharedSchemaDocumentNode,
+      stateTypeDefinitionNode,
+      existingValue,
+    });
     setInitialState(updatedStateDoc, scope);
-  }, [sharedSchemaSdl, stateSchema, initialValue, setInitialState, scope]);
+  }, [sharedSchemaSdl, initialValue, setInitialState, scope]);
 
   return (
     <div className="grid grid-cols-2 gap-4">

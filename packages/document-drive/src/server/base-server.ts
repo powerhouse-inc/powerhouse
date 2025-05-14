@@ -1988,11 +1988,7 @@ export class BaseDocumentDriveServer
     actions: (DocumentDriveAction | Action)[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
-    return this.queueDriveActions(
-      driveId,
-      actions as DocumentDriveAction[],
-      options,
-    );
+    return this.queueDriveActions(driveId, actions, options);
   }
 
   private async processDriveActions(

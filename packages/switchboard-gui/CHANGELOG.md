@@ -129,23 +129,14 @@
 
 - add source map generation so we can debug ([a4e8cbb69](https://github.com/powerhouse-inc/powerhouse/commit/a4e8cbb69))
 - **codegen:** getDocument query ([a9900f27c](https://github.com/powerhouse-inc/powerhouse/commit/a9900f27c))
+- update lockfile ([07931c848](https://github.com/powerhouse-inc/powerhouse/commit/07931c848))
 
 ### ❤️ Thank You
 
 - Benjamin Jordan
 - Frank
 
-## 0.25.0-dev.2 (2025-04-11)
-
-### 🩹 Fixes
-
-- update lockfile ([07931c848](https://github.com/powerhouse-inc/powerhouse/commit/07931c848))
-
-### ❤️ Thank You
-
-- Benjamin Jordan
-
-## 0.25.0-dev.1 (2025-04-10)
+## 0.25.0-staging.1 (2025-04-10)
 
 ### 🚀 Features
 
@@ -158,6 +149,21 @@
 - build and deploy action ([e8c550849](https://github.com/powerhouse-inc/powerhouse/commit/e8c550849))
 - made ph packages env var ([b9aaff84d](https://github.com/powerhouse-inc/powerhouse/commit/b9aaff84d))
 - remove filter ([ece84a667](https://github.com/powerhouse-inc/powerhouse/commit/ece84a667))
+
+### ❤️ Thank You
+
+- Frank
+
+## 0.25.0-staging.0 (2025-04-09)
+
+### 🚀 Features
+
+- added sky-atlas-staging ([ac1658ce9](https://github.com/powerhouse-inc/powerhouse/commit/ac1658ce9))
+
+### 🩹 Fixes
+
+- made ph packages env var ([df93611b7](https://github.com/powerhouse-inc/powerhouse/commit/df93611b7))
+- remove filter ([842a93a75](https://github.com/powerhouse-inc/powerhouse/commit/842a93a75))
 
 ### ❤️ Thank You
 

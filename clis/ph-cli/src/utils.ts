@@ -245,4 +245,8 @@ export function setCustomHelp(command: Command, helpText: string): Command {
   return command;
 }
 
+<<<<<<< HEAD
 export { getConfig } from "@powerhousedao/config/utils";
+=======
+export { getConfig } from "@powerhousedao/config/powerhouse";
+>>>>>>> staging

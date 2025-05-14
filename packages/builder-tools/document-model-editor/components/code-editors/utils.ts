@@ -1,4 +1,5 @@
 import { updateTimeout } from "#document-model-editor/constants/documents";
+import { safeParseSdl } from "#document-model-editor/context/schema-context";
 import {
   autocompletion,
   closeBrackets,
@@ -39,8 +40,8 @@ import {
   rectangularSelection,
   type ViewUpdate,
 } from "@codemirror/view";
-import { filterSchema, isDocumentString } from "@graphql-tools/utils";
-import { GraphQLError, type GraphQLSchema, locatedError, parse } from "graphql";
+import { filterSchema } from "@graphql-tools/utils";
+import { GraphQLError, type GraphQLSchema, locatedError } from "graphql";
 import { validateSDL } from "graphql/validation/validate.js";
 import { useEffect, useRef } from "react";
 
@@ -77,10 +78,10 @@ export function makeLinter(
       diagnostics = diagnostics.concat(customLinter(doc));
     }
 
-    if (isDocumentString(doc)) {
-      try {
-        const newDocNode = parse(doc);
+    const newDocNode = safeParseSdl(doc);
 
+    if (newDocNode) {
+      try {
         const currentTypeNames = new Set(
           newDocNode.definitions
             .filter((def) => "name" in def && def.name)

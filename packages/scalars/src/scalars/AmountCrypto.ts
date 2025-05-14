@@ -79,3 +79,10 @@ export const config: GraphQLScalarTypeConfig<AmountCrypto, AmountCrypto> = {
 };
 
 export const scalar = new GraphQLScalarType(config);
+
+export const getDefaultValue = (): AmountCrypto => {
+  return {
+    unit: "ETH",
+    value: 0,
+  };
+};

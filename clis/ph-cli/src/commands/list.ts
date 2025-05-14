@@ -1,8 +1,8 @@
-import { type PowerhouseConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/utils";
 import { type Command } from "commander";
 import { listHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
-import { getConfig, getProjectInfo, setCustomHelp } from "../utils.js";
+import { getProjectInfo, setCustomHelp } from "../utils.js";
 
 export const list: CommandActionType<
   [
@@ -22,9 +22,7 @@ export const list: CommandActionType<
   }
 
   try {
-    const phConfig = getConfig(
-      projectInfo.path + "/powerhouse.config.json",
-    ) as Pick<PowerhouseConfig, "packages">;
+    const phConfig = getConfig(projectInfo.path + "/powerhouse.config.json");
 
     if (!phConfig.packages || phConfig.packages.length === 0) {
       console.log("No packages found in the project");

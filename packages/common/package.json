@@ -45,8 +45,8 @@
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@tailwindcss/cli": "^4.0.9",
-    "@tailwindcss/vite": "^4.0.9",
+    "@tailwindcss/cli": "^4.1.4",
+    "@tailwindcss/vite": "^4.1.4",
     "@types/node": "^22.15.17",
     "@types/react": "^18.3.18",
     "@types/wicg-file-system-access": "^2020.9.6",
@@ -58,11 +58,12 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "storybook-mock-date-decorator": "^2.0.6",
-    "tsx": "^4.19.2",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.9",
+    "tsx": "^4.19.2",
     "uuid": "^11.0.5",
-    "vite": "^6.2.2",
+    "vite": "^6.3.3",
+    "vitest": "^3.1.2",
     "zod": "^3.24.1"
   }
 }
