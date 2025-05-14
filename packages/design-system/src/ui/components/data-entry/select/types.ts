@@ -1,6 +1,15 @@
 import type { IconName } from "#powerhouse";
 import type { InputBaseProps } from "#scalars";
 import type React from "react";
+import type {
+  DiffMode,
+  WithDifference,
+} from "../../../../scalars/components/types.js";
+
+interface SelectWithDifference
+  extends Omit<WithDifference<string>, "diffMode"> {
+  diffMode?: Extract<DiffMode, "sentences">;
+}
 
 interface SelectOption {
   icon?: IconName | React.ComponentType<{ className?: string }>;
@@ -35,6 +44,12 @@ type SelectProps = Omit<
   keyof InputBaseProps<string | string[]> | keyof SelectConfigProps
 > &
   InputBaseProps<string | string[]> &
-  SelectConfigProps;
+  SelectConfigProps &
+  SelectWithDifference;
 
-export type { SelectBaseProps, SelectOption, SelectProps };
+export type {
+  SelectBaseProps,
+  SelectOption,
+  SelectProps,
+  SelectWithDifference,
+};

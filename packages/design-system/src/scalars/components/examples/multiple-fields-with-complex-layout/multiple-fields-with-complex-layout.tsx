@@ -1,7 +1,7 @@
 import { Button } from "#powerhouse";
 import { BooleanField } from "../../boolean-field/index.js";
 import { Form } from "../../form/index.js";
-import { RadioGroupField } from "../../fragments/index.js";
+import { RadioGroupField } from "../../fragments/radio-group-field/index.js";
 import { NumberField } from "../../number-field/index.js";
 import { StringField } from "../../string-field/index.js";
 

@@ -135,3 +135,17 @@ export {
    */
   TextareaField,
 } from "./fragments/textarea-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `EnumField` instead. This component is deprecated and will be removed in a future version.
+   */
+  SelectField,
+} from "./fragments/select-field/index.js";
+
+export {
+  /**
+   * @deprecated Use `EnumField` instead. This component is deprecated and will be removed in a future version.
+   */
+  RadioGroupField,
+} from "./fragments/radio-group-field/index.js";
