@@ -10,6 +10,14 @@ export type Context = {
   driveId?: string;
   headers: IncomingHttpHeaders;
   db: unknown;
+  isGuest?: (address: string) => boolean;
+  isUser?: (address: string) => boolean;
+  isAdmin?: (address: string) => boolean;
+  user?: {
+    address: string;
+    chainId: number;
+    networkId: string;
+  };
 };
 
 export type ISubgraph = {
