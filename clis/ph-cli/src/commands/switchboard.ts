@@ -1,6 +1,6 @@
 import { type SwitchboardReactor } from "@powerhousedao/switchboard/server";
 import { type Command } from "commander";
-import { reactorHelp } from "../help.js";
+import { switchboardHelp } from "../help.js";
 import { type ReactorOptions } from "../services/reactor.js";
 import { type CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
@@ -47,7 +47,7 @@ export function switchboardCommand(program: Command) {
       console.log("   ➜  Switchboard:", defaultDriveUrl);
     });
 
-  setCustomHelp(command, reactorHelp);
+  setCustomHelp(command, switchboardHelp);
 }
 
 if (process.argv.at(2) === "spawn") {

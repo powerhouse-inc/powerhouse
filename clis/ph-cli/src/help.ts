@@ -347,6 +347,43 @@ Notes:
 /**
  * Help text for the switchboard command
  */
+export const switchboardHelp = `
+Command Overview:
+  The switchboard command starts a local Switchboard instance, which acts as the document
+  processing engine for Powerhouse projects. It provides the infrastructure for document
+  models, processors, and real-time updates.
+
+  This command:
+  1. Starts a local switchboard server
+  2. Loads document models and processors
+  3. Provides an API for document operations
+  4. Enables real-time document processing
+
+Options:
+  --port <PORT>           Port to host the API. Default is 4001.
+                        
+  --config-file <path>    Path to the powerhouse.config.js file. Default is 
+                        './powerhouse.config.json'. This configures the switchboard behavior.
+                        
+  --db-path <DB_PATH>     Path to the database for storing document data.
+                        
+  --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
+                        
+  --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
+                        
+  --packages <pkg...>     List of packages to be loaded. If defined, packages specified
+                        in the config file are ignored.
+
+Examples:
+  $ ph switchboard                           # Start switchboard with default settings
+  $ ph switchboard --port 5000               # Use custom port 5000
+  $ ph switchboard --config-file custom.json # Use custom configuration file
+  $ ph switchboard --packages pkg1 pkg2      # Load specific packages
+`;
+
+/**
+ * Help text for the reactor command
+ */
 export const reactorHelp = `
 Command Overview:
   The reactor command starts a local Switchboard instance,
