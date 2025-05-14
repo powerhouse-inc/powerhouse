@@ -12,6 +12,9 @@
     },
     {
       "path": "../document-drive"
+    },
+    {
+      "path": "../renown"
     }
   ],
   "include": ["src", "index.ts", "types.d.ts"],

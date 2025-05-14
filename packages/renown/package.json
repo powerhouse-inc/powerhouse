@@ -5,22 +5,20 @@
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
-  "main": "./src/index.browser.ts",
-  "types": "./src/index.browser.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.browser.ts",
   "publishConfig": {
     "access": "public"
   },
-  "exports": {
-    ".": {
-      "node": "./src/index.node.ts",
-      "default": "./src/index.browser.ts"
+  "imports": {
+    "#*": "./dist/src/*",
+    "#init/env": {
+      "node": "./dist/src/init.node.js",
+      "default": "./dist/src/init.browser.js"
     }
   },
   "files": [
-    "/src",
-    "tsconfig.base.json",
-    "tsconfig.browser.json",
-    "tsconfig.node.json"
+    "dist"
   ],
   "nx-release-publish": {
     "options": {
@@ -31,9 +29,7 @@
     "build:tsc": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.browser.json --noEmit",
     "build:tsc:node": "tsc -p tsconfig.node.json --noEmit",
     "build:tsc:browser": "tsc -p tsconfig.browser.json --noEmit",
-    "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.browser.json",
-    "build:browser": "tsc -p tsconfig.browser.json",
-    "build:node": "tsc -p tsconfig.node.json",
+    "build": "tsc --build",
     "prebuild": "npm run clean",
     "clean": "rimraf dist/",
     "clean:node_modules": "rimraf node_modules"
