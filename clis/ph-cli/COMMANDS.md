@@ -10,8 +10,8 @@ This document provides detailed information about the available commands in the 
 - [Inspect](#inspect)
 - [Install](#install)
 - [List](#list)
+- [Reactor](#reactor)
 - [Service](#service)
-- [Switchboard](#switchboard)
 - [Uninstall](#uninstall)
 - [Version](#version)
 
@@ -266,6 +266,49 @@ Notes:
   - Each package is displayed by its package name
 ```
 
+## Reactor
+
+```
+Command Overview:
+  The reactor command starts a local Switchboard instance,
+  which acts as the document processing engine for Powerhouse projects. It provides
+  the infrastructure for document models, processors, and real-time updates.
+
+  This command:
+  1. Starts a local reactor server
+  2. Loads document models and processors
+  3. Provides an API for document operations
+  4. Supports real-time updates and code generation
+
+Options:
+  --port <PORT>           Port to host the API. Default is 4001.
+                        
+  --config-file <path>    Path to the powerhouse.config.js file. Default is 
+                        './powerhouse.config.json'. This configures the reactor behavior.
+                        
+  --generate              Generate code automatically when document models are updated.
+                        
+  --db-path <DB_PATH>     Path to the database for storing document data.
+                        
+  --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
+                        
+  --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
+                        
+  -w, --watch             Watch for local changes to document models and processors,
+                        and automatically update the reactor accordingly.
+                        
+  --packages <pkg...>     List of packages to be loaded. If defined, packages specified
+                        in the config file are ignored.
+
+Examples:
+  $ ph reactor                           # Start reactor with default settings
+  $ ph reactor --port 5000               # Use custom port 5000
+  $ ph reactor --generate                # Enable auto code generation
+  $ ph reactor --watch                   # Watch for local file changes
+  $ ph reactor --config-file custom.json # Use custom configuration file
+  $ ph reactor --packages pkg1 pkg2      # Load specific packages
+```
+
 ## Service
 
 ```
@@ -307,52 +350,6 @@ Notes:
   - The 'status' action shows uptime, memory usage, CPU usage, and other metrics
   - The 'list' action is the default when no action is specified
   - The 'all' service is the default when no service is specified
-```
-
-## Switchboard
-
-```
-Command Overview:
-  The switchboard command (also known as reactor) starts a local Switchboard instance,
-  which acts as the document processing engine for Powerhouse projects. It provides
-  the infrastructure for document models, processors, and real-time updates.
-
-  This command:
-  1. Starts a local Switchboard server
-  2. Loads document models and processors
-  3. Provides an API for document operations
-  4. Supports real-time updates and code generation
-
-Options:
-  --port <PORT>           Port to host the API. Default is 4001.
-                        
-  --config-file <path>    Path to the powerhouse.config.js file. Default is 
-                        './powerhouse.config.json'. This configures the Switchboard behavior.
-                        
-  --generate              Generate code automatically when document models are updated.
-                        
-  --db-path <DB_PATH>     Path to the database for storing document data.
-                        
-  --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
-                        
-  --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
-                        
-  -w, --watch             Watch for local changes to document models and processors,
-                        and automatically update the Switchboard accordingly.
-                        
-  --packages <pkg...>     List of packages to be loaded. If defined, packages specified
-                        in the config file are ignored.
-
-Examples:
-  $ ph switchboard                           # Start Switchboard with default settings
-  $ ph switchboard --port 5000               # Use custom port 5000
-  $ ph switchboard --generate                # Enable auto code generation
-  $ ph switchboard --watch                   # Watch for local file changes
-  $ ph switchboard --config-file custom.json # Use custom configuration file
-  $ ph switchboard --packages pkg1 pkg2      # Load specific packages
-
-Aliases:
-  $ ph reactor                              # Alias for switchboard
 ```
 
 ## Uninstall

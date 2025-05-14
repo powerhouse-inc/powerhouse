@@ -1,4 +1,4 @@
-import { type SwitchboardReactor } from "@powerhousedao/switchboard/server";
+import { type LocalReactor } from "@powerhousedao/reactor-local";
 import { type Command } from "commander";
 import { reactorHelp } from "../help.js";
 import { type ReactorOptions } from "../services/reactor.js";
@@ -6,28 +6,22 @@ import { type CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startLocalSwitchboard(options: ReactorOptions) {
-  console.log("Starting switchboard", options);
-  const Switchboard = await import("../services/switchboard.js");
-  const { startSwitchboard } = Switchboard;
-
-  return startSwitchboard({
-    ...options,
-    port:
-      typeof options.port === "string" ? parseInt(options.port) : options.port,
-  });
+  const Switchboard = await import("../services/reactor.js");
+  const { startLocalReactor } = Switchboard;
+  return startLocalReactor(options);
 }
 
 export const switchboard: CommandActionType<
   [ReactorOptions],
-  Promise<SwitchboardReactor>
+  Promise<LocalReactor>
 > = async (options) => {
-  return await startLocalSwitchboard(options);
+  return startLocalSwitchboard(options);
 };
 
-export function switchboardCommand(program: Command) {
+export function reactorCommand(program: Command) {
   const command = program
-    .command("switchboard")
-    .description("Starts local switchboard")
+    .command("reactor")
+    .description("Starts local reactor")
     .option("--port <PORT>", "port to host the api", "4001")
     .option(
       "--config-file <configFile>",
@@ -39,12 +33,15 @@ export function switchboardCommand(program: Command) {
     .option("--https-key-file <HTTPS_KEY_FILE>", "path to the ssl key file")
     .option("--https-cert-file <HTTPS_CERT_FILE>", "path to the ssl cert file")
     .option(
+      "-w, --watch",
+      "if the reactor should watch for local changes to document models and processors",
+    )
+    .option(
       "--packages <packages...>",
       "list of packages to be loaded, if defined then packages on config file are ignored",
     )
     .action(async (...args: [ReactorOptions]) => {
-      const { defaultDriveUrl } = await switchboard(...args);
-      console.log("   ➜  Switchboard:", defaultDriveUrl);
+      await switchboard(...args);
     });
 
   setCustomHelp(command, reactorHelp);
@@ -54,8 +51,8 @@ if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
   const options = optionsArg ? (JSON.parse(optionsArg) as ReactorOptions) : {};
   startLocalSwitchboard(options)
-    .then((reactor) => {
-      process.send?.(`driveUrl:${reactor.defaultDriveUrl}`);
+    .then((switchboard) => {
+      process.send?.(`driveUrl:${switchboard.driveUrl}`);
     })
     .catch((e: unknown) => {
       throw e;

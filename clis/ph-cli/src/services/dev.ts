@@ -4,10 +4,7 @@ import { type ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getConfig } from "../utils.js";
-import {
-  DefaultSwitchboardOptions,
-  type SwitchboardOptions,
-} from "./switchboard.js";
+import { DefaultReactorOptions, type ReactorOptions } from "./reactor.js";
 
 const __dirname =
   import.meta.dirname || dirname(fileURLToPath(import.meta.url));
@@ -21,7 +18,7 @@ export type DevOptions = {
   httpsCertFile?: string;
 };
 
-function spawnLocalSwitchboard(options?: SwitchboardOptions) {
+function spawnLocalSwitchboard(options?: ReactorOptions) {
   const child = fork(
     path.join(dirname(__dirname), "commands", "switchboard.js"),
     ["spawn", JSON.stringify(options)],
@@ -96,7 +93,7 @@ async function spawnConnect(
 export async function startDev({
   generate,
   watch,
-  switchboardPort = DefaultSwitchboardOptions.port,
+  switchboardPort = DefaultReactorOptions.port,
   configFile,
 }: DevOptions) {
   try {
