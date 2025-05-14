@@ -1,17 +1,25 @@
+import { nodeResolve } from "@rollup/plugin-node-resolve";
 import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import viteReact from "@vitejs/plugin-react";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import path, { join, resolve } from "node:path";
 import {
+  build,
   createLogger,
   createServer,
+  loadEnv,
+  type HtmlTagDescriptor,
   type InlineConfig,
   type Plugin,
 } from "vite";
 import { viteEnvs } from "vite-envs";
+import { createHtmlPlugin } from "vite-plugin-html";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+import svgr from "vite-plugin-svgr";
+import tsconfigPaths from "vite-tsconfig-paths";
 import {
   backupIndexHtml,
   copyConnect,
@@ -21,7 +29,77 @@ import { type StartServerOptions } from "./types.js";
 import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
 import { generateImportMapPlugin } from "./vite-plugins/importmap.js";
 import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
-
+const clientConfig = {
+  meta: [
+    {
+      tag: "meta",
+      attrs: {
+        property: "og:title",
+        content: "Connect",
+      },
+    },
+    {
+      tag: "meta",
+      attrs: {
+        property: "og:type",
+        content: "website",
+      },
+    },
+    {
+      tag: "meta",
+      attrs: {
+        property: "og:url",
+        content: "https://apps.powerhouse.io/powerhouse/connect/",
+      },
+    },
+    {
+      tag: "meta",
+      attrs: {
+        property: "og:description",
+        content:
+          "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
+      },
+    },
+    {
+      tag: "meta",
+      attrs: {
+        property: "og:image",
+        content:
+          "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
+      },
+    },
+    {
+      tag: "meta",
+      attrs: {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+    },
+    {
+      tag: "meta",
+      attrs: {
+        name: "twitter:image",
+        content:
+          "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
+      },
+    },
+    {
+      tag: "meta",
+      attrs: {
+        name: "twitter:title",
+        content: "Connect",
+      },
+    },
+    {
+      tag: "meta",
+      attrs: {
+        name: "twitter:description",
+        content:
+          "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
+      },
+    },
+  ],
+};
 function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation
   const require = createRequire(root);
@@ -173,4 +251,151 @@ export async function startServer(
 
   server.printUrls();
   server.bindCLIShortcuts({ print: true });
+}
+
+const staticFiles = [
+  "./src/service-worker.ts",
+  "./src/external-packages.js",
+  "./src/hmr.ts",
+];
+
+const externalAndExclude = ["vite", "vite-envs", "node:crypto"];
+export const externalIds = [/^react(-dom)?(\/.*)?$/, /^node:.*$/];
+export async function runBuild(
+  options: StartServerOptions = {
+    logLevel: "debug",
+  },
+) {
+  console.log("Running build");
+  // set from options, as they are dynamically loaded
+  process.env.LOG_LEVEL = options.logLevel;
+
+  // exits if node version is not compatible
+  ensureNodeVersion();
+  console.log("Ensured node version");
+  const projectRoot = process.cwd();
+  console.log("Resolved project root", { projectRoot });
+  const buildSrcDirPath = join(projectRoot, ".ph", "connect-build");
+  console.log("Resolved build src dir path", { buildSrcDirPath });
+  const buildDistDirPath = join(projectRoot, "dist");
+  console.log("Resolved build dist dir path", { buildDistDirPath });
+  const connectPath = "/Users/ry/work/powerhouse/apps/connect";
+  copyConnect(connectPath, buildSrcDirPath);
+  console.log("Copied connect");
+  const env = loadEnv("production", buildSrcDirPath);
+  console.log("Loaded env", { env });
+  const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
+  const phPackages = phPackagesStr?.split(",") || [];
+  const APP_VERSION =
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    (process.env.APP_VERSION ?? env.APP_VERSION ?? "1.0.0").toString();
+  console.log("Resolved connect path", { connectPath });
+
+  // backups index html if running on windows
+  backupIndexHtml(buildSrcDirPath, true);
+  console.log("Backed up index html");
+
+  // needed for viteEnvs
+  if (!fs.existsSync(join(buildSrcDirPath, "src"))) {
+    fs.mkdirSync(join(buildSrcDirPath, "src"));
+    console.log("Created src directory");
+  }
+
+  process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
+  console.log("Set ph cli version", {
+    PH_CONNECT_CLI_VERSION: process.env.PH_CONNECT_CLI_VERSION,
+  });
+
+  const staticInputs = staticFiles.reduce(
+    (acc, file) =>
+      Object.assign(acc, {
+        [path.basename(file, path.extname(file))]: path.resolve(
+          buildSrcDirPath,
+          file,
+        ),
+      }),
+    {},
+  );
+  const config: InlineConfig = {
+    root: buildSrcDirPath,
+    build: {
+      outDir: buildDistDirPath,
+      rollupOptions: {
+        input: {
+          main: path.resolve(buildSrcDirPath, "index.html"),
+          ...staticInputs,
+        },
+        output: {
+          entryFileNames: (chunk) =>
+            Object.keys(staticInputs).includes(chunk.name)
+              ? `${chunk.name}.js`
+              : "assets/[name].[hash].js",
+        },
+        external: [...externalAndExclude, ...externalIds],
+      },
+    },
+    resolve: {
+      alias: [
+        { find: "jszip", replacement: "jszip/dist/jszip.min.js" },
+        {
+          find: "react",
+          replacement: join(projectRoot, "node_modules", "react"),
+        },
+        {
+          find: "react-dom",
+          replacement: join(projectRoot, "node_modules", "react-dom"),
+        },
+      ],
+      dedupe: ["@powerhousedao/reactor-browser"],
+    },
+    plugins: [
+      nodeResolve(),
+      tsconfigPaths(),
+      tailwindcss(),
+      nodePolyfills({
+        include: ["events"],
+        globals: {
+          Buffer: false,
+          global: false,
+          process: false,
+        },
+      }),
+      viteReact({
+        include: [join(buildSrcDirPath, "./src/**/*.tsx")],
+        babel: {
+          parserOpts: {
+            plugins: ["decorators"],
+          },
+        },
+      }),
+      svgr(),
+      createHtmlPlugin({
+        minify: true,
+        inject: {
+          tags: [
+            ...(clientConfig.meta.map((meta) => ({
+              ...meta,
+              injectTo: "head",
+            })) as HtmlTagDescriptor[]),
+          ],
+        },
+      }),
+      viteLoadExternalPackages(
+        false,
+        phPackages,
+        path.resolve(buildSrcDirPath, "./src"),
+      ),
+      generateImportMapPlugin(buildSrcDirPath, [
+        { name: "react", provider: "esm.sh" },
+        { name: "react-dom", provider: "esm.sh" },
+      ]),
+    ],
+    optimizeDeps: {
+      include: ["did-key-creator"],
+      exclude: externalAndExclude,
+    },
+  };
+
+  const output = await build(config);
+  console.log("Build output", { output });
 }

@@ -1,4 +1,5 @@
 import {
+  buildConnectStudio,
   type ConnectStudioOptions,
   startConnectStudio,
 } from "@powerhousedao/builder-tools/connect-studio";
@@ -15,6 +16,16 @@ export async function startConnect(connectOptions: ConnectOptions) {
     packages,
     phCliVersion: typeof version === "string" ? version : undefined,
     open: studio?.openBrowser,
+    logLevel: logLevel,
+    ...connectOptions,
+  });
+}
+
+export async function buildConnect(connectOptions: ConnectOptions) {
+  const { packages, logLevel } = getConfig(connectOptions.configFile);
+  return await buildConnectStudio({
+    packages,
+    phCliVersion: typeof version === "string" ? version : undefined,
     logLevel: logLevel,
     ...connectOptions,
   });
