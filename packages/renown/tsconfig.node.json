@@ -1,9 +1,13 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist/node",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.browser.ts"]
+  "include": ["src/**/*.node.ts"],
+  "exclude": ["src/**/*.browser.ts"],
+  "references": [
+    {
+      "path": "./tsconfig.common.json"
+    }
+  ]
 }
