@@ -37,12 +37,12 @@ export function parsePkhDid(did: string): PKHDid {
   };
 }
 
-export async function verifyAuthBearerToken(token: string) {
-  const jwt = Buffer.from(token, "base64").toString();
+export async function verifyAuthBearerToken(jwt: string) {
   try {
     const verified = await verifyCredential(jwt, getResolver());
     return verified;
   } catch (e) {
+    console.error(e);
     return false;
   }
 }
@@ -67,7 +67,7 @@ export async function createAuthBearerToken(
   };
 
   const jwt = await createVerifiableCredentialJwt(vcPayload, issuer);
-  return Buffer.from(jwt).toString("base64");
+  return jwt;
 }
 export const getResolver = () => {
   const keyResolver = keyDidResolver();
