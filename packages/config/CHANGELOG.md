@@ -1,3 +1,13 @@
+## 1.27.0-dev.14 (2025-05-15)
+
+### 🚀 Features
+
+- removed scalars package ([d6f7059a7](https://github.com/powerhouse-inc/powerhouse/commit/d6f7059a7))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
 ## 1.27.0-dev.13 (2025-05-15)
 
 ### 🚀 Features
