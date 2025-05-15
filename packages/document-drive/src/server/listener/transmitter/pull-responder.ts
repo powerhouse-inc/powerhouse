@@ -127,33 +127,25 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       `processAcknowledge(drive: ${driveId}, listener: ${listenerId})`,
       revisions,
     );
-
-    const syncUnits = await this.manager.getListenerSyncUnitIds(
-      driveId,
-      listenerId,
-    );
     let success = true;
     for (const revision of revisions) {
-      const syncUnit = syncUnits.find(
-        (s) =>
-          s.scope === revision.scope &&
-          s.branch === revision.branch &&
-          s.documentId == revision.documentId,
-      );
-      if (!syncUnit) {
-        this.logger.warn("Unknown sync unit was acknowledged", revision);
+      try {
+        await this.manager.updateListenerRevision(
+          listenerId,
+          driveId,
+          {
+            documentId: revision.documentId,
+            scope: revision.scope,
+            branch: revision.branch,
+          },
+          revision.revision,
+        );
+      } catch (error) {
+        this.logger.warn("Error acknowledging sync unit", error, revision);
         success = false;
         continue;
       }
-
-      await this.manager.updateListenerRevision(
-        listenerId,
-        driveId,
-        syncUnit.syncId,
-        revision.revision,
-      );
     }
-
     return success;
   }
 

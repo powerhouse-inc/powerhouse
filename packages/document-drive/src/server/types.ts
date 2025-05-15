@@ -73,12 +73,13 @@ export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
 
 export type DriveOperationResult = IOperationResult<DocumentDriveDocument>;
 
-export type SynchronizationUnit = {
-  syncId: string; // TODO type as `${documentId}:${scope}:`${branch}`
+export type SynchronizationUnitId = {
   documentId: string;
-  documentType: string;
   scope: string;
   branch: string;
+};
+
+export type SynchronizationUnit = SynchronizationUnitId & {
   lastUpdated: string;
   revision: number;
 };
@@ -181,6 +182,8 @@ export interface DriveEvents {
     status: SyncStatus,
     error?: Error,
     syncUnitStatus?: SyncUnitStatusObject,
+    scope?: string,
+    branch?: string,
   ) => void;
   defaultRemoteDrive: (
     status: AddRemoteDriveStatus,
@@ -461,35 +464,6 @@ export interface IBaseDocumentDriveServer {
     syncUnitId: string,
   ): SyncStatus | SynchronizationUnitNotFoundError;
 
-  /** Synchronization methods */
-  getSynchronizationUnits(
-    driveId: string,
-    documentId?: string[],
-    scope?: string[],
-    branch?: string[],
-    documentType?: string[],
-  ): Promise<SynchronizationUnit[]>;
-
-  getSynchronizationUnit(
-    driveId: string,
-    syncId: string,
-    loadedDrive?: DocumentDriveDocument,
-  ): Promise<SynchronizationUnit | undefined>;
-
-  getSynchronizationUnitsIds(
-    driveId: string,
-    documentId?: string[],
-    scope?: string[],
-    branch?: string[],
-    documentType?: string[],
-  ): Promise<SynchronizationUnitQuery[]>;
-
-  getOperationData(
-    driveId: string,
-    syncId: string,
-    filter: GetStrandsOptions,
-  ): Promise<OperationUpdate[]>;
-
   /** Internal methods **/
   getDocumentModelModules(): DocumentModelModule[];
 
@@ -532,18 +506,13 @@ export interface IListenerManager {
   updateListenerRevision(
     listenerId: string,
     driveId: string,
-    syncId: string,
+    syncUnitId: SynchronizationUnitId,
     listenerRev: number,
   ): Promise<void>;
 
-  // todo: re-evaluate
-  getListenerSyncUnitIds(
-    driveId: string,
-    listenerId: string,
-  ): Promise<SynchronizationUnitQuery[]>;
   removeSyncUnits(
     driveId: string,
-    syncUnits: Pick<SynchronizationUnit, "syncId">[],
+    syncUnits: SynchronizationUnitId[],
   ): Promise<void>;
 }
 
@@ -555,12 +524,17 @@ export type ListenerStatus =
   | "CONFLICT"
   | "ERROR";
 
+export type SynchronizationUnitMap = Map<
+  SynchronizationUnitId,
+  SyncronizationUnitState
+>;
+
 export interface ListenerState {
   driveId: string;
   block: boolean;
   pendingTimeout: string;
   listener: Listener;
-  syncUnits: Map<SynchronizationUnit["syncId"], SyncronizationUnitState>;
+  syncUnits: SynchronizationUnitMap;
   listenerStatus: ListenerStatus;
 }
 
@@ -589,7 +563,7 @@ export interface IEventEmitter {
 export interface ISynchronizationManager {
   setDocumentModelModules(arg0: DocumentModelModule[]): void;
   getSynchronizationUnits(
-    driveId: string,
+    parentId: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],
@@ -597,7 +571,7 @@ export interface ISynchronizationManager {
   ): Promise<SynchronizationUnit[]>;
 
   getSynchronizationUnitsIds(
-    driveId: string,
+    parentId: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],
@@ -605,28 +579,34 @@ export interface ISynchronizationManager {
   ): Promise<SynchronizationUnitQuery[]>;
 
   getSynchronizationUnit(
-    driveId: string,
-    syncId: string,
+    syncId: SynchronizationUnitId,
   ): Promise<SynchronizationUnit | undefined>;
 
   getOperationData(
-    driveId: string,
-    syncId: string,
+    syncId: SynchronizationUnitId,
     filter: GetStrandsOptions,
   ): Promise<OperationUpdate[]>;
 
-  getSynchronizationUnitsRevision(
-    driveId: string,
-    syncUnitsQuery: SynchronizationUnitQuery[],
-  ): Promise<SynchronizationUnit[]>;
-
-  // New sync status methods
+  // Overloaded sync status methods
   getSyncStatus(
-    syncUnitId: string,
+    documentId: string,
+    scope?: string,
+    branch?: string,
+  ): SyncStatus | SynchronizationUnitNotFoundError;
+  getSyncStatus(
+    syncId: SynchronizationUnitId,
   ): SyncStatus | SynchronizationUnitNotFoundError;
 
+  // Overloaded sync status update methods
   updateSyncStatus(
-    syncUnitId: string,
+    documentId: string,
+    status: Partial<SyncUnitStatusObject> | null,
+    error?: Error,
+    scope?: string,
+    branch?: string,
+  ): void;
+  updateSyncStatus(
+    syncId: SynchronizationUnitId,
     status: Partial<SyncUnitStatusObject> | null,
     error?: Error,
   ): void;

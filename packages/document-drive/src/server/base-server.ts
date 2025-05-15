@@ -67,14 +67,12 @@ import { type StrandUpdateSource } from "./listener/transmitter/types.js";
 import {
   type AddOperationOptions,
   type Constructor,
-  type CreateDocumentInput,
   DefaultListenerManagerOptions,
   type DocumentDriveServerOptions,
   type DriveEvents,
   type DriveInput,
   type DriveOperationResult,
   type GetDocumentOptions,
-  type GetStrandsOptions,
   type IBaseDocumentDriveServer,
   type IEventEmitter,
   type IListenerManager,
@@ -89,8 +87,6 @@ import {
   type StrandUpdate,
   type SyncStatus,
   type SyncUnitStatusObject,
-  type SynchronizationUnit,
-  type SynchronizationUnitQuery,
 } from "./types.js";
 import { filterOperationsByRevision, isAtRevision } from "./utils.js";
 
@@ -217,7 +213,7 @@ export class BaseDocumentDriveServer
   }
 
   private async _initialize() {
-    await this.listenerManager.initialize(this.handleListenerError);
+    await this.listenerManager.initialize(this.handleListenerError.bind(this));
 
     await this.queueManager.init(this.queueDelegate, (error) => {
       this.logger.error(`Error initializing queue manager`, error);
@@ -301,7 +297,8 @@ export class BaseDocumentDriveServer
   private async startSyncRemoteDrive(driveId: string) {
     let driveTriggers = this.triggerMap.get(driveId);
 
-    const syncUnits = await this.getSynchronizationUnitsIds(driveId);
+    const syncUnits =
+      await this.synchronizationManager.getSynchronizationUnitsIds(driveId);
 
     const drive = await this.getDrive(driveId);
     for (const trigger of drive.state.local.triggers) {
@@ -318,7 +315,7 @@ export class BaseDocumentDriveServer
       });
 
       for (const syncUnit of syncUnits) {
-        this.synchronizationManager.updateSyncStatus(syncUnit.syncId, {
+        this.synchronizationManager.updateSyncStatus(syncUnit, {
           pull: "SYNCING",
         });
       }
@@ -350,44 +347,24 @@ export class BaseDocumentDriveServer
             }
           },
           (revisions) => {
-            const errorRevision = revisions.filter(
+            const errorRevisions = revisions.filter(
               (r) => r.status !== "SUCCESS",
             );
 
-            if (errorRevision.length < 1) {
+            if (errorRevisions.length < 1) {
               this.synchronizationManager.updateSyncStatus(driveId, {
                 pull: "SUCCESS",
               });
             }
 
-            const documentIdsFromRevision = revisions
-              .filter((rev) => rev.documentId !== "")
-              .map((rev) => rev.documentId);
-
-            this.getSynchronizationUnitsIds(driveId, documentIdsFromRevision)
-              .then((revSyncUnits) => {
-                for (const syncUnit of revSyncUnits) {
-                  const fileErrorRevision = errorRevision.find(
-                    (r) => r.documentId === syncUnit.documentId,
-                  );
-
-                  if (fileErrorRevision) {
-                    this.synchronizationManager.updateSyncStatus(
-                      syncUnit.syncId,
-                      { pull: fileErrorRevision.status },
-                      fileErrorRevision.error,
-                    );
-                  } else {
-                    this.synchronizationManager.updateSyncStatus(
-                      syncUnit.syncId,
-                      {
-                        pull: "SUCCESS",
-                      },
-                    );
-                  }
-                }
-              })
-              .catch(console.error);
+            for (const revision of revisions) {
+              const { documentId, scope, branch, status, error } = revision;
+              this.synchronizationManager.updateSyncStatus(
+                { documentId, scope, branch },
+                { pull: status },
+                error,
+              );
+            }
 
             // if it is the first pull and returns empty
             // then updates corresponding push transmitter
@@ -397,20 +374,17 @@ export class BaseDocumentDriveServer
                 (listener) => trigger.data.url === listener.callInfo?.data,
               );
               if (pushListener) {
-                this.getSynchronizationUnitsRevision(driveId, syncUnits)
-                  .then((syncUnitRevisions) => {
-                    for (const revision of syncUnitRevisions) {
-                      this.listenerManager
-                        .updateListenerRevision(
-                          pushListener.listenerId,
-                          driveId,
-                          revision.syncId,
-                          revision.revision,
-                        )
-                        .catch(this.logger.error);
-                    }
-                  })
-                  .catch(this.logger.error);
+                for (const revision of revisions) {
+                  const { documentId, scope, branch } = revision;
+                  this.listenerManager
+                    .updateListenerRevision(
+                      pushListener.listenerId,
+                      driveId,
+                      { documentId, scope, branch },
+                      revision.revision,
+                    )
+                    .catch(this.logger.error);
+                }
               }
             }
           },
@@ -422,17 +396,14 @@ export class BaseDocumentDriveServer
   }
 
   private async stopSyncRemoteDrive(driveId: string) {
-    const syncUnits = await this.getSynchronizationUnitsIds(driveId);
-    const filesNodeSyncId = syncUnits
-      .filter((syncUnit) => syncUnit.documentId !== "")
-      .map((syncUnit) => syncUnit.syncId);
-
     const triggers = this.triggerMap.get(driveId);
     triggers?.forEach((cancel) => cancel());
     this.synchronizationManager.updateSyncStatus(driveId, null);
 
-    for (const fileNodeSyncId of filesNodeSyncId) {
-      this.synchronizationManager.updateSyncStatus(fileNodeSyncId, null);
+    const syncUnits =
+      await this.synchronizationManager.getSynchronizationUnitsIds(driveId);
+    for (const syncUnit of syncUnits) {
+      this.synchronizationManager.updateSyncStatus(syncUnit, null);
     }
     return this.triggerMap.delete(driveId);
   }
@@ -525,61 +496,6 @@ export class BaseDocumentDriveServer
         );
       }
     }
-  }
-
-  // Delegate synchronization methods to synchronizationManager
-  getSynchronizationUnits(
-    driveId: string,
-    documentId?: string[],
-    scope?: string[],
-    branch?: string[],
-    documentType?: string[],
-  ): Promise<SynchronizationUnit[]> {
-    return this.synchronizationManager.getSynchronizationUnits(
-      driveId,
-      documentId,
-      scope,
-      branch,
-      documentType,
-    );
-  }
-
-  getSynchronizationUnitsIds(
-    driveId: string,
-    documentId?: string[],
-    scope?: string[],
-    branch?: string[],
-    documentType?: string[],
-  ): Promise<SynchronizationUnitQuery[]> {
-    return this.synchronizationManager.getSynchronizationUnitsIds(
-      driveId,
-      documentId,
-      scope,
-      branch,
-      documentType,
-    );
-  }
-
-  getOperationData(
-    driveId: string,
-    syncId: string,
-    filter: GetStrandsOptions,
-  ): Promise<OperationUpdate[]> {
-    return this.synchronizationManager.getOperationData(
-      driveId,
-      syncId,
-      filter,
-    );
-  }
-
-  getSynchronizationUnitsRevision(
-    driveId: string,
-    syncUnitsQuery: SynchronizationUnitQuery[],
-  ): Promise<SynchronizationUnit[]> {
-    return this.synchronizationManager.getSynchronizationUnitsRevision(
-      driveId,
-      syncUnitsQuery,
-    );
   }
 
   protected getDocumentModelModule<TDocument extends PHDocument>(
@@ -909,13 +825,14 @@ export class BaseDocumentDriveServer
 
   async deleteDocument(driveId: string, documentId: string) {
     try {
-      const syncUnits = await this.getSynchronizationUnitsIds(driveId, [
-        documentId,
-      ]);
+      const syncUnits =
+        await this.synchronizationManager.getSynchronizationUnitsIds(driveId, [
+          documentId,
+        ]);
 
       // remove document sync units status when a document is deleted
       for (const syncUnit of syncUnits) {
-        this.synchronizationManager.updateSyncStatus(syncUnit.syncId, null);
+        this.synchronizationManager.updateSyncStatus(syncUnit, null);
       }
       await this.listenerManager.removeSyncUnits(driveId, syncUnits);
     } catch (error) {
@@ -1545,12 +1462,13 @@ export class BaseDocumentDriveServer
         { scopes: [] as string[], branches: ["main"] },
       );
 
-      const syncUnits = await this.getSynchronizationUnits(
-        driveId,
-        [documentId],
-        scopes,
-        branches,
-      );
+      const syncUnits =
+        await this.synchronizationManager.getSynchronizationUnits(
+          driveId,
+          [documentId],
+          scopes,
+          branches,
+        );
 
       // checks if any of the provided operations where reshufled
       const newOp = operationsApplied.find(
@@ -1572,7 +1490,6 @@ export class BaseDocumentDriveServer
         : (options?.source ?? { type: "local" });
 
       // update listener cache
-
       const operationSource = this.getOperationSource(source);
 
       this.listenerManager
@@ -1586,7 +1503,7 @@ export class BaseDocumentDriveServer
             });
 
             for (const syncUnit of syncUnits) {
-              this.synchronizationManager.updateSyncStatus(syncUnit.syncId, {
+              this.synchronizationManager.updateSyncStatus(syncUnit, {
                 [operationSource]: "SYNCING",
               });
             }
@@ -1602,7 +1519,7 @@ export class BaseDocumentDriveServer
           }
 
           for (const syncUnit of syncUnits) {
-            this.synchronizationManager.updateSyncStatus(syncUnit.syncId, {
+            this.synchronizationManager.updateSyncStatus(syncUnit, {
               [operationSource]: "SUCCESS",
             });
           }
@@ -1619,7 +1536,7 @@ export class BaseDocumentDriveServer
 
           for (const syncUnit of syncUnits) {
             this.synchronizationManager.updateSyncStatus(
-              syncUnit.syncId,
+              syncUnit,
               {
                 [operationSource]: "ERROR",
               },
@@ -1872,11 +1789,9 @@ export class BaseDocumentDriveServer
             driveId,
             [
               {
-                syncId: "0",
-                documentId: "",
+                documentId: driveId,
                 scope: "global",
                 branch: "main",
-                documentType: "powerhouse/document-drive",
                 lastUpdated: lastOperation.timestamp,
                 revision: lastOperation.index,
               },
@@ -1913,9 +1828,9 @@ export class BaseDocumentDriveServer
       }
 
       if (this.shouldSyncRemoteDrive(document)) {
-        this.startSyncRemoteDrive(driveId);
+        this.startSyncRemoteDrive(driveId).catch(this.logger.error);
       } else {
-        this.stopSyncRemoteDrive(driveId);
+        this.stopSyncRemoteDrive(driveId).catch(this.logger.error);
       }
 
       // after applying all the valid operations,throws
@@ -2062,13 +1977,6 @@ export class BaseDocumentDriveServer
     return this.eventEmitter.emit(event, ...args);
   }
 
-  getSynchronizationUnit(
-    driveId: string,
-    syncId: string,
-  ): Promise<SynchronizationUnit | undefined> {
-    return this.synchronizationManager.getSynchronizationUnit(driveId, syncId);
-  }
-
   // Add delegated methods to properly implement ISynchronizationManager
   updateSyncStatus(
     syncUnitId: string,
@@ -2131,27 +2039,16 @@ export class BaseDocumentDriveServer
     }
 
     if (result.status === "ERROR") {
-      const syncUnits =
-        strand.documentId !== ""
-          ? (
-              await this.getSynchronizationUnitsIds(
-                strand.driveId,
-                [strand.documentId],
-                [strand.scope],
-                [strand.branch],
-              )
-            ).map((s) => s.syncId)
-          : [strand.driveId];
-
       const operationSource = this.getOperationSource(source);
-
-      for (const syncUnit of syncUnits) {
-        this.synchronizationManager.updateSyncStatus(
-          syncUnit,
-          { [operationSource]: result.status },
-          result.error,
-        );
-      }
+      this.synchronizationManager.updateSyncStatus(
+        {
+          documentId: strand.documentId || strand.driveId,
+          scope: strand.scope,
+          branch: strand.branch,
+        },
+        { [operationSource]: result.status },
+        result.error,
+      );
     }
     this.eventEmitter.emit("strandUpdate", strand);
     return result;
