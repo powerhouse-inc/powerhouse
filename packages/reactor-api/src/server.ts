@@ -133,9 +133,17 @@ async function setupGraphQLManager(
 
   if (auth) {
     graphqlManager.setAdditionalContextFields({
-      isGuest: (address: string) => auth.guests.includes(address),
-      isUser: (address: string) => auth.users.includes(address),
-      isAdmin: (address: string) => auth.admins.includes(address),
+      isGuest: (address: string) =>
+        auth.enabled && auth.guests.includes(address),
+      isUser: (address: string) => auth.enabled && auth.users.includes(address),
+      isAdmin: (address: string) =>
+        auth.enabled && auth.admins.includes(address),
+    });
+  } else {
+    graphqlManager.setAdditionalContextFields({
+      isGuest: () => true,
+      isUser: () => true,
+      isAdmin: () => true,
     });
   }
   return graphqlManager;
