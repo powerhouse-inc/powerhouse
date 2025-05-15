@@ -44,7 +44,6 @@ export function AddDriveModal(props: Props) {
                 if (!status) return onClose();
             }}
             appOptions={apps}
-            authToken={'test'}
         />
     );
 }
