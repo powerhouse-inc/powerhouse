@@ -261,11 +261,7 @@ export async function startServer(
   server.bindCLIShortcuts({ print: true });
 }
 
-const staticFiles = [
-  "./src/service-worker.ts",
-  "./src/external-packages.js",
-  "./src/hmr.ts",
-];
+const staticFiles = ["./src/service-worker.ts", "./src/external-packages.js"];
 
 const externalAndExclude = ["vite", "vite-envs", "node:crypto"];
 export const externalIds = [/^react(-dom)?(\/.*)?$/, /^node:.*$/];
@@ -274,7 +270,7 @@ export async function runBuild(
     logLevel: "debug",
   },
 ) {
-  console.log("Running build");
+  console.log("Running build with options", { options });
   // set from options, as they are dynamically loaded
   process.env.LOG_LEVEL = options.logLevel;
 
@@ -283,31 +279,28 @@ export async function runBuild(
   console.log("Ensured node version");
   const projectRoot = process.cwd();
   console.log("Resolved project root", { projectRoot });
-  const buildSrcDirPath = join(projectRoot, ".ph", "connect-build");
-  console.log("Resolved build src dir path", { buildSrcDirPath });
-  const buildDistDirPath = join(projectRoot, "dist");
-  console.log("Resolved build dist dir path", { buildDistDirPath });
+  const connectBuildRoot = join(projectRoot, ".ph", "connect-build");
+  console.log("Resolved build src dir path", {
+    connectBuildDirPath: connectBuildRoot,
+  });
+  const connectBuildDistDirPath = join(connectBuildRoot, "dist");
+  console.log("Resolved build dist dir path", { connectBuildDistDirPath });
   const connectPath = "/Users/ry/work/powerhouse/apps/connect";
-  copyConnect(connectPath, buildSrcDirPath);
+  copyConnect(connectPath, connectBuildRoot);
   console.log("Copied connect");
-  const env = loadEnv("production", buildSrcDirPath);
+  const env = loadEnv("production", connectBuildRoot);
   console.log("Loaded env", { env });
-  const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
-  const phPackages = phPackagesStr?.split(",") || [];
+  const phPackages = options.packages ?? [];
+  console.log("Resolved ph packages", { phPackages });
   const APP_VERSION =
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     (process.env.APP_VERSION ?? env.APP_VERSION ?? "1.0.0").toString();
+  console.log("Resolved app version", { APP_VERSION });
   console.log("Resolved connect path", { connectPath });
 
   // backups index html if running on windows
-  backupIndexHtml(buildSrcDirPath, true);
+  backupIndexHtml(connectBuildRoot, true);
   console.log("Backed up index html");
-
-  // needed for viteEnvs
-  if (!fs.existsSync(join(buildSrcDirPath, "src"))) {
-    fs.mkdirSync(join(buildSrcDirPath, "src"));
-    console.log("Created src directory");
-  }
 
   process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
   console.log("Set ph cli version", {
@@ -318,19 +311,19 @@ export async function runBuild(
     (acc, file) =>
       Object.assign(acc, {
         [path.basename(file, path.extname(file))]: path.resolve(
-          buildSrcDirPath,
+          connectBuildRoot,
           file,
         ),
       }),
     {},
   );
   const config: InlineConfig = {
-    root: buildSrcDirPath,
+    root: connectBuildRoot,
     build: {
-      outDir: buildDistDirPath,
+      outDir: connectBuildDistDirPath,
       rollupOptions: {
         input: {
-          main: path.resolve(buildSrcDirPath, "index.html"),
+          main: path.resolve(connectBuildRoot, "index.html"),
           ...staticInputs,
         },
         output: {
@@ -369,7 +362,10 @@ export async function runBuild(
         },
       }),
       viteReact({
-        include: [join(buildSrcDirPath, "./src/**/*.tsx")],
+        include: [
+          join(connectBuildRoot, "**/*.tsx"),
+          join(projectRoot, "**/*.tsx"),
+        ],
         babel: {
           parserOpts: {
             plugins: ["decorators"],
@@ -388,12 +384,8 @@ export async function runBuild(
           ],
         },
       }),
-      viteLoadExternalPackages(
-        false,
-        phPackages,
-        path.resolve(buildSrcDirPath, "./src"),
-      ),
-      generateImportMapPlugin(buildSrcDirPath, [
+      viteLoadExternalPackages(true, phPackages, connectBuildRoot),
+      generateImportMapPlugin(connectBuildRoot, [
         { name: "react", provider: "esm.sh" },
         { name: "react-dom", provider: "esm.sh" },
       ]),
