@@ -109,6 +109,7 @@ export class BaseDocumentDriveServer
   protected options: Required<DocumentDriveServerOptions>;
   private listenerManager: IListenerManager;
   private synchronizationManager: ISynchronizationManager;
+  private generateJwtHandler?: (driveUrl: string) => Promise<string>;
 
   // internal dependencies
   private defaultDrivesManager: DefaultDrivesManager;
@@ -2133,6 +2134,11 @@ export class BaseDocumentDriveServer
     }
     this.eventEmitter.emit("strandUpdate", strand);
     return result;
+  }
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>) {
+    this.generateJwtHandler = handler;
+    this.listenerManager.setGenerateJwtHandler(handler);
   }
 }
 
