@@ -11,7 +11,10 @@ import {
     encodeDIDfromHexString,
     rawKeyInHexfromUncompressed,
 } from 'did-key-creator';
+import { fromString } from 'uint8arrays';
+
 import { childLogger } from 'document-drive';
+
 const logger = childLogger(['connect', 'crypto']);
 export type JwkKeyPair = {
     publicKey: JsonWebKey;
@@ -201,14 +204,21 @@ export class ConnectCrypto implements IConnectCrypto {
         return (await this.#subtleCrypto).verify(...args);
     };
 
-    async sign(data: Uint8Array): Promise<Uint8Array> {
+    #stringToBytes(s: string): Uint8Array {
+        return fromString(s, 'utf-8');
+    }
+
+    async sign(data: Uint8Array | string): Promise<Uint8Array> {
         if (this.#keyPair?.privateKey) {
+            const dataBytes: Uint8Array =
+                typeof data === 'string' ? this.#stringToBytes(data) : data;
+
             const subtleCrypto = await this.#subtleCrypto;
 
             const arrayBuffer = await subtleCrypto.sign(
                 ConnectCrypto.signAlgorithm,
                 this.#keyPair.privateKey,
-                data.buffer as ArrayBuffer,
+                dataBytes.buffer as ArrayBuffer,
             );
 
             return new Uint8Array(arrayBuffer);
@@ -230,10 +240,9 @@ export class ConnectCrypto implements IConnectCrypto {
                         ? new TextEncoder().encode(data)
                         : data,
                 );
-                // Convert to base64url format for JWT
                 return bytesToBase64url(signature);
             },
-            alg: 'EdDSA',
+            alg: 'ES256',
         };
     }
 }

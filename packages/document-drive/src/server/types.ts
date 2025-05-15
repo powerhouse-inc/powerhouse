@@ -504,6 +504,8 @@ export interface IBaseDocumentDriveServer {
   getDocumentModelModules(): DocumentModelModule[];
 
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
 }
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
