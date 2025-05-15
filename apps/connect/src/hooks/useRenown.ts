@@ -1,5 +1,13 @@
-import { type IRenown, type User } from '#services';
+import {
+    RENOWN_CHAIN_ID,
+    RENOWN_NETWORK_ID,
+    type IRenown,
+    type User,
+} from '#services';
+import { createAuthBearerToken } from '@renown/sdk';
 import { atom, useAtom } from 'jotai';
+import { useEffect } from 'react';
+import { useUnwrappedReactor } from '../store/reactor.js';
 import { useConnectCrypto } from './useConnectCrypto.js';
 
 const renownAtom = atom<Promise<IRenown | undefined> | undefined>(
@@ -8,7 +16,17 @@ const renownAtom = atom<Promise<IRenown | undefined> | undefined>(
 
 export function useRenown() {
     const [renown, setRenown] = useAtom(renownAtom);
-    const { did } = useConnectCrypto();
+    const { did, getBearerToken } = useConnectCrypto();
+    const reactor = useUnwrappedReactor();
+    useEffect(() => {
+        if (!renown || !reactor || !did) {
+            return;
+        }
+
+        reactor.setGenerateJwtHandler(getBearerToken);
+    }, [renown, reactor]);
+
+
 
     async function initRenown(
         getDid: () => Promise<string>,

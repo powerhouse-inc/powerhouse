@@ -42,6 +42,14 @@ export function useConnectCrypto(): IConnectCrypto {
                 const crypto = await getConnectCrypto();
                 return await crypto.sign(data);
             },
+            async getIssuer() {
+                const crypto = await getConnectCrypto();
+                return crypto.getIssuer();
+            },
+            async getBearerToken(driveUrl: string) {
+                const crypto = await getConnectCrypto();
+                return crypto.getBearerToken(driveUrl);
+            },
         }),
         [],
     );
