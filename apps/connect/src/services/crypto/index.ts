@@ -1,13 +1,18 @@
 /* eslint-disable no-unused-private-class-members */
 import {
+    RENOWN_CHAIN_ID,
+    RENOWN_NETWORK_ID,
+} from '@powerhousedao/reactor-browser/renown/constants';
+import { createAuthBearerToken } from '@renown/sdk';
+import { bytesToBase64url } from 'did-jwt';
+import type { Issuer } from 'did-jwt-vc';
+import {
     compressedKeyInHexfromRaw,
     encodeDIDfromHexString,
     rawKeyInHexfromUncompressed,
 } from 'did-key-creator';
 import { childLogger } from 'document-drive';
-
 const logger = childLogger(['connect', 'crypto']);
-
 export type JwkKeyPair = {
     publicKey: JsonWebKey;
     privateKey: JsonWebKey;
@@ -30,6 +35,8 @@ export interface IConnectCrypto {
     did: () => Promise<DID>;
     regenerateDid(): Promise<void>;
     sign: (data: Uint8Array) => Promise<Uint8Array>;
+    getIssuer: () => Promise<Issuer>;
+    getBearerToken: (driveUrl: string) => Promise<string>;
 }
 
 export type DID = `did:key:${string}`;
@@ -93,6 +100,18 @@ export class ConnectCrypto implements IConnectCrypto {
         const did = await this.#parseDid();
         logger.info('Connect DID:', did);
         return did;
+    }
+
+    async getBearerToken(driveUrl: string) {
+        const issuer = await this.getIssuer();
+        const token = await createAuthBearerToken(
+            Number(RENOWN_CHAIN_ID),
+            RENOWN_NETWORK_ID,
+            await this.#did,
+            issuer,
+        );
+        console.log('token', token);
+        return token;
     }
 
     did() {
@@ -196,6 +215,26 @@ export class ConnectCrypto implements IConnectCrypto {
         } else {
             throw new Error('No private key available');
         }
+    }
+
+    async getIssuer(): Promise<Issuer> {
+        if (!this.#keyPair?.privateKey) {
+            throw new Error('No private key available');
+        }
+
+        return {
+            did: await this.#did,
+            signer: async (data: string | Uint8Array) => {
+                const signature = await this.sign(
+                    typeof data === 'string'
+                        ? new TextEncoder().encode(data)
+                        : data,
+                );
+                // Convert to base64url format for JWT
+                return bytesToBase64url(signature);
+            },
+            alg: 'EdDSA',
+        };
     }
 }
 export * from './browser.js';
