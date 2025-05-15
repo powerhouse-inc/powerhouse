@@ -23,7 +23,6 @@ import {
   type ParseOptions,
   buildSchema,
 } from "graphql";
-import type request from "graphql-request";
 import { GraphQLClient, gql } from "graphql-request";
 import { logger } from "./logger.js";
 
@@ -39,13 +38,18 @@ export type GraphQLResult<T> = { [K in keyof T]: T[K] | null } & {
 
 // replaces fetch so it can be used in Node and Browser envs
 export async function requestGraphql<T>(
-  ...args: Parameters<typeof request>
+  url: string,
+  document: string,
+  variables?: Record<string, unknown>,
+  headers?: Record<string, string>,
 ): Promise<GraphQLResult<T>> {
-  const [url, ...requestArgs] = args;
-  const client = new GraphQLClient(url, { fetch });
+  const client = new GraphQLClient(url, {
+    fetch,
+    headers: headers || {},
+  });
   const { errors, ...response } = await client.request<
     { [K in keyof T]: T[K] | null } & { errors?: ReqGraphQLError[] }
-  >(...requestArgs);
+  >(document, variables);
 
   const result = { ...response } as GraphQLResult<T>;
   if (errors?.length) {
@@ -141,7 +145,10 @@ export function generateDocumentStateQueryFields(
   return queryFields;
 }
 
-export async function requestPublicDrive(url: string): Promise<DriveInfo> {
+export async function requestPublicDrive(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<DriveInfo> {
   let drive: DriveInfo;
   try {
     const result = await requestGraphql<{ drive: DriveInfo }>(
@@ -159,6 +166,8 @@ export async function requestPublicDrive(url: string): Promise<DriveInfo> {
           }
         }
       `,
+      undefined,
+      headers,
     );
     if (result.errors?.length || !result.drive) {
       throw result.errors?.at(0) ?? new Error("Drive not found");
