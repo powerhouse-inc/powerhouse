@@ -289,12 +289,12 @@ export async function startAPI(
         return;
       }
       req.user = {
-        address,
+        address: address.toLowerCase(),
         chainId,
         networkId,
       };
 
-      if (!all.includes(address)) {
+      if (!all.includes(req.user.address)) {
         res.status(403).json({ error: "Forbidden" });
         return;
       }
