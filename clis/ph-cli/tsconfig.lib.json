@@ -23,9 +23,6 @@
       "path": "../../packages/reactor-local"
     },
     {
-      "path": "../../packages/scalars"
-    },
-    {
       "path": "../../packages/design-system"
     },
     {
