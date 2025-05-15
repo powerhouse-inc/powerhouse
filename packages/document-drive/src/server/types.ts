@@ -555,6 +555,9 @@ export interface IListenerManager {
     driveId: string,
     syncUnits: Pick<SynchronizationUnit, "syncId">[],
   ): Promise<void>;
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
+  generateJwtHandler?: (driveUrl: string) => Promise<string>;
 }
 
 export type ListenerStatus =
