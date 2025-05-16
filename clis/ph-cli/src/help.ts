@@ -373,12 +373,16 @@ Options:
                         
   --packages <pkg...>     List of packages to be loaded. If defined, packages specified
                         in the config file are ignored.
+                        
+  --base-path <path>      Base path for the API endpoints. Sets the BASE_PATH environment 
+                        variable used by the server to prefix all routes.
 
 Examples:
   $ ph switchboard                           # Start switchboard with default settings
   $ ph switchboard --port 5000               # Use custom port 5000
   $ ph switchboard --config-file custom.json # Use custom configuration file
   $ ph switchboard --packages pkg1 pkg2      # Load specific packages
+  $ ph switchboard --base-path /switchboard  # Set API base path to /switchboard
 `;
 
 /**
