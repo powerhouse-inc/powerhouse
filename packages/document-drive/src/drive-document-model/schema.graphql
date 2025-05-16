@@ -24,7 +24,7 @@ type DocumentDriveState {
 }
 
 type ListenerFilter {
-  documentType: [String!]!
+  documentType: [String!]
   documentId: [ID!]
   scope: [String!]
   branch: [String!]

@@ -133,7 +133,7 @@ export type ListenerCallInfo = {
 export type ListenerFilter = {
   branch: Maybe<Array<Scalars["String"]["output"]>>;
   documentId: Maybe<Array<Scalars["ID"]["output"]>>;
-  documentType: Array<Scalars["String"]["output"]>;
+  documentType: Maybe<Array<Scalars["String"]["output"]>>;
   scope: Maybe<Array<Scalars["String"]["output"]>>;
 };
 

@@ -18,8 +18,14 @@ import {
   type IDocumentAdminStorage,
   type IDocumentStorage,
   type IDriveOperationStorage,
+  type IStorageUnit,
+  type IStorageUnitFilter,
 } from "./types.js";
-import { isValidDocumentId, isValidSlug } from "./utils.js";
+import {
+  isValidDocumentId,
+  isValidSlug,
+  resolveStorageUnitsFilter,
+} from "./utils.js";
 
 type DriveManifest = {
   documentIds: Set<string>;
@@ -268,7 +274,6 @@ export class MemoryStorage
   ////////////////////////////////
 
   async addDocumentOperations(
-    drive: string,
     id: string,
     operations: Operation[],
     header: DocumentHeader,
@@ -320,20 +325,20 @@ export class MemoryStorage
       units.map(async (unit) => {
         try {
           const document = await this.get<PHDocument>(unit.documentId);
-          if (!document) {
+          if (!document || !Object.keys(document.state).includes(unit.scope)) {
             return undefined;
           }
+
           const operation =
             document.operations[unit.scope as OperationScope].at(-1);
-          if (operation) {
-            return {
-              documentId: unit.documentId,
-              scope: unit.scope,
-              branch: unit.branch,
-              lastUpdated: operation.timestamp,
-              revision: operation.index,
-            };
-          }
+
+          return {
+            documentId: unit.documentId,
+            scope: unit.scope,
+            branch: unit.branch,
+            lastUpdated: operation?.timestamp ?? document.created,
+            revision: operation ? operation.index + 1 : 0,
+          };
         } catch {
           return undefined;
         }
@@ -353,6 +358,88 @@ export class MemoryStorage
       }
       return acc;
     }, []);
+  }
+
+  ////////////////////////////////
+  // IStorageUnitStorage
+  ////////////////////////////////
+
+  async findStorageUnitsBy(
+    filter: IStorageUnitFilter,
+    limit: number,
+    cursor?: string,
+  ): Promise<{ units: IStorageUnit[]; nextCursor?: string }> {
+    const storageUnits: IStorageUnit[] = [];
+
+    const {
+      parentId: parentIds,
+      documentId: documentIds,
+      documentModelType: documentTypes,
+      scope: scopes,
+      branch: branches,
+    } = resolveStorageUnitsFilter(filter);
+
+    let documents: Set<string>;
+
+    // apply parent id filter
+    if (parentIds) {
+      // join children from all parents
+      const childrenIds = new Set<string>();
+      for (const parentId of parentIds) {
+        const ids = await this.getChildren(parentId);
+        ids.forEach((id) => childrenIds.add(id));
+      }
+      documents = parentIds.union(childrenIds);
+    } else {
+      documents = new Set(Object.keys(this.documents));
+    }
+
+    // apply document id filter
+    documents = documentIds ? documentIds.intersection(documents) : documents;
+
+    for (const documentId of documents) {
+      const document = this.documents[documentId];
+
+      // apply document type filter
+      if (documentTypes && !documentTypes.has(document.documentType)) continue;
+
+      // For each operation scope in the document
+      for (const [scope] of Object.entries(document.state)) {
+        // apply scope filter
+        if (scopes && !scopes.has(scope)) continue;
+
+        // Create storage unit for this document+scope combination
+        storageUnits.push({
+          documentId,
+          documentModelType: document.documentType,
+          scope,
+          branch: "main", // Default branch
+        });
+      }
+    }
+
+    // Handle pagination
+    let startIndex = 0;
+    if (cursor) {
+      const index = storageUnits.findIndex(
+        (unit) => unit.documentId === cursor,
+      );
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // Calculate the range to return
+    const endIndex = Math.min(startIndex + limit, storageUnits.length);
+    const nextCursor =
+      endIndex < storageUnits.length
+        ? storageUnits[endIndex].documentId
+        : undefined;
+
+    return {
+      units: storageUnits.slice(startIndex, endIndex),
+      nextCursor,
+    };
   }
 
   ////////////////////////////////

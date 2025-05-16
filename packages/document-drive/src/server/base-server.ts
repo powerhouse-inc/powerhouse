@@ -122,24 +122,20 @@ export class BaseDocumentDriveServer
     exists: (documentId: string): Promise<boolean> =>
       this.documentStorage.exists(documentId),
     processOperationJob: async ({
-      driveId,
       documentId,
       operations,
       options,
     }: OperationJob) => {
-      return !documentId || driveId === documentId
-        ? this.processDriveOperations(driveId, operations, options)
-        : this.processOperations(driveId, documentId, operations, options);
+      const document = await this.getDocument(documentId);
+      return isDocumentDrive(document)
+        ? this.processDriveOperations(documentId, operations, options)
+        : this.processOperations(documentId, operations, options);
     },
-    processActionJob: async ({
-      driveId,
-      documentId,
-      actions,
-      options,
-    }: ActionJob) => {
-      return documentId
-        ? this.processActions(driveId, documentId, actions, options)
-        : this.processDriveActions(driveId, actions, options);
+    processActionJob: async ({ documentId, actions, options }: ActionJob) => {
+      const document = await this.getDocument(documentId);
+      return isDocumentDrive(document)
+        ? this.processActions(documentId, actions, options)
+        : this.processDriveActions(documentId, actions, options);
     },
     processJob: async (job: Job) => {
       if (isOperationJob(job)) {
@@ -517,6 +513,13 @@ export class BaseDocumentDriveServer
     return [...this.documentModelModules];
   }
 
+  addDocument<TDocument extends PHDocument>(
+    input: CreateDocumentInput<TDocument>,
+    preferredEditor?: string,
+  ): Promise<TDocument> {
+    return this.createDocument(input, { type: "local" }, preferredEditor);
+  }
+
   async addDrive(
     input: DriveInput,
     preferredEditor?: string,
@@ -645,6 +648,7 @@ export class BaseDocumentDriveServer
       throw new Error(`Document with id ${driveId} is not a Document Drive`);
     } else {
       if (!options?.revisions) {
+        this.cache.setDocument(driveId, result).catch(this.logger.error);
         this.cache.setDrive(driveId, result).catch(this.logger.error);
       }
       return result;
@@ -720,16 +724,16 @@ export class BaseDocumentDriveServer
     // TODO: check if document exists? Should that be a concern here?
     try {
       await this.documentStorage.addChild(parentId, documentId);
+      const syncUnits =
+        await this.synchronizationManager.getSynchronizationUnitsIds(
+          undefined,
+          [documentId],
+        );
+      await this.listenerManager.removeSyncUnits(parentId, syncUnits);
     } catch (e) {
       this.logger.error("Error adding child document", e);
       throw e;
     }
-
-    const syncUnits = this.synchronizationManager.getSynchronizationUnitsIds(
-      parentId,
-      [documentId],
-    );
-    await this.listenerManager.removeSyncUnits(parentId, syncUnits);
   }
 
   protected async removeChild(
@@ -761,6 +765,7 @@ export class BaseDocumentDriveServer
   protected async createDocument<TDocument extends PHDocument>(
     input: CreateDocumentInput<TDocument>,
     source: StrandUpdateSource,
+    preferredEditor?: string,
   ): Promise<TDocument> {
     // if a document was provided then checks if it's valid
     let state = undefined;
@@ -779,6 +784,12 @@ export class BaseDocumentDriveServer
         id: input.id,
         state,
       });
+
+    if (preferredEditor) {
+      const meta = document.meta ?? {};
+      meta.preferredEditor = preferredEditor;
+      document.meta = meta;
+    }
 
     // stores document information
     await this.documentStorage.create(document);
@@ -1344,7 +1355,7 @@ export class BaseDocumentDriveServer
   ): Promise<IOperationResult<DocumentDriveDocument>> {
     try {
       const jobId = await this.queueManager.addJob({
-        driveId: driveId,
+        documentId: driveId,
         actions,
         options,
       });
@@ -1446,7 +1457,7 @@ export class BaseDocumentDriveServer
 
       const syncUnits =
         await this.synchronizationManager.getSynchronizationUnits(
-          driveId,
+          undefined,
           [documentId],
           scopes,
           branches,
@@ -1474,12 +1485,14 @@ export class BaseDocumentDriveServer
       // update listener cache
       const operationSource = this.getOperationSource(source);
 
+      // TODO Decouple the operation processing from syncing it to the listeners?
+      // Listener manager should be the one keeping the sync status instead
       this.listenerManager
         .updateSynchronizationRevisions(
           syncUnits,
           source,
           () => {
-            this.synchronizationManager.updateSyncStatus(driveId, {
+            this.synchronizationManager.updateSyncStatus(documentId, {
               [operationSource]: "SYNCING",
             });
 
@@ -1494,7 +1507,7 @@ export class BaseDocumentDriveServer
         )
         .then((updates) => {
           if (updates.length) {
-            this.synchronizationManager.updateSyncStatus(driveId, {
+            this.synchronizationManager.updateSyncStatus(documentId, {
               [operationSource]: "SUCCESS",
             });
           }
@@ -1508,7 +1521,7 @@ export class BaseDocumentDriveServer
         .catch((error) => {
           this.logger.error("Non handled error updating sync revision", error);
           this.synchronizationManager.updateSyncStatus(
-            driveId,
+            documentId,
             {
               [operationSource]: "ERROR",
             },
@@ -1651,7 +1664,7 @@ export class BaseDocumentDriveServer
     }
     try {
       const jobId = await this.queueManager.addJob({
-        driveId: driveId,
+        documentId: driveId,
         operations,
         options,
       });
@@ -1714,7 +1727,6 @@ export class BaseDocumentDriveServer
       await this._addDriveOperations(driveId, async (documentStorage) => {
         const result = await this._processOperations(
           driveId,
-          undefined,
           documentStorage,
           operations.slice(),
         );
@@ -1735,6 +1747,7 @@ export class BaseDocumentDriveServer
         throw error ?? new Error("Invalid Document Drive document");
       }
 
+      this.cache.setDocument(driveId, document).catch(this.logger.error);
       this.cache.setDrive(driveId, document).catch(this.logger.error);
 
       // update listener cache
@@ -1767,7 +1780,6 @@ export class BaseDocumentDriveServer
 
         this.listenerManager
           .updateSynchronizationRevisions(
-            driveId,
             [
               {
                 documentId: driveId,
@@ -1865,32 +1877,29 @@ export class BaseDocumentDriveServer
   }
 
   async addAction(
-    driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.addActions(driveId, documentId, [action], options);
+    return this.addActions(documentId, [action], options);
   }
 
   async addActions(
-    driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.queueActions(driveId, documentId, actions, options);
+    return this.queueActions(documentId, actions, options);
   }
 
   private async processActions(
-    driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    const document = await this.getDocument(driveId, documentId);
+    const document = await this.getDocument(documentId);
     const operations = this._buildOperations(document, actions);
-    return this.processOperations(driveId, documentId, operations, options);
+    return this.processOperations(documentId, operations, options);
   }
 
   async addDriveAction(
@@ -1996,14 +2005,9 @@ export class BaseDocumentDriveServer
     let result: IOperationResult;
     if (strand.documentId) {
       try {
-        result = await this.queueOperations(
-          strand.driveId,
-          strand.documentId,
-          operations,
-          {
-            source,
-          },
-        );
+        result = await this.queueOperations(strand.documentId, operations, {
+          source,
+        });
       } catch (error) {
         this.logger.error("Error queueing operations", error);
         throw error;

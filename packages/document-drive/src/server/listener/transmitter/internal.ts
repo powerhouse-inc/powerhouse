@@ -65,13 +65,12 @@ export class InternalTransmitter implements ITransmitter {
         },
         checkHashes: false,
       };
-      const document = await (strand.documentId
-        ? this.drive.getDocument<TDocument>(
-            strand.driveId,
+      const document = await (strand.documentId === strand.driveId
+        ? this.drive.getDrive(strand.driveId, getDocumentOptions)
+        : this.drive.getDocument<TDocument>(
             strand.documentId,
             getDocumentOptions,
-          )
-        : this.drive.getDrive(strand.driveId, getDocumentOptions));
+          ));
 
       if (index < 0) {
         stateByIndex.set(index, document.initialState.state[strand.scope]);

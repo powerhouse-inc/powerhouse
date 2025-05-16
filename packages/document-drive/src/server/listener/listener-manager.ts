@@ -57,9 +57,11 @@ export class ListenerManager implements IListenerManager {
     // then triggers the listeners update
     if (typeof window !== "undefined") {
       window.addEventListener("online", () => {
-        this.triggerUpdate(false, { type: "local" }, handler).catch((error) => {
-          this.logger.error("Non handled error updating listeners", error);
-        });
+        this.triggerUpdate(false, { type: "local" }, undefined, handler).catch(
+          (error) => {
+            this.logger.error("Non handled error updating listeners", error);
+          },
+        );
       });
     }
   }
@@ -114,7 +116,10 @@ export class ListenerManager implements IListenerManager {
     parentId: string,
     syncUnits: SynchronizationUnitId[],
   ): Promise<void> {
-    const parent = this.syncUnitByParent(parentId);
+    const parent = this.syncUnitByParent.get(parentId) ?? [];
+    parent.push(...syncUnits);
+    this.syncUnitByParent.set(parentId, parent);
+    return Promise.resolve();
   }
 
   async removeSyncUnits(
@@ -153,9 +158,12 @@ export class ListenerManager implements IListenerManager {
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     forceSync = false,
   ) {
+    // TODO Do we need to check if listeners are outdated?
+    // This method is called when processing an operation.
+    // Should we decouple the operation processing from the sync?
     const driveListeners = this.listenerStateByDriveId.values();
     const outdatedListeners: Listener[] = [];
-    for (const [drive, [_, listenerState]] of driveListeners) {
+    for (const [_drive, [_, listenerState]] of driveListeners) {
       if (
         outdatedListeners.find(
           (l) => l.listenerId === listenerState.listener.listenerId,
@@ -184,11 +192,7 @@ export class ListenerManager implements IListenerManager {
       }
     }
 
-    if (outdatedListeners.length) {
-      willUpdate?.(outdatedListeners);
-      return this.triggerUpdate(forceSync, source, onError);
-    }
-    return [];
+    return this.triggerUpdate(forceSync, source, willUpdate, onError);
   }
 
   async updateListenerRevision(
@@ -231,6 +235,7 @@ export class ListenerManager implements IListenerManager {
 
   private async _triggerUpdate(
     source: StrandUpdateSource,
+    willUpdate?: (listeners: Listener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     maxContinues = 500,
   ) {
@@ -426,6 +431,7 @@ export class ListenerManager implements IListenerManager {
           } else {
             const updates = await this._triggerUpdate(
               source,
+              willUpdate,
               onError,
               maxContinues - 1,
             );

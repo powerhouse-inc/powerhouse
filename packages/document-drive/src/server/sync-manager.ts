@@ -95,6 +95,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
   ): Promise<SynchronizationUnitQuery[]> {
     const filter = {
       parentId: parentId ? [parentId] : undefined,
+      documentId: documentId,
       documentModelType: documentType,
       scope,
       branch,
@@ -109,47 +110,11 @@ export default class SynchronizationManager implements ISynchronizationManager {
       cursor = nextCursor;
     } while (cursor);
 
-    // checks if the parent synchronization units should be added
-    if (
-      parentId &&
-      (!documentId ||
-        documentId.includes("*") ||
-        documentId.includes("") ||
-        documentId.includes(parentId))
-    ) {
-      let parentCursor: string | undefined;
-      const parentUnits: IStorageUnit[] = [];
-      do {
-        const { units: newUnits, nextCursor } =
-          await this.documentStorage.findStorageUnitsBy(
-            { documentId: [parentId], scope, branch },
-            100,
-            cursor,
-          );
-        parentUnits.push(...newUnits);
-        parentCursor = nextCursor;
-      } while (parentCursor);
-
-      units.unshift(
-        ...parentUnits.filter(
-          (parentUnit) =>
-            (!documentType?.length ||
-              documentType.includes("*") ||
-              documentType.includes("") ||
-              documentType.includes(parentUnit.documentModelType)) &&
-            !units.find(
-              (unit) =>
-                unit.documentId === parentUnit.documentId &&
-                unit.scope === parentUnit.scope &&
-                unit.branch === parentUnit.branch,
-            ),
-        ),
-      );
-    }
-
-    return units.map(({ documentModelType: _, ...u }) => ({
-      ...u,
-    }));
+    return units.reduce(
+      (acc, { documentModelType: _, ...u }) =>
+        u.scope === "local" ? acc : acc.concat([u]),
+      new Array<SynchronizationUnitQuery>(),
+    );
   }
 
   async getSynchronizationUnit(
@@ -159,15 +124,19 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
     // TODO: REPLACE WITH GET DOCUMENT OPERATIONS
     const document = await this.getDocument(documentId);
+    if (!Object.keys(document.state).includes(scope)) {
+      return undefined;
+    }
+
     const operations = document.operations[scope as OperationScope] ?? [];
-    const lastOperation = operations[operations.length - 1];
+    const lastOperation = operations.at(-1);
 
     return {
       scope,
       branch,
       documentId,
-      lastUpdated: lastOperation.timestamp ?? document.lastModified,
-      revision: lastOperation.index ?? 0,
+      lastUpdated: lastOperation?.timestamp ?? document.lastModified,
+      revision: lastOperation ? lastOperation.index + 1 : 0,
     };
   }
 

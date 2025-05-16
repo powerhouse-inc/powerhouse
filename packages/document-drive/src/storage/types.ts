@@ -18,10 +18,46 @@ export type IStorageUnit = {
   branch: string;
 };
 
+export type IStorageUnitFilter = {
+  /** The ids of the parent documents. If '*' then select all. */
+  parentId?: string[];
+  /** The ids of the documents. If '*' then select all. */
+  documentId?: string[];
+  /** The types of the document models. If '*' then select all. */
+  documentModelType?: string[];
+  /** The scopes of the documents. If '*' then select all. */
+  scope?: string[];
+  /** The branches of the documents. If '*' then select all. */
+  branch?: string[];
+};
+
+// values either have a set of values or null if there are no restrictions
+export type ResolvedStorageUnitFilter = Required<{
+  [K in keyof IStorageUnitFilter]: Set<string> | null;
+}>;
+
+export interface IStorageUnitStorage {
+  /**
+   * Finds storage units based on the provided filter.
+   *
+   * @param filter - The filter to apply.
+   * @param limit - The maximum number of documents to return.
+   * @param cursor - The cursor to start the search from.
+   */
+  findStorageUnitsBy: (
+    filter: IStorageUnitFilter,
+    limit: number,
+    cursor?: string,
+  ) => Promise<{
+    units: IStorageUnit[];
+    nextCursor?: string;
+  }>;
+}
+
 /**
  * Describes the storage interface for documents.
  */
-export interface IDocumentStorage {
+export interface IDocumentStorage extends IStorageUnitStorage {
   /**
    * Returns true if and only if the document exists.
    *
@@ -72,33 +108,6 @@ export interface IDocumentStorage {
   ): Promise<{
     documents: string[];
     nextCursor: string | undefined;
-  }>;
-
-  /**
-   * Finds storage units based on the provided filter.
-   *
-   * @param filter - The filter to apply.
-   * @param limit - The maximum number of documents to return.
-   * @param cursor - The cursor to start the search from.
-   */
-  findStorageUnitsBy: (
-    filter: {
-      /** The ids of the parent documents. If '*' then select all. */
-      parentId?: string[];
-      /** The ids of the documents. If '*' then select all. */
-      documentId?: string[];
-      /** The types of the document models. If '*' then select all. */
-      documentModelType?: string[];
-      /** The scopes of the documents. If '*' then select all. */
-      scope?: string[];
-      /** The branches of the documents. If '*' then select all. */
-      branch?: string[];
-    },
-    limit: number,
-    cursor?: string,
-  ) => Promise<{
-    units: IStorageUnit[];
-    nextCursor?: string;
   }>;
 
   /**

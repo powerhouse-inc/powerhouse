@@ -123,26 +123,27 @@ export class EventQueueManager implements IQueueManager {
     if (jobActions.find((j) => j.scope !== scope)) {
       throw new Error("Job has actions with different scopes");
     }
-    const queue = this.getQueue(job.documentId ?? job.driveId, scope);
+    const queue = this.getQueue(job.documentId, scope);
 
     // checks if the job is for a document:scope that has been deleted
     if (await queue.isDeleted()) {
       throw new Error("Document queue is deleted");
     }
 
+    // TODO we no longer need to await ADD_FILE operations
     // checks if the job is for a document that doesn't exist in storage yet
-    const { documentId } = job;
-    const newDocument = documentId && !(await this.delegate.exists(documentId));
+    // const { documentId } = job;
+    // const newDocument = documentId && !(await this.delegate.exists(documentId));
 
-    // if it is a new document and queue is not yet blocked then
-    // blocks it so the jobs are not processed until it's ready
-    if (newDocument) {
-      // checks if there any job in the queue adding the file and adds as dependency
-      const addFileJob = await this.getAddFileJob(job.driveId, documentId);
-      if (addFileJob) {
-        await queue.addDependency(addFileJob);
-      }
-    }
+    // // if it is a new document and queue is not yet blocked then
+    // // blocks it so the jobs are not processed until it's ready
+    // if (newDocument) {
+    //   // checks if there any job in the queue adding the file and adds as dependency
+    //   const addFileJob = await this.getAddFileJob(job.driveId, documentId);
+    //   if (addFileJob) {
+    //     await queue.addDependency(addFileJob);
+    //   }
+    // }
 
     // TODO is this needed?
     // if it has ADD_FILE operations then adds the job as
@@ -159,7 +160,7 @@ export class EventQueueManager implements IQueueManager {
     await queue.addJob(jobValue);
     this.globalQueue.push({
       jobId,
-      documentId: job.documentId ?? job.driveId,
+      documentId: job.documentId,
       scope,
       timestamp: new Date().toUTCString(),
     });
@@ -233,30 +234,31 @@ export class EventQueueManager implements IQueueManager {
   }
 
   protected async handleJobSignal(job: IJob<Job>, s: SignalResult) {
-    switch (s.signal.type) {
-      case "CREATE_CHILD_DOCUMENT": {
-        const id =
-          typeof s.result !== "boolean" ? s.result.id : s.signal.input.newId;
-        const docQueues = this.getDocumentQueues(id);
-        if (docQueues) {
-          await Promise.all(
-            docQueues
-              .values()
-              .map(async (queue) => queue.removeDependency(job)),
-          );
-        }
-        break;
-      }
-      case "DELETE_CHILD_DOCUMENT": {
-        const docQueues = this.getDocumentQueues(s.signal.input.id);
-        if (docQueues) {
-          await Promise.all(
-            docQueues.values().map((queue) => queue.setDeleted(true)),
-          );
-        }
-        break;
-      }
-    }
+    // TODO we no longer have queue dependency
+    // switch (s.signal.type) {
+    //   case "CREATE_CHILD_DOCUMENT": {
+    //     const id =
+    //       typeof s.result !== "boolean" ? s.result.id : s.signal.input.newId;
+    //     const docQueues = this.getDocumentQueues(id);
+    //     if (docQueues) {
+    //       await Promise.all(
+    //         docQueues
+    //           .values()
+    //           .map(async (queue) => queue.removeDependency(job)),
+    //       );
+    //     }
+    //     break;
+    //   }
+    //   case "DELETE_CHILD_DOCUMENT": {
+    //     const docQueues = this.getDocumentQueues(s.signal.input.id);
+    //     if (docQueues) {
+    //       await Promise.all(
+    //         docQueues.values().map((queue) => queue.setDeleted(true)),
+    //       );
+    //     }
+    //     break;
+    //   }
+    // }
   }
 
   protected async getAddFileJob(driveId: string, documentId: string) {
