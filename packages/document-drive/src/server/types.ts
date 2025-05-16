@@ -63,6 +63,13 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
   expectedDriveInfo?: DriveInfo;
   accessLevel?: RemoteDriveAccessLevel;
 };
+
+export type CreateDocumentInput<TDocument extends PHDocument> = {
+  id: string;
+  documentType: string;
+  document?: TDocument;
+};
+
 export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
   status: UpdateStatus;
   error?: OperationError;
@@ -351,85 +358,102 @@ export interface IBaseDocumentDriveServer {
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
   getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]>;
 
-  getDocuments(driveId: string): Promise<string[]>;
+  addDocument<TDocument extends PHDocument>(
+    input: CreateDocumentInput<TDocument>,
+    preferredEditor?: string,
+  ): Promise<TDocument>;
+  deleteDocument(documentId: string): Promise<void>;
+
+  getDocuments(parentId: string): Promise<string[]>;
   getDocument<TDocument extends PHDocument>(
-    driveId: string,
     documentId: string,
     options?: GetDocumentOptions,
   ): Promise<TDocument>;
 
   addOperation(
-    driveId: string,
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   addOperations(
-    driveId: string,
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueOperation(
-    driveId: string,
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueOperations(
-    driveId: string,
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueAction(
-    driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueActions(
-    driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use the {@link addOperation} method instead.
+   */
   addDriveOperation(
     driveId: string,
     operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
+  /**
+   * @deprecated Use the {@link addOperations} method instead.
+   */
   addDriveOperations(
     driveId: string,
     operations: Operation<DocumentDriveAction>[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
+  /**
+   * @deprecated Use the {@link queueOperation} method instead.
+   */
   queueDriveOperation(
     driveId: string,
     operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
+  /**
+   * @deprecated Use the {@link queueOperations} method instead.
+   */
   queueDriveOperations(
     driveId: string,
     operations: Operation<DocumentDriveAction>[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
+  /**
+   * @deprecated Use the {@link queueAction} method instead.
+   */
   queueDriveAction(
     driveId: string,
     action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use the {@link queueActions} method instead.
+   */
   queueDriveActions(
     driveId: string,
     actions: DocumentDriveAction[],
@@ -437,23 +461,28 @@ export interface IBaseDocumentDriveServer {
   ): Promise<IOperationResult>;
 
   addAction(
-    driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
   addActions(
-    driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use the {@link addAction} method instead.
+   */
   addDriveAction(
     driveId: string,
     action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
+
+  /**
+   * @deprecated Use the {@link addActions} method instead.
+   */
   addDriveActions(
     driveId: string,
     actions: DocumentDriveAction[],
@@ -496,7 +525,6 @@ export interface IListenerManager {
     options?: GetStrandsOptions,
   ): Promise<StrandUpdate[]>;
   updateSynchronizationRevisions(
-    driveId: string,
     syncUnits: SynchronizationUnit[],
     source: StrandUpdateSource,
     willUpdate?: (listeners: Listener[]) => void,
@@ -510,8 +538,12 @@ export interface IListenerManager {
     listenerRev: number,
   ): Promise<void>;
 
+  addSyncUnits(
+    parentId: string,
+    syncUnits: SynchronizationUnitId[],
+  ): Promise<void>;
   removeSyncUnits(
-    driveId: string,
+    parentId: string,
     syncUnits: SynchronizationUnitId[],
   ): Promise<void>;
 }
@@ -563,7 +595,7 @@ export interface IEventEmitter {
 export interface ISynchronizationManager {
   setDocumentModelModules(arg0: DocumentModelModule[]): void;
   getSynchronizationUnits(
-    parentId: string,
+    parentId?: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],
@@ -571,7 +603,7 @@ export interface ISynchronizationManager {
   ): Promise<SynchronizationUnit[]>;
 
   getSynchronizationUnitsIds(
-    parentId: string,
+    parentId?: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],

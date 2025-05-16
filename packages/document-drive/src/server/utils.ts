@@ -4,7 +4,11 @@ import type {
   OperationScope,
   PHDocument,
 } from "document-model";
-import { type RevisionsFilter, type StrandUpdate } from "./types.js";
+import {
+  type RevisionsFilter,
+  type StrandUpdate,
+  type SynchronizationUnitId,
+} from "./types.js";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],
@@ -83,5 +87,16 @@ export function isAfterRevision(
       }
       return operation && operation.index > revision;
     })
+  );
+}
+
+export function compareSyncUnits(
+  a: SynchronizationUnitId,
+  b: SynchronizationUnitId,
+) {
+  return (
+    a.documentId === b.documentId &&
+    a.scope === b.scope &&
+    a.branch === b.branch
   );
 }

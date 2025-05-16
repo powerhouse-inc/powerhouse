@@ -163,13 +163,11 @@ export interface IDocumentAdminStorage extends IDocumentStorage {
  */
 export interface IDocumentOperationStorage {
   addDocumentOperations<TDocument extends PHDocument>(
-    drive: string,
     id: string,
     operations: OperationFromDocument<TDocument>[],
     header: DocumentHeader,
   ): Promise<void>;
   addDocumentOperationsWithTransaction?<TDocument extends PHDocument>(
-    drive: string,
     id: string,
     callback: (document: TDocument) => Promise<{
       operations: OperationFromDocument<TDocument>[];
@@ -177,7 +175,6 @@ export interface IDocumentOperationStorage {
     }>,
   ): Promise<void>;
   getOperationResultingState?(
-    drive: string,
     id: string,
     index: number,
     scope: string,

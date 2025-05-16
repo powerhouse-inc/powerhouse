@@ -16,6 +16,7 @@ import {
   type SynchronizationUnit,
   type SynchronizationUnitId,
 } from "#server/types";
+import { compareSyncUnits } from "#server/utils";
 import { childLogger, type ListenerFilter } from "document-drive";
 import { type OperationScope } from "document-model";
 import { debounce } from "./util.js";
@@ -36,6 +37,8 @@ export class ListenerManager implements IListenerManager {
     string,
     Map<string, ListenerState>
   >();
+  // parentId -> sync unit ids
+  protected syncUnitByParent = new Map<string, SynchronizationUnitId[]>();
 
   constructor(
     syncManager: ISynchronizationManager,
@@ -107,11 +110,31 @@ export class ListenerManager implements IListenerManager {
     return Promise.resolve(driveMap.delete(listenerId));
   }
 
-  async removeSyncUnits(
-    driveId: string,
+  async addSyncUnits(
+    parentId: string,
     syncUnits: SynchronizationUnitId[],
   ): Promise<void> {
-    const listeners = this.listenerStateByDriveId.get(driveId);
+    const parent = this.syncUnitByParent(parentId);
+  }
+
+  async removeSyncUnits(
+    parentId: string,
+    syncUnits: SynchronizationUnitId[],
+  ): Promise<void> {
+    // delete sync units from parent map
+    for (const syncUnit of syncUnits) {
+      const parents = this.syncUnitByParent.get(parentId);
+      if (!parents) {
+        continue;
+      }
+      const index = parents.findIndex((s) => compareSyncUnits(s, syncUnit));
+      if (index > -1) {
+        parents.splice(index, 1);
+      }
+    }
+
+    // delete sync unit state from listeners
+    const listeners = this.listenerStateByDriveId.get(parentId);
     if (!listeners) {
       return;
     }
@@ -124,20 +147,15 @@ export class ListenerManager implements IListenerManager {
   }
 
   async updateSynchronizationRevisions(
-    driveId: string,
     syncUnits: SynchronizationUnit[],
     source: StrandUpdateSource,
     willUpdate?: (listeners: Listener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     forceSync = false,
   ) {
-    const listenerIdToListenerState = this.listenerStateByDriveId.get(driveId);
-    if (!listenerIdToListenerState) {
-      return [];
-    }
-
+    const driveListeners = this.listenerStateByDriveId.values();
     const outdatedListeners: Listener[] = [];
-    for (const [, listenerState] of listenerIdToListenerState) {
+    for (const [drive, [_, listenerState]] of driveListeners) {
       if (
         outdatedListeners.find(
           (l) => l.listenerId === listenerState.listener.listenerId,
@@ -152,7 +170,7 @@ export class ListenerManager implements IListenerManager {
       }
 
       for (const syncUnit of syncUnits) {
-        // TODO how to check document type? (This probably shound)
+        // TODO how to check document type?
         if (!this._checkFilter(listenerState.listener.filter, syncUnit)) {
           continue;
         }

@@ -3,7 +3,7 @@ import type { Action, Operation, OperationScope } from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {
-  driveId: string;
+  driveId?: string;
   documentId?: string;
   actions?: Action[];
   options?: AddOperationOptions;

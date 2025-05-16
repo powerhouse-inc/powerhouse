@@ -87,14 +87,14 @@ export default class SynchronizationManager implements ISynchronizationManager {
   }
 
   async getSynchronizationUnitsIds(
-    driveId: string,
+    parentId?: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],
     documentType?: string[],
   ): Promise<SynchronizationUnitQuery[]> {
     const filter = {
-      parentId: [driveId],
+      parentId: parentId ? [parentId] : undefined,
       documentModelType: documentType,
       scope,
       branch,
@@ -109,28 +109,46 @@ export default class SynchronizationManager implements ISynchronizationManager {
       cursor = nextCursor;
     } while (cursor);
 
-    // checks if document drive synchronization unit should be added
+    // checks if the parent synchronization units should be added
     if (
-      (!documentId || documentId.includes("*") || documentId.includes("")) &&
-      (!documentType?.length ||
-        documentType.includes("powerhouse/document-drive") ||
-        documentType.includes("*"))
+      parentId &&
+      (!documentId ||
+        documentId.includes("*") ||
+        documentId.includes("") ||
+        documentId.includes(parentId))
     ) {
-      const driveUnits = await this.documentStorage.findStorageUnitsBy(
-        {
-          documentId: [driveId],
-          scope,
-          branch,
-        },
-        100,
+      let parentCursor: string | undefined;
+      const parentUnits: IStorageUnit[] = [];
+      do {
+        const { units: newUnits, nextCursor } =
+          await this.documentStorage.findStorageUnitsBy(
+            { documentId: [parentId], scope, branch },
+            100,
+            cursor,
+          );
+        parentUnits.push(...newUnits);
+        parentCursor = nextCursor;
+      } while (parentCursor);
+
+      units.unshift(
+        ...parentUnits.filter(
+          (parentUnit) =>
+            (!documentType?.length ||
+              documentType.includes("*") ||
+              documentType.includes("") ||
+              documentType.includes(parentUnit.documentModelType)) &&
+            !units.find(
+              (unit) =>
+                unit.documentId === parentUnit.documentId &&
+                unit.scope === parentUnit.scope &&
+                unit.branch === parentUnit.branch,
+            ),
+        ),
       );
-      // TODO exhaust cursor
-      units.unshift(...driveUnits.units);
     }
-    return units.map(({ documentModelType, ...u }) => ({
+
+    return units.map(({ documentModelType: _, ...u }) => ({
       ...u,
-      documentType: documentModelType,
-      syncId: `${u.documentId}:${u.scope}:${u.branch}`,
     }));
   }
 
