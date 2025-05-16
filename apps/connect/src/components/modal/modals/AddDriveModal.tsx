@@ -1,5 +1,5 @@
 import { useConnectCrypto } from '#hooks';
-import { useApps } from '#store';
+import { useApps, useUser } from '#store';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
@@ -15,7 +15,7 @@ type Props = {
 
 export function AddDriveModal(props: Props) {
     const { open, onAddLocalDrive, onAddRemoteDrive, onClose } = props;
-
+    const user = useUser();
     const apps = useApps();
     const { getBearerToken } = useConnectCrypto();
 
@@ -35,10 +35,22 @@ export function AddDriveModal(props: Props) {
             onAddLocalDrive={onAddLocalDriveSubmit}
             onAddRemoteDrive={onAddRemoteDriveSubmit}
             requestPublicDrive={async (url: string) => {
-                const authToken = await getBearerToken(url);
-                return requestPublicDrive(url, {
-                    Authorization: `Bearer ${authToken}`,
-                });
+                try {
+                    const authToken = await getBearerToken(url, user?.address);
+                    return requestPublicDrive(url, {
+                        Authorization: `Bearer ${authToken}`,
+                    });
+                } catch (error) {
+                    console.error(error);
+                    const authToken = await getBearerToken(
+                        url,
+                        user?.address,
+                        true,
+                    );
+                    return requestPublicDrive(url, {
+                        Authorization: `Bearer ${authToken}`,
+                    });
+                }
             }}
             onOpenChange={status => {
                 if (!status) return onClose();

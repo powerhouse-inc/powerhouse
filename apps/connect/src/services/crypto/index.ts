@@ -39,7 +39,11 @@ export interface IConnectCrypto {
     regenerateDid(): Promise<void>;
     sign: (data: Uint8Array) => Promise<Uint8Array>;
     getIssuer: () => Promise<Issuer>;
-    getBearerToken: (driveUrl: string) => Promise<string>;
+    getBearerToken: (
+        driveUrl: string,
+        address: string | undefined,
+        refresh?: boolean,
+    ) => Promise<string>;
 }
 
 export type DID = `did:key:${string}`;
@@ -50,6 +54,7 @@ export class ConnectCrypto implements IConnectCrypto {
     #keyPairStorage: JsonWebKeyPairStorage;
 
     #did: Promise<DID>;
+    #bearerToken: string | undefined;
 
     static algorithm: EcKeyAlgorithm = {
         name: 'ECDSA',
@@ -105,16 +110,22 @@ export class ConnectCrypto implements IConnectCrypto {
         return did;
     }
 
-    async getBearerToken(driveUrl: string) {
+    async getBearerToken(
+        driveUrl: string,
+        address: string | undefined,
+        refresh = false,
+    ) {
         const issuer = await this.getIssuer();
-        const token = await createAuthBearerToken(
-            Number(RENOWN_CHAIN_ID),
-            RENOWN_NETWORK_ID,
-            await this.#did,
-            issuer,
-        );
-        console.log('token', token);
-        return token;
+        if (refresh || !this.#bearerToken) {
+            this.#bearerToken = await createAuthBearerToken(
+                Number(RENOWN_CHAIN_ID),
+                RENOWN_NETWORK_ID,
+                address || (await this.#did),
+                issuer,
+            );
+        }
+
+        return this.#bearerToken;
     }
 
     did() {

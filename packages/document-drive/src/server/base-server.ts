@@ -170,7 +170,6 @@ export class BaseDocumentDriveServer
     eventEmitter: IEventEmitter,
     synchronizationManager: ISynchronizationManager,
     listenerManager: IListenerManager,
-
     options?: DocumentDriveServerOptions,
   ) {
     this.documentModelModules = documentModelModules;
@@ -191,6 +190,10 @@ export class BaseDocumentDriveServer
         ...DefaultListenerManagerOptions,
         ...options?.listenerManager,
       },
+      jwtHandler:
+        options?.jwtHandler === undefined
+          ? () => Promise.resolve("")
+          : options.jwtHandler,
       taskQueueMethod:
         options?.taskQueueMethod === undefined
           ? RunAsap.runAsap

@@ -43,7 +43,6 @@ export const startSwitchboard = async (
   options: StartServerOptions = {},
 ): Promise<SwitchboardReactor> => {
   const serverPort = options.port ?? DEFAULT_PORT;
-  console.log(options);
 
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
     try {

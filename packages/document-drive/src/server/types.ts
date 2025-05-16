@@ -311,6 +311,11 @@ export type DocumentDriveServerOptions = {
    */
   taskQueueMethod?: RunAsap.RunAsap<unknown> | null;
   listenerManager?: ListenerManagerOptions;
+  jwtHandler?: (
+    driveUrl: string,
+    address: string | undefined,
+    refresh?: boolean,
+  ) => Promise<string>;
 };
 
 export type GetStrandsOptions = {
