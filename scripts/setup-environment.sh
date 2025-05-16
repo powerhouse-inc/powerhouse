@@ -256,7 +256,7 @@ fi
 
 cd $HOME/.ph
 pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
-pnpm add @powerhousedao/switchboard
+pnpm add @powerhousedao/switchboard@dev
 
 # Start services with PM2
 echo "Starting services with PM2..."
