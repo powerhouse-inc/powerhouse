@@ -335,8 +335,8 @@ export class DriveSubgraph extends Subgraph {
           filter,
         );
 
-        const isAdmin = ctx.user?.address && ctx.isAdmin?.(ctx.user.address);
-        const isUser = ctx.user?.address && ctx.isUser?.(ctx.user.address);
+        const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+        const isUser = ctx.isUser?.(ctx.user?.address ?? "");
         if (!isAdmin && !isUser) {
           throw new GraphQLError("Forbidden");
         }

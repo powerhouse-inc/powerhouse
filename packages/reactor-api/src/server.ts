@@ -130,8 +130,7 @@ async function setupGraphQLManager(
   }
 
   await graphqlManager.updateRouter();
-
-  if (auth) {
+  if (auth?.enabled) {
     graphqlManager.setAdditionalContextFields({
       isGuest: (address: string) =>
         auth.enabled && auth.guests.includes(address),
@@ -141,9 +140,9 @@ async function setupGraphQLManager(
     });
   } else {
     graphqlManager.setAdditionalContextFields({
-      isGuest: () => true,
-      isUser: () => true,
-      isAdmin: () => true,
+      isGuest: (address: string) => true,
+      isUser: (address: string) => true,
+      isAdmin: (address: string) => true,
     });
   }
   return graphqlManager;
