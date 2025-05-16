@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 interface Config {
   auth: {
     enabled: boolean;
