@@ -529,6 +529,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
+    manager?: IListenerManager,
   ): Promise<boolean> {
     staticLogger().verbose(
       `executePull(driveId: ${driveId}), trigger:`,
@@ -549,6 +550,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         driveId,
         url,
         listenerId,
+        undefined,
+        manager,
       );
     } catch (e) {
       error = e as Error;
@@ -576,6 +579,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
               driveId,
               url,
               listenerId,
+              undefined,
+              manager,
             );
 
             staticLogger().verbose(
@@ -705,6 +710,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           const { error, ...rest } = revision;
           return rest;
         }),
+        manager,
       );
 
       success = true;
@@ -751,6 +757,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
+    manager?: IListenerManager,
   ): CancelPullLoop {
     staticLogger().verbose(
       `[SYNC DEBUG] PullResponderTransmitter.setupPull initiated for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
@@ -795,6 +802,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             onError,
             onRevisions,
             onAcknowledge,
+            manager,
           );
 
           if (hasMore) {
@@ -836,6 +844,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     driveId: string,
     url: string,
     options: Pick<RemoteDriveOptions, "pullInterval" | "pullFilter">,
+    listenerManager: IListenerManager,
   ): Promise<PullResponderTrigger> {
     staticLogger().verbose(
       `createPullResponderTrigger(drive: ${driveId}, url: ${url})`,
@@ -853,6 +862,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       driveId,
       url,
       filter,
+      undefined,
+      listenerManager,
     );
 
     const pullTrigger: PullResponderTrigger = {

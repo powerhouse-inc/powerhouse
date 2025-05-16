@@ -3,6 +3,7 @@ import {
   type FileNode,
   type FolderNode,
 } from "#drive-document-model/gen/types";
+import { type IBaseDocumentDriveServer } from "#server/types";
 import { pascalCase } from "change-case";
 import {
   type DocumentModelModule,
@@ -143,6 +144,17 @@ export function generateDocumentStateQueryFields(
 
   const queryFields = getFields(stateQuery.type, prefix);
   return queryFields;
+}
+
+export async function requestPublicDriveWithTokenFromReactor(
+  url: string,
+  server: IBaseDocumentDriveServer,
+): Promise<DriveInfo> {
+  const token = await server.generateJwtHandler?.(url);
+  const headers: Record<string, string> = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+  return requestPublicDrive(url, headers);
 }
 
 export async function requestPublicDrive(

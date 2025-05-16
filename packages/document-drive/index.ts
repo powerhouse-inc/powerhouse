@@ -84,7 +84,10 @@ export type {
   SyncStatus,
 } from "#server/types";
 export { MemoryStorage } from "#storage/memory";
-export { requestPublicDrive } from "#utils/graphql";
+export {
+  requestPublicDrive,
+  requestPublicDriveWithTokenFromReactor,
+} from "#utils/graphql";
 export {
   childLogger,
   logger,
