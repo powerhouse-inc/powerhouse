@@ -1,6 +1,8 @@
 import { type Command } from "commander";
+import { connectHelp } from "../help.js";
 import { type ConnectOptions } from "../services/connect.js";
 import { type CommandActionType } from "../types.js";
+import { setCustomHelp } from "../utils.js";
 
 async function startConnect(options: ConnectOptions) {
   const Connect = await import("../services/connect.js");
@@ -16,7 +18,7 @@ export const connect: CommandActionType<
 };
 
 export function connectCommand(program: Command) {
-  program
+  const cmd = program
     .command("connect")
     .description("Starts Connect Studio")
     .option("-p, --port <port>", "Port to run the server on", "3000")
@@ -26,25 +28,19 @@ export function connectCommand(program: Command) {
     .option(
       "--config-file <configFile>",
       "Path to the powerhouse.config.js file",
-    )
-    .option(
-      "-le, --local-editors <localEditors>",
-      "Link local document editors path",
-    )
-    .option(
-      "-ld, --local-documents <localDocuments>",
-      "Link local documents path",
-    )
-    .action(async (...args: [ConnectOptions]) => {
-      await connect(...args);
-    });
+    );
+
+  // Use the setCustomHelp utility to apply custom help formatting
+  setCustomHelp(cmd, connectHelp);
+
+  cmd.action(async (...args: [ConnectOptions]) => {
+    await connect(...args);
+  });
 }
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg
-    ? (JSON.parse(optionsArg) as ConnectOptions)
-    : {};
+  const options = optionsArg ? (JSON.parse(optionsArg) as ConnectOptions) : {};
   startConnect(options).catch((e: unknown) => {
     throw e;
   });

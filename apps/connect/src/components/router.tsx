@@ -6,8 +6,8 @@ import {
     createBrowserRouter,
     createMemoryRouter,
 } from 'react-router-dom';
-import { AtlasImport } from './demo/atlas-import.js';
 import { Home } from '../pages/home.js';
+import { AtlasImport } from './demo/atlas-import.js';
 import Root from './root.js';
 
 const Content = React.lazy(() => import('../pages/content.js'));
@@ -24,8 +24,27 @@ async function createRouter(routes: RouteObject[]) {
     });
 }
 
-const RouterAsync = async () => {
-    const router = await createRouter([
+function createRoutes() {
+    const routes: RouteObject[] = [
+        {
+            path: '/',
+            element: <Home />,
+        },
+        {
+            path: 'd?/:driveId?/*?',
+            element: (
+                <Suspense>
+                    <Content />
+                </Suspense>
+            ),
+        },
+        {
+            path: 'import/:documentId',
+            element: <AtlasImport />,
+        },
+    ];
+
+    return [
         {
             path: '/',
             element: (
@@ -33,24 +52,7 @@ const RouterAsync = async () => {
                     <Root />
                 </Suspense>
             ),
-            children: [
-                {
-                    path: '/',
-                    element: <Home />,
-                },
-                {
-                    path: 'd?/:driveId?/*?',
-                    element: (
-                        <Suspense>
-                            <Content />
-                        </Suspense>
-                    ),
-                },
-                {
-                    path: 'import/:documentId',
-                    element: <AtlasImport />,
-                },
-            ],
+            children: routes,
         },
         {
             element: (
@@ -59,7 +61,13 @@ const RouterAsync = async () => {
                 </Suspense>
             ),
         },
-    ]);
+    ];
+}
+
+const routes = createRoutes();
+
+const RouterAsync = async () => {
+    const router = await createRouter(routes);
 
     const Router = () => <RouterProvider router={router} />;
     return Router;

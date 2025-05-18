@@ -25,6 +25,34 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean };
   Int: { input: number; output: number };
   Float: { input: number; output: number };
+  Amount: {
+    input: { unit?: string; value?: number };
+    output: { unit?: string; value?: number };
+  };
+  Amount_Crypto: {
+    input: { unit: string; value: number };
+    output: { unit: string; value: number };
+  };
+  Amount_Currency: {
+    input: { unit: string; value: number };
+    output: { unit: string; value: number };
+  };
+  Amount_Fiat: {
+    input: { unit: string; value: number };
+    output: { unit: string; value: number };
+  };
+  Amount_Money: { input: number; output: number };
+  Amount_Percentage: { input: number; output: number };
+  Amount_Tokens: { input: number; output: number };
+  Currency: { input: string; output: string };
+  Date: { input: string; output: string };
+  DateTime: { input: string; output: string };
+  EmailAddress: { input: string; output: string };
+  EthereumAddress: { input: string; output: string };
+  OID: { input: string; output: string };
+  OLabel: { input: string; output: string };
+  PHID: { input: string; output: string };
+  URL: { input: string; output: string };
   Unknown: { input: unknown; output: unknown };
 };
 
@@ -72,10 +100,8 @@ export type DocumentDriveLocalState = {
 
 export type DocumentDriveState = {
   icon: Maybe<Scalars["String"]["output"]>;
-  id: Scalars["ID"]["output"];
   name: Scalars["String"]["output"];
   nodes: Array<Node>;
-  slug: Maybe<Scalars["String"]["output"]>;
 };
 
 export type FileNode = {

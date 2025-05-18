@@ -14,9 +14,6 @@
       "path": "./packages/document-model"
     },
     {
-      "path": "./packages/scalars"
-    },
-    {
       "path": "./packages/reactor-browser"
     },
     {
@@ -36,9 +33,6 @@
     },
     {
       "path": "./clis/ph-cmd"
-    },
-    {
-      "path": "./tools/scalar-generator"
     },
     {
       "path": "./packages/builder-tools"

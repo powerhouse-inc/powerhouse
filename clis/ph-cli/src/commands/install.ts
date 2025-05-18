@@ -2,12 +2,14 @@ import { type Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 
+import { installHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   type PackageManager,
   packageManagers,
+  setCustomHelp,
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,
 } from "../utils.js";
@@ -18,10 +20,14 @@ export function installDependency(
   projectPath: string,
   workspace?: boolean,
 ) {
-  if (!fs.existsSync(projectPath)) {
-    throw new Error(`Project path not found: ${projectPath}`);
-  }
+  return buildInstallCommand(packageManager, dependencies, workspace);
+}
 
+export function buildInstallCommand(
+  packageManager: PackageManager,
+  dependencies: string[],
+  workspace?: boolean,
+): string {
   const manager = packageManagers[packageManager];
 
   let installCommand = manager.installCommand.replace(
@@ -33,12 +39,7 @@ export function installDependency(
     installCommand += ` ${manager.workspaceOption}`;
   }
 
-  const commandOptions = { cwd: projectPath };
-
-  execSync(installCommand, {
-    stdio: "inherit",
-    ...commandOptions,
-  });
+  return installCommand;
 }
 
 export const install: CommandActionType<
@@ -54,6 +55,35 @@ export const install: CommandActionType<
 > = (dependencies, options) => {
   if (options.debug) {
     console.log(">>> command arguments", { dependencies, options });
+  }
+
+  if (!dependencies || dependencies.length === 0) {
+    throw new Error("❌ Dependency name is required");
+  }
+
+  // Parse package names to extract version/tag
+  const parsedDependencies = dependencies.map((dep) => {
+    const parts = dep.split("@");
+    let packageName = dep;
+    let version = undefined;
+
+    if (parts.length > 1 && !dep.startsWith("@")) {
+      packageName = parts.slice(0, parts.length - 1).join("@");
+      version = parts[parts.length - 1];
+    } else if (parts.length > 2 && dep.startsWith("@")) {
+      packageName = `@${parts[1]}`;
+      version = parts[2];
+    }
+
+    return {
+      name: packageName,
+      version: version,
+      full: dep,
+    };
+  });
+
+  if (options.debug) {
+    console.log(">>> parsedDependencies", parsedDependencies);
   }
 
   if (!dependencies || dependencies.length === 0) {
@@ -90,12 +120,20 @@ export const install: CommandActionType<
 
   try {
     console.log("installing dependencies 📦 ...");
-    installDependency(
+    if (!fs.existsSync(projectInfo.path)) {
+      throw new Error(`Project path not found: ${projectInfo.path}`);
+    }
+    const installCommand = installDependency(
       packageManager as PackageManager,
-      dependencies,
+      parsedDependencies.map((dep) => dep.full),
       projectInfo.path,
       options.workspace,
     );
+    const commandOptions = { cwd: projectInfo.path };
+    execSync(installCommand, {
+      stdio: "inherit",
+      ...commandOptions,
+    });
     console.log("Dependency installed successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to install dependencies");
@@ -110,7 +148,7 @@ export const install: CommandActionType<
 
   try {
     console.log("⚙️ Updating powerhouse config file...");
-    updateConfigFile(dependencies, projectInfo.path, "install");
+    updateConfigFile(parsedDependencies, projectInfo.path, "install");
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");
@@ -119,7 +157,7 @@ export const install: CommandActionType<
 };
 
 export function installCommand(program: Command) {
-  program
+  const command = program
     .command("install")
     .alias("add")
     .alias("i")
@@ -136,4 +174,6 @@ export function installCommand(program: Command) {
       "force package manager to use",
     )
     .action(install);
+
+  setCustomHelp(command, installHelp);
 }

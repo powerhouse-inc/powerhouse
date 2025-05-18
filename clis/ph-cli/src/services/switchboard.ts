@@ -1,99 +1,39 @@
-import { generateFromFile } from "@powerhousedao/codegen";
+import { getConfig } from "@powerhousedao/config/utils";
 import {
-  getConfig,
-  type PowerhouseConfig,
-} from "@powerhousedao/config/powerhouse";
-import {
-  DefaultStartServerOptions,
-  type LocalReactor,
-  startServer,
   type StartServerOptions,
-} from "@powerhousedao/reactor-local";
-import { IReceiver } from "document-drive";
-import { InternalTransmitter, InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { Listener } from "document-drive/server/types";
-import { DocumentModelDocument } from "document-model";
+  startSwitchboard as startSwitchboardServer,
+} from "@powerhousedao/switchboard/server";
+import path from "node:path";
 
-export type SwitchboardOptions = StartServerOptions & {
-  configFile?: string;
-  generate?: boolean;
-  watch?: boolean;
-  dbPath?: string;
+const defaultSwitchboardOptions: Partial<StartServerOptions> = {
+  port: 4001,
+  dbPath: path.join(process.cwd(), ".ph/read-model.db"),
+  drive: {
+    id: "powerhouse",
+    slug: "powerhouse",
+    global: {
+      name: "Powerhouse",
+      icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
+    },
+    local: {
+      availableOffline: true,
+      listeners: [],
+      sharingType: "public",
+      triggers: [],
+    },
+  },
 };
 
-export const DefaultSwitchboardOptions = {
-  ...DefaultStartServerOptions,
-  dev: true,
-};
-
-export async function startLocalSwitchboard(
-  switchboardOptions: SwitchboardOptions,
-) {
-  const baseConfig = getConfig(switchboardOptions.configFile);
-  const options = {
-    ...DefaultSwitchboardOptions,
-    ...switchboardOptions,
-  };
+export async function startSwitchboard(options: StartServerOptions) {
+  const baseConfig = getConfig(options.configFile);
 
   const { https } = baseConfig.reactor ?? { https: false };
 
-  const reactor = await startServer({
+  const reactor = await startSwitchboardServer({
+    ...defaultSwitchboardOptions,
     ...options,
     https,
-    logLevel: baseConfig.logLevel,
   });
 
-  if (options.generate) {
-    await addGenerateTransmitter(reactor, baseConfig);
-  }
   return reactor;
-}
-
-async function addGenerateTransmitter(
-  reactor: LocalReactor,
-  config: PowerhouseConfig,
-) {
-  const receiver: IReceiver = {
-    onStrands: async function (strands: InternalTransmitterUpdate<DocumentModelDocument>[]) {
-      const documentPaths = new Set<string>();
-      for (const strand of strands) {
-        documentPaths.add(
-          reactor.getDocumentPath(strand.driveId, strand.documentId),
-        );
-      }
-      for (const path of documentPaths) {
-        await generateFromFile(path, config);
-      }
-      return Promise.resolve();
-    },
-    onDisconnect: () => Promise.resolve(),
-  };
-
-  const listenerManager = reactor.server.listeners;
-
-  // todo: simplify
-  const listener: Listener = {
-    driveId: "powerhouse",
-    listenerId: "reactor-local-document-model-generator",
-    label: "reactor-local-document-model-generator",
-    filter: {
-      documentType: ["powerhouse/document-model"],
-      scope: ["global"],
-      branch: ["*"],
-      documentId: ["*"],
-    },
-    block: false,
-    system: false,
-    callInfo: {
-      data: "",
-      name: "reactor-local-document-model-generator",
-      transmitterType: "Internal",
-    },
-  };
-
-  const transmitter = new InternalTransmitter(listener, reactor.server, receiver);
-
-  listener.transmitter = transmitter;
-
-  await listenerManager.setListener(listener.driveId, listener);
 }

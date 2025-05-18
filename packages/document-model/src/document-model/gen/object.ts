@@ -1,6 +1,5 @@
-import { ExtendedStateFromDocument } from "#document/types.js";
-import { applyMixins, SignalDispatch } from "document-model";
-import { BaseDocumentClass } from "../../document/object.js";
+import { applyMixins, BaseDocumentClass } from "#document/object.js";
+import { ExtendedStateFromDocument, SignalDispatch } from "#document/types.js";
 import { DocumentModelAction } from "./actions.js";
 import { fileExtension } from "./constants.js";
 import DocumentModel_Header from "./header/object.js";

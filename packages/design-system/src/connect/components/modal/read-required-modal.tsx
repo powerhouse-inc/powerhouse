@@ -105,7 +105,7 @@ export function ReadRequiredModal(props: ReadRequiredModalProps) {
           ref={contentRef}
           {...mergeClassNameProps(
             bodyProps,
-            "my-6 max-h-[245px] overflow-scroll rounded-md bg-slate-50 p-4 text-center text-slate-200",
+            "my-6 max-h-[245px] overflow-scroll rounded-md bg-slate-50 p-4 text-center",
           )}
         >
           {body}

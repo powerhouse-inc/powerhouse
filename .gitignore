@@ -11,3 +11,6 @@ dev.db
 .DS_Store
 .cursor
 storybook-static
+.gitignore.local
+.env
+.ph

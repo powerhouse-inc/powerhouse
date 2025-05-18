@@ -1,12 +1,12 @@
 {
   "name": "document-drive",
-  "version": "1.27.0",
+  "version": "1.29.12-dev.10",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
-    "./storage/prisma": "./dist/src/storage/prisma/index.js",
+    "./storage/prisma": "./dist/src/storage/prisma/prisma.js",
     "./*": "./dist/src/*.js"
   },
   "imports": {
@@ -31,12 +31,12 @@
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "migrate": "prisma generate && prisma db push",
-    "copy-prisma": "copyfiles prisma/schema.prisma dist/",
+    "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prebuild:tsc": "prisma generate --no-hints",
-    "prebuild": "prisma generate --no-hints"
+    "prebuild": "npm run clean && prisma generate --no-hints",
+    "prelint:nx": "prisma generate --no-hints"
   },
   "optionalDependencies": {
-    "@powerhousedao/scalars": "workspace:*",
     "@prisma/client": "5.17.0",
     "localforage": "^1.10.0",
     "redis": "^4.6.15",
@@ -44,33 +44,38 @@
     "sqlite3": "^5.1.7"
   },
   "dependencies": {
+    "@helia/mfs": "^4.0.3",
     "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/scalars": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
     "@prisma/client": "5.17.0",
     "change-case": "^5.4.4",
     "document-model": "workspace:*",
     "exponential-backoff": "^3.1.1",
-    "graphql": "^16.9.0",
+    "graphql": "^16.11.0",
     "graphql-request": "^6.1.0",
+    "helia": "^5.3.0",
     "json-stringify-deterministic": "^1.0.12",
     "localforage": "^1.10.0",
+    "lru-cache": "^11.1.0",
     "nanoevents": "^9.0.0",
+    "object-sizeof": "^2.6.5",
     "prisma": "5.17.0",
     "sanitize-filename": "^1.6.3",
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
     "uuid": "^11.0.5",
-    "zod": "^3.24.2"
+    "zod": "^3.24.3"
   },
   "devDependencies": {
-    "@types/node": "^20.14.11",
+    "@types/node": "^22.15.17",
     "@types/uuid": "^9.0.8",
+    "@vitest/coverage-v8": "^3.1.2",
     "copyfiles": "^2.4.1",
     "fake-indexeddb": "^5.0.2",
     "msw": "^2.3.1",
     "typescript": "^5.7.3",
-    "vite": "^6.2.0",
-    "vitest": "^3.0.7",
+    "vite": "^6.3.3",
+    "vitest": "^3.1.2",
     "vitest-fetch-mock": "^0.4.5",
     "webdriverio": "^9.0.9"
   }

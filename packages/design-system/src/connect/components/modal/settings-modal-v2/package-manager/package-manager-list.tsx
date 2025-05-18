@@ -139,7 +139,7 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
     <div
       {...rest}
       className={twMerge(
-        "flex flex-col items-stretch overflow-hidden",
+        "flex max-h-[370px] flex-col items-stretch overflow-hidden",
         className,
       )}
     >

@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { IEventEmitter } from "./types.js";
+import type { IEventEmitter } from "./types.js";
 
 export class NodeEventEmitter<Events extends Record<string, unknown>>
   implements IEventEmitter<Events>

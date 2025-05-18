@@ -32,7 +32,7 @@ export function buildOperation<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,
   index?: number,
-): Operation {
+): Operation<ActionFromDocument<TDocument>> {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const operation = newDocument.operations[action.scope]
@@ -46,7 +46,7 @@ export function buildOperations<TDocument extends PHDocument>(
   reducer: PHReducer<TDocument>,
   document: TDocument,
   actions: Array<Action>,
-): Operation[] {
+): Operation<ActionFromDocument<TDocument>>[] {
   const operations: Operation[] = [];
   for (const action of actions) {
     document = reducer(document, action);
@@ -144,7 +144,7 @@ export class BasicClient<TDocument extends PHDocument = PHDocument> {
       action,
     );
 
-    this.document = { ...result.document } as TDocument;
+    this.document = { ...result.document };
     this.unsyncedOperations.push({ ...result.operation });
 
     return result;
@@ -217,7 +217,7 @@ export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
       action,
     );
 
-    this.document = { ...result.document } as TDocument;
+    this.document = { ...result.document };
     this.unsyncedOperations.push({ ...result.operation });
 
     return result;

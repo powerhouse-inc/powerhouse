@@ -8,6 +8,7 @@ import {
 import { createAction, createReducer } from "../src/document/utils/base.js";
 
 // Empty reducer that supports base actions
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
   return state;
 };

@@ -1,3 +1,436 @@
+## 2.28.1-dev.15 (2025-05-15)
+
+### 🚀 Features
+
+- removed scalars package ([d6f7059a7](https://github.com/powerhouse-inc/powerhouse/commit/d6f7059a7))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 2.28.1-dev.14 (2025-05-15)
+
+### 🚀 Features
+
+- enabled switchboard command ([5a9c467bf](https://github.com/powerhouse-inc/powerhouse/commit/5a9c467bf))
+- removed scalars dependencies ([596aedbd5](https://github.com/powerhouse-inc/powerhouse/commit/596aedbd5))
+- **builder-tools:** handle recursive objects in initial state generator ([c9eedcc43](https://github.com/powerhouse-inc/powerhouse/commit/c9eedcc43))
+- **monorepo:** bump graphql lib ([ba9d5d338](https://github.com/powerhouse-inc/powerhouse/commit/ba9d5d338))
+- **monorepo:** handle updating monorepo build deps ([db2ac2316](https://github.com/powerhouse-inc/powerhouse/commit/db2ac2316))
+- **monorepo:** regenerate lockfile ([a6c390b4e](https://github.com/powerhouse-inc/powerhouse/commit/a6c390b4e))
+- **builder-tools:** fix wrong value used for field id ([a6c6142e0](https://github.com/powerhouse-inc/powerhouse/commit/a6c6142e0))
+- **reactor-api,reactor-local:** updated analytics dependencies ([cbeace573](https://github.com/powerhouse-inc/powerhouse/commit/cbeace573))
+- added sky-atlas-staging ([ac1658ce9](https://github.com/powerhouse-inc/powerhouse/commit/ac1658ce9))
+
+### 🩹 Fixes
+
+- **document-drive:** fix type issue on browser storage ([240a78b41](https://github.com/powerhouse-inc/powerhouse/commit/240a78b41))
+- **ph-cli:** ph add does not remove installed packages ([aedfbf56e](https://github.com/powerhouse-inc/powerhouse/commit/aedfbf56e))
+- remove .env and add to .gitignore ([0d2d48684](https://github.com/powerhouse-inc/powerhouse/commit/0d2d48684))
+- **switchboard,reactor-local:** latest version of sky atlas was not being installed ([72bf72fd4](https://github.com/powerhouse-inc/powerhouse/commit/72bf72fd4))
+- made ph packages env var ([df93611b7](https://github.com/powerhouse-inc/powerhouse/commit/df93611b7))
+- remove filter ([842a93a75](https://github.com/powerhouse-inc/powerhouse/commit/842a93a75))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente
+- ryanwolhuter
+
+## 2.28.1-dev.13 (2025-05-10)
+
+### 🩹 Fixes
+
+- **document-drive,reactor-api:** updated addDrive mutation and improved createDrive method ([440054262](https://github.com/powerhouse-inc/powerhouse/commit/440054262))
+- **document-model:** override document id when provided as undefined ([a960e9309](https://github.com/powerhouse-inc/powerhouse/commit/a960e9309))
+- **ph-cli:** remove ts ignore ([0a212419c](https://github.com/powerhouse-inc/powerhouse/commit/0a212419c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 2.28.1-dev.12 (2025-05-09)
+
+### 🩹 Fixes
+
+- setup global project and remove init from install-tools ([61af7eb11](https://github.com/powerhouse-inc/powerhouse/commit/61af7eb11))
+- **scripts:** added connect domain to allowed hosts ([dbb08f51b](https://github.com/powerhouse-inc/powerhouse/commit/dbb08f51b))
+- **scripts:** work with postgresql prefix ([b53848a40](https://github.com/powerhouse-inc/powerhouse/commit/b53848a40))
+- **scripts:** improved project init ([35dd55ec9](https://github.com/powerhouse-inc/powerhouse/commit/35dd55ec9))
+- **scripts:** improved db setup ([1db384e79](https://github.com/powerhouse-inc/powerhouse/commit/1db384e79))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
+## 2.28.1-dev.11 (2025-05-08)
+
+### 🚀 Features
+
+- timeline integration ([6580b762e](https://github.com/powerhouse-inc/powerhouse/commit/6580b762e))
+- **monorepo:** enable type import lint rule ([5fd802021](https://github.com/powerhouse-inc/powerhouse/commit/5fd802021))
+- **monorepo:** unify linting and build ([542313e91](https://github.com/powerhouse-inc/powerhouse/commit/542313e91))
+- **monorepo:** remove global dev deps ([ac51963c4](https://github.com/powerhouse-inc/powerhouse/commit/ac51963c4))
+- **common:** fix exports field ([139fa8fc5](https://github.com/powerhouse-inc/powerhouse/commit/139fa8fc5))
+- **document-model:** re-add missing type arg ([a9d06964a](https://github.com/powerhouse-inc/powerhouse/commit/a9d06964a))
+- **common:** use document drive document model from document drive ([131c6ce03](https://github.com/powerhouse-inc/powerhouse/commit/131c6ce03))
+- **monorepo:** resolve type errors from merge ([2fac67372](https://github.com/powerhouse-inc/powerhouse/commit/2fac67372))
+- **document-drive:** prefer document type with inference ([922712672](https://github.com/powerhouse-inc/powerhouse/commit/922712672))
+- **document-model:** add utils for simpler state and action inference ([752712b47](https://github.com/powerhouse-inc/powerhouse/commit/752712b47))
+- **connect:** set app when creating drive ([f5722eebd](https://github.com/powerhouse-inc/powerhouse/commit/f5722eebd))
+- **connect:** load apps ([06632e3d3](https://github.com/powerhouse-inc/powerhouse/commit/06632e3d3))
+- **monorepo:** let acaldas try ([351cdc55d](https://github.com/powerhouse-inc/powerhouse/commit/351cdc55d))
+- **connect:** fix revision history type errors ([9fbc54952](https://github.com/powerhouse-inc/powerhouse/commit/9fbc54952))
+- **connect:** remove any ([2c3f8f522](https://github.com/powerhouse-inc/powerhouse/commit/2c3f8f522))
+- **connect:** use document model lib type ([f81c0ab25](https://github.com/powerhouse-inc/powerhouse/commit/f81c0ab25))
+- **document-model-editor:** move editor to builder tooling ([c4616ffc4](https://github.com/powerhouse-inc/powerhouse/commit/c4616ffc4))
+- **common:** improved drive story ([ec96a6b7e](https://github.com/powerhouse-inc/powerhouse/commit/ec96a6b7e))
+- **codegen:** handle codegen location ([4a9ba97d0](https://github.com/powerhouse-inc/powerhouse/commit/4a9ba97d0))
+- **builder-tools:** move editor utils to builder tools ([d115e257d](https://github.com/powerhouse-inc/powerhouse/commit/d115e257d))
+- **monorepo:** allow emit on error ([b29fafabd](https://github.com/powerhouse-inc/powerhouse/commit/b29fafabd))
+- **document-model:** allow passing action type to ph document ([4b8ebfa1b](https://github.com/powerhouse-inc/powerhouse/commit/4b8ebfa1b))
+- **document-model:** revert change utils file names ([cc2c18055](https://github.com/powerhouse-inc/powerhouse/commit/cc2c18055))
+- **builder-tools:** move connect studio ([1a6011eaa](https://github.com/powerhouse-inc/powerhouse/commit/1a6011eaa))
+- **document-model:** replace usages of Document ([0c3b5b818](https://github.com/powerhouse-inc/powerhouse/commit/0c3b5b818))
+- **document-drive:** update document drive imports ([f76746d99](https://github.com/powerhouse-inc/powerhouse/commit/f76746d99))
+- **codegen:** handle codegen path ([39b0aca84](https://github.com/powerhouse-inc/powerhouse/commit/39b0aca84))
+- **document-model:** update generics ([211dfe954](https://github.com/powerhouse-inc/powerhouse/commit/211dfe954))
+- **document-model:** use relative imports only ([d8f6c762f](https://github.com/powerhouse-inc/powerhouse/commit/d8f6c762f))
+- **document-drive:** handle drive document model exports ([fabc4a77d](https://github.com/powerhouse-inc/powerhouse/commit/fabc4a77d))
+- **document-model:** simplify generics ([572eecd5c](https://github.com/powerhouse-inc/powerhouse/commit/572eecd5c))
+- **connect:** support removing external packages ([a9b1d59cc](https://github.com/powerhouse-inc/powerhouse/commit/a9b1d59cc))
+- **document-drive:** move drive document model to drive package ([d6bb69f07](https://github.com/powerhouse-inc/powerhouse/commit/d6bb69f07))
+- **document-model:** fix object defs ([88d0faf4c](https://github.com/powerhouse-inc/powerhouse/commit/88d0faf4c))
+- **document-model-libs:** park for now ([36a2fcc3b](https://github.com/powerhouse-inc/powerhouse/commit/36a2fcc3b))
+- **connect:** improved loading of external packages ([7ea94ee5a](https://github.com/powerhouse-inc/powerhouse/commit/7ea94ee5a))
+- **document-model-libs:** update module naming convention ([2aeebadb1](https://github.com/powerhouse-inc/powerhouse/commit/2aeebadb1))
+- **document-model-libs:** refactor first document model ([d2661d3b9](https://github.com/powerhouse-inc/powerhouse/commit/d2661d3b9))
+- **document-model-libs:** update config and deps ([bf250ef60](https://github.com/powerhouse-inc/powerhouse/commit/bf250ef60))
+- **document-model:** rename types ([73bdc1f02](https://github.com/powerhouse-inc/powerhouse/commit/73bdc1f02))
+- **monorepo:** bump deps ([7a898f66f](https://github.com/powerhouse-inc/powerhouse/commit/7a898f66f))
+- **monorepo:** move ph cli to clis directory ([5b677ebdc](https://github.com/powerhouse-inc/powerhouse/commit/5b677ebdc))
+- merge main into dspot-branch ([#769](https://github.com/powerhouse-inc/powerhouse/pull/769))
+- removed document-model editor v1 ([#745](https://github.com/powerhouse-inc/powerhouse/pull/745))
+- **renown:** added initial renown sdk package ([2864fbc62](https://github.com/powerhouse-inc/powerhouse/commit/2864fbc62))
+- **document-model:** export generateId method ([71d945b28](https://github.com/powerhouse-inc/powerhouse/commit/71d945b28))
+- **document-model:** added utils export ([b62619619](https://github.com/powerhouse-inc/powerhouse/commit/b62619619))
+- **document-model:** improved invalid action input error ([1d2f1edba](https://github.com/powerhouse-inc/powerhouse/commit/1d2f1edba))
+- **reactor-api:** Added support for processors ([#655](https://github.com/powerhouse-inc/powerhouse/pull/655))
+- **monorepo:** simplify parallel task execution ([0ed8df13a](https://github.com/powerhouse-inc/powerhouse/commit/0ed8df13a))
+- **monorepo:** handle project references ([3b6c046f2](https://github.com/powerhouse-inc/powerhouse/commit/3b6c046f2))
+- **document-model-libs:** move tailwind config to workspace root ([74b9869af](https://github.com/powerhouse-inc/powerhouse/commit/74b9869af))
+- **document-model-libs:** remove wrong peer deps ([5fd7ef670](https://github.com/powerhouse-inc/powerhouse/commit/5fd7ef670))
+- use unified deps ([38c759a97](https://github.com/powerhouse-inc/powerhouse/commit/38c759a97))
+- **monorepo:** fix export declarations ([589087793](https://github.com/powerhouse-inc/powerhouse/commit/589087793))
+- **monorepo:** unify typescript and linting ([24b9a2058](https://github.com/powerhouse-inc/powerhouse/commit/24b9a2058))
+- **monorepo:** use workspace protocol in package deps ([2584e9dd0](https://github.com/powerhouse-inc/powerhouse/commit/2584e9dd0))
+- **monorepo:** fix eslint config for react files ([019fa584d](https://github.com/powerhouse-inc/powerhouse/commit/019fa584d))
+- **document-model-libs:** remove unused deps ([f102bd867](https://github.com/powerhouse-inc/powerhouse/commit/f102bd867))
+- **document-model-libs:** move error handling to linter ([4eed29d6a](https://github.com/powerhouse-inc/powerhouse/commit/4eed29d6a))
+- **document-model-libs:** leverage codemirror linting ([a5dca60af](https://github.com/powerhouse-inc/powerhouse/commit/a5dca60af))
+- **scalars:** add EnumField with configs & tests ([313868530](https://github.com/powerhouse-inc/powerhouse/commit/313868530))
+- **document-model-libs:** update name in type ([3fa1bd416](https://github.com/powerhouse-inc/powerhouse/commit/3fa1bd416))
+- **design-system:** extract entry time label to component ([032be787e](https://github.com/powerhouse-inc/powerhouse/commit/032be787e))
+- **design-system:** use intl format for datetime inputs ([d51f80999](https://github.com/powerhouse-inc/powerhouse/commit/d51f80999))
+- **codegen:** use prettier api to format typescript from gql ([8896d86e3](https://github.com/powerhouse-inc/powerhouse/commit/8896d86e3))
+- qa updates 4 ([50ac4eb5c](https://github.com/powerhouse-inc/powerhouse/commit/50ac4eb5c))
+- **document-model:** include resulting state into zip file ([#491](https://github.com/powerhouse-inc/powerhouse/pull/491))
+- **document-model-libs:** add more inputs ([37db4561a](https://github.com/powerhouse-inc/powerhouse/commit/37db4561a))
+- **document-model-libs:** address initial QA feedback ([7513155e3](https://github.com/powerhouse-inc/powerhouse/commit/7513155e3))
+- **document-model:** fixed cjs exports ([5afce14c2](https://github.com/powerhouse-inc/powerhouse/commit/5afce14c2))
+- **document-model-libs:** bump deps ([68a98ee63](https://github.com/powerhouse-inc/powerhouse/commit/68a98ee63))
+- **document-model-libs:** re-add prevent default and handle operation initial schema ([ae0107790](https://github.com/powerhouse-inc/powerhouse/commit/ae0107790))
+- **document-model-libs:** add initial state editor ([#443](https://github.com/powerhouse-inc/powerhouse/pull/443))
+- **document-model-libs:** add json editors with sync ([76acd8076](https://github.com/powerhouse-inc/powerhouse/commit/76acd8076))
+- **document-model-libs:** include typedefs in initial hidden schema state ([88e184fd5](https://github.com/powerhouse-inc/powerhouse/commit/88e184fd5))
+- **document-model-libs:** added scalars as a peerDep ([#435](https://github.com/powerhouse-inc/powerhouse/pull/435))
+- **document-model-libs:** simplify editor ([1725f876a](https://github.com/powerhouse-inc/powerhouse/commit/1725f876a))
+- **document-model-libs:** port code from private repo ([11ef336ad](https://github.com/powerhouse-inc/powerhouse/commit/11ef336ad))
+- **document-model-libs:** update codegen dependency ([f53301393](https://github.com/powerhouse-inc/powerhouse/commit/f53301393))
+- **design-system:** create icon components in prepare install of postinstall ([f302d65f7](https://github.com/powerhouse-inc/powerhouse/commit/f302d65f7))
+- **monorepo:** regenerate lockfile ([0e277cec1](https://github.com/powerhouse-inc/powerhouse/commit/0e277cec1))
+- **monorepo:** apply lint fixes ([9803ac778](https://github.com/powerhouse-inc/powerhouse/commit/9803ac778))
+- **monorepo:** migrate to unified configs ([693ce1a30](https://github.com/powerhouse-inc/powerhouse/commit/693ce1a30))
+- ⚠️  **document-model:** initial document-model package setup ([8a145eecb](https://github.com/powerhouse-inc/powerhouse/commit/8a145eecb))
+
+### 🩹 Fixes
+
+- all builds should first clean their dist directories -- this does not affect the build cache ([7acffd6b0](https://github.com/powerhouse-inc/powerhouse/commit/7acffd6b0))
+- use relative path for generateId to fix test ([973a92662](https://github.com/powerhouse-inc/powerhouse/commit/973a92662))
+- **reactor:** fix  issue where get drive by revision was incorrect ([e6be7d3f1](https://github.com/powerhouse-inc/powerhouse/commit/e6be7d3f1))
+- remove all usages of hashKey and replace with appropriate generateId/generateUUID functions ([1a365939d](https://github.com/powerhouse-inc/powerhouse/commit/1a365939d))
+- **codegen,document-model:** fix ph index type issues ([8ec628941](https://github.com/powerhouse-inc/powerhouse/commit/8ec628941))
+- **document-model:** trigger release ([1f2a88fdf](https://github.com/powerhouse-inc/powerhouse/commit/1f2a88fdf))
+- **document-drive:** incremental refactoring to read tests ([5e32f3ac7](https://github.com/powerhouse-inc/powerhouse/commit/5e32f3ac7))
+- keep consistent zod version across projects ([97cdadab3](https://github.com/powerhouse-inc/powerhouse/commit/97cdadab3))
+- **codegen:** fix module index template ([d11775bcd](https://github.com/powerhouse-inc/powerhouse/commit/d11775bcd))
+- **codegen,document-model,document-drive:** updated codegen templates ([5e41b78f2](https://github.com/powerhouse-inc/powerhouse/commit/5e41b78f2))
+- **document-drive:** fixed some regressions ([93b2878e2](https://github.com/powerhouse-inc/powerhouse/commit/93b2878e2))
+- **document-model:** revert document model module changes ([87dae96d3](https://github.com/powerhouse-inc/powerhouse/commit/87dae96d3))
+- **document-model:** add conditional env imports ([ad20432e7](https://github.com/powerhouse-inc/powerhouse/commit/ad20432e7))
+- **document-model:** do not generate a new timestamp for operations ([#544](https://github.com/powerhouse-inc/powerhouse/pull/544))
+- **document-model:** fix import zip files ([#412](https://github.com/powerhouse-inc/powerhouse/pull/412))
+- **document-model-libs:** added type annotation for createDocumentStory ([6c5441f3e](https://github.com/powerhouse-inc/powerhouse/commit/6c5441f3e))
+- **monorepo:** remove workspaces and package manager fields ([e0b53fef2](https://github.com/powerhouse-inc/powerhouse/commit/e0b53fef2))
+- **document-model:** update .gitignore ([d0c932981](https://github.com/powerhouse-inc/powerhouse/commit/d0c932981))
+
+### ⚠️  Breaking Changes
+
+- ⚠️  **document-model:** initial document-model package setup ([8a145eecb](https://github.com/powerhouse-inc/powerhouse/commit/8a145eecb))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- nestor
+- Ryan Wolhuter
+- ryanwolhuter
+
+## 2.28.1-dev.10 (2025-05-07)
+
+### 🚀 Features
+
+- **scripts:** added setup environment ([9459aa5e5](https://github.com/powerhouse-inc/powerhouse/commit/9459aa5e5))
+- **scripts:** added install tools ([2f6798c9c](https://github.com/powerhouse-inc/powerhouse/commit/2f6798c9c))
+- **connect:** added bin which serves connect ([6b731c703](https://github.com/powerhouse-inc/powerhouse/commit/6b731c703))
+- **switchboard:** use package manager from reactor api ([a0a15417b](https://github.com/powerhouse-inc/powerhouse/commit/a0a15417b))
+
+### 🩹 Fixes
+
+- all builds should first clean their dist directories -- this does not affect the build cache ([7acffd6b0](https://github.com/powerhouse-inc/powerhouse/commit/7acffd6b0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
+## 2.28.1-dev.9 (2025-05-03)
+
+### 🚀 Features
+
+- moved log levels definition to config and set default level to "info" ([ef6040210](https://github.com/powerhouse-inc/powerhouse/commit/ef6040210))
+
+### 🩹 Fixes
+
+- added script for testing end-to-end codegen pipeline ([8668f82b4](https://github.com/powerhouse-inc/powerhouse/commit/8668f82b4))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 2.28.1-dev.8 (2025-05-02)
+
+### 🚀 Features
+
+- **document-drive:** implemented LRU in memory cache ([9f6347b58](https://github.com/powerhouse-inc/powerhouse/commit/9f6347b58))
+
+### 🩹 Fixes
+
+- use relative path for generateId to fix test ([973a92662](https://github.com/powerhouse-inc/powerhouse/commit/973a92662))
+- **reactor:** fix  issue where get drive by revision was incorrect ([e6be7d3f1](https://github.com/powerhouse-inc/powerhouse/commit/e6be7d3f1))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
+## 2.28.1-dev.7 (2025-04-29)
+
+### 🚀 Features
+
+- **reactor-browser,connect:** use global analytics store ([213059fcd](https://github.com/powerhouse-inc/powerhouse/commit/213059fcd))
+
+### 🩹 Fixes
+
+- remove all usages of hashKey and replace with appropriate generateId/generateUUID functions ([1a365939d](https://github.com/powerhouse-inc/powerhouse/commit/1a365939d))
+- updating launch confituration to fix reactor local debug source mapping ([32af5af15](https://github.com/powerhouse-inc/powerhouse/commit/32af5af15))
+- **switchboard:** add analytics-engine-core as a dependency of switchboard ([bded7cbab](https://github.com/powerhouse-inc/powerhouse/commit/bded7cbab))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 2.28.1-dev.6 (2025-04-21)
+
+### 🚀 Features
+
+- timeline integration ([6580b762e](https://github.com/powerhouse-inc/powerhouse/commit/6580b762e))
+- **reactor-api,reactor-local:** updated analytics dependencies ([34ba69ba4](https://github.com/powerhouse-inc/powerhouse/commit/34ba69ba4))
+- **connect,reactor-browser:** implemented analytics demo on connect ([d71c42400](https://github.com/powerhouse-inc/powerhouse/commit/d71c42400))
+- **reactor-browser:** added analytics engine support ([50067856f](https://github.com/powerhouse-inc/powerhouse/commit/50067856f))
+
+### 🩹 Fixes
+
+- **ph-cli:** ph add does not remove installed packages ([1109ef2ed](https://github.com/powerhouse-inc/powerhouse/commit/1109ef2ed))
+- **connect:** fixed diff analyzer dependency version ([c4119416f](https://github.com/powerhouse-inc/powerhouse/commit/c4119416f))
+- **connect:** updated diff analyzer dependency ([012eb867c](https://github.com/powerhouse-inc/powerhouse/commit/012eb867c))
+- **connect,document-drive,reactor-browser:** build issues ([d8142a0e3](https://github.com/powerhouse-inc/powerhouse/commit/d8142a0e3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
+## 2.28.1-dev.5 (2025-04-17)
+
+### 🩹 Fixes
+
+- remove .env and add to .gitignore ([5ca95a8ee](https://github.com/powerhouse-inc/powerhouse/commit/5ca95a8ee))
+- **switchboard,reactor-local:** latest version of sky atlas was not being installed ([7245bb133](https://github.com/powerhouse-inc/powerhouse/commit/7245bb133))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
+## 2.28.1-dev.4 (2025-04-15)
+
+### 🩹 Fixes
+
+- add source map generation so we can debug ([a4e8cbb69](https://github.com/powerhouse-inc/powerhouse/commit/a4e8cbb69))
+- **codegen:** getDocument query ([a9900f27c](https://github.com/powerhouse-inc/powerhouse/commit/a9900f27c))
+- update lockfile ([07931c848](https://github.com/powerhouse-inc/powerhouse/commit/07931c848))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
+## 2.28.1-staging.1 (2025-04-10)
+
+### 🚀 Features
+
+- checkout release branch ([6f3e20067](https://github.com/powerhouse-inc/powerhouse/commit/6f3e20067))
+- added sky-atlas-staging ([7eb24f6c6](https://github.com/powerhouse-inc/powerhouse/commit/7eb24f6c6))
+
+### 🩹 Fixes
+
+- **deploy:** set branch env var ([835cc704d](https://github.com/powerhouse-inc/powerhouse/commit/835cc704d))
+- build and deploy action ([e8c550849](https://github.com/powerhouse-inc/powerhouse/commit/e8c550849))
+- made ph packages env var ([b9aaff84d](https://github.com/powerhouse-inc/powerhouse/commit/b9aaff84d))
+- remove filter ([ece84a667](https://github.com/powerhouse-inc/powerhouse/commit/ece84a667))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.28.1-staging.0 (2025-04-09)
+
+### 🚀 Features
+
+- added sky-atlas-staging ([ac1658ce9](https://github.com/powerhouse-inc/powerhouse/commit/ac1658ce9))
+
+### 🩹 Fixes
+
+- made ph packages env var ([df93611b7](https://github.com/powerhouse-inc/powerhouse/commit/df93611b7))
+- remove filter ([842a93a75](https://github.com/powerhouse-inc/powerhouse/commit/842a93a75))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.28.1-dev.1 (2025-04-08)
+
+### 🚀 Features
+
+- removed DriveContextProvider dep from connect DriveEditorContainer ([ea926fc30](https://github.com/powerhouse-inc/powerhouse/commit/ea926fc30))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 2.28.1-dev.0 (2025-04-03)
+
+### 🚀 Features
+
+- **nx-cloud:** setup nx cloud workspace ([3048ba71d](https://github.com/powerhouse-inc/powerhouse/commit/3048ba71d))
+- **switchboard:** use reactor api package manager ([e5b5722fe](https://github.com/powerhouse-inc/powerhouse/commit/e5b5722fe))
+- **reactor:** added vscode launch config and cli for debugging react-local ([610b33f50](https://github.com/powerhouse-inc/powerhouse/commit/610b33f50))
+- **reactor-api:** added JSON scalar ([d3f8b4193](https://github.com/powerhouse-inc/powerhouse/commit/d3f8b4193))
+- **ui:** improve cell navigation ([eaaa8b995](https://github.com/powerhouse-inc/powerhouse/commit/eaaa8b995))
+- **builder-tools:** load local package from manifest ([96f4962d3](https://github.com/powerhouse-inc/powerhouse/commit/96f4962d3))
+
+### 🩹 Fixes
+
+- **codegen,document-model:** fix ph index type issues ([8ec628941](https://github.com/powerhouse-inc/powerhouse/commit/8ec628941))
+- **document-drive:** linting issues ([de8e4472e](https://github.com/powerhouse-inc/powerhouse/commit/de8e4472e))
+- **scalars:** restore scrollbar styles ([b450e57b6](https://github.com/powerhouse-inc/powerhouse/commit/b450e57b6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- nesdc88
+- Yasiel Cabrera @YasielCabrera
+
+## 2.28.0 (2025-03-26)
+
+### 🚀 Features
+
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente
+
+## 2.27.2 (2025-03-24)
+
+### 🩹 Fixes
+
+- **document-model:** trigger release ([1f2a88fdf](https://github.com/powerhouse-inc/powerhouse/commit/1f2a88fdf))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.27.1 (2025-03-19)
+
+### 🩹 Fixes
+
+- roll back replace plugin ([6c4781da](https://github.com/powerhouse-inc/powerhouse/commit/6c4781da))
+- **codegen:** update validation plugin name ([18de5641](https://github.com/powerhouse-inc/powerhouse/commit/18de5641))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 2.27.0 (2025-03-19)
+
+### 🚀 Features
+
+- added switchboard to release app ([b3aac885](https://github.com/powerhouse-inc/powerhouse/commit/b3aac885))
+- **codegen:** update templates to use file extensions ([28b1686a](https://github.com/powerhouse-inc/powerhouse/commit/28b1686a))
+- **switchboard:** added sentry ([f1f0c13d](https://github.com/powerhouse-inc/powerhouse/commit/f1f0c13d))
+- **monorepo:** remove migrations ([0c698b39](https://github.com/powerhouse-inc/powerhouse/commit/0c698b39))
+- **design-system:** fix storybook type errors ([75cd9dd5](https://github.com/powerhouse-inc/powerhouse/commit/75cd9dd5))
+- **monorepo:** regenerate lockfile ([10b40ad0](https://github.com/powerhouse-inc/powerhouse/commit/10b40ad0))
+- **connect:** remove accidentally added dep ([5f6ba2e4](https://github.com/powerhouse-inc/powerhouse/commit/5f6ba2e4))
+- **design-system:** simplify icons and remove dynamic loader ([1db37756](https://github.com/powerhouse-inc/powerhouse/commit/1db37756))
+
+### 🩹 Fixes
+
+- **reactor-local:** support commonjs code on local subgraphs ([c49914e2](https://github.com/powerhouse-inc/powerhouse/commit/c49914e2))
+- **document-drive:** typescript should be a dev dependency of document-drive ([b5ddc827](https://github.com/powerhouse-inc/powerhouse/commit/b5ddc827))
+- **reactor-api:** add ethers as peer dependency ([069767f8](https://github.com/powerhouse-inc/powerhouse/commit/069767f8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 2.26.0 (2025-03-17)
 
 ### 🚀 Features

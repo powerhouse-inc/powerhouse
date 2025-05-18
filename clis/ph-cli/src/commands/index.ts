@@ -6,10 +6,10 @@ import { helpCommand } from "./help.js";
 import { inspectCommand } from "./inspect.js";
 import { installCommand } from "./install.js";
 import { listCommand } from "./list.js";
+import { reactorCommand } from "./reactor.js";
 import { serviceCommand } from "./service.js";
-import { reactorCommand } from "./switchboard.js";
+import { switchboardCommand } from "./switchboard.js";
 import { uninstallCommand } from "./uninstall.js";
-import { versionCommand } from "./version.js";
 
 export const commands = [
   // devCommand,
@@ -22,7 +22,7 @@ export const commands = [
   serviceCommand,
   listCommand,
   inspectCommand,
-  versionCommand,
+  switchboardCommand,
 ];
 
 export default function registerCommands(program: Command) {

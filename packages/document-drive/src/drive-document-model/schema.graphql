@@ -25,11 +25,9 @@ type FileNode {
 union Node = FolderNode | FileNode
 
 type DocumentDriveState {
-  id: ID!
   name: String!
   nodes: [Node!]!
   icon: String
-  slug: String
 }
 
 type ListenerFilter {

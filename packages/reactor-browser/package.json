@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "1.21.0",
+  "version": "1.22.38-dev.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "publishConfig": {
@@ -13,6 +13,7 @@
   "main": "./dist/src/index.js",
   "exports": {
     ".": "./dist/src/index.js",
+    "./analytics": "./dist/src/analytics/analytics.js",
     "./*": "./dist/src/*.js"
   },
   "scripts": {
@@ -22,26 +23,38 @@
     "lint:fix": "eslint --fix",
     "build": "tsc --build",
     "build:watch": "tsc --build --watch",
-    "test": "vitest run --passWithNoTests",
+    "prebuild": "npm run clean",
+    "test:browser": "vitest run",
     "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "clean:node_modules": "rimraf node_modules",
+    "install:playwright": "playwright install"
   },
-  "keywords": [],
-  "author": "",
   "devDependencies": {
+    "@types/luxon": "^3.6.2",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.4.1",
+    "@vitest/browser": "^3.0.7",
+    "playwright": "^1.51.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "vite-plugin-node-polyfills": "^0.23.0",
+    "vitest": "^3.1.2",
+    "vitest-browser-react": "^0.1.1"
   },
   "peerDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "dependencies": {
+    "@powerhousedao/analytics-engine-browser": "0.5.0",
+    "@powerhousedao/analytics-engine-core": "0.4.0",
+    "@powerhousedao/analytics-engine-knex": "0.5.1",
+    "@tanstack/react-query": "^5.49.2",
+    "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "did-key-creator": "^1.2.0",
-    "jotai": "^2.10.3"
+    "jotai": "^2.10.3",
+    "luxon": "^3.6.1"
   }
 }

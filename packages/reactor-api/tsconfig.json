@@ -1,17 +1,17 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": ["@types/node"],
-    "outDir": "./dist",
+    "composite": true
   },
+  "files": [
+    "src/custom.d.ts"
+  ],
   "references": [
     {
-      "path": "../document-model"
+      "path": "tsconfig.lib.json"
     },
     {
-      "path": "../document-drive"
+      "path": "tsconfig.test.json"
     }
-  ],
-  "include": ["**/*"],
-  "exclude": ["**/*.test.ts", "**/*.bench.ts", "dist", "node_modules"]
+  ]
 }

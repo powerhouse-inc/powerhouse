@@ -1,15 +1,15 @@
+import type { LogLevel } from "@powerhousedao/config/powerhouse";
+
 export type ConnectStudioOptions = {
   connectPath?: string;
   port?: string;
   host?: boolean;
   https?: boolean;
   configFile?: string;
-  localEditors?: string;
-  localDocuments?: string;
   open?: boolean;
   packages?: { packageName: string }[];
   phCliVersion?: string;
-  logLevel?: "verbose" | "debug" | "info" | "warn" | "error" | "silent";
+  logLevel?: LogLevel;
 };
 
 export type StartServerOptions = {
@@ -19,5 +19,5 @@ export type StartServerOptions = {
   https?: boolean;
   open?: boolean;
   phCliVersion?: string;
-  logLevel?: "verbose" | "debug" | "info" | "warn" | "error" | "silent";
+  logLevel?: LogLevel;
 };

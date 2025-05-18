@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
+import { PH_PACKAGES } from "@powerhousedao/config/packages";
 import { type ComponentPropsWithoutRef, useState } from "react";
 import { mockPackages, mockReactorOptions } from "../mocks.js";
 import { PackageManager } from "./package-manager.js";
@@ -21,6 +22,7 @@ const baseArgs = {
   packages: mockPackages,
   mutable: true,
 };
+
 export function PackageManagerWrapper(
   args: Pick<Props, "reactor" | "onReactorChange">,
 ) {
@@ -50,6 +52,7 @@ function PackageManagerStoryWrapper(storyArgs: Partial<Props> = {}): Story {
     ...storyArgs,
   } as Props;
   return {
+    // @ts-expect-error
     render: PackageManagerWrapper,
     args: defaultArgs,
   };
@@ -71,3 +74,12 @@ export const WithError: Story = PackageManagerStoryWrapper({
 });
 
 export const Immutable: Story = PackageManagerStoryWrapper({ mutable: false });
+
+export const WithAutoComplete: Story = PackageManagerStoryWrapper({
+  packageOptions: [
+    ...PH_PACKAGES,
+    { packageName: "@test/npm", provider: "github" },
+    { packageName: "@test/github", provider: "github" },
+    { packageName: "@test/local", provider: "local" },
+  ],
+});

@@ -1,4 +1,5 @@
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type Command } from "commander";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import path, { dirname } from "node:path";
@@ -14,6 +15,8 @@ export const packageManagers = {
     uninstallCommand: "bun remove {{dependency}}",
     workspaceOption: "",
     lockfile: "bun.lock",
+    updateCommand: "bun update {{dependency}}",
+    buildAffected: "bun run build:affected",
   },
   pnpm: {
     globalPathRegexp: /[\\/]pnpm[\\/]/,
@@ -21,6 +24,8 @@ export const packageManagers = {
     uninstallCommand: "pnpm remove {{dependency}}",
     workspaceOption: "--workspace-root",
     lockfile: "pnpm-lock.yaml",
+    updateCommand: "pnpm update {{dependency}}",
+    buildAffected: "pnpm run build:affected",
   },
   yarn: {
     globalPathRegexp: /[\\/]yarn[\\/]/,
@@ -28,12 +33,16 @@ export const packageManagers = {
     uninstallCommand: "yarn remove {{dependency}}",
     workspaceOption: "-W",
     lockfile: "yarn.lock",
+    updateCommand: "yarn upgrade {{dependency}}",
+    buildAffected: "yarn run build:affected",
   },
   npm: {
     installCommand: "npm install {{dependency}}",
     uninstallCommand: "npm uninstall {{dependency}}",
     workspaceOption: "",
     lockfile: "package-lock.json",
+    updateCommand: "npm update {{dependency}} --save",
+    buildAffected: "npm run build:affected",
   },
 };
 
@@ -123,13 +132,38 @@ export function getPackageManagerFromPath(dir: string): PackageManager {
   return "npm";
 }
 
+export function updatePackagesArray(
+  currentPackages: PowerhouseConfig["packages"] = [],
+  dependencies: { name: string; version: string | undefined; full: string }[],
+  task: "install" | "uninstall" = "install",
+): PowerhouseConfig["packages"] {
+  const isInstall = task === "install";
+  const mappedPackages = dependencies.map((dep) => ({
+    packageName: dep.name,
+    version: dep.version,
+    provider: "npm" as const,
+  }));
+
+  if (isInstall) {
+    // Overwrite existing package if version is different
+    const filteredPackages = currentPackages.filter(
+      (pkg) => !dependencies.find((dep) => dep.name === pkg.packageName),
+    );
+    return [...filteredPackages, ...mappedPackages];
+  }
+
+  return currentPackages.filter(
+    (pkg) => !dependencies.map((dep) => dep.name).includes(pkg.packageName),
+  );
+}
+
+// Modify updateConfigFile to use the new function
 export function updateConfigFile(
-  dependencies: string[],
+  dependencies: { name: string; version: string | undefined; full: string }[],
   projectPath: string,
   task: "install" | "uninstall" = "install",
 ) {
   const configPath = path.join(projectPath, POWERHOUSE_CONFIG_FILE);
-  const isInstall = task === "install";
 
   if (!fs.existsSync(configPath)) {
     throw new Error(
@@ -141,31 +175,74 @@ export function updateConfigFile(
     fs.readFileSync(configPath, "utf-8"),
   ) as PowerhouseConfig;
 
-  const mappedPackages: PowerhouseConfig["packages"] = dependencies.map(
-    (dep) => ({
-      packageName: dep,
-    }),
-  );
-
   const updatedConfig: PowerhouseConfig = {
     ...config,
-    packages: isInstall
-      ? [
-          // replace existing packages if they were already listed on the config file
-          ...(config.packages?.filter(
-            (packages) =>
-              !config.packages?.find(
-                (p) => p.packageName === packages.packageName,
-              ),
-          ) || []),
-          ...mappedPackages,
-        ]
-      : [...(config.packages || [])].filter(
-          (pkg) => !dependencies.includes(pkg.packageName),
-        ),
+    packages: updatePackagesArray(config.packages, dependencies, task),
   };
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
 }
 
-export { getConfig } from "@powerhousedao/config/powerhouse";
+/**
+ * Recursively searches for a specific file by traversing up the directory tree.
+ * Starting from the given path, it checks each parent directory until it finds
+ * the target file or reaches the root directory.
+ *
+ * @param startPath - The absolute path of the directory to start searching from
+ * @param targetFile - The name of the file to search for (e.g., 'package.json', 'pnpm-workspace.yaml')
+ * @returns The absolute path of the directory containing the target file, or null if not found
+ *
+ * @example
+ * // Find the workspace root directory
+ * const workspaceRoot = findContainerDirectory('/path/to/project/src', 'pnpm-workspace.yaml');
+ *
+ * // Find the nearest package.json
+ * const packageDir = findContainerDirectory('/path/to/project/src/components', 'package.json');
+ */
+export const findContainerDirectory = (
+  startPath: string,
+  targetFile: string,
+): string | null => {
+  const filePath = path.join(startPath, targetFile);
+
+  if (fs.existsSync(filePath)) {
+    return startPath;
+  }
+
+  const parentDir = path.dirname(startPath);
+
+  //reached the root directory and haven't found the file
+  if (parentDir === startPath) {
+    return null;
+  }
+
+  return findContainerDirectory(parentDir, targetFile);
+};
+
+/**
+ * Applies custom help formatting to a command to avoid duplication in help output
+ *
+ * @param command - The Command instance to enhance
+ * @param helpText - The custom help text to display
+ * @returns The command for chaining
+ */
+export function setCustomHelp(command: Command, helpText: string): Command {
+  // Apply custom help formatter that avoids duplication
+  command.helpInformation = function () {
+    const name = command.name();
+    const args = command.usage();
+    const description = command.description();
+
+    // Create a minimal header
+    let header = `\nUsage: ph ${name}`;
+    if (args) header += ` ${args}`;
+    if (description) header += `\n\n${description}\n`;
+
+    // Return the custom help text
+    return header + "\n" + helpText;
+  };
+
+  return command;
+}
+
+export { getConfig } from "@powerhousedao/config/utils";

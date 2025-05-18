@@ -1,5 +1,7 @@
 import { type IRenown, type User } from '#services';
 import { atom, useAtom } from 'jotai';
+import { useEffect } from 'react';
+import { useUnwrappedReactor } from '../store/reactor.js';
 import { useConnectCrypto } from './useConnectCrypto.js';
 
 const renownAtom = atom<Promise<IRenown | undefined> | undefined>(
@@ -8,7 +10,20 @@ const renownAtom = atom<Promise<IRenown | undefined> | undefined>(
 
 export function useRenown() {
     const [renown, setRenown] = useAtom(renownAtom);
-    const { did } = useConnectCrypto();
+    const { did, getBearerToken } = useConnectCrypto();
+
+    const reactor = useUnwrappedReactor();
+    useEffect(() => {
+        if (!renown || !reactor || !did) {
+            return;
+        }
+
+        renown.user().then(user => {
+            reactor.setGenerateJwtHandler(async driveUrl =>
+                getBearerToken(driveUrl, user?.address),
+            );
+        });
+    }, [renown, reactor]);
 
     async function initRenown(
         getDid: () => Promise<string>,

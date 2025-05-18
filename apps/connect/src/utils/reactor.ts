@@ -7,10 +7,17 @@ import {
     ReactorBuilder,
 } from 'document-drive';
 import { BrowserStorage } from 'document-drive/storage/browser';
+import {
+    IDocumentAdminStorage,
+    IDocumentOperationStorage,
+    IDocumentStorage,
+    IDriveOperationStorage,
+} from 'document-drive/storage/types';
 import { type DocumentModelModule } from 'document-model';
 
 const DEFAULT_DRIVES_URL =
-    import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL || undefined;
+    (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
+    undefined;
 const defaultDrivesUrl = DEFAULT_DRIVES_URL
     ? DEFAULT_DRIVES_URL.split(',')
     : [];
@@ -63,12 +70,21 @@ export const getReactorDefaultDrivesConfig = (): Pick<
     };
 };
 
+export function createBrowserStorage(
+    routerBasename: string,
+): IDriveOperationStorage &
+    IDocumentOperationStorage &
+    IDocumentStorage &
+    IDocumentAdminStorage {
+    return new BrowserStorage(routerBasename);
+}
+
 export function createBrowserDocumentDriveServer(
     documentModels: DocumentModelModule[],
-    routerBasename: string,
+    storage: IDriveOperationStorage,
 ): IDocumentDriveServer {
     return new ReactorBuilder(documentModels)
-        .withStorage(new BrowserStorage(routerBasename))
+        .withStorage(storage)
         .withCache(new InMemoryCache())
         .withQueueManager(new BaseQueueManager(1, 10))
         .withOptions({ ...getReactorDefaultDrivesConfig() })

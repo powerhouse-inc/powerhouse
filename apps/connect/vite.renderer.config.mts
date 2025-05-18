@@ -25,7 +25,27 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import clientConfig from './client.config.js';
 import pkg from './package.json' with { type: 'json' };
 
-const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
+const staticFiles = [
+    './src/service-worker.ts',
+    './src/external-packages.js',
+    './src/hmr.ts',
+];
+const staticInputs = staticFiles.reduce(
+    (acc, file) =>
+        Object.assign(acc, {
+            [path.basename(file, path.extname(file))]: path.resolve(
+                __dirname,
+                file,
+            ),
+        }),
+    {},
+);
+const externalAndExclude = [
+    'vite',
+    'vite-envs',
+    'node:crypto',
+    '@electric-sql/pglite',
+];
 
 export default defineConfig(({ mode }) => {
     const outDir = path.resolve(__dirname, './dist');
@@ -55,7 +75,30 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
-    const phPackages = phPackagesStr?.split(',') || [];
+    const phPackages =
+        phPackagesStr?.split(',').filter(p => p.trim().length) || [];
+
+    const wrapViteEnvs = (): PluginOption => {
+        const viteEnvsPlugin = viteEnvs({
+            computedEnv() {
+                return {
+                    APP_VERSION,
+                    REQUIRES_HARD_REFRESH,
+                    SENTRY_RELEASE: release,
+                };
+            },
+        });
+        return {
+            ...viteEnvsPlugin,
+            closeBundle() {
+                try {
+                    return viteEnvsPlugin.closeBundle();
+                } catch (error) {
+                    console.error(error);
+                }
+            },
+        };
+    };
 
     const plugins: PluginOption[] = [
         nodeResolve(),
@@ -65,11 +108,15 @@ export default defineConfig(({ mode }) => {
             globals: {
                 Buffer: false,
                 global: false,
-                process: false,
+                process: true,
             },
         }),
         viteConnectDevStudioPlugin(false, outDir, env),
-        viteLoadExternalPackages(phPackages, outDir),
+        viteLoadExternalPackages(
+            false,
+            phPackages,
+            path.resolve(__dirname, './src'),
+        ),
         tsconfigPaths(),
         react({
             include: './src/**/*.tsx',
@@ -92,16 +139,7 @@ export default defineConfig(({ mode }) => {
                 ],
             },
         }),
-        viteEnvs({
-            computedEnv() {
-                return {
-                    APP_VERSION,
-                    REQUIRES_HARD_REFRESH,
-                    SENTRY_RELEASE: release,
-                    LOAD_EXTERNAL_PACKAGES: phPackages.length > 0,
-                };
-            },
-        }),
+        wrapViteEnvs(),
     ] as const;
 
     if (uploadSentrySourcemaps) {
@@ -123,7 +161,6 @@ export default defineConfig(({ mode }) => {
             generateImportMapPlugin(outDir, [
                 { name: 'react', provider: 'esm.sh' },
                 { name: 'react-dom', provider: 'esm.sh' },
-                '@powerhousedao/reactor-browser',
             ]),
         );
     }
@@ -132,18 +169,15 @@ export default defineConfig(({ mode }) => {
         plugins,
         build: {
             minify: false,
-            sourcemap: false,
+            sourcemap: true,
             rollupOptions: {
                 input: {
                     main: path.resolve(__dirname, 'index.html'),
-                    'service-worker': path.resolve(
-                        __dirname,
-                        './src/service-worker.ts',
-                    ),
+                    ...staticInputs,
                 },
                 output: {
                     entryFileNames: chunk =>
-                        ['service-worker'].includes(chunk.name)
+                        Object.keys(staticInputs).includes(chunk.name)
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
@@ -155,11 +189,26 @@ export default defineConfig(({ mode }) => {
             exclude: externalAndExclude,
         },
         resolve: {
-            dedupe: ['@powerhousedao/reactor-browser'],
+            alias: {
+                ...(mode !== 'development' && {
+                    'vite-plugin-node-polyfills/shims/process': path.resolve(
+                        __dirname,
+                        'node_modules',
+                        'vite-plugin-node-polyfills',
+                        'shims',
+                        'process',
+                        'dist',
+                        'index.cjs',
+                    ),
+                }),
+            },
         },
         define: {
             __APP_VERSION__: JSON.stringify(APP_VERSION),
             __REQUIRES_HARD_REFRESH__: JSON.stringify(REQUIRES_HARD_REFRESH),
+            ...(mode !== 'development' && {
+                'import.meta.hot': 'import.meta.hot',
+            }),
         },
     };
 });

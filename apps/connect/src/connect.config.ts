@@ -1,6 +1,5 @@
 import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
-import { logger, setLogLevel } from 'document-drive/utils/logger';
-import { LogLevel } from 'vite';
+import { isLogLevel, logger, setLogLevel } from 'document-drive/utils/logger';
 import pkg from '../package.json' with { type: 'json' };
 
 const version = pkg.version;
@@ -49,14 +48,19 @@ const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
 const PH_CONNECT_CLI_VERSION =
     import.meta.env.PH_CONNECT_CLI_VERSION || undefined;
 
-setLogLevel(import.meta.env.LOG_LEVEL as LogLevel);
-logger.info(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
+
+const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
+    ? import.meta.env.LOG_LEVEL
+    : 'info';
+setLogLevel(LOG_LEVEL);
+logger.debug(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
 
 export default {
     appVersion: APP_VERSION,
     studioMode: PH_CONNECT_STUDIO_MODE.toString() === 'true',
     warnOutdatedApp: WARN_OUTDATED_APP === 'true',
     routerBasename: PH_CONNECT_ROUTER_BASENAME,
+    analyticsDatabaseName: `${PH_CONNECT_ROUTER_BASENAME}:analytics`,
     sentry: {
         dsn: PH_CONNECT_SENTRY_DSN,
         env: PH_CONNECT_SENTRY_ENV,

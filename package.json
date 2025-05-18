@@ -12,10 +12,12 @@
     "affected:check:ci": "pnpm nx affected --target=build,build-storybook,lint:nx && pnpm nx affected --target=test --exclude=document-drive",
     "build": "pnpm nx run-many --target=build --all",
     "build:all": "pnpm nx run-many --target=build --all",
+    "build:affected": "pnpm nx affected --target=build",
     "test:all": "pnpm nx run-many --target=test --all",
     "storybook:all": "pnpm nx run-many --target=build-storybook --all",
     "check:all": "pnpm i && pnpm nx run-many --target=build,lint:nx,test --all",
-    "check:all:ci": "pnpm check:all --exclude=document-drive"
+    "check:all:ci": "pnpm check:all --exclude=document-drive",
+    "update-monorepo-dev-deps": "pnpm update -r vite vitest @vitejs/plugin-react @tailwindcss/vite @tailwindcss/cli @vitejs/plugin-basic-ssl @vitejs/plugin-react-swc vite-plugin-svgr vite-tsconfig-paths vite-envs"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.5",
@@ -24,8 +26,8 @@
     "@eslint/compat": "^1.2.7",
     "@eslint/js": "^9.21.0",
     "@jscutlery/semver": "^5.6.0",
-    "@nx/eslint": "20.4.6",
     "@nx/devkit": "20.4.6",
+    "@nx/eslint": "20.4.6",
     "@nx/js": "20.4.6",
     "@nx/plugin": "^20.4.6",
     "@storybook/addon-actions": "^8.6.3",
@@ -46,11 +48,7 @@
     "@swc/cli": "~0.6.0",
     "@swc/core": "~1.11.1",
     "@swc/helpers": "~0.5.15",
-    "@tailwindcss/cli": "^4.0.9",
-    "@types/node": "^22.13.5",
-    "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/browser": "^3.0.7",
-    "@vitest/coverage-v8": "^3.0.7",
+    "@types/node": "^22.15.17",
     "chromatic": "^11.26.1",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.2",
@@ -70,20 +68,23 @@
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.25.0",
-    "vite-envs": "^4.4.11",
-    "vite-plugin-dts": "^4.5.0",
-    "vitest": "^3.0.7"
+    "vitest": "^3.1.2"
   },
   "dependencies": {
     "@nx/devkit": "20.4.6",
     "@nx/plugin": "^20.4.6"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "commitlint": {
     "rules": {
-      "header-max-length": [2, "always", 200]
+      "header-max-length": [
+        2,
+        "always",
+        200
+      ]
     }
-  }
+  },
+  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39"
 }

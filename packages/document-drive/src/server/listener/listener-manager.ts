@@ -20,8 +20,6 @@ import { childLogger, type ListenerFilter } from "document-drive";
 import { type OperationScope } from "document-model";
 import { debounce } from "./util.js";
 
-const ENABLE_SYNC_DEBUG = false;
-
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
 
@@ -32,6 +30,7 @@ export class ListenerManager implements IListenerManager {
 
   protected syncManager: ISynchronizationManager;
   protected options: ListenerManagerOptions;
+  public generateJwtHandler?: (driveUrl: string) => Promise<string>;
 
   // driveId -> listenerId -> listenerState
   protected listenerStateByDriveId = new Map<
@@ -47,6 +46,10 @@ export class ListenerManager implements IListenerManager {
     this.options = { ...DefaultListenerManagerOptions, ...options };
 
     this.logger.verbose(`constructor(...)`);
+  }
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>) {
+    this.generateJwtHandler = handler;
   }
 
   async initialize(handler: DriveUpdateErrorHandler) {
@@ -223,12 +226,12 @@ export class ListenerManager implements IListenerManager {
 
     const listenerUpdates: ListenerUpdate[] = [];
 
-    for (const [driveId, drive] of this.listenerStateByDriveId) {
-      for (const [listenerId, listenerState] of drive) {
+    for (const [driveId, listenerStateById] of this.listenerStateByDriveId) {
+      for (const [listenerId, listenerState] of listenerStateById) {
         const transmitter = listenerState.listener.transmitter;
 
         if (!transmitter?.transmit) {
-          this.logger.verbose(`Transmitter not set on listener: ${listenerId}`);
+          // transmit is optional, so we can skip listeners that don't have a transmitter
           continue;
         }
 
@@ -248,7 +251,7 @@ export class ListenerManager implements IListenerManager {
             return;
           } else {
             this.logger.verbose(
-              `Listener out-of-date for sync unit (${syncUnit.driveId}, ${syncUnit.scope}, ${syncUnit.documentId}): ${unitState?.listenerRev} < ${syncUnit.revision}`,
+              `Listener out-of-date for sync unit (${syncUnit.scope}, ${syncUnit.documentId}): ${unitState?.listenerRev} < ${syncUnit.revision}`,
             );
           }
 
@@ -509,69 +512,120 @@ export class ListenerManager implements IListenerManager {
     options?: GetStrandsOptions,
   ): Promise<StrandUpdate[]> {
     // this will throw if listenerState is not found
-    const listenerState = this.getListenerState(driveId, listenerId);
+    this.logger.verbose(
+      `[SYNC DEBUG] ListenerManager.getStrands called for drive: ${driveId}, listener: ${listenerId}, options: ${JSON.stringify(options || {})}`,
+    );
+
+    let listenerState;
+    try {
+      listenerState = this.getListenerState(driveId, listenerId);
+      this.logger.verbose(
+        `[SYNC DEBUG] Found listener state for drive: ${driveId}, listener: ${listenerId}, status: ${listenerState.listenerStatus}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `[SYNC DEBUG] Failed to find listener state for drive: ${driveId}, listener: ${listenerId}. Error: ${error}`,
+      );
+      throw error;
+    }
 
     // fetch operations from drive  and prepare strands
     const strands: StrandUpdate[] = [];
 
-    const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
+    try {
+      const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
+      this.logger.verbose(
+        `[SYNC DEBUG] Retrieved ${syncUnits.length} sync units for drive: ${driveId}, listener: ${listenerId}`,
+      );
 
-    const limit = options?.limit; // maximum number of operations to send across all sync units
-    let operationsCount = 0; // total amount of operations that have been retrieved
+      const limit = options?.limit; // maximum number of operations to send across all sync units
+      let operationsCount = 0; // total amount of operations that have been retrieved
 
-    const tasks = syncUnits.map((syncUnit) => async () => {
-      if (limit && operationsCount >= limit) {
-        // break;
-        return;
-      }
-      if (syncUnit.revision < 0) {
-        return;
-      }
-      const entry = listenerState.syncUnits.get(syncUnit.syncId);
-      if (entry && entry.listenerRev >= syncUnit.revision) {
-        return;
-      }
-
-      const { documentId, driveId, scope, branch } = syncUnit;
-      try {
-        const operations = await this.syncManager.getOperationData(
-          // DEAL WITH INVALID SYNC ID ERROR
-          driveId,
-          syncUnit.syncId,
-          {
-            since: options?.since,
-            fromRevision: options?.fromRevision ?? entry?.listenerRev,
-            limit: limit ? limit - operationsCount : undefined,
-          },
-        );
-
-        if (!operations.length) {
+      const tasks = syncUnits.map((syncUnit) => async () => {
+        if (limit && operationsCount >= limit) {
+          // break;
+          return;
+        }
+        if (syncUnit.revision < 0) {
+          this.logger.verbose(
+            `[SYNC DEBUG] Skipping sync unit with negative revision: ${syncUnit.syncId}, revision: ${syncUnit.revision}`,
+          );
+          return;
+        }
+        const entry = listenerState.syncUnits.get(syncUnit.syncId);
+        if (entry && entry.listenerRev >= syncUnit.revision) {
+          this.logger.verbose(
+            `[SYNC DEBUG] Skipping sync unit - listener already up to date: ${syncUnit.syncId}, listenerRev: ${entry.listenerRev}, revision: ${syncUnit.revision}`,
+          );
           return;
         }
 
-        operationsCount += operations.length;
+        const { documentId, scope, branch } = syncUnit;
+        try {
+          this.logger.verbose(
+            `[SYNC DEBUG] Getting operations for syncUnit: ${syncUnit.syncId}, documentId: ${documentId}, scope: ${scope}, branch: ${branch}`,
+          );
 
-        strands.push({
-          driveId,
-          documentId,
-          scope: scope as OperationScope,
-          branch,
-          operations,
-        });
-      } catch (error) {
-        this.logger.error(error);
-        return;
-      }
-    });
+          const operations = await this.syncManager.getOperationData(
+            // DEAL WITH INVALID SYNC ID ERROR
+            driveId,
+            syncUnit.syncId,
+            {
+              since: options?.since,
+              fromRevision: options?.fromRevision ?? entry?.listenerRev,
+              limit: limit ? limit - operationsCount : undefined,
+            },
+          );
 
-    if (this.options.sequentialUpdates) {
-      for (const task of tasks) {
-        await task();
+          this.logger.verbose(
+            `[SYNC DEBUG] Retrieved ${operations.length} operations for syncUnit: ${syncUnit.syncId}`,
+          );
+
+          if (!operations.length) {
+            return;
+          }
+
+          operationsCount += operations.length;
+
+          strands.push({
+            driveId,
+            documentId,
+            scope: scope as OperationScope,
+            branch,
+            operations,
+          });
+
+          this.logger.verbose(
+            `[SYNC DEBUG] Added strand with ${operations.length} operations for syncUnit: ${syncUnit.syncId}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Error getting operations for syncUnit: ${syncUnit.syncId}, error: ${error}`,
+          );
+          return;
+        }
+      });
+
+      if (this.options.sequentialUpdates) {
+        this.logger.verbose(
+          `[SYNC DEBUG] Processing ${tasks.length} sync units sequentially`,
+        );
+        for (const task of tasks) {
+          await task();
+        }
+      } else {
+        this.logger.verbose(
+          `[SYNC DEBUG] Processing ${tasks.length} sync units in parallel`,
+        );
+        await Promise.all(tasks.map((task) => task()));
       }
-    } else {
-      await Promise.all(tasks.map((task) => task()));
+    } catch (error) {
+      this.logger.error(`Error in getStrands: ${error}`);
     }
 
+    this.logger.verbose(
+      `ListenerManager.getStrands returning ${strands.length} strands for drive: ${driveId}, listener: ${listenerId}`,
+    );
     return strands;
   }
 

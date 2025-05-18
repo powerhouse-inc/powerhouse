@@ -1,0 +1,501 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`graphql codegen > should generate correct typescript code for drive schema 1`] = `
+"export type Maybe<T> = T | null;
+export type InputMaybe<T> = T | null | undefined;
+export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
+export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
+export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+/** All built-in and custom scalars, mapped to their actual values */
+export type Scalars = {
+  ID: { input: string; output: string; }
+  String: { input: string; output: string; }
+  Boolean: { input: boolean; output: boolean; }
+  Int: { input: number; output: number; }
+  Float: { input: number; output: number; }
+  Unknown: { input: unknown; output: unknown; }
+};
+
+export type FolderNode = {
+  id: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  kind: Scalars['String']['output'];
+  parentFolder: Maybe<Scalars['String']['output']>;
+};
+
+export type SynchronizationUnit = {
+  syncId: Scalars['ID']['output'];
+  scope: Scalars['String']['output'];
+  branch: Scalars['String']['output'];
+};
+
+export type FileNode = {
+  id: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  kind: Scalars['String']['output'];
+  documentType: Scalars['String']['output'];
+  parentFolder: Maybe<Scalars['String']['output']>;
+  synchronizationUnits: Array<SynchronizationUnit>;
+};
+
+export type Node = FolderNode | FileNode;
+
+export type DocumentDriveState = {
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  nodes: Array<Node>;
+  icon: Maybe<Scalars['String']['output']>;
+};
+
+export type ListenerFilter = {
+  documentType: Array<Scalars['String']['output']>;
+  documentId: Maybe<Array<Scalars['ID']['output']>>;
+  scope: Maybe<Array<Scalars['String']['output']>>;
+  branch: Maybe<Array<Scalars['String']['output']>>;
+};
+
+export type TransmitterType =
+  | 'Internal'
+  | 'SwitchboardPush'
+  | 'PullResponder'
+  | 'SecureConnect'
+  | 'MatrixConnect'
+  | 'RESTWebhook';
+
+export type ListenerCallInfo = {
+  transmitterType: Maybe<TransmitterType | \`\${TransmitterType}\`>;
+  name: Maybe<Scalars['String']['output']>;
+  data: Maybe<Scalars['String']['output']>;
+};
+
+export type Listener = {
+  listenerId: Scalars['ID']['output'];
+  label: Maybe<Scalars['String']['output']>;
+  block: Scalars['Boolean']['output'];
+  system: Scalars['Boolean']['output'];
+  filter: ListenerFilter;
+  callInfo: Maybe<ListenerCallInfo>;
+};
+
+export type TriggerType =
+  | 'PullResponder';
+
+export type PullResponderTriggerData = {
+  listenerId: Scalars['ID']['output'];
+  url: Scalars['String']['output'];
+  interval: Scalars['String']['output'];
+};
+
+export type TriggerData = PullResponderTriggerData;
+
+export type Trigger = {
+  id: Scalars['ID']['output'];
+  type: TriggerType | \`\${TriggerType}\`;
+  data: Maybe<TriggerData>;
+};
+
+export type DocumentDriveLocalState = {
+  sharingType: Maybe<Scalars['String']['output']>;
+  availableOffline: Scalars['Boolean']['output'];
+  listeners: Array<Listener>;
+  triggers: Array<Trigger>;
+};
+
+export type AddFileInput = {
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+  documentType: Scalars['String']['input'];
+  parentFolder?: InputMaybe<Scalars['ID']['input']>;
+  synchronizationUnits: Array<SynchronizationUnit>;
+  document?: InputMaybe<Scalars['Unknown']['input']>;
+};
+
+export type AddFolderInput = {
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+  parentFolder?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type DeleteNodeInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type UpdateFileInput = {
+  id: Scalars['ID']['input'];
+  parentFolder?: InputMaybe<Scalars['ID']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  documentType?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateNodeInput = {
+  id: Scalars['ID']['input'];
+  parentFolder?: InputMaybe<Scalars['ID']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CopyNodeInput = {
+  srcId: Scalars['ID']['input'];
+  targetId: Scalars['ID']['input'];
+  targetName?: InputMaybe<Scalars['String']['input']>;
+  targetParentFolder?: InputMaybe<Scalars['ID']['input']>;
+  synchronizationUnits?: InputMaybe<Array<SynchronizationUnit>>;
+};
+
+export type MoveNodeInput = {
+  srcFolder: Scalars['ID']['input'];
+  targetParentFolder?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type SetDriveNameInput = {
+  name: Scalars['String']['input'];
+};
+
+export type SetSharingTypeInput = {
+  type: Scalars['String']['input'];
+};
+
+export type SetDriveIconInput = {
+  icon: Scalars['String']['input'];
+};
+
+export type SetAvailableOfflineInput = {
+  availableOffline: Scalars['Boolean']['input'];
+};
+
+export type AddListenerInput = {
+  listener: Listener;
+};
+
+export type RemoveListenerInput = {
+  listenerId: Scalars['String']['input'];
+};
+
+export type AddTriggerInput = {
+  trigger: Trigger;
+};
+
+export type RemoveTriggerInput = {
+  triggerId: Scalars['String']['input'];
+};
+"
+`;
+
+exports[`graphql codegen > should generate correct typescript code for schema 1`] = `
+"export type Maybe<T> = T | null;
+export type InputMaybe<T> = T | null | undefined;
+export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
+export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
+export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+/** All built-in and custom scalars, mapped to their actual values */
+export type Scalars = {
+  ID: { input: string; output: string; }
+  String: { input: string; output: string; }
+  Boolean: { input: boolean; output: boolean; }
+  Int: { input: number; output: number; }
+  Float: { input: number; output: number; }
+  Unknown: { input: unknown; output: unknown; }
+  DateTime: { input: string; output: string; }
+  Attachment: { input: string; output: string; }
+  Address: { input: \`\${string}:0x\${string}\`; output: \`\${string}:0x\${string}\`; }
+  Amount_Tokens: { input: number; output: number; }
+  EthereumAddress: { input: string; output: string; }
+  EmailAddress: { input: string; output: string; }
+  Amount_Percentage: { input: number; output: number; }
+  Date: { input: string; output: string; }
+  URL: { input: string; output: string; }
+  Amount_Money: { input: number; output: number; }
+  OLabel: { input: string; output: string; }
+  Currency: { input: string; output: string; }
+  PHID: { input: string; output: string; }
+  OID: { input: string; output: string; }
+  Amount_Fiat: { input: { unit: string, value: number }; output: { unit: string, value: number }; }
+  Amount_Currency: { input: { unit: string, value: number }; output: { unit: string, value: number }; }
+  Amount_Crypto: { input: { unit: string, value: number }; output: { unit: string, value: number }; }
+  Amount: { input: { unit?: string, value?: number }; output: { unit?: string, value?: number }; }
+};
+
+export type User = {
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  email: Maybe<Scalars['String']['output']>;
+  address: Maybe<Scalars['Address']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+};
+
+export type Query = {
+  user: Maybe<User>;
+  users: Array<User>;
+};
+
+
+export type QueryUserArgs = {
+  id: Scalars['ID']['input'];
+};
+"
+`;
+
+exports[`graphql codegen > should generate correct zod code for drive schema 1`] = `
+"import { z } from 'zod'
+import type { FolderNode, SynchronizationUnit, FileNode, DocumentDriveState, ListenerFilter, TransmitterType, ListenerCallInfo, Listener, TriggerType, PullResponderTriggerData, Trigger, DocumentDriveLocalState, AddFileInput, AddFolderInput, DeleteNodeInput, UpdateFileInput, UpdateNodeInput, CopyNodeInput, MoveNodeInput, SetDriveNameInput, SetSharingTypeInput, SetDriveIconInput, SetAvailableOfflineInput, AddListenerInput, RemoveListenerInput, AddTriggerInput, RemoveTriggerInput } from './types.js'
+
+type Properties<T> = Required<{
+  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+}>;
+
+type definedNonNullAny = {};
+
+export const isDefinedNonNullAny = (v: any): v is definedNonNullAny => v !== undefined && v !== null;
+
+export const definedNonNullAnySchema = z.any().refine((v) => isDefinedNonNullAny(v));
+
+export const TransmitterTypeSchema = z.enum(['Internal', 'SwitchboardPush', 'PullResponder', 'SecureConnect', 'MatrixConnect', 'RESTWebhook']);
+
+export const TriggerTypeSchema = z.enum(['PullResponder']);
+
+export function FolderNodeSchema(): z.ZodObject<Properties<FolderNode>> {
+  return z.object({
+    __typename: z.literal('FolderNode').optional(),
+    id: z.string(),
+    name: z.string(),
+    kind: z.string(),
+    parentFolder: z.string().nullable()
+  })
+}
+
+export function SynchronizationUnitSchema(): z.ZodObject<Properties<SynchronizationUnit>> {
+  return z.object({
+    __typename: z.literal('SynchronizationUnit').optional(),
+    syncId: z.string(),
+    scope: z.string(),
+    branch: z.string()
+  })
+}
+
+export function FileNodeSchema(): z.ZodObject<Properties<FileNode>> {
+  return z.object({
+    __typename: z.literal('FileNode').optional(),
+    id: z.string(),
+    name: z.string(),
+    kind: z.string(),
+    documentType: z.string(),
+    parentFolder: z.string().nullable(),
+    synchronizationUnits: z.array(SynchronizationUnitSchema())
+  })
+}
+
+export function NodeSchema() {
+  return z.union([FolderNodeSchema(), FileNodeSchema()])
+}
+
+export function DocumentDriveStateSchema(): z.ZodObject<Properties<DocumentDriveState>> {
+  return z.object({
+    __typename: z.literal('DocumentDriveState').optional(),
+    id: z.string(),
+    name: z.string(),
+    nodes: z.array(NodeSchema()),
+    icon: z.string().nullable()
+  })
+}
+
+export function ListenerFilterSchema(): z.ZodObject<Properties<ListenerFilter>> {
+  return z.object({
+    __typename: z.literal('ListenerFilter').optional(),
+    documentType: z.array(z.string()),
+    documentId: z.array(z.string()).nullable(),
+    scope: z.array(z.string()).nullable(),
+    branch: z.array(z.string()).nullable()
+  })
+}
+
+export function ListenerCallInfoSchema(): z.ZodObject<Properties<ListenerCallInfo>> {
+  return z.object({
+    __typename: z.literal('ListenerCallInfo').optional(),
+    transmitterType: TransmitterTypeSchema.nullable(),
+    name: z.string().nullable(),
+    data: z.string().nullable()
+  })
+}
+
+export function ListenerSchema(): z.ZodObject<Properties<Listener>> {
+  return z.object({
+    __typename: z.literal('Listener').optional(),
+    listenerId: z.string(),
+    label: z.string().nullable(),
+    block: z.boolean(),
+    system: z.boolean(),
+    filter: ListenerFilterSchema(),
+    callInfo: ListenerCallInfoSchema().nullable()
+  })
+}
+
+export function PullResponderTriggerDataSchema(): z.ZodObject<Properties<PullResponderTriggerData>> {
+  return z.object({
+    __typename: z.literal('PullResponderTriggerData').optional(),
+    listenerId: z.string(),
+    url: z.string(),
+    interval: z.string()
+  })
+}
+
+export function TriggerDataSchema() {
+  return PullResponderTriggerDataSchema()
+}
+
+export function TriggerSchema(): z.ZodObject<Properties<Trigger>> {
+  return z.object({
+    __typename: z.literal('Trigger').optional(),
+    id: z.string(),
+    type: TriggerTypeSchema,
+    data: TriggerDataSchema().nullable()
+  })
+}
+
+export function DocumentDriveLocalStateSchema(): z.ZodObject<Properties<DocumentDriveLocalState>> {
+  return z.object({
+    __typename: z.literal('DocumentDriveLocalState').optional(),
+    sharingType: z.string().nullable(),
+    availableOffline: z.boolean(),
+    listeners: z.array(ListenerSchema()),
+    triggers: z.array(TriggerSchema())
+  })
+}
+
+export function AddFileInputSchema(): z.ZodObject<Properties<AddFileInput>> {
+  return z.object({
+    id: z.string(),
+    name: z.string(),
+    documentType: z.string(),
+    parentFolder: z.string().nullish(),
+    synchronizationUnits: z.array(SynchronizationUnitSchema()),
+    document: z.unknown().nullish()
+  })
+}
+
+export function AddFolderInputSchema(): z.ZodObject<Properties<AddFolderInput>> {
+  return z.object({
+    id: z.string(),
+    name: z.string(),
+    parentFolder: z.string().nullish()
+  })
+}
+
+export function DeleteNodeInputSchema(): z.ZodObject<Properties<DeleteNodeInput>> {
+  return z.object({
+    id: z.string()
+  })
+}
+
+export function UpdateFileInputSchema(): z.ZodObject<Properties<UpdateFileInput>> {
+  return z.object({
+    id: z.string(),
+    parentFolder: z.string().nullish(),
+    name: z.string().nullish(),
+    documentType: z.string().nullish()
+  })
+}
+
+export function UpdateNodeInputSchema(): z.ZodObject<Properties<UpdateNodeInput>> {
+  return z.object({
+    id: z.string(),
+    parentFolder: z.string().nullish(),
+    name: z.string().nullish()
+  })
+}
+
+export function CopyNodeInputSchema(): z.ZodObject<Properties<CopyNodeInput>> {
+  return z.object({
+    srcId: z.string(),
+    targetId: z.string(),
+    targetName: z.string().nullish(),
+    targetParentFolder: z.string().nullish(),
+    synchronizationUnits: z.array(SynchronizationUnitSchema()).nullish()
+  })
+}
+
+export function MoveNodeInputSchema(): z.ZodObject<Properties<MoveNodeInput>> {
+  return z.object({
+    srcFolder: z.string(),
+    targetParentFolder: z.string().nullish()
+  })
+}
+
+export function SetDriveNameInputSchema(): z.ZodObject<Properties<SetDriveNameInput>> {
+  return z.object({
+    name: z.string()
+  })
+}
+
+export function SetSharingTypeInputSchema(): z.ZodObject<Properties<SetSharingTypeInput>> {
+  return z.object({
+    type: z.string()
+  })
+}
+
+export function SetDriveIconInputSchema(): z.ZodObject<Properties<SetDriveIconInput>> {
+  return z.object({
+    icon: z.string()
+  })
+}
+
+export function SetAvailableOfflineInputSchema(): z.ZodObject<Properties<SetAvailableOfflineInput>> {
+  return z.object({
+    availableOffline: z.boolean()
+  })
+}
+
+export function AddListenerInputSchema(): z.ZodObject<Properties<AddListenerInput>> {
+  return z.object({
+    listener: ListenerSchema()
+  })
+}
+
+export function RemoveListenerInputSchema(): z.ZodObject<Properties<RemoveListenerInput>> {
+  return z.object({
+    listenerId: z.string()
+  })
+}
+
+export function AddTriggerInputSchema(): z.ZodObject<Properties<AddTriggerInput>> {
+  return z.object({
+    trigger: TriggerSchema()
+  })
+}
+
+export function RemoveTriggerInputSchema(): z.ZodObject<Properties<RemoveTriggerInput>> {
+  return z.object({
+    triggerId: z.string()
+  })
+}
+"
+`;
+
+exports[`graphql codegen > should generate correct zod code for schema 1`] = `
+"import { z } from 'zod'
+import type { User } from './types.js'
+
+type Properties<T> = Required<{
+  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+}>;
+
+type definedNonNullAny = {};
+
+export const isDefinedNonNullAny = (v: any): v is definedNonNullAny => v !== undefined && v !== null;
+
+export const definedNonNullAnySchema = z.any().refine((v) => isDefinedNonNullAny(v));
+
+export function UserSchema(): z.ZodObject<Properties<User>> {
+  return z.object({
+    __typename: z.literal('User').optional(),
+    id: z.string(),
+    name: z.string(),
+    email: z.string().nullable(),
+    address: z.custom<\`\${string}:0x\${string}\`>((val) => /^[a-zA-Z0-9]+:0x[a-fA-F0-9]{40}$/.test(val as string)).nullable(),
+    createdAt: z.string().datetime()
+  })
+}
+"
+`;

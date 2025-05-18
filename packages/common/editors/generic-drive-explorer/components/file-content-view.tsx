@@ -1,18 +1,18 @@
 import {
-  FileItem,
-  UiFileNode,
-  useWindowSize,
+    FileItem,
+    useWindowSize,
+    type BaseUiFileNode,
 } from "@powerhousedao/design-system";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 type Props = {
-  fileNodes: UiFileNode[];
-  onSelectNode: (uiNode: UiFileNode) => void;
-  onRenameNode: (name: string, uiNode: UiFileNode) => void;
-  onDuplicateNode: (uiNode: UiFileNode) => void;
-  onDeleteNode: (uiNode: UiFileNode) => void;
+  fileNodes: BaseUiFileNode[];
+  onSelectNode: (uiNode: BaseUiFileNode) => void;
+  onRenameNode: (name: string, uiNode: BaseUiFileNode) => void;
+  onDuplicateNode: (uiNode: BaseUiFileNode) => void;
+  onDeleteNode: (uiNode: BaseUiFileNode) => void;
   isAllowedToCreateDocuments: boolean;
 };
 
@@ -63,7 +63,7 @@ export function FileContentView(props: Props) {
   const getItem = (
     rowIndex: number,
     columnIndex: number,
-  ): UiFileNode | null => {
+  ): BaseUiFileNode | null => {
     const index = getItemIndex(rowIndex, columnIndex);
     return fileNodes[index] || null;
   };

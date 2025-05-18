@@ -5,16 +5,26 @@ import {
   documentModelDocumentModelModule,
   DocumentModelModule,
   DocumentModelState,
+  generateId,
   PHDocument,
 } from "document-model";
 import { GraphQLError } from "graphql";
 import { beforeEach, describe, it, vi, vitest } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-import { addFile, updateNode } from "../src/drive-document-model/gen/creators";
-import { reducer } from "../src/drive-document-model/gen/reducer";
-import { DocumentDriveDocument, DocumentDriveState } from "../src/drive-document-model/gen/types";
-import { createDocument, createState } from "../src/drive-document-model/gen/utils";
-import { driveDocumentModelModule } from "../src/drive-document-model/module";
+import {
+  addFile,
+  updateNode,
+} from "../src/drive-document-model/gen/creators.js";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import {
+  DocumentDriveDocument,
+  DocumentDriveState,
+} from "../src/drive-document-model/gen/types.js";
+import {
+  createDocument,
+  createState,
+} from "../src/drive-document-model/gen/utils.js";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
@@ -44,9 +54,12 @@ function getDocumentModelModule<TDocument extends PHDocument>(
 }
 
 function buildDriveDocument(
+  { id, slug }: { id: string; slug: string },
   state: Partial<DocumentDriveState>,
 ): DocumentDriveDocument {
   return createDocument({
+    id,
+    slug,
     state: createState({
       global: state,
     }),
@@ -87,7 +100,7 @@ function mockAddDrive(url: string, drive: DocumentDriveDocument) {
       body: JSON.stringify({
         data:
           operationName === "getDrive"
-            ? { drive: drive.state.global }
+            ? { drive: { ...drive.state.global, id: drive.id } }
             : {
                 document: buildDocumentResponse(drive),
               },
@@ -105,7 +118,7 @@ describe("Read mode methods", () => {
     expect,
   }) => {
     const readModeService = new ReadModeService(getDocumentModelModule);
-    const readDriveId = "read-drive";
+    const readDriveId = generateId();
     const context: ReadDriveContext = {
       url: `https://switchboard.com/d/${readDriveId}`,
       filter: {
@@ -115,14 +128,19 @@ describe("Read mode methods", () => {
         scope: ["*"],
       },
     };
+
     const driveData = {
-      id: readDriveId,
       name: "Read drive",
       nodes: [],
-      slug: "read-drive",
     };
 
-    const drive = buildDriveDocument(driveData);
+    const drive = buildDriveDocument(
+      {
+        id: readDriveId,
+        slug: "read-drive",
+      },
+      driveData,
+    );
     mockAddDrive(context.url, drive);
 
     await readModeService.addReadDrive(context.url, context);
@@ -187,10 +205,10 @@ describe("Read mode methods", () => {
                     }
                     ... on DocumentDrive {
                         state {
-                            id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug
+                            name nodes { ... on DocumentDrive_FolderNode { id name kind parentFolder } ... on DocumentDrive_FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon
                         }
                         initialState {
-                            id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug
+                            name nodes { ... on DocumentDrive_FolderNode { id name kind parentFolder } ... on DocumentDrive_FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon
                         }
                     }
                 }
@@ -242,9 +260,15 @@ describe("Read mode methods", () => {
       id: readDriveId,
       name: "Read drive",
       nodes: [],
-      slug: "read-drive",
     };
-    const drive = buildDriveDocument(driveData);
+    const drive = buildDriveDocument(
+      {
+        id: readDriveId,
+        slug: "read-drive",
+      },
+      driveData,
+    );
+
     mockAddDrive(context.url, drive);
 
     await readModeService.addReadDrive(context.url, context);
@@ -269,7 +293,6 @@ describe("Read mode methods", () => {
       },
     };
     const driveData = {
-      id: readDriveId,
       name: "Read drive",
       documentType: "",
       created: "",
@@ -279,10 +302,15 @@ describe("Read mode methods", () => {
         id: readDriveId,
         name: "Read drive",
         nodes: [],
-        slug: "read-drive",
       },
     };
-    const drive = buildDriveDocument(driveData);
+    const drive = buildDriveDocument(
+      {
+        id: readDriveId,
+        slug: "read-drive",
+      },
+      driveData,
+    );
     mockAddDrive(context.url, drive);
 
     await readModeService.addReadDrive(context.url);
@@ -294,17 +322,17 @@ describe("Read mode methods", () => {
   });
 
   it("should return read document from drive", async ({ expect }) => {
-    const readDriveId = "read-drive";
-    const documentId = "my-document";
+    const readDriveId = generateId();
+    const documentId = generateId();
 
     let drive = createDocument({
+      id: readDriveId,
+      slug: "read-drive",
       state: {
         global: {
-          id: readDriveId,
           name: "Read drive",
           nodes: [],
           icon: null,
-          slug: "read-drive",
         },
         local: {},
       },
@@ -530,9 +558,7 @@ describe("Read mode methods", () => {
 
     await expect(
       readModeService.addReadDrive(context.url),
-    ).rejects.toThrowError(
-      new ReadDriveNotFoundError(readDriveId),
-    );
+    ).rejects.toThrowError(new ReadDriveNotFoundError(readDriveId));
   });
 
   it("should throw if specific Graphql error is found", async ({ expect }) => {
@@ -598,7 +624,11 @@ describe("Read mode methods", () => {
         "powerhouse/document-drive",
       );
     } catch (error) {
-      expect(error).toStrictEqual(new GraphQLError('Cannot query field "revisio" on type "IDocument". Did you mean "revision"?'));
+      expect(error).toStrictEqual(
+        new GraphQLError(
+          'Cannot query field "revisio" on type "IDocument". Did you mean "revision"?',
+        ),
+      );
     }
 
     fetchMocker.mockOnceIf(context.url, () => ({

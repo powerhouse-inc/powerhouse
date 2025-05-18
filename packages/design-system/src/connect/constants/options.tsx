@@ -23,20 +23,9 @@ export const defaultDriveOptions = [NEW_FOLDER, RENAME, SETTINGS] as const;
 
 export const defaultFileOptions = [RENAME, DELETE, DUPLICATE] as const;
 
-export const defaultFolderOptions = [
-  NEW_FOLDER,
-  RENAME,
-  DELETE,
-  DUPLICATE,
-] as const;
+export const defaultFolderOptions = [RENAME, DELETE, DUPLICATE] as const;
 
-export const normalNodeOptions = [
-  DUPLICATE,
-  NEW_FOLDER,
-  RENAME,
-  DELETE,
-  SETTINGS,
-] as const;
+export const normalNodeOptions = [DUPLICATE, RENAME, DELETE, SETTINGS] as const;
 
 export const debugNodeOptions = [
   ADD_TRIGGER,
@@ -102,10 +91,6 @@ export const normalNodeOptionsMap: Record<NormalNodeOption, OptionMetadata> = {
   [DUPLICATE]: {
     label: "Duplicate",
     icon: <Icon name="FilesEarmark" />,
-  },
-  [NEW_FOLDER]: {
-    label: "New Folder",
-    icon: <Icon name="FolderPlus" />,
   },
   [RENAME]: {
     label: "Rename",

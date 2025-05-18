@@ -1,6 +1,8 @@
 import {
   createDocumentStory,
   type DocumentStory,
+  type DriveDocumentStory,
+  type DriveEditorStoryComponent,
   type EditorStoryArgs,
   type EditorStoryComponent,
   type EditorStoryProps,
@@ -135,16 +137,19 @@ export function createDriveStory(
     Editor,
     driveDocumentModelModule.reducer,
     initialState ??
-      driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { id: "powerhouse", name: "Powerhouse" }, local: {} },
+    {
+      ...driveDocumentModelModule.utils.createExtendedState({
+        state: { global: { name: "Powerhouse" }, local: {} },
       }),
+      id: "powerhouse",
+    },
     additionalStoryArgs,
     [DriveContextDecorator, ...(decorators ?? [])],
   );
 }
 
 export function createDriveStoryWithUINodes(
-  Editor: EditorStoryComponent<DocumentDriveDocument>,
+  Editor: DriveEditorStoryComponent<DocumentDriveDocument>,
   initialState?: ExtendedState<
     PartialState<DocumentDriveState>,
     PartialState<DocumentDriveLocalState>
@@ -153,16 +158,25 @@ export function createDriveStoryWithUINodes(
   decorators?: Decorator<EditorStoryProps<DocumentDriveDocument>>[],
 ): {
   meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory<DocumentDriveDocument>;
+  CreateDocumentStory: DriveDocumentStory<DocumentDriveDocument>;
 } {
-  return createDocumentStory(
-    Editor,
+  const { meta, CreateDocumentStory } = createDocumentStory(
+    Editor as EditorStoryComponent<DocumentDriveDocument>,
     driveDocumentModelModule.reducer,
     initialState ??
-      driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { id: "powerhouse", name: "Powerhouse" }, local: {} },
-      }),
+      {
+        ...driveDocumentModelModule.utils.createExtendedState({
+          state: { global: { name: "Powerhouse" }, local: {} },
+        }),
+        id: "powerhouse",
+      },
     additionalStoryArgs,
     [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
   );
+
+  return {
+    meta: meta as Meta<typeof Editor>,
+    CreateDocumentStory:
+      CreateDocumentStory as DriveDocumentStory<DocumentDriveDocument>,
+  };
 }

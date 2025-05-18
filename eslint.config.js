@@ -36,6 +36,7 @@ export default tseslint.config(
       "**/postcss.config.mjs",
       "**/create-require.js",
       ".nx/",
+      "packages/codegen/**/__tests__",
       "packages/document-drive/**/*.test.ts",
       "packages/document-drive/**/*.bench.ts",
       "packages/reactor-api/**/*.test.ts",
@@ -48,6 +49,9 @@ export default tseslint.config(
       "apps/connect/src/vite-env.d.ts",
       "**/*.config.*",
       "clis/ph-cli/.ph/",
+      "packages/document-drive/src/storage/prisma/client/",
+      "clis/ph-cli/test/utils.test.ts",
+      "apps/connect/src/external-packages.js"
     ],
   },
   {

@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "resolveJsonModule": true
+  },
+  "include": ["tests/*", "index.ts", "playwright.config.ts", "powerhouse.manifest.json"]
+}

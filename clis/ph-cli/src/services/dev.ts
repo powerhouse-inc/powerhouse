@@ -3,8 +3,8 @@ import { blue, green, red } from "colorette";
 import { type ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DefaultSwitchboardOptions, type SwitchboardOptions } from "./switchboard.js";
 import { getConfig } from "../utils.js";
+import { DefaultReactorOptions, type ReactorOptions } from "./reactor.js";
 
 const __dirname =
   import.meta.dirname || dirname(fileURLToPath(import.meta.url));
@@ -18,7 +18,7 @@ export type DevOptions = {
   httpsCertFile?: string;
 };
 
-function spawnLocalSwitchboard(options?: SwitchboardOptions) {
+function spawnLocalSwitchboard(options?: ReactorOptions) {
   const child = fork(
     path.join(dirname(__dirname), "commands", "switchboard.js"),
     ["spawn", JSON.stringify(options)],
@@ -69,8 +69,6 @@ async function spawnConnect(
       env: {
         ...process.env,
         // TODO add studio variables?
-        LOCAL_DOCUMENT_MODELS: options?.localDocuments,
-        LOCAL_DOCUMENT_EDITORS: options?.localEditors,
         PH_CONNECT_DEFAULT_DRIVES_URL: localReactorUrl,
       },
     },
@@ -95,7 +93,7 @@ async function spawnConnect(
 export async function startDev({
   generate,
   watch,
-  switchboardPort = DefaultSwitchboardOptions.port,
+  switchboardPort = DefaultReactorOptions.port,
   configFile,
 }: DevOptions) {
   try {
