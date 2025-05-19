@@ -15,7 +15,7 @@ async function initConnectCrypto() {
     return connectCrypto;
 }
 
-function getConnectCrypto(): Promise<IConnectCrypto> {
+export function getConnectCrypto(): Promise<IConnectCrypto> {
     if (window.connectCrypto) {
         return Promise.resolve(window.connectCrypto);
     }

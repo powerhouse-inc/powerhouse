@@ -11,6 +11,8 @@ import { generateId } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { atomWithLazy, unwrap } from 'jotai/utils';
+import { getConnectCrypto } from '../hooks/useConnectCrypto.js';
+import { renownAtom, renownStatusAtom } from '../hooks/useRenown.js';
 import {
     documentModelsAtom,
     subscribeDocumentModels,
@@ -18,6 +20,8 @@ import {
 import { atomStore } from './index.js';
 
 async function initReactor(reactor: IDocumentDriveServer) {
+    await initJwtHandler(reactor);
+
     const errors = await reactor.initialize();
     const error = errors?.at(0);
     if (error) {
@@ -45,14 +49,60 @@ async function initReactor(reactor: IDocumentDriveServer) {
     }
 }
 
+async function initJwtHandler(server: IDocumentDriveServer) {
+    const renown = await atomStore.get(renownAtom);
+    const user = await renown?.user();
+    const crypto = await getConnectCrypto();
+
+    if (user?.address) {
+        server.setGenerateJwtHandler(async driveUrl => {
+            // TODO: remove this
+            console.log('>>> setGenerateJwtHandler', { driveUrl });
+            return crypto.getBearerToken(driveUrl, user.address);
+        });
+    }
+}
+
+// Helper function to wait for renown to be initialized
+async function waitForRenown(): Promise<void> {
+    // Wait for renown status to be 'finished'
+    return new Promise<void>(resolve => {
+        const unsubscribe = observe(get => {
+            try {
+                const status = get(renownStatusAtom);
+                if (status === 'finished' || status === 'error') {
+                    unsubscribe();
+                    resolve();
+                }
+            } catch (err) {
+                // In case of any error during the observation, proceed with reactor initialization
+                console.warn(
+                    'Error observing renown status:',
+                    err instanceof Error ? err.message : 'Unknown error',
+                );
+                unsubscribe();
+                resolve();
+            }
+        }, atomStore);
+
+        // Set a maximum timeout (5 seconds) to avoid blocking indefinitely
+        setTimeout(() => {
+            unsubscribe();
+            console.warn('Timed out waiting for renown to initialize');
+            resolve();
+        }, 5000);
+    });
+}
+
 async function createReactor() {
+    await waitForRenown();
     // get storage
     const storage = atomStore.get(storageAtom);
 
     // waits for document models to be loaded
     const documentModels = await atomStore.get(documentModelsAtom);
     const server =
-        (window.electronAPI?.documentDrive as unknown as
+        (window.electronAPI?.documentDrive as
             | IDocumentDriveServer
             | undefined) ??
         createBrowserDocumentDriveServer(documentModels, storage);
