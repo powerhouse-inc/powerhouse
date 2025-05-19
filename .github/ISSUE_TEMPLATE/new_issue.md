@@ -1,3 +1,11 @@
+---
+name: "New Issue"
+about: "Describe an item from the work breakdown or a well defined workload item"
+title: "[ISSUE TITLE] "
+labels:
+assignees: ""
+---
+
 ## Context / Background
 
 > Describe the context and motivation for this issue.   
