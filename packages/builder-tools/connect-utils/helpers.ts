@@ -70,3 +70,63 @@ export function readJsonFile(filePath: string): PowerhouseConfig | null {
     return null;
   }
 }
+
+export function makeImportScriptFromPackages(args: {
+  packages: string[];
+  localPackage: boolean;
+  hasStyles: boolean;
+  hasModule: boolean;
+  localJsPath: string;
+  localCssPath: string;
+  localPackageId: string;
+}) {
+  const {
+    packages,
+    localPackage,
+    hasStyles,
+    hasModule,
+    localJsPath,
+    localCssPath,
+    localPackageId,
+  } = args;
+  const imports: string[] = [];
+  const moduleNames: string[] = [];
+  let counter = 0;
+
+  for (const packageName of packages) {
+    const moduleName = `module${counter}`;
+    moduleNames.push(moduleName);
+    imports.push(`import * as ${moduleName} from '${packageName}';`);
+    imports.push(`import '${packageName}/style.css';`);
+    counter++;
+  }
+
+  const exports = moduleNames.map(
+    (name, index) => `{
+      id: "${packages[index]}",
+      ...${name},
+    }`,
+  );
+
+  if (localPackage) {
+    if (hasStyles) {
+      imports.push(`import '${localCssPath}';`);
+    }
+    if (hasModule) {
+      const moduleName = `module${counter}`;
+      imports.push(`import * as ${moduleName} from '${localJsPath}';`);
+      exports.push(`{
+        id: "${localPackageId}",
+        ...${moduleName},
+      }`);
+    }
+  }
+
+  const exportStatement = `export default [
+        ${exports.join(",\n")}
+    ];`;
+
+  const fileContent = `${imports.join("\n")}\n\n${exportStatement}`;
+
+  return fileContent;
+}

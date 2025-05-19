@@ -11,6 +11,7 @@
   ],
   "exports": {
     "./connect-studio": "./dist/connect-studio/index.js",
+    "./connect-build": "./dist/connect-build/index.js",
     "./document-model-editor": "./dist/document-model-editor/index.js",
     "./editor-utils": "./dist/editor-utils/index.js",
     "./style.css": "./dist/style.css"
@@ -18,7 +19,7 @@
   "imports": {
     "#editor-utils/*": "./dist/editor-utils/*.js",
     "#document-model-editor/*": "./dist/document-model-editor/*.js",
-    "#connect-studio/*": "./dist/connect-studio/*.js"
+    "#connect-utils": "./dist/connect-utils/index.js"
   },
   "scripts": {
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",

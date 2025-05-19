@@ -1,9 +1,19 @@
+import {
+  backupIndexHtml,
+  copyConnect,
+  generateImportMapPlugin,
+  LOCAL_PACKAGE_ID,
+  makeImportScriptFromPackages,
+  removeBase64EnvValues,
+  viteConnectDevStudioPlugin,
+  viteLoadExternalPackages,
+} from "#connect-utils";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import viteReact from "@vitejs/plugin-react";
 import { exec } from "node:child_process";
-import fs from "node:fs";
+import fs, { writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path, { join, resolve } from "node:path";
 import {
@@ -20,15 +30,8 @@ import { createHtmlPlugin } from "vite-plugin-html";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
-import {
-  backupIndexHtml,
-  copyConnect,
-  removeBase64EnvValues,
-} from "./helpers.js";
 import { type StartServerOptions } from "./types.js";
-import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
-import { generateImportMapPlugin } from "./vite-plugins/importmap.js";
-import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
+
 const clientConfig = {
   meta: [
     {
@@ -261,8 +264,6 @@ export async function startServer(
   server.bindCLIShortcuts({ print: true });
 }
 
-const staticFiles = ["./src/service-worker.ts", "./src/external-packages.js"];
-
 const externalAndExclude = ["vite", "vite-envs", "node:crypto"];
 export const externalIds = [/^react(-dom)?(\/.*)?$/, /^node:.*$/];
 export async function runBuild(
@@ -285,6 +286,8 @@ export async function runBuild(
   });
   const connectBuildDistDirPath = join(connectBuildRoot, "dist");
   console.log("Resolved build dist dir path", { connectBuildDistDirPath });
+  const projectDistDirPath = join(projectRoot, "dist");
+  console.log("Resolved project dist dir path", { projectDistDirPath });
   const connectPath = "/Users/ry/work/powerhouse/apps/connect";
   copyConnect(connectPath, connectBuildRoot);
   console.log("Copied connect");
@@ -307,16 +310,6 @@ export async function runBuild(
     PH_CONNECT_CLI_VERSION: process.env.PH_CONNECT_CLI_VERSION,
   });
 
-  const staticInputs = staticFiles.reduce(
-    (acc, file) =>
-      Object.assign(acc, {
-        [path.basename(file, path.extname(file))]: path.resolve(
-          connectBuildRoot,
-          file,
-        ),
-      }),
-    {},
-  );
   const config: InlineConfig = {
     root: connectBuildRoot,
     build: {
@@ -324,12 +317,15 @@ export async function runBuild(
       rollupOptions: {
         input: {
           main: path.resolve(connectBuildRoot, "index.html"),
-          ...staticInputs,
+          "external-packages": path.resolve(
+            connectBuildRoot,
+            "src/external-packages.js",
+          ),
         },
         output: {
           entryFileNames: (chunk) =>
-            Object.keys(staticInputs).includes(chunk.name)
-              ? `${chunk.name}.js`
+            chunk.name.includes("external-packages")
+              ? `external-packages.js`
               : "assets/[name].[hash].js",
         },
         external: [...externalAndExclude, ...externalIds],
@@ -362,10 +358,8 @@ export async function runBuild(
         },
       }),
       viteReact({
-        include: [
-          join(connectBuildRoot, "**/*.tsx"),
-          join(projectRoot, "**/*.tsx"),
-        ],
+        include: [join(projectRoot, "**/*.(js|jsx|ts|tsx)")],
+        exclude: ["node_modules", join(connectBuildRoot, "assets/*.js")],
         babel: {
           parserOpts: {
             plugins: ["decorators"],
@@ -384,7 +378,6 @@ export async function runBuild(
           ],
         },
       }),
-      viteLoadExternalPackages(true, phPackages, connectBuildRoot),
       generateImportMapPlugin(connectBuildRoot, [
         { name: "react", provider: "esm.sh" },
         { name: "react-dom", provider: "esm.sh" },
@@ -395,7 +388,20 @@ export async function runBuild(
       exclude: externalAndExclude,
     },
   };
-
+  const importScript = makeImportScriptFromPackages({
+    packages: phPackages,
+    localPackage: true,
+    hasStyles: true,
+    hasModule: true,
+    localJsPath: join(projectDistDirPath, "index.js"),
+    localCssPath: join(projectDistDirPath, "style.css"),
+    localPackageId: LOCAL_PACKAGE_ID,
+  });
+  console.log("Resolved import script", { importScript });
+  writeFileSync(
+    join(connectBuildRoot, "src/external-packages.js"),
+    importScript,
+  );
   const output = await build(config);
   console.log("Build output", { output });
 }
