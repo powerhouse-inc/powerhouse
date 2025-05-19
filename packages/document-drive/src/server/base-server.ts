@@ -2156,6 +2156,11 @@ export class BaseDocumentDriveServer
     this.generateJwtHandler = handler;
     this.listenerManager.setGenerateJwtHandler(handler);
   }
+
+  removeJwtHandler() {
+    this.generateJwtHandler = undefined;
+    this.listenerManager.removeJwtHandler();
+  }
 }
 
 export type DocumentDriveServerConstructor =

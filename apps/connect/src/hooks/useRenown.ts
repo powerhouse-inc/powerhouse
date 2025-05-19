@@ -67,7 +67,10 @@ export function useRenown() {
                     return renownBrowser.login(did);
                 },
                 logout() {
-                    return Promise.resolve(renownBrowser.logout());
+                    return atomStore.get(reactorAtom).then(reactor => {
+                        reactor.removeJwtHandler();
+                        return renownBrowser.logout();
+                    });
                 },
                 on: {
                     user(cb) {
