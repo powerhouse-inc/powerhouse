@@ -1,6 +1,6 @@
 import { readJsonFile } from "#connect-utils";
 import { dirname, isAbsolute, join } from "path";
-import { runBuild, startServer } from "./server.js";
+import { startServer } from "./server.js";
 import { type ConnectStudioOptions, type StartServerOptions } from "./types.js";
 
 export function startConnectStudio(options: ConnectStudioOptions) {
@@ -71,50 +71,6 @@ export function startConnectStudio(options: ConnectStudioOptions) {
   }
 
   return startServer(serverOptions).catch((error) => {
-    throw error;
-  });
-}
-
-export function buildConnectStudio(options: ConnectStudioOptions) {
-  const serverOptions: StartServerOptions = {};
-
-  if (options.configFile) {
-    const config = readJsonFile(options.configFile);
-    if (!config) return;
-
-    const configFileDir = dirname(options.configFile);
-
-    if (config.packages && config.packages.length > 0) {
-      serverOptions.packages = config.packages.map((p) => p.packageName);
-    }
-
-    if (config.documentModelsDir) {
-      process.env.LOCAL_DOCUMENT_MODELS = isAbsolute(config.documentModelsDir)
-        ? config.documentModelsDir
-        : join(configFileDir, config.documentModelsDir);
-    }
-
-    if (config.editorsDir) {
-      process.env.LOCAL_DOCUMENT_EDITORS = isAbsolute(config.editorsDir)
-        ? config.editorsDir
-        : join(configFileDir, config.editorsDir);
-    }
-  }
-
-  if (options.packages && options.packages.length > 0) {
-    serverOptions.packages = options.packages.map((p) => p.packageName);
-  }
-
-  if (options.phCliVersion) {
-    serverOptions.phCliVersion = options.phCliVersion;
-  }
-
-  if (options.logLevel) {
-    process.env.LOG_LEVEL = options.logLevel;
-    serverOptions.logLevel = options.logLevel;
-  }
-
-  return runBuild(serverOptions).catch((error) => {
     throw error;
   });
 }

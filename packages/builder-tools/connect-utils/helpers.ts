@@ -1,6 +1,20 @@
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { exec } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
+import { type Plugin } from "vite";
+
+export function resolvePackage(packageName: string, root = process.cwd()) {
+  // find connect installation
+  const require = createRequire(root);
+  return require.resolve(packageName, { paths: [root] });
+}
+
+export function resolveConnect(root = process.cwd()) {
+  const connectHTMLPath = resolvePackage("@powerhousedao/connect", root);
+  return resolve(connectHTMLPath, "..");
+}
 
 export function copyConnect(sourcePath: string, targetPath: string) {
   try {
@@ -129,4 +143,42 @@ export function makeImportScriptFromPackages(args: {
   const fileContent = `${imports.join("\n")}\n\n${exportStatement}`;
 
   return fileContent;
+}
+
+export function ensureNodeVersion(minVersion = "20") {
+  const version = process.versions.node;
+  if (!version) {
+    return;
+  }
+
+  if (version < minVersion) {
+    console.error(
+      `Node version ${minVersion} or higher is required. Current version: ${version}`,
+    );
+    process.exit(1);
+  }
+}
+
+export function runShellScriptPlugin(
+  scriptName: string,
+  connectPath: string,
+): Plugin {
+  return {
+    name: "vite-plugin-run-shell-script",
+    buildStart() {
+      const scriptPath = join(connectPath, scriptName);
+      if (fs.existsSync(scriptPath)) {
+        exec(`sh ${scriptPath}`, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`Error executing the script: ${error.message}`);
+            removeBase64EnvValues(connectPath);
+            return;
+          }
+          if (stderr) {
+            console.error(stderr);
+          }
+        });
+      }
+    },
+  };
 }

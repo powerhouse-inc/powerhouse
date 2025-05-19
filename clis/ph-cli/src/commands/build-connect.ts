@@ -5,8 +5,8 @@ import { type CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function runBuildConnect(options: ConnectOptions) {
-  const Connect = await import("../services/connect.js");
-  const { buildConnect } = Connect;
+  const Build = await import("../services/build.js");
+  const { buildConnect } = Build;
   return buildConnect(options);
 }
 
