@@ -52,6 +52,10 @@ export class ListenerManager implements IListenerManager {
     this.generateJwtHandler = handler;
   }
 
+  removeJwtHandler() {
+    this.generateJwtHandler = undefined;
+  }
+
   async initialize(handler: DriveUpdateErrorHandler) {
     this.logger.verbose("initialize(...)");
 

@@ -511,6 +511,7 @@ export interface IBaseDocumentDriveServer {
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
 
   setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
+  removeJwtHandler(): void;
   generateJwtHandler?: (driveUrl: string) => Promise<string>;
 }
 
@@ -565,6 +566,7 @@ export interface IListenerManager {
   ): Promise<void>;
 
   setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
+  removeJwtHandler(): void;
   generateJwtHandler?: (driveUrl: string) => Promise<string>;
 }
 
