@@ -30,6 +30,7 @@ export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
 export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
   driveId: string;
   documentId: string;
+  documentType: string;
   scope: OperationScope;
   branch: string;
   operations: InternalOperationUpdate<TDocument>[];
@@ -107,18 +108,21 @@ export class InternalTransmitter implements ITransmitter {
 
     try {
       await this.processor.onStrands(updates);
-      return strands.map(({ operations, ...s }) => ({
-        ...s,
-        status: "SUCCESS",
-        revision: operations.at(operations.length - 1)?.index ?? -1,
-      }));
+      return strands.map(({ operations, ...s }) => {
+        const operation = operations.at(-1);
+        return {
+          ...s,
+          status: "SUCCESS",
+          revision: operation ? operation.index + 1 : 0,
+        };
+      });
     } catch (error) {
       logger.error(error);
       // TODO check which strand caused an error
       return strands.map(({ operations, ...s }) => ({
         ...s,
         status: "ERROR",
-        revision: (operations.at(0)?.index ?? 0) - 1,
+        revision: operations.at(0)?.index ?? 0,
       }));
     }
   }

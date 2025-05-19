@@ -154,6 +154,7 @@ export class DriveSubgraph extends Subgraph {
     input InputStrandUpdate {
       driveId: String!
       documentId: String!
+      documentType: String!
       scope: String!
       branch: String!
       operations: [InputOperationUpdate!]!
@@ -405,6 +406,7 @@ export class DriveSubgraph extends Subgraph {
               branch: "main",
             })) as Operation[],
             documentId: strandGql.documentId,
+            documentType: strandGql.documentType,
             driveId: strandGql.driveId,
             scope: strandGql.scope,
             branch: strandGql.branch,

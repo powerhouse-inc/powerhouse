@@ -135,8 +135,8 @@ export class BaseDocumentDriveServer
     processActionJob: async ({ documentId, actions, options }: ActionJob) => {
       const document = await this.getDocument(documentId);
       return isDocumentDrive(document)
-        ? this.processActions(documentId, actions, options)
-        : this.processDriveActions(documentId, actions, options);
+        ? this.processDriveActions(documentId, actions, options)
+        : this.processActions(documentId, actions, options);
     },
     processJob: async (job: Job) => {
       if (isOperationJob(job)) {

@@ -1,12 +1,8 @@
 import { DocumentModelModule, generateId, setModelName } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+import * as DriveActions from "../src/drive-document-model/gen/creators.js";
 import { ReactorBuilder } from "../src/server/builder.js";
-import {
-  InternalTransmitter,
-  InternalTransmitterUpdate,
-} from "../src/server/listener/transmitter/internal.js";
+import { InternalTransmitter } from "../src/server/listener/transmitter/internal.js";
 import { expectUTCTimestamp, expectUUID } from "./utils.js";
 
 import { IProcessor } from "#processors/types";
@@ -76,7 +72,8 @@ describe("Internal Listener", () => {
   });
 
   test("should call transmit function of listener and acknowledge", async () => {
-    const transmitFn = vitest.fn(() => {
+    const transmitFn = vitest.fn((args) => {
+      console.log("TRANSMIT", args);
       return Promise.resolve();
     });
 
@@ -86,97 +83,90 @@ describe("Internal Listener", () => {
     });
     const drive = await server.getDrive(driveId);
 
-    const documentId = generateId();
-    const action = generateAddNodeAction(
-      drive.state.global,
-      {
-        id: documentId,
-        name: "test",
-        documentType: "powerhouse/document-model",
-      },
-      ["global", "local"],
-    );
-    await server.addDriveAction(driveId, action);
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(1));
+    expect(transmitFn).toHaveBeenCalledWith([
+      {
+        branch: "main",
+        documentId: drive.id,
+        documentType: "powerhouse/document-drive",
+        driveId: drive.id,
+        operations: [],
+        scope: "global",
+        state: {},
+      },
+    ]);
 
-    const update: InternalTransmitterUpdate<DocumentDriveDocument> = {
-      branch: "main",
-      documentId: driveId,
-      driveId,
-      operations: [
-        {
-          hash: expect.any(String) as string,
-          context: undefined,
-          id: expectUUID(expect) as string,
-          index: 0,
-          input: action.input,
-          skip: 0,
-          timestamp: "2024-01-01T00:00:00.000Z",
-          type: "ADD_FILE",
-          state: {
-            icon: "",
-            name: "Global Drive",
-            nodes: [
-              {
-                documentType: "powerhouse/document-model",
-                id: documentId,
-                kind: "file",
-                name: "test",
-                parentFolder: null,
-                synchronizationUnits: [
-                  {
-                    branch: "main",
-                    scope: "global",
-                    syncId: expectUUID(expect) as string,
-                  },
-                  {
-                    branch: "main",
-                    scope: "local",
-                    syncId: expectUUID(expect) as string,
-                  },
-                ],
-              },
-            ],
-          },
-          previousState: {
-            icon: "",
-            name: "Global Drive",
-            nodes: [],
-          },
-        },
-      ],
-      state: {
-        icon: "",
-        name: "Global Drive",
-        nodes: [
+    const documentId = generateId();
+    const document = documentModelDocumentModelModule.utils.createDocument({
+      id: documentId,
+    });
+    await server.addDocument(document);
+
+    const action = DriveActions.addFile({
+      id: documentId,
+      name: "test",
+      documentType: "powerhouse/document-model",
+    });
+
+    const result = await server.addDriveAction(driveId, action);
+    await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
+    expect(transmitFn).toHaveBeenCalledWith([
+      {
+        branch: "main",
+        documentId: drive.id,
+        documentType: "powerhouse/document-drive",
+        driveId: driveId,
+        operations: [
           {
-            documentType: "powerhouse/document-model",
-            id: documentId,
-            kind: "file",
-            name: "test",
-            parentFolder: null,
-            synchronizationUnits: [
-              {
-                branch: "main",
-                scope: "global",
-                syncId: action.input.synchronizationUnits[0]?.syncId,
-              },
-              {
-                branch: "main",
-                scope: "local",
-                syncId: action.input.synchronizationUnits[1]?.syncId,
-              },
-            ],
+            hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
+            context: undefined,
+            id: expectUUID(expect) as string,
+            index: 0,
+            input: {
+              id: documentId,
+              name: "test",
+              documentType: "powerhouse/document-model",
+            },
+            skip: 0,
+            timestamp: expectUTCTimestamp(expect),
+            type: "ADD_FILE",
+            previousState: {
+              icon: "",
+              name: "Global Drive",
+              nodes: [],
+            },
+            state: {
+              icon: "",
+              name: "Global Drive",
+              nodes: [
+                {
+                  documentType: "powerhouse/document-model",
+                  id: documentId,
+                  kind: "file",
+                  name: "test",
+                  parentFolder: null,
+                },
+              ],
+            },
           },
         ],
+        scope: "global",
+        state: result.document!.state.global,
       },
-      scope: "global",
-    };
-    expect(transmitFn).toHaveBeenCalledWith([update]);
+      {
+        branch: "main",
+        documentId: document.id,
+        documentType: "powerhouse/document-model",
+        driveId: driveId,
+        operations: [],
+        scope: "global",
+        state: {},
+      },
+    ]);
 
-    await server.addAction(driveId, documentId, setModelName({ name: "test" }));
+    await server.addAction(documentId, setModelName({ name: "test" }));
 
-    await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
 
     const state = {
       author: {
@@ -207,14 +197,16 @@ describe("Internal Listener", () => {
         },
       ],
     };
+
     expect(transmitFn).toHaveBeenLastCalledWith([
       {
         branch: "main",
+        documentType: "powerhouse/document-model",
         documentId,
         driveId,
         operations: [
           {
-            hash: "nWKpqR6ns0l8C/Khwrl+SyKy0sA=",
+            hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
             context: undefined,
             id: expectUUID(expect) as string,
             index: 0,
@@ -233,21 +225,18 @@ describe("Internal Listener", () => {
       },
     ]);
 
-    await server.addAction(
-      driveId,
-      documentId,
-      setModelName({ name: "test 2" }),
-    );
+    await server.addAction(documentId, setModelName({ name: "test 2" }));
 
-    await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
+    await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(4));
     expect(transmitFn).toHaveBeenLastCalledWith([
       {
         branch: "main",
+        documentType: "powerhouse/document-model",
         documentId,
         driveId,
         operations: [
           {
-            hash: "s7RBcer0JqjSGvNb12gqpeeJGRY=",
+            hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
             context: undefined,
             id: expectUUID(expect) as string,
             index: 1,

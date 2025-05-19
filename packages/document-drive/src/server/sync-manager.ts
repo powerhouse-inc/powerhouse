@@ -170,7 +170,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
         ((filter.since === undefined ||
           isBefore(filter.since, operation.timestamp)) &&
           (filter.fromRevision === undefined ||
-            operation.index > filter.fromRevision)),
+            operation.index >= filter.fromRevision)),
     );
 
     this.logger.verbose(

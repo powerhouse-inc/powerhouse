@@ -1,7 +1,7 @@
-import stringify from "json-stringify-deterministic";
+import { type ListenerRevision, type StrandUpdate } from "#server/types";
 import { gql, requestGraphql } from "#utils/graphql";
 import { childLogger } from "#utils/logger";
-import { type ListenerRevision, type StrandUpdate } from "#server/types";
+import stringify from "json-stringify-deterministic";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 const SYNC_OPS_BATCH_LIMIT = 10;
@@ -27,14 +27,17 @@ export class SwitchboardPushTransmitter implements ITransmitter {
     ) {
       this.logger.verbose(`Cutting trigger loop from ${this.targetURL}.`);
 
-      return strands.map((strand) => ({
-        driveId: strand.driveId,
-        documentId: strand.documentId,
-        scope: strand.scope,
-        branch: strand.branch,
-        status: "SUCCESS",
-        revision: strand.operations.at(-1)?.index ?? -1,
-      }));
+      return strands.map((strand) => {
+        const operation = strand.operations.at(-1);
+        return {
+          driveId: strand.driveId,
+          documentId: strand.documentId,
+          scope: strand.scope,
+          branch: strand.branch,
+          status: "SUCCESS",
+          revision: operation ? operation.index + 1 : 0,
+        };
+      });
     }
 
     const culledStrands: StrandUpdate[] = [];

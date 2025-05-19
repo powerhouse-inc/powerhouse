@@ -1,5 +1,6 @@
 import { OperationError } from "#server/error";
 import { type StrandUpdateSource } from "#server/listener/transmitter/types";
+import { SyncUnitMap } from "#server/sync-unit-map";
 import {
   DefaultListenerManagerOptions,
   type DriveUpdateErrorHandler,
@@ -15,6 +16,7 @@ import {
   type StrandUpdate,
   type SynchronizationUnit,
   type SynchronizationUnitId,
+  type SyncronizationUnitState,
 } from "#server/types";
 import { childLogger, type ListenerFilter } from "document-drive";
 import { type OperationScope } from "document-model";
@@ -92,7 +94,7 @@ export class ListenerManager implements IListenerManager {
       pendingTimeout: "0",
       listener,
       listenerStatus: "CREATED",
-      syncUnits: new Map(),
+      syncUnits: new SyncUnitMap<SyncronizationUnitState>(),
     });
 
     await this.triggerUpdate(true, { type: "local" });
@@ -139,7 +141,7 @@ export class ListenerManager implements IListenerManager {
     // Should we decouple the operation processing from the sync?
     const driveListeners = this.listenerStateByDriveId.values();
     const outdatedListeners: Listener[] = [];
-    for (const [_drive, [_, listenerState]] of driveListeners) {
+    for (const [[_drive, listenerState]] of driveListeners) {
       if (
         outdatedListeners.find(
           (l) => l.listenerId === listenerState.listener.listenerId,
@@ -245,24 +247,26 @@ export class ListenerManager implements IListenerManager {
           }
 
           const opData: OperationUpdate[] = [];
-          try {
-            const data = await this.syncManager.getOperationData(
-              // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
-              syncUnit,
-              {
-                fromRevision: unitState?.listenerRev,
-              },
-            );
-            opData.push(...data);
-          } catch (e) {
-            this.logger.error(e);
-          }
+          if (syncUnit.revision > 0) {
+            try {
+              const data = await this.syncManager.getOperationData(
+                // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
+                syncUnit,
+                {
+                  fromRevision: unitState?.listenerRev,
+                },
+              );
+              opData.push(...data);
+            } catch (e) {
+              this.logger.error(e);
+            }
 
-          if (!opData.length) {
-            this.logger.verbose(
-              `Abandoning push for ${JSON.stringify(syncUnit)}: no operations found`,
-            );
-            return;
+            if (!opData.length) {
+              this.logger.verbose(
+                `Abandoning push for ${JSON.stringify(syncUnit)}: no operations found`,
+              );
+              return;
+            }
           }
 
           strandUpdates.push({

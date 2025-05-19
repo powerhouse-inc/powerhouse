@@ -31,6 +31,7 @@ import {
   type ITransmitter,
   type StrandUpdateSource,
 } from "./listener/transmitter/types.js";
+import { type ISyncUnitMap } from "./sync-unit-map.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -553,10 +554,7 @@ export type ListenerStatus =
   | "CONFLICT"
   | "ERROR";
 
-export type SynchronizationUnitMap = Map<
-  SynchronizationUnitId,
-  SyncronizationUnitState
->;
+export type SynchronizationUnitMap = ISyncUnitMap<SyncronizationUnitState>;
 
 export interface ListenerState {
   driveId: string;
