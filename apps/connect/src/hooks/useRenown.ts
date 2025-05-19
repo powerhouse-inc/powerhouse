@@ -1,8 +1,5 @@
 import { type IRenown, type User } from '#services';
 import { atom, useAtom } from 'jotai';
-import { useEffect } from 'react';
-import { atomStore } from '../store/index.js';
-import { reactorAtom } from '../store/reactor.js';
 import { useConnectCrypto } from './useConnectCrypto.js';
 
 export type RenownStatus = 'idle' | 'loading' | 'finished' | 'error';
@@ -15,37 +12,7 @@ export const renownAtom = atom<Promise<IRenown | undefined> | undefined>(
 export function useRenown() {
     const [renown, setRenown] = useAtom(renownAtom);
     const [, setRenownStatus] = useAtom(renownStatusAtom);
-    const { did, getBearerToken } = useConnectCrypto();
-
-    useEffect(() => {
-        if (!renown || !did) {
-            return;
-        }
-
-        // Get reactor programmatically instead of using the hook
-        atomStore
-            .get(reactorAtom)
-            .then(reactor => {
-                return reactor;
-            })
-            .then(reactor => {
-                if (!reactor) return;
-                return renown.user().then(user => ({ reactor, user }));
-            })
-            .then(result => {
-                if (!result) return;
-                const { reactor, user } = result;
-                if (!user) return;
-
-                const address = user.address;
-                if (typeof address !== 'string') return;
-
-                reactor.setGenerateJwtHandler(async driveUrl =>
-                    getBearerToken(driveUrl, address),
-                );
-            })
-            .catch(err => console.error(err));
-    }, [renown, did]);
+    const { did } = useConnectCrypto();
 
     async function initRenown(
         getDid: () => Promise<string>,
@@ -67,10 +34,7 @@ export function useRenown() {
                     return renownBrowser.login(did);
                 },
                 logout() {
-                    return atomStore.get(reactorAtom).then(reactor => {
-                        reactor.removeJwtHandler();
-                        return renownBrowser.logout();
-                    });
+                    return Promise.resolve(renownBrowser.logout());
                 },
                 on: {
                     user(cb) {
