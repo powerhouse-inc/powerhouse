@@ -111,8 +111,10 @@ export default class SynchronizationManager implements ISynchronizationManager {
     } while (cursor);
 
     return units.reduce(
-      (acc, { documentModelType: _, ...u }) =>
-        u.scope === "local" ? acc : acc.concat([u]),
+      (acc, { documentModelType, ...u }) =>
+        u.scope === "local"
+          ? acc
+          : acc.concat([{ ...u, documentType: documentModelType }]),
       new Array<SynchronizationUnitQuery>(),
     );
   }
@@ -135,6 +137,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       scope,
       branch,
       documentId,
+      documentType: document.documentType,
       lastUpdated: lastOperation?.timestamp ?? document.lastModified,
       revision: lastOperation ? lastOperation.index + 1 : 0,
     };

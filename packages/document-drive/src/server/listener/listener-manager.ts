@@ -211,19 +211,8 @@ export class ListenerManager implements IListenerManager {
       return;
     }
 
-    const syncUnit = await this.syncManager.getSynchronizationUnit(syncId);
-    if (!syncUnit) {
-      throw new Error("Unknown sync unit", { cause: { driveId, syncId } });
-    }
-
     const lastUpdated = new Date().toISOString();
-    const entry = listener.syncUnits.get(syncId);
-    if (entry) {
-      entry.listenerRev = listenerRev;
-      entry.lastUpdated = lastUpdated;
-    } else {
-      listener.syncUnits.set(syncId, { listenerRev, lastUpdated });
-    }
+    listener.syncUnits.set(syncId, { listenerRev, lastUpdated });
 
     return Promise.resolve();
   }

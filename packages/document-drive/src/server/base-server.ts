@@ -90,6 +90,7 @@ import {
   type StrandUpdate,
   type SyncStatus,
   type SyncUnitStatusObject,
+  type SynchronizationUnit,
 } from "./types.js";
 import { filterOperationsByRevision, isAtRevision } from "./utils.js";
 
@@ -1440,29 +1441,35 @@ export class BaseDocumentDriveServer
         };
       });
 
+      const syncUnits = new Array<SynchronizationUnit>();
+
       if (document) {
         this.cache.setDocument(documentId, document).catch(this.logger.error);
-      }
 
-      // gets all the different scopes and branches combinations from the operations
-      const { scopes, branches } = operationsApplied.reduce(
-        (acc, operation) => {
-          if (!acc.scopes.includes(operation.scope)) {
-            acc.scopes.push(operation.scope);
+        // creates array of unique sync units from the applied operations
+        for (const operation of operationsApplied) {
+          const syncUnit: SynchronizationUnit = {
+            documentId,
+            documentType: document.documentType,
+            scope: operation.scope,
+            branch: "main", // TODO: handle branches
+            revision: operation.index + 1,
+            lastUpdated: operation.timestamp,
+          };
+
+          // checks if this sync unit was already added
+          const exists = syncUnits.some(
+            (unit) =>
+              unit.documentId === syncUnit.documentId &&
+              unit.scope === syncUnit.scope &&
+              unit.branch === syncUnit.branch,
+          );
+
+          if (!exists) {
+            syncUnits.push(syncUnit);
           }
-          return acc;
-        },
-        { scopes: [] as string[], branches: ["main"] },
-      );
-
-      const syncUnits =
-        await this.synchronizationManager.getSynchronizationUnits(
-          undefined,
-          [documentId],
-          scopes,
-          branches,
-        );
-
+        }
+      }
       // checks if any of the provided operations where reshufled
       const newOp = operationsApplied.find(
         (appliedOp) =>
@@ -1486,58 +1493,63 @@ export class BaseDocumentDriveServer
       const operationSource = this.getOperationSource(source);
 
       // TODO Decouple the operation processing from syncing it to the listeners?
-      // Listener manager should be the one keeping the sync status instead
-      this.listenerManager
-        .updateSynchronizationRevisions(
-          syncUnits,
-          source,
-          () => {
-            this.synchronizationManager.updateSyncStatus(documentId, {
-              [operationSource]: "SYNCING",
-            });
+      // Listener manager should be the one keeping the sync status since it depends on the listeners
+      if (syncUnits.length) {
+        this.listenerManager
+          .updateSynchronizationRevisions(
+            syncUnits,
+            source,
+            () => {
+              this.synchronizationManager.updateSyncStatus(documentId, {
+                [operationSource]: "SYNCING",
+              });
+
+              for (const syncUnit of syncUnits) {
+                this.synchronizationManager.updateSyncStatus(syncUnit, {
+                  [operationSource]: "SYNCING",
+                });
+              }
+            },
+            this.handleListenerError.bind(this),
+            options?.forceSync ?? source.type === "local",
+          )
+          .then((updates) => {
+            if (updates.length) {
+              this.synchronizationManager.updateSyncStatus(documentId, {
+                [operationSource]: "SUCCESS",
+              });
+            }
 
             for (const syncUnit of syncUnits) {
               this.synchronizationManager.updateSyncStatus(syncUnit, {
-                [operationSource]: "SYNCING",
+                [operationSource]: "SUCCESS",
               });
             }
-          },
-          this.handleListenerError.bind(this),
-          options?.forceSync ?? source.type === "local",
-        )
-        .then((updates) => {
-          if (updates.length) {
-            this.synchronizationManager.updateSyncStatus(documentId, {
-              [operationSource]: "SUCCESS",
-            });
-          }
-
-          for (const syncUnit of syncUnits) {
-            this.synchronizationManager.updateSyncStatus(syncUnit, {
-              [operationSource]: "SUCCESS",
-            });
-          }
-        })
-        .catch((error) => {
-          this.logger.error("Non handled error updating sync revision", error);
-          this.synchronizationManager.updateSyncStatus(
-            documentId,
-            {
-              [operationSource]: "ERROR",
-            },
-            error as Error,
-          );
-
-          for (const syncUnit of syncUnits) {
+          })
+          .catch((error) => {
+            this.logger.error(
+              "Non handled error updating sync revision",
+              error,
+            );
             this.synchronizationManager.updateSyncStatus(
-              syncUnit,
+              documentId,
               {
                 [operationSource]: "ERROR",
               },
               error as Error,
             );
-          }
-        });
+
+            for (const syncUnit of syncUnits) {
+              this.synchronizationManager.updateSyncStatus(
+                syncUnit,
+                {
+                  [operationSource]: "ERROR",
+                },
+                error as Error,
+              );
+            }
+          });
+      }
 
       // after applying all the valid operations,throws
       // an error if there was an invalid operation
