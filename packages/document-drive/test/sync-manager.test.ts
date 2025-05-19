@@ -43,6 +43,7 @@ describe("Synchronization Manager with memory adapters", () => {
 
     expect(syncUnit).toStrictEqual({
       documentId: drive.id,
+      documentType: "powerhouse/document-drive",
       scope: "global",
       branch: "main",
       lastUpdated: drive.lastModified,
@@ -63,6 +64,7 @@ describe("Synchronization Manager with memory adapters", () => {
 
     expect(syncUnit).toStrictEqual({
       documentId: document.id,
+      documentType: "powerhouse/document-model",
       scope: "global",
       branch: "main",
       lastUpdated: document.lastModified,
@@ -93,6 +95,7 @@ describe("Synchronization Manager with memory adapters", () => {
 
     expect(syncUnit).toStrictEqual({
       documentId: drive.id,
+      documentType: "powerhouse/document-drive",
       scope: "global",
       branch: "main",
       lastUpdated: newDrive.lastModified,
@@ -125,6 +128,7 @@ describe("Synchronization Manager with memory adapters", () => {
     expect(syncUnits).toStrictEqual([
       {
         documentId: drive.id,
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         lastUpdated: drive.lastModified,
@@ -132,6 +136,7 @@ describe("Synchronization Manager with memory adapters", () => {
       },
       {
         documentId: document.id,
+        documentType: "powerhouse/document-model",
         scope: "global",
         branch: "main",
         lastUpdated: document.lastModified,
