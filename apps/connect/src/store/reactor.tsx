@@ -56,8 +56,6 @@ async function initJwtHandler(server: IDocumentDriveServer) {
 
     if (user?.address) {
         server.setGenerateJwtHandler(async driveUrl => {
-            // TODO: remove this
-            console.log('>>> setGenerateJwtHandler', { driveUrl });
             return crypto.getBearerToken(driveUrl, user.address);
         });
     }
