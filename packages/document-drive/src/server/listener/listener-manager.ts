@@ -16,7 +16,6 @@ import {
   type SynchronizationUnit,
   type SynchronizationUnitId,
 } from "#server/types";
-import { compareSyncUnits } from "#server/utils";
 import { childLogger, type ListenerFilter } from "document-drive";
 import { type OperationScope } from "document-model";
 import { debounce } from "./util.js";
@@ -37,8 +36,6 @@ export class ListenerManager implements IListenerManager {
     string,
     Map<string, ListenerState>
   >();
-  // parentId -> sync unit ids
-  protected syncUnitByParent = new Map<string, SynchronizationUnitId[]>();
 
   constructor(
     syncManager: ISynchronizationManager,
@@ -112,38 +109,17 @@ export class ListenerManager implements IListenerManager {
     return Promise.resolve(driveMap.delete(listenerId));
   }
 
-  async addSyncUnits(
-    parentId: string,
-    syncUnits: SynchronizationUnitId[],
-  ): Promise<void> {
-    const parent = this.syncUnitByParent.get(parentId) ?? [];
-    parent.push(...syncUnits);
-    this.syncUnitByParent.set(parentId, parent);
-    return Promise.resolve();
-  }
-
   async removeSyncUnits(
     parentId: string,
     syncUnits: SynchronizationUnitId[],
   ): Promise<void> {
-    // delete sync units from parent map
-    for (const syncUnit of syncUnits) {
-      const parents = this.syncUnitByParent.get(parentId);
-      if (!parents) {
-        continue;
-      }
-      const index = parents.findIndex((s) => compareSyncUnits(s, syncUnit));
-      if (index > -1) {
-        parents.splice(index, 1);
-      }
+    const driveMap = this.listenerStateByDriveId.get(parentId);
+    if (!driveMap) {
+      return;
     }
 
     // delete sync unit state from listeners
-    const listeners = this.listenerStateByDriveId.get(parentId);
-    if (!listeners) {
-      return;
-    }
-    for (const [, listener] of listeners) {
+    for (const [, listener] of driveMap) {
       for (const syncUnit of syncUnits) {
         listener.syncUnits.delete(syncUnit);
       }

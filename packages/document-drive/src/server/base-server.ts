@@ -725,12 +725,7 @@ export class BaseDocumentDriveServer
     // TODO: check if document exists? Should that be a concern here?
     try {
       await this.documentStorage.addChild(parentId, documentId);
-      const syncUnits =
-        await this.synchronizationManager.getSynchronizationUnitsIds(
-          undefined,
-          [documentId],
-        );
-      await this.listenerManager.removeSyncUnits(parentId, syncUnits);
+      // TODO: update listener manager?
     } catch (e) {
       this.logger.error("Error adding child document", e);
       throw e;

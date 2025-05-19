@@ -539,11 +539,6 @@ export interface IListenerManager {
     syncUnitId: SynchronizationUnitId,
     listenerRev: number,
   ): Promise<void>;
-
-  addSyncUnits(
-    parentId: string,
-    syncUnits: SynchronizationUnitId[],
-  ): Promise<void>;
   removeSyncUnits(
     parentId: string,
     syncUnits: SynchronizationUnitId[],
