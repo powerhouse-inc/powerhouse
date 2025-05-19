@@ -45,9 +45,7 @@ function ensureDir(dir: string) {
   }
 }
 
-export class FilesystemStorage
-  implements IDriveOperationStorage, IDocumentStorage
-{
+export class FilesystemStorage implements IDriveOperationStorage, IDocumentStorage {
   private basePath: string;
 
   constructor(basePath: string) {
@@ -342,7 +340,6 @@ export class FilesystemStorage
   ////////////////////////////////
 
   async addDocumentOperations(
-    drive: string,
     id: string,
     operations: Operation[],
     header: DocumentHeader,
@@ -398,6 +395,7 @@ export class FilesystemStorage
   ): Promise<
     {
       documentId: string;
+      documentType: string;
       scope: string;
       branch: string;
       lastUpdated: string;
@@ -416,6 +414,7 @@ export class FilesystemStorage
           if (operation) {
             return {
               documentId: unit.documentId,
+              documentType: document.documentType,
               scope: unit.scope,
               branch: unit.branch,
               lastUpdated: operation.timestamp,
@@ -430,6 +429,7 @@ export class FilesystemStorage
     return results.reduce<
       {
         documentId: string;
+        documentType: string;
         scope: string;
         branch: string;
         lastUpdated: string;

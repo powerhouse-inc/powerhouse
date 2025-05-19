@@ -87,6 +87,7 @@ export type SynchronizationUnitId = {
 };
 
 export type SynchronizationUnit = SynchronizationUnitId & {
+  documentType: string;
   lastUpdated: string;
   revision: number;
 };
@@ -161,6 +162,7 @@ export type OperationUpdate = {
 export type StrandUpdate = {
   driveId: string;
   documentId: string;
+  documentType: string;
   scope: OperationScope;
   branch: string;
   operations: OperationUpdate[];

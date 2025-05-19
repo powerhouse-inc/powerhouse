@@ -1795,6 +1795,7 @@ export class BaseDocumentDriveServer
             [
               {
                 documentId: driveId,
+                documentType: document.documentType,
                 scope: "global",
                 branch: "main",
                 lastUpdated: lastOperation.timestamp,

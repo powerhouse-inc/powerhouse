@@ -365,7 +365,6 @@ export class BrowserStorage
   }
 
   async addDocumentOperations(
-    drive: string,
     id: string,
     operations: Operation[],
     header: DocumentHeader,
@@ -406,6 +405,7 @@ export class BrowserStorage
   ): Promise<
     {
       documentId: string;
+      documentType: string;
       scope: string;
       branch: string;
       lastUpdated: string;
@@ -424,6 +424,7 @@ export class BrowserStorage
           if (operation) {
             return {
               documentId: unit.documentId,
+              documentType: document.documentType,
               scope: unit.scope,
               branch: unit.branch,
               lastUpdated: operation.timestamp,
@@ -438,6 +439,7 @@ export class BrowserStorage
     return results.reduce<
       {
         documentId: string;
+        documentType: string;
         scope: string;
         branch: string;
         lastUpdated: string;

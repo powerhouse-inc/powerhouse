@@ -315,6 +315,7 @@ export class MemoryStorage
   ): Promise<
     {
       documentId: string;
+      documentType: string;
       scope: string;
       branch: string;
       lastUpdated: string;
@@ -334,6 +335,7 @@ export class MemoryStorage
 
           return {
             documentId: unit.documentId,
+            documentType: unit.documentType,
             scope: unit.scope,
             branch: unit.branch,
             lastUpdated: operation?.timestamp ?? document.created,
@@ -347,6 +349,7 @@ export class MemoryStorage
     return results.reduce<
       {
         documentId: string;
+        documentType: string;
         scope: string;
         branch: string;
         lastUpdated: string;

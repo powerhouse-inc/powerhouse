@@ -192,6 +192,7 @@ export interface IDocumentOperationStorage {
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
       documentId: string;
+      documentType: string;
       scope: string;
       branch: string;
       lastUpdated: string;

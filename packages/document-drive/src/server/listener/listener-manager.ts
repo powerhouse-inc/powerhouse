@@ -291,6 +291,7 @@ export class ListenerManager implements IListenerManager {
 
           strandUpdates.push({
             driveId,
+            documentType: syncUnit.documentType,
             documentId: syncUnit.documentId,
             branch: syncUnit.branch,
             operations: opData,
@@ -582,6 +583,7 @@ export class ListenerManager implements IListenerManager {
           strands.push({
             driveId,
             documentId,
+            documentType: syncUnit.documentType,
             scope: scope as OperationScope,
             branch,
             operations,
