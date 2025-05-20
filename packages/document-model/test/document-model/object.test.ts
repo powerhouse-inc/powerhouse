@@ -1,5 +1,5 @@
+import { generateUUID } from "#document/utils/node.js";
 import { DocumentModelClass } from "../../src/document-model/gen/object.js";
-import { hashKey } from "../../src/document/utils/base.js";
 
 describe("DocumentModel Class", () => {
   it("should create an empty document", () => {
@@ -48,8 +48,8 @@ describe("DocumentModel Class", () => {
     const model = new DocumentModelClass();
 
     model
-      .addModule({ id: hashKey(), name: "state" })
-      .addModule({ id: hashKey(), name: "header" });
+      .addModule({ id: generateUUID(), name: "state" })
+      .addModule({ id: generateUUID(), name: "header" });
 
     expect(
       model.state.global.specifications[0].modules.map((m) => m.name),
@@ -101,14 +101,14 @@ describe("DocumentModel Class", () => {
     const model = new DocumentModelClass();
 
     model
-      .addModule({ id: hashKey(), name: "header" })
-      .addModule({ id: hashKey(), name: "state" });
+      .addModule({ id: generateUUID(), name: "header" })
+      .addModule({ id: generateUUID(), name: "state" });
 
     const headerModuleId = model.state.global.specifications[0].modules[0].id;
     const stateModuleId = model.state.global.specifications[0].modules[1].id;
 
     model.addOperation({
-      id: hashKey(),
+      id: generateUUID(),
       moduleId: headerModuleId,
       name: "SetModuleExtension",
       schema: "<SetModuleExtension.schema>",
@@ -119,7 +119,7 @@ describe("DocumentModel Class", () => {
     });
 
     model.addOperation({
-      id: hashKey(),
+      id: generateUUID(),
       moduleId: stateModuleId,
       name: "AddStateExample",
     });

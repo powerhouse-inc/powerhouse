@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { setName } from "../../src/document/actions/creators.js";
 import { SET_NAME } from "../../src/document/actions/types.js";
 
+import { generateUUID } from "#document/utils/node.js";
 import { type CreateChildDocumentInput } from "../../src/document/signal.js";
 import { type CustomAction } from "../../src/document/types.js";
 import {
@@ -10,7 +11,6 @@ import {
   baseCreateExtendedState,
   createAction,
   createReducer,
-  hashKey,
 } from "../../src/document/utils/base.js";
 import {
   type CountDocument,
@@ -117,7 +117,7 @@ describe("Base reducer", () => {
     expect.assertions(4);
     const document = baseCreateDocument();
 
-    const id = hashKey();
+    const id = generateUUID();
     const reducer = createReducer((_state, action, dispatch) => {
       if (action.type === "CREATE_DOCUMENT") {
         // @ts-expect-error TODO add synchronization units to fix type error

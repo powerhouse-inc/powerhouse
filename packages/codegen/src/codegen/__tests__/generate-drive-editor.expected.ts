@@ -19,6 +19,7 @@ export const EXPECTED_EDITOR_CONTENT = `import { type DriveEditorProps } from "@
 import { DriveContextProvider } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import { type DocumentDriveDocument, addFolder, deleteNode, updateNode, generateNodesCopy, copyNode } from "document-drive";
 import { WagmiContext } from "@powerhousedao/design-system";
+import { generateId } from "document-model";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { useCallback } from "react";
 
@@ -29,7 +30,7 @@ export function BaseEditor(props: IProps) {
   
   const onAddFolder = useCallback((name: string, parentFolder?: string) => {
     dispatch(addFolder({
-      id: hashKey(),
+      id: generateId(),
       name,
       parentFolder,
     }));
@@ -44,13 +45,11 @@ export function BaseEditor(props: IProps) {
   }, [dispatch]);
 
   const onCopyNode = useCallback((nodeId: string, targetName: string, parentId?: string) => {
-    const generateId = () => hashKey();
-    
     const copyNodesInput = generateNodesCopy({
       srcId: nodeId,
       targetParentFolder: parentId,
       targetName,
-    }, generateId, props.document.state.global.nodes);
+    }, () => generateId(), props.document.state.global.nodes);
 
     const copyNodesAction = copyNodesInput.map(input => {
       return copyNode(input);
