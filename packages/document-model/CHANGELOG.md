@@ -1,3 +1,13 @@
+## 3.0.2 (2025-05-20)
+
+### 🩹 Fixes
+
+- **document-model,connect,ph-cmd,builder-tools,codegen:** remove hashkey for compat ([2a8d46b2c](https://github.com/powerhouse-inc/powerhouse/commit/2a8d46b2c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 3.0.1 (2025-05-08)
 
 ### 🚀 Features
