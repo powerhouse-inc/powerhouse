@@ -580,6 +580,18 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
+
+    await server.addDocument(
+      documentModelDocumentModelModule.utils.createDocument({
+        id: document1Id,
+      }),
+    );
+    await server.addDocument(
+      documentModelDocumentModelModule.utils.createDocument({
+        id: document2Id,
+      }),
+    );
+
     await server.addDrive({
       id: driveId,
       slug: "drive",
@@ -620,7 +632,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     );
     drive = reducer(
       drive,
-      DocumentDriveUtils.generateCopyNodeAction(drive.state.global, {
+      actions.copyNode({
         srcId: document1Id,
         targetId: document2Id,
         targetName: "2.2",
@@ -640,9 +652,28 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(document.slug).not.toBe(documentB.slug);
 
     // compare everything but the slug + id (which are supposed to be different)
-    const { slug, id, ...rest } = document;
-    const { slug: slugB, id: idB, ...restB } = documentB;
+    const {
+      slug,
+      id,
+      initialState: { id: initialId1, slug: initialSlug1, ...initialState },
+      ...rest
+    } = document;
+    const {
+      slug: slug2,
+      id: id2,
+      initialState: { id: initialId2, slug: initialSlug2, ...initialStateB },
+      ...restB
+    } = documentB;
     expect(rest).toStrictEqual(restB);
+    expect(initialState).toStrictEqual(initialStateB);
+    expect(initialId1).toBe(document1Id);
+    expect(id).toBe(document1Id);
+    expect(slug).toBe(document1Id);
+    expect(initialSlug1).toBe(document1Id);
+    expect(initialId2).toBe(document2Id);
+    expect(initialSlug2).toBe(document2Id);
+    expect(id2).toBe(document2Id);
+    expect(slug2).toBe(document2Id);
   });
 
   it("adds document operation", async ({ expect }) => {

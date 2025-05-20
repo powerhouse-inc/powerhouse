@@ -1092,24 +1092,7 @@ export class BaseDocumentDriveServer
             handler = () => this.removeChild(documentId, signal.input.id);
             break;
           case "COPY_CHILD_DOCUMENT":
-            handler = () => {
-              throw new Error("COPY_CHILD is not implemented yet");
-            };
-            // this.getDocument(driveId, signal.input.id).then(
-            //   (documentToCopy) => {
-            //     const doc = {
-            //       ...documentToCopy,
-            //       slug: signal.input.newId,
-            //     };
-
-            //     return this.ensureDocument(driveId, {
-            //       id: signal.input.newId,
-            //       documentType: documentToCopy.documentType,
-            //       document: doc,
-            //       synchronizationUnits: signal.input.synchronizationUnits,
-            //     });
-            //   },
-            // );
+            handler = () => this.addChild(documentId, signal.input.newId);
             break;
         }
         if (handler) {
