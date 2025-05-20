@@ -791,6 +791,56 @@ export function useDocumentDriveServer() {
         [_addDriveOperation],
     );
 
+    const getDocumentModelGraphQLSchema = useCallback(
+        async (documentModelId: string) => {
+            if (!reactor) {
+                throw new Error('Reactor is not loaded');
+            }
+            const docModels = reactor.getDocumentModelModules();
+            const docModel = docModels.find(
+                docModel => docModel.documentModel.id === documentModelId,
+            );
+            if (!docModel) {
+                throw new Error(`Document model ${documentModelId} not found`);
+            }
+            let graphQLSchema = '';
+            let documentModelName = '';
+            for (const specification of docModel.documentModel.specifications) {
+                if (specification.state.global) {
+                    // remove type *State {} from schema
+                    const schema = specification.state.global.schema
+                        .split('{')
+                        .slice(1)
+                        .join('{');
+                    graphQLSchema += schema;
+                }
+                if (specification.state.global) {
+                    documentModelName = docModel.documentModel.name;
+                }
+            }
+
+            if (graphQLSchema === '' || documentModelName === '') {
+                throw new Error(
+                    `Could not generate GraphQL Query for document model ${documentModelId}`,
+                );
+            }
+
+            const query = `
+            query getDocument {
+                id
+                ${documentModelName} {
+                    getDocument {
+                        state {
+                            ${graphQLSchema}
+                        }
+                    }
+                }
+            }`;
+            return query;
+        },
+        [reactor],
+    );
+
     return useMemo(
         () => ({
             documentDrives,
@@ -821,6 +871,7 @@ export function useDocumentDriveServer() {
             addTrigger: handleAddTrigger,
             registerNewPullResponderTrigger,
             getDocumentsIds,
+            getDocumentModelGraphQLSchema,
         }),
         [
             addDocument,
@@ -851,6 +902,7 @@ export function useDocumentDriveServer() {
             setDriveSharingType,
             handleUpdateFile,
             getDocumentsIds,
+            getDocumentModelGraphQLSchema,
         ],
     );
 }

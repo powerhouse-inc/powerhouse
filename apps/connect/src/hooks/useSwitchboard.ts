@@ -33,5 +33,13 @@ export function useSwitchboard() {
 
             return data.data.driveIdBySlug;
         },
+
+        getSwitchboardGatewayUrl: async (driveUrl: string) => {
+            const urlParts = driveUrl.split('/');
+            urlParts.pop(); // remove id
+            urlParts.pop(); // remove /d
+            urlParts.push('graphql'); // add /graphql
+            return urlParts.join('/');
+        },
     };
 }
