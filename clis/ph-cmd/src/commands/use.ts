@@ -8,6 +8,7 @@ import {
   getProjectInfo,
   installDependency,
   type PackageManager,
+  updateDependencyVersionString,
   withCustomHelp,
 } from "../utils/index.js";
 
@@ -67,6 +68,7 @@ export const updatePackageJson = async (
   localPath?: string,
   packageManager?: PackageManager,
   debug?: boolean,
+  useResolved?: boolean,
 ) => {
   const projectInfo = await getProjectInfo();
   const pkgManager =
@@ -124,7 +126,11 @@ export const updatePackageJson = async (
 
   try {
     console.log("⚙️ Updating dependencies...");
-    installDependency(pkgManager, dependencies, projectInfo.path);
+    if (localPath || useResolved) {
+      installDependency(pkgManager, dependencies, projectInfo.path);
+    } else {
+      updateDependencyVersionString(pkgManager, dependencies, projectInfo.path);
+    }
     console.log("✅ Dependencies updated successfully");
   } catch (error) {
     console.error("❌ Failed to update dependencies");
@@ -141,6 +147,7 @@ export type UseOptions = {
   latest?: boolean;
   force?: boolean;
   packageManager?: string;
+  useResolved?: boolean;
 };
 
 export const use: CommandActionType<
@@ -176,6 +183,7 @@ export const use: CommandActionType<
     localPath,
     packageManager as PackageManager,
     debug,
+    options.useResolved,
   );
 };
 
@@ -194,6 +202,7 @@ export function useCommand(program: Command): Command {
       "The path to the local environment (you have to specify the path to the local environment)",
     )
     .option("--force", "force environment to use")
+    .option("--use-resolved", "Use resolved dependency versions")
     .option(
       "--package-manager <packageManager>",
       "force package manager to use",
