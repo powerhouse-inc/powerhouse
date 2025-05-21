@@ -4,7 +4,7 @@ import {
     useGetDocument,
     useOpenSwitchboardLink,
 } from '#hooks';
-import { useFileNodeDocument } from '#store';
+import { useFileNodeDocument, useGetDocumentModelModule } from '#store';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { type GetDocumentOptions } from 'document-drive';
 import {
@@ -15,7 +15,6 @@ import {
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
-import { useUiNodes } from '../hooks/useUiNodes.js';
 import { exportFile } from '../utils/index.js';
 import { validateDocument } from '../utils/validate-document.js';
 import { DocumentEditor } from './editors.js';
@@ -39,7 +38,7 @@ export function DocumentEditorContainer() {
     const selectedDocumentDrive = useDocumentDriveById(selectedDriveNode?.id);
     const { isRemoteDrive } = selectedDocumentDrive;
     const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
-    const { getDocumentModelModule } = useUiNodes();
+    const getDocumentModelModule = useGetDocumentModelModule();
 
     const getDocument = useGetDocument();
 

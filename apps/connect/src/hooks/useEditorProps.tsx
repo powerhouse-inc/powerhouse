@@ -32,7 +32,6 @@ import { useAtomValue } from 'jotai';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
-import { useUiNodes } from './useUiNodes.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
 export interface EditorProps {
@@ -129,7 +128,7 @@ export function useEditorProps(
     const context = useMemo(() => ({ theme, user }), [theme, user]);
     const { selectedDocument } = useFileNodeDocument();
     const { selectedParentNode, setSelectedNode } = useUiNodesContext();
-    const { getDocumentModelModule } = useUiNodes();
+    const getDocumentModelModule = useGetDocumentModelModule();
 
     const canUndo =
         !!document &&

@@ -1,10 +1,9 @@
 import { useModal } from '#components';
-import { useApps, useGetDocumentModelModule } from '#store';
+import { useApps } from '#store';
 import { makeNodeSlugFromNodeName } from '#utils';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
-    CLOUD,
     DRIVE,
     FILE,
     FOLDER,
@@ -47,8 +46,6 @@ export function useUiNodes() {
         addTrigger,
         registerNewPullResponderTrigger,
     } = useDocumentDriveServer();
-
-    const getDocumentModelModule = useGetDocumentModelModule();
 
     const apps = useApps();
 
@@ -483,25 +480,8 @@ export function useUiNodes() {
         [addTrigger],
     );
 
-    const driveNodesBySharingType = useMemo(
-        () =>
-            driveNodes.reduce<Record<SharingType, UiDriveNode[]>>(
-                (acc, driveNode) => {
-                    acc[driveNode.sharingType].push(driveNode);
-                    return acc;
-                },
-                {
-                    [PUBLIC]: [],
-                    [CLOUD]: [],
-                    [LOCAL]: [],
-                },
-            ),
-        [driveNodes],
-    );
-
     return useMemo(
         () => ({
-            driveNodesBySharingType,
             onAddFolder,
             onAddFile,
             onCopyNode,
@@ -517,10 +497,8 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
-            getDocumentModelModule,
         }),
         [
-            driveNodesBySharingType,
             onAddFolder,
             onAddFile,
             onCopyNode,
@@ -536,7 +514,6 @@ export function useUiNodes() {
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
-            getDocumentModelModule,
         ],
     );
 }
