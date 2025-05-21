@@ -5,6 +5,7 @@ import {
     type UiFileNode,
     type UiNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,9 +26,9 @@ export function FileContentView(props: Props) {
     const windowSize = useWindowSize();
     const { fileNodes } = props;
     const availableWidth = windowSize.innerWidth - USED_SPACE;
-
+    const { setSelectedNode } = useUiNodesContext();
     const handleSelectNode = (node: BaseUiFileNode) => {
-        props.setSelectedNode(node as unknown as UiFileNode);
+        setSelectedNode(node as unknown as UiFileNode);
     };
 
     const handleRenameNode = (name: string, node: BaseUiFileNode) => {

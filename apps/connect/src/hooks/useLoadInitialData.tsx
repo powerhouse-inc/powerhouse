@@ -1,6 +1,6 @@
 import { ReloadConnectToast } from '#components';
 import { useReadModeContext } from '#context';
-import { useUiNodes } from '#hooks';
+import { useDocumentDriveServer, useUiNodes } from '#hooks';
 import { useAsyncReactor } from '#store';
 import {
     CONFLICT,
@@ -9,6 +9,7 @@ import {
     SUCCESS,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { logger, type DocumentDriveDocument } from 'document-drive';
 import { type TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
@@ -21,13 +22,9 @@ import { isLatestVersion } from './utils.js';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
-    const {
-        documentDrives,
-        driveNodes,
-        setDriveNodes,
-        makeUiDriveNodes,
-        onSyncStatus,
-    } = useUiNodes();
+    const { documentDrives, onSyncStatus } = useDocumentDriveServer();
+    const { driveNodes, setDriveNodes } = useUiNodesContext();
+    const { makeUiDriveNodes } = useUiNodes();
     const prevDrivesState = useRef([...driveNodes]);
     const drivesWithError = useRef<UiDriveNode[]>([]);
     const [, , serverSubscribeUpdates] = useDocumentDrives();

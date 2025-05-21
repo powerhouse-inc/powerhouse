@@ -6,6 +6,7 @@ import {
     SidebarItem,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -17,8 +18,8 @@ export default function Sidebar() {
     const navigate = useNavigate();
 
     const { user, openRenown, logout } = useLogin();
-    const { driveNodes, setSelectedNode, selectedNode, showAddDriveModal } =
-        useUiNodes();
+    const { driveNodes, setSelectedNode, selectedNode } = useUiNodesContext();
+    const { showAddDriveModal } = useUiNodes();
 
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
 

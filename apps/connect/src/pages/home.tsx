@@ -7,6 +7,7 @@ import {
     Icon,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { useCallback } from 'react';
 
 function getDriveIcon(driveNode: UiDriveNode) {
@@ -29,9 +30,9 @@ function getDriveIcon(driveNode: UiDriveNode) {
 
 export function Home() {
     const getAppDescriptionForEditorId = useGetAppNameForEditorId();
-    const { showAddDriveModal, driveNodes, setSelectedNode } = useUiNodes();
+    const { showAddDriveModal } = useUiNodes();
     const { documentDrives } = useDocumentDriveServer();
-
+    const { driveNodes, setSelectedNode } = useUiNodesContext();
     const handleDriveClick = useCallback(
         (driveNode: UiDriveNode) => {
             setSelectedNode(driveNode);
@@ -46,9 +47,7 @@ export function Home() {
     return (
         <HomeScreen>
             {driveNodes.map(driveNode => {
-                const drive = documentDrives.find(
-                    d => d.id === driveNode.id,
-                );
+                const drive = documentDrives.find(d => d.id === driveNode.id);
                 const editorId = drive?.meta?.preferredEditor;
                 const appName = editorId
                     ? getAppDescriptionForEditorId(editorId)

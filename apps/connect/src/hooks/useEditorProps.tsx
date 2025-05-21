@@ -1,5 +1,10 @@
 import { useModal } from '#components';
-import { themeAtom, useGetDocumentModelModule, useUser } from '#store';
+import {
+    themeAtom,
+    useFileNodeDocument,
+    useGetDocumentModelModule,
+    useUser,
+} from '#store';
 import {
     addActionContext,
     type DocumentDispatch,
@@ -12,6 +17,7 @@ import {
     type UiDriveNode,
     type UiFileNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import {
     type Action,
@@ -121,13 +127,9 @@ export function useEditorProps(
     const userPermissions = useUserPermissions();
 
     const context = useMemo(() => ({ theme, user }), [theme, user]);
-
-    const {
-        selectedParentNode,
-        selectedDocument,
-        setSelectedNode,
-        getDocumentModelModule,
-    } = useUiNodes();
+    const { selectedDocument } = useFileNodeDocument();
+    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
+    const { getDocumentModelModule } = useUiNodes();
 
     const canUndo =
         !!document &&

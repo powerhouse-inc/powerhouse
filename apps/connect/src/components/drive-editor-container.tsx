@@ -6,11 +6,11 @@ import {
     useEditorProps,
     useGetDocument,
     useSyncStatus,
-    useUiNodes,
 } from '#hooks';
 import {
     useAsyncReactor,
     useDriveEditor,
+    useFileNodeDocument,
     useFilteredDocumentModels,
     useGetDocumentModelModule,
     useGetEditor,
@@ -64,8 +64,7 @@ export function DriveEditorContainer() {
         selectedNode,
         selectedParentNode,
     } = useUiNodesContext();
-
-    const { addOperationToSelectedDrive } = useUiNodes();
+    const { addOperationToSelectedDrive } = useFileNodeDocument();
     const documentDrive = useSelectedDocumentDrive();
     const [document, _dispatch, error] = useDocumentDispatch(
         driveDocumentModelModule.reducer,

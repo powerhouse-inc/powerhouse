@@ -1,6 +1,9 @@
-import { type IReadModeContext } from '#context';
-import { documentToHash, type TDocumentDriveServer } from '#hooks';
-import { type TUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import { useReadModeContext } from '#context';
+import { documentToHash, useDocumentDriveServer } from '#hooks';
+import {
+    useUiNodesContext,
+    type TUiNodesContext,
+} from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { logger } from 'document-drive';
 import {
     hashDocumentStateForScope,
@@ -147,17 +150,12 @@ const selectedDocumentAtom = atom(
 );
 const useSetSelectedDocument = () => useSetAtom(selectedDocumentAtom);
 
-export function useFileNodeDocument(
-    props: TUiNodesContext & TDocumentDriveServer & IReadModeContext,
-) {
-    const {
-        selectedNode,
-        selectedDriveNode,
-        openFile,
-        addOperations,
-        onStrandUpdate,
-        fetchDocument: fetchReadDocument,
-    } = props;
+export function useFileNodeDocument() {
+    const { selectedNode, selectedDriveNode } = useUiNodesContext();
+
+    const { openFile, addOperations, onStrandUpdate } =
+        useDocumentDriveServer();
+    const { fetchDocument: fetchReadDocument } = useReadModeContext();
     const [fileNodeDocument, setFileNodeDocument] =
         useAtom(fileNodeDocumentAtom);
     const isReadMode =

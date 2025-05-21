@@ -2,7 +2,6 @@ import { useModal } from '#components';
 import { useReadModeContext } from '#context';
 import {
     useApps,
-    useFileNodeDocument,
     useFilteredDocumentModels,
     useGetDocumentModelModule,
 } from '#store';
@@ -36,16 +35,13 @@ import { useUserPermissions } from './useUserPermissions.js';
 export function useUiNodes() {
     const { showModal } = useModal();
     const { t } = useTranslation();
-    const uiNodesContext = useUiNodesContext();
     const {
         selectedDriveNode,
         driveNodes,
         selectedParentNode,
         setSelectedNode,
         getParentNode,
-    } = uiNodesContext;
-    const readModeContext = useReadModeContext();
-    const documentDriveServer = useDocumentDriveServer();
+    } = useUiNodesContext();
     const {
         addFolder,
         addFile,
@@ -63,18 +59,13 @@ export function useUiNodes() {
         removeTrigger,
         addTrigger,
         registerNewPullResponderTrigger,
-    } = documentDriveServer;
+    } = useDocumentDriveServer();
     const selectedDocumentDrive = useDocumentDriveById(selectedDriveNode?.id);
     const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
     const userPermissions = useUserPermissions();
     const nodeOptions = getNodeOptions();
     const documentModels = useFilteredDocumentModels();
     const getDocumentModelModule = useGetDocumentModelModule();
-    const fileNodeDocument = useFileNodeDocument({
-        ...uiNodesContext,
-        ...documentDriveServer,
-        ...readModeContext,
-    });
 
     const apps = useApps();
 
@@ -527,11 +518,8 @@ export function useUiNodes() {
 
     return useMemo(
         () => ({
-            ...documentDriveServer,
-            ...uiNodesContext,
             ...userPermissions,
             ...selectedDocumentDrive,
-            ...fileNodeDocument,
             nodeOptions,
             driveNodesBySharingType,
             documentModels,
@@ -554,11 +542,8 @@ export function useUiNodes() {
             getDocumentModelModule,
         }),
         [
-            documentDriveServer,
-            uiNodesContext,
             userPermissions,
             selectedDocumentDrive,
-            fileNodeDocument,
             nodeOptions,
             driveNodesBySharingType,
             documentModels,

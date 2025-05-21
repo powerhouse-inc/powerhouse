@@ -1,5 +1,6 @@
-import { useConnectConfig, useUiNodes } from '#hooks';
+import { useConnectConfig, useDocumentDriveServer, useUiNodes } from '#hooks';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
 import Button from './button.js';
@@ -17,17 +18,16 @@ const getDocumentModelName = (name: string) => {
 export function DriveView() {
     const [connectConfig] = useConnectConfig();
     const { showModal } = useModal();
-    const uiNodes = useUiNodes();
+    const { addFolder } = useDocumentDriveServer();
     const {
-        documentModels,
-        isAllowedToCreateDocuments,
         selectedDriveNode,
         selectedParentNode,
         setSelectedNode,
         selectedNodePath,
         getNodeById,
-        addFolder,
-    } = uiNodes;
+    } = useUiNodesContext();
+    const uiNodes = useUiNodes();
+    const { documentModels, isAllowedToCreateDocuments } = uiNodes;
 
     const createFolder = useCallback(
         (name: string, parentFolder: string | undefined) => {

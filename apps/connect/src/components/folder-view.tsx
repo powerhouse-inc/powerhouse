@@ -9,6 +9,7 @@ import {
     type BaseUiNode,
     type UiFolderNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content/index.js';
@@ -16,14 +17,14 @@ import FileContentView from './file-content-view.js';
 
 export function FolderView(props: TUiNodes) {
     const { t } = useTranslation();
-    const { selectedParentNode } = props;
+    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
     const { isDropTarget, dropProps } = useDrop({
         ...props,
         uiNode: selectedParentNode,
     });
 
     const handleSelectNode = (node: BaseUiFolderNode) => {
-        props.setSelectedNode(node as unknown as UiFolderNode);
+        setSelectedNode(node as unknown as UiFolderNode);
     };
 
     const handleRenameNode = (name: string, node: BaseUiFolderNode) => {
