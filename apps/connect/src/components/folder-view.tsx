@@ -15,7 +15,9 @@ import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content/index.js';
 import FileContentView from './file-content-view.js';
 
-export function FolderView(props: TUiNodes) {
+export function FolderView(
+    props: TUiNodes & { isAllowedToCreateDocuments?: boolean },
+) {
     const { t } = useTranslation();
     const { selectedParentNode, setSelectedNode } = useUiNodesContext();
     const { isDropTarget, dropProps } = useDrop({

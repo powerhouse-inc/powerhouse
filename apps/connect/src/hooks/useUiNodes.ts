@@ -1,5 +1,4 @@
 import { useModal } from '#components';
-import { useReadModeContext } from '#context';
 import {
     useApps,
     useFilteredDocumentModels,
@@ -27,7 +26,6 @@ import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from '../services/toast.js';
-import { useDocumentDriveById } from './useDocumentDriveById.js';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 import { useOpenSwitchboardLink } from './useOpenSwitchboardLink.js';
 import { useUserPermissions } from './useUserPermissions.js';
@@ -60,9 +58,8 @@ export function useUiNodes() {
         addTrigger,
         registerNewPullResponderTrigger,
     } = useDocumentDriveServer();
-    const selectedDocumentDrive = useDocumentDriveById(selectedDriveNode?.id);
+
     const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
-    const userPermissions = useUserPermissions();
     const nodeOptions = getNodeOptions();
     const documentModels = useFilteredDocumentModels();
     const getDocumentModelModule = useGetDocumentModelModule();
@@ -518,8 +515,6 @@ export function useUiNodes() {
 
     return useMemo(
         () => ({
-            ...userPermissions,
-            ...selectedDocumentDrive,
             nodeOptions,
             driveNodesBySharingType,
             documentModels,
@@ -542,8 +537,6 @@ export function useUiNodes() {
             getDocumentModelModule,
         }),
         [
-            userPermissions,
-            selectedDocumentDrive,
             nodeOptions,
             driveNodesBySharingType,
             documentModels,

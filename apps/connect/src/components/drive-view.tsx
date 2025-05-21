@@ -1,4 +1,9 @@
-import { useConnectConfig, useDocumentDriveServer, useUiNodes } from '#hooks';
+import {
+    useConnectConfig,
+    useDocumentDriveServer,
+    useUiNodes,
+    useUserPermissions,
+} from '#hooks';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
@@ -27,7 +32,8 @@ export function DriveView() {
         getNodeById,
     } = useUiNodesContext();
     const uiNodes = useUiNodes();
-    const { documentModels, isAllowedToCreateDocuments } = uiNodes;
+    const { isAllowedToCreateDocuments } = useUserPermissions() ?? {};
+    const { documentModels } = uiNodes;
 
     const createFolder = useCallback(
         (name: string, parentFolder: string | undefined) => {
