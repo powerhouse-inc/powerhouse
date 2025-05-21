@@ -1,9 +1,5 @@
-import { useModal } from '#components';
-import { useApps } from '#store';
 import { makeNodeSlugFromNodeName } from '#utils';
 import {
-    type AddLocalDriveInput,
-    type AddRemoteDriveInput,
     DRIVE,
     FILE,
     FOLDER,
@@ -19,36 +15,10 @@ import {
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from '../services/toast.js';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 
-export function useUiNodes() {
-    const { showModal } = useModal();
-    const { t } = useTranslation();
-    const { driveNodes, selectedParentNode, setSelectedNode, getParentNode } =
-        useUiNodesContext();
-    const {
-        addFolder,
-        addFile,
-        renameNode,
-        deleteNode,
-        addDrive,
-        addRemoteDrive,
-        deleteDrive,
-        renameDrive,
-        setDriveAvailableOffline,
-        setDriveSharingType,
-        copyNode,
-        moveNode,
-        getSyncStatus,
-        removeTrigger,
-        addTrigger,
-        registerNewPullResponderTrigger,
-    } = useDocumentDriveServer();
-
-    const apps = useApps();
-
+export function useMakeUiDriveNode() {
+    const { getSyncStatus } = useDocumentDriveServer();
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument | ReadDrive) => {
             const isReadDrive = 'readContext' in drive;
@@ -159,11 +129,86 @@ export function useUiNodes() {
         [getSyncStatus],
     );
 
-    const makeUiDriveNodes = useCallback(
-        async (documentDrives: DocumentDriveDocument[]) => {
-            return Promise.all(documentDrives.map(makeUiDriveNode));
+    return makeUiDriveNode;
+}
+
+export function useDebugHandlers() {
+    const { removeTrigger, addTrigger, registerNewPullResponderTrigger } =
+        useDocumentDriveServer();
+
+    const onAddTrigger = useCallback(
+        async (uiNodeDriveId: string) => {
+            const url = window.prompt('url') || '';
+
+            const pullResponderTrigger = await registerNewPullResponderTrigger(
+                uiNodeDriveId,
+                url,
+                { pullInterval: 6000 },
+            );
+            await addTrigger(uiNodeDriveId, pullResponderTrigger);
         },
-        [makeUiDriveNode],
+        [addTrigger, registerNewPullResponderTrigger],
+    );
+
+    const onRemoveTrigger = useCallback(
+        async (uiNodeDriveId: string) => {
+            const triggerId = window.prompt('triggerId:');
+
+            if (triggerId) {
+                await removeTrigger(uiNodeDriveId, triggerId);
+            }
+        },
+        [removeTrigger],
+    );
+
+    const onAddInvalidTrigger = useCallback(
+        async (uiNodeDriveId: string) => {
+            const url = window.prompt('url') || '';
+
+            await addTrigger(uiNodeDriveId, {
+                id: 'some-invalid-id',
+                type: 'PullResponder',
+                data: {
+                    interval: '3000',
+                    listenerId: 'invalid-listener-id',
+                    url,
+                },
+            });
+        },
+        [addTrigger],
+    );
+
+    return {
+        onAddTrigger,
+        onRemoveTrigger,
+        onAddInvalidTrigger,
+    };
+}
+
+export function useUiNodes() {
+    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
+    const { addFolder, addFile, renameNode, copyNode, moveNode } =
+        useDocumentDriveServer();
+
+    const onAddFile = useCallback(
+        async (file: File, parentNode: UiNode | null) => {
+            if (!parentNode) {
+                throw new Error('Parent node is required');
+            }
+            if (parentNode.kind === FILE) {
+                throw new Error('Cannot add file to a file');
+            }
+
+            const fileName = file.name.replace(/\.zip$/gim, '');
+
+            return await addFile(
+                file,
+                parentNode.driveId,
+                fileName,
+                parentNode.id,
+            );
+        },
+        [addFile],
     );
 
     const onAddFolder = useCallback(
@@ -213,27 +258,6 @@ export function useUiNodes() {
         [moveNode],
     );
 
-    const onAddFile = useCallback(
-        async (file: File, parentNode: UiNode | null) => {
-            if (!parentNode) {
-                throw new Error('Parent node is required');
-            }
-            if (parentNode.kind === FILE) {
-                throw new Error('Cannot add file to a file');
-            }
-
-            const fileName = file.name.replace(/\.zip$/gim, '');
-
-            return await addFile(
-                file,
-                parentNode.driveId,
-                fileName,
-                parentNode.id,
-            );
-        },
-        [addFile],
-    );
-
     const onDuplicateNode = useCallback(
         async (uiNode: UiNode) => {
             if (!selectedParentNode) return;
@@ -245,177 +269,6 @@ export function useUiNodes() {
             await copyNode(uiNode, selectedParentNode);
         },
         [copyNode, selectedParentNode],
-    );
-
-    const onDeleteNode = useCallback(
-        (uiNode: UiFileNode | UiFolderNode) => {
-            showModal('deleteItem', {
-                uiNode,
-                onDelete: async closeModal => {
-                    closeModal();
-
-                    const i18nKey =
-                        uiNode.kind === FOLDER
-                            ? 'notifications.deleteFolderSuccess'
-                            : 'notifications.fileDeleteSuccess';
-
-                    const parentNode = getParentNode(uiNode);
-
-                    await deleteNode(uiNode.driveId, uiNode.id);
-
-                    setSelectedNode(parentNode);
-
-                    toast(t(i18nKey), { type: 'connect-deleted' });
-                },
-            });
-        },
-        [deleteNode, getParentNode, setSelectedNode, showModal, t],
-    );
-
-    const onDeleteDrive = useCallback(
-        (uiDriveNode: UiDriveNode) => {
-            showModal('deleteDriveModal', {
-                uiDriveNode,
-                onDelete: async closeModal => {
-                    closeModal();
-                    await deleteDrive(uiDriveNode.id);
-
-                    setSelectedNode(driveNodes[0]);
-
-                    toast(t('notifications.deleteDriveSuccess'), {
-                        type: 'connect-deleted',
-                    });
-                },
-            });
-        },
-        [deleteDrive, driveNodes, setSelectedNode, showModal, t],
-    );
-
-    const onAddLocalDrive = useCallback(
-        async (data: AddLocalDriveInput) => {
-            try {
-                const app = apps.find(a => a.id === data.appId);
-                const newDrive = await addDrive(
-                    {
-                        id: '',
-                        slug: '',
-                        global: {
-                            name: data.name,
-                            icon: null,
-                        },
-                        local: {
-                            availableOffline: data.availableOffline,
-                            sharingType: data.sharingType.toLowerCase(),
-                            listeners: [],
-                            triggers: [],
-                        },
-                    },
-                    app?.driveEditor,
-                );
-
-                toast(t('notifications.addDriveSuccess'), {
-                    type: 'connect-success',
-                });
-
-                const newDriveNode = await makeUiDriveNode(newDrive);
-
-                setSelectedNode(newDriveNode);
-            } catch (e) {
-                console.error(e);
-            }
-        },
-        [addDrive, makeUiDriveNode, setSelectedNode, t],
-    );
-
-    const onAddRemoteDrive = useCallback(
-        async (data: AddRemoteDriveInput) => {
-            try {
-                const newDrive = await addRemoteDrive(data.url, {
-                    sharingType: data.sharingType,
-                    availableOffline: data.availableOffline,
-                    listeners: [
-                        {
-                            block: true,
-                            callInfo: {
-                                data: data.url,
-                                name: 'switchboard-push',
-                                transmitterType: 'SwitchboardPush',
-                            },
-                            filter: {
-                                branch: ['main'],
-                                documentId: ['*'],
-                                documentType: ['*'],
-                                scope: ['global'],
-                            },
-                            label: 'Switchboard Sync',
-                            listenerId: '1',
-                            system: true,
-                        },
-                    ],
-                    triggers: [],
-                });
-
-                toast(t('notifications.addDriveSuccess'), {
-                    type: 'connect-success',
-                });
-
-                const newDriveNode = await makeUiDriveNode(newDrive);
-
-                setSelectedNode(newDriveNode);
-            } catch (e) {
-                console.error(e);
-            }
-        },
-        [addRemoteDrive, makeUiDriveNode, setSelectedNode, t],
-    );
-
-    const showAddDriveModal = useCallback(
-        () =>
-            showModal('addDriveModal', {
-                onAddLocalDrive,
-                onAddRemoteDrive,
-            }),
-        [onAddLocalDrive, onAddRemoteDrive, showModal],
-    );
-
-    const onRenameDrive = useCallback(
-        async (uiDriveNode: UiDriveNode, newName: string) => {
-            await renameDrive(uiDriveNode.id, newName);
-        },
-        [renameDrive],
-    );
-
-    const onChangeSharingType = useCallback(
-        async (uiDriveNode: UiDriveNode, newSharingType: SharingType) => {
-            await setDriveSharingType(uiDriveNode.id, newSharingType);
-        },
-        [setDriveSharingType],
-    );
-
-    const onChangeAvailableOffline = useCallback(
-        async (uiDriveNode: UiDriveNode, newAvailableOffline: boolean) => {
-            await setDriveAvailableOffline(uiDriveNode.id, newAvailableOffline);
-        },
-        [setDriveAvailableOffline],
-    );
-
-    const showDriveSettingsModal = useCallback(
-        (uiDriveNode: UiDriveNode) => {
-            showModal('driveSettings', {
-                uiDriveNode,
-                onRenameDrive,
-                onDeleteDrive,
-                onChangeSharingType,
-                onChangeAvailableOffline,
-            });
-        },
-        [
-            onChangeAvailableOffline,
-            onChangeSharingType,
-            onDeleteDrive,
-            onRenameDrive,
-            showModal,
-        ],
     );
 
     const onAddAndSelectNewFolder = useCallback(
@@ -438,65 +291,15 @@ export function useUiNodes() {
         [onAddFolder, selectedParentNode, setSelectedNode],
     );
 
-    const onAddTrigger = useCallback(
-        async (uiNodeDriveId: string) => {
-            const url = window.prompt('url') || '';
-
-            const pullResponderTrigger = await registerNewPullResponderTrigger(
-                uiNodeDriveId,
-                url,
-                { pullInterval: 6000 },
-            );
-            await addTrigger(uiNodeDriveId, pullResponderTrigger);
-        },
-        [addTrigger, registerNewPullResponderTrigger],
-    );
-
-    const onRemoveTrigger = useCallback(
-        async (uiNodeDriveId: string) => {
-            const triggerId = window.prompt('triggerId:');
-
-            if (triggerId) {
-                await removeTrigger(uiNodeDriveId, triggerId);
-            }
-        },
-        [removeTrigger],
-    );
-
-    const onAddInvalidTrigger = useCallback(
-        async (uiNodeDriveId: string) => {
-            const url = window.prompt('url') || '';
-
-            await addTrigger(uiNodeDriveId, {
-                id: 'some-invalid-id',
-                type: 'PullResponder',
-                data: {
-                    interval: '3000',
-                    listenerId: 'invalid-listener-id',
-                    url,
-                },
-            });
-        },
-        [addTrigger],
-    );
-
     return useMemo(
         () => ({
-            onAddFolder,
             onAddFile,
+            onAddFolder,
+            onRenameNode,
             onCopyNode,
             onMoveNode,
-            onRenameNode,
             onDuplicateNode,
-            onDeleteNode,
-            onDeleteDrive,
-            makeUiDriveNodes,
             onAddAndSelectNewFolder,
-            showAddDriveModal,
-            showDriveSettingsModal,
-            onAddTrigger,
-            onRemoveTrigger,
-            onAddInvalidTrigger,
         }),
         [
             onAddFolder,
@@ -505,15 +308,7 @@ export function useUiNodes() {
             onMoveNode,
             onRenameNode,
             onDuplicateNode,
-            onDeleteNode,
-            onDeleteDrive,
-            makeUiDriveNodes,
             onAddAndSelectNewFolder,
-            showAddDriveModal,
-            showDriveSettingsModal,
-            onAddTrigger,
-            onRemoveTrigger,
-            onAddInvalidTrigger,
         ],
     );
 }

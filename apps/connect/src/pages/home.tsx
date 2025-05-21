@@ -1,4 +1,4 @@
-import { useDocumentDriveServer, useUiNodes } from '#hooks';
+import { useDocumentDriveServer, useShowAddDriveModal } from '#hooks';
 import { useGetAppNameForEditorId } from '#store';
 import {
     HomeScreen,
@@ -30,7 +30,7 @@ function getDriveIcon(driveNode: UiDriveNode) {
 
 export function Home() {
     const getAppDescriptionForEditorId = useGetAppNameForEditorId();
-    const { showAddDriveModal } = useUiNodes();
+    const showAddDriveModal = useShowAddDriveModal();
     const { documentDrives } = useDocumentDriveServer();
     const { driveNodes, setSelectedNode } = useUiNodesContext();
     const handleDriveClick = useCallback(

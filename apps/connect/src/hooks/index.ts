@@ -1,3 +1,4 @@
+export * from './modals.js';
 export * from './useAcceptedCookies/index.js';
 export * from './useAllowList.js';
 export * from './useClientErrorHandler.js';
@@ -28,4 +29,3 @@ export * from './useUndoRedoShortcuts.js';
 export * from './useUserPermissions.js';
 export * from './useWindowSize.js';
 export * from './utils.js';
-

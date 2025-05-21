@@ -1,4 +1,4 @@
-import { useLogin, useUiNodes } from '#hooks';
+import { useLogin, useShowAddDriveModal } from '#hooks';
 import {
     ConnectSidebar,
     Icon,
@@ -19,8 +19,7 @@ export default function Sidebar() {
 
     const { user, openRenown, logout } = useLogin();
     const { driveNodes, setSelectedNode, selectedNode } = useUiNodesContext();
-    const { showAddDriveModal } = useUiNodes();
-
+    const showAddDriveModal = useShowAddDriveModal();
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
 
     const onClickSettings = () => {

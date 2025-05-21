@@ -1,4 +1,4 @@
-import { useWindowSize, type TUiNodes } from '#hooks';
+import { useShowDeleteNodeModal, useWindowSize, type TUiNodes } from '#hooks';
 import {
     FileItem,
     type BaseUiFileNode,
@@ -28,6 +28,7 @@ export function FileContentView(props: Props) {
     const { fileNodes } = props;
     const availableWidth = windowSize.innerWidth - USED_SPACE;
     const { setSelectedNode } = useUiNodesContext();
+    const showDeleteNodeModal = useShowDeleteNodeModal();
     const handleSelectNode = (node: BaseUiFileNode) => {
         setSelectedNode(node as unknown as UiFileNode);
     };
@@ -41,7 +42,7 @@ export function FileContentView(props: Props) {
     };
 
     const handleDeleteNode = (node: BaseUiFileNode) => {
-        props.onDeleteNode(node as unknown as UiFileNode);
+        showDeleteNodeModal(node as unknown as UiFileNode);
     };
 
     const handleAddFile = (file: File, parentNode: BaseUiFileNode | null) => {

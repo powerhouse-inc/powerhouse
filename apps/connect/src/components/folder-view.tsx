@@ -1,4 +1,4 @@
-import { type TUiNodes } from '#hooks';
+import { useShowDeleteNodeModal, type TUiNodes } from '#hooks';
 import { sortUiNodesByName } from '#utils';
 import {
     FILE,
@@ -20,6 +20,7 @@ export function FolderView(
 ) {
     const { t } = useTranslation();
     const { selectedParentNode, setSelectedNode } = useUiNodesContext();
+    const showDeleteNodeModal = useShowDeleteNodeModal();
     const { isDropTarget, dropProps } = useDrop({
         ...props,
         uiNode: selectedParentNode,
@@ -38,7 +39,7 @@ export function FolderView(
     };
 
     const handleDeleteNode = (node: BaseUiFolderNode) => {
-        props.onDeleteNode(node as unknown as UiFolderNode);
+        showDeleteNodeModal(node as unknown as UiFolderNode);
     };
 
     const handleAddFile = async (file: File, parentNode: BaseUiNode | null) => {
