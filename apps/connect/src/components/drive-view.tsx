@@ -4,6 +4,7 @@ import {
     useUiNodes,
     useUserPermissions,
 } from '#hooks';
+import { useFilteredDocumentModels } from '#store';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
@@ -33,7 +34,7 @@ export function DriveView() {
     } = useUiNodesContext();
     const uiNodes = useUiNodes();
     const { isAllowedToCreateDocuments } = useUserPermissions() ?? {};
-    const { documentModels } = uiNodes;
+    const documentModels = useFilteredDocumentModels();
 
     const createFolder = useCallback(
         (name: string, parentFolder: string | undefined) => {

@@ -2,6 +2,7 @@ import {
     useDocumentDriveById,
     useDocumentDriveServer,
     useGetDocument,
+    useOpenSwitchboardLink,
 } from '#hooks';
 import { useFileNodeDocument } from '#store';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser';
@@ -37,7 +38,8 @@ export function DocumentEditorContainer() {
     } = useUiNodesContext();
     const selectedDocumentDrive = useDocumentDriveById(selectedDriveNode?.id);
     const { isRemoteDrive } = selectedDocumentDrive;
-    const { openSwitchboardLink, getDocumentModelModule } = useUiNodes();
+    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
+    const { getDocumentModelModule } = useUiNodes();
 
     const getDocument = useGetDocument();
 

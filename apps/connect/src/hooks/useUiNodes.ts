@@ -1,10 +1,6 @@
 import { useModal } from '#components';
-import {
-    useApps,
-    useFilteredDocumentModels,
-    useGetDocumentModelModule,
-} from '#store';
-import { getNodeOptions, makeNodeSlugFromNodeName } from '#utils';
+import { useApps, useGetDocumentModelModule } from '#store';
+import { makeNodeSlugFromNodeName } from '#utils';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
@@ -27,19 +23,12 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from '../services/toast.js';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
-import { useOpenSwitchboardLink } from './useOpenSwitchboardLink.js';
-import { useUserPermissions } from './useUserPermissions.js';
 
 export function useUiNodes() {
     const { showModal } = useModal();
     const { t } = useTranslation();
-    const {
-        selectedDriveNode,
-        driveNodes,
-        selectedParentNode,
-        setSelectedNode,
-        getParentNode,
-    } = useUiNodesContext();
+    const { driveNodes, selectedParentNode, setSelectedNode, getParentNode } =
+        useUiNodesContext();
     const {
         addFolder,
         addFile,
@@ -59,9 +48,6 @@ export function useUiNodes() {
         registerNewPullResponderTrigger,
     } = useDocumentDriveServer();
 
-    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
-    const nodeOptions = getNodeOptions();
-    const documentModels = useFilteredDocumentModels();
     const getDocumentModelModule = useGetDocumentModelModule();
 
     const apps = useApps();
@@ -515,9 +501,7 @@ export function useUiNodes() {
 
     return useMemo(
         () => ({
-            nodeOptions,
             driveNodesBySharingType,
-            documentModels,
             onAddFolder,
             onAddFile,
             onCopyNode,
@@ -530,16 +514,13 @@ export function useUiNodes() {
             onAddAndSelectNewFolder,
             showAddDriveModal,
             showDriveSettingsModal,
-            openSwitchboardLink,
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
             getDocumentModelModule,
         }),
         [
-            nodeOptions,
             driveNodesBySharingType,
-            documentModels,
             onAddFolder,
             onAddFile,
             onCopyNode,
@@ -552,7 +533,6 @@ export function useUiNodes() {
             onAddAndSelectNewFolder,
             showAddDriveModal,
             showDriveSettingsModal,
-            openSwitchboardLink,
             onAddTrigger,
             onRemoveTrigger,
             onAddInvalidTrigger,
