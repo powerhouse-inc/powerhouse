@@ -1,3 +1,13 @@
+## 1.27.0-dev.15 (2025-05-21)
+
+### 🩹 Fixes
+
+- docker build with PH_PACKAGES ([856ac1187](https://github.com/powerhouse-inc/powerhouse/commit/856ac1187))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
 ## 1.27.0-dev.14 (2025-05-15)
 
 ### 🚀 Features
