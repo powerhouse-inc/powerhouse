@@ -1,3 +1,23 @@
+## 2.28.1-dev.16 (2025-05-21)
+
+### 🩹 Fixes
+
+- docker build with PH_PACKAGES ([856ac1187](https://github.com/powerhouse-inc/powerhouse/commit/856ac1187))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 2.28.1-dev.15 (2025-05-15)
+
+### 🚀 Features
+
+- removed scalars package ([d6f7059a7](https://github.com/powerhouse-inc/powerhouse/commit/d6f7059a7))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 2.28.1-dev.14 (2025-05-15)
 
 ### 🚀 Features

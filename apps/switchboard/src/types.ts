@@ -19,6 +19,12 @@ export type StartServerOptions = {
       }
     | boolean
     | undefined;
+  auth?: {
+    enabled: boolean;
+    guests: string[];
+    users: string[];
+    admins: string[];
+  };
 };
 
 export type SwitchboardReactor = {

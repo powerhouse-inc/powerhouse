@@ -25,6 +25,7 @@ import {
   type Operation,
   type PHDocument,
 } from "document-model";
+import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { type Asset } from "./temp-hack-rwa-type-defs.js";
 
@@ -333,6 +334,12 @@ export class DriveSubgraph extends Subgraph {
           `registerPullResponderListener(drive: ${ctx.driveId})`,
           filter,
         );
+
+        const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+        const isUser = ctx.isUser?.(ctx.user?.address ?? "");
+        if (!isAdmin && !isUser) {
+          throw new GraphQLError("Forbidden");
+        }
 
         if (!ctx.driveId) {
           throw new Error("Drive ID is required");

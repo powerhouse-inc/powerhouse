@@ -1,4 +1,11 @@
-import { useGetDocument } from '#hooks';
+import {
+    useDocumentDriveById,
+    useDocumentDriveServer,
+    useGetDocument,
+    useOpenSwitchboardLink,
+} from '#hooks';
+import { useFileNodeDocument, useGetDocumentModelModule } from '#store';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { type GetDocumentOptions } from 'document-drive';
 import {
     type EditorContext,
@@ -8,7 +15,6 @@ import {
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
-import { useUiNodes } from '../hooks/useUiNodes.js';
 import { exportFile } from '../utils/index.js';
 import { validateDocument } from '../utils/validate-document.js';
 import { DocumentEditor } from './editors.js';
@@ -17,18 +23,21 @@ export function DocumentEditorContainer() {
     const { t } = useTranslation();
     const { showModal } = useModal();
     const {
-        selectedNode,
-        selectedParentNode,
-        isRemoteDrive,
         selectedDocument,
         fileNodeDocument,
-        setSelectedNode,
         setSelectedDocument,
-        openSwitchboardLink,
         addOperationToSelectedDocument,
-        renameNode,
-        getDocumentModelModule,
-    } = useUiNodes();
+    } = useFileNodeDocument();
+    const { renameNode } = useDocumentDriveServer();
+    const {
+        selectedNode,
+        selectedDriveNode,
+        selectedParentNode,
+        setSelectedNode,
+    } = useUiNodesContext();
+    const { isRemoteDrive } = useDocumentDriveById(selectedDriveNode?.id);
+    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
+    const getDocumentModelModule = useGetDocumentModelModule();
 
     const getDocument = useGetDocument();
 

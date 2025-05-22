@@ -1,8 +1,11 @@
-import { FILE, type NodeProps, UI_NODE, type UiNode } from "#connect";
+import { FILE, UI_NODE, type UiNode } from "#connect";
 import { type DragEvent, useCallback, useMemo, useState } from "react";
 
-type Props = Pick<NodeProps, "onAddFile" | "onCopyNode" | "onMoveNode"> & {
+type Props = {
   uiNode: UiNode | null;
+  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
+  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
 };
 export function useDrop(props: Props) {
   const { uiNode, onAddFile, onCopyNode, onMoveNode } = props;

@@ -33,10 +33,6 @@ jobs:
           git config user.name "Github Actions Bot"
           git config user.email "-"
 
-      - name: Bump canary version scalars
-        run: pnpm version prerelease --preid=canary --no-git-tag-version
-        working-directory: packages/scalars
-
       - name: Bump canary version design-system
         run: pnpm version prerelease --preid=canary --no-git-tag-version
         working-directory: packages/design-system
@@ -57,13 +53,6 @@ jobs:
 
       - name: Build packages
         run: npx nx run-many --target=build --all --skip-nx-cache
-
-      - name: Publish canary package scalars
-        run: |
-          pnpm config set //registry.npmjs.org/:_authToken ${NODE_AUTH_TOKEN}
-          pnpm publish --filter @powerhousedao/scalars --access public --tag canary --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
 
       - name: Publish canary package design-system
         run: |

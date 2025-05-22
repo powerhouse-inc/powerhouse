@@ -1,20 +1,32 @@
-import { type NodeProps, type UiNode, useDrop } from "#connect";
-import { type TUiNodesContext } from "@powerhousedao/reactor-browser";
+import { type UiNode, useDrop } from "#connect";
 import { twMerge } from "tailwind-merge";
 
-type Props = TUiNodesContext &
-  NodeProps & {
-    readonly uiNode: UiNode;
-    readonly position: "before" | "after";
-    readonly className?: string;
-  };
+type Props = {
+  uiNode: UiNode;
+  position: "before" | "after";
+  className?: string;
+  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
+  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  getParentNode: (uiNode: UiNode) => UiNode | null;
+};
 
 export function DropIndicator(props: Props) {
-  const { uiNode, position, className, getParentNode } = props;
+  const {
+    uiNode,
+    position,
+    className,
+    onAddFile,
+    onMoveNode,
+    onCopyNode,
+    getParentNode,
+  } = props;
   const parentNode = getParentNode(uiNode);
   const { isDropTarget, dropProps } = useDrop({
-    ...props,
     uiNode: parentNode,
+    onAddFile,
+    onMoveNode,
+    onCopyNode,
   });
 
   const positionStyle = position === "before" ? "top-0" : "bottom-0";

@@ -15,7 +15,7 @@ async function initConnectCrypto() {
     return connectCrypto;
 }
 
-function getConnectCrypto(): Promise<IConnectCrypto> {
+export function getConnectCrypto(): Promise<IConnectCrypto> {
     if (window.connectCrypto) {
         return Promise.resolve(window.connectCrypto);
     }
@@ -41,6 +41,18 @@ export function useConnectCrypto(): IConnectCrypto {
             sign: async (data: Uint8Array) => {
                 const crypto = await getConnectCrypto();
                 return await crypto.sign(data);
+            },
+            async getIssuer() {
+                const crypto = await getConnectCrypto();
+                return crypto.getIssuer();
+            },
+            async getBearerToken(
+                driveUrl: string,
+                address: string | undefined,
+                refresh = false,
+            ) {
+                const crypto = await getConnectCrypto();
+                return crypto.getBearerToken(driveUrl, address, refresh);
             },
         }),
         [],

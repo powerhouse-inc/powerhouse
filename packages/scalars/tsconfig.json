@@ -1,9 +1,0 @@
-{
-  "extends": "../../tsconfig.options.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "types": ["vitest/globals"],
-    "resolveJsonModule": true
-  },
-  "include": ["**/*", "package.json"]
-}

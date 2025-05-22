@@ -5,8 +5,17 @@ import { type ReactorOptions } from "../services/reactor.js";
 import { type CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
-async function startLocalSwitchboard(options: ReactorOptions) {
+type SwitchboardOptions = ReactorOptions & {
+  basePath?: string;
+};
+
+async function startLocalSwitchboard(options: SwitchboardOptions) {
   console.log("Starting switchboard", options);
+  if (options.basePath) {
+    console.log(`Setting BASE_PATH to ${options.basePath}`);
+    process.env.BASE_PATH = options.basePath;
+  }
+
   const Switchboard = await import("../services/switchboard.js");
   const { startSwitchboard } = Switchboard;
 
@@ -41,6 +50,10 @@ export function switchboardCommand(program: Command) {
     .option(
       "--packages <packages...>",
       "list of packages to be loaded, if defined then packages on config file are ignored",
+    )
+    .option(
+      "--base-path <basePath>",
+      "base path for the API endpoints (sets the BASE_PATH environment variable)",
     )
     .action(async (...args: [ReactorOptions]) => {
       const { defaultDriveUrl } = await switchboard(...args);
