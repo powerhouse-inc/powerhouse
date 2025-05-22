@@ -4,29 +4,14 @@ on:
   schedule:
   - cron: '0 6 * * *'
   workflow_dispatch:
-    inputs:
-      tag:
-        type: string
-        default: "dev"
 
 env:
   NX_ISOLATE_PLUGINS: false
-  TAG: ${{ inputs.tag ||  'dev'  }}
+  TAG: 'staging'
 
 jobs:
-  validate-tag:
-    name: Validate Tag
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check tag value
-        if: ${{ inputs.tag == 'staging' || inputs.tag == 'production' || inputs.tag == 'latest' }}
-        run: |
-          echo "::error::Tag value '${{ inputs.tag }}' is not allowed"
-          exit 1
-
   build-and-publish:
     name: Build and Publish Package
-    needs: validate-tag
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -46,7 +31,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: "pnpm"
           registry-url: https://registry.npmjs.org/
 
