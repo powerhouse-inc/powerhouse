@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard-gui",
   "private": true,
-  "version": "0.25.0-dev.12",
+  "version": "0.25.0-staging.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
