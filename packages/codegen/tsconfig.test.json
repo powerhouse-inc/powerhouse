@@ -3,7 +3,7 @@
   "compilerOptions": {
     "strictNullChecks": true,
     "outDir": "./src/__tests__/dist",
-    "types": ["vitest/globals"],
+    "types": [],
     "esModuleInterop": true,
     "resolveJsonModule": true
   },

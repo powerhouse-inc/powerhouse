@@ -17,6 +17,7 @@ import {
   type ExtendedStateFromDocument,
   type ValidationError,
 } from "#document/types.js";
+import { beforeEach, describe, expect, it } from "vitest";
 
 describe("DocumentModel Validation Error", () => {
   const documentName = "testDocument";

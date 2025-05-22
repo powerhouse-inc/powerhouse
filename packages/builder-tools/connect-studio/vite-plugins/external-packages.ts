@@ -1,12 +1,15 @@
-import { getConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config";
 import { exec } from "node:child_process";
 import fs from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { type PluginOption, type ViteDevServer } from "vite";
 
 export const EXTERNAL_PACKAGES_IMPORT = "PH:EXTERNAL_PACKAGES";
 export const IMPORT_SCRIPT_FILE = "external-packages.js";
 export const LOCAL_PACKAGE_ID = "ph:local-package";
+
+const LOCAL_CSS = "../../style.css";
+const LOCAL_JS = "../../index.js";
 
 function generateImportScript(
   packages: string[],
@@ -38,13 +41,21 @@ function generateImportScript(
   );
 
   if (localPackage) {
-    const moduleName = `module${counter}`;
-    imports.push(`import * as ${moduleName} from '../../index.js';`);
-    imports.push(`import '../../style.css';`);
-    exports.push(`{
-      id: "${LOCAL_PACKAGE_ID}",
-      ...${moduleName},
-    }`);
+    const hasModule =
+      fs.existsSync(resolve(targetDir, LOCAL_JS)) ||
+      fs.existsSync(resolve(targetDir, LOCAL_JS.replace(".js", ".ts")));
+    const hasStyles = fs.existsSync(resolve(targetDir, LOCAL_CSS));
+    if (hasStyles) {
+      imports.push(`import '${LOCAL_CSS}';`);
+    }
+    if (hasModule) {
+      const moduleName = `module${counter}`;
+      imports.push(`import * as ${moduleName} from '${LOCAL_JS}';`);
+      exports.push(`{
+        id: "${LOCAL_PACKAGE_ID}",
+        ...${moduleName},
+      }`);
+    }
   }
 
   const exportStatement = `export default [
@@ -111,19 +122,20 @@ export const viteLoadExternalPackages = (
   targetDir: string,
 ): PluginOption[] => {
   const importPath = join(targetDir, IMPORT_SCRIPT_FILE);
+  packages = packages?.filter((p) => p.trim().length) ?? [];
   return [
     {
       name: "vite-plugin-ph-external-packages",
       config() {
         if (!localPackage) {
-          generateImportScript(packages ?? [], importPath, localPackage);
+          generateImportScript(packages, importPath, localPackage);
         }
       },
       closeBundle() {
-        generateImportScript(packages ?? [], importPath, localPackage);
+        generateImportScript(packages, importPath, localPackage);
       },
       configureServer(server) {
-        generateImportScript(packages ?? [], importPath, localPackage);
+        generateImportScript(packages, importPath, localPackage);
         handleExternalPackageEvents(server);
       },
       handleHotUpdate({ file, server, modules, timestamp }) {

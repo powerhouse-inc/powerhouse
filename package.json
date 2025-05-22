@@ -76,6 +76,9 @@
   "engines": {
     "node": ">=20"
   },
+  "resolutions": {
+    "zod": "^3.24.3"
+  },
   "commitlint": {
     "rules": {
       "header-max-length": [2, "always", 200]

@@ -13,9 +13,6 @@
       "path": "../document-model"
     },
     {
-      "path": "../scalars"
-    },
-    {
       "path": "../config"
     },
     {

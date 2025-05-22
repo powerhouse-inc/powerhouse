@@ -1,5 +1,5 @@
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
-import { typeDefs } from "@powerhousedao/scalars";
+import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
 import {
   type DocumentModelModule,

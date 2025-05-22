@@ -1,4 +1,5 @@
 import { generateUUID } from "#document/utils/node.js";
+import { describe, expect, it } from "vitest";
 import { DocumentModelClass } from "../../src/document-model/gen/object.js";
 
 describe("DocumentModel Class", () => {

@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from "vitest";
 import { noop } from "../../src/document/actions/creators.js";
 import type { BaseDocument } from "../../src/document/types.js";
 import {

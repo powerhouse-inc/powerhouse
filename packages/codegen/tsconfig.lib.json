@@ -15,7 +15,6 @@
   ],
   "references": [
     { "path": "../document-model" },
-    { "path": "../scalars" },
     { "path": "../config" },
     { "path": "./tsconfig.hygen.json" }
   ]

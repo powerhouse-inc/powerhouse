@@ -17,7 +17,7 @@
       "path": "../document-model"
     },
     {
-      "path": "../design-system"
+      "path": "../design-system/tsconfig.lib.json"
     },
     {
       "path": "../builder-tools"

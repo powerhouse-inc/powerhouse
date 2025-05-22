@@ -44,7 +44,11 @@ export function ensureValidStateSchemaName(
   scope: string,
 ) {
   if (!safeParseSdl(doc)) return [];
-  const requiredTypeName = `${pascalCase(modelName)}${scope === "local" ? "Local" : ""}State`;
+  const scopePascalCase = pascalCase(scope);
+  const modelNamePascalCase = pascalCase(modelName);
+  const scopeStateTypeNamePrefix =
+    scopePascalCase === "Global" ? "" : scopePascalCase;
+  const requiredTypeName = `${scopeStateTypeNamePrefix}${modelNamePascalCase}State`;
   if (
     !ensureDocumentContainsNodeWithNameAndType(
       doc,
