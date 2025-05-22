@@ -16,7 +16,7 @@
       "path": "../scalars"
     },
     {
-      "path": "../design-system"
+      "path": "../design-system/tsconfig.lib.json"
     }
   ],
   "include": ["**/*"]
