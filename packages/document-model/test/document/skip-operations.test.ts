@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { setName } from "../../src/document/actions/creators.js";
 import {
   baseCreateDocument,

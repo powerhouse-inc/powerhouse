@@ -3,7 +3,6 @@
   "compilerOptions": {
     "types": [
       "node",
-      "vitest/globals",
       "@types/wicg-file-system-access",
       "@storybook/types"
     ],
