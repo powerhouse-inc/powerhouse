@@ -70,7 +70,9 @@ export default defineConfig(({ mode }) => {
     const uploadSentrySourcemaps = authToken && org && project;
 
     const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
-    const phPackages = phPackagesStr?.split(',') || [];
+    const phPackages =
+        phPackagesStr?.split(',').filter(p => p.trim().length) || [];
+
 
     const wrapViteEnvs = (): PluginOption => {
         const viteEnvsPlugin = viteEnvs({
