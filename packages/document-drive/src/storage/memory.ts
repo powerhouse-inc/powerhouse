@@ -6,7 +6,7 @@ import {
   DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
-import { mergeOperations } from "#utils/misc";
+import { mergeOperations, operationsToRevision } from "#utils/misc";
 import {
   type DocumentHeader,
   type Operation,
@@ -321,16 +321,15 @@ export class MemoryStorage
             return undefined;
           }
 
-          const operation =
-            document.operations[unit.scope as OperationScope].at(-1);
+          const operations = document.operations[unit.scope as OperationScope];
 
           return {
             documentId: unit.documentId,
             documentType: unit.documentType,
             scope: unit.scope,
             branch: unit.branch,
-            lastUpdated: operation?.timestamp ?? document.created,
-            revision: operation ? operation.index + 1 : 0,
+            lastUpdated: operations.at(-1)?.timestamp ?? document.created,
+            revision: operationsToRevision(operations),
           };
         } catch {
           return undefined;

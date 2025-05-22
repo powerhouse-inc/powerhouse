@@ -115,6 +115,8 @@ export class EventQueueManager implements IQueueManager {
 
     const jobId = generateId();
     const jobActions = isOperationJob(job) ? job.operations : job.actions;
+
+    // TODO: support createDocument job
     if (!jobActions.length) {
       throw new Error("Job has no operations or actions");
     }

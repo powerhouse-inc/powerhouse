@@ -6,7 +6,7 @@ import {
   type IStorageUnit,
 } from "#storage/types";
 import { childLogger } from "#utils/logger";
-import { isBefore } from "#utils/misc";
+import { isBefore, operationsToRevision } from "#utils/misc";
 import {
   type DocumentModelModule,
   type OperationScope,
@@ -139,7 +139,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       documentId,
       documentType: document.documentType,
       lastUpdated: lastOperation?.timestamp ?? document.lastModified,
-      revision: lastOperation ? lastOperation.index + 1 : 0,
+      revision: operationsToRevision(operations),
     };
   }
 

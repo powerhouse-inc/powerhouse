@@ -352,9 +352,7 @@ export class ListenerManager implements IListenerManager {
               );
 
               if (su && su.operations.length > 0) {
-                const suIndex = su.operations.at(
-                  su.operations.length - 1,
-                )?.index;
+                const suIndex = su.operations.at(-1)?.index;
                 if (suIndex !== revision.revision) {
                   this.logger.verbose(
                     `Revision still out-of-date for ${su.documentId}:${su.scope}:${su.branch} ${suIndex} <> ${revision.revision}`,
@@ -365,10 +363,6 @@ export class ListenerManager implements IListenerManager {
                     `Revision match for ${su.documentId}:${su.scope}:${su.branch} ${suIndex}`,
                   );
                 }
-              } else {
-                this.logger.verbose(
-                  `Cannot find strand update for (${revision.documentId}:${revision.scope}:${revision.branch} in drive ${revision.driveId})`,
-                );
               }
               // Check for revision status ^^
             } else {
@@ -535,28 +529,26 @@ export class ListenerManager implements IListenerManager {
         }
 
         const { documentId, scope, branch } = syncUnit;
+        let operations: OperationUpdate[] = [];
         try {
-          this.logger.verbose(
-            `[SYNC DEBUG] Getting operations for syncUnit: ${JSON.stringify(syncUnit)}`,
-          );
+          if (syncUnit.revision > 0) {
+            this.logger.verbose(
+              `[SYNC DEBUG] Getting operations for syncUnit: ${JSON.stringify(syncUnit)}`,
+            );
 
-          const operations = await this.syncManager.getOperationData(
-            // DEAL WITH INVALID SYNC ID ERROR
-            syncUnit,
-            {
-              since: options?.since,
-              fromRevision: options?.fromRevision ?? entry?.listenerRev,
-              limit: limit ? limit - operationsCount : undefined,
-            },
-          );
-
+            operations = await this.syncManager.getOperationData(
+              // DEAL WITH INVALID SYNC ID ERROR
+              syncUnit,
+              {
+                since: options?.since,
+                fromRevision: options?.fromRevision ?? entry?.listenerRev,
+                limit: limit ? limit - operationsCount : undefined,
+              },
+            );
+          }
           this.logger.verbose(
             `[SYNC DEBUG] Retrieved ${operations.length} operations for syncUnit: ${JSON.stringify(syncUnit)}`,
           );
-
-          if (!operations.length) {
-            return;
-          }
 
           operationsCount += operations.length;
 

@@ -244,7 +244,7 @@ describe("Synchronization Manager with memory adapters", () => {
     // Get operations after a specific revision
     const laterOps = await syncManager.getOperationData(
       { documentId: document.id, scope: "global", branch: "main" },
-      { fromRevision: 0 },
+      { fromRevision: 1 },
     );
     expect(laterOps).toHaveLength(1);
     expect(laterOps[0].index).toBe(1);
@@ -347,7 +347,7 @@ describe("Synchronization Manager with memory adapters", () => {
       { documentId: document.id, scope: "global", branch: "main" },
       {
         since: new Date("2025-01-02T00:00:00.000Z").toISOString(),
-        fromRevision: 1,
+        fromRevision: 2,
       },
     );
     expect(combinedOps).toHaveLength(1);

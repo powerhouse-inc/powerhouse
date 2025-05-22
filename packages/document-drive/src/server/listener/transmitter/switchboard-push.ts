@@ -1,6 +1,7 @@
 import { type ListenerRevision, type StrandUpdate } from "#server/types";
 import { gql, requestGraphql } from "#utils/graphql";
 import { childLogger } from "#utils/logger";
+import { operationsToRevision } from "#utils/misc";
 import stringify from "json-stringify-deterministic";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
@@ -28,14 +29,14 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       this.logger.verbose(`Cutting trigger loop from ${this.targetURL}.`);
 
       return strands.map((strand) => {
-        const operation = strand.operations.at(-1);
         return {
           driveId: strand.driveId,
           documentId: strand.documentId,
+          documentType: strand.documentType,
           scope: strand.scope,
           branch: strand.branch,
           status: "SUCCESS",
-          revision: operation ? operation.index + 1 : 0,
+          revision: operationsToRevision(strand.operations),
         };
       });
     }
@@ -84,6 +85,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
             pushUpdates(strands: $strands) {
               driveId
               documentId
+              documentType
               scope
               branch
               status

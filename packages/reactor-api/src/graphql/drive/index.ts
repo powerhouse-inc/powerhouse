@@ -289,11 +289,7 @@ export class DriveSubgraph extends Subgraph {
       },
       document: async (_: unknown, { id }: { id: string }, ctx: Context) => {
         this.logger.verbose(`document(drive: ${ctx.driveId}, id: ${id})`);
-        if (!ctx.driveId) throw new Error("Drive ID is required");
-        const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
-        const document = await (driveId === id
-          ? this.reactor.getDrive(driveId)
-          : this.reactor.getDocument(driveId, id));
+        const document = await this.reactor.getDocument(id);
 
         const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
@@ -441,6 +437,7 @@ export class DriveSubgraph extends Subgraph {
           .map((e) => ({
             driveId: e.driveId,
             documentId: e.documentId,
+            documentType: e.documentType,
             scope: e.scope,
             branch: e.branch,
             revision: e.revision,

@@ -73,7 +73,6 @@ describe("Internal Listener", () => {
 
   test("should call transmit function of listener and acknowledge", async () => {
     const transmitFn = vitest.fn((args) => {
-      console.log("TRANSMIT", args);
       return Promise.resolve();
     });
 

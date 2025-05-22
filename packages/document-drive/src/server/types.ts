@@ -130,6 +130,7 @@ export enum TransmitterType {
 export type ListenerRevision = {
   driveId: string;
   documentId: string;
+  documentType: string;
   scope: string;
   branch: string;
   status: UpdateStatus;

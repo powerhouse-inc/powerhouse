@@ -495,6 +495,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       listenerRevisions.push({
         branch: strand.branch,
         documentId: strand.documentId || "",
+        documentType: strand.documentType,
         driveId: strand.driveId,
         revision: operations.pop()?.index ?? -1,
         scope: strand.scope,

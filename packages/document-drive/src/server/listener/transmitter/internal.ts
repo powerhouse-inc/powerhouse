@@ -15,6 +15,7 @@ import {
   type StrandUpdate,
 } from "#server/types";
 import { logger } from "#utils/logger";
+import { operationsToRevision } from "#utils/misc";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
@@ -109,11 +110,10 @@ export class InternalTransmitter implements ITransmitter {
     try {
       await this.processor.onStrands(updates);
       return strands.map(({ operations, ...s }) => {
-        const operation = operations.at(-1);
         return {
           ...s,
           status: "SUCCESS",
-          revision: operation ? operation.index + 1 : 0,
+          revision: operationsToRevision(operations),
         };
       });
     } catch (error) {
