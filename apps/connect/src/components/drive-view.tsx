@@ -32,10 +32,17 @@ export function DriveView() {
         selectedNodePath,
         getNodeById,
     } = useUiNodesContext();
-    const uiNodes = useUiNodes();
     const { isAllowedToCreateDocuments } = useUserPermissions() ?? {};
     const documentModels = useFilteredDocumentModels();
-
+    const {
+        onAddFile,
+        onAddFolder,
+        onRenameNode,
+        onCopyNode,
+        onMoveNode,
+        onDuplicateNode,
+        onAddAndSelectNewFolder,
+    } = useUiNodes();
     const createFolder = useCallback(
         (name: string, parentFolder: string | undefined) => {
             if (!selectedDriveNode) {
@@ -78,7 +85,15 @@ export function DriveView() {
             {connectConfig.content.showSearchBar && <SearchBar />}
             <div className="px-4">
                 <div className="mb-5">
-                    <FolderView {...uiNodes} />
+                    <FolderView
+                        onAddFile={onAddFile}
+                        onAddFolder={onAddFolder}
+                        onRenameNode={onRenameNode}
+                        onCopyNode={onCopyNode}
+                        onMoveNode={onMoveNode}
+                        onAddAndSelectNewFolder={onAddAndSelectNewFolder}
+                        onDuplicateNode={onDuplicateNode}
+                    />
                 </div>
                 {isAllowedToCreateDocuments && (
                     <>

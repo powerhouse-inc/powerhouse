@@ -35,8 +35,7 @@ export function DocumentEditorContainer() {
         selectedParentNode,
         setSelectedNode,
     } = useUiNodesContext();
-    const selectedDocumentDrive = useDocumentDriveById(selectedDriveNode?.id);
-    const { isRemoteDrive } = selectedDocumentDrive;
+    const { isRemoteDrive } = useDocumentDriveById(selectedDriveNode?.id);
     const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
     const getDocumentModelModule = useGetDocumentModelModule();
 
