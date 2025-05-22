@@ -1,6 +1,6 @@
+import { Select, type SelectOption } from "#ui";
 import React, { useMemo } from "react";
-import type { SelectOption } from "../enum-field/types.js";
-import { FormGroup, SelectFieldRaw } from "../fragments/index.js";
+import { FormGroup } from "../fragments/index.js";
 import { withFieldValidation } from "../fragments/with-field-validation/with-field-validation.js";
 import type { FieldErrorHandling, InputBaseProps } from "../types.js";
 import type { AllowedTypes, Currency } from "./types.js";
@@ -59,7 +59,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
 
       return (
         (defaultCurrencies
-          ?.map((currency) => {
+          .map((currency) => {
             if (favoriteTickers.has(currency.ticker)) {
               return null;
             }
@@ -125,7 +125,7 @@ export const CurrencyCodeFieldRaw = React.forwardRef<
 
     return (
       <FormGroup>
-        <SelectFieldRaw
+        <Select
           ref={ref}
           options={options}
           selectionIcon="checkmark"

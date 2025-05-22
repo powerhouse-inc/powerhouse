@@ -1,2 +1,4 @@
-export * from "./radio-group.js";
-export * from "./radio-group-field.js";
+export {
+  RadioGroupField,
+  type RadioGroupFieldProps,
+} from "./radio-group-field.js";

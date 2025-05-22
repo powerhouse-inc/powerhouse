@@ -5,6 +5,7 @@ import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
+  PrebuiltArgTypes,
   StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { EnumField } from "./enum-field.js";
@@ -26,6 +27,7 @@ const meta: Meta<typeof EnumField> = {
   tags: ["autodocs"],
   argTypes: {
     ...getDefaultArgTypes(),
+    ...PrebuiltArgTypes.placeholder,
 
     variant: {
       control: "radio",
@@ -103,6 +105,19 @@ const meta: Meta<typeof EnumField> = {
     },
 
     ...getValidationArgTypes(),
+
+    ...PrebuiltArgTypes.viewMode,
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["sentences"],
+      table: {
+        type: { summary: "sentences" },
+        defaultValue: { summary: "sentences" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    ...PrebuiltArgTypes.baseValue,
   },
   args: {
     name: "enum-field",

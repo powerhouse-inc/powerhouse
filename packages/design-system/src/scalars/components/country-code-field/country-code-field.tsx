@@ -1,4 +1,4 @@
-import { SelectFieldRaw } from "#scalars";
+import { Select } from "#ui";
 import React from "react";
 import { CircleFlag } from "react-circle-flags";
 import countries, { type Countries } from "world-countries";
@@ -72,7 +72,7 @@ const CountryCodeFieldRaw = React.forwardRef<
         : defaultOptions;
 
     return (
-      <SelectFieldRaw
+      <Select
         ref={ref}
         options={options}
         selectionIcon="checkmark"
