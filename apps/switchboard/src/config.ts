@@ -1,6 +1,10 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { getConfig } from "@powerhousedao/config/utils";
+const phConfig = getConfig();
+const { switchboard: { auth: { enabled, guests, users, admins } = {} } = {} } =
+  phConfig;
 interface Config {
   auth: {
     enabled: boolean;
@@ -11,9 +15,18 @@ interface Config {
 }
 export const config: Config = {
   auth: {
-    enabled: Boolean(process.env.SWITCHBOARD_AUTH_ENABLED) || false,
-    guests: (process.env.SWITCHBOARD_AUTH_GUESTS || "").split(","),
-    users: (process.env.SWITCHBOARD_AUTH_USERS || "").split(","),
-    admins: (process.env.SWITCHBOARD_AUTH_ADMINS || "").split(","),
+    enabled:
+      process.env.SWITCHBOARD_AUTH_ENABLED === "true"
+        ? true
+        : (enabled ?? false),
+    guests: process.env.SWITCHBOARD_AUTH_GUESTS
+      ? process.env.SWITCHBOARD_AUTH_GUESTS.split(",")
+      : (guests ?? []),
+    users: process.env.SWITCHBOARD_AUTH_USERS
+      ? process.env.SWITCHBOARD_AUTH_USERS.split(",")
+      : (users ?? []),
+    admins: process.env.SWITCHBOARD_AUTH_ADMINS
+      ? process.env.SWITCHBOARD_AUTH_ADMINS.split(",")
+      : (admins ?? []),
   },
 };
