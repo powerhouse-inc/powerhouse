@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="450" viewBox="0 0 800 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="450" fill="#F5F6F7" rx="8"/>
+  
+  <!-- Play button circle -->
+  <circle cx="400" cy="225" r="50" fill="#0066FF" />
+  
+  <!-- Play button triangle -->
+  <path d="M420 225L390 245L390 205L420 225Z" fill="white"/>
+  
+  <!-- Text -->
+  <text x="400" y="320" font-family="Arial" font-size="24" fill="#666" text-anchor="middle">
+    Watch Introduction Video
+  </text>
+</svg> 
