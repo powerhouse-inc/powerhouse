@@ -253,7 +253,7 @@ export async function startAPI(
   if (options.auth?.enabled) {
     // set admin, users and guest list
     app.use(async (req, res, next) => {
-      if (!options.auth || req.method === "OPTIONS") {
+      if (!options.auth || req.method === "OPTIONS" || req.method === "GET") {
         next();
         return;
       }
