@@ -1,3 +1,17 @@
+## 1.27.0-dev.16 (2025-05-24)
+
+### 🚀 Features
+
+- **config:** added switchboard auth ([3437c4835](https://github.com/powerhouse-inc/powerhouse/commit/3437c4835))
+
+### 🩹 Fixes
+
+- **scripts:** merged install tools and setup environment into one script ([2a7bd3c97](https://github.com/powerhouse-inc/powerhouse/commit/2a7bd3c97))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 1.27.0-dev.15 (2025-05-21)
 
 ### 🩹 Fixes

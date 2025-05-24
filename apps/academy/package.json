@@ -1,6 +1,6 @@
 {
   "name": "powerhouse-docs",
-  "version": "0.0.0",
+  "version": "0.1.0-dev.0",
   "private": true,
   "homepage": "",
   "packageManager": "pnpm@10.9.0",

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.49.6-dev.3",
+  "version": "0.49.7-dev.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
