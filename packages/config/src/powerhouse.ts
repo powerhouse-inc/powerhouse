@@ -52,6 +52,10 @@ export type PowerhouseConfig = {
       users: string[];
       admins: string[];
     };
+    database?: {
+      url?: string;
+    };
+    port?: number;
   };
   studio?: {
     port?: number;
