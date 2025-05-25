@@ -55,3 +55,19 @@ jobs:
           dockerfile_name: apps/switchboard/Dockerfile
           process_type: web
           docker_options: "--build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}"
+  academy:
+    environment: ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
+      - name: Build, Push and Release Academy to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ vars.HEROKU_APP_NAME_ACADEMY }}
+          dockerfile_directory: ./apps/academy
+          process_type: web
