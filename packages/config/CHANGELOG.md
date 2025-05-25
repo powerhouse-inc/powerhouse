@@ -1,3 +1,14 @@
+## 1.27.0-dev.17 (2025-05-25)
+
+### 🚀 Features
+
+- **switchboard:** deploy with new dockerfile ([54f65af17](https://github.com/powerhouse-inc/powerhouse/commit/54f65af17))
+- **config:** added new switchboard params ([80cd1e43a](https://github.com/powerhouse-inc/powerhouse/commit/80cd1e43a))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 1.27.0-dev.16 (2025-05-24)
 
 ### 🚀 Features

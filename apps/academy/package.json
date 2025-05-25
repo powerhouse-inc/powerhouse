@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/academy",
-  "version": "0.1.0-dev.0",
+  "version": "0.1.0-dev.1",
   "homepage": "https://powerhouse.academy",
   "packageManager": "pnpm@10.9.0",
   "scripts": {
