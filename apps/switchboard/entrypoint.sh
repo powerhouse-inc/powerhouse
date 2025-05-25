@@ -13,4 +13,5 @@ if [ ! -z "$PH_PACKAGES" ]; then
 fi
 
 echo "[entrypoint] Starting switchboard..."
-ph switchboard
+export SWITCHBOARD_PORT="${PORT:-4001}"
+ph switchboard --port $SWITCHBOARD_PORT
