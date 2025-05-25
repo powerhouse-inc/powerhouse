@@ -1,6 +1,8 @@
 FROM node:22-alpine AS build
 RUN apk update && apk add git
 WORKDIR /app
+COPY . .
+RUN chmod +x entrypoint.sh
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack install --global pnpm@9.8.0
@@ -41,7 +43,6 @@ RUN pnpm add -g ph-cmd@$PH_TAG && \
     ph use $PH_TAG
 
 # Copy and set up entrypoint script
-COPY . .
-RUN chmod +x entrypoint.sh
+
 
 ENTRYPOINT ["/app/entrypoint.sh"]
