@@ -36,7 +36,8 @@ ARG PH_TAG=latest
 ENV PH_TAG=$PH_TAG
 
 RUN pnpm add -g ph-cmd@$PH_TAG && \
-    ph setup-globals --package-manager pnpm && \
+    ph init powerhouse --package-manager pnpm && \
+    cd /app/powerhouse && \
     ph use $PH_TAG
 
 # Copy and set up entrypoint script
