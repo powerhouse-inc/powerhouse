@@ -57,7 +57,7 @@ jobs:
           dockerfile_directory: .
           dockerfile_name: apps/switchboard/Dockerfile
           process_type: web
-          docker_options: "--build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}"
+          docker_options: "--build-arg PH_TAG=${{ vars.PH_TAG }}"
   academy:
     environment: ${{ github.ref_name }}
     runs-on: ubuntu-latest

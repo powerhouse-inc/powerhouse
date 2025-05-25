@@ -25,11 +25,15 @@ ENV PH_SWITCHBOARD_GUESTS_LIST="0x123,0x456"
 ENV PH_SWITCHBOARD_DATABASE_URL="dev.db"
 ENV PH_SWITCHBOARD_REDIS_URL=""
 
+# Heroku Workaround
+ENV PORT=4001 
+
 # Switchboard
-ENV PH_SWITCHBOARD_PORT=4001
+ENV PH_SWITCHBOARD_PORT=$PORT
 
 # Other
-ENV PH_TAG=latest
+ARG PH_TAG=latest
+ENV PH_TAG=$PH_TAG
 
 RUN pnpm add -g ph-cmd@$PH_TAG && \
     ph setup-globals && \
