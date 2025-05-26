@@ -11,6 +11,7 @@
   ],
   "exports": {
     "./connect-studio": "./dist/connect-studio/index.js",
+    "./connect-build": "./dist/connect-build/index.js",
     "./document-model-editor": "./dist/document-model-editor/index.js",
     "./editor-utils": "./dist/editor-utils/index.js",
     "./style.css": "./dist/style.css"
@@ -18,7 +19,7 @@
   "imports": {
     "#editor-utils/*": "./dist/editor-utils/*.js",
     "#document-model-editor/*": "./dist/document-model-editor/*.js",
-    "#connect-studio/*": "./dist/connect-studio/*.js"
+    "#connect-utils": "./dist/connect-utils/index.js"
   },
   "scripts": {
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
@@ -40,6 +41,10 @@
     "react-dom": "^18.3.1"
   },
   "dependencies": {
+    "tailwindcss": "^4.1.6",
+    "esbuild": "^0.24.2",
+    "postcss": "^8.5.3",
+    "@tailwindcss/postcss": "^4.1.7",
     "@codemirror/autocomplete": "^6.18.6",
     "@codemirror/commands": "^6.8.1",
     "@codemirror/lang-javascript": "^6.2.3",
@@ -81,14 +86,12 @@
     "document-model": "workspace:*",
     "dspot-powerhouse-components": "^1.1.0",
     "es-toolkit": "^1.37.2",
-    "esbuild": "^0.24.0",
     "fast-glob": "^3.3.3",
     "graphql": "^16.11.0",
     "magic-string": "^0.30.17",
     "react-hook-form": "^7.56.1",
     "resolve.exports": "^2.0.3",
     "tailwind-merge": "^3.2.0",
-    "tailwindcss": "^4.1.4",
     "thememirror": "^2.0.1",
     "usehooks-ts": "^3.1.1",
     "uuid": "^11.1.0",
