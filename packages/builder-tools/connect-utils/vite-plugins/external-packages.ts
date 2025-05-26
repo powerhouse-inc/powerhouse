@@ -94,15 +94,8 @@ export const viteLoadExternalPackages = (
   packages: string[] | undefined,
   targetDir: string,
 ): PluginOption[] => {
-  console.log("Loading external packages", {
-    localPackage,
-    targetDir,
-    packages,
-  });
   const importPath = join(targetDir, IMPORT_SCRIPT_FILE);
-  console.log("Resolved import path", { importPath });
   packages = packages?.filter((p) => p.trim().length) ?? [];
-  console.log("Resolved packages", { packages });
   return [
     {
       name: "vite-plugin-ph-external-packages",
