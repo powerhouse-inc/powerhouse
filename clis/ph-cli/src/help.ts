@@ -1,7 +1,13 @@
+import {
+  DEFAULT_ASSETS_DIR_NAME,
+  DEFAULT_EXTERNAL_PACKAGES_FILE_NAME,
+  DEFAULT_STYLES_FILE_NAME,
+} from "@powerhousedao/builder-tools/connect-build";
+
 /**
- * Help text for the connect command
+ * Help text for the connect studio command
  */
-export const connectHelp = `
+export const connectStudioHelp = `
 Command Overview:
   The connect command starts the Connect Studio, a development environment for building
   and testing Powerhouse applications. It provides a visual interface for working with 
@@ -35,6 +41,35 @@ Examples:
   $ ph connect --open                         # Open browser automatically
   $ ph connect --config-file custom.config.js # Use custom configuration
   $ ph connect -p 8080 --open                 # Start on port 8080 and open browser
+`;
+
+/**
+ * Help text for the connect build command
+ */
+export const connectBuildHelp = `
+Command Overview:
+  The Connect build command creates a connect build with the project's local and external packages included.
+
+Options:
+  --project-root <path>  The root directory of the project. Default is "process.cwd()".
+  --assets-dir-name <name> The name of the assets directory. Default is "${DEFAULT_ASSETS_DIR_NAME}".
+  --external-packages-file-name <name> The name of the external packages file. Default is "${DEFAULT_EXTERNAL_PACKAGES_FILE_NAME}".
+  --styles-file-name <name> The name of the styles file. Default is "${DEFAULT_STYLES_FILE_NAME}".
+  --connect-path <path>  The path to the Connect dist directory. Calls "resolveConnect()" if not provided.
+`;
+
+/**
+ * Help text for the connect preview command
+ */
+export const connectPreviewHelp = `
+Command Overview:
+  The Connect preview command previews a built Connect project.
+  NOTE: You must run \`ph connect build\` first.
+
+Options:
+  --project-root <path>  The root directory of the project. Default is "process.cwd()".
+  --port <port>          The port to run the server on. Default is 4173.
+  --open                 Open the browser. Default is true.
 `;
 
 /**

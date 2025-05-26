@@ -3,10 +3,8 @@ import { exec } from "node:child_process";
 import fs from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { type PluginOption, type ViteDevServer } from "vite";
-
-export const EXTERNAL_PACKAGES_IMPORT = "PH:EXTERNAL_PACKAGES";
-export const IMPORT_SCRIPT_FILE = "external-packages.js";
-export const LOCAL_PACKAGE_ID = "ph:local-package";
+import { IMPORT_SCRIPT_FILE, LOCAL_PACKAGE_ID } from "../constants.js";
+import { makeImportScriptFromPackages } from "../helpers.js";
 
 const LOCAL_CSS = "../../style.css";
 const LOCAL_JS = "../../index.js";
@@ -21,48 +19,23 @@ function generateImportScript(
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
   }
-  const imports: string[] = [];
-  const moduleNames: string[] = [];
-  let counter = 0;
 
-  for (const packageName of packages) {
-    const moduleName = `module${counter}`;
-    moduleNames.push(moduleName);
-    imports.push(`import * as ${moduleName} from '${packageName}';`);
-    imports.push(`import '${packageName}/style.css';`);
-    counter++;
-  }
+  const hasModule =
+    localPackage &&
+    (fs.existsSync(resolve(targetDir, LOCAL_JS)) ||
+      fs.existsSync(resolve(targetDir, LOCAL_JS.replace(".js", ".ts"))));
+  const hasStyles =
+    localPackage && fs.existsSync(resolve(targetDir, LOCAL_CSS));
 
-  const exports = moduleNames.map(
-    (name, index) => `{
-      id: "${packages[index]}",
-      ...${name},
-    }`,
-  );
-
-  if (localPackage) {
-    const hasModule =
-      fs.existsSync(resolve(targetDir, LOCAL_JS)) ||
-      fs.existsSync(resolve(targetDir, LOCAL_JS.replace(".js", ".ts")));
-    const hasStyles = fs.existsSync(resolve(targetDir, LOCAL_CSS));
-    if (hasStyles) {
-      imports.push(`import '${LOCAL_CSS}';`);
-    }
-    if (hasModule) {
-      const moduleName = `module${counter}`;
-      imports.push(`import * as ${moduleName} from '${LOCAL_JS}';`);
-      exports.push(`{
-        id: "${LOCAL_PACKAGE_ID}",
-        ...${moduleName},
-      }`);
-    }
-  }
-
-  const exportStatement = `export default [
-        ${exports.join(",\n")}
-    ];`;
-
-  const fileContent = `${imports.join("\n")}\n\n${exportStatement}`;
+  const fileContent = makeImportScriptFromPackages({
+    packages,
+    localPackage,
+    hasStyles,
+    hasModule,
+    localJsPath: LOCAL_JS,
+    localCssPath: LOCAL_CSS,
+    localPackageId: LOCAL_PACKAGE_ID,
+  });
   fs.writeFileSync(targetPath, fileContent);
 
   return targetPath;
@@ -123,7 +96,6 @@ export const viteLoadExternalPackages = (
 ): PluginOption[] => {
   const importPath = join(targetDir, IMPORT_SCRIPT_FILE);
   packages = packages?.filter((p) => p.trim().length) ?? [];
-
   return [
     {
       name: "vite-plugin-ph-external-packages",
