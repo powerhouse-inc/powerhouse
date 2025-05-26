@@ -1,3 +1,14 @@
+## 0.1.0-dev.2 (2025-05-26)
+
+### 🩹 Fixes
+
+- **academy:** deployment ([36e5f194d](https://github.com/powerhouse-inc/powerhouse/commit/36e5f194d))
+- **switchboard:** docker build ([7052e39e1](https://github.com/powerhouse-inc/powerhouse/commit/7052e39e1))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 0.1.0-dev.1 (2025-05-25)
 
 ### 🚀 Features
