@@ -1,21 +1,17 @@
----
-# sidebar_position: 1
-sidebar_label: Renown Login Flow
-displayed_sidebar: renownSidebar
----
-
-# Renown Login Flow
+# Renown Authentication Flow
 
 The Renown login flow leverages decentralized identity (DID) creation and the Ceramic network for credential storage and verification, ensuring secure and verifiable actions within decentralized organizations. Below is a detailed breakdown of the process, aimed at developers integrating the Renown, Connect, and Switchboard components.
 
-### Overview
-Renown provides a decentralized identity and reputation hub, where users connect their Ethereum address, creating a Decentralized Identifier (DID) tied to their wallet. The system uses Ceramic for credential generation and storage. Credentials are later verified through Switchboard for secure operation management.
+### Renown in the decentralized workplace
+Renown provides a decentralized identity and reputation hub, where users connect their Ethereum address, creating a **Decentralized Identifier (DID)** tied to their wallet. Renown is designed to address the challenge of trust within DAOs, where contributors often operate under pseudonyms. In traditional organizations, personal identity and reputation are key to establishing trust and accountability. Renown replicates this dynamic in the digital space, allowing contributors to earn experience and build reputation without revealing their real-world identities. Over time, contributors can share their pseudonymous profiles with other organizations as cryptographic resumes, helping to secure new opportunities while maintaining privacy.
 
-### Detailed Flow
+### Detailed Login Flow
 
 #### 1. User Login via Wallet Connection
 - The user starts by logging into Renown using their Ethereum address. This is done by signing a message with their wallet.
 - The Ethereum key is used to create a DID (Decentralized Identifier), which uniquely represents the user without exposing their personal identity.
+
+![Renown Login](./images/ConnectAddress.png)
 
 #### 2. DID Creation
 - A Decentralized Identifier (DID) is created based on the user's Ethereum key. The DID follows a specific format:  
@@ -29,6 +25,8 @@ Renown provides a decentralized identity and reputation hub, where users connect
 #### 4. Operation Signing with Connect
 - Connect uses the newly created DID to sign operations performed by the user. For example, when a document or transaction is edited in Connect, the operation is signed with the user's DID.
 - This ensures that every action taken within the Connect system is linked to the user's decentralized identity, maintaining transparency and accountability.
+
+![Renown Login](./images/OperationsHistory.png)
 
 #### 5. Switchboard Verification
 - Once an operation is signed by the DID through Connect, it is sent to Switchboard for verification.
@@ -48,6 +46,9 @@ Renown provides a decentralized identity and reputation hub, where users connect
 - After Switchboard validates the operation, it ensures the operation context is accurate and the credentials match the signer. 
 - The operation is then either approved or rejected based on the verification results.
 - Approved operations are processed, and changes made within the Connect system are synchronized across the relevant nodes.
+
+<img src="/img/Renown Intro Diagram.png" alt="renown diagram"/>
+*An overview of the Holder - Issuer - Verifier relationship that the decentralised identity system Renown makes use of to establish a self sovereign identity for it's users.*
 
 :::info
 **Key Components used during login-flow**

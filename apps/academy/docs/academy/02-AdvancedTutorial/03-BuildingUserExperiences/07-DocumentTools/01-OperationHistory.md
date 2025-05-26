@@ -49,7 +49,7 @@ Hovering over a revision reveals its event ID and state hash, providing traceabi
 
 ### Signature Verification
 Clicking the signature badge shows signature details, including signer address, hash, and verification status. This ensures every operation is cryptographically auditable.
-Read more about how we are using [Renown](/docs/renown/intro) for authentication & verification of signer data. 
+Read more about how we are using [Renown](/docs/academy/AdvancedTutorial/BuildingUserExperiences/Authorization/RenownAuthenticationFlow) for authentication & verification of signer data. 
 
 ![Signature Details Popup](./images/signature-details-popup.png)
 

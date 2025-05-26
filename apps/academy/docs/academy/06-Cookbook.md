@@ -709,7 +709,7 @@ Use the constructed URL to add or access the drive in your Connect environment.
 - The drive can be managed or accessed using the generated URL.
 
 ## Related Recipes
-- [Configuring Drives](../AdvancedTutorial/BuildingUserExperiences/ConfiguringDrives)
+- [Configuring Drives](/docs/academy/AdvancedTutorial/BuildingUserExperiences/ConfiguringDrives)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
 ## Further Reading

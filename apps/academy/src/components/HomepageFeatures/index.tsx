@@ -41,7 +41,7 @@ const FeatureList: FeatureItem[] = [
   {
     title: "Renown",
     imageSrc: require("@site/static/img/renown.png").default,
-    docPath: "/docs/renown/intro",
+    docPath: "/docs/academy/AdvancedTutorial/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
     description: (
       <>
         Dive into the customizable reputation system 
