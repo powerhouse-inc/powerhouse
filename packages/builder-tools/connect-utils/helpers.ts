@@ -1,6 +1,7 @@
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { exec } from "node:child_process";
-import fs from "node:fs";
+import fs, { existsSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { type Plugin } from "vite";
@@ -11,11 +12,17 @@ export function resolvePackage(packageName: string, root = process.cwd()) {
   return require.resolve(packageName, { paths: [root] });
 }
 
+/**
+ * Finds the dist dir of Connect on the local machine
+ */
 export function resolveConnect(root = process.cwd()) {
   const connectHTMLPath = resolvePackage("@powerhousedao/connect", root);
   return resolve(connectHTMLPath, "..");
 }
 
+/**
+ * Copies the Connect dist dir to the target path
+ */
 export function copyConnect(sourcePath: string, targetPath: string) {
   try {
     // Ensure targetPath is removed before copying
@@ -28,6 +35,11 @@ export function copyConnect(sourcePath: string, targetPath: string) {
   }
 }
 
+/**
+ * Backs up the index.html file
+ *
+ * Needed when running the Connect Studio dev server on Windows
+ */
 export function backupIndexHtml(appPath: string, restore = false) {
   const filePath = join(appPath, "index.html");
   const backupPath = join(appPath, "index.html.bak");
@@ -85,6 +97,9 @@ export function readJsonFile(filePath: string): PowerhouseConfig | null {
   }
 }
 
+/**
+ * Takes a list of Powerhouse project packages and optionally local Powerhouse packages and outputs a js file which exports those packages for use in Connect Studio.
+ */
 export function makeImportScriptFromPackages(args: {
   packages: string[];
   localPackage: boolean;
@@ -181,4 +196,26 @@ export function runShellScriptPlugin(
       }
     },
   };
+}
+
+/**
+ * Appends the contents to the <head> tag of the index.html file
+ */
+export async function appendToHtmlHead(pathToHtml: string, contents: string) {
+  try {
+    if (!existsSync(pathToHtml)) {
+      throw new Error(`File ${pathToHtml} does not exist.`);
+    }
+
+    let html = await readFile(pathToHtml, "utf8");
+
+    if (!html.includes("</head>")) {
+      throw new Error("No </head> tag found in the HTML file.");
+    }
+
+    html = html.replace("</head>", `\n${contents}\n</head>`);
+    await writeFile(pathToHtml, html, "utf8");
+  } catch (error) {
+    console.error("Error appending to HTML head:", error);
+  }
 }

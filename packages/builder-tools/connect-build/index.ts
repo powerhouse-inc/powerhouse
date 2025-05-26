@@ -1,2 +1,2 @@
-export { buildConnectStudio } from "./build.js";
-export type { ConnectBuildOptions, RunBuildOptions } from "./types.js";
+export { buildConnect } from "./build.js";
+export type { ConnectBuildOptions } from "./types.js";
