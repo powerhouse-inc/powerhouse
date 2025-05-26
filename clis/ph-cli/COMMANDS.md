@@ -4,7 +4,9 @@ This document provides detailed information about the available commands in the 
 
 ## Table of Contents
 
-- [Connect](#connect)
+- [Connect Build](#connect-build)
+- [Connect Preview](#connect-preview)
+- [Connect Studio](#connect-studio)
 - [Dev](#dev)
 - [Generate](#generate)
 - [Inspect](#inspect)
@@ -16,7 +18,34 @@ This document provides detailed information about the available commands in the 
 - [Uninstall](#uninstall)
 - [Version](#version)
 
-## Connect
+## Connect Build
+
+```
+Command Overview:
+  The Connect build command creates a connect build with the project's local and external packages included.
+
+Options:
+  --project-root <path>  The root directory of the project. Default is "process.cwd()".
+  --assets-dir-name <name> The name of the assets directory. Default is "${DEFAULT_ASSETS_DIR_NAME}".
+  --external-packages-file-name <name> The name of the external packages file. Default is "${DEFAULT_EXTERNAL_PACKAGES_FILE_NAME}".
+  --styles-file-name <name> The name of the styles file. Default is "${DEFAULT_STYLES_FILE_NAME}".
+  --connect-path <path>  The path to the Connect dist directory. Calls "resolveConnect()" if not provided.
+```
+
+## Connect Preview
+
+```
+Command Overview:
+  The Connect preview command previews a built Connect project.
+  NOTE: You must run \`ph connect build\` first.
+
+Options:
+  --project-root <path>  The root directory of the project. Default is "process.cwd()".
+  --port <port>          The port to run the server on. Default is 4173.
+  --open                 Open the browser. Default is true.
+```
+
+## Connect Studio
 
 ```
 Command Overview:

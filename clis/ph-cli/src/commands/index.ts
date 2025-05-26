@@ -1,6 +1,5 @@
 import { type Command } from "commander";
 import { connectCommand } from "./connect.js";
-import { buildConnectCommand } from "./build-connect.js";
 // import { devCommand } from "./dev.js";
 import { generateCommand } from "./generate.js";
 import { helpCommand } from "./help.js";
@@ -15,7 +14,6 @@ import { uninstallCommand } from "./uninstall.js";
 export const commands = [
   // devCommand,
   connectCommand,
-  buildConnectCommand,
   generateCommand,
   reactorCommand,
   helpCommand,

@@ -11,3 +11,13 @@ export type ConnectBuildOptions = {
   /** The path to the Connect dist directory, calls `resolveConnect()` if not provided */
   connectPath?: string;
 };
+
+/** Options for previewing a built Connect project */
+export type ConnectPreviewOptions = {
+  /** The root directory of the project, defaults to `process.cwd()` */
+  projectRoot?: string;
+  /** The port to run the server on, defaults to 4173 (vite preview default) */
+  port?: number;
+  /** Whether to open the browser, defaults to true */
+  open?: boolean;
+};
