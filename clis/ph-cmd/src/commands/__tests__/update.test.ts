@@ -16,7 +16,10 @@ vi.mock("node:fs");
 vi.mock("node:child_process");
 
 // Import installDependency after mocking
-import { installDependency } from "../../utils/index.js";
+import {
+  installDependency,
+  updateDependencyVersionString,
+} from "../../utils/index.js";
 
 vi.mock("../../utils/index.js", async (importOriginal) => {
   const actual: any = await importOriginal();
@@ -35,6 +38,7 @@ vi.mock("../../utils/index.js", async (importOriginal) => {
     getProjectInfo: vi.fn(),
     findContainerDirectory: vi.fn(),
     installDependency: vi.fn(),
+    updateDependencyVersionString: vi.fn(),
   } as unknown;
 });
 
@@ -132,7 +136,7 @@ describe("updateCommand", () => {
     await cmd?.parseAsync(["node", "test", "--force", "prod"]);
 
     // When using --force, it should call installDependency with the latest versions
-    expect(installDependency).toHaveBeenCalledWith(
+    expect(updateDependencyVersionString).toHaveBeenCalledWith(
       "pnpm",
       ["@powerhousedao/common@latest", "@powerhousedao/design-system@latest"],
       "/test/project",

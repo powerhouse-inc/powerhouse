@@ -1,0 +1,8 @@
+{
+  "label": "Chatroom",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Get started with the Chatroom tutorial! Jump into creating a new Powerhouse project if you have NodeJs, VSCode, and Git installed. Whe are going to create a new document model that represents a chat.  So you as a user can post messages into that chat room, react to the messages. This chatroom will be synchronized between different connect instances. Let's explore the potential of the tools available in the powerhouse toolkit"
+  }
+}
