@@ -636,6 +636,89 @@ ph generate --drive-editor <drive-app-name>
 - [Build a Drive-Explorer](/docs/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer)
 </details>
 
+<details id="adding-a-new-drive-via-graphql-mutation">
+<summary>Adding a New Drive via GraphQL Mutation</summary>
+
+## How to Add a New Remote Drive via GraphQL Mutation
+---
+
+## Problem Statement
+You want to programmatically add a new remote drive to your Powerhouse Connect environment using a GraphQL mutation. This is useful for automation, scripting, or integrating with external systems.
+
+## Prerequisites
+- Access to the Switchboard or remote reactor (server node) of your Connect instance.
+- The GraphQL endpoint for your instance (e.g., `https://staging.switchboard.phd/graphql/system`).
+- Appropriate permissions to perform mutations.
+
+## Solution
+
+### Step 1: Access the GraphQL Playground or Client
+Open the GraphQL Playground at your endpoint (e.g., [https://staging.switchboard.phd/graphql/system](https://staging.switchboard.phd/graphql/system)), or use a GraphQL client of your choice.
+
+### Step 2: Prepare the Mutation
+Use the following mutation to create a new drive, set a name and add a drive icon. Weither or not you define a ID & Slug is up to you:
+
+```graphql
+mutation Mutation($name: String!, $icon: String, $addDriveId: String, $slug: String) {
+  addDrive(name: $name, icon: $icon, id: $addDriveId, slug: $slug) {
+    icon
+    id
+    name
+    slug
+  }
+}
+```
+
+Example variables:
+```json
+{
+  "name": "AcademyTest",
+  "icon": "https://static.thenounproject.com/png/3009860-200.png",
+  "addDriveId": null,
+  "slug": null
+}
+```
+You can also provide a custom `id`, `slug`, or `preferredEditor` if needed.
+
+### Step 3: Execute the Mutation
+Run the mutation. On success, you will receive a response containing the new drive's `icon`, `id`, `name`, and `slug`:
+
+```json
+{
+  "data": {
+    "addDrive": {
+      "icon": "https://static.thenounproject.com/png/3009860-200.png",
+      "id": "6461580b-d317-4596-942d-f6b3d1bfc8fd",
+      "name": "AcademyTest",
+      "slug": "6461580b-d317-4596-942d-f6b3d1bfc8fd"
+    }
+  }
+}
+```
+
+### Step 4: Construct the Drive URL
+Once you have the `id` or `slug`, you can construct the drive URL for Connect:
+- Format: `domain/d/driveId` or `domain/d/driveSlug`
+- Example: `https://staging.connect.phd/d/6461580b-d317-4596-942d-f6b3d1bfc8fd`
+
+### Step 5: Add the Drive in Connect
+Use the constructed URL to add or access the drive in your Connect environment.
+
+## Expected Outcome
+- A new drive is created and accessible in your Connect environment.
+- The drive can be managed or accessed using the generated URL.
+
+## Related Recipes
+- [Configuring Drives](../AdvancedTutorial/BuildingUserExperiences/ConfiguringDrives)
+- [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
+
+## Further Reading
+- [GraphQL Playground](https://www.apollographql.com/docs/apollo-server/testing/graphql-playground/)
+- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
+
+</details>
+
+
 ## Reactor Recipes
 
 <details id="starting-the-reactor">
@@ -839,7 +922,7 @@ You need to understand and manage different types of dependencies in your Powerh
 
 </details>
 
-Data Synchronisation Recipes
+## Data Synchronisation Recipes
 
 <details id="troubleshooting-document-syncing">
 <summary>Troubleshooting Document Syncing: Supergraph vs. Drive Endpoints</summary>
