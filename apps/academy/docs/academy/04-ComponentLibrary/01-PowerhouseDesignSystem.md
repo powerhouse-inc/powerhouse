@@ -1,8 +1,8 @@
-# Powerhouse Design System
+# Document-Engineering System
 
 The reusable components are a set of of front-end components based on graphQL scalars. 
 Powerhouse also has a set of custom scalars that are not part of the graphQL standard but are specific to the web3 ecosystem.
-These components are offered through the **Powerhouse Design System** with the help of storybook & the Academy documentation. 
+These components are offered through the **Powerhouse document-engineering system** with the help of storybook & the Academy documentation. 
 
 It provides a collection of pre-built, reusable UI components designed for consistency and efficiency across Powerhouse applications and editors. Think of it as a toolkit of standard UI elements like buttons, inputs, and checkboxes with many of these components based on graphql scalars. 
 
@@ -49,9 +49,9 @@ We use Storybook as an interactive catalog for our design system components. It 
 2.  **Usage Snippet:** Below the demo, you'll typically find a basic code example demonstrating how to include the component in your code (e.g., `<Checkbox defaultValue label="Accept terms and conditions" />`). This provides a starting point for implementation.
 3.  **Props Table:** Further down, a table lists the properties (`props`) the component accepts. Props are like settings or configuration options. For the `Checkbox`, this table would show props like `label`, `defaultValue`, `value`, `onChange`, etc., often with descriptions of what they control.
 
-## Implementing a Design System Component
+## Implementing a Component
 
-Let's walk through the typical workflow for using a component from the design system, using the `Checkbox` from the [To-do List editor](/docs/academy/GetStarted/ToDoList/BuildToDoListEditor).
+Let's walk through the typical workflow for using a component from the document-engineering system, using the `Checkbox` from the [To-do List editor](/docs/academy/GetStarted/ToDoList/BuildToDoListEditor).
 
 1.  **Identify the Need:** While building your feature (e.g., the To-do List editor in `editor.tsx`), you determine the need for a standard UI element, like a checkbox.
 2.  **Consult the Resuable Components in Academy or in Storybook:**

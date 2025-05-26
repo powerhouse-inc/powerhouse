@@ -8,7 +8,7 @@ These five applications are:
 2. **Switchboard** – The data infrastructure and API engine.
 3. **Fusion** – The public-facing collaboration hub.
 4. **Renown** – The decentralized reputation and identity system.
-5. **Academy** – The onboarding and learning platform.
+5. **Academy** – The onboarding and learning modules.
 
 Each application is designed to be modular yet complementary, ensuring smooth data flows, structured collaboration, and scalable automation. The functionality of the four host apps offers an integrated experience for running decentralized operations.
 
