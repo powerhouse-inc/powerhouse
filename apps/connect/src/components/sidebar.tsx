@@ -6,7 +6,10 @@ import {
     SidebarItem,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import {
+    useSetSelectedDriveId,
+    useUiNodesContext,
+} from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -19,6 +22,7 @@ export default function Sidebar() {
 
     const { user, openRenown, logout } = useLogin();
     const { driveNodes, setSelectedNode, selectedNode } = useUiNodesContext();
+    const setSelectedDriveId = useSetSelectedDriveId();
     const showAddDriveModal = useShowAddDriveModal();
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
 
@@ -28,8 +32,9 @@ export default function Sidebar() {
 
     const onRootClick = useCallback(() => {
         setSelectedNode(null);
+        setSelectedDriveId(null);
         navigate('/');
-    }, [navigate, setSelectedNode]);
+    }, [navigate, setSelectedNode, setSelectedDriveId]);
 
     const onAddDriveClick = useCallback(() => {
         showAddDriveModal();
@@ -57,8 +62,9 @@ export default function Sidebar() {
     const handleDriveClick = useCallback(
         (driveNode: UiDriveNode) => {
             setSelectedNode(driveNode);
+            setSelectedDriveId(driveNode.id);
         },
-        [setSelectedNode],
+        [setSelectedNode, setSelectedDriveId],
     );
 
     const etherscanUrl = user?.address

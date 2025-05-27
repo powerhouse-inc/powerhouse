@@ -4,7 +4,7 @@ import { type DocumentDriveDocument, logger } from 'document-drive';
 import { type OperationScope, type PHDocument } from 'document-model';
 import { atom, useAtom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useDebugValue, useMemo } from 'react';
 import { type ClientErrorHandler } from './useClientErrorHandler.js';
 
 // map of DocumentDriveServer objects and their Document Drives
@@ -55,6 +55,7 @@ export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
 // returns an array with the document drives of a
 // server and a method to fetch the document drives
 export function useDocumentDrives() {
+    useDebugValue('useDocumentDrives');
     const reactor = useUnwrappedReactor();
     const [documentDrives, setDocumentDrives] = useAtom(
         useMemo(readWriteDocumentDrivesAtom(reactor), [reactor]),

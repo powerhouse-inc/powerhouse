@@ -1,9 +1,6 @@
 import { useReadModeContext } from '#context';
 import { documentToHash, useDocumentDriveServer } from '#hooks';
-import {
-    useUiNodesContext,
-    type TUiNodesContext,
-} from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { logger } from 'document-drive';
 import {
     hashDocumentStateForScope,
@@ -11,7 +8,7 @@ import {
     type PHDocument,
 } from 'document-model';
 import { atom, useAtom, useSetAtom } from 'jotai';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useDebugValue, useEffect, useMemo } from 'react';
 
 function debounceOperations(
     callback: (operations: Operation[]) => Promise<PHDocument | undefined>,
@@ -151,6 +148,7 @@ const selectedDocumentAtom = atom(
 const useSetSelectedDocument = () => useSetAtom(selectedDocumentAtom);
 
 export function useFileNodeDocument() {
+    useDebugValue('useFileNodeDocument');
     const { selectedNode, selectedDriveNode } = useUiNodesContext();
 
     const { openFile, addOperations, onStrandUpdate } =

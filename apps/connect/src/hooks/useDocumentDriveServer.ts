@@ -53,7 +53,7 @@ import {
     type Listener,
 } from 'document-drive/server/types';
 import { type Operation, type PHDocument, generateId } from 'document-model';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useDebugValue, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useDocumentDrives } from './useDocumentDrives.js';
 import { useUserPermissions } from './useUserPermissions.js';
@@ -64,6 +64,7 @@ export interface SortOptions {
 }
 
 export function useDocumentDriveServer() {
+    useDebugValue('useDocumentDriveServer');
     const logger = childLogger([
         'useDocumentDriveServer',
         Math.floor(Math.random() * 999).toString(),

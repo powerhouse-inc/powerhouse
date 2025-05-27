@@ -7,7 +7,10 @@ import {
     Icon,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import {
+    useSetSelectedDriveId,
+    useUiNodesContext,
+} from '@powerhousedao/reactor-browser';
 import { useCallback } from 'react';
 
 function getDriveIcon(driveNode: UiDriveNode) {
@@ -33,11 +36,13 @@ export function Home() {
     const showAddDriveModal = useShowAddDriveModal();
     const { documentDrives } = useDocumentDriveServer();
     const { driveNodes, setSelectedNode } = useUiNodesContext();
+    const setSelectedDriveId = useSetSelectedDriveId();
     const handleDriveClick = useCallback(
         (driveNode: UiDriveNode) => {
             setSelectedNode(driveNode);
+            setSelectedDriveId(driveNode.id);
         },
-        [setSelectedNode],
+        [setSelectedNode, setSelectedDriveId],
     );
 
     const onAddDriveClick = useCallback(() => {

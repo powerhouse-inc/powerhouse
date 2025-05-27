@@ -36,5 +36,8 @@
         ],
         "experimentalDecorators": true
     },
-    "include": ["src", "e2e-tests", "custom.d.ts"]
+    "include": ["src", "e2e-tests", "custom.d.ts"],
+    "references": [
+        { "path": "../../packages/reactor-browser" }
+    ]
 }

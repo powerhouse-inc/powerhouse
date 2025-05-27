@@ -7,6 +7,7 @@ import {
 } from '@powerhousedao/design-system';
 import {
     FOLDER,
+    useSetSelectedDriveId,
     useUiNodesContext,
     type SharingType,
     type UiDriveNode,
@@ -22,6 +23,7 @@ export function useShowAddDriveModal() {
     const { showModal } = useModal();
     const { addDrive, addRemoteDrive } = useDocumentDriveServer();
     const { setSelectedNode } = useUiNodesContext();
+    const setSelectedDriveId = useSetSelectedDriveId();
     const apps = useApps();
     const makeUiDriveNode = useMakeUiDriveNode();
     const onAddLocalDrive = useCallback(
@@ -53,6 +55,7 @@ export function useShowAddDriveModal() {
                 const newDriveNode = await makeUiDriveNode(newDrive);
 
                 setSelectedNode(newDriveNode);
+                setSelectedDriveId(newDriveNode.id);
             } catch (e) {
                 console.error(e);
             }
@@ -95,11 +98,18 @@ export function useShowAddDriveModal() {
                 const newDriveNode = await makeUiDriveNode(newDrive);
 
                 setSelectedNode(newDriveNode);
+                setSelectedDriveId(newDriveNode.id);
             } catch (e) {
                 console.error(e);
             }
         },
-        [addRemoteDrive, makeUiDriveNode, setSelectedNode, t],
+        [
+            addRemoteDrive,
+            makeUiDriveNode,
+            setSelectedNode,
+            setSelectedDriveId,
+            t,
+        ],
     );
     const showAddDriveModal = useCallback(
         () =>
@@ -122,6 +132,7 @@ export function useShowDriveSettingsModal() {
         deleteDrive,
     } = useDocumentDriveServer();
     const { driveNodes, setSelectedNode } = useUiNodesContext();
+    const setSelectedDriveId = useSetSelectedDriveId();
     const onRenameDrive = useCallback(
         async (uiDriveNode: UiDriveNode, newName: string) => {
             await renameDrive(uiDriveNode.id, newName);
@@ -151,6 +162,7 @@ export function useShowDriveSettingsModal() {
                     await deleteDrive(uiDriveNode.id);
 
                     setSelectedNode(driveNodes[0]);
+                    setSelectedDriveId(driveNodes[0].id);
 
                     toast(t('notifications.deleteDriveSuccess'), {
                         type: 'connect-deleted',

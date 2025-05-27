@@ -9,6 +9,7 @@ import { DriveEditorContainer } from '../components/drive-editor-container.js';
 import { toast } from '../services/toast.js';
 
 export default function Content() {
+    console.log('rendering content...');
     const navigate = useNavigate();
     const { driveId } = useParams();
     const [documentDrives, , , status] = useDocumentDrives();

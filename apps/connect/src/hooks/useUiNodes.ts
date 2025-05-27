@@ -23,6 +23,7 @@ export function useMakeUiDriveNode() {
         async (drive: DocumentDriveDocument | ReadDrive) => {
             const isReadDrive = 'readContext' in drive;
             const id = drive.id;
+            console.log('rendering useMakeUiDriveNode...', id);
             const { name, icon } = drive.state.global;
             const { slug } = drive;
             const { sharingType: _sharingType, availableOffline } = !isReadDrive

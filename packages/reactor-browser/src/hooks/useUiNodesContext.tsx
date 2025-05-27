@@ -4,6 +4,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useDebugValue,
   useEffect,
   useMemo,
   useState,
@@ -48,6 +49,26 @@ const defaultTreeItemContextValue: TUiNodesContext = {
   getSiblings: () => [],
 };
 
+const getPathToNode = (uiNode: UiNode, driveNodes: UiDriveNode[]) => {
+  const path: UiNode[] = [];
+
+  const driveNode = driveNodes.find((d) => d.id === uiNode.driveId);
+
+  let current: UiNode | undefined = uiNode;
+
+  while (current) {
+    path.push(current);
+    current =
+      current.parentFolder === driveNode?.id
+        ? driveNode
+        : current.parentFolder
+          ? driveNode?.nodeMap[current.parentFolder]
+          : undefined;
+  }
+
+  return path.reverse();
+};
+
 export const UiNodesContext = createContext<TUiNodesContext>(
   defaultTreeItemContextValue,
 );
@@ -59,6 +80,7 @@ export interface UiNodesContextProviderProps {
 export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({
   children,
 }) => {
+  console.log("rendering UiNodesContextProvider...");
   const [driveNodes, setDriveNodes] = useState<UiDriveNode[]>([]);
   const [selectedNode, _setSelectedNode] = useState<UiNode | null>(null);
   const [selectedNodePath, setSelectedNodePath] = useState<UiNode[]>([]);
@@ -152,29 +174,6 @@ export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({
       return selectedNode;
     },
     [_getParentNode],
-  );
-
-  const getPathToNode = useCallback(
-    (uiNode: UiNode, driveNodes: UiDriveNode[]) => {
-      const path: UiNode[] = [];
-
-      const driveNode = driveNodes.find((d) => d.id === uiNode.driveId);
-
-      let current: UiNode | undefined = uiNode;
-
-      while (current) {
-        path.push(current);
-        current =
-          current.parentFolder === driveNode?.id
-            ? driveNode
-            : current.parentFolder
-              ? driveNode?.nodeMap[current.parentFolder]
-              : undefined;
-      }
-
-      return path.reverse();
-    },
-    [],
   );
 
   /*
@@ -280,6 +279,7 @@ export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({
 };
 
 export const useUiNodesContext = () => {
+  useDebugValue("useUiNodesContext");
   const contextValue = useContext(UiNodesContext);
   return contextValue;
 };
