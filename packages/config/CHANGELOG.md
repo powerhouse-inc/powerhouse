@@ -1,3 +1,17 @@
+## 1.27.0-dev.18 (2025-05-27)
+
+### 🚀 Features
+
+- enforce conventional commits ([faa49da40](https://github.com/powerhouse-inc/powerhouse/commit/faa49da40))
+
+### 🩹 Fixes
+
+- **switchboard:** docker build ([7052e39e1](https://github.com/powerhouse-inc/powerhouse/commit/7052e39e1))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 1.27.0-dev.17 (2025-05-25)
 
 ### 🚀 Features

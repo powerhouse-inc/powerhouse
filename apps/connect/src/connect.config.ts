@@ -9,6 +9,7 @@ const WARN_OUTDATED_APP =
 const PH_CONNECT_STUDIO_MODE =
     import.meta.env.PH_CONNECT_STUDIO_MODE || 'false';
 
+const DISABLE_ADD_DRIVE = import.meta.env.PH_CONNECT_DISABLE_ADD_DRIVE || false;
 const DISABLE_ADD_PUBLIC_DRIVES =
     import.meta.env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES || undefined;
 const DISABLE_ADD_CLOUD_DRIVES =
@@ -48,7 +49,6 @@ const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
 const PH_CONNECT_CLI_VERSION =
     import.meta.env.PH_CONNECT_CLI_VERSION || undefined;
 
-
 const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
     ? import.meta.env.LOG_LEVEL
     : 'info';
@@ -72,6 +72,7 @@ export default {
             HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS !== 'true',
     },
     drives: {
+        addDriveEnabled: DISABLE_ADD_DRIVE !== 'true',
         sections: {
             [LOCAL]: {
                 enabled: LOCAL_DRIVES_ENABLED !== 'false',

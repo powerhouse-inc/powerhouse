@@ -1,3 +1,18 @@
+## 0.25.0-dev.13 (2025-05-27)
+
+### 🚀 Features
+
+- enforce conventional commits ([faa49da40](https://github.com/powerhouse-inc/powerhouse/commit/faa49da40))
+
+### 🩹 Fixes
+
+- **switchboard:** docker build ([7052e39e1](https://github.com/powerhouse-inc/powerhouse/commit/7052e39e1))
+- **scripts:** merged install tools and setup environment into one script ([2a7bd3c97](https://github.com/powerhouse-inc/powerhouse/commit/2a7bd3c97))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 0.25.0-dev.12 (2025-05-21)
 
 ### 🩹 Fixes

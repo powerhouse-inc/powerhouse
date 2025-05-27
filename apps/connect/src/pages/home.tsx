@@ -1,4 +1,8 @@
-import { useDocumentDriveServer, useShowAddDriveModal } from '#hooks';
+import {
+    useConnectConfig,
+    useDocumentDriveServer,
+    useShowAddDriveModal,
+} from '#hooks';
 import { useGetAppNameForEditorId } from '#store';
 import {
     HomeScreen,
@@ -37,6 +41,7 @@ export function Home() {
     const { documentDrives } = useDocumentDriveServer();
     const { driveNodes, setSelectedNode } = useUiNodesContext();
     const setSelectedDriveId = useSetSelectedDriveId();
+    const [config] = useConnectConfig();
     const handleDriveClick = useCallback(
         (driveNode: UiDriveNode) => {
             setSelectedNode(driveNode);
@@ -67,7 +72,9 @@ export function Home() {
                     />
                 );
             })}
-            <HomeScreenAddDriveItem onClick={onAddDriveClick} />
+            {config.drives.addDriveEnabled && (
+                <HomeScreenAddDriveItem onClick={onAddDriveClick} />
+            )}
         </HomeScreen>
     );
 }
