@@ -35,4 +35,8 @@ ph install contributor-billing
 
 This command downloads and sets up the Contributor Billing package, making its features available in your Powerhouse environment.
 
-You've now successfully installed `ph-cmd` and added your first package! To run the package locally in Connect, our collaboration & contributor app, you run the `ph connect` command. 
+You've now successfully installed `ph-cmd` and added your first package! 
+
+### Step 3 : Install the Contributor Billing Package
+
+To run the package locally in Connect, our collaboration & contributor app, you run the `ph connect` command. 

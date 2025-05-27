@@ -1,8 +1,5 @@
 # Glossary
 
-A great way to get familiar with the vision, philosophy and terminology of Powerhouse is by reading the [Book Of Powerhouse](./docs/bookofpowerhouse/Overview).
-It offers an entry level, non-technical explainer to the high level vision of Powerhouse.
-
 ## General Terms
 - **Powerhouse** – A network organization that provides open-source software and services to support decentralized operations for other network organizations.
 - **Scalable Network Organization (SNO)** – A network organization structured according to the Powerhouse framework, designed for sustainable and scalable growth.
