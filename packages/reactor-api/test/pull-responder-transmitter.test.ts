@@ -51,10 +51,12 @@ describe("Pull Responder Transmitter", () => {
   }
 
   async function setupTrigger() {
+    const { reactor, listenerManager } = await setupReactor();
     return PullResponderTransmitter.createPullResponderTrigger(
       driveId,
       remoteUrl,
       triggerOptions,
+      listenerManager,
     );
   }
 

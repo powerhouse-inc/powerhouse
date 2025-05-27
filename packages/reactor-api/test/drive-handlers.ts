@@ -8,7 +8,7 @@ export const createDriveHandlers = (
 ) => {
   const driveSubgraph = new DriveSubgraph({ reactor } as any);
   const { Query, Mutation, Sync } = driveSubgraph.resolvers as any;
-  const context = { driveId };
+  const context = { driveId, isUser: () => true, isAdmin: () => true };
 
   return [
     graphql.query("getDrive", async ({ variables }) =>
