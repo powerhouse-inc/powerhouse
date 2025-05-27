@@ -1,3 +1,13 @@
+## 2.28.1-staging.6 (2025-05-27)
+
+### 🩹 Fixes
+
+- config and document-model versions ([201fcd13a](https://github.com/powerhouse-inc/powerhouse/commit/201fcd13a))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 2.28.1-dev.16 (2025-05-21)
 
 ### 🩹 Fixes
