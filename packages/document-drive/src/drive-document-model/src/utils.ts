@@ -37,7 +37,7 @@ export type GenerateNodesCopySrc = {
   targetParentFolder?: Node["parentFolder"];
 };
 
-export type GenerateNodesCopyIdGenerator = (prevId: Node["id"]) => Node["id"];
+export type GenerateNodesCopyIdGenerator = (nodeToCopy: Node) => Node["id"];
 
 /**
  * Generates a copy of nodes based on the provided source and target information.
@@ -74,12 +74,12 @@ export function generateNodesCopy(
     ids[src.targetParentFolder] = src.targetParentFolder;
   }
 
-  const getNewNodeId = (id: string): string => {
-    let newId = ids[id];
+  const getNewNodeId = (node: Node): string => {
+    let newId = ids[node.id];
 
     if (!newId) {
-      const oldId = id;
-      newId = idGenerator(id);
+      const oldId = node.id;
+      newId = idGenerator(node);
       ids[oldId] = newId;
     }
 
@@ -88,11 +88,9 @@ export function generateNodesCopy(
 
   const copyNodesInput = nodesToCopy.map<CopyNodeInput>((node) => ({
     srcId: node.id,
-    targetId: getNewNodeId(node.id),
+    targetId: getNewNodeId(node),
     targetName: node.name,
-    targetParentFolder: node.parentFolder
-      ? getNewNodeId(node.parentFolder)
-      : null,
+    targetParentFolder: node.parentFolder ? getNewNodeId(node) : null,
   }));
 
   return copyNodesInput;

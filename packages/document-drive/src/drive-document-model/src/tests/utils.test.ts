@@ -72,7 +72,11 @@ describe("DocumentDrive Utils", () => {
         },
       ];
 
-      const result = generateNodesCopy({ srcId: "1" }, generateId, nodes);
+      const result = generateNodesCopy(
+        { srcId: "1" },
+        (node) => generateId(node.id),
+        nodes,
+      );
 
       expect(result.length).toBe(3);
       expect(result).toEqual(expectedResult);
@@ -102,7 +106,7 @@ describe("DocumentDrive Utils", () => {
 
       const result = generateNodesCopy(
         { srcId: "1", targetName: "New Name" },
-        generateId,
+        (node) => generateId(node.id),
         nodes,
       );
 
@@ -122,7 +126,7 @@ describe("DocumentDrive Utils", () => {
 
       const result = generateNodesCopy(
         { srcId: "1.1.1", targetParentFolder: "1.1" },
-        generateId,
+        (node) => generateId(node.id),
         nodes,
       );
 
@@ -154,7 +158,7 @@ describe("DocumentDrive Utils", () => {
 
       const result = generateNodesCopy(
         { srcId: "1", targetParentFolder: "2" },
-        generateId,
+        (node) => generateId(node.id),
         nodes,
       );
 
@@ -190,7 +194,7 @@ describe("DocumentDrive Utils", () => {
           targetParentFolder: "2",
           targetName: "New Name",
         },
-        generateId,
+        (node) => generateId(node.id),
         nodes,
       );
 
@@ -200,7 +204,11 @@ describe("DocumentDrive Utils", () => {
 
     it("should throw an error if the src node is not found", () => {
       expect(() =>
-        generateNodesCopy({ srcId: "invalid" }, generateId, nodes),
+        generateNodesCopy(
+          { srcId: "invalid" },
+          (node) => generateId(node.id),
+          nodes,
+        ),
       ).toThrowError(`Node with id invalid not found`);
     });
   });

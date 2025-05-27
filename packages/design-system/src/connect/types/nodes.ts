@@ -6,7 +6,7 @@ import {
   type SyncStatus,
   type TDocumentType,
 } from "#connect";
-import { type Maybe, type SynchronizationUnitInput } from "document-model";
+import { type Maybe } from "document-model";
 
 export type BaseUiFolderNode = {
   id: string;
@@ -41,7 +41,6 @@ export type BaseUiNode = BaseUiFolderNode | BaseUiFileNode | BaseUiDriveNode;
 export type UiFileNode = BaseUiFileNode & {
   slug?: string | null;
   documentType: TDocumentType;
-  synchronizationUnits: SynchronizationUnitInput[];
   sharingType: SharingType;
 };
 
@@ -68,7 +67,6 @@ export type FileNode = {
   kind: string;
   name: string;
   parentFolder: Maybe<string>;
-  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type FolderNode = {

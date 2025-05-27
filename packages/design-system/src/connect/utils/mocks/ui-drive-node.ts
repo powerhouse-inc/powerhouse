@@ -31,7 +31,6 @@ export const mockUiFileNode: UiFileNode = {
   parentFolder: mockDriveId,
   driveId: mockDriveId,
   syncStatus: SUCCESS,
-  synchronizationUnits: [{ syncId: "1", scope: "global", branch: "main" }],
   sharingType: LOCAL,
 };
 
@@ -264,10 +263,7 @@ export function makeDriveNode(drive: DocumentDriveDocument) {
 
   for (const node of nodes) {
     if (node.kind === FILE) {
-      node.syncStatus = getSyncStatus(
-        node.synchronizationUnits[0].syncId,
-        sharingType,
-      );
+      node.syncStatus = getSyncStatus(node.id, sharingType);
     }
 
     if (node.parentFolder === id) {

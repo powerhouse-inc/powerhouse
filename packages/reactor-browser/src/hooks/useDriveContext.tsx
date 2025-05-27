@@ -62,16 +62,16 @@ export interface IDriveContext {
     documentType: string,
     parentFolder?: string,
     document?: PHDocument,
+    id?: string,
   ) => Promise<FileNode>;
 
   /**
    * Shows a modal for creating a new document
    * @param documentModel - Document model of the document to be created
-   * @returns Promise resolving to an object containing the document name
    */
   showCreateDocumentModal: (
     documentModel: DocumentModelModule,
-  ) => Promise<{ name: string }>;
+  ) => Promise<void>;
 
   /**
    * Retrieves the sync status of a document or drive

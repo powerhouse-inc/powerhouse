@@ -112,9 +112,8 @@ export class BrowserStorage
     documents = documentIds ? documentIds.intersection(documents) : documents;
 
     for (const documentId of documents) {
-      const document = await this.get(documentId);
+      const document = await this.get(documentId).catch(() => null);
       // might be a child that has not been synced yet
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!document) continue;
 
       // apply document type filter

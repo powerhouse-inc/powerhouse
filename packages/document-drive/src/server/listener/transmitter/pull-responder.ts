@@ -18,6 +18,7 @@ import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { requestGraphql } from "#utils/graphql";
 import { childLogger, type ILogger } from "#utils/logger";
+import { operationsToRevision } from "#utils/misc";
 import { generateId } from "document-model";
 import { gql } from "graphql-request";
 import {
@@ -498,7 +499,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         documentId: strand.documentId || "",
         documentType: strand.documentType,
         driveId: strand.driveId,
-        revision: operations.pop()?.index ?? -1,
+        revision: operationsToRevision(operations),
         scope: strand.scope,
         status: error
           ? error instanceof OperationError

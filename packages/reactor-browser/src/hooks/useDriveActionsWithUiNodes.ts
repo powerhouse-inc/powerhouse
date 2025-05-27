@@ -31,7 +31,6 @@ function toNode(uiNode: UiNode): Node {
       parentFolder,
       kind: "file",
       documentType: fileNode.documentType,
-      synchronizationUnits: fileNode.synchronizationUnits,
     } satisfies FileNode;
   }
 }

@@ -191,6 +191,7 @@ export function useDocumentDriveServer() {
             documentType: string,
             parentFolder?: string,
             document?: PHDocument,
+            id?: string,
         ) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
@@ -205,7 +206,7 @@ export function useDocumentDriveServer() {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
 
-            const documentId = generateId();
+            const documentId = id ?? generateId();
             const documentModelModule =
                 await getDocumentModelModule(documentType);
             if (!documentModelModule) {
@@ -457,24 +458,51 @@ export function useDocumentDriveServer() {
 
             if (!drive) return;
 
+            const documentsToCopy: { oldId: string; newId: string }[] = [];
             const copyNodesInput = generateNodesCopy(
                 {
                     srcId: src.id,
                     targetParentFolder: target.id,
                     targetName: src.name,
                 },
-                () => generateId(),
+                node => {
+                    const newId = generateId();
+                    if (isFileNode(node)) {
+                        documentsToCopy.push({ oldId: node.id, newId });
+                    }
+                    return newId;
+                },
                 drive.state.global.nodes,
             );
 
+            for (const { oldId, newId } of documentsToCopy) {
+                const document = await reactor
+                    .getDocument(oldId)
+                    .catch(e =>
+                        logger.warn(
+                            'Document being copied does not exist',
+                            oldId,
+                        ),
+                    );
+                if (!document) {
+                    logger.warn('Document being copied does not exist', oldId);
+                    continue;
+                }
+                try {
+                    await reactor.addDocument({
+                        id: newId,
+                        documentType: document.documentType,
+                        document,
+                    });
+                } catch (error) {
+                    logger.error('Error copying document', oldId, error);
+                }
+            }
             const copyActions = copyNodesInput.map(copyNodeInput =>
                 copyNode(copyNodeInput),
             );
 
-            const result = await reactor.addDriveActions(
-                src.driveId,
-                copyActions,
-            );
+            const result = await reactor.addActions(src.driveId, copyActions);
             if (result.operations.length) {
                 await refreshDocumentDrives();
             } else if (result.status !== 'SUCCESS') {

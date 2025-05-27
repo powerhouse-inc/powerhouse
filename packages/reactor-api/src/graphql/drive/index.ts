@@ -178,6 +178,7 @@ export class DriveSubgraph extends Subgraph {
     input ListenerRevisionInput {
       driveId: String!
       documentId: String!
+      documentType: String!
       scope: String!
       branch: String!
       status: UpdateStatus!
@@ -187,6 +188,7 @@ export class DriveSubgraph extends Subgraph {
     type ListenerRevision {
       driveId: String!
       documentId: String!
+      documentType: String!
       scope: String!
       branch: String!
       status: UpdateStatus!

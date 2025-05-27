@@ -149,10 +149,7 @@ export function useUiNodes() {
             for await (const node of nodes) {
                 if (node.kind === FILE) {
                     const fileSyncStatus = !isReadDrive
-                        ? await getSyncStatus(
-                              node.synchronizationUnits[0].syncId,
-                              sharingType,
-                          )
+                        ? await getSyncStatus(node.id, sharingType)
                         : undefined;
 
                     // TODO: rempve this after integration in design-system

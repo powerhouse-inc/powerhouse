@@ -1,8 +1,7 @@
 import { type Operation, type PHDocument } from "document-model";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 
 import { type IDocumentDriveServer } from "document-drive";
-import { useDocumentDrives } from "./useDocumentDrives.js";
 import { useUserPermissions } from "./useUserPermissions.js";
 
 function debounceOperations(
@@ -45,7 +44,6 @@ function debounceOperations(
 }
 
 export type UseAddDebouncedOperationsProps = {
-  driveId: string;
   documentId: string;
 };
 
@@ -53,22 +51,15 @@ export function useAddDebouncedOperations(
   reactor: IDocumentDriveServer | undefined,
   props: UseAddDebouncedOperationsProps,
 ) {
-  const { driveId, documentId } = props;
-  const [documentDrives] = useDocumentDrives(reactor);
-
-  const documentDrivesRef = useRef(documentDrives);
+  const { documentId } = props;
 
   const { isAllowedToEditDocuments } = useUserPermissions() || {
     isAllowedToCreateDocuments: false,
     isAllowedToEditDocuments: false,
   };
 
-  useEffect(() => {
-    documentDrivesRef.current = documentDrives;
-  }, [documentDrives]);
-
   const addOperations = useCallback(
-    async (driveId: string, id: string, operations: Operation[]) => {
+    async (id: string, operations: Operation[]) => {
       if (!isAllowedToEditDocuments) {
         throw new Error("User is not allowed to edit documents");
       }
@@ -77,18 +68,7 @@ export function useAddDebouncedOperations(
         throw new Error("Reactor is not loaded");
       }
 
-      const drive = documentDrivesRef.current.find(
-        (drive) => drive.id === driveId,
-      );
-      if (!drive) {
-        throw new Error(`Drive with id ${driveId} not found`);
-      }
-
-      const newDocument = await reactor.queueOperations(
-        driveId,
-        id,
-        operations,
-      );
+      const newDocument = await reactor.queueOperations(id, operations);
       return newDocument.document;
     },
     [isAllowedToEditDocuments, reactor],
@@ -96,9 +76,9 @@ export function useAddDebouncedOperations(
 
   const addDebouncedOperations = useMemo(() => {
     return debounceOperations((operations) =>
-      addOperations(driveId, documentId, operations),
+      addOperations(documentId, operations),
     );
-  }, [addOperations, driveId, documentId]);
+  }, [addOperations, documentId]);
 
   return addDebouncedOperations;
 }
