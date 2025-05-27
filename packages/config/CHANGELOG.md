@@ -1,3 +1,13 @@
+## 1.27.0-staging.2 (2025-05-27)
+
+### 🩹 Fixes
+
+- **config:** config version ([e9d8b7dd3](https://github.com/powerhouse-inc/powerhouse/commit/e9d8b7dd3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 1.27.0-dev.15 (2025-05-21)
 
 ### 🩹 Fixes
