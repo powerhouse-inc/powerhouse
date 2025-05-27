@@ -1,11 +1,12 @@
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
-import { exec } from "node:child_process";
+import { exec, execSync } from "node:child_process";
 import fs, { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
+import ts from "typescript";
 import { type Plugin } from "vite";
-
+import { LOCAL_PACKAGE_ID } from "./constants.js";
 export function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation
   const require = createRequire(root);
@@ -102,22 +103,11 @@ export function readJsonFile(filePath: string): PowerhouseConfig | null {
  */
 export function makeImportScriptFromPackages(args: {
   packages: string[];
-  localPackage: boolean;
-  hasStyles: boolean;
-  hasModule: boolean;
-  localJsPath: string;
-  localCssPath: string;
-  localPackageId: string;
+  importStyles?: boolean;
+  localJsPath?: string;
+  localCssPath?: string;
 }) {
-  const {
-    packages,
-    localPackage,
-    hasStyles,
-    hasModule,
-    localJsPath,
-    localCssPath,
-    localPackageId,
-  } = args;
+  const { packages, localJsPath, localCssPath, importStyles = true } = args;
   const imports: string[] = [];
   const moduleNames: string[] = [];
   let counter = 0;
@@ -126,7 +116,9 @@ export function makeImportScriptFromPackages(args: {
     const moduleName = `module${counter}`;
     moduleNames.push(moduleName);
     imports.push(`import * as ${moduleName} from '${packageName}';`);
-    imports.push(`import '${packageName}/style.css';`);
+    if (importStyles) {
+      imports.push(`import '${packageName}/style.css';`);
+    }
     counter++;
   }
 
@@ -137,7 +129,11 @@ export function makeImportScriptFromPackages(args: {
     }`,
   );
 
-  if (localPackage) {
+  const hasModule = localJsPath !== undefined;
+  const hasStyles = importStyles && localCssPath !== undefined;
+  const hasLocalPackage = hasModule || hasStyles;
+
+  if (hasLocalPackage) {
     if (hasStyles) {
       imports.push(`import '${localCssPath}';`);
     }
@@ -145,7 +141,7 @@ export function makeImportScriptFromPackages(args: {
       const moduleName = `module${counter}`;
       imports.push(`import * as ${moduleName} from '${localJsPath}';`);
       exports.push(`{
-        id: "${localPackageId}",
+        id: "${LOCAL_PACKAGE_ID}",
         ...${moduleName},
       }`);
     }
@@ -218,4 +214,8 @@ export async function appendToHtmlHead(pathToHtml: string, contents: string) {
   } catch (error) {
     console.error("Error appending to HTML head:", error);
   }
+}
+
+export function runTsc(outDir: string) {
+  execSync(`npx tsc --outDir ${outDir}`, { stdio: "inherit" });
 }

@@ -6,11 +6,11 @@ import postcss from "postcss";
 
 /** Runs esbuild to bundle the external packages */
 export async function bundleExternalPackages(
-  externalPackagesPath: string,
+  externalPackagesImportScriptPath: string,
   connectBuildDistDirPath: string,
 ) {
   const result = await build({
-    entryPoints: [externalPackagesPath],
+    entryPoints: [externalPackagesImportScriptPath],
     outdir: connectBuildDistDirPath,
     bundle: true,
     minify: true,
