@@ -1,3 +1,13 @@
+## 0.1.0-dev.3 (2025-05-27)
+
+### 🚀 Features
+
+- enforce conventional commits ([faa49da40](https://github.com/powerhouse-inc/powerhouse/commit/faa49da40))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 0.1.0-dev.2 (2025-05-26)
 
 ### 🩹 Fixes
