@@ -392,7 +392,7 @@ export class BaseDocumentDriveServer
               );
             }
           },
-          (revisions) => {
+          async (revisions) => {
             const errorRevisions = revisions.filter(
               (r) => r.status !== "SUCCESS",
             );
@@ -413,9 +413,30 @@ export class BaseDocumentDriveServer
             }
 
             // if it is the first pull and returns empty
-            // then updates corresponding push transmitter
+            // then updates drive documents to "SUCCESS" and
+            // updates corresponding push transmitter
             if (firstPull) {
               firstPull = false;
+
+              const syncUnitsIds =
+                await this.synchronizationManager.getSynchronizationUnitsIds(
+                  driveId,
+                );
+              const unchangedSyncUnits = syncUnitsIds.filter((syncUnit) => {
+                return !revisions.find((revision) => {
+                  return (
+                    revision.documentId === syncUnit.documentId &&
+                    revision.scope === syncUnit.scope &&
+                    revision.branch === syncUnit.branch
+                  );
+                });
+              });
+              unchangedSyncUnits.forEach((syncUnit) => {
+                this.synchronizationManager.updateSyncStatus(syncUnit, {
+                  pull: "SUCCESS",
+                });
+              });
+
               const pushListener = drive.state.local.listeners.find(
                 (listener) => trigger.data.url === listener.callInfo?.data,
               );
