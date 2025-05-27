@@ -1,4 +1,4 @@
-import { useLogin, useShowAddDriveModal } from '#hooks';
+import { useConnectConfig, useLogin, useShowAddDriveModal } from '#hooks';
 import {
     ConnectSidebar,
     Icon,
@@ -19,6 +19,7 @@ export default function Sidebar() {
 
     const { user, openRenown, logout } = useLogin();
     const { driveNodes, setSelectedNode, selectedNode } = useUiNodesContext();
+    const [config] = useConnectConfig();
     const showAddDriveModal = useShowAddDriveModal();
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
 
@@ -102,7 +103,9 @@ export default function Sidebar() {
                         }
                     />
                 ))}
-                <SidebarAddDriveItem onClick={onAddDriveClick} />
+                {config.drives.addDriveEnabled && (
+                    <SidebarAddDriveItem onClick={onAddDriveClick} />
+                )}
             </ErrorBoundary>
         </ConnectSidebar>
     );
