@@ -44,7 +44,7 @@ export function useSyncStatus(
             if (!('synchronizationUnits' in document)) return;
 
             const status = getSyncStatusSync(
-                document.synchronizationUnits[0].syncId,
+                documentId,
                 sharingType as SharingType,
             );
 

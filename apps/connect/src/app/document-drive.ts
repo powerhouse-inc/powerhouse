@@ -58,53 +58,31 @@ export default (
     ipcMain.handle('documentDrive:getDocuments', (_e, drive: string) =>
         documentDrive.getDocuments(drive),
     );
-    ipcMain.handle(
-        'documentDrive:getDocument',
-        (_e, drive: string, id: string) => documentDrive.getDocument(drive, id),
+    ipcMain.handle('documentDrive:getDocument', (_e, id: string) =>
+        documentDrive.getDocument(id),
     );
     ipcMain.handle(
         'documentDrive:addOperation',
-        (
-            _e,
-            drive: string,
-            id: string,
-            operation: Operation,
-            forceSync?: boolean,
-        ) => documentDrive.addOperation(drive, id, operation, { forceSync }),
+        (_e, id: string, operation: Operation, forceSync?: boolean) =>
+            documentDrive.addOperation(id, operation, { forceSync }),
     );
 
     ipcMain.handle(
         'documentDrive:addOperations',
-        (
-            _e,
-            drive: string,
-            id: string,
-            operations: Operation[],
-            forceSync?: boolean,
-        ) => documentDrive.addOperations(drive, id, operations, { forceSync }),
+        (_e, id: string, operations: Operation[], forceSync?: boolean) =>
+            documentDrive.addOperations(id, operations, { forceSync }),
     );
 
     ipcMain.handle(
         'documentDrive:queueOperation',
-        (
-            _e,
-            drive: string,
-            id: string,
-            operation: Operation,
-            forceSync?: boolean,
-        ) => documentDrive.queueOperation(drive, id, operation, { forceSync }),
+        (_e, id: string, operation: Operation, forceSync?: boolean) =>
+            documentDrive.queueOperation(id, operation, { forceSync }),
     );
 
     ipcMain.handle(
         'documentDrive:queueOperations',
-        (
-            _e,
-            drive: string,
-            id: string,
-            operations: Operation[],
-            forceSync?: boolean,
-        ) =>
-            documentDrive.queueOperations(drive, id, operations, { forceSync }),
+        (_e, id: string, operations: Operation[], forceSync?: boolean) =>
+            documentDrive.queueOperations(id, operations, { forceSync }),
     );
 
     ipcMain.handle(

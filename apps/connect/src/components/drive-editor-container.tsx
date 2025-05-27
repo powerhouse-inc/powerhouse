@@ -114,13 +114,9 @@ export function DriveEditorContainer() {
     const onGetDocumentRevision: DriveEditorContext['getDocumentRevision'] =
         useCallback(
             (documentId: string, options?: GetDocumentOptions) => {
-                if (!selectedNode) {
-                    console.error('No selected node');
-                    return Promise.reject(new Error('No selected node'));
-                }
-                return getDocument(selectedNode.driveId, documentId, options);
+                return getDocument(documentId, options);
             },
-            [getDocument, selectedNode],
+            [getDocument],
         );
 
     const driveContext: IDriveContext = useMemo(

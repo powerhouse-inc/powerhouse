@@ -164,12 +164,9 @@ async function waitForUpdate(
 }
 
 export async function uploadDocumentOperations(
-    drive: string,
     documentId: string,
     document: PHDocument,
-    reactor: IDocumentDriveServer,
     pushOperations: (
-        driveId: string,
         id: string,
         operations: Operation[],
     ) => Promise<PHDocument | undefined>,
@@ -179,7 +176,7 @@ export async function uploadDocumentOperations(
         options?.operationsLimit || FILE_UPLOAD_OPERATIONS_CHUNK_SIZE;
 
     logger.verbose(
-        `uploadDocumentOperations(drive: ${drive}, documentId:${documentId}, ops: ${Object.keys(document.operations).join(',')}, limit:${operationsLimit})`,
+        `uploadDocumentOperations(documentId:${documentId}, ops: ${Object.keys(document.operations).join(',')}, limit:${operationsLimit})`,
     );
 
     for (const operations of Object.values(document.operations)) {
@@ -210,7 +207,7 @@ export async function uploadDocumentOperations(
             }
             */
 
-            await pushOperations(drive, documentId, chunk);
+            await pushOperations(documentId, chunk);
 
             logger.verbose(
                 `uploadDocumentOperations:for:waitForUpdate(${documentId}:${scope} rev ${operation.index}): NEXT`,

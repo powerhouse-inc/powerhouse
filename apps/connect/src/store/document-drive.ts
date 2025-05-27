@@ -175,7 +175,7 @@ export function useFileNodeDocument(
         async (driveId: string, id: string, documentType: string) => {
             const document = await (isReadMode
                 ? fetchReadDocument(driveId, id, documentType)
-                : openFile(driveId, id));
+                : openFile(id));
             if (document instanceof Error) {
                 throw document;
             }
@@ -293,12 +293,12 @@ export function useFileNodeDocument(
     ]);
 
     const addOperationToSelectedDocument = useMemo(() => {
-        if (driveId && documentId && kind === 'FILE') {
+        if (documentId && kind === 'FILE') {
             return debounceOperations(operations =>
-                addOperations(driveId, documentId, operations),
+                addOperations(documentId, operations),
             );
         }
-    }, [addOperations, driveId, documentId, kind]);
+    }, [addOperations, documentId, kind]);
 
     const addOperationToSelectedDrive = useCallback(
         (operation: Operation) => {
@@ -306,7 +306,7 @@ export function useFileNodeDocument(
                 throw new Error('No drive node selected');
             }
             return debounceOperations(operations =>
-                addOperations(selectedDriveNode.id, undefined, operations),
+                addOperations(selectedDriveNode.id, operations),
             )(operation);
         },
         [addOperations, selectedDriveNode?.id],
