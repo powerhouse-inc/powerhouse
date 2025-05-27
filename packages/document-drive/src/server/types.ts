@@ -374,6 +374,11 @@ export interface IBaseDocumentDriveServer {
     options?: GetDocumentOptions,
   ): Promise<TDocument>;
 
+  queueDocument<TDocument extends PHDocument>(
+    input: CreateDocumentInput<TDocument>,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+
   addOperation(
     documentId: string,
     operation: Operation,

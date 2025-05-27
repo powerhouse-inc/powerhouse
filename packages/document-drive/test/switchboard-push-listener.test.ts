@@ -18,21 +18,6 @@ import { expectUTCTimestamp } from "./utils.js";
 
 vi.mock(import("graphql-request"), async (importOriginal) => {
   const originalModule = await importOriginal();
-  const documentModels = [
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-  ] as DocumentModelModule[];
-
-  // const builder = await import("#server/builder").then((m) => m.ReactorBuilder);
-  // const remoteServer = new builder(documentModels).build();
-  // await remoteServer.initialize();
-
-  // await remoteServer.addDrive({
-  //   id: "test-drive",
-  //   global: {
-  //     name: "Test Drive",
-  //   },
-  // });
 
   return {
     ...originalModule,

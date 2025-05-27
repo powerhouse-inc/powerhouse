@@ -8,10 +8,12 @@ import {
 import { createDocument } from "#drive-document-model/gen/utils";
 import {
   type ActionJob,
+  DocumentJob,
   type IQueueManager,
   type Job,
   type OperationJob,
   isActionJob,
+  isDocumentJob,
   isOperationJob,
 } from "#queue/types";
 import { ReadModeServer } from "#read-mode/server";
@@ -27,6 +29,7 @@ import { requestPublicDrive } from "#utils/graphql";
 import { isDocumentDrive, runAsapAsync } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
+  DocumentAlreadyExistsError,
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type Trigger,
@@ -138,11 +141,50 @@ export class BaseDocumentDriveServer
         ? this.processDriveActions(documentId, actions, options)
         : this.processActions(documentId, actions, options);
     },
+    processDocumentJob: async ({
+      documentId,
+      documentType,
+      initialState,
+      options,
+    }: DocumentJob): Promise<IOperationResult> => {
+      const documentModelModule = this.getDocumentModelModule(documentType);
+      const newDocument = documentModelModule.utils.createDocument({
+        ...initialState,
+        id: documentId,
+      });
+      try {
+        const createdDocument = await this.createDocument(
+          newDocument,
+          options?.source ?? { type: "local" },
+        );
+        return {
+          status: "SUCCESS",
+          operations: [],
+          document: createdDocument,
+          signals: [],
+        };
+      } catch (error) {
+        return {
+          status: "ERROR",
+          error: new OperationError(
+            "ERROR",
+            undefined,
+            "Error creating document",
+            error instanceof Error ? error : new Error(JSON.stringify(error)),
+          ),
+          operations: [],
+          document: undefined,
+          signals: [],
+        };
+      }
+    },
     processJob: async (job: Job) => {
       if (isOperationJob(job)) {
         return this.queueDelegate.processOperationJob(job);
       } else if (isActionJob(job)) {
         return this.queueDelegate.processActionJob(job);
+      } else if (isDocumentJob(job)) {
+        return this.queueDelegate.processDocumentJob(job);
       } else {
         throw new Error("Unknown job type", job);
       }
@@ -1172,6 +1214,56 @@ export class BaseDocumentDriveServer
     }
   }
 
+  async queueDocument<TDocument extends PHDocument>(
+    input: CreateDocumentInput<TDocument>,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult> {
+    const exists = await this.documentStorage.exists(input.id);
+    if (exists) {
+      throw new DocumentAlreadyExistsError(input.id);
+    }
+
+    // add listeners first
+    let jobId: string;
+    const promise = new Promise<IOperationResult>((resolve, reject) => {
+      const unsubscribe = this.queueManager.on(
+        "jobCompleted",
+        (job, result) => {
+          if (job.jobId === jobId) {
+            unsubscribe();
+            unsubscribeError();
+            resolve(result);
+          }
+        },
+      );
+      const unsubscribeError = this.queueManager.on(
+        "jobFailed",
+        (job, error) => {
+          if (job.jobId === jobId) {
+            unsubscribe();
+            unsubscribeError();
+            reject(error);
+          }
+        },
+      );
+    });
+
+    // now queue the job
+    try {
+      jobId = await this.queueManager.addJob({
+        documentId: input.id,
+        documentType: input.documentType,
+        initialState: input.document,
+        options,
+      });
+    } catch (error) {
+      this.logger.error("Error adding job", error);
+      throw error;
+    }
+
+    return promise;
+  }
+
   queueOperation(
     documentId: string,
     operation: Operation,
@@ -1984,7 +2076,23 @@ export class BaseDocumentDriveServer
   }
 
   // Add back the saveStrand method that was accidentally removed
-  private async saveStrand(strand: StrandUpdate, source: StrandUpdateSource) {
+  private async saveStrand(
+    strand: StrandUpdate,
+    source: StrandUpdateSource,
+  ): Promise<IOperationResult> {
+    const isNewDocument = !(await this.documentStorage.exists(
+      strand.documentId,
+    ));
+
+    let result: IOperationResult | undefined = undefined;
+
+    if (isNewDocument) {
+      result = await this.queueDocument({
+        id: strand.documentId,
+        documentType: strand.documentType,
+      });
+    }
+
     const operations: Operation[] = strand.operations.map(
       (op: OperationUpdate) => ({
         ...op,
@@ -1993,8 +2101,9 @@ export class BaseDocumentDriveServer
       }),
     );
 
-    let result: IOperationResult;
-    if (strand.documentId) {
+    // if document already existed or queueDocument
+    // was successful, queues the operations
+    if ((!isNewDocument || result?.status === "SUCCESS") && operations.length) {
       try {
         result = await this.queueOperations(strand.documentId, operations, {
           source,
@@ -2003,15 +2112,16 @@ export class BaseDocumentDriveServer
         this.logger.error("Error queueing operations", error);
         throw error;
       }
-    } else {
-      try {
-        result = await this.queueDriveOperations(strand.driveId, operations, {
-          source,
-        });
-      } catch (error) {
-        this.logger.error("Error queueing operations", error);
-        throw error;
-      }
+    }
+
+    if (!result) {
+      this.logger.debug(`Document ${strand.documentId} already exists`);
+      return {
+        status: "SUCCESS",
+        document: await this.getDocument(strand.documentId),
+        operations: [],
+        signals: [],
+      } satisfies IOperationResult;
     }
 
     if (result.status === "ERROR") {

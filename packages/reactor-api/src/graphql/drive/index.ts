@@ -146,6 +146,7 @@ export class DriveSubgraph extends Subgraph {
     type StrandUpdate {
       driveId: String!
       documentId: String!
+      documentType: String!
       scope: String!
       branch: String!
       operations: [OperationUpdate!]!
@@ -325,7 +326,7 @@ export class DriveSubgraph extends Subgraph {
         _: unknown,
         { filter, listenerId }: { filter: ListenerFilter; listenerId?: string },
         ctx: Context,
-      ) => {
+      ): Promise<Listener> => {
         this.logger.verbose(
           `registerPullResponderListener(drive: ${ctx.driveId})`,
           filter,
@@ -383,7 +384,7 @@ export class DriveSubgraph extends Subgraph {
         _: unknown,
         { strands: strandsGql }: { strands: StrandUpdateGraphQL[] },
         ctx: Context,
-      ) => {
+      ): Promise<ListenerRevision[]> => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         this.logger.verbose(
@@ -421,7 +422,7 @@ export class DriveSubgraph extends Subgraph {
           revisions,
         }: { listenerId: string; revisions: ListenerRevision[] },
         ctx: Context,
-      ) => {
+      ): Promise<boolean> => {
         if (!listenerId || !revisions) return false;
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
@@ -462,7 +463,7 @@ export class DriveSubgraph extends Subgraph {
           since,
         }: { listenerId: string; since: string | undefined },
         ctx: Context,
-      ) => {
+      ): Promise<StrandUpdateGraphQL[]> => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         this.logger.debug(
@@ -481,6 +482,7 @@ export class DriveSubgraph extends Subgraph {
         return strands.map((update) => ({
           driveId: update.driveId,
           documentId: update.documentId,
+          documentType: update.documentType,
           scope: update.scope,
           branch: update.branch,
           operations: update.operations.map((op) => ({

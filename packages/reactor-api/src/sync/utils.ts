@@ -22,6 +22,18 @@ export const processPushUpdate = async (
   reactor: IDocumentDriveServer,
   strand: InternalStrandUpdate,
 ): Promise<ListenerRevision> => {
+  const existingDocuments = strand.driveId
+    ? await reactor.getDocuments(strand.driveId)
+    : [];
+  const isNewDocument = !existingDocuments.includes(strand.documentId);
+
+  if (isNewDocument) {
+    const result = await processPushNewDocument(reactor, strand);
+    if (result.status !== "SUCCESS" || strand.operations.length === 0) {
+      return result;
+    }
+  }
+
   const result = await reactor.queueOperations(
     strand.documentId,
     strand.operations,
@@ -37,6 +49,50 @@ export const processPushUpdate = async (
     status: result.status,
     error: result.error?.message,
   };
+};
+
+export const processPushNewDocument = async (
+  reactor: IDocumentDriveServer,
+  strand: InternalStrandUpdate,
+): Promise<ListenerRevision> => {
+  const listenerRevision: Omit<ListenerRevision, "status" | "error"> = {
+    revision: 0,
+    branch: strand.branch,
+    documentId: strand.documentId,
+    documentType: strand.documentType,
+    driveId: strand.driveId,
+    scope: strand.scope,
+  };
+
+  try {
+    const result = await reactor.queueDocument({
+      id: strand.documentId,
+      documentType: strand.documentType,
+    });
+
+    return {
+      ...listenerRevision,
+      revision: operationsToRevision(result.operations),
+      status: result.status,
+      error: result.error?.message,
+    };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.constructor.name === "DocumentAlreadyExistsError"
+    ) {
+      return {
+        ...listenerRevision,
+        status: "SUCCESS",
+      };
+    } else {
+      return {
+        ...listenerRevision,
+        status: "ERROR",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
 };
 
 // processes an acknowledge request and returns a boolean

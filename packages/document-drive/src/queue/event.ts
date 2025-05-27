@@ -1,14 +1,13 @@
-import { type AddFileInput } from "#drive-document-model/gen/types";
 import { type IOperationResult } from "#server/types";
 import { childLogger, logger } from "#utils/logger";
-import { type Action, generateId, type OperationScope } from "document-model";
+import { generateId, type OperationScope } from "document-model";
 import { createNanoEvents, type Unsubscribe } from "nanoevents";
-import { type SignalResult } from "../../../document-model/src/document/signal.js";
 import { MemoryQueue } from "./base.js";
 import {
   type IJob,
   type IJobQueue,
   type IQueueManager,
+  isDocumentJob,
   type IServerDelegate,
   isOperationJob,
   type Job,
@@ -24,11 +23,7 @@ interface EnqueuedJob {
   scope: OperationScope;
   timestamp: string;
 }
-/**
- * TODO:
- *  - Separate priority scheduler class
- *  - Separate dependencies manager (isBlocked)
- */
+
 export class EventQueueManager implements IQueueManager {
   protected logger = childLogger(["EventQueueManager"]);
   protected emitter = createNanoEvents<QueueEvents>();
@@ -114,49 +109,32 @@ export class EventQueueManager implements IQueueManager {
     }
 
     const jobId = generateId();
-    const jobActions = isOperationJob(job) ? job.operations : job.actions;
 
-    // TODO: support createDocument job
-    if (!jobActions.length) {
-      throw new Error("Job has no operations or actions");
+    const documentJob = isDocumentJob(job);
+    const jobActions = isDocumentJob(job)
+      ? undefined
+      : isOperationJob(job)
+        ? job.operations
+        : job.actions;
+
+    if (!documentJob && !jobActions?.length) {
+      throw new Error(
+        "Job has no operations or actions: " + JSON.stringify(job),
+      );
     }
 
-    const scope = jobActions[0].scope;
-    if (jobActions.find((j) => j.scope !== scope)) {
+    const scope = jobActions?.at(0)?.scope ?? "global";
+    if (jobActions?.find((j) => j.scope !== scope)) {
       throw new Error("Job has actions with different scopes");
     }
     const queue = this.getQueue(job.documentId, scope);
 
     // checks if the job is for a document:scope that has been deleted
-    if (await queue.isDeleted()) {
-      throw new Error("Document queue is deleted");
+    if (!isDocumentJob(job) && (await queue.isDeleted())) {
+      throw new Error("Job has operations for deleted document");
     }
 
-    // TODO we no longer need to await ADD_FILE operations
-    // checks if the job is for a document that doesn't exist in storage yet
-    // const { documentId } = job;
-    // const newDocument = documentId && !(await this.delegate.exists(documentId));
-
-    // // if it is a new document and queue is not yet blocked then
-    // // blocks it so the jobs are not processed until it's ready
-    // if (newDocument) {
-    //   // checks if there any job in the queue adding the file and adds as dependency
-    //   const addFileJob = await this.getAddFileJob(job.driveId, documentId);
-    //   if (addFileJob) {
-    //     await queue.addDependency(addFileJob);
-    //   }
-    // }
-
-    // TODO is this needed?
-    // if it has ADD_FILE operations then adds the job as
-    // a dependency to the corresponding document queues
-    // const actions = isOperationJob(job) ? job.operations : (job.actions ?? []);
-    // const addFileOps = actions.filter((j: Action) => j.type === "ADD_FILE");
-    // for (const addFileOp of addFileOps) {
-    //   const input = addFileOp.input as AddFileInput;
-    //   const q = this.getQueue(job.driveId, input.id);
-    //   await q.addDependencies({ jobId, ...job });
-    // }
+    // TODO should create document job be a dependency of all jobs to the same document?
 
     const jobValue = Object.freeze({ jobId, ...job });
     await queue.addJob(jobValue);
@@ -227,60 +205,8 @@ export class EventQueueManager implements IQueueManager {
 
   protected async handleJobCompleted(job: IJob<Job>, result: IOperationResult) {
     this.removeJob(job);
-
-    for (const signal of result.signals) {
-      await this.handleJobSignal(job, signal);
-    }
-
     return this.processNextJob();
   }
-
-  protected async handleJobSignal(job: IJob<Job>, s: SignalResult) {
-    // TODO we no longer have queue dependency
-    // switch (s.signal.type) {
-    //   case "CREATE_CHILD_DOCUMENT": {
-    //     const id =
-    //       typeof s.result !== "boolean" ? s.result.id : s.signal.input.newId;
-    //     const docQueues = this.getDocumentQueues(id);
-    //     if (docQueues) {
-    //       await Promise.all(
-    //         docQueues
-    //           .values()
-    //           .map(async (queue) => queue.removeDependency(job)),
-    //       );
-    //     }
-    //     break;
-    //   }
-    //   case "DELETE_CHILD_DOCUMENT": {
-    //     const docQueues = this.getDocumentQueues(s.signal.input.id);
-    //     if (docQueues) {
-    //       await Promise.all(
-    //         docQueues.values().map((queue) => queue.setDeleted(true)),
-    //       );
-    //     }
-    //     break;
-    //   }
-    // }
-  }
-
-  protected async getAddFileJob(driveId: string, documentId: string) {
-    const driveQueue = this.getQueue(driveId, "global");
-    const jobs = await driveQueue.getJobs();
-    for (const driveJob of jobs) {
-      const actions = isOperationJob(driveJob)
-        ? driveJob.operations
-        : driveJob.actions;
-      if (
-        actions.find((j: Action) => {
-          const input = j.input as AddFileInput;
-          return j.type === "ADD_FILE" && input.id === documentId;
-        })
-      ) {
-        return driveJob;
-      }
-    }
-  }
-
   protected isBusy() {
     return this.workers >= this.maxWorkers;
   }

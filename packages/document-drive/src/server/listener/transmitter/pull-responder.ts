@@ -211,6 +211,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
               strands(listenerId: $listenerId) {
                 driveId
                 documentId
+                documentType
                 scope
                 branch
                 operations {

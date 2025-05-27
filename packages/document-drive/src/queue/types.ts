@@ -1,11 +1,21 @@
 import { type AddOperationOptions, type IOperationResult } from "#server/types";
-import type { Action, Operation, OperationScope } from "document-model";
+import type {
+  Action,
+  Operation,
+  OperationScope,
+  PHDocument,
+} from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {
   documentId: string;
   actions?: Action[];
   options?: AddOperationOptions;
+}
+
+export interface DocumentJob extends Omit<BaseJob, "actions"> {
+  documentType: string;
+  initialState?: PHDocument;
 }
 
 export interface OperationJob extends BaseJob {
@@ -16,7 +26,7 @@ export interface ActionJob extends BaseJob {
   actions: Action[];
 }
 
-export type Job = OperationJob | ActionJob;
+export type Job = DocumentJob | OperationJob | ActionJob;
 
 export type JobId = string;
 
@@ -64,6 +74,10 @@ export interface IQueue<T> {
 }
 
 export type IJobQueue = IQueue<Job>;
+
+export function isDocumentJob(job: Job): job is DocumentJob {
+  return "documentType" in job;
+}
 
 export function isOperationJob(job: Job): job is OperationJob {
   return "operations" in job;
