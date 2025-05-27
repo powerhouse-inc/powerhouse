@@ -1,10 +1,12 @@
+import { getAuthenticatedDID } from "@didtools/key-did";
+import { EdDSASigner } from "did-jwt";
 import {
   createVerifiableCredentialJwt,
   verifyCredential,
   type Issuer,
   type JwtCredentialPayload,
 } from "did-jwt-vc";
-import { Resolver, type ResolverRegistry } from "did-resolver";
+import { Resolver } from "did-resolver";
 import { getResolver as keyDidResolver } from "key-did-resolver";
 export type PKHDid = {
   networkId: string;
@@ -35,11 +37,14 @@ export function parsePkhDid(did: string): PKHDid {
   };
 }
 
-export function verifyAuthBearerToken(token: string) {
-  const jwt = Buffer.from(token, "base64").toString();
-  const verified = verifyCredential(jwt, getResolver());
-  console.log(verified);
-  return verified;
+export async function verifyAuthBearerToken(jwt: string) {
+  try {
+    const verified = await verifyCredential(jwt, getResolver());
+    return verified;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
 }
 
 export async function createAuthBearerToken(
@@ -60,13 +65,25 @@ export async function createAuthBearerToken(
       },
     },
   };
+
   const jwt = await createVerifiableCredentialJwt(vcPayload, issuer);
-  return Buffer.from(jwt).toString("base64");
+  return jwt;
 }
 export const getResolver = () => {
-  const keyResolver = keyDidResolver() as ResolverRegistry;
+  const keyResolver = keyDidResolver();
   if (!keyResolver) {
     throw new Error("Failed to get key resolver");
   }
+
   return new Resolver(keyResolver);
 };
+
+export async function getIssuer(privateKey: Uint8Array): Promise<Issuer> {
+  const signer = EdDSASigner(privateKey);
+  const did = await getAuthenticatedDID(privateKey);
+  return {
+    did: did.id,
+    signer,
+    alg: "EdDSA",
+  };
+}

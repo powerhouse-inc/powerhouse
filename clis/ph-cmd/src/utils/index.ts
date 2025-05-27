@@ -44,6 +44,7 @@ export const packageManagers = {
     updateCommand: "bun update {{dependency}}",
     buildAffected: "bun run build:affected",
     workspaceOption: "",
+    installDepsCommand: "bun install",
   },
   pnpm: {
     installCommand: "pnpm add {{dependency}}",
@@ -54,6 +55,7 @@ export const packageManagers = {
     updateCommand: "pnpm update {{dependency}}",
     buildAffected: "pnpm run build:affected",
     workspaceOption: "--workspace-root",
+    installDepsCommand: "pnpm install",
   },
   yarn: {
     installCommand: "yarn add {{dependency}}",
@@ -64,6 +66,7 @@ export const packageManagers = {
     updateCommand: "yarn upgrade {{dependency}}",
     buildAffected: "yarn run build:affected",
     workspaceOption: "-W",
+    installDepsCommand: "yarn install",
   },
   npm: {
     installCommand: "npm install {{dependency}}",
@@ -73,6 +76,7 @@ export const packageManagers = {
     updateCommand: "npm update {{dependency}} --save",
     buildAffected: "npm run build:affected",
     workspaceOption: "",
+    installDepsCommand: "npm install",
   },
 } as const;
 
@@ -253,6 +257,76 @@ export const findContainerDirectory = (
 
   return findContainerDirectory(parentDir, targetFile);
 };
+
+interface PackageJson {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+function parseDependencyString(dependency: string): {
+  name: string;
+  version: string;
+} {
+  // Handle scoped packages (e.g. @org/package@version)
+  const lastAtIndex = dependency.lastIndexOf("@");
+  if (lastAtIndex === 0) {
+    // This is a scoped package without version
+    return { name: dependency, version: "latest" };
+  }
+
+  const name = dependency.slice(0, lastAtIndex);
+  const version = dependency.slice(lastAtIndex + 1);
+
+  return {
+    name,
+    version: version || "latest",
+  };
+}
+
+export function updateDependencyVersionString(
+  packageManager: PackageManager,
+  dependencies: string[],
+  projectPath: string,
+) {
+  const manager = packageManagers[packageManager];
+
+  const packageJsonPath = path.join(projectPath, "package.json");
+  const packageJson = JSON.parse(
+    fs.readFileSync(packageJsonPath, "utf8"),
+  ) as PackageJson;
+
+  // Initialize dependencies and devDependencies if they don't exist
+  packageJson.dependencies = packageJson.dependencies || {};
+  packageJson.devDependencies = packageJson.devDependencies || {};
+
+  // Process each dependency string
+  for (const dependency of dependencies) {
+    const { name, version } = parseDependencyString(dependency);
+
+    // Check if the package exists in either dependencies or devDependencies
+    if (name in packageJson.dependencies) {
+      packageJson.dependencies[name] = version;
+    } else if (name in packageJson.devDependencies) {
+      packageJson.devDependencies[name] = version;
+    }
+  }
+
+  // Write the updated package.json back to the file
+  fs.writeFileSync(
+    packageJsonPath,
+    JSON.stringify(packageJson, null, 2),
+    "utf8",
+  );
+
+  const installDepsCommand = manager.installDepsCommand;
+  const commandOptions = { cwd: projectPath };
+
+  execSync(installDepsCommand, {
+    stdio: "inherit",
+    ...commandOptions,
+  });
+}
 
 export function installDependency(
   packageManager: PackageManager,

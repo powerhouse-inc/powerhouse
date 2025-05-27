@@ -1,5 +1,9 @@
-import { type ListenerRevision, type StrandUpdate } from "#server/types";
-import { gql, requestGraphql } from "#utils/graphql";
+import {
+  type IListenerManager,
+  type ListenerRevision,
+  type StrandUpdate,
+} from "#server/types";
+import { gql, requestGraphql, type GraphQLResult } from "#utils/graphql";
 import { childLogger } from "#utils/logger";
 import { operationsToRevision } from "#utils/misc";
 import stringify from "json-stringify-deterministic";
@@ -9,13 +13,56 @@ const SYNC_OPS_BATCH_LIMIT = 10;
 
 export class SwitchboardPushTransmitter implements ITransmitter {
   private targetURL: string;
+  private manager?: IListenerManager;
   private logger = childLogger([
     "SwitchboardPushTransmitter",
     Math.floor(Math.random() * 999).toString(),
   ]);
 
-  constructor(targetURL: string) {
+  constructor(targetURL: string, manager?: IListenerManager) {
     this.targetURL = targetURL;
+    this.manager = manager;
+  }
+
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    if (!this.manager?.generateJwtHandler) {
+      this.logger.verbose(`No JWT handler available for ${this.targetURL}`);
+      return {};
+    }
+    try {
+      const jwt = await this.manager.generateJwtHandler(this.targetURL);
+      if (!jwt) {
+        this.logger.verbose(`No JWT generated for ${this.targetURL}`);
+        return {};
+      }
+      return { Authorization: `Bearer ${jwt}` };
+    } catch (error) {
+      this.logger.error(`Error generating JWT for ${this.targetURL}:`, error);
+      return {};
+    }
+  }
+
+  private async requestWithAuth<T>(
+    query: string,
+    variables?: Record<string, unknown>,
+  ): Promise<GraphQLResult<T>> {
+    const headers = await this.getAuthHeaders();
+    const result = await requestGraphql<T>(
+      this.targetURL,
+      query,
+      variables,
+      headers,
+    );
+
+    // Check for unauthorized error
+    const error = result.errors?.at(0);
+    if (error?.message.includes("Unauthorized")) {
+      // Retry once with fresh JWT
+      const freshHeaders = await this.getAuthHeaders();
+      return requestGraphql<T>(this.targetURL, query, variables, freshHeaders);
+    }
+
+    return result;
   }
 
   async transmit(
@@ -76,10 +123,9 @@ export class SwitchboardPushTransmitter implements ITransmitter {
 
     // Send Graphql mutation to switchboard
     try {
-      const { pushUpdates } = await requestGraphql<{
+      const result = await this.requestWithAuth<{
         pushUpdates: ListenerRevision[];
       }>(
-        this.targetURL,
         gql`
           mutation pushUpdates($strands: [InputStrandUpdate!]) {
             pushUpdates(strands: $strands) {
@@ -105,15 +151,14 @@ export class SwitchboardPushTransmitter implements ITransmitter {
         },
       );
 
-      if (!pushUpdates) {
+      if (!result.pushUpdates) {
         throw new Error("Couldn't update listener revision");
       }
 
-      return pushUpdates;
+      return result.pushUpdates;
     } catch (e) {
       this.logger.error(e);
       throw e;
     }
-    return [];
   }
 }

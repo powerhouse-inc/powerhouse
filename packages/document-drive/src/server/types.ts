@@ -315,6 +315,11 @@ export type DocumentDriveServerOptions = {
    */
   taskQueueMethod?: RunAsap.RunAsap<unknown> | null;
   listenerManager?: ListenerManagerOptions;
+  jwtHandler?: (
+    driveUrl: string,
+    address: string | undefined,
+    refresh?: boolean,
+  ) => Promise<string>;
 };
 
 export type GetStrandsOptions = {
@@ -506,6 +511,10 @@ export interface IBaseDocumentDriveServer {
   getDocumentModelModules(): DocumentModelModule[];
 
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
+  removeJwtHandler(): void;
+  generateJwtHandler?: (driveUrl: string) => Promise<string>;
 }
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
@@ -550,6 +559,10 @@ export interface IListenerManager {
     parentId: string,
     syncUnits: SynchronizationUnitId[],
   ): Promise<void>;
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
+  removeJwtHandler(): void;
+  generateJwtHandler?: (driveUrl: string) => Promise<string>;
 }
 
 export type ListenerStatus =

@@ -1,37 +1,22 @@
-import tailwindcss from "@tailwindcss/vite";
-import basicSsl from "@vitejs/plugin-basic-ssl";
-import viteReact from "@vitejs/plugin-react";
-import { exec } from "node:child_process";
-import fs from "node:fs";
-import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
-import {
-  createLogger,
-  createServer,
-  type InlineConfig,
-  type Plugin,
-} from "vite";
-import { viteEnvs } from "vite-envs";
 import {
   backupIndexHtml,
   copyConnect,
-  removeBase64EnvValues,
-} from "./helpers.js";
+  ensureNodeVersion,
+  generateImportMapPlugin,
+  resolveConnect,
+  runShellScriptPlugin,
+  viteConnectDevStudioPlugin,
+  viteLoadExternalPackages,
+} from "#connect-utils";
+import tailwindcss from "@tailwindcss/vite";
+import basicSsl from "@vitejs/plugin-basic-ssl";
+import viteReact from "@vitejs/plugin-react";
+import fs from "node:fs";
+import { join } from "node:path";
+import { createLogger, createServer, type InlineConfig } from "vite";
+import { viteEnvs } from "vite-envs";
 import { type StartServerOptions } from "./types.js";
-import { viteLoadExternalPackages } from "./vite-plugins/external-packages.js";
-import { generateImportMapPlugin } from "./vite-plugins/importmap.js";
-import { viteConnectDevStudioPlugin } from "./vite-plugins/studio.js";
 
-function resolvePackage(packageName: string, root = process.cwd()) {
-  // find connect installation
-  const require = createRequire(root);
-  return require.resolve(packageName, { paths: [root] });
-}
-
-function resolveConnect(root = process.cwd()) {
-  const connectHTMLPath = resolvePackage("@powerhousedao/connect", root);
-  return resolve(connectHTMLPath, "..");
-}
 // silences dynamic import warnings
 const logger = createLogger();
 // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -46,41 +31,6 @@ logger.warn = (msg, options) => {
   }
   loggerWarn(msg, options);
 };
-
-function ensureNodeVersion(minVersion = "20") {
-  const version = process.versions.node;
-  if (!version) {
-    return;
-  }
-
-  if (version < minVersion) {
-    console.error(
-      `Node version ${minVersion} or higher is required. Current version: ${version}`,
-    );
-    process.exit(1);
-  }
-}
-
-function runShellScriptPlugin(scriptName: string, connectPath: string): Plugin {
-  return {
-    name: "vite-plugin-run-shell-script",
-    buildStart() {
-      const scriptPath = join(connectPath, scriptName);
-      if (fs.existsSync(scriptPath)) {
-        exec(`sh ${scriptPath}`, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`Error executing the script: ${error.message}`);
-            removeBase64EnvValues(connectPath);
-            return;
-          }
-          if (stderr) {
-            console.error(stderr);
-          }
-        });
-      }
-    },
-  };
-}
 
 export async function startServer(
   options: StartServerOptions = {

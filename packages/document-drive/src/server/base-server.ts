@@ -25,7 +25,7 @@ import {
   DefaultDrivesManager,
   type IDefaultDrivesManager,
 } from "#utils/default-drives-manager";
-import { requestPublicDrive } from "#utils/graphql";
+import { requestPublicDriveWithTokenFromReactor } from "#utils/graphql";
 import { isDocumentDrive, runAsapAsync } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
@@ -100,7 +100,7 @@ import { filterOperationsByRevision, isAtRevision } from "./utils.js";
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager
 {
-  private logger = childLogger(["BaseDocumentDriveServer"]);
+  protected logger = childLogger(["BaseDocumentDriveServer"]);
 
   // external dependencies
   private documentModelModules: DocumentModelModule[];
@@ -112,6 +112,7 @@ export class BaseDocumentDriveServer
   protected options: Required<DocumentDriveServerOptions>;
   private listenerManager: IListenerManager;
   private synchronizationManager: ISynchronizationManager;
+  public generateJwtHandler?: (driveUrl: string) => Promise<string>;
 
   // internal dependencies
   private defaultDrivesManager: DefaultDrivesManager;
@@ -207,7 +208,6 @@ export class BaseDocumentDriveServer
     eventEmitter: IEventEmitter,
     synchronizationManager: ISynchronizationManager,
     listenerManager: IListenerManager,
-
     options?: DocumentDriveServerOptions,
   ) {
     this.documentModelModules = documentModelModules;
@@ -228,6 +228,10 @@ export class BaseDocumentDriveServer
         ...DefaultListenerManagerOptions,
         ...options?.listenerManager,
       },
+      jwtHandler:
+        options?.jwtHandler === undefined
+          ? () => Promise.resolve("")
+          : options.jwtHandler,
       taskQueueMethod:
         options?.taskQueueMethod === undefined
           ? RunAsap.runAsap
@@ -430,6 +434,8 @@ export class BaseDocumentDriveServer
               }
             }
           },
+          undefined,
+          this.listeners,
         );
         driveTriggers.set(trigger.id, cancelPullLoop);
         this.triggerMap.set(driveId, driveTriggers);
@@ -479,6 +485,7 @@ export class BaseDocumentDriveServer
 
         const transmitter = new SwitchboardPushTransmitter(
           zodListener.callInfo.data ?? "",
+          this.listeners,
         );
 
         this.logger.verbose(
@@ -600,8 +607,13 @@ export class BaseDocumentDriveServer
     url: string,
     options: RemoteDriveOptions,
   ): Promise<DocumentDriveDocument> {
+    const token = await this.generateJwtHandler?.(url);
+    const headers: Record<string, string> = token
+      ? { Authorization: `Bearer ${token}` }
+      : {};
     const { id, name, slug, icon, meta } =
-      options.expectedDriveInfo || (await requestPublicDrive(url));
+      options.expectedDriveInfo ||
+      (await requestPublicDriveWithTokenFromReactor(url, this));
 
     const {
       pullFilter,
@@ -613,10 +625,15 @@ export class BaseDocumentDriveServer
     } = options;
 
     const pullTrigger =
-      await PullResponderTransmitter.createPullResponderTrigger(id, url, {
-        pullFilter,
-        pullInterval,
-      });
+      await PullResponderTransmitter.createPullResponderTrigger(
+        id,
+        url,
+        {
+          pullFilter,
+          pullInterval,
+        },
+        this.listeners,
+      );
 
     return await this.addDrive(
       {
@@ -2138,6 +2155,16 @@ export class BaseDocumentDriveServer
     }
     this.eventEmitter.emit("strandUpdate", strand);
     return result;
+  }
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>) {
+    this.generateJwtHandler = handler;
+    this.listenerManager.setGenerateJwtHandler(handler);
+  }
+
+  removeJwtHandler() {
+    this.generateJwtHandler = undefined;
+    this.listenerManager.removeJwtHandler();
   }
 }
 

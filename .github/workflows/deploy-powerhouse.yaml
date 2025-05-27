@@ -1,0 +1,75 @@
+name: Deploy Powerhouse   
+
+on:
+  workflow_run:
+    workflows: [Release Package]
+    types:
+      - completed
+
+env:
+  HUSKY: 0
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  connect:
+    environment: ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build, Push and Release APP to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ vars.HEROKU_APP_NAME_CONNECT }}
+          dockerfile_directory: ./
+          dockerfile_name: apps/connect/Dockerfile
+          docker_options: >-
+            --build-arg NX_SOCKET_DIR=${{ vars.NX_SOCKET_DIR }}
+            --build-arg BASE_PATH=${{ vars.CONNECT_BASE_PATH }}
+            --build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}
+            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.CONNECT_SENTRY_DSN }}
+            --build-arg PH_CONNECT_SENTRY_ENV=${{ github.ref_name }}
+            --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+          process_type: web
+  switchboard:
+    environment: ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh     
+      - name: Build, Push and Release API to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ vars.HEROKU_APP_NAME_SWITCHBOARD }}
+          dockerfile_directory: ./apps/switchboard
+          process_type: web
+          docker_options: "--build-arg PH_TAG=${{ vars.PH_TAG }}"
+  academy:
+    environment: ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
+      - name: Build, Push and Release Academy to Heroku. # Your custom step name
+        uses: gonuit/heroku-docker-deploy@v1.3.3
+        with:
+          email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ vars.HEROKU_APP_NAME_ACADEMY }}
+          dockerfile_directory: ./apps/academy
+          process_type: web

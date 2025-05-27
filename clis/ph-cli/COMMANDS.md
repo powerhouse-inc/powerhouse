@@ -4,18 +4,48 @@ This document provides detailed information about the available commands in the 
 
 ## Table of Contents
 
-- [Connect](#connect)
+- [Connect Build](#connect-build)
+- [Connect Preview](#connect-preview)
+- [Connect Studio](#connect-studio)
 - [Dev](#dev)
 - [Generate](#generate)
 - [Inspect](#inspect)
 - [Install](#install)
 - [List](#list)
+- [Reactor](#reactor)
 - [Service](#service)
 - [Switchboard](#switchboard)
 - [Uninstall](#uninstall)
 - [Version](#version)
 
-## Connect
+## Connect Build
+
+```
+Command Overview:
+  The Connect build command creates a connect build with the project's local and external packages included.
+
+Options:
+  --project-root <path>  The root directory of the project. Default is "process.cwd()".
+  --assets-dir-name <name> The name of the assets directory. Default is "${DEFAULT_ASSETS_DIR_NAME}".
+  --external-packages-file-name <name> The name of the external packages file. Default is "${DEFAULT_EXTERNAL_PACKAGES_FILE_NAME}".
+  --styles-file-name <name> The name of the styles file. Default is "${DEFAULT_STYLES_FILE_NAME}".
+  --connect-path <path>  The path to the Connect dist directory. Calls "resolveConnect()" if not provided.
+```
+
+## Connect Preview
+
+```
+Command Overview:
+  The Connect preview command previews a built Connect project.
+  NOTE: You must run \`ph connect build\` first.
+
+Options:
+  --project-root <path>  The root directory of the project. Default is "process.cwd()".
+  --port <port>          The port to run the server on. Default is 4173.
+  --open                 Open the browser. Default is true.
+```
+
+## Connect Studio
 
 ```
 Command Overview:
@@ -266,6 +296,49 @@ Notes:
   - Each package is displayed by its package name
 ```
 
+## Reactor
+
+```
+Command Overview:
+  The reactor command starts a local Switchboard instance,
+  which acts as the document processing engine for Powerhouse projects. It provides
+  the infrastructure for document models, processors, and real-time updates.
+
+  This command:
+  1. Starts a local reactor server
+  2. Loads document models and processors
+  3. Provides an API for document operations
+  4. Supports real-time updates and code generation
+
+Options:
+  --port <PORT>           Port to host the API. Default is 4001.
+                        
+  --config-file <path>    Path to the powerhouse.config.js file. Default is 
+                        './powerhouse.config.json'. This configures the reactor behavior.
+                        
+  --generate              Generate code automatically when document models are updated.
+                        
+  --db-path <DB_PATH>     Path to the database for storing document data.
+                        
+  --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
+                        
+  --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
+                        
+  -w, --watch             Watch for local changes to document models and processors,
+                        and automatically update the reactor accordingly.
+                        
+  --packages <pkg...>     List of packages to be loaded. If defined, packages specified
+                        in the config file are ignored.
+
+Examples:
+  $ ph reactor                           # Start reactor with default settings
+  $ ph reactor --port 5000               # Use custom port 5000
+  $ ph reactor --generate                # Enable auto code generation
+  $ ph reactor --watch                   # Watch for local file changes
+  $ ph reactor --config-file custom.json # Use custom configuration file
+  $ ph reactor --packages pkg1 pkg2      # Load specific packages
+```
+
 ## Service
 
 ```
@@ -313,23 +386,21 @@ Notes:
 
 ```
 Command Overview:
-  The switchboard command (also known as reactor) starts a local Switchboard instance,
-  which acts as the document processing engine for Powerhouse projects. It provides
-  the infrastructure for document models, processors, and real-time updates.
+  The switchboard command starts a local Switchboard instance, which acts as the document
+  processing engine for Powerhouse projects. It provides the infrastructure for document
+  models, processors, and real-time updates.
 
   This command:
-  1. Starts a local Switchboard server
+  1. Starts a local switchboard server
   2. Loads document models and processors
   3. Provides an API for document operations
-  4. Supports real-time updates and code generation
+  4. Enables real-time document processing
 
 Options:
   --port <PORT>           Port to host the API. Default is 4001.
                         
   --config-file <path>    Path to the powerhouse.config.js file. Default is 
-                        './powerhouse.config.json'. This configures the Switchboard behavior.
-                        
-  --generate              Generate code automatically when document models are updated.
+                        './powerhouse.config.json'. This configures the switchboard behavior.
                         
   --db-path <DB_PATH>     Path to the database for storing document data.
                         
@@ -337,22 +408,18 @@ Options:
                         
   --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
                         
-  -w, --watch             Watch for local changes to document models and processors,
-                        and automatically update the Switchboard accordingly.
-                        
   --packages <pkg...>     List of packages to be loaded. If defined, packages specified
                         in the config file are ignored.
+                        
+  --base-path <path>      Base path for the API endpoints. Sets the BASE_PATH environment 
+                        variable used by the server to prefix all routes.
 
 Examples:
-  $ ph switchboard                           # Start Switchboard with default settings
+  $ ph switchboard                           # Start switchboard with default settings
   $ ph switchboard --port 5000               # Use custom port 5000
-  $ ph switchboard --generate                # Enable auto code generation
-  $ ph switchboard --watch                   # Watch for local file changes
   $ ph switchboard --config-file custom.json # Use custom configuration file
   $ ph switchboard --packages pkg1 pkg2      # Load specific packages
-
-Aliases:
-  $ ph reactor                              # Alias for switchboard
+  $ ph switchboard --base-path /switchboard  # Set API base path to /switchboard
 ```
 
 ## Uninstall

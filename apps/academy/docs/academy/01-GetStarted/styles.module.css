@@ -1,0 +1,99 @@
+.titleContainer {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.titleContainer h1 {
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+.learningPath {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.pathCard {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.cardContent {
+  height: 100%;
+}
+
+.buttonContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.titleIcon {
+  width: 24px;
+  height: 24px;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.cardIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 0.75rem;
+}
+
+:global(.card-title) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+:global(.card-title img) {
+  display: inline-flex;
+}
+
+:global(.path-button) {
+  display: block;
+  text-decoration: none;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  border-radius: 8px;
+  background: #f3f4f6;
+  border: 0px solid #e5e7eb;
+  color: #111827;
+  font-weight: 500;
+  text-align: center;
+  transition: background 0.2s ease-in-out;
+}
+
+:global(.path-button:hover) {
+  background: #ffffff;
+  border-color: #d1d5db;
+} 

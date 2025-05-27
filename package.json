@@ -21,8 +21,8 @@
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.5",
-    "@commitlint/cli": "^19.7.1",
-    "@commitlint/config-conventional": "^19.7.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/compat": "^1.2.7",
     "@eslint/js": "^9.21.0",
     "@jscutlery/semver": "^5.6.0",
@@ -76,6 +76,9 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "resolutions": {
+    "zod": "^3.24.3"
   },
   "commitlint": {
     "rules": {

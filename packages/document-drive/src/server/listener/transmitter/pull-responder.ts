@@ -16,7 +16,7 @@ import {
 } from "#drive-document-model/gen/types";
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
-import { requestGraphql } from "#utils/graphql";
+import { type GraphQLResult, requestGraphql } from "#utils/graphql";
 import { childLogger, type ILogger } from "#utils/logger";
 import { operationsToRevision } from "#utils/misc";
 import { generateId } from "document-model";
@@ -68,7 +68,6 @@ const staticLogger = () => {
   if (!_staticLogger) {
     _staticLogger = childLogger(["PullResponderTransmitter", "static"]);
   }
-
   return _staticLogger;
 };
 
@@ -84,8 +83,53 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
   constructor(listener: Listener, manager: IListenerManager) {
     this.listener = listener;
     this.manager = manager;
-
     this.logger.verbose(`constructor(listener: ${listener.listenerId})`);
+  }
+
+  private static async getAuthHeaders(
+    url: string,
+    manager?: IListenerManager,
+  ): Promise<Record<string, string>> {
+    if (!manager?.generateJwtHandler) {
+      staticLogger().verbose(`No JWT handler available for ${url}`);
+      return {};
+    }
+    try {
+      const jwt = await manager.generateJwtHandler(url);
+      if (!jwt) {
+        staticLogger().verbose(`No JWT generated for ${url}`);
+        return {};
+      }
+      return { Authorization: `Bearer ${jwt}` };
+    } catch (error) {
+      staticLogger().error(`Error generating JWT for ${url}:`, error);
+      return {};
+    }
+  }
+
+  private async requestWithAuth<T>(
+    url: string,
+    query: string,
+    variables?: Record<string, unknown>,
+  ): Promise<GraphQLResult<T>> {
+    const headers = await PullResponderTransmitter.getAuthHeaders(
+      url,
+      this.manager,
+    );
+    const result = await requestGraphql<T>(url, query, variables, headers);
+
+    // Check for unauthorized error
+    const error = result.errors?.at(0);
+    if (error?.message.includes("Unauthorized")) {
+      // Retry once with fresh JWT
+      const freshHeaders = await PullResponderTransmitter.getAuthHeaders(
+        url,
+        this.manager,
+      );
+      return requestGraphql<T>(url, query, variables, freshHeaders);
+    }
+
+    return result;
   }
 
   getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]> {
@@ -155,10 +199,11 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     filter: ListenerFilter,
     listenerId?: string,
+    manager?: IListenerManager,
   ): Promise<Listener["listenerId"]> {
     staticLogger().verbose(`registerPullResponder(url: ${url})`, filter);
 
-    // graphql request to switchboard
+    const headers = await this.getAuthHeaders(url, manager);
     const result = await requestGraphql<{
       registerPullResponderListener: {
         listenerId: Listener["listenerId"];
@@ -179,10 +224,44 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         }
       `,
       { filter, listenerId },
+      headers,
     );
 
     const error = result.errors?.at(0);
     if (error) {
+      if (error.message.includes("Unauthorized")) {
+        // Retry once with fresh JWT
+        const freshHeaders = await this.getAuthHeaders(url, manager);
+        const retryResult = await requestGraphql<{
+          registerPullResponderListener: {
+            listenerId: Listener["listenerId"];
+          };
+        }>(
+          url,
+          gql`
+            mutation registerPullResponderListener(
+              $filter: InputListenerFilter!
+              $listenerId: String
+            ) {
+              registerPullResponderListener(
+                filter: $filter
+                listenerId: $listenerId
+              ) {
+                listenerId
+              }
+            }
+          `,
+          { filter, listenerId },
+          freshHeaders,
+        );
+        if (retryResult.errors?.at(0)) {
+          throw retryResult.errors[0];
+        }
+        if (!retryResult.registerPullResponderListener) {
+          throw new Error("Error registering listener");
+        }
+        return retryResult.registerPullResponderListener.listenerId;
+      }
       throw error;
     }
 
@@ -197,12 +276,14 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     driveId: string,
     url: string,
     listenerId: string,
-    options?: GetStrandsOptions, // TODO add support for since
+    options?: GetStrandsOptions,
+    manager?: IListenerManager,
   ): Promise<StrandUpdate[]> {
     staticLogger().verbose(
       `[SYNC DEBUG] PullResponderTransmitter.pullStrands called for drive: ${driveId}, url: ${url}, listener: ${listenerId}, options: ${JSON.stringify(options || {})}`,
     );
 
+    const headers = await this.getAuthHeaders(url, manager);
     const result = await requestGraphql<PullStrandsGraphQL>(
       url,
       gql`
@@ -244,13 +325,70 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         }
       `,
       { listenerId },
+      headers,
     );
 
     const error = result.errors?.at(0);
     if (error) {
-      staticLogger().verbose(
-        `[SYNC DEBUG] Error pulling strands for drive: ${driveId}, listener: ${listenerId}, error: ${JSON.stringify(error)}`,
-      );
+      if (error.message.includes("Unauthorized")) {
+        // Retry once with fresh JWT
+        const freshHeaders = await this.getAuthHeaders(url, manager);
+        const retryResult = await requestGraphql<PullStrandsGraphQL>(
+          url,
+          gql`
+            query strands($listenerId: ID!) {
+              system {
+                sync {
+                  strands(listenerId: $listenerId) {
+                    driveId
+                    documentId
+                    scope
+                    branch
+                    operations {
+                      id
+                      timestamp
+                      skip
+                      type
+                      input
+                      hash
+                      index
+                      context {
+                        signer {
+                          user {
+                            address
+                            networkId
+                            chainId
+                          }
+                          app {
+                            name
+                            key
+                          }
+                          signatures
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          `,
+          { listenerId },
+          freshHeaders,
+        );
+        if (retryResult.errors?.at(0)) {
+          throw retryResult.errors[0];
+        }
+        if (!retryResult.system) {
+          return [];
+        }
+        return retryResult.system.sync.strands.map((s) => ({
+          ...s,
+          operations: s.operations.map((o) => ({
+            ...o,
+            input: JSON.parse(o.input) as object,
+          })),
+        }));
+      }
       throw error;
     }
 
@@ -286,6 +424,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     url: string,
     listenerId: string,
     revisions: ListenerRevision[],
+    manager?: IListenerManager,
   ): Promise<void> {
     staticLogger().verbose(
       `acknowledgeStrands(url: ${url}, listener: ${listenerId})`,
@@ -304,6 +443,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       );
     }
 
+    const headers = await this.getAuthHeaders(url, manager);
     // order does not matter, we can send out requests in parallel
     const results = await Promise.allSettled(
       chunks.map(async (chunk) => {
@@ -318,10 +458,35 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             }
           `,
           { listenerId, revisions: chunk },
+          headers,
         );
 
         const error = result.errors?.at(0);
         if (error) {
+          if (error.message.includes("Unauthorized")) {
+            // Retry once with fresh JWT
+            const freshHeaders = await this.getAuthHeaders(url, manager);
+            const retryResult = await requestGraphql<{ acknowledge: boolean }>(
+              url,
+              gql`
+                mutation acknowledge(
+                  $listenerId: String!
+                  $revisions: [ListenerRevisionInput]
+                ) {
+                  acknowledge(listenerId: $listenerId, revisions: $revisions)
+                }
+              `,
+              { listenerId, revisions: chunk },
+              freshHeaders,
+            );
+            if (retryResult.errors?.at(0)) {
+              throw retryResult.errors[0];
+            }
+            if (retryResult.acknowledge === null || !retryResult.acknowledge) {
+              throw new Error("Error acknowledging strands");
+            }
+            return;
+          }
           throw error;
         }
 
@@ -358,6 +523,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
+    manager?: IListenerManager,
   ): Promise<boolean> {
     staticLogger().verbose(
       `executePull(driveId: ${driveId}), trigger:`,
@@ -378,7 +544,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         driveId,
         url,
         listenerId,
-        // since ?
+        undefined,
+        manager,
       );
     } catch (e) {
       error = e as Error;
@@ -406,7 +573,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
               driveId,
               url,
               listenerId,
-              // since ?
+              undefined,
+              manager,
             );
 
             staticLogger().verbose(
@@ -537,6 +705,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
           const { error, ...rest } = revision;
           return rest;
         }),
+        manager,
       );
 
       success = true;
@@ -583,6 +752,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     onError: (error: Error) => void,
     onRevisions?: (revisions: ListenerRevisionWithError[]) => void,
     onAcknowledge?: (success: boolean) => void,
+    manager?: IListenerManager,
   ): CancelPullLoop {
     staticLogger().verbose(
       `[SYNC DEBUG] PullResponderTransmitter.setupPull initiated for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
@@ -627,6 +797,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
             onError,
             onRevisions,
             onAcknowledge,
+            manager,
           );
 
           if (hasMore) {
@@ -668,6 +839,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     driveId: string,
     url: string,
     options: Pick<RemoteDriveOptions, "pullInterval" | "pullFilter">,
+    listenerManager: IListenerManager,
   ): Promise<PullResponderTrigger> {
     staticLogger().verbose(
       `createPullResponderTrigger(drive: ${driveId}, url: ${url})`,
@@ -685,6 +857,8 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       driveId,
       url,
       filter,
+      undefined,
+      listenerManager,
     );
 
     const pullTrigger: PullResponderTrigger = {

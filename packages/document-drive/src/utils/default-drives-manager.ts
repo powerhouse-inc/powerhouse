@@ -8,7 +8,7 @@ import {
   type RemoveDriveStrategy,
   type RemoveOldRemoteDrivesOption,
 } from "#server/types";
-import { requestPublicDrive } from "./graphql.js";
+import { requestPublicDriveWithTokenFromReactor } from "./graphql.js";
 import { logger } from "./logger.js";
 
 export interface IServerDelegateDrivesManager {
@@ -136,9 +136,8 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
           "preserve-by-url-and-detach"
             ? "detach"
             : "remove";
-
         const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map((url) =>
-          requestPublicDrive(url),
+          requestPublicDriveWithTokenFromReactor(url, this.server),
         );
 
         const drivesIdsToPreserve = (await Promise.all(getDrivesInfo)).map(
@@ -158,7 +157,8 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
       }
       case "remove-by-url": {
         const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
-          (driveUrl) => requestPublicDrive(driveUrl),
+          (driveUrl) =>
+            requestPublicDriveWithTokenFromReactor(driveUrl, this.server),
         );
         const drivesInfo = await Promise.all(getDrivesInfo);
 
@@ -198,7 +198,8 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
       }
       case "detach-by-url": {
         const getDrivesInfo = this.removeOldRemoteDrivesConfig.urls.map(
-          (driveUrl) => requestPublicDrive(driveUrl),
+          (driveUrl) =>
+            requestPublicDriveWithTokenFromReactor(driveUrl, this.server),
         );
         const drivesInfo = await Promise.all(getDrivesInfo);
 
@@ -251,7 +252,11 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
 
       try {
         const driveInfo =
-          remoteDrive.metadata ?? (await requestPublicDrive(remoteDrive.url));
+          remoteDrive.metadata ??
+          (await requestPublicDriveWithTokenFromReactor(
+            remoteDrive.url,
+            this.server,
+          ));
 
         remoteDriveInfo = { ...remoteDrive, metadata: driveInfo };
 

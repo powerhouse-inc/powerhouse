@@ -1,6 +1,6 @@
 {
   "name": "@renown/sdk",
-  "version": "0.15.4-dev.0",
+  "version": "0.15.4-dev.5",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
@@ -41,6 +41,8 @@
     "document-model": "workspace:*"
   },
   "dependencies": {
+    "@didtools/key-did": "^1.0.0",
+    "did-jwt": "^8.0.14",
     "did-jwt-vc": "^4.0.12",
     "did-resolver": "^4.1.0",
     "key-did-resolver": "^4.0.0"

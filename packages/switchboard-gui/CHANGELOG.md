@@ -1,3 +1,70 @@
+## 0.25.0-dev.13 (2025-05-27)
+
+### 🚀 Features
+
+- enforce conventional commits ([faa49da40](https://github.com/powerhouse-inc/powerhouse/commit/faa49da40))
+
+### 🩹 Fixes
+
+- **switchboard:** docker build ([7052e39e1](https://github.com/powerhouse-inc/powerhouse/commit/7052e39e1))
+- **scripts:** merged install tools and setup environment into one script ([2a7bd3c97](https://github.com/powerhouse-inc/powerhouse/commit/2a7bd3c97))
+
+### ❤️ Thank You
+
+- Frank
+
+## 0.25.0-dev.12 (2025-05-21)
+
+### 🩹 Fixes
+
+- docker build with PH_PACKAGES ([856ac1187](https://github.com/powerhouse-inc/powerhouse/commit/856ac1187))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 0.25.0-dev.11 (2025-05-15)
+
+### 🚀 Features
+
+- removed scalars package ([d6f7059a7](https://github.com/powerhouse-inc/powerhouse/commit/d6f7059a7))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 0.25.0-dev.10 (2025-05-15)
+
+### 🚀 Features
+
+- enabled switchboard command ([5a9c467bf](https://github.com/powerhouse-inc/powerhouse/commit/5a9c467bf))
+- removed scalars dependencies ([596aedbd5](https://github.com/powerhouse-inc/powerhouse/commit/596aedbd5))
+- **builder-tools:** handle recursive objects in initial state generator ([c9eedcc43](https://github.com/powerhouse-inc/powerhouse/commit/c9eedcc43))
+- **monorepo:** bump graphql lib ([ba9d5d338](https://github.com/powerhouse-inc/powerhouse/commit/ba9d5d338))
+- **monorepo:** handle updating monorepo build deps ([db2ac2316](https://github.com/powerhouse-inc/powerhouse/commit/db2ac2316))
+- **monorepo:** regenerate lockfile ([a6c390b4e](https://github.com/powerhouse-inc/powerhouse/commit/a6c390b4e))
+- **builder-tools:** fix wrong value used for field id ([a6c6142e0](https://github.com/powerhouse-inc/powerhouse/commit/a6c6142e0))
+- **reactor-api,reactor-local:** updated analytics dependencies ([cbeace573](https://github.com/powerhouse-inc/powerhouse/commit/cbeace573))
+- added sky-atlas-staging ([ac1658ce9](https://github.com/powerhouse-inc/powerhouse/commit/ac1658ce9))
+
+### 🩹 Fixes
+
+- **document-drive,reactor-api:** updated addDrive mutation and improved createDrive method ([440054262](https://github.com/powerhouse-inc/powerhouse/commit/440054262))
+- **document-drive:** fix type issue on browser storage ([240a78b41](https://github.com/powerhouse-inc/powerhouse/commit/240a78b41))
+- **ph-cli:** ph add does not remove installed packages ([aedfbf56e](https://github.com/powerhouse-inc/powerhouse/commit/aedfbf56e))
+- remove .env and add to .gitignore ([0d2d48684](https://github.com/powerhouse-inc/powerhouse/commit/0d2d48684))
+- **switchboard,reactor-local:** latest version of sky atlas was not being installed ([72bf72fd4](https://github.com/powerhouse-inc/powerhouse/commit/72bf72fd4))
+- made ph packages env var ([df93611b7](https://github.com/powerhouse-inc/powerhouse/commit/df93611b7))
+- remove filter ([842a93a75](https://github.com/powerhouse-inc/powerhouse/commit/842a93a75))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- ryanwolhuter @ryanwolhuter
+
 ## 0.25.0-dev.9 (2025-05-09)
 
 ### 🩹 Fixes

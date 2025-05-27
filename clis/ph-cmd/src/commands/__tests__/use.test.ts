@@ -13,7 +13,10 @@ import { useCommand } from "../use.js";
 vi.mock("node:fs");
 
 // Import installDependency after mocking
-import { installDependency } from "../../utils/index.js";
+import {
+  installDependency,
+  updateDependencyVersionString,
+} from "../../utils/index.js";
 
 vi.mock("../../utils/index.js", async (importOriginal) => {
   const actual: any = await importOriginal();
@@ -31,6 +34,7 @@ vi.mock("../../utils/index.js", async (importOriginal) => {
     getPackageManagerFromLockfile: vi.fn(),
     getProjectInfo: vi.fn(),
     installDependency: vi.fn(),
+    updateDependencyVersionString: vi.fn(),
   } as unknown;
 });
 
@@ -98,7 +102,7 @@ describe("useCommand", () => {
     const cmd = program.commands.find((c) => c.name() === "use");
     await cmd?.parseAsync(["node", "test", "dev"]);
 
-    expect(installDependency).toHaveBeenCalledWith(
+    expect(updateDependencyVersionString).toHaveBeenCalledWith(
       "pnpm",
       [
         "@powerhousedao/common@dev",
@@ -117,7 +121,7 @@ describe("useCommand", () => {
     const cmd = program.commands.find((c) => c.name() === "use");
     await cmd?.parseAsync(["node", "test", "prod"]);
 
-    expect(installDependency).toHaveBeenCalledWith(
+    expect(updateDependencyVersionString).toHaveBeenCalledWith(
       "pnpm",
       [
         "@powerhousedao/common@latest",
@@ -185,7 +189,7 @@ describe("useCommand", () => {
     const cmd = program.commands.find((c) => c.name() === "use");
     await cmd?.parseAsync(["node", "test", "dev", "--package-manager", "npm"]);
 
-    expect(installDependency).toHaveBeenCalledWith(
+    expect(updateDependencyVersionString).toHaveBeenCalledWith(
       "npm",
       expect.any(Array),
       "/test/project",
@@ -197,7 +201,7 @@ describe("useCommand", () => {
     await cmd?.parseAsync(["node", "test", "dev"]);
 
     // Verify that only installed dependencies are updated
-    const call = vi.mocked(installDependency).mock.calls[0];
+    const call = vi.mocked(updateDependencyVersionString).mock.calls[0];
     const updatedDependencies = call[1];
 
     expect(updatedDependencies).not.toContain("@powerhousedao/reactor-api@dev");
@@ -248,7 +252,7 @@ describe("useCommand", () => {
     const cmd = program.commands.find((c) => c.name() === "use");
     await cmd?.parseAsync(["node", "test", "dev"]);
 
-    expect(installDependency).toHaveBeenCalledWith(
+    expect(updateDependencyVersionString).toHaveBeenCalledWith(
       "pnpm",
       ["document-model@dev", "document-drive@dev"],
       "/test/project",
@@ -272,7 +276,7 @@ describe("useCommand", () => {
     const cmd = program.commands.find((c) => c.name() === "use");
     await cmd?.parseAsync(["node", "test", "dev"]);
 
-    expect(installDependency).toHaveBeenCalledWith(
+    expect(updateDependencyVersionString).toHaveBeenCalledWith(
       "pnpm",
       ["@powerhousedao/common@dev", "@powerhousedao/design-system@dev"],
       "/test/project",
@@ -296,7 +300,8 @@ describe("useCommand", () => {
     const cmd = program.commands.find((c) => c.name() === "use");
     await cmd?.parseAsync(["node", "test", "dev"]);
 
-    const updatedDependencies = vi.mocked(installDependency).mock.calls[0][1];
+    const updatedDependencies = vi.mocked(updateDependencyVersionString).mock
+      .calls[0][1];
     expect(updatedDependencies).toEqual([
       "document-model@dev",
       "document-drive@dev",
