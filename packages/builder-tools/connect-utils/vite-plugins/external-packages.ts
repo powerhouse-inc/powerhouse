@@ -3,7 +3,7 @@ import { exec } from "node:child_process";
 import fs from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { type PluginOption, type ViteDevServer } from "vite";
-import { IMPORT_SCRIPT_FILE, LOCAL_PACKAGE_ID } from "../constants.js";
+import { IMPORT_SCRIPT_FILE } from "../constants.js";
 import { makeImportScriptFromPackages } from "../helpers.js";
 
 const LOCAL_CSS = "../../style.css";
@@ -26,15 +26,13 @@ function generateImportScript(
       fs.existsSync(resolve(targetDir, LOCAL_JS.replace(".js", ".ts"))));
   const hasStyles =
     localPackage && fs.existsSync(resolve(targetDir, LOCAL_CSS));
+  const localJsPath = hasModule ? LOCAL_JS : undefined;
+  const localCssPath = hasStyles ? LOCAL_CSS : undefined;
 
   const fileContent = makeImportScriptFromPackages({
     packages,
-    localPackage,
-    hasStyles,
-    hasModule,
-    localJsPath: LOCAL_JS,
-    localCssPath: LOCAL_CSS,
-    localPackageId: LOCAL_PACKAGE_ID,
+    localJsPath,
+    localCssPath,
   });
   fs.writeFileSync(targetPath, fileContent);
 
