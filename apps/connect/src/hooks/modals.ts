@@ -7,7 +7,7 @@ import {
 } from '@powerhousedao/design-system';
 import {
     FOLDER,
-    useSetSelectedDriveId,
+    useSetSelectedNodeId,
     useUiNodesContext,
     type SharingType,
     type UiDriveNode,
@@ -23,7 +23,7 @@ export function useShowAddDriveModal() {
     const { showModal } = useModal();
     const { addDrive, addRemoteDrive } = useDocumentDriveServer();
     const { setSelectedNode } = useUiNodesContext();
-    const setSelectedDriveId = useSetSelectedDriveId();
+    const setSelectedNodeId = useSetSelectedNodeId();
     const apps = useApps();
     const makeUiDriveNode = useMakeUiDriveNode();
     const onAddLocalDrive = useCallback(
@@ -55,7 +55,7 @@ export function useShowAddDriveModal() {
                 const newDriveNode = await makeUiDriveNode(newDrive);
 
                 setSelectedNode(newDriveNode);
-                setSelectedDriveId(newDriveNode.id);
+                setSelectedNodeId(newDriveNode.id);
             } catch (e) {
                 console.error(e);
             }
@@ -98,7 +98,7 @@ export function useShowAddDriveModal() {
                 const newDriveNode = await makeUiDriveNode(newDrive);
 
                 setSelectedNode(newDriveNode);
-                setSelectedDriveId(newDriveNode.id);
+                setSelectedNodeId(newDriveNode.id);
             } catch (e) {
                 console.error(e);
             }
@@ -107,7 +107,7 @@ export function useShowAddDriveModal() {
             addRemoteDrive,
             makeUiDriveNode,
             setSelectedNode,
-            setSelectedDriveId,
+            setSelectedNodeId,
             t,
         ],
     );
@@ -132,7 +132,7 @@ export function useShowDriveSettingsModal() {
         deleteDrive,
     } = useDocumentDriveServer();
     const { driveNodes, setSelectedNode } = useUiNodesContext();
-    const setSelectedDriveId = useSetSelectedDriveId();
+    const setSelectedNodeId = useSetSelectedNodeId();
     const onRenameDrive = useCallback(
         async (uiDriveNode: UiDriveNode, newName: string) => {
             await renameDrive(uiDriveNode.id, newName);
@@ -162,7 +162,7 @@ export function useShowDriveSettingsModal() {
                     await deleteDrive(uiDriveNode.id);
 
                     setSelectedNode(driveNodes[0]);
-                    setSelectedDriveId(driveNodes[0].id);
+                    setSelectedNodeId(driveNodes[0].id);
 
                     toast(t('notifications.deleteDriveSuccess'), {
                         type: 'connect-deleted',

@@ -2,9 +2,8 @@ import { useDocumentDrives, useDocumentDriveServer } from '#hooks';
 import { useFileNodeDocument } from '#store';
 import { FILE } from '@powerhousedao/design-system';
 import {
-    useNodeMap,
     useSelectedDriveId,
-    useSetSelectedDriveId,
+    useSetSelectedNodeId,
     useUiNodesContext,
 } from '@powerhousedao/reactor-browser';
 import { useEffect } from 'react';
@@ -19,9 +18,7 @@ export default function Content() {
     const { driveId } = useParams();
     const [documentDrives, , , status] = useDocumentDrives();
     const selectedDriveId = useSelectedDriveId();
-    const setSelectedDriveId = useSetSelectedDriveId();
-    const nodeMap = useNodeMap();
-    console.log('nodeMap', nodeMap);
+    const setSelectedNodeId = useSetSelectedNodeId();
     const { selectedNode } = useUiNodesContext();
     const { addFile } = useDocumentDriveServer();
     const { fileNodeDocument } = useFileNodeDocument();
@@ -30,9 +27,9 @@ export default function Content() {
     useEffect(() => {
         if (!firstDriveId) return;
         if (selectedDriveId === null && firstDriveId) {
-            setSelectedDriveId(firstDriveId);
+            setSelectedNodeId(firstDriveId);
         }
-    }, [selectedDriveId, setSelectedDriveId, firstDriveId]);
+    }, [selectedDriveId, setSelectedNodeId, firstDriveId]);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {

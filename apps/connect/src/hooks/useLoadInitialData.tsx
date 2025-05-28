@@ -10,9 +10,8 @@ import {
     type UiDriveNode,
 } from '@powerhousedao/design-system';
 import {
-    useSetNodeMap,
     useUiNodesContext,
-    makeNodeMap,
+    useUpdateNodeMap,
 } from '@powerhousedao/reactor-browser';
 import { logger, type DocumentDriveDocument } from 'document-drive';
 import { type TFunction } from 'i18next';
@@ -28,7 +27,7 @@ export const useLoadInitialData = () => {
     const { t } = useTranslation();
     const { documentDrives, onSyncStatus } = useDocumentDriveServer();
     const { driveNodes, setDriveNodes } = useUiNodesContext();
-    const setNodeMap = useSetNodeMap();
+    const updateNodeMap = useUpdateNodeMap();
     const prevDrivesState = useRef([...driveNodes]);
     const drivesWithError = useRef<UiDriveNode[]>([]);
     const [, , serverSubscribeUpdates] = useDocumentDrives();
@@ -144,10 +143,9 @@ export const useLoadInitialData = () => {
         async (documentDrives: DocumentDriveDocument[]) => {
             const uiDriveNodes = await makeUiDriveNodes(documentDrives);
             setDriveNodes(uiDriveNodes);
-            const nodeMap = makeNodeMap(documentDrives);
-            setNodeMap(nodeMap);
+            updateNodeMap(documentDrives);
         },
-        [makeUiDriveNodes, setDriveNodes],
+        [makeUiDriveNodes, setDriveNodes, updateNodeMap],
     );
     useEffect(() => {
         const drives: DocumentDriveDocument[] = [

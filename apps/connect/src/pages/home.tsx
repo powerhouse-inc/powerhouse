@@ -12,7 +12,7 @@ import {
     type UiDriveNode,
 } from '@powerhousedao/design-system';
 import {
-    useSetSelectedDriveId,
+    useSetSelectedNodeId,
     useUiNodesContext,
 } from '@powerhousedao/reactor-browser';
 import { useCallback } from 'react';
@@ -40,14 +40,14 @@ export function Home() {
     const showAddDriveModal = useShowAddDriveModal();
     const { documentDrives } = useDocumentDriveServer();
     const { driveNodes, setSelectedNode } = useUiNodesContext();
-    const setSelectedDriveId = useSetSelectedDriveId();
+    const setSelectedNodeId = useSetSelectedNodeId();
     const [config] = useConnectConfig();
     const handleDriveClick = useCallback(
         (driveNode: UiDriveNode) => {
             setSelectedNode(driveNode);
-            setSelectedDriveId(driveNode.id);
+            setSelectedNodeId(driveNode.id);
         },
-        [setSelectedNode, setSelectedDriveId],
+        [setSelectedNode, setSelectedNodeId],
     );
 
     const onAddDriveClick = useCallback(() => {
