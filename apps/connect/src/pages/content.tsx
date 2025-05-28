@@ -2,6 +2,7 @@ import { useDocumentDrives, useDocumentDriveServer } from '#hooks';
 import { useFileNodeDocument } from '#store';
 import { FILE } from '@powerhousedao/design-system';
 import {
+    useNodeMap,
     useSelectedDriveId,
     useSetSelectedDriveId,
     useUiNodesContext,
@@ -19,6 +20,8 @@ export default function Content() {
     const [documentDrives, , , status] = useDocumentDrives();
     const selectedDriveId = useSelectedDriveId();
     const setSelectedDriveId = useSetSelectedDriveId();
+    const nodeMap = useNodeMap();
+    console.log('nodeMap', nodeMap);
     const { selectedNode } = useUiNodesContext();
     const { addFile } = useDocumentDriveServer();
     const { fileNodeDocument } = useFileNodeDocument();
