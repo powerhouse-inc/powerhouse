@@ -1,6 +1,7 @@
 import { Operation } from "#shared/types.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus, type IEventBus } from "../src/events/event-bus.js";
+import { EventBus } from "../src/events/event-bus.js";
+import { type IEventBus } from "../src/events/interfaces.js";
 import {
   InMemoryJobExecutor,
   JobExecutorEventTypes,
@@ -12,7 +13,9 @@ import {
   type JobFailedEvent,
   type JobStartedEvent,
 } from "../src/executor/job-executor.js";
-import { InMemoryQueue, type IQueue, type Job } from "../src/queue/queue.js";
+import { type IQueue } from "../src/queue/interfaces.js";
+import { InMemoryQueue } from "../src/queue/queue.js";
+import { type Job } from "../src/queue/types.js";
 
 describe("InMemoryJobExecutor", () => {
   let executor: IJobExecutor;

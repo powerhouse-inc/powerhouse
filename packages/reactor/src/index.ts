@@ -1,19 +1,16 @@
 // Event Bus
-export {
-  EventBus,
-  EventBusAggregateError,
-  type IEventBus,
-  type Unsubscribe,
-} from "./events/event-bus.js";
+export { EventBus } from "./events/event-bus.js";
+export { type IEventBus } from "./events/interfaces.js";
+export { EventBusAggregateError, type Unsubscribe } from "./events/types.js";
 
 // Queue
+export { type IQueue } from "./queue/interfaces.js";
+export { InMemoryQueue } from "./queue/queue.js";
 export {
-  InMemoryQueue,
   QueueEventTypes,
-  type IQueue,
   type Job,
   type JobAvailableEvent,
-} from "./queue/queue.js";
+} from "./queue/types.js";
 
 // Job Executor
 export {
