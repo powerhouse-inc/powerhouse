@@ -73,13 +73,16 @@ export class SystemSubgraph extends Subgraph {
             throw new GraphQLError("Forbidden");
           }
 
-          const { name, icon, ...driveInput } = args;
+          const { name, icon, preferredEditor, ...driveInput } = args;
 
-          const drive = await this.reactor.addDrive({
-            ...driveInput,
-            global: { name, icon },
-            local: {},
-          });
+          const drive = await this.reactor.addDrive(
+            {
+              ...driveInput,
+              global: { name, icon },
+              local: {},
+            },
+            preferredEditor,
+          );
 
           const driveAdded = {
             id: drive.id,
