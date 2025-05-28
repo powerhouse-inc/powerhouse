@@ -123,10 +123,10 @@ export default function HomepageFeatures() {
               <div className={styles.cardIconWrapper}>
                 <img src="/img/academy/icons/Book.svg" alt="" />
               </div>
-              <h3 className={styles.cardTitle}>Book of Powerhouse</h3>
+              <h3 className={styles.cardTitle}>New Link</h3>
             </div>
             <div className={styles.cardContent}>
-              <a href="/docs/bookofpowerhouse/Overview" className={styles.pathButton}>The Vision of Powerhouse</a>
+              <a href="@callmeT" className={styles.pathButton}>The Vision of Powerhouse</a>
             </div>
           </div>
 

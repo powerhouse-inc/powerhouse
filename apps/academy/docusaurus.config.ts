@@ -37,9 +37,8 @@ const config: Config = {
       'classic',
       {
         docs: {
+          routeBasePath: '/',
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/powerhouse-inc/powerhouse-docs/tree/dev',
           showLastUpdateTime: false,
@@ -81,6 +80,7 @@ const config: Config = {
         alt: 'My Site Logo',
         src: 'img/Powerhouse-main.svg',
         srcDark: 'img/Powerhouse-main-light.svg',
+        href: '/',
       },
       items: [
         {
@@ -89,13 +89,6 @@ const config: Config = {
           position: 'left',
           label: 'Academy',
         },
-        {
-          type: 'docSidebar',
-          sidebarId: 'bookofpowerhouseSidebar',
-          position: 'left',
-          label: 'Book of Powerhouse',
-        },
-        {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/powerhouse-inc/powerhouse-docs',
           label: 'GitHub',

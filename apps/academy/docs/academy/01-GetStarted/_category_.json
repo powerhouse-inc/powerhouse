@@ -1,3 +1,8 @@
 {
-    "label": "Get Started"
+    "label": "Get Started",
+   "position": 1,
+  "link": {
+    "type": "doc",
+    "id": "academy/GetStarted/home"
   }
+}

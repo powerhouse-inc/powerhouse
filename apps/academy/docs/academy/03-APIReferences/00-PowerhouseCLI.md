@@ -38,3 +38,18 @@ When installing or using the Powerhouse CLI commands you are able to make use of
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 </details>
+
+
+the ph connect command now uses three subcommands:
+
+studio (default) — runs connect studio. since this is the default argument, running ph connect still has the same behavior as before,
+
+build — bundles the project's local and external model/editor code and injects the js/css into the already-built connect bundle for deployment,
+
+preview — runs the vite preview server with the output of build for testing purposes,
+
+running ph connect --help now lists the sub-commands. Running ph connect studio --help now shows the help for the studio command, likewise for the other new commands.
+
+This approach avoids redundant build/compilation which is great for minimizing server resource use. The only compilation that runs is the esbuild of the project code (does not need tsc as that is handled separately) and then tailwind for the local project styles. The whole thing takes less than a second, albeit on my macbook.
+
+This should just work with the current boilerplate since these are just new arguments to the existing ph-cli connect command. 

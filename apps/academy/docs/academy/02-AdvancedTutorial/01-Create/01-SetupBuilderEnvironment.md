@@ -3,41 +3,8 @@
 Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
 :::info
-If you've already set up Git, Node, and pnpm, your most important step is to install the Powerhouse CLI with the command `pnpm install ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. In this case use `pnpm install -g ph-cmd`. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of [Powerhouse Builder Tools](../Create/BuilderTools)
+If you've already set up **Git, Node, and pnpm**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. In this case use `pnpm install -g ph-cmd`. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of [Powerhouse Builder Tools](../Create/BuilderTools). Move to the end of this chapter to [verify your installation.](#verify-installation)
 :::
-
-The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides essential commands for managing Powerhouse projects. You can get access to the Powerhouse Ecosystem tools by installing them globally using:
-```bash
-pnpm install -g ph-cmd
-``` 
-
-Key commands include:
-- `ph connect` for running the Connect application locally
-- `ph switchboard` or `ph reactor` for starting the API service
-- `ph init` to start a new project and build a document model
-- `ph help` to get an overview of all the available commands
-
-This tool will be fundamental on your journey when creating, building, and running Document Models.
-
-<details>
-<summary> How to make use of different branches? </summary>
-
-When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features then the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
-
-| Command | Description |
-|---------|-------------|
-| **pnpm install -g ph-cmd** | Install latest stable version |
-| **pnpm install -g ph-cmd@dev** | Install development version |
-| **pnpm install -g ph-cmd@staging** | Install staging version |
-| **ph init** | Use latest stable version of the boilerplate |
-| **ph init --dev** | Use development version of the boilerplate |
-| **ph init --staging** | Use staging version of the boilerplate |
-| **ph use** | Switch all dependencies to latest production versions |
-| **ph use dev** | Switch all dependencies to development versions |
-| **ph use prod** | Switch all dependencies to production versions |
-
-Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
-</details>
 ___
 
 ## Table of Contents
@@ -55,9 +22,10 @@ ___
   - [For macOS](#for-macos-2)
   - [For Linux (Ubuntu/Debian)](#for-linux-ubuntudebian-2)
 - [Configure Git](#configure-git-all-systems)
+- [Install Powerhouse CLI](#install-powerhouse-cli)
 - [Verify Installation](#verify-installation)
 
-## Prerequisites
+## Overview
 
 Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools: node.js 22, which helps us run our code, Visual Studio Code (VS Code), which is where we'll write our code, and Git, which helps us manage our code. Follow the steps below based on your computer's operating system.
 
@@ -235,6 +203,41 @@ git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
 ```
 
+### Install Powerhouse CLI
+
+The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides essential commands for managing Powerhouse projects. You can get access to the Powerhouse Ecosystem tools by installing them globally using:
+```bash
+pnpm install -g ph-cmd
+``` 
+
+Key commands include:
+- `ph connect` for running the Connect application locally
+- `ph switchboard` or `ph reactor` for starting the API service
+- `ph init` to start a new project and build a document model
+- `ph help` to get an overview of all the available commands
+
+This tool will be fundamental on your journey when creating, building, and running Document Models.
+
+<details>
+<summary> How to make use of different branches? </summary>
+
+When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features then the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
+
+| Command | Description |
+|---------|-------------|
+| **pnpm install -g ph-cmd** | Install latest stable version |
+| **pnpm install -g ph-cmd@dev** | Install development version |
+| **pnpm install -g ph-cmd@staging** | Install staging version |
+| **ph init** | Use latest stable version of the boilerplate |
+| **ph init --dev** | Use development version of the boilerplate |
+| **ph init --staging** | Use staging version of the boilerplate |
+| **ph use** | Switch all dependencies to latest production versions |
+| **ph use dev** | Switch all dependencies to development versions |
+| **ph use prod** | Switch all dependencies to production versions |
+
+Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
+</details>
+
 ### Verify Installation
 
 Open your terminal (command prompt) and run the following commands to verify your setup:
@@ -243,5 +246,7 @@ node --version
 pnpm --version
 git --version
 ```
+
+ADD VERSION NUMBER OUTPUTS @CallmeT
 
 You should see version numbers displayed for all commands. You're now ready to start building your first Document Model!
