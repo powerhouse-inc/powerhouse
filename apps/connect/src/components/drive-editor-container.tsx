@@ -98,7 +98,7 @@ export function DriveEditorContainer() {
                 selectedParentNode,
                 setSelectedNode,
             });
-            return Promise.resolve({ name: 'New Document' }); // TODO fix this
+            return Promise.resolve();
         },
         [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
     );
