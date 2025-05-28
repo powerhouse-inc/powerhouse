@@ -1,5 +1,11 @@
 import { useReadModeContext } from '#context';
-import { documentToHash, useDocumentDriveServer } from '#hooks';
+import {
+    documentToHash,
+    getDriveSharingType,
+    useDocumentDriveById,
+    useDocumentDriveServer,
+} from '#hooks';
+import { useSelectedDriveId } from '@powerhousedao/reactor-browser/atoms';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { logger } from 'document-drive';
 import {
@@ -149,16 +155,19 @@ const useSetSelectedDocument = () => useSetAtom(selectedDocumentAtom);
 
 export function useFileNodeDocument() {
     useDebugValue('useFileNodeDocument');
-    const { selectedNode, selectedDriveNode } = useUiNodesContext();
-
-    const { openFile, addOperations, onStrandUpdate } =
+    const { selectedNode } = useUiNodesContext();
+    const selectedDriveId = useSelectedDriveId();
+    const documentDrive = useDocumentDriveById(selectedDriveId);
+    const sharingType = getDriveSharingType(documentDrive.drive);
+    const { openFile, addOperations, onStrandUpdate, getSyncStatus } =
         useDocumentDriveServer();
+    const syncStatus = documentDrive.drive
+        ? getSyncStatus(documentDrive.drive.id, sharingType)
+        : undefined;
     const { fetchDocument: fetchReadDocument } = useReadModeContext();
     const [fileNodeDocument, setFileNodeDocument] =
         useAtom(fileNodeDocumentAtom);
-    const isReadMode =
-        selectedDriveNode?.sharingType !== 'LOCAL' &&
-        selectedDriveNode?.syncStatus === undefined;
+    const isReadMode = sharingType !== 'LOCAL' && syncStatus === undefined;
     const driveId = selectedNode?.driveId;
     const documentId = selectedNode?.id;
     const name = selectedNode?.name;
@@ -298,14 +307,14 @@ export function useFileNodeDocument() {
 
     const addOperationToSelectedDrive = useCallback(
         (operation: Operation) => {
-            if (!selectedDriveNode?.id) {
+            if (!selectedDriveId) {
                 throw new Error('No drive node selected');
             }
             return debounceOperations(operations =>
-                addOperations(selectedDriveNode.id, undefined, operations),
+                addOperations(selectedDriveId, undefined, operations),
             )(operation);
         },
-        [addOperations, selectedDriveNode?.id],
+        [addOperations, selectedDriveId],
     );
 
     const isSelectedDocument =

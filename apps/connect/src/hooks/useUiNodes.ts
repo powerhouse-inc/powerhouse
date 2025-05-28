@@ -17,6 +17,18 @@ import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 
+export function getDriveSharingType(
+    drive: DocumentDriveDocument | ReadDrive | undefined | null,
+) {
+    if (!drive) return PUBLIC;
+    const isReadDrive = 'readContext' in drive;
+    const { sharingType: _sharingType, availableOffline } = !isReadDrive
+        ? drive.state.local
+        : { sharingType: PUBLIC, availableOffline: false };
+    const __sharingType = _sharingType?.toUpperCase();
+    return (__sharingType === 'PRIVATE' ? LOCAL : __sharingType) as SharingType;
+}
+
 export function useMakeUiDriveNode() {
     const { getSyncStatus } = useDocumentDriveServer();
     const makeUiDriveNode = useCallback(
@@ -29,10 +41,7 @@ export function useMakeUiDriveNode() {
             const { sharingType: _sharingType, availableOffline } = !isReadDrive
                 ? drive.state.local
                 : { sharingType: PUBLIC, availableOffline: false };
-            const __sharingType = _sharingType?.toUpperCase();
-            const sharingType = (
-                __sharingType === 'PRIVATE' ? LOCAL : __sharingType
-            ) as SharingType;
+            const sharingType = getDriveSharingType(drive);
             const driveSyncStatus = !isReadDrive
                 ? await getSyncStatus(id, sharingType)
                 : undefined;

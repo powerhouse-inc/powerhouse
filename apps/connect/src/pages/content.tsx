@@ -1,7 +1,11 @@
 import { useDocumentDrives, useDocumentDriveServer } from '#hooks';
 import { useFileNodeDocument } from '#store';
 import { FILE } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import {
+    useSelectedDriveId,
+    useSetSelectedDriveId,
+    useUiNodesContext,
+} from '@powerhousedao/reactor-browser';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
@@ -13,24 +17,34 @@ export default function Content() {
     const navigate = useNavigate();
     const { driveId } = useParams();
     const [documentDrives, , , status] = useDocumentDrives();
-    const { selectedDriveNode, selectedNode } = useUiNodesContext();
+    const selectedDriveId = useSelectedDriveId();
+    const setSelectedDriveId = useSetSelectedDriveId();
+    const { selectedNode } = useUiNodesContext();
     const { addFile } = useDocumentDriveServer();
     const { fileNodeDocument } = useFileNodeDocument();
+    const firstDriveId = documentDrives[0]?.id;
+
+    useEffect(() => {
+        if (!firstDriveId) return;
+        if (selectedDriveId === null && firstDriveId) {
+            setSelectedDriveId(firstDriveId);
+        }
+    }, [selectedDriveId, setSelectedDriveId, firstDriveId]);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
-            if (!selectedDriveNode || selectedNode?.kind !== FILE) {
+            if (!selectedDriveId || selectedNode?.kind !== FILE) {
                 return;
             }
 
             await addFile(
                 file.content,
-                selectedDriveNode.id,
+                selectedDriveId,
                 file.name,
                 selectedNode.parentFolder,
             );
         });
-    }, [selectedDriveNode, selectedNode, addFile]);
+    }, [selectedDriveId, selectedNode, addFile]);
 
     // if drives are loaded and route driveId is not found
     // then redirects to homepage
@@ -53,8 +67,8 @@ export default function Content() {
         <div className="flex h-full flex-col overflow-auto" id="content-view">
             {fileNodeDocument ? (
                 <DocumentEditorContainer key={fileNodeDocument.documentId} />
-            ) : selectedDriveNode ? (
-                <DriveEditorContainer key={selectedDriveNode.id} />
+            ) : selectedDriveId ? (
+                <DriveEditorContainer key={selectedDriveId} />
             ) : null}
         </div>
     );

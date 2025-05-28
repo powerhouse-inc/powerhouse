@@ -6,7 +6,10 @@ import {
 } from '#hooks';
 import { useFilteredDocumentModels } from '#store';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import {
+    useSelectedDriveId,
+    useUiNodesContext,
+} from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
 import Button from './button.js';
@@ -25,8 +28,8 @@ export function DriveView() {
     const [connectConfig] = useConnectConfig();
     const { showModal } = useModal();
     const { addFolder } = useDocumentDriveServer();
+    const selectedDriveId = useSelectedDriveId();
     const {
-        selectedDriveNode,
         selectedParentNode,
         setSelectedNode,
         selectedNodePath,
@@ -45,14 +48,12 @@ export function DriveView() {
     } = useUiNodes();
     const createFolder = useCallback(
         (name: string, parentFolder: string | undefined) => {
-            if (!selectedDriveNode) {
+            if (!selectedDriveId) {
                 return;
             }
-            addFolder(selectedDriveNode.id, name, parentFolder).catch(
-                console.error,
-            );
+            addFolder(selectedDriveId, name, parentFolder).catch(console.error);
         },
-        [selectedDriveNode, addFolder],
+        [selectedDriveId, addFolder],
     );
 
     const { breadcrumbs, onBreadcrumbSelected } = useBreadcrumbs({
@@ -63,15 +64,13 @@ export function DriveView() {
 
     const createDocument = useCallback(
         (documentModel: DocumentModelModule) => {
-            if (!selectedDriveNode) return;
-
             showModal('createDocument', {
                 documentModel,
                 selectedParentNode,
                 setSelectedNode,
             });
         },
-        [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
+        [selectedParentNode, setSelectedNode, showModal],
     );
 
     return (

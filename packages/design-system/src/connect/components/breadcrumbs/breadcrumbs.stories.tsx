@@ -41,7 +41,6 @@ export const Default: Story = {
       setDriveNodes,
       setSelectedNode,
       selectedNode,
-      selectedDriveNode,
       selectedNodePath,
     } = useUiNodesContext();
 
@@ -72,10 +71,10 @@ export const Default: Story = {
 
       setDriveNodes([
         {
-          ...selectedDriveNode!,
-          children: [...selectedDriveNode!.children, newFolderNode],
+          ...mockDriveNodes[0],
+          children: [...mockDriveNodes[0].children, newFolderNode],
           nodeMap: {
-            ...selectedDriveNode!.nodeMap,
+            ...mockDriveNodes[0].nodeMap,
             [newFolderNode.id]: newFolderNode,
           },
         },

@@ -13,10 +13,7 @@ import {
     signOperation,
     validateDocument,
 } from '#utils';
-import {
-    type UiDriveNode,
-    type UiFileNode,
-} from '@powerhousedao/design-system';
+import { type UiNode } from '@powerhousedao/design-system';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import {
@@ -48,7 +45,7 @@ export interface EditorProps {
 }
 
 export function useEditorDispatch(
-    node: UiDriveNode | UiFileNode | null,
+    node: UiNode | null,
     documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
@@ -59,7 +56,9 @@ export function useEditorDispatch(
     const documentType =
         node?.kind === 'DRIVE'
             ? 'powerhouse/document-drive'
-            : node?.documentType;
+            : !!node && 'documentType' in node
+              ? node.documentType
+              : undefined;
     const getDocumentModelModule = useGetDocumentModelModule();
     const documentModelModule = useMemo(
         () => (documentType ? getDocumentModelModule(documentType) : undefined),
@@ -115,7 +114,7 @@ export function useEditorDispatch(
 
 export function useEditorProps(
     document: PHDocument | undefined,
-    node: UiDriveNode | UiFileNode | null,
+    node: UiNode | null,
     documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {

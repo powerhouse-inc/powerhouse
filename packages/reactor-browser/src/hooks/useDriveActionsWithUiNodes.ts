@@ -7,8 +7,9 @@ import {
 } from "document-drive";
 import { type EditorDispatch } from "document-model";
 import { useMemo } from "react";
+import { useSelectedDriveId } from "../atoms.js";
 import { FILE } from "../uiNodes/constants.js";
-import type { UiFileNode, UiNode } from "../uiNodes/types.js";
+import type { UiNode } from "../uiNodes/types.js";
 import { type IDriveActions, useDriveActions } from "./useDriveActions.js";
 import { type IDriveContext, useDriveContext } from "./useDriveContext.js";
 import { useUiNodesContext } from "./useUiNodesContext.js";
@@ -24,7 +25,7 @@ function toNode(uiNode: UiNode): Node {
   } else {
     // Remove after ts reset is fixed
 
-    const fileNode = uiNode as UiFileNode;
+    const fileNode = uiNode;
     return {
       id,
       name,
@@ -79,9 +80,8 @@ export function useDriveActionsWithUiNodes(
   document: DocumentDriveDocument,
   dispatch: EditorDispatch<DocumentDriveAction>,
 ) {
-  const { selectedNode, selectedDriveNode, setSelectedNode, getNodeById } =
-    useUiNodesContext();
-
+  const { selectedNode, setSelectedNode, getNodeById } = useUiNodesContext();
+  const selectedDriveId = useSelectedDriveId();
   const _driveContext = useDriveContext();
 
   const driveContext: IDriveContext = useMemo(
@@ -93,7 +93,7 @@ export function useDriveActionsWithUiNodes(
         setSelectedNode(getNodeById(node.id));
       },
     }),
-    [selectedNode, selectedDriveNode?.driveId, setSelectedNode, getNodeById],
+    [selectedNode, selectedDriveId, setSelectedNode, getNodeById],
   );
   const driveActions = useDriveActions(document, dispatch, driveContext);
 

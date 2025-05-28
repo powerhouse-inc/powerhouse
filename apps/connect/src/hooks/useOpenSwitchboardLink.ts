@@ -2,7 +2,7 @@ import { getSwitchboardUrl, openUrl } from '#utils';
 import { FILE, type UiNode } from '@powerhousedao/design-system';
 import { useDocumentDriveById } from './useDocumentDriveById.js';
 
-export const useOpenSwitchboardLink = (driveId: string | undefined) => {
+export const useOpenSwitchboardLink = (driveId: string | undefined | null) => {
     const { isRemoteDrive, remoteUrl } = useDocumentDriveById(driveId);
 
     return async (uiNode?: UiNode | null) => {

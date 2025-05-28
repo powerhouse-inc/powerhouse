@@ -3,7 +3,7 @@ import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 
 type ExtendedDocumentDriveState = DocumentDriveState & { remoteUrl?: string };
 
-export function useDocumentDriveById(driveId: string | undefined) {
+export function useDocumentDriveById(driveId: string | undefined | null) {
     const { documentDrives } = useDocumentDriveServer();
     if (!driveId)
         return {

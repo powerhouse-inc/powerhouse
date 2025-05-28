@@ -5,7 +5,10 @@ import {
     useOpenSwitchboardLink,
 } from '#hooks';
 import { useFileNodeDocument, useGetDocumentModelModule } from '#store';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import {
+    useSelectedDriveId,
+    useUiNodesContext,
+} from '@powerhousedao/reactor-browser';
 import { type GetDocumentOptions } from 'document-drive';
 import {
     type EditorContext,
@@ -29,14 +32,11 @@ export function DocumentEditorContainer() {
         addOperationToSelectedDocument,
     } = useFileNodeDocument();
     const { renameNode } = useDocumentDriveServer();
-    const {
-        selectedNode,
-        selectedDriveNode,
-        selectedParentNode,
-        setSelectedNode,
-    } = useUiNodesContext();
-    const { isRemoteDrive } = useDocumentDriveById(selectedDriveNode?.id);
-    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
+    const { selectedNode, selectedParentNode, setSelectedNode } =
+        useUiNodesContext();
+    const selectedDriveId = useSelectedDriveId();
+    const { isRemoteDrive } = useDocumentDriveById(selectedDriveId);
+    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveId);
     const getDocumentModelModule = useGetDocumentModelModule();
 
     const getDocument = useGetDocument();

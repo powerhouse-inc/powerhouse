@@ -17,7 +17,10 @@ import {
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import { type DriveEditorContext } from '@powerhousedao/reactor-browser';
+import {
+    useSelectedDriveId,
+    type DriveEditorContext,
+} from '@powerhousedao/reactor-browser';
 import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
 import { type IDriveContext } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
@@ -42,30 +45,27 @@ function DriveEditorError({ error }: FallbackProps) {
 }
 
 function useSelectedDocumentDrive() {
-    const { selectedDriveNode } = useUiNodesContext();
+    const selectedDriveId = useSelectedDriveId();
 
-    if (!selectedDriveNode) {
+    if (!selectedDriveId) {
         throw new Error('No drive node selected');
     }
 
-    const documentDrive = useDocumentDriveById(selectedDriveNode.id);
+    const documentDrive = useDocumentDriveById(selectedDriveId);
 
     if (!documentDrive.drive) {
-        throw new Error(`Drive with id "${selectedDriveNode.id}" not found`);
+        throw new Error(`Drive with id "${selectedDriveId}" not found`);
     }
 
     return documentDrive.drive;
 }
 
 export function DriveEditorContainer() {
-    const {
-        selectedDriveNode,
-        setSelectedNode,
-        selectedNode,
-        selectedParentNode,
-    } = useUiNodesContext();
+    const { setSelectedNode, selectedNode, selectedParentNode } =
+        useUiNodesContext();
     const { addOperationToSelectedDrive } = useFileNodeDocument();
     const documentDrive = useSelectedDocumentDrive();
+    const selectedDriveId = useSelectedDriveId();
     const [document, _dispatch, error] = useDocumentDispatch(
         driveDocumentModelModule.reducer,
         documentDrive,
@@ -81,7 +81,7 @@ export function DriveEditorContainer() {
 
     const editorProps = useEditorProps(
         document,
-        selectedDriveNode,
+        selectedNode,
         _dispatch,
         handleAddOperationToSelectedDrive,
     );
@@ -89,10 +89,6 @@ export function DriveEditorContainer() {
     const { showModal } = useModal();
     const showCreateDocumentModal = useCallback(
         (documentModel: DocumentModelModule) => {
-            if (!selectedDriveNode) {
-                throw new Error('No drive node selected');
-            }
-
             showModal('createDocument', {
                 documentModel,
                 selectedParentNode,
@@ -100,7 +96,7 @@ export function DriveEditorContainer() {
             });
             return Promise.resolve({ name: 'New Document' }); // TODO fix this
         },
-        [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
+        [selectedParentNode, setSelectedNode, showModal],
     );
 
     const { addFile, addDocument } = useDocumentDriveServer();
@@ -127,7 +123,6 @@ export function DriveEditorContainer() {
             showSearchBar: false,
             isAllowedToCreateDocuments: editorProps.isAllowedToCreateDocuments,
             documentModels: documentModels ?? [],
-            selectedDriveNode,
             selectedNode,
             selectNode: setSelectedNode,
             addFile,
@@ -160,12 +155,9 @@ export function DriveEditorContainer() {
         driveEditor?.Component ?? GenericDriveExplorer.Component;
 
     return (
-        <ErrorBoundary
-            fallbackRender={DriveEditorError}
-            key={selectedDriveNode?.id}
-        >
+        <ErrorBoundary fallbackRender={DriveEditorError} key={selectedDriveId}>
             <DriveEditorComponent
-                key={selectedDriveNode?.id}
+                key={selectedDriveId}
                 {...editorProps}
                 context={{
                     ...editorProps.context,
