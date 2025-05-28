@@ -53,7 +53,7 @@ pnpm install -g ph-cmd@<version>
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
 </details>
 
 <details id="uninstalling-ph-cmd">
@@ -94,8 +94,8 @@ rm -rf ~/.ph
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
-- [Create A New Powerhouse Project](/docs/academy/GetStarted/ToDoList/CreateNewPowerhouseProject)
+- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [Create A New Powerhouse Project](/academy/GetStarted/CreateNewPowerhouseProject)
 </details>
 
 <details id="setting-up-or-resetting-the-global-powerhouse-configuration">
@@ -153,8 +153,9 @@ ph use staging
 - [Using Different Branches in Powerhouse](#using-different-branches-in-powerhouse)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
-- [GraphQL Schema Best Practices](/docs/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
+- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [Domain Modeling Guide](/domain-modeling)
+- [GraphQL Schema Best Practices](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
 </details>
 
 <details id="using-different-branches-in-powerhouse">
@@ -232,7 +233,7 @@ ph use prod
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
 </details>
 
 <details id="using-different-package-managers-with-powerhouse">
@@ -331,7 +332,7 @@ ph init --package-manager pnpm
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
 - [Yarn Global Installation Guide](https://classic.yarnpkg.com/lang/en/docs/cli/global/)
 - [Bun Installation Guide](https://bun.sh/docs/installation#how-to-add-your-path)
 </details>
@@ -402,8 +403,8 @@ In the "New Document" section at the bottom of the page, click the `DocumentMode
 - Implementing Document Model Reducers (Details to be added)
 
 ## Further Reading
-- [Domain Modeling Guide](/docs/domain-modeling)
-- [GraphQL Schema Best Practices](/docs/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
+- [Domain Modeling Guide](/domain-modeling)
+- [GraphQL Schema Best Practices](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
 </details>
 
 <details id="generating-reducers-from-a-document-model-file">
@@ -450,7 +451,7 @@ The command will output the generated reducer scaffolding code in the designated
 - Generating a Document Editor
 
 ## Further Reading
-- [Domain Modeling Guide](/docs/domain-modeling)
+- [Domain Modeling Guide](/domain-modeling)
 
 </details>
 
@@ -543,8 +544,8 @@ You might encounter a browser warning about the self-signed certificate; you may
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
-- [GraphQL Schema Best Practices](/docs/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
+- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [GraphQL Schema Best Practices](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
 </details>
 
 
@@ -591,7 +592,7 @@ ph generate --editor <ModelName> --document-types <docType>
 - [Generating a Custom Drive Explorer](#generating-a-custom-drive-explorer)
 
 ## Further Reading
-- [Build a Todo-list Editor](/docs/academy/GetStarted/ToDoList/BuildToDoListEditor)
+- [Build a Todo-list Editor](/academy/GetStarted/BuildToDoListEditor)
 </details>
 
 <details id="generating-a-custom-drive-explorer">
@@ -633,7 +634,7 @@ ph generate --drive-editor <drive-app-name>
 - [Generating a Document Editor](#generating-a-document-editor)
 
 ## Further Reading
-- [Build a Drive-Explorer](/docs/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer)
+- [Build a Drive-Explorer](/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer)
 </details>
 
 <details id="adding-a-new-drive-via-graphql-mutation">
@@ -709,12 +710,12 @@ Use the constructed URL to add or access the drive in your Connect environment.
 - The drive can be managed or accessed using the generated URL.
 
 ## Related Recipes
-- [Configuring Drives](/docs/academy/AdvancedTutorial/BuildingUserExperiences/ConfiguringDrives)
+- [Configuring Drives](/academy/AdvancedTutorial/BuildingUserExperiences/ConfiguringDrives)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
 ## Further Reading
 - [GraphQL Playground](https://www.apollographql.com/docs/apollo-server/testing/graphql-playground/)
-- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
 
 </details>
 
@@ -917,8 +918,8 @@ You need to understand and manage different types of dependencies in your Powerh
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/docs/academy/AdvancedTutorial/Create/BuilderTools)
-- [GraphQL Schema Best Practices](/docs/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
+- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [GraphQL Schema Best Practices](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
 
 </details>
 

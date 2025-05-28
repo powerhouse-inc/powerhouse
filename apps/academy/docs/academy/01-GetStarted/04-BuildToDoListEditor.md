@@ -1,12 +1,12 @@
-# Build a Todo-list Editor
+# 4. Build a ToDoList Editor
 
-In this chapter we will continue with the interface or editor implementation of the **ToDoList** document model editor. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items.
+In this chapter we will continue with the interface or editor implementation of the **ToDoList** document model. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items.
 
 ## Generate the editor template
 
-Run the command below to generate the editor template for the **ToDoList** document model. This command reads the **ToDoList** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list/editor.tsx` folder.
+Run the command below to generate the editor template for the **ToDoList** document model. This command reads the **ToDoList** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
 
-Notice the `--editor` flag which defines the **ToDoList** document model. And the `--document-types` flag which defines the document type `powerhouse/todolist`.
+Notice the `--editor` flag which specifies the **ToDoList** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
 
 ```bash
 ph generate --editor ToDoList --document-types powerhouse/todolist
@@ -188,18 +188,18 @@ export default function Editor({ document, dispatch }: IProps) {
 
 ---
 
-## To-do List Editor 
+## ToDoList Editor
 
 :::tip
 ### Implementing Components
-The editor we are about to implement makes use of some components from the **Powerhouse Design System**.   
-When you'll add the editor code you'll see it makes use of two components, the `Checkbox` and `InputField`.    
-These are imported from the Powerhouse Design System (`@powerhousedao/design-system/scalars`).   
+The editor we are about to implement makes use of some components from **Powerhouse Document Engineering**. 
+When you add the editor code, you'll see it makes use of two components, the `Checkbox` and `InputField`.
+These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/design-system/scalars`).   
 
 This system provides a library of reusable components to ensure consistency and speed up development.  
-You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance. For a detailed guide on how to leverage the design system and Storybook, see [using the Powerhouse Design System](/docs/academy/ComponentLibrary/PowerhouseDesignSystem) page.
+You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance. For a detailed guide on how to leverage the Document Engineering design system and Storybook, see [Using the Powerhouse Document Engineering](/academy/ComponentLibrary/PowerhouseDesignSystem) page.
 
-For our tutorial you can now create a `components` folder in the `editors/to-do-list` folder and add the following code to each of the components
+For this tutorial, create a `components` folder inside `editors/to-do-list`. Then, within this new `components` folder, create the files for the `Checkbox` and `InputField` components (e.g., `Checkbox.tsx` and `InputField.tsx`) with the following code:
 :::
 
 <details>
@@ -270,10 +270,10 @@ export const InputField = (props: InputFieldProps) => {
 </details>
 
 
-Below is the complete code for the To-do List editor, primarily using Tailwind CSS for styling and importing the components from the Powerhouse Design System. 
+Below is the complete code for the To-Do List editor. It primarily uses Tailwind CSS for styling and imports the local `Checkbox` and `InputField` components you created in the previous step. These local components, in turn, utilize elements from the Powerhouse Document Engineering design system.
 
 <details>
-<summary>Complete To-do-list Editor Example (using Tailwind CSS)</summary>
+<summary>Complete ToDoList Editor Example (using Tailwind CSS)</summary>
 
 ```typescript
 // Import necessary types and components.
@@ -487,7 +487,7 @@ The editor will update dynamically, so you can play around with your editor styl
 Congratulations!
 If you managed to follow this tutorial until this point, you have successfully implemented the **ToDoList** document model with its reducer operations and editor. 
 
-Now you can move on to creating a [custom drive explorer](/docs/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer) for your ToDoList document.    
+Now you can move on to creating a [custom drive explorer](/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer) for your ToDoList document.    
 Imagine you have many ToDoLists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
 
 

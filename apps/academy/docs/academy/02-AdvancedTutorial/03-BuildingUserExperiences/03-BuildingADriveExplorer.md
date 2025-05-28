@@ -69,7 +69,7 @@ The application allows users to create and manage todo lists with a visual progr
    - Start by running Connect locally with `ph connect`
 
 :::warning
-Since you've likely already run through the [document modeling process](/docs/academy/GetStarted/ToDoList/DefineToDoListDocumentModel) of a simplified todo list, we'll offer you a **slightly more advanced** todo list below! 
+Since you've likely already run through the [document modeling process](/academy/GetStarted/DefineToDoListDocumentModel) of a simplified todo list, we'll offer you a **slightly more advanced** todo list below! 
 :::
 
      - Download [todo.phdm.zip](https://github.com/powerhouse-inc/todo-drive-explorer/blob/ee63786fa8ceed71de63cd9c52f1795ad11ac403/todo.phdm.zip) from our GitHub repo. 

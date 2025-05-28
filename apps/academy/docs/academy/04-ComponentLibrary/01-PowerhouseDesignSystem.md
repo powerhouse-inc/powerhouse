@@ -51,7 +51,7 @@ We use Storybook as an interactive catalog for our design system components. It 
 
 ## Implementing a Component
 
-Let's walk through the typical workflow for using a component from the document-engineering system, using the `Checkbox` from the [To-do List editor](/docs/academy/GetStarted/ToDoList/BuildToDoListEditor).
+Let's walk through the typical workflow for using a component from the document-engineering system, using the `Checkbox` from the [To-do List editor](/academy/GetStarted/BuildToDoListEditor).
 
 1.  **Identify the Need:** While building your feature (e.g., the To-do List editor in `editor.tsx`), you determine the need for a standard UI element, like a checkbox.
 2.  **Consult the Resuable Components in Academy or in Storybook:**

@@ -5,7 +5,7 @@ A drive in Powerhouse is a container or a wrapper for documents and data. It's a
 ## Prerequisites
 
 Before configuring a drive, ensure you have:
-- Powerhouse [CLI installed](/docs/academy/AdvancedTutorial/Create/BuilderTools)
+- Powerhouse [CLI installed](/academy/AdvancedTutorial/Create/BuilderTools)
 - Access to a Powerhouse instance
 - Appropriate permissions to create and manage drives
 
@@ -38,7 +38,7 @@ A drive exists by making use of a reactor and the storagelayer that specific rea
 
 These customized editors are called Drive explorers or Drive Apps. They provide custom views, organization tools, and interactive features tailored to specific use cases. For example, a Drive Explorer might present data as a Kanban board, provide aggregated insights, or offer specialized widgets for data processing. 
 
-To learn more about building and customizing Drive Explorers, check out our [Building a Drive Explorer](/docs/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer) guide.
+To learn more about building and customizing Drive Explorers, check out our [Building a Drive Explorer](/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer) guide.
 
 
 ## Creating a New Drive

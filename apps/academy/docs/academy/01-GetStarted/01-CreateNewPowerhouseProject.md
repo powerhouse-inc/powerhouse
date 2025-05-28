@@ -1,13 +1,15 @@
-# Create a Powerhouse Project
+# 1. Create a new ToDoList Document
 
 ## Overview
-This tutorial will guide you through creating a new 'Powerhouse project', which primarily consists of a document model and its editor. You'll be using Connect locally, known as 'Studio mode'.
+This tutorial guides you through creating a 'Powerhouse project' for a ToDoList. A Powerhouse project primarily consists of a document model and its editor. You'll be using Connect locally, known as 'Studio mode'.
 
 ## Prerequisites
 - Powerhouse CLI installed: `pnpm install -g ph-cmd`
 - node.js 22 and pnpm installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
+
+If you need help with installing the prerequisites you can visit our page prerequisites. @callme-t
 
 ## Quick Start
 Create a new Powerhouse project with a single command:
@@ -35,7 +37,7 @@ Please be aware that these versions can contain bugs and experimental features t
 </details>
 
 ## Before You Begin
-1. Open your terminal (either your system terminal or VS Code's integrated terminal)
+1. Open your terminal (either your system terminal or IDE's integrated terminal)
 2. Navigate to your desired project directory using:
 
    ```bash
@@ -65,7 +67,7 @@ Navigate to the newly created project directory:
 cd <yourprojectname>
 ```
 
-Once you are in the project directory, you can run the `ph connect` command to instantiate a local version of the Connect application to start building your document model.
+Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 
 Run the following command to start the Connect application:
 
@@ -86,12 +88,12 @@ A new browser window will open and you will see the Connect application. If it d
 You will see your local drive and a button to create a new drive. 
 
 :::tip
-A drive is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive-App as a specialized lens— it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/docs/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer)
+A drive is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer)
 :::
 
 Move into your local drive. 
-Create a new document model by clicking on the `DocumentModel` button by the "New Document" section in the bottom. 
+Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. 
 
-If you followed the steps correctly, you should have an empty document model created.
+If you've followed the steps correctly, you'll have an empty document where you can define the 'Document Specifications'.
 
-In the next tutorials, you will learn how to design your document model and export it to be later used in your Powerhouse project.
+In the next tutorials, you will learn how to specify, add code and build an editor for your document model and export it to be used in your Powerhouse package. 

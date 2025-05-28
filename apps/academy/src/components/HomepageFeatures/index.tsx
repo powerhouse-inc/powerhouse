@@ -138,7 +138,7 @@ export default function HomepageFeatures() {
               <h3 className={styles.cardTitle}>Create</h3>
             </div>
             <div className={styles.cardContent}>
-              <a href="/docs/academy/GetStarted/ToDoList/CreateNewPowerhouseProject" className={styles.pathButton}>Build a Todo-list Document Model</a>
+              <a href="/docs/academy/GetStarted/CreateNewPowerhouseProject" className={styles.pathButton}>Build a Todo-list Document Model</a>
             </div>
           </div>
 
@@ -163,7 +163,7 @@ export default function HomepageFeatures() {
               <h3 className={styles.cardTitle}>Build User Experiences</h3>
             </div>
             <div className={styles.cardContent}>
-              <a href="/docs/academy/GetStarted/ToDoList/BuildToDoListEditor" className={styles.pathButton}>Building a Todo-list Editor</a>
+              <a href="/docs/academy/GetStarted/BuildToDoListEditor" className={styles.pathButton}>Building a Todo-list Editor</a>
               <a href="/docs/academy/BuildingUserExperiences/BuildingBeautifulDocumentEditors" className={styles.pathButton}>Building Beautiful Document Editors</a>
               <a href="/docs/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer" className={styles.pathButton}>Building Custom Drive Explorers</a>
             </div>

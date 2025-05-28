@@ -1,8 +1,0 @@
-{
-  "label": "Create a ToDoList",
-  "position": 1,
-  "link": {
-    "type": "generated-index",
-    "description": "Get started with the ToDoList tutorial! Jump into creating a new Powerhouse project if you have NodeJs, VSCode, and Git installed."
-  }
-}

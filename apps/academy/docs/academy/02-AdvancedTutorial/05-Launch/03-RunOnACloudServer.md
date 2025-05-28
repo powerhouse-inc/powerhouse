@@ -8,7 +8,7 @@ To help you navigate the steps involved, the diagram below illustrates the overa
 
 ![tutorial schema](images/tutorialschema.png)
 
-Understanding this process is key because, within the Powerhouse ecosystem, users typically start by installing pre-built packages onto their Connect or Switchboard instances. These packages are often sourced from a central repository, similar to an app store. In the previous tutorial, we have [created and published our package](/docs/academy/AdvancedTutorial/Launch/PublishYourProject) on the Node Package Manager (NPM) registry as our "app store", and now you'll learn how to deploy your own package to a cloud environment.
+Understanding this process is key because, within the Powerhouse ecosystem, users typically start by installing pre-built packages onto their Connect or Switchboard instances. These packages are often sourced from a central repository, similar to an app store. Now that we have [created and published our package](/academy/AdvancedTutorial/Launch/PublishYourProject) on the Node Package Manager (NPM) registry as our "app store", and now you'll learn how to deploy your own package to a cloud environment.
 
 ## 1. Setting up your cloud environment
 ### 1.1. Launching your server instance (AWS \- EC2 \- Ubuntu)
@@ -79,7 +79,7 @@ The script contains the following commands and will help you set up a series of 
 - **pnpm**: Fast, disk-space-efficient package manager
 
 :::info
-ph-cmd is a tool that helps you manage your Powerhouse projects. It's a command-line interface package that you can install globally on your server and personal machine. It gives you access to a series of powerful commands to create or manage your projects, start or stop your services, install your project on a server instance, etc. Visit this page to learn more about the [Powerhouse builder tooling](/docs/academy/AdvancedTutorial/Create/BuilderTools)
+ph-cmd is a tool that helps you manage your Powerhouse projects. It's a command-line interface package that you can install globally on your server and personal machine. It gives you access to a series of powerful commands to create or manage your projects, start or stop your services, install your project on a server instance, etc. Visit this page to learn more about the [Powerhouse builder tooling](/academy/AdvancedTutorial/Create/BuilderTools)
 
 <details>
 <summary> How to make use of different branches? </summary>

@@ -1,8 +1,8 @@
-# Implement Operation Reducers
+# 3. Implement the Document Model
 
-In this section, we will implement and test the operation reducers for the **ToDoList** document model. In order to do this, you have to export the document model from the Connect application and import it into your powerhouse project directory. 
+In this section, we will implement and test the operation reducers for the **ToDoList** document model. For this, you have to export the document model specification from the Connect application and import it into your Powerhouse project directory. 
 
-To export the document model, follow the steps in the [Define ToDoList Document Model](/docs/academy/GetStarted/ToDoList/DefineToDoListDocumentModel) section.
+To export the document model specification, follow the steps in the [Define ToDoList Document Model](/academy/GetStarted/DefineToDoListDocumentModel) section.
 
 ## Understanding Reducers in Document Models
 
@@ -16,25 +16,25 @@ Reducers are a core concept in Powerhouse document models. They implement the st
 
 4. **Type Safety**: Powerhouse generates TypeScript types from your SDL, ensuring that your reducers and operations are type-safe.
 
-5. **Pure Functions**: Reducers should be pure functions that only depend on the current state and the operation input, making them predictable and testable.
+5. **Pure Functions**: Reducers should be pure functions that depend only on the current state and the operation input, making them predictable and testable.
 
 Let's see how these concepts are implemented in our **ToDoList** document model.
 
-## Import Document Model and Generate Code
+## Importing the Document Model Specification and Generating Code
 
-To import the document model into your powerhouse project, you can either:
+To import the document model specification into your Powerhouse project, you can either:
  
-- Copy and paste the file directly into the root of your powerhouse project.
-- Or drag and drop the file into the powerhouse project directory in the VSCode editor as seen in the image below:
+- Copy and paste the file directly into the root of your Powerhouse project.
+- Or drag and drop the file into the Powerhouse project directory in the VSCode editor as seen in the image below:
 
-Either step will import the document model into your powerhouse project.
+Either step will import the document model specification into your Powerhouse project.
 
 ![vscode image](./images/vscode.png)
 
 The next steps will take place in the VSCode editor. Make sure to have it open and the terminal window inside VSCode open as well. 
 
 
-To write the operation reducers of the **ToDoList** document model, you need to generate the document model code from the document model file you have exported into the powerhouse project directory.
+To write the operation reducers of the **ToDoList** document model, you need to generate the document model code from the document model specification file you have exported into the Powerhouse project directory.
 
 To do this, run the following command in the terminal:
 
@@ -44,7 +44,7 @@ ph generate ToDoList.phdm.zip
 
 Now you can navigate to `/document-models/to-do-list/src/reducers/to-do-list.ts` and start writing the operation reducers.
 
-Open the `to-do-list.ts` file and you should see the code that needs to be filled for the three operations you have defined earlier. Image below shows the code that needs to be filled:
+Open the `to-do-list.ts` file and you should see the code that needs to be filled for the three operations you have specified earlier. The image below shows the code that needs to be filled:
 
 ![to-do-list ts file](./images/reducers.png)
 
@@ -54,6 +54,8 @@ Open the `to-do-list.ts` file and you should see the code that needs to be fille
 2. Save the file.
 
 
+<details>
+<summary>Operation Reducers</summary>
 ```typescript
 import { ToDoListToDoListOperations } from '../../gen/to-do-list/operations.js';
 
@@ -104,6 +106,7 @@ export const reducer: ToDoListToDoListOperations = {
   },
 };
 ```
+</details>
 
 ## Write the Operation Reducers Tests
 
@@ -111,8 +114,10 @@ In order to make sure the operation reducers are working as expected, you need t
 
 Navigate to `/document-models/to-do-list/src/reducers/tests/to-do-list.test.ts` and copy and paste the code below into the file. Save the file.
 
-Here are the tests for the three operations written in the reducers file. This test file creates an empty ToDoList document model, then adds a todo item, updates it and deletes it.
+Here are the tests for the three operations implemented in the reducers file. This test file creates an empty ToDoList document model, then adds a todo item, updates it and deletes it.
 
+<details>
+<summary>Operation Reducers Tests</summary>
 ```typescript
 import utils from '../../gen/utils';
 import { reducer } from '../../gen/reducer';
@@ -178,6 +183,7 @@ describe('Todolist Operations', () => {
     });
 });
 ```
+</details>
 
 Now you can run the tests to make sure the operation reducers are working as expected.
 
@@ -194,8 +200,6 @@ Output should be as follows:
    Duration  417ms (transform 79ms, setup 0ms, collect 174ms, tests 12ms, environment 0ms, prepare 158ms)
 ```
 
-If you got the same output, you have successfully implemented the operation reducers and tests for the **ToDoList** document model. Congratulations, you've successfully setup the backbone for a simple **ToDoList** document model. 
+If you got the same output, you have successfully implemented the operation reducers and tests for the **ToDoList** document model. Congratulations, you've successfully set up the backbone for a simple **ToDoList** document. 
 
-:::tip
-Continue to the next chapter on your builder track to learn how to implement the document model editor so you can see a simple user interface for the **ToDoList** document model in action. Click here for the [ToDoList Editor](/docs/academy/GetStarted/ToDoList/BuildToDoListEditor)
-:::
+In the next chapter of this introduction track you will learn how to implement an editor for your document model so you can see a simple user interface for the **ToDoList** document model in action.

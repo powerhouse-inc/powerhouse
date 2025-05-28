@@ -2,7 +2,7 @@
 
 In this section, we will cover **the core concepts of GraphQL with examples applied to the Powerhouse ecosystem**. More specifically, GraphQL is used as:
 - The **schema definition language (SDL)** for defining our document models and thereby self-documenting the API to the data model. It allows developers to define the structure and relationships of data in a strongly-typed format.
-- As the **query language in subgraphs**, which allow different services to expose and query structured data dynamically. Jump to the section [GraphQL and Subgraphs](/docs/academy/AdvancedTutorial/WorkWithData/WorkingWithSubgraphs/GraphQLAndSubgraphs) to learn more about this.
+- As the **query language in subgraphs**, which allow different services to expose and query structured data dynamically. Jump to the section [GraphQL and Subgraphs](/academy/AdvancedTutorial/WorkWithData/WorkingWithSubgraphs/GraphQLAndSubgraphs) to learn more about this.
 
 
 ### Why GraphQL?
