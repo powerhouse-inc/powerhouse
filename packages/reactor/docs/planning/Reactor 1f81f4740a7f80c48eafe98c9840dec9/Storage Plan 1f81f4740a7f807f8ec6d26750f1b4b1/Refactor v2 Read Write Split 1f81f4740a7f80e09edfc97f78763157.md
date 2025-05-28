@@ -34,6 +34,7 @@ graph TD
         - When multiple clients attempt to apply operations to the same document, the reactor is already queuing and waiting for each set of writes to the operation store.
         - The operations store throws named errors on revision mismatch issues. The reactor, already queuing operations, performs operation reordering logic to account for the revision changes.
     - The document header is also stored in the operations store. Changes to the document header are reflected in the operations, so the header is immutable.
+    - It has a primitive LRU cache.
 - **Document View**
     - [IDocumentView](../Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IDocumentView%201fc1f4740a7f8033a40ce160fe362209.md)
     - Builds and caches documents based on operations history. It pulls this history from the `IOperationStore` , which provides a document’s full history.
@@ -41,9 +42,11 @@ graph TD
         - Similar schema to the existing Prisma storage adapter, but no separate drive table.
         - 
     - Much of the `IDocumentStorage` interface can move here.
+    - It has a primitive LRU cache.
 - **Synchronization**
     - [ISyncStore](../Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20ISyncStore%201fc1f4740a7f80e09ecdd805df1d614c.md)
     - Synchronization is focused on the Operations Store instead of the DocumentView. This would provide a unidirectional flow of data: the queue / jobs would push Operations into the store, the DocumentView would get updates through a subscriber mechanism, and then make higher level decisions about how to rehydrate.
+    - It has a primitive LRU cache.
 
 **Effects:**
 
