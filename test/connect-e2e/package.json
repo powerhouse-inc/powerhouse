@@ -1,6 +1,6 @@
 {
   "name": "connect-e2e",
-  "version": "1.0.188-staging.0",
+  "version": "1.0.191-staging.0",
   "description": "",
   "main": "index.js",
   "type": "module",
