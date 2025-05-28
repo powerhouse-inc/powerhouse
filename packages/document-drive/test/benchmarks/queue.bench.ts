@@ -1,6 +1,5 @@
 import { addFolder } from "#drive-document-model/gen/creators";
 import { driveDocumentModelModule } from "#drive-document-model/module";
-import { BaseQueueManager } from "#queue/base";
 import { EventQueueManager } from "#queue/event";
 import { IQueueManager } from "#queue/types";
 import { ReactorBuilder } from "#server/builder";
@@ -63,26 +62,6 @@ describe("Process Operations", () => {
 
     callback();
   }
-
-  bench(
-    "BaseQueueManager",
-    () => {
-      return new Promise<void>((resolve, reject) => {
-        processStrands(new BaseQueueManager(1), resolve, reject);
-      });
-    },
-    BENCH_OPTIONS,
-  );
-
-  bench(
-    "BaseQueueManager with 10 workers",
-    () => {
-      return new Promise<void>((resolve, reject) => {
-        processStrands(new BaseQueueManager(10), resolve, reject);
-      });
-    },
-    BENCH_OPTIONS,
-  );
 
   bench(
     "EventQueueManager",

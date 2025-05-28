@@ -2,13 +2,13 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./test/dist",
+    "resolveJsonModule": true
   },
   "references": [
     {
       "path": "tsconfig.lib.json"
-    },
+    }
   ],
-  "include": ["test/**/*", "vitest.config.ts"],
+  "include": ["test", "test/**/*.json", "vitest.config.ts"],
   "exclude": ["test/flaky/**", "dist", "node_modules", "coverage", "test/dist"]
-
 }

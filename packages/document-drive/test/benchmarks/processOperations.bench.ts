@@ -11,10 +11,9 @@ import {
   generateId,
 } from "document-model";
 import { bench, BenchOptions, describe, vi } from "vitest";
-import { BrowserStorage } from "../../src/storage/browser";
-import GetDrive from "./getDrive.json";
-import Strands from "./strands.small.json";
-
+import { BrowserStorage } from "../../src/storage/browser.js";
+import GetDrive from "./getDrive.json" with { type: "json" };
+import Strands from "./strands.small.json" with { type: "json" };
 const DRIVE_ID = GetDrive.data.drive.id;
 const documentModels = [
   driveDocumentModelModule,
@@ -71,10 +70,6 @@ vi.mock(import("graphql-request"), async () => {
     gql: vi.fn().mockImplementation((...args) => args.join("")),
   };
 });
-
-const ITERATIONS = 10;
-const WARMUP = 5;
-const THROWS = true;
 
 const BENCH_OPTIONS: BenchOptions = {
   iterations: 10,
