@@ -340,16 +340,24 @@ describe("EventBus", () => {
       const unsubscribe2 = eventBus.subscribe(eventType, () => {});
 
       // Verify listeners exist
-      expect((eventBus as any).listeners.has(eventType)).toBe(true);
-      expect((eventBus as any).listeners.get(eventType)).toHaveLength(2);
+      expect((eventBus as any).eventTypeToSubscribers.has(eventType)).toBe(
+        true,
+      );
+      expect(
+        (eventBus as any).eventTypeToSubscribers.get(eventType),
+      ).toHaveLength(2);
 
       // Unsubscribe first subscriber
       unsubscribe1();
-      expect((eventBus as any).listeners.get(eventType)).toHaveLength(1);
+      expect(
+        (eventBus as any).eventTypeToSubscribers.get(eventType),
+      ).toHaveLength(1);
 
       // Unsubscribe last subscriber - should clean up the map entry
       unsubscribe2();
-      expect((eventBus as any).listeners.has(eventType)).toBe(false);
+      expect((eventBus as any).eventTypeToSubscribers.has(eventType)).toBe(
+        false,
+      );
     });
 
     it("should handle unsubscribe of non-existent subscriber gracefully", () => {
@@ -359,7 +367,7 @@ describe("EventBus", () => {
       const unsubscribe = eventBus.subscribe(eventType, () => {});
 
       // Manually remove the subscriber to simulate edge case
-      const listeners = (eventBus as any).listeners.get(eventType);
+      const listeners = (eventBus as any).eventTypeToSubscribers.get(eventType);
       listeners.length = 0;
 
       // Should not throw
