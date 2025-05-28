@@ -126,11 +126,7 @@ export function DocumentEditorContainer() {
                     console.error('No selected node');
                     return Promise.reject(new Error('No selected node'));
                 }
-                return getDocument(
-                    selectedNode.driveId,
-                    selectedNode.id,
-                    options,
-                );
+                return getDocument(selectedNode.id, options);
             },
             [getDocument, selectedNode],
         );

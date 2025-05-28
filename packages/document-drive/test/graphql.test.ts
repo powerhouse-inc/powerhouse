@@ -9,7 +9,7 @@ describe("Graphql methods", () => {
       "",
     );
     expect(schema).toEqual(
-      "id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug",
+      "name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder } } icon",
     );
   });
 });

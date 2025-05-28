@@ -32,7 +32,7 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
         const getDocumentsPromise = documentIds.map<
             Promise<[string, PHDocument]>
         >(async documentId => {
-            const document = await openFile(_driveId, documentId);
+            const document = await openFile(documentId);
             return [documentId, document];
         });
 

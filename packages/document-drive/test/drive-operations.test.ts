@@ -66,7 +66,7 @@ describe("Drive operations", () => {
       },
     });
     const drive = await server.getDrive(id);
-    const result = await server.addDriveOperation(
+    const result = await server.addOperation(
       id,
       buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
@@ -87,12 +87,12 @@ describe("Drive operations", () => {
       },
     });
     const drive = await server.getDrive(id);
-    await server.addDriveOperation(
+    await server.addOperation(
       id,
       buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
 
-    const result = await server.addDriveOperation(
+    const result = await server.addOperation(
       id,
       buildOperation(drive, addFolder({ id: "1", name: "test" }), 1),
     );
@@ -115,12 +115,12 @@ describe("Drive operations", () => {
       },
     });
     const drive = await server.getDrive(id);
-    await server.addDriveOperation(
+    await server.addOperation(
       id,
       buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
 
-    const result = await server.addDriveOperation(
+    const result = await server.addOperation(
       id,
       buildOperation(drive, addFolder({ id: "2", name: "test 2" }), 2),
     );
@@ -143,7 +143,7 @@ describe("Drive operations", () => {
       },
     });
     let drive = await server.getDrive(id);
-    const result = await server.addDriveOperations(id, [
+    const result = await server.addOperations(id, [
       ...buildOperations(drive, [
         addFolder({ id: "1", name: "test 1" }),
         addFolder({ id: "2", name: "test 2" }),
@@ -166,7 +166,7 @@ describe("Drive operations", () => {
     ]);
   });
 
-  it("should apply operations with different scopes", async () => {
+  it("should reject operations with different scopes", async () => {
     const id = generateId();
     await server.addDrive({
       id,
@@ -179,23 +179,15 @@ describe("Drive operations", () => {
       },
     });
     let drive = await server.getDrive(id);
-    const result = await server.addDriveOperations(
-      id,
-      buildOperations(drive, [
-        addFolder({ id: "1", name: "test 1" }),
-        addFolder({ id: "2", name: "test 2" }),
-        setAvailableOffline({ availableOffline: true }),
-      ]),
-    );
-
-    expect(result.status).toBe("SUCCESS");
-    expect(result.operations.length).toBe(3);
-
-    drive = await server.getDrive(id);
-    expect(drive.state.global.nodes).toStrictEqual([
-      expect.objectContaining({ id: "1", name: "test 1" }),
-      expect.objectContaining({ id: "2", name: "test 2" }),
-    ]);
-    expect(drive.state.local.availableOffline).toBe(true);
+    await expect(
+      server.addOperations(
+        id,
+        buildOperations(drive, [
+          addFolder({ id: "1", name: "test 1" }),
+          addFolder({ id: "2", name: "test 2" }),
+          setAvailableOffline({ availableOffline: true }),
+        ]),
+      ),
+    ).rejects.toThrow("Job has actions with different scopes");
   });
 });

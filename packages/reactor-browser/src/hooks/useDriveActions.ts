@@ -2,10 +2,7 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   addFolder,
-  copyNode,
   deleteNode,
-  generateAddNodeAction,
-  generateNodesCopy,
   isFileNode,
   isFolderNode,
   moveNode,
@@ -152,18 +149,14 @@ function createDriveActions(
     parentFolder?: string,
     id = generateId(),
   ) => {
-    const action = generateAddNodeAction(
-      drive.state.global,
-      {
-        id,
-        name,
-        parentFolder: parentFolder ?? null,
-        documentType,
-        document,
-      },
-      ["global"],
+    await context.addDocument(
+      driveId,
+      name,
+      documentType,
+      parentFolder,
+      document,
+      id,
     );
-    dispatch(action);
   };
 
   const addFile = async (
@@ -224,23 +217,26 @@ function createDriveActions(
       throw new Error(`Source node with id "${sourceId}" not found`);
     }
 
-    const copyNodesInput = generateNodesCopy(
-      {
-        srcId: sourceId,
-        targetParentFolder: target?.id,
-        targetName: source.name,
-      },
-      generateId,
-      drive.state.global.nodes,
-    );
+    // TODO: new document nodes need to be created in the reactor
+    throw new Error("Copy node is not implemented yet");
 
-    const copyActions = copyNodesInput.map((copyNodeInput) =>
-      copyNode(copyNodeInput),
-    );
+    // const copyNodesInput = generateNodesCopy(
+    //   {
+    //     srcId: sourceId,
+    //     targetParentFolder: target?.id,
+    //     targetName: source.name,
+    //   },
+    //   generateId,
+    //   drive.state.global.nodes,
+    // );
 
-    for (const copyAction of copyActions) {
-      dispatch(copyAction); // TODO support batching dispatch
-    }
+    // const copyActions = copyNodesInput.map((copyNodeInput) =>
+    //   copyNode(copyNodeInput),
+    // );
+
+    // for (const copyAction of copyActions) {
+    //   dispatch(copyAction); // TODO support batching dispatch
+    // }
   };
 
   const duplicateNode = async (sourceId: string) => {

@@ -1,6 +1,15 @@
 import { isLogLevel } from "@powerhousedao/config";
 import { startAPI } from "@powerhousedao/reactor-api";
-import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
+import {
+  driveDocumentModelModule,
+  InMemoryCache,
+  logger,
+  ReactorBuilder,
+} from "document-drive";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+} from "document-model";
 import dotenv from "dotenv";
 import path from "node:path";
 import {
@@ -49,7 +58,10 @@ const startServer = async (
 
   // create document drive server with all available document models & storage
   const cache = new InMemoryCache();
-  const driveServer = new ReactorBuilder([])
+  const driveServer = new ReactorBuilder([
+    driveDocumentModelModule as DocumentModelModule,
+    documentModelDocumentModelModule as DocumentModelModule,
+  ])
     .withCache(cache)
     .withStorage(createStorage(storage, cache))
     .build();

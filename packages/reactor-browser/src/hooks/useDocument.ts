@@ -3,7 +3,6 @@ import { type PHDocument } from "document-model";
 import { useCallback, useEffect, useState } from "react";
 
 export type DocumentMeta = {
-  driveId?: string;
   documentId?: string;
   documentType?: string;
 };
@@ -12,7 +11,7 @@ export function useDocument(
   reactor: IDocumentDriveServer | undefined,
   documentMeta: DocumentMeta = {},
 ) {
-  const { documentId, documentType, driveId } = documentMeta;
+  const { documentId, documentType } = documentMeta;
 
   const [document, setDocument] = useState<PHDocument | undefined>();
 
@@ -28,29 +27,23 @@ export function useDocument(
 
   useEffect(() => {
     if (!reactor) return;
-    if (!driveId || !documentId || !documentType) return;
+    if (!documentId || !documentType) return;
 
-    reactor
-      .getDocument(driveId, documentId)
-      .then(setDocument)
-      .catch(console.error);
-  }, [driveId, documentId, documentType, reactor]);
+    reactor.getDocument(documentId).then(setDocument).catch(console.error);
+  }, [documentId, documentType, reactor]);
 
   useEffect(() => {
     if (!reactor) return;
-    if (!driveId || !documentId || !documentType) return;
+    if (!documentId || !documentType) return;
 
     const removeListener = onStrandUpdate((strand) => {
-      if (strand.driveId === driveId && strand.documentId === documentId) {
-        reactor
-          .getDocument(driveId, documentId)
-          .then(setDocument)
-          .catch(console.error);
+      if (strand.documentId === documentId) {
+        reactor.getDocument(documentId).then(setDocument).catch(console.error);
       }
     });
 
     return removeListener;
-  }, [onStrandUpdate, driveId, documentId, documentType]);
+  }, [onStrandUpdate, documentId, documentType]);
 
   return document;
 }

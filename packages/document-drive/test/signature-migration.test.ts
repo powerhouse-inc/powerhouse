@@ -116,7 +116,6 @@ describe.each(storageLayers)(
           id: "1.1",
           name: "Test",
           documentType: "powerhouse/budget-statement",
-          synchronizationUnits: [],
         }),
       );
       expect(driveOperation.context).toBeUndefined();
@@ -165,7 +164,6 @@ describe.each(storageLayers)(
           id: "1.1",
           name: "Test",
           documentType: "powerhouse/budget-statement",
-          synchronizationUnits: [],
         }),
       );
       driveOperation.context = {
@@ -240,7 +238,6 @@ describe.each(storageLayers)(
           id: "1.1",
           name: "Test",
           documentType: "powerhouse/budget-statement",
-          synchronizationUnits: [],
         }),
       );
       driveOperation.context = {

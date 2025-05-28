@@ -19,9 +19,11 @@ import {
 import { createDocument } from "../../src/drive-document-model/gen/utils.js";
 import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
 import { generateNodesCopy } from "../../src/drive-document-model/src/utils.js";
-import { BaseDocumentDriveServer } from "../../src/server/base-server.js";
 import { ReactorBuilder } from "../../src/server/builder.js";
-import { IOperationResult } from "../../src/server/types.js";
+import {
+  IDocumentDriveServer,
+  IOperationResult,
+} from "../../src/server/types.js";
 import { DriveBasicClient } from "../utils.js";
 
 function sortNodes(nodes: Node[]) {
@@ -34,11 +36,9 @@ describe("Drive Operations", () => {
     driveDocumentModelModule,
   ] as DocumentModelModule[];
 
-  let server: BaseDocumentDriveServer;
+  let server: IDocumentDriveServer;
   beforeEach(async () => {
-    server = new ReactorBuilder(
-      documentModels,
-    ).build() as unknown as BaseDocumentDriveServer;
+    server = new ReactorBuilder(documentModels).build();
     await server.initialize();
   });
 

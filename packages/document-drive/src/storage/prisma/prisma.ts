@@ -1,4 +1,8 @@
-import { isValidDocumentId, isValidSlug } from "#storage/utils";
+import {
+  isValidDocumentId,
+  isValidSlug,
+  resolveStorageUnitsFilter,
+} from "#storage/utils";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   AttachmentInput,
@@ -28,7 +32,12 @@ import {
 } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
-import type { IDocumentStorage, IDriveOperationStorage } from "../types.js";
+import type {
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
+} from "../types.js";
 import { type Prisma, type PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
@@ -115,6 +124,109 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   ////////////////////////////////
+  // IStorageUnitStorage
+  ////////////////////////////////
+  async findStorageUnitsBy(
+    filter: IStorageUnitFilter,
+    limit: number,
+    cursor?: string,
+  ): Promise<{ units: IStorageUnit[]; nextCursor?: string }> {
+    const {
+      parentId: parentIds,
+      documentId: documentIds,
+      documentModelType: documentTypes,
+      scope: scopes,
+      branch: branches,
+    } = resolveStorageUnitsFilter(filter);
+
+    let documents = new Array<string>();
+
+    // if parent ids are passed, find all documents that are children
+    // of those parents, intersecting with document ids if provided
+    if (parentIds?.size) {
+      documents = await this.db.driveDocument
+        .findMany({
+          select: {
+            documentId: true,
+          },
+          where: {
+            driveId: {
+              in: [...parentIds],
+            },
+            ...(documentIds ? { documentId: { in: [...documentIds] } } : {}),
+          },
+        })
+        .then((docs) => docs.map((doc) => doc.documentId));
+      documents.unshift(
+        ...(documentIds ? parentIds.intersection(documentIds) : parentIds),
+      );
+    }
+
+    const queryOptions: Prisma.DocumentFindManyArgs = {
+      where: {
+        ...(documents.length > 0 ? { id: { in: [...documents] } } : {}),
+        ...(documentTypes ? { documentType: { in: [...documentTypes] } } : {}),
+        ...(scopes && scopes.size > 0
+          ? {
+              scopes: {
+                hasSome: [...scopes],
+              },
+            }
+          : {}),
+        // branch: { in: branches ? [...branches] : undefined },
+      },
+      orderBy: {
+        ordinal: "asc",
+      },
+      select: {
+        id: true,
+        documentType: true,
+        scopes: true,
+        ordinal: true,
+      },
+      take: limit,
+    };
+
+    // if cursor is provided, add it to the query
+    if (cursor) {
+      const cursorOrdinal = parseInt(cursor, 10);
+      if (isNaN(cursorOrdinal)) {
+        throw new Error("Invalid cursor format: Expected an integer");
+      }
+
+      queryOptions.cursor = {
+        ordinal: cursorOrdinal,
+      };
+
+      // skip the cursor itself
+      queryOptions.skip = 1;
+    }
+
+    const results = await this.db.document.findMany(queryOptions);
+
+    let nextCursor: string | undefined;
+    if (results.length === limit) {
+      // the cursor is the last document in the results
+      nextCursor = results[limit - 1].ordinal.toString();
+    }
+
+    // Map the database results to IStorageUnit objects
+    const units: IStorageUnit[] = results.flatMap((doc) =>
+      doc.scopes.map((scope) => ({
+        documentId: doc.id,
+        documentModelType: doc.documentType,
+        scope,
+        branch: "main",
+      })),
+    );
+
+    return {
+      units,
+      nextCursor,
+    };
+  }
+
+  ////////////////////////////////
   // IDocumentStorage
   ////////////////////////////////
 
@@ -151,6 +263,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           initialState: JSON.stringify(document.initialState),
           lastModified: document.lastModified,
           revision: JSON.stringify(document.revision),
+          scopes: Object.keys(document.state),
           meta: document.meta ? JSON.stringify(document.meta) : undefined,
         },
       });
@@ -372,36 +485,6 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   async delete(documentId: string): Promise<boolean> {
-    // find all children that are only children of this document
-    try {
-      // Find documents that are only associated with this drive (have no other parents)
-      const documentsToDelete = await this.db.document.findMany({
-        where: {
-          driveDocuments: {
-            some: {
-              driveId: documentId,
-            },
-            every: {
-              driveId: documentId,
-            },
-          },
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      // Delete these documents that only belong to this drive
-      for (const doc of documentsToDelete) {
-        await this.delete(doc.id);
-      }
-    } catch (e: unknown) {
-      this.logger.error(
-        "Error deleting child documents that only belong to this document",
-        e,
-      );
-    }
-
     try {
       // delete out of drives
       await this.db.drive.deleteMany({
@@ -468,12 +551,14 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     }
 
     // create the many-to-many relation
-    await this.db.document.update({
+    await this.db.drive.update({
       where: {
-        id: childId,
+        id: parentId,
       },
       data: {
-        driveDocuments: { create: { driveId: parentId } },
+        driveDocuments: {
+          create: { documentId: childId },
+        },
       },
     });
   }
@@ -497,20 +582,16 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   async getChildren(parentId: string): Promise<string[]> {
-    const docs = await this.db.document.findMany({
+    const docs = await this.db.driveDocument.findMany({
       select: {
-        id: true,
+        documentId: true,
       },
       where: {
-        driveDocuments: {
-          some: {
-            driveId: parentId,
-          },
-        },
+        driveId: parentId,
       },
     });
 
-    return docs.map((doc) => doc.id);
+    return docs.map((doc) => doc.documentId);
   }
 
   async getParents(childId: string): Promise<string[]> {
@@ -537,7 +618,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     operations: Operation<DocumentDriveAction>[],
     header: DocumentHeader,
   ): Promise<void> {
-    await this.addDocumentOperations("drives", id, operations, header);
+    await this.addDocumentOperations(id, operations, header);
   }
 
   async addDriveOperationsWithTransaction(
@@ -547,16 +628,13 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       header: DocumentHeader;
     }>,
   ) {
-    return this.addDocumentOperationsWithTransaction(
-      "drives",
-      drive,
-      (document) => callback(document as DocumentDriveDocument),
+    return this.addDocumentOperationsWithTransaction(drive, (document) =>
+      callback(document as DocumentDriveDocument),
     );
   }
 
   private async _addDocumentOperations(
     tx: Transaction,
-    drive: string,
     id: string,
     operations: Operation[],
     header: DocumentHeader,
@@ -598,7 +676,6 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
             return tx.operation.update({
               where: {
                 unique_operation: {
-                  driveId: drive,
                   documentId: id,
                   index: op.index,
                   scope: op.scope,
@@ -622,7 +699,6 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         const existingOperation = await this.db.operation.findFirst({
           where: {
             AND: operations.map((op) => ({
-              driveId: drive,
               documentId: id,
               scope: op.scope,
               branch: "main",
@@ -653,7 +729,6 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   async addDocumentOperationsWithTransaction<TDocument extends PHDocument>(
-    drive: string,
     id: string,
     callback: (document: TDocument) => Promise<{
       operations: OperationFromDocument<TDocument>[];
@@ -676,7 +751,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         result = await callback(document);
 
         const { operations, header, newState } = result;
-        return this._addDocumentOperations(tx, drive, id, operations, header);
+        return this._addDocumentOperations(tx, id, operations, header);
       },
       { isolationLevel: "Serializable", maxWait: 10000, timeout: 20000 },
     );
@@ -690,16 +765,14 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   async addDocumentOperations(
-    drive: string,
     id: string,
     operations: Operation[],
     header: DocumentHeader,
   ): Promise<void> {
-    return this._addDocumentOperations(this.db, drive, id, operations, header);
+    return this._addDocumentOperations(this.db, id, operations, header);
   }
 
   async getOperationResultingState(
-    driveId: string,
     documentId: string,
     index: number,
     scope: string,
@@ -724,13 +797,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     scope: string,
     branch: string,
   ): Promise<string | undefined> {
-    return this.getOperationResultingState(
-      "drives",
-      drive,
-      index,
-      scope,
-      branch,
-    );
+    return this.getOperationResultingState(drive, index, scope, branch);
   }
 
   async getSynchronizationUnitsRevision(
@@ -738,12 +805,20 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   ): Promise<
     {
       documentId: string;
+      documentType: string;
       scope: string;
       branch: string;
       lastUpdated: string;
       revision: number;
     }[]
   > {
+    const documentTypes = await this.db.document.findMany({
+      where: {
+        id: { in: [...new Set(units.map((unit) => unit.documentId)).keys()] },
+      },
+      select: { id: true, documentType: true },
+    });
+
     // TODO add branch condition
     const whereClauses = units
       .map((_, index) => {
@@ -752,7 +827,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       .join(" OR ");
 
     const query = `
-            SELECT "documentId", "scope", "branch", MAX("timestamp") as "lastUpdated", MAX("index") as revision FROM "Operation"
+            SELECT "documentId", "scope", "branch", MAX("timestamp") as "lastUpdated", MAX("index") + 1 as revision FROM "Operation"
             WHERE ${whereClauses}
             GROUP BY "documentId", "scope", "branch"
         `;
@@ -767,9 +842,12 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         revision: number;
       }[]
     >(query, ...params);
+
     return results.map((row) => ({
       ...row,
       documentId: row.documentId,
+      documentType: documentTypes.find((doc) => doc.id === row.documentId)!
+        .documentType,
       lastUpdated: new Date(row.lastUpdated).toISOString(),
     }));
   }

@@ -13,16 +13,15 @@ import { type RunAsap } from "#utils/run-asap";
 import {
   type Action,
   type ActionContext,
-  type CreateChildDocumentInput,
   type DocumentModelModule,
   type Operation,
   type OperationFromDocument,
   type OperationScope,
   type PHDocument,
   type ReducerOptions,
-  type Signal,
 } from "document-model";
 import { type Unsubscribe } from "nanoevents";
+import { type SignalResult } from "../../../document-model/src/document/signal.js";
 import { type BaseDocumentDriveServer } from "./base-server.js";
 import {
   type OperationError,
@@ -32,6 +31,7 @@ import {
   type ITransmitter,
   type StrandUpdateSource,
 } from "./listener/transmitter/types.js";
+import { type ISyncUnitMap } from "./sync-unit-map.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -65,12 +65,10 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
   accessLevel?: RemoteDriveAccessLevel;
 };
 
-export type CreateDocumentInput<TDocument extends PHDocument> =
-  CreateChildDocumentInput<TDocument>;
-
-export type SignalResult = {
-  signal: Signal;
-  result: unknown; // infer from return types on document-model
+export type CreateDocumentInput<TDocument extends PHDocument> = {
+  id: string;
+  documentType: string;
+  document?: TDocument;
 };
 
 export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
@@ -83,12 +81,14 @@ export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
 
 export type DriveOperationResult = IOperationResult<DocumentDriveDocument>;
 
-export type SynchronizationUnit = {
-  syncId: string;
+export type SynchronizationUnitId = {
   documentId: string;
-  documentType: string;
   scope: string;
   branch: string;
+};
+
+export type SynchronizationUnit = SynchronizationUnitId & {
+  documentType: string;
   lastUpdated: string;
   revision: number;
 };
@@ -130,6 +130,7 @@ export enum TransmitterType {
 export type ListenerRevision = {
   driveId: string;
   documentId: string;
+  documentType: string;
   scope: string;
   branch: string;
   status: UpdateStatus;
@@ -163,6 +164,7 @@ export type OperationUpdate = {
 export type StrandUpdate = {
   driveId: string;
   documentId: string;
+  documentType: string;
   scope: OperationScope;
   branch: string;
   operations: OperationUpdate[];
@@ -191,6 +193,8 @@ export interface DriveEvents {
     status: SyncStatus,
     error?: Error,
     syncUnitStatus?: SyncUnitStatusObject,
+    scope?: string,
+    branch?: string,
   ) => void;
   defaultRemoteDrive: (
     status: AddRemoteDriveStatus,
@@ -363,85 +367,107 @@ export interface IBaseDocumentDriveServer {
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
   getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]>;
 
-  getDocuments(driveId: string): Promise<string[]>;
+  addDocument<TDocument extends PHDocument>(
+    input: CreateDocumentInput<TDocument>,
+    preferredEditor?: string,
+  ): Promise<TDocument>;
+  deleteDocument(documentId: string): Promise<void>;
+
+  getDocuments(parentId: string): Promise<string[]>;
   getDocument<TDocument extends PHDocument>(
-    driveId: string,
     documentId: string,
     options?: GetDocumentOptions,
   ): Promise<TDocument>;
 
+  queueDocument<TDocument extends PHDocument>(
+    input: CreateDocumentInput<TDocument>,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+
   addOperation(
-    driveId: string,
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   addOperations(
-    driveId: string,
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueOperation(
-    driveId: string,
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueOperations(
-    driveId: string,
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueAction(
-    driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
   queueActions(
-    driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use the {@link addOperation} method instead.
+   */
   addDriveOperation(
     driveId: string,
     operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
+  /**
+   * @deprecated Use the {@link addOperations} method instead.
+   */
   addDriveOperations(
     driveId: string,
     operations: Operation<DocumentDriveAction>[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
+  /**
+   * @deprecated Use the {@link queueOperation} method instead.
+   */
   queueDriveOperation(
     driveId: string,
     operation: Operation<DocumentDriveAction>,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
+  /**
+   * @deprecated Use the {@link queueOperations} method instead.
+   */
   queueDriveOperations(
     driveId: string,
     operations: Operation<DocumentDriveAction>[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
+  /**
+   * @deprecated Use the {@link queueAction} method instead.
+   */
   queueDriveAction(
     driveId: string,
     action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use the {@link queueActions} method instead.
+   */
   queueDriveActions(
     driveId: string,
     actions: DocumentDriveAction[],
@@ -449,23 +475,28 @@ export interface IBaseDocumentDriveServer {
   ): Promise<IOperationResult>;
 
   addAction(
-    driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
   addActions(
-    driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use the {@link addAction} method instead.
+   */
   addDriveAction(
     driveId: string,
     action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
+
+  /**
+   * @deprecated Use the {@link addActions} method instead.
+   */
   addDriveActions(
     driveId: string,
     actions: DocumentDriveAction[],
@@ -475,35 +506,6 @@ export interface IBaseDocumentDriveServer {
   getSyncStatus(
     syncUnitId: string,
   ): SyncStatus | SynchronizationUnitNotFoundError;
-
-  /** Synchronization methods */
-  getSynchronizationUnits(
-    driveId: string,
-    documentId?: string[],
-    scope?: string[],
-    branch?: string[],
-    documentType?: string[],
-  ): Promise<SynchronizationUnit[]>;
-
-  getSynchronizationUnit(
-    driveId: string,
-    syncId: string,
-    loadedDrive?: DocumentDriveDocument,
-  ): Promise<SynchronizationUnit | undefined>;
-
-  getSynchronizationUnitsIds(
-    driveId: string,
-    documentId?: string[],
-    scope?: string[],
-    branch?: string[],
-    documentType?: string[],
-  ): Promise<SynchronizationUnitQuery[]>;
-
-  getOperationData(
-    driveId: string,
-    syncId: string,
-    filter: GetStrandsOptions,
-  ): Promise<OperationUpdate[]>;
 
   /** Internal methods **/
   getDocumentModelModules(): DocumentModelModule[];
@@ -541,7 +543,6 @@ export interface IListenerManager {
     options?: GetStrandsOptions,
   ): Promise<StrandUpdate[]>;
   updateSynchronizationRevisions(
-    driveId: string,
     syncUnits: SynchronizationUnit[],
     source: StrandUpdateSource,
     willUpdate?: (listeners: Listener[]) => void,
@@ -551,18 +552,12 @@ export interface IListenerManager {
   updateListenerRevision(
     listenerId: string,
     driveId: string,
-    syncId: string,
+    syncUnitId: SynchronizationUnitId,
     listenerRev: number,
   ): Promise<void>;
-
-  // todo: re-evaluate
-  getListenerSyncUnitIds(
-    driveId: string,
-    listenerId: string,
-  ): Promise<SynchronizationUnitQuery[]>;
   removeSyncUnits(
-    driveId: string,
-    syncUnits: Pick<SynchronizationUnit, "syncId">[],
+    parentId: string,
+    syncUnits: SynchronizationUnitId[],
   ): Promise<void>;
 
   setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
@@ -578,12 +573,14 @@ export type ListenerStatus =
   | "CONFLICT"
   | "ERROR";
 
+export type SynchronizationUnitMap = ISyncUnitMap<SyncronizationUnitState>;
+
 export interface ListenerState {
   driveId: string;
   block: boolean;
   pendingTimeout: string;
   listener: Listener;
-  syncUnits: Map<SynchronizationUnit["syncId"], SyncronizationUnitState>;
+  syncUnits: SynchronizationUnitMap;
   listenerStatus: ListenerStatus;
 }
 
@@ -612,7 +609,7 @@ export interface IEventEmitter {
 export interface ISynchronizationManager {
   setDocumentModelModules(arg0: DocumentModelModule[]): void;
   getSynchronizationUnits(
-    driveId: string,
+    parentId?: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],
@@ -620,7 +617,7 @@ export interface ISynchronizationManager {
   ): Promise<SynchronizationUnit[]>;
 
   getSynchronizationUnitsIds(
-    driveId: string,
+    parentId?: string,
     documentId?: string[],
     scope?: string[],
     branch?: string[],
@@ -628,28 +625,34 @@ export interface ISynchronizationManager {
   ): Promise<SynchronizationUnitQuery[]>;
 
   getSynchronizationUnit(
-    driveId: string,
-    syncId: string,
+    syncId: SynchronizationUnitId,
   ): Promise<SynchronizationUnit | undefined>;
 
   getOperationData(
-    driveId: string,
-    syncId: string,
+    syncId: SynchronizationUnitId,
     filter: GetStrandsOptions,
   ): Promise<OperationUpdate[]>;
 
-  getSynchronizationUnitsRevision(
-    driveId: string,
-    syncUnitsQuery: SynchronizationUnitQuery[],
-  ): Promise<SynchronizationUnit[]>;
-
-  // New sync status methods
+  // Overloaded sync status methods
   getSyncStatus(
-    syncUnitId: string,
+    documentId: string,
+    scope?: string,
+    branch?: string,
+  ): SyncStatus | SynchronizationUnitNotFoundError;
+  getSyncStatus(
+    syncId: SynchronizationUnitId,
   ): SyncStatus | SynchronizationUnitNotFoundError;
 
+  // Overloaded sync status update methods
   updateSyncStatus(
-    syncUnitId: string,
+    documentId: string,
+    status: Partial<SyncUnitStatusObject> | null,
+    error?: Error,
+    scope?: string,
+    branch?: string,
+  ): void;
+  updateSyncStatus(
+    syncId: SynchronizationUnitId,
     status: Partial<SyncUnitStatusObject> | null,
     error?: Error,
   ): void;

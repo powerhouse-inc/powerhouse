@@ -147,6 +147,7 @@ export class DriveSubgraph extends Subgraph {
     type StrandUpdate {
       driveId: String!
       documentId: String!
+      documentType: String!
       scope: String!
       branch: String!
       operations: [OperationUpdate!]!
@@ -155,6 +156,7 @@ export class DriveSubgraph extends Subgraph {
     input InputStrandUpdate {
       driveId: String!
       documentId: String!
+      documentType: String!
       scope: String!
       branch: String!
       operations: [InputOperationUpdate!]!
@@ -177,6 +179,7 @@ export class DriveSubgraph extends Subgraph {
     input ListenerRevisionInput {
       driveId: String!
       documentId: String!
+      documentType: String!
       scope: String!
       branch: String!
       status: UpdateStatus!
@@ -186,6 +189,7 @@ export class DriveSubgraph extends Subgraph {
     type ListenerRevision {
       driveId: String!
       documentId: String!
+      documentType: String!
       scope: String!
       branch: String!
       status: UpdateStatus!
@@ -289,11 +293,7 @@ export class DriveSubgraph extends Subgraph {
       },
       document: async (_: unknown, { id }: { id: string }, ctx: Context) => {
         this.logger.verbose(`document(drive: ${ctx.driveId}, id: ${id})`);
-        if (!ctx.driveId) throw new Error("Drive ID is required");
-        const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
-        const document = await (driveId === id
-          ? this.reactor.getDrive(driveId)
-          : this.reactor.getDocument(driveId, id));
+        const document = await this.reactor.getDocument(id);
 
         const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
@@ -329,7 +329,7 @@ export class DriveSubgraph extends Subgraph {
         _: unknown,
         { filter, listenerId }: { filter: ListenerFilter; listenerId?: string },
         ctx: Context,
-      ) => {
+      ): Promise<Listener> => {
         this.logger.verbose(
           `registerPullResponderListener(drive: ${ctx.driveId})`,
           filter,
@@ -393,7 +393,7 @@ export class DriveSubgraph extends Subgraph {
         _: unknown,
         { strands: strandsGql }: { strands: StrandUpdateGraphQL[] },
         ctx: Context,
-      ) => {
+      ): Promise<ListenerRevision[]> => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         this.logger.verbose(
@@ -412,6 +412,7 @@ export class DriveSubgraph extends Subgraph {
               branch: "main",
             })) as Operation[],
             documentId: strandGql.documentId,
+            documentType: strandGql.documentType,
             driveId: strandGql.driveId,
             scope: strandGql.scope,
             branch: strandGql.branch,
@@ -430,7 +431,7 @@ export class DriveSubgraph extends Subgraph {
           revisions,
         }: { listenerId: string; revisions: ListenerRevision[] },
         ctx: Context,
-      ) => {
+      ): Promise<boolean> => {
         if (!listenerId || !revisions) return false;
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
@@ -446,6 +447,7 @@ export class DriveSubgraph extends Subgraph {
           .map((e) => ({
             driveId: e.driveId,
             documentId: e.documentId,
+            documentType: e.documentType,
             scope: e.scope,
             branch: e.branch,
             revision: e.revision,
@@ -470,7 +472,7 @@ export class DriveSubgraph extends Subgraph {
           since,
         }: { listenerId: string; since: string | undefined },
         ctx: Context,
-      ) => {
+      ): Promise<StrandUpdateGraphQL[]> => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         this.logger.debug(
@@ -489,6 +491,7 @@ export class DriveSubgraph extends Subgraph {
         return strands.map((update) => ({
           driveId: update.driveId,
           documentId: update.documentId,
+          documentType: update.documentType,
           scope: update.scope,
           branch: update.branch,
           operations: update.operations.map((op) => ({
