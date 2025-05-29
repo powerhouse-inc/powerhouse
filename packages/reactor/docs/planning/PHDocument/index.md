@@ -2,10 +2,14 @@
 
 ### Summary
 
+`PHDocument` is the core object that represents a document in the Reactor system. It is a typed API for interacting with a document.
+
 We break PHDocument into four objects:
 
 ```tsx
 {
+  id,        // the document ID
+
 	state,     // plain, serializable object
 	
 	mutations, // typed API for creting and/or executing operations
@@ -13,6 +17,14 @@ We break PHDocument into four objects:
 	history,   // typed API for fetching document history
 }
 ```
+
+#### Id
+
+The `id` is a unique, Ed25519 signature of the document header data. It is used to verify the creator of a document to a document id.
+
+This has effects on storage mechanisms, as currently the document id is used as a primary key. Because these signatures have a uniform distribution, they make poor lookups for typical btree indexes. A hash index may be used instead, but hash indexes cannot serve as primary keys. Likely, the storage layer will need to either use a secondary index or eat the cost of poor indexing for document ids.
+
+See the header section below for more information.
 
 #### State
 
@@ -26,6 +38,49 @@ The `header` scope is a "special case" scope that is always populated.
 let drive = await client.get<DocumentDriveDocument>("mine");
 
 console.log(`Drive icon: ${drive.state.global.icon}`);
+```
+
+##### Header
+
+The special case `header` scope contains a number of key elements:
+
+```tsx
+type SignatureInfo = {
+  /** The public key of the document creator. */
+  publicKey: string;
+
+  /** The message that was signed. */
+  message: string;
+
+  /** The nonce that was appended to the message to create the signature. */
+  nonce: string;
+}
+
+type DocumentHeader = {
+  /** Information to verify the document creator. */
+  sig: SignatureInfo;
+
+  /** The slug of the document. */
+  slug: string;
+
+  /** The name of the document. */
+  name: string;
+
+  /** The type of the document. */
+  documentType: string;
+  
+  /** The timestamp of the creation date of the document. */
+  createdAtUtcMs: number;
+  
+  /** The timestamp of the last change in the document. */
+  lastModifiedAtUtcMs: number;
+
+  /** Meta information about the document. */
+  meta?: {
+    /** The preferred editor for the document. */
+    preferredEditor?: string;
+  };
+}
 ```
 
 #### Mutations
