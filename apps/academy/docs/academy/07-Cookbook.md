@@ -53,7 +53,7 @@ pnpm install -g ph-cmd@<version>
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 </details>
 
 <details id="uninstalling-ph-cmd">
@@ -94,7 +94,7 @@ rm -rf ~/.ph
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - [Create A New Powerhouse Project](/academy/GetStarted/CreateNewPowerhouseProject)
 </details>
 
@@ -153,9 +153,9 @@ ph use staging
 - [Using Different Branches in Powerhouse](#using-different-branches-in-powerhouse)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - [Domain Modeling Guide](/domain-modeling)
-- [GraphQL Schema Best Practices](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
+- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
 </details>
 
 <details id="using-different-branches-in-powerhouse">
@@ -233,7 +233,7 @@ ph use prod
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 </details>
 
 <details id="using-different-package-managers-with-powerhouse">
@@ -332,7 +332,7 @@ ph init --package-manager pnpm
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - [Yarn Global Installation Guide](https://classic.yarnpkg.com/lang/en/docs/cli/global/)
 - [Bun Installation Guide](https://bun.sh/docs/installation#how-to-add-your-path)
 </details>
@@ -404,7 +404,7 @@ In the "New Document" section at the bottom of the page, click the `DocumentMode
 
 ## Further Reading
 - [Domain Modeling Guide](/domain-modeling)
-- [GraphQL Schema Best Practices](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
+- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
 </details>
 
 <details id="generating-reducers-from-a-document-model-file">
@@ -544,8 +544,8 @@ You might encounter a browser warning about the self-signed certificate; you may
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
-- [GraphQL Schema Best Practices](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
+- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
 </details>
 
 
@@ -634,7 +634,7 @@ ph generate --drive-editor <drive-app-name>
 - [Generating a Document Editor](#generating-a-document-editor)
 
 ## Further Reading
-- [Build a Drive-Explorer](/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer)
+- [Build a Drive-Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 </details>
 
 <details id="adding-a-new-drive-via-graphql-mutation">
@@ -710,12 +710,12 @@ Use the constructed URL to add or access the drive in your Connect environment.
 - The drive can be managed or accessed using the generated URL.
 
 ## Related Recipes
-- [Configuring Drives](/academy/AdvancedTutorial/BuildingUserExperiences/ConfiguringDrives)
+- [Configuring Drives](/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
 ## Further Reading
 - [GraphQL Playground](https://www.apollographql.com/docs/apollo-server/testing/graphql-playground/)
-- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 
 </details>
 
@@ -918,8 +918,8 @@ You need to understand and manage different types of dependencies in your Powerh
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ## Further Reading
-- [Powerhouse Builder Tools](/academy/AdvancedTutorial/Create/BuilderTools)
-- [GraphQL Schema Best Practices](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
+- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
 
 </details>
 

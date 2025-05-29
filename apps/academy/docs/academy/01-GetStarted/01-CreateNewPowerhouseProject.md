@@ -1,4 +1,4 @@
-# 1. Create a new ToDoList Document
+# Create a new ToDoList Document
 
 ## Overview
 This tutorial guides you through creating a 'Powerhouse project' for a ToDoList. A Powerhouse project primarily consists of a document model and its editor. You'll be using Connect locally, known as 'Studio mode'.
@@ -88,7 +88,7 @@ A new browser window will open and you will see the Connect application. If it d
 You will see your local drive and a button to create a new drive. 
 
 :::tip
-A drive is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer)
+A drive is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 :::
 
 Move into your local drive. 

@@ -5,17 +5,6 @@
 - **Scalable Network Organization (SNO)** – A network organization structured according to the Powerhouse framework, designed for sustainable and scalable growth.
 - **Powerhouse Ecosystem** – The overall environment of Powerhouse tools, applications (like Connect), concepts (document models, packages), and services.
 
-## Organizational Concepts
-- **Network Organization** – A group of independent contributors and teams working together towards a common purpose, relying on decentralization and resource sharing.
-- **Event-Driven Architecture (EDA)** – A software design approach where system flows are determined by events that trigger actions asynchronously.
-- **Ceramic** – A decentralized network for storing verifiable data, used by Powerhouse Renown for secure credential management.
-- **Decentralized Identifier (DID)** – A user-controlled, globally unique ID, used in Renown to link a user's blockchain key to actions pseudonymously.
-- **Immutable Updates** – A principle where data is never altered in place; operations create new data versions, vital for Powerhouse's event sourcing.
-- **Type Safety (in Document Modeling)** – Powerhouse's use of auto-generated TypeScript definitions from a model's schema (SDL) to prevent data type errors in development.
-
-## Governance & Legal
-- **Proof of Work Tokens (POWts)** – A legal instrument used to measure opportunity costs for contributors in a SNO.
-
 ## Technology & Framework
 - **CQRS (Command Query Responsibility Segregation)** – A pattern that separates read and write operations to improve scalability.
 - **Event Sourcing** – A method of storing system state as a sequence of immutable events rather than modifying a single record.
@@ -37,10 +26,18 @@
 
 ## Development & Data Modeling
 - **Document Models** – Structured data models that define how Powerhouse documents store and process information.
+- **Document Model Specification** – The formal definition of a document model (state, operations), created in Connect Studio (using GraphQL SDL) and exported (e.g., `.phdm.zip`) for code generation.
 - **Document Model Editors** – An interface or UI to a document model that allows users to create and modify the data captured by the document models.
+- **Document State** – The current data held by a document instance, structured according to its Document Model.
+- **Document Type** – A unique string identifier (e.g., `powerhouse/todolist`) for a Document Model, used by host apps to select the correct editor/logic.
+- **GraphQL Schema Definition Language (SDL) (for Document Models)** – Language used in Connect Studio to define a Document Model's data structure (state) and operations.
+- **Input Types (GraphQL for Document Operations)** – Custom data structures in SDL detailing parameters for document operations (e.g., `AddTodoItemInput`).
+- **Modules (in Document Model Editor)** – An organizational feature in Connect Studio's model editor for grouping related operations.
+- **Operations (Document Operations)** – Named commands (e.g., `ADD_TODO_ITEM`) in a Document Model representing all ways to change its state, forming its event log.
+- **Powerhouse Document (`.phd` file)** – Standard file extension for an exported Powerhouse document instance, containing its data and history.
 - **Powerhouse Project** – A collection of document models, document model editors, and other resources being build in Connect Studio.
+- **Powerhouse Package** – A collection of document models, document model editors, and other resources that are published as a package and can be used in any of the host applications.
 - **Host Applications** – Applications that use the Powerhouse framework to create and manage documents and data.
-- **Packages** – A collection of document models, document model editors, and other resources that are published as a package and can be used in any of the host applications.
 - **GraphQL Scalars** – Data types used in Powerhouse document modeling (e.g., `String`, `Int`, `Currency`, `OID` for unique object IDs).
 - **Model-Driven Development (MDD)** – A software approach that uses high-level models to generate system logic and configurations.
 - **Strands** – A single synchronization channel that connects exactly one unit of synchronization to another, with all four parameters (drive_url, doc_id, scope, branch) set to fixed values. This allows synchronization between two distinct points of instances of a document or document drive.
@@ -48,16 +45,8 @@
 - **Actions (Document Actions)** – Typed objects representing an intent to change a document's state, dispatched to reducers, containing an operation type and input data.
 - **Boilerplate (Powerhouse Project)** – The `ph init` command's initial project structure, providing a standard starting point for new Powerhouse packages.
 - **Dispatch (in Document Models)** – The act of sending an action (representing an operation) to a document model's reducer to trigger a state update.
-- **Document Model Specification** – The formal definition of a document model (state, operations), created in Connect Studio (using GraphQL SDL) and exported (e.g., `.phdm.zip`) for code generation.
-- **Document State** – The current data held by a document instance, structured according to its Document Model.
-- **Document Type** – A unique string identifier (e.g., `powerhouse/todolist`) for a Document Model, used by host apps to select the correct editor/logic.
 - **Drive** – A logical container in Powerhouse for storing, organizing, and managing collections of documents.
 - **Drive App (Custom Drive Explorer)** – A UI application, often custom, providing tailored views and interactions with documents in a Drive.
-- **GraphQL Schema Definition Language (SDL) (for Document Models)** – Language used in Connect Studio to define a Document Model's data structure (state) and operations.
-- **Input Types (GraphQL for Document Operations)** – Custom data structures in SDL detailing parameters for document operations (e.g., `AddTodoItemInput`).
-- **Modules (in Document Model Editor)** – An organizational feature in Connect Studio's model editor for grouping related operations.
-- **Operations (Document Operations)** – Named commands (e.g., `ADD_TODO_ITEM`) in a Document Model representing all ways to change its state, forming its event log.
-- **Powerhouse Document (`.phd` file)** – Standard file extension for an exported Powerhouse document instance, containing its data and history.
 - **Pure Functions (for Reducers)** – Principle that document model reducers must be pure (output depends only on input, no side effects) for predictable state transitions.
 - **Reducers (Document Model Reducers)** – Functions implementing a Document Model's logic; for each operation, a reducer takes current state and an action, returning new state.
 - **Scalars (Design System Components)** – Reusable UI building blocks (e.g., `Checkbox`, `InputField`) from `@powerhousedao/design-system/scalars`, used in editors (distinct from GraphQL scalars).
@@ -70,3 +59,14 @@
 - **AI Assistants** – AI-powered contributors paired with human contributors to automate tasks and improve productivity.
 - **AI Contributor Modes** – Configurable states that determine the AI assistant's behavior, permissions, and task focus.
 - **Task Automation & Scaling** – The use of AI to streamline repetitive tasks, improve communications, and enhance decision-making.
+
+## Organizational Concepts
+- **Network Organization** – A group of independent contributors and teams working together towards a common purpose, relying on decentralization and resource sharing.
+- **Event-Driven Architecture (EDA)** – A software design approach where system flows are determined by events that trigger actions asynchronously.
+- **Ceramic** – A decentralized network for storing verifiable data, used by Powerhouse Renown for secure credential management.
+- **Decentralized Identifier (DID)** – A user-controlled, globally unique ID, used in Renown to link a user's blockchain key to actions pseudonymously.
+- **Immutable Updates** – A principle where data is never altered in place; operations create new data versions, vital for Powerhouse's event sourcing.
+- **Type Safety (in Document Modeling)** – Powerhouse's use of auto-generated TypeScript definitions from a model's schema (SDL) to prevent data type errors in development.
+
+## Governance & Legal
+- **Proof of Work Tokens (POWts)** – A legal instrument used to measure opportunity costs for contributors in a SNO.

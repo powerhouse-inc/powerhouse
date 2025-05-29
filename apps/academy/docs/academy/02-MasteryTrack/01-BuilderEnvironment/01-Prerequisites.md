@@ -1,9 +1,9 @@
-# Setup Builder Environment
+# Prerequisites 
 
 Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
 :::info
-If you've already set up **Git, Node, and pnpm**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. In this case use `pnpm install -g ph-cmd`. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of [Powerhouse Builder Tools](../Create/BuilderTools). Move to the end of this chapter to [verify your installation.](#verify-installation)
+If you've already set up **Git, Node, and pnpm**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. In this case use `pnpm install -g ph-cmd`. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
 :::
 ___
 
@@ -27,7 +27,12 @@ ___
 
 ## Overview
 
-Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools: node.js 22, which helps us run our code, Visual Studio Code (VS Code), which is where we'll write our code, and Git, which helps us manage our code. Follow the steps below based on your computer's operating system.
+Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools: 
+- Node.js 22, which helps us run our code.
+- Visual Studio Code (VS Code), which is where we'll write our code
+- Git, which helps us manage our code. 
+
+Follow the steps below based on your computer's operating system.
 
 ### Installing node.js 22
 
@@ -51,14 +56,21 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    - Once the installer downloads, double-click it to start installation
    - Click "Next" through the installation wizard, leaving all settings at their defaults
 
-3. **Verify Installation:**
+3. **Install pnpm:**
+   - Open PowerShell (no need for admin mode)
+   - Type this command and press Enter:
+   ```powershell
+   npm install -g pnpm
+   ```
+
+4. **Verify Installation:**
    - Open PowerShell (no need for admin mode)
    - Type these commands one at a time and press Enter after each:
    ```powershell
    node --version
    pnpm --version
    ```
-   - You should see version numbers appear after each command (e.g., v18.17.0). If you do, congratulations - node.js 22 is installed!
+   - You should see version numbers appear after each command (e.g., v18.17.0). If you do, congratulations - Node.js and pnpm are installed!
 
 > **Note**: If node.js 22 commands don't work in VS Code, restart VS Code to refresh environment variables.
 
@@ -74,7 +86,11 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
 2. **Install node.js 22:**
    - In the same Terminal window, type this command and press Enter:
    ```bash
-   brew install node
+   brew install node@22
+   ```
+   - Then, install pnpm:
+   ```bash
+   brew install pnpm
    ```
 
 3. **Verify Installation:**
@@ -83,7 +99,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    node --version
    pnpm --version
    ```
-   - If you see version numbers, you've successfully installed node.js 22!
+   - If you see version numbers, you've successfully installed Node.js and pnpm!
 
 #### For Linux (Ubuntu/Debian):
 1. **Open Terminal:**
@@ -131,7 +147,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 6. To make VS Code available in your terminal:
    - Open VS Code
    - Press Command + Shift + P
-   - Type "shell command" and select "Install 'code' command in PATH"
+   - Type "shell command" and select "Shell Command: Install 'code' command in PATH"
 
 #### For Linux (Ubuntu/Debian):
 1. Open Terminal (Ctrl + Alt + T)
@@ -203,9 +219,9 @@ git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
 ```
 
-### Install Powerhouse CLI
+### Install the Powerhouse CLI
 
-The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides essential commands for managing Powerhouse projects. You can get access to the Powerhouse Ecosystem tools by installing them globally using:
+The Powerhouse CLI (installed via the `ph-cmd` package) is a command-line interface tool. It provides the `ph` command, which is essential for managing Powerhouse projects. You can get access to the Powerhouse Ecosystem tools by installing them globally using:
 ```bash
 pnpm install -g ph-cmd
 ``` 
@@ -219,9 +235,9 @@ Key commands include:
 This tool will be fundamental on your journey when creating, building, and running Document Models.
 
 <details>
-<summary> How to make use of different branches? </summary>
+<summary> How to use different branches? </summary>
 
-When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features then the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
+When installing or using the Powerhouse CLI commands you can use the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bug fix or features under development.
 
 | Command | Description |
 |---------|-------------|
@@ -245,8 +261,22 @@ Open your terminal (command prompt) and run the following commands to verify you
 node --version
 pnpm --version
 git --version
+ph --version
 ```
 
-ADD VERSION NUMBER OUTPUTS @CallmeT
+You should see version numbers displayed for all commands, similar to the example output below (your versions might be higher). The output for `ph --version` includes its version and may also show additional messages if further setup like `ph setup-globals` is needed.
+You're now ready to start building your first Document Model!
 
-You should see version numbers displayed for all commands. You're now ready to start building your first Document Model!
+```bash
+% node --version
+v22.16.0
+% pnpm --version
+10.10.0
+% git --version
+git version 2.39.3 
+% ph --version
+PH CMD version:  0.43.18
+-------------------------------------
+PH CLI is not available, please run `ph setup-globals` to generate the default global project
+```
+

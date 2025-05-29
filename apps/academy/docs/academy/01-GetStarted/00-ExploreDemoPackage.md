@@ -67,7 +67,7 @@ Switchboard checks the validity of the DID and credential, ensuring the operatio
 By leveraging this system, every operation or modification made to a document is cryptographically signed by the contributor\'s Renown identity. This ensures that each change is verifiable, traceable, and attributable to a specific pseudonymous user, providing a robust audit trail for all document activity. 
 
 A key feature you get with Connect is the **Operations History**. Every change to a document is stored as an individual operation, creating an immutable and replayable history. This provides complete auditability and transparency, as you can inspect each revision, its details, and any associated signatures. For example, you can see a chronological list of all modifications, along with who made them and when. This ensures every action is traceable and verifiable.
-Learn more about the [Operations History and other document tools you get for free](../AdvancedTutorial/BuildingUserExperiences/DocumentTools/OperationHistory).
+Learn more about the [Operations History and other document tools you get for free](../MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory).
 
 ## Step 6: Export a Document
 

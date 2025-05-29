@@ -1,4 +1,4 @@
-# 4. Build a ToDoList Editor
+# Build a ToDoList Editor
 
 In this chapter we will continue with the interface or editor implementation of the **ToDoList** document model. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items.
 
@@ -487,7 +487,7 @@ The editor will update dynamically, so you can play around with your editor styl
 Congratulations!
 If you managed to follow this tutorial until this point, you have successfully implemented the **ToDoList** document model with its reducer operations and editor. 
 
-Now you can move on to creating a [custom drive explorer](/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer) for your ToDoList document.    
+Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your ToDoList document.    
 Imagine you have many ToDoLists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
 
 

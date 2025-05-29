@@ -31,7 +31,7 @@ query {
 ```
 
 In this example, query is the operation type, user is the field on the root type, and name, email, and friends are fields on the user type. The id: `"1"` is a parameter passed to the query, specifying which user to fetch.
-You can find more examples of GraphQL core concept in the section [GraphQL at Powerhouse](/academy/AdvancedTutorial/WorkWithData/GraphQLAtPowerhouse).
+You can find more examples of GraphQL core concept in the section [GraphQL at Powerhouse](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse).
 
 ## Analytics Query Structure
 

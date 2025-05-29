@@ -1,4 +1,4 @@
-# 3. Implement the Document Model
+# Implement the Document Model
 
 In this section, we will implement and test the operation reducers for the **ToDoList** document model. For this, you have to export the document model specification from the Connect application and import it into your Powerhouse project directory. 
 
