@@ -1,0 +1,65 @@
+---
+description: Reactor Package File Organization Structure
+globs: packages/reactor/src/**/*
+alwaysApply: false
+---
+# Reactor Package File Organization
+
+Enforces consistent file organization structure for systems in the reactor package.
+
+<rule>
+name: reactor_file_organization
+description: Ensures each system in the reactor package follows the standard file structure with types.ts, interfaces.ts, and implementation files
+filters:
+  - type: file_path
+    pattern: "packages/reactor/src/[^/]+/"
+  - type: event
+    pattern: "(file_create|file_modify|directory_create)"
+
+actions:
+  - type: suggest
+    conditions:
+      - pattern: "packages/reactor/src/([^/]+)/(?!types\\.ts$|interfaces\\.ts$|[^/]+\\.ts$)"
+        message: |
+          Each system directory should follow the standard structure:
+          
+          ```
+          system-name/
+          ├── types.ts           # Type definitions specific to the system
+          ├── interfaces.ts      # Interface definitions and contracts
+          └── [implementation].ts # Main implementation file(s)
+          ```
+          
+          File Responsibilities:
+          - **types.ts**: Type definitions, enums, and type aliases specific to the system
+          - **interfaces.ts**: Interface definitions that define contracts and API shapes
+          - **[implementation].ts**: Main implementation logic for the system
+
+  - type: enforce
+    conditions:
+      - pattern: "packages/reactor/src/([^/]+)/$"
+        requirements:
+          - file_exists: "types.ts"
+            message: "System directory must contain types.ts for type definitions"
+          - file_exists: "interfaces.ts"
+            message: "System directory must contain interfaces.ts for interface definitions"
+          - min_implementation_files: 1
+            message: "System directory must contain at least one implementation file"
+
+examples:
+  - input: |
+      packages/reactor/src/events/
+      ├── types.ts
+      ├── interfaces.ts
+      └── event-bus.ts
+    output: "Correctly structured system directory"
+
+  - input: |
+      packages/reactor/src/events/
+      └── event-bus.ts
+    output: "Missing required types.ts and interfaces.ts files"
+
+metadata:
+  priority: medium
+  version: 1.0
+</rule> 

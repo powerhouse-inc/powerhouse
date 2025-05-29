@@ -1,0 +1,107 @@
+---
+description: 
+globs: packages/reactor/test/*
+alwaysApply: false
+---
+# Reactor Testing Standards
+
+Enforces testing standards and best practices for the @powerhousedao/reactor package using Vitest.
+
+<rule>
+name: reactor_testing_standards
+description: Ensures consistent testing patterns and file organization for the reactor package
+filters:
+  - type: file_path
+    pattern: "packages/reactor/test/*"
+  - type: content
+    pattern: "import.*vitest"
+
+actions:
+  - type: suggest
+    conditions:
+      - pattern: "^(?!.*import.*vitest)"
+        message: "Test files should import from vitest. Add: import { describe, expect, it } from \"vitest\";"
+    
+  - type: suggest
+    conditions:
+      - pattern: "import.*\\.\\./src/.*(?!\\.js)"
+        message: "Imports from src should use .js extension for ESM compatibility"
+    
+  - type: suggest
+    conditions:
+      - pattern: "(?s)describe\\([^,]*,\\s*\\(\\)\\s*=>\\s*\\{(?!.*it\\()"
+        message: "Empty describe blocks should contain test cases using it() or nested describe() blocks"
+    
+  - type: reject
+    conditions:
+      - pattern: "(?s)it\\([^,]*,\\s*\\(\\)\\s*=>\\s*\\{\\s*\\}\\)"
+        message: "Empty test cases are not allowed. Add meaningful test logic or remove the test."
+    
+  - type: suggest
+    conditions:
+      - pattern: "(?s)async.*=>.*(?!await)"
+        message: "Async test functions should use await for async operations"
+    
+  - type: suggest
+    message: |
+      Follow these testing standards:
+      
+      1. **File Structure**:
+         - Use *.test.ts naming convention
+         - Import from src with .js extensions
+         - Group related tests with nested describe blocks
+      
+      2. **Basic Pattern**:
+         ```typescript
+         import { describe, expect, it } from "vitest";
+         import { Module } from "../src/module.js";
+         
+         describe("Module", () => {
+           it("should do something", async () => {
+             const instance = new Module();
+             const result = await instance.method();
+             expect(result).toBe(expected);
+           });
+         });
+         ```
+      
+      3. **Test Categories**:
+         - Core functionality
+         - Error handling  
+         - Edge cases
+         - Performance (if relevant)
+      
+      4. **Key Guidelines**:
+         - Use async/await for async operations
+         - Test both success and error cases
+         - Use TypeScript types for better test safety
+         - Group related tests logically
+
+examples:
+  - input: |
+      import { describe, expect, it } from "vitest";
+      import { EventBus } from "../src/events/event-bus.js";
+      
+      describe("EventBus", () => {
+        it("should emit events", async () => {
+          const bus = new EventBus();
+          const result = await bus.emit("test");
+          expect(result).toBeDefined();
+        });
+      });
+    output: "Well-structured test following reactor standards"
+    
+  - input: |
+      import { EventBus } from "../src/events/event-bus";
+      
+      describe("EventBus", () => {
+        it("should work", () => {
+        });
+      });
+    output: "Missing .js extension, vitest imports, and empty test case"
+
+metadata:
+  priority: medium
+  version: 1.0
+  category: testing
+</rule>

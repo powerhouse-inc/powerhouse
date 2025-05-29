@@ -1,0 +1,187 @@
+---
+description: 
+globs: packages/reactor/bench/*
+alwaysApply: false
+---
+# Benchmarking Standards
+
+Performance benchmarking standards and best practices for the document-drive package using Vitest.
+
+<rule>
+name: benchmarking_standards
+description: Ensures consistent and effective performance benchmarking practices using Vitest's bench function
+filters:
+  - type: file_extension
+    pattern: "\\.bench\\.ts$"
+  - type: file_path
+    pattern: "(bench|benchmarks)/"
+  - type: content
+    pattern: "bench\\("
+
+actions:
+  - type: suggest
+    conditions:
+      - pattern: "new .*\\(\\).*bench\\("
+        message: |
+          Move expensive object creation outside the bench function to isolate what you're measuring.
+          
+          Good:
+          ```typescript
+          const eventBus = new EventBus(); // Setup outside
+          bench('emit event', () => {
+            eventBus.emit(1, data);
+          });
+          ```
+          
+          Bad:
+          ```typescript
+          bench('emit event', () => {
+            const eventBus = new EventBus(); // This gets measured!
+            eventBus.emit(1, data);
+          });
+          ```
+
+  - type: suggest
+    conditions:
+      - pattern: "bench\\([^,]*,\\s*(?:async\\s+)?\\([^)]*\\)\\s*=>\\s*\\{[^}]*\\}\\s*\\);"
+        message: |
+          Consider adding benchmark configuration options for more reliable results:
+          
+          ```typescript
+          bench('test name', () => {
+            // benchmark code
+          }, { 
+            time: 500,           // Run for 500ms
+            iterations: 100,     // Minimum iterations
+            warmupTime: 100,     // Warmup time in ms
+            warmupIterations: 5  // Minimum warmup iterations
+          });
+          ```
+
+  - type: suggest
+    conditions:
+      - pattern: "bench\\([^,]*,\\s*(?:async\\s+)?\\([^)]*\\)\\s*=>\\s*\\{.*await.*\\}"
+        message: |
+          For async benchmarks, ensure proper await usage and consider using setup/teardown for expensive operations:
+          
+          ```typescript
+          bench('async operation', async () => {
+            await asyncOperation(data);
+          }, {
+            setup() {
+              // Expensive setup code (not measured)
+            },
+            teardown() {
+              // Cleanup code (not measured)
+            }
+          });
+          ```
+
+  - type: suggest
+    conditions:
+      - pattern: "describe\\([^,]*,\\s*\\(\\)\\s*=>\\s*\\{[^}]*bench\\([^,]*,'[^']*'[^}]*\\}\\s*\\);"
+        message: |
+          Consider testing multiple scenarios for comprehensive performance analysis:
+          
+          ```typescript
+          describe('Component Operations', () => {
+            bench('single operation', () => { /* ... */ });
+            bench('batch operation (10)', () => { /* ... */ });
+            bench('batch operation (100)', () => { /* ... */ });
+            bench('batch operation (1000)', () => { /* ... */ });
+          });
+          ```
+
+  - type: reject
+    conditions:
+      - pattern: "bench\\([^,]*,\\s*(?:async\\s+)?\\([^)]*\\)\\s*=>\\s*\\{[^}]*console\\.(log|error|warn)"
+        message: "Remove console.log statements from benchmark functions as they affect performance measurements"
+
+  - type: suggest
+    message: |
+      Benchmarking Best Practices:
+
+      1. **File Organization**:
+         - Use `.bench.ts` extension
+         - Group by component/feature
+         - Place in `bench/` or `benchmarks/` directory
+
+      2. **Benchmark Structure**:
+         ```typescript
+         import { bench, describe } from 'vitest';
+         
+         describe('Component Benchmarks', () => {
+           const component = new Component(); // Setup outside
+           
+           bench('operation name', async () => {
+             // Only the code you want to measure
+           }, { time: 500 });
+         });
+         ```
+
+      3. **Performance Isolation**:
+         - Move setup code outside bench functions
+         - Use realistic data sizes
+         - Test different scenarios (small/large data, 1/many operations)
+         - Use setup/teardown for expensive operations
+
+      4. **Configuration Options**:
+         - `time`: Duration in milliseconds (default: 500)
+         - `iterations`: Minimum iterations to run
+         - `warmupTime`: Warmup duration in milliseconds
+         - `warmupIterations`: Minimum warmup iterations
+
+      5. **Async Benchmarks**:
+         - Use `async` functions with proper `await`
+         - Ensure all promises are resolved
+         - Consider memory cleanup in teardown
+
+      6. **Understanding Results**:
+         - **hz**: Operations per second (higher is better)
+         - **min/max/mean**: Execution time statistics
+         - **p75/p99**: Percentile measurements
+         - **rme**: Relative margin of error
+
+examples:
+  - input: |
+      bench('emit event', () => {
+        const eventBus = new EventBus();
+        eventBus.emit(1, data);
+      });
+    output: |
+      const eventBus = new EventBus(); // Move setup outside
+      bench('emit event', () => {
+        eventBus.emit(1, data);
+      }, { time: 500 });
+
+  - input: |
+      bench('async operation', async () => {
+        const result = await processor.process(data);
+        console.log(result); // Remove console.log
+      });
+    output: |
+      bench('async operation', async () => {
+        await processor.process(data);
+      }, { time: 500 });
+
+  - input: |
+      bench('single test', () => {
+        component.method();
+      });
+    output: |
+      describe('Component Performance', () => {
+        bench('single operation', () => {
+          component.method();
+        });
+        bench('batch operations (10)', () => {
+          for (let i = 0; i < 10; i++) {
+            component.method();
+          }
+        });
+      });
+
+metadata:
+  priority: medium
+  version: 1.0
+  tags: ["performance", "testing", "vitest", "benchmarking"]
+</rule>
