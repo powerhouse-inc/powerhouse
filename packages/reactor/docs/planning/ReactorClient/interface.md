@@ -1,4 +1,4 @@
-# Interface: IReactorClient
+# Interface
 
 ```tsx
 interface IReactorClient {

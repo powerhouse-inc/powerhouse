@@ -1,4 +1,10 @@
-# Interface: ISyncStore
+# ISyncStore
+
+### Summary
+
+- Read/write storage for synchronization primitives.
+
+### Interface
 
 ```tsx
 type StorageUnit = {

@@ -1,4 +1,4 @@
-# Interface: IReactor
+# Interface
 
 ```tsx
 interface IReactor {

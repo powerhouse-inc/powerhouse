@@ -1,4 +1,12 @@
-# Interface: IOperationStore
+# IOperationStore
+
+### Summary
+
+- Read/write access to raw operations.
+- Very important that it has no dependencies on `PHDocument`.
+- Very important that all writes are atomic.
+
+### Interface
 
 ```tsx
 //  [
@@ -124,6 +132,27 @@ interface AtomicTxn {
 	setName(name: string);
 }
 ```
+
+### Usage
+
+```tsx
+await operations.apply(
+	documentId, scope, branch, revision,
+	async (txn) => {
+		// get current state to pass to reducers
+		const currentState = await readModel.get(documentId, scope, branch, revision);
+		const { operations, header } = await applyReducers(currentState);
+		
+		// add new operations
+	  txn.addOperations(...operations);
+	  
+	  // header operations
+	  txn.setSlug('updated-slug');
+	  txn.setName('updated-name');
+	});
+```
+
+### Schema
 
 The database schema, in prisma format, will look something like:
 

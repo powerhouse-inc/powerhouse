@@ -1,4 +1,4 @@
-# Interface: IEventBus
+# Interface
 
 ```tsx
 /**
@@ -29,8 +29,3 @@ export interface IEventBus {
   emit(type: number, data: any): Promise<void>;
 }
 ```
-
-**Implementation Notes**
-
-- All in-memory with no persistence.
-- While an initial implementation can be shared between client and server, the node implementation might be able to be optimized with `process.nextTick` .

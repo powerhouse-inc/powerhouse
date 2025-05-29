@@ -1,4 +1,4 @@
-# Usage: IJobExecutor
+# Usage
 
 ```tsx
 // Configure and start the job executor

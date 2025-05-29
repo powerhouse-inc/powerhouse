@@ -1,4 +1,17 @@
-# Interface: IDocumentView
+# IDocumentView
+
+### Summary
+
+- Listens to `IEventBus` for operation store updates, which trigger it to rebuild / update pre-joined, denormalized views for application reads.
+- Reads from `IOperationStore` as needed.
+- Provides an API for `IReactor` or external systems to read document data from.
+
+### Dependencies
+
+- [IOperationStore](../Reactor/Interfaces/IOperationStore.md)
+- [IDocumentIndexer](../Reactor/Interfaces/IDocumentIndexer.md)
+
+### Interface
 
 ```tsx
 interface IDocumentView {

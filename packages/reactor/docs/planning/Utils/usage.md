@@ -1,4 +1,4 @@
-# Usage: Utils
+# Usage
 
 ### paginate()
 

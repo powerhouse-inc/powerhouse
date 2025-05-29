@@ -1,4 +1,14 @@
-# Interface: IQueue
+# IQueue
+
+### Summary
+
+The `IQueue` provides a simple API to queue new write jobs. Internally, it creates separate queues keyed by documentId, scope, and branch to ensure proper ordering of operations within each document context. Jobs are processed in FIFO order within each queue to maintain consistency. When jobs are enqueued, the queue emits 'jobAvailable' events to the event bus to notify job executors.
+
+### Dependencies
+
+- [IEventBus](../Events/index.md)
+
+### Interface
 
 ```tsx
 /**
@@ -99,9 +109,58 @@ export interface IQueue {
 }
 ```
 
-**Implementation Notes**
+### Usage
+
+```tsx
+// Create a new job for a document operation
+const job: Job = {
+  id: crypto.randomUUID(),
+  documentId: 'doc-123',
+  scope: 'global',
+  branch: 'main',
+  operation: {
+    type: 'UPDATE_TITLE',
+    input: { title: 'New Title' },
+    scope: 'global',
+    index: 42,
+    timestamp: new Date().toISOString(),
+    hash: 'abc123',
+    skip: 0
+  },
+  createdAt: new Date().toISOString(),
+  maxRetries: 3
+};
+
+// Enqueue the job (this will emit a 'jobAvailable' event to the event bus)
+await queue.enqueue(job);
+
+// Check queue size for a specific document/scope/branch
+const queueSize = await queue.size('doc-123', 'global', 'main');
+console.log(`Queue size: ${queueSize}`);
+
+// Get the next job for processing (used by job executor)
+const nextJob = await queue.dequeueNext();
+if (nextJob) {
+  console.log(`Processing job: ${nextJob.id}`);
+}
+
+// Remove a specific job if needed
+const removed = await queue.remove('job-id-456');
+if (removed) {
+  console.log('Job removed successfully');
+}
+
+// Clear all jobs for a specific document context
+await queue.clear('doc-123', 'global', 'main');
+
+// Get total queue size across all documents
+const totalSize = await queue.totalSize();
+console.log(`Total jobs in queue: ${totalSize}`);
+```
+
+### Implementation Notes
 
 - The queue internally maintains separate queues keyed by `(documentId, scope, branch)` to ensure proper ordering of operations within each document context.
 - Jobs within the same document/scope/branch combination are processed in FIFO order to maintain consistency.
 - When a job is enqueued, the queue emits a 'jobAvailable' event to the event bus to notify job executors.
-- Retry logic should be handled by the job executor, with exponential backoff recommended. 
+- Retry logic should be handled by the job executor, with exponential backoff recommended.

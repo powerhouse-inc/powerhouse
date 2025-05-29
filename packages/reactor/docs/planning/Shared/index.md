@@ -1,7 +1,12 @@
-# Interface: Supporting Types
+# Supporting Types
+
+### Summary
+
+Various types used throughout.
+
+### Interface
 
 ```tsx
-
 /**
  * Enum that determines deletion propagation.
  */

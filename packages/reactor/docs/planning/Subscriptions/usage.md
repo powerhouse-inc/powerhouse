@@ -1,4 +1,4 @@
-# Usage: IReactorSubscriptionManager
+# Usage
 
 ```tsx
 // subscribe to changes through the subscription manager

@@ -1,4 +1,4 @@
-# Interface: IReactorSubscriptionManager
+# Interface
 
 ```tsx
 /**
