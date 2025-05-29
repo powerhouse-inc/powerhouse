@@ -66,8 +66,16 @@ type DocumentHeader = {
   /** The name of the document. */
   name: string;
 
+  /** The branch of this document. */
+  branch: string;
+
   /** The type of the document. */
   documentType: string;
+
+  /** The number of operations applied to the document, per scope. */
+  revisions: {
+    [scope: string]: number;
+  };
   
   /** The timestamp of the creation date of the document. */
   createdAtUtcMs: number;
