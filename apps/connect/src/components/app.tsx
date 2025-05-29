@@ -22,6 +22,7 @@ const Preloader = () => {
     return null;
 };
 
+// TODO: enable this after Web Worker implementation
 const ReactorAnalyticsProvider = lazy(
     () => import('../context/reactor-analytics.js'),
 );
@@ -34,17 +35,15 @@ const App = () => (
                 <WagmiContext>
                     <RootProvider>
                         <ReadModeContextProvider>
-                            <ReactorAnalyticsProvider>
-                                <ToastContainer
-                                    position="bottom-right"
-                                    containerId="connect"
-                                />
-                                <UiNodesContextProvider>
-                                    <Router />
-                                    <CookieBanner />
-                                    <Analytics />
-                                </UiNodesContextProvider>
-                            </ReactorAnalyticsProvider>
+                            <ToastContainer
+                                position="bottom-right"
+                                containerId="connect"
+                            />
+                            <UiNodesContextProvider>
+                                <Router />
+                                <CookieBanner />
+                                <Analytics />
+                            </UiNodesContextProvider>
                         </ReadModeContextProvider>
                     </RootProvider>
                 </WagmiContext>
