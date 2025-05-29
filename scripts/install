@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# Detect operating system
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    # Windows
+    if [ -f "$0.ps1" ]; then
+        powershell -ExecutionPolicy Bypass -File "$0.ps1"
+    else
+        echo "Error: Windows installation script (install.ps1) not found"
+        exit 1
+    fi
+else
+    # Linux/Unix
+    if [ -f "$0.sh" ]; then
+        bash "$0.sh"
+    else
+        echo "Error: Linux installation script (install.sh) not found"
+        exit 1
+    fi
+fi 

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+# Get the target tag from command line argument
+TARGET_TAG=${1:-"latest"}
+
+# Detect operating system
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    # Windows
+    if [ -f "$0.ps1" ]; then
+        powershell -ExecutionPolicy Bypass -File "$0.ps1" -TARGET_TAG "$TARGET_TAG"
+    else
+        echo "Error: Windows setup script (setup-environment.ps1) not found"
+        exit 1
+    fi
+else
+    # Linux/Unix
+    if [ -f "$0.sh" ]; then
+        bash "$0.sh" "$TARGET_TAG"
+    else
+        echo "Error: Linux setup script (setup-environment.sh) not found"
+        exit 1
+    fi
+fi 

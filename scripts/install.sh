@@ -46,20 +46,8 @@ if ! command -v pnpm &> /dev/null; then
     exit 1
 fi
 
-# Get available versions of ph-cmd
-echo "Fetching available versions of ph-cmd..."
-echo "Available versions of ph-cmd: dev, staging and latest"
-read -p "Enter the version to install (dev/staging/latest) or press Enter for latest: " version_choice
-
-if [ -z "$version_choice" ]; then
-    # Install latest version
-    echo "Installing latest version of ph-cmd..."
-    pnpm add -g ph-cmd
-else
-    # Install selected version
-    echo "Installing ph-cmd version $version_choice..."
-    pnpm add -g ph-cmd@$version_choice
-fi
+echo "Installing latest version of ph-cmd..."
+pnpm add -g ph-cmd@latest
 
 # Set up environment variables in current shell
 export PNPM_HOME="$HOME/.local/share/pnpm"
@@ -94,6 +82,9 @@ if ! command -v ph &> /dev/null; then
     echo "Please try running: source $SHELL_CONFIG"
     exit 1
 fi
+
+# Source the shell configuration to make ph command available immediately
+source "$SHELL_CONFIG"
 
 echo ""
 echo "  🎉 Setup Complete! 🎉"

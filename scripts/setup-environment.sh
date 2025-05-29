@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+TARGET_TAG=${1:-"latest"}
 
 # Install required packages
 sudo apt install -y postgresql postgresql-contrib nginx
@@ -7,7 +8,14 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Setting up global project"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-ph setup-globals
+# Create /var/www if it doesn't exist
+sudo mkdir -p /var/www
+cd /var/www
+
+ph init powerhouse
+cd powerhouse
+ph use $TARGET_TAG
+ph connect build
 
 # Interactive package installation loop
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -61,7 +69,7 @@ else
 fi
 
 # Save DATABASE_URL to .env file
-echo "DATABASE_URL=$DATABASE_URL" | sudo tee -a $HOME/.ph/.env
+echo "DATABASE_URL=$DATABASE_URL" | sudo tee -a /var/www/powerhouse/.env
 
 # SSL Configuration choice
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -127,16 +135,27 @@ server {
     ssl_certificate /etc/nginx/ssl/temp.crt;
     ssl_certificate_key /etc/nginx/ssl/temp.key;
     
+    # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    if (\$http_x_forwarded_proto = "http") {
+      return 301 https://\$server_name\$request_uri;
+    }
+    
     location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        root /var/www/powerhouse/.ph/connect-build/dist;
+        try_files \$uri \$uri/ /index.html;
+        add_header Cache-Control "no-cache";
+        add_header X-Forwarded-Proto \$scheme;
+        add_header X-Forwarded-Host \$host;
+        add_header X-Forwarded-Port \$server_port;
     }
 }
 
@@ -254,7 +273,6 @@ if ! command -v pm2 &> /dev/null; then
     pnpm install -g pm2
 fi
 
-cd $HOME/.ph
 pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
 pnpm add @powerhousedao/switchboard@dev
 
@@ -262,16 +280,12 @@ pnpm add @powerhousedao/switchboard@dev
 echo "Starting services with PM2..."
 if [ "$ssl_choice" = "2" ]; then
     # Self-signed certificate - use base paths
-    pm2 start pnpm connect --name "connect" -- --base-path /connect
     pm2 start pnpm switchboard --name "switchboard" -- --base-path /switchboard
 else
     # Let's Encrypt - no base paths needed
-    pm2 start "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=\"$connect_domain\" pnpm connect" --name "connect"
     pm2 start "pnpm switchboard" --name "switchboard" 
 fi
 
 # Save PM2 process list and setup startup script
 pm2 save
 pm2 startup
-
-# Node.js setup
