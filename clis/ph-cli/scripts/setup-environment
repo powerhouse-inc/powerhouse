@@ -31,10 +31,8 @@ else
     sudo mkdir -p /var/www
     cd /var/www
 
-    ph init powerhouse
+    ph init powerhouse --$TARGET_TAG
     cd powerhouse
-    ph use $TARGET_TAG
-    ph connect build
 
     # =============================================================================
     # Interactive Package Installation
@@ -49,6 +47,11 @@ else
         fi
         ph install "$package_name"
     done
+
+    # =============================================================================
+    # Connect Build
+    # =============================================================================
+    ph connect build
 
     # =============================================================================
     # Database Configuration
@@ -300,7 +303,6 @@ EOF
     fi
 
     pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
-    pnpm add @powerhousedao/switchboard@dev
 
     # Start services with PM2
     echo "Starting services with PM2..."
