@@ -2,7 +2,7 @@
 
 ## Supporting Types
 
-[Interface: Supporting Types](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20Supporting%20Types%201fc1f4740a7f804abc67d8a75bc9dabf.md)
+* [Interface](Interfaces/Supporting-Types.md)
 
 **Summary:**
 
@@ -14,7 +14,7 @@ Various types used throughout.
 
 ## IEventBus
 
-[Interface: IEventBus](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IEventBus%201fa1f4740a7f804bb539f17a277a46da.md)
+* [Interface](Interfaces/IEventBus.md)
 
 **Summary:**
 
@@ -26,9 +26,8 @@ The `EventBus` is an async pub/sub mechanism. We can use an event bus to de-dupl
 
 ## IQueue
 
-[Interface: IQueue](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IQueue%201fc1f4740a7f8045a8b2c3d4e5f6789a.md)
-
-[Usage: IQueue](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Usage%20IQueue%201f81f4740a7f8047c0d4e5f6789abcde.md)
+* [Interface](Interfaces/IQueue.md)
+* [Usage](Interfaces/IQueue-Usage.md)
 
 **Summary:**
 
@@ -40,9 +39,8 @@ The `IQueue` provides a simple API to queue new write jobs. Internally, it creat
 
 ## IJobExecutor
 
-[Interface: IJobExecutor](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IJobExecutor%201fc1f4740a7f8046b9c3d4e5f6789abc.md)
-
-[Usage: IJobExecutor](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Usage%20IJobExecutor%201f81f4740a7f8048d1e5f6789abcdef0.md)
+* [Interface](Interfaces/IJobExecutor.md)
+* [Usage](Interfaces/IJobExecutor-Usage.md)
 
 **Summary:**
 
@@ -56,9 +54,8 @@ The `IJobExecutor` listens for 'jobAvailable' events from the event bus and pull
 
 ## IReactorSubscriptionManager
 
-[Interface: IReactorSubscriptionManager](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IReactorSubscriptionManager%201fc1f4740a7f8076b4cdec7ce2ff3019.md)
-
-[Usage: IReactorSubscriptionManager](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Usage%20IReactorSubscriptionManager%201f81f4740a7f80f396b7f2988a4f7629.md)
+* [Interface](Interfaces/IReactorSubscriptionManager.md)
+* [Usage](Interfaces/IReactorSubscriptionManager-Usage.md)
 
 **Summary:**
 
@@ -72,9 +69,8 @@ The `IJobExecutor` listens for 'jobAvailable' events from the event bus and pull
 
 ## IReactor
 
-[Interface: IReactor](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IReactor%201fc1f4740a7f8016840aea3c91d3b00a.md)
-
-[Usage: IReactor](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Usage%20IReactor%201f81f4740a7f8016ab7ef6ff5e9669d6.md)
+* [Interface](Interfaces/IReactor.md)
+* [Usage](Interfaces/IReactor-Usage.md)
 
 **Summary:**
 
@@ -102,17 +98,16 @@ graph TD
             ASub["on()"]
         end
 
-        ASub --> ARM["IDocumentView"]
+    
+        ASub --> ARM["IDocumentView"] <-->|"Read/Write"| IDocumentIndexer
         ARM -->|"Read"| AOS
     end
-
 ```
 
 ## IReactorClient
 
-[Interface: IReactorClient](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IReactorClient%201fc1f4740a7f8099a3cdecbf339be595.md)
-
-[Usage: IReactorClient](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Usage%20IReactorClient%201f81f4740a7f8012bab7c7a4a70f4054.md)
+* [Interface](Interfaces/IReactorClient.md)
+* [Usage](Interfaces/IReactorClient-Usage.md)
 
 **Summary:**
 
@@ -128,9 +123,8 @@ graph TD
 
 ## Utils
 
-[Interface: Utils](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20Utils%201fc1f4740a7f80c188dcdb3d7cdf32fd.md)
-
-[Usage: Utils](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Usage%20Utils%201f81f4740a7f8042b972c520a8d6df6f.md)
+* [Interface](Interfaces/Utils.md)
+* [Usage](Interfaces/Utils-Usage.md)
 
 **Summary:**
 
@@ -138,9 +132,8 @@ graph TD
 
 ## IOperationStore
 
-[Interface: IOperationStore](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IOperationStore%201fc1f4740a7f80a9bd57ca809ee55bda.md)
-
-[Usage: IOperationStore](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Usage%20IOperationStore%201fc1f4740a7f800a8fb8d5e0ed575e2d.md)
+* [Interface](Interfaces/IOperationStore.md)
+* [Usage](Interfaces/IOperationStore-Usage.md)
 
 **Summary:**
 
@@ -154,7 +147,7 @@ graph TD
 
 ## IDocumentView
 
-[Interface: IDocumentView](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20IDocumentView%201fc1f4740a7f8033a40ce160fe362209.md)
+* [Interface](Interfaces/IDocumentView.md)
 
 **Summary:**
 
@@ -165,10 +158,19 @@ graph TD
 **Dependencies:**
 
 - IOperationStore
+- IDocumentIndexer
+
+## IDocumentIndexer
+
+* [Interface](Interfaces/IDocumentIndexer.md)
+
+**Summary:**
+
+- Indexes relationships between documents.
 
 ## ISyncStore
 
-[Interface: ISyncStore](Interfaces%201f31f4740a7f8040a49bc416e7e0766e/Interface%20ISyncStore%201fc1f4740a7f80e09ecdd805df1d614c.md)
+* [Interface](Interfaces/ISyncStore.md)
 
 **Summary:**
 
