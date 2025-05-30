@@ -4,9 +4,50 @@
 
 The `IJobExecutor` listens for 'jobAvailable' events from the event bus and pulls jobs from the queue when capacity allows. It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities. The executor ensures jobs are processed in the correct order per document/scope/branch combination.
 
-### Error Handling
+### Reshuffle Logic
 
-> TODO: Define structured error events and typical metrics (queue lag, failure counts). Clarify how retries interact with the event log.
+The `IJobExecutor` will proactively reshuffle jobs to prevent as many revision mismatches as possible.
+
+This can be done by invoking the merge helper with `reshuffleByTimestamp`. This rearranges the operations and introduces a skip offset for the newly inserted operations:
+
+```
+const trunk = garbageCollect(sortOperations(storageDocumentOperations));
+const [invertedTrunk, tail] = attachBranch(trunk, branch);
+const newHistory =
+  tail.length < 1
+    ? invertedTrunk
+    : merge(trunk, invertedTrunk, reshuffleByTimestamp);
+```
+
+`merge` sets up a `startIndex` with a `skip` value and passes it to `reshuffle` (e.g., `reshuffleByTimestamp`). This function assigns new indices and updates the skip field for the reordered operations:
+
+```
+const newOperationHistory = reshuffle(
+  {
+    index: nextIndex,
+    skip: nextIndex - (maxCommonIndex + 1),
+  },
+  _targetOperations,
+  filteredMergeOperations,
+);
+```
+
+`reshuffleByTimestamp` then walks through the combined operations, reassigning indices and handling the skip value:
+
+```
+return [...opsA, ...opsB]
+  .sort((a, b) =>
+    new Date(a.timestamp || "").getTime() -
+    new Date(b.timestamp || "").getTime()
+  )
+  .map((op, i) => ({
+    ...op,
+    index: startIndex.index + i,
+    skip: i === 0 ? startIndex.skip : 0,
+  }));
+```
+
+### Error Handling
 
 The executor emits a set of structured events so that clients can react to job progress and failures:
 
@@ -19,7 +60,9 @@ The executor emits a set of structured events so that clients can react to job p
 
 Retries will only be attempted if the job failed for a reason that is likely to be resolved by retrying. For example, if the job failed because the operation was already applied or because the operation was invalid, it will not be retried.
 
-However, if the job failed because of a temporary network issue, it will be retried with exponential backoff + jitter.
+In some cases, a retry might result in a requeue instead, where the job is added back to the queue to wait for some other job to be processed.
+
+If a job failed because of a temporary network issue, for example, it will be retried with exponential backoff + jitter.
 
 #### Fatal Errors
 

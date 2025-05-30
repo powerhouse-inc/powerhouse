@@ -2,9 +2,9 @@
 
 ### Summary
 
-- Read/write access to raw operations.
-- Very important that it has no dependencies on `PHDocument`.
-- Very important that all writes are atomic.
+- Append only: read/append access to raw operations.
+- No dependencies on `PHDocument`.
+- All writes are atomic.
 
 ### Interface
 
