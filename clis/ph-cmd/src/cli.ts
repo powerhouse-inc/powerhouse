@@ -28,7 +28,9 @@ const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = (
 
   const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");
   const isVersionCommand =
-    args.startsWith("--version") || args.startsWith("-v");
+    args.startsWith("--version") ||
+    args.startsWith("-v") ||
+    args.startsWith("version");
 
   // if no args are provided then runs the help command
   if (!args.length) {
