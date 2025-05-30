@@ -1,28 +1,36 @@
-import type { DocumentDriveDocument, Node } from "document-drive";
-import deepEqual from "fast-deep-equal";
 import {
-  atom,
-  useAtom,
-  useAtomValue,
-  useSetAtom,
-  type WritableAtom,
-} from "jotai";
+  type DocumentDriveDocument,
+  type FileNode,
+  type FolderNode,
+  type Node,
+  type ReadDrive,
+} from "document-drive";
+import deepEqual from "fast-deep-equal";
+import { atom, useAtomValue, useSetAtom } from "jotai";
 import { atomFamily } from "jotai/utils";
-import { type AtomFamily } from "jotai/vanilla/utils/atomFamily";
-import { DRIVE } from "./uiNodes/constants.js";
+import { useMemo } from "react";
+import { DRIVE, LOCAL, PUBLIC } from "./uiNodes/constants.js";
+import { type SharingType } from "./uiNodes/types.js";
 
-export const selectedNodeIdAtom = atom<string | null>(null);
-export function useSelectedNodeId() {
-  const selectedDocumentId = useAtomValue(selectedNodeIdAtom);
-  return selectedDocumentId;
-}
+const selectedNodeIdAtom = atom<string | null>(null);
 
-export function useSetSelectedNodeId() {
-  const setSelectedNodeId = useSetAtom(selectedNodeIdAtom);
-  return setSelectedNodeId;
-}
+const nodeMapAtom = atom<Record<string, Node>>({});
 
-export function makeNodeMap(documentDrives: DocumentDriveDocument[]) {
+const nodeAtomFamily = atomFamily(
+  (id: string | null) =>
+    atom(
+      (get) => (id ? get(nodeMapAtom)[id] : null),
+      (get, set, newNode: Node) => {
+        const map = get(nodeMapAtom);
+        if (id && !deepEqual(map[id], newNode)) {
+          set(nodeMapAtom, { ...map, [id]: newNode });
+        }
+      },
+    ),
+  deepEqual,
+);
+
+function makeNodeMap(documentDrives: DocumentDriveDocument[]) {
   console.log("making node map", documentDrives);
   const nodeMap: Record<string, Node> = {};
 
@@ -40,7 +48,7 @@ export function makeNodeMap(documentDrives: DocumentDriveDocument[]) {
       const childNode: Node = {
         id: node.id,
         name: node.name,
-        kind: node.kind,
+        kind: node.kind.toUpperCase(),
         parentFolder: node.parentFolder || documentDrive.id,
       };
 
@@ -51,26 +59,7 @@ export function makeNodeMap(documentDrives: DocumentDriveDocument[]) {
   return nodeMap;
 }
 
-export const nodeMapAtom = atom<Record<string, Node>>({});
-
-export const nodeAtomFamily: AtomFamily<
-  string | null,
-  WritableAtom<Node | null, [newNode: Node], void>
-> = atomFamily(
-  (id: string | null) =>
-    atom(
-      (get) => (id ? get(nodeMapAtom)[id] : null),
-      (get, set, newNode: Node) => {
-        const map = get(nodeMapAtom);
-        if (id && !deepEqual(map[id], newNode)) {
-          set(nodeMapAtom, { ...map, [id]: newNode });
-        }
-      },
-    ),
-  deepEqual,
-);
-
-export const bulkUpdateNodeMapAtom = atom(
+const bulkUpdateNodeMapAtom = atom(
   null,
   (get, set, updatedNodes: Record<string, Node>) => {
     const currentMap = get(nodeMapAtom);
@@ -103,6 +92,16 @@ export const bulkUpdateNodeMapAtom = atom(
   },
 );
 
+export function useSelectedNodeId() {
+  const selectedDocumentId = useAtomValue(selectedNodeIdAtom);
+  return selectedDocumentId;
+}
+
+export function useSetSelectedNodeId() {
+  const setSelectedNodeId = useSetAtom(selectedNodeIdAtom);
+  return setSelectedNodeId;
+}
+
 export function useUpdateNodeMap() {
   const update = useSetAtom(bulkUpdateNodeMapAtom);
   return (drives: DocumentDriveDocument[]) => {
@@ -111,8 +110,8 @@ export function useUpdateNodeMap() {
   };
 }
 
-export function useNodeById(id: string | null) {
-  return useAtom(nodeAtomFamily(id));
+export function useNodeById(id: string | null): Node | null {
+  return useAtomValue(nodeAtomFamily(id));
 }
 
 export function useParentNode(id: string | null): Node | null {
@@ -123,6 +122,11 @@ export function useParentNode(id: string | null): Node | null {
   return parentId ? (nodeMap[parentId] ?? null) : null;
 }
 
+export function useParentNodeId(id: string | null): string | null {
+  const parentNode = useParentNode(id);
+  return parentNode?.id ?? null;
+}
+
 export function useDriveNodeForNode(id: string | null): Node | null {
   const nodeMap = useAtomValue(nodeMapAtom);
   let current = id ? nodeMap[id] : null;
@@ -131,6 +135,18 @@ export function useDriveNodeForNode(id: string | null): Node | null {
   }
 
   return current ?? null;
+}
+
+export function useDriveIdForNode(id: string | null): string | null {
+  const driveNode = useDriveNodeForNode(id);
+  return driveNode?.id ?? null;
+}
+
+export function useNodeDocumentType(id: string | null): string | null {
+  const node = useNodeById(id);
+  if (!node) return null;
+  if (isFileNodeKind(node)) return node.documentType;
+  return null;
 }
 
 export function useNodePath(id: string | null): string[] {
@@ -148,13 +164,13 @@ export function useNodePath(id: string | null): string[] {
   return path;
 }
 
-export function useSelectedNode() {
+export function useSelectedNode(): Node | null {
   const selectedNodeId = useSelectedNodeId();
   return useNodeById(selectedNodeId);
 }
 
 export function useSelectedDriveId() {
-  const [selectedNode] = useSelectedNode();
+  const selectedNode = useSelectedNode();
   const driveNode = useDriveNodeForNode(selectedNode?.id ?? null);
   return driveNode?.id ?? null;
 }
@@ -169,7 +185,113 @@ export function useIsInSelectedNodePath(id: string) {
   return selectedNodePath.includes(id);
 }
 
+export function useIsSelected(id: string | null) {
+  const selectedNodeId = useSelectedNodeId();
+  if (!id) return false;
+  return selectedNodeId === id;
+}
+
 export function useSelectedParentNode() {
   const selectedNodeId = useSelectedNodeId();
   return useParentNode(selectedNodeId);
+}
+
+export function useSelectedParentNodeId() {
+  const selectedParentNode = useSelectedParentNode();
+  return selectedParentNode?.id ?? null;
+}
+
+export function useNodeChildrenIds(id: string | null): string[] {
+  const nodeMap = useAtomValue(nodeMapAtom);
+  if (!id || isFileNodeKind(nodeMap[id])) return [];
+  const nodes = Object.values(nodeMap);
+  const childrenIds = nodes
+    .filter((n) => n.parentFolder === id)
+    .map((n) => n.id);
+  // memoize the childrenIds because this is used to render a list of react nodes
+  return useMemo(() => childrenIds, [childrenIds]);
+}
+
+export function useNodeChildren(id: string | null): Node[] {
+  const nodeMap = useAtomValue(nodeMapAtom);
+  const childrenIds = useNodeChildrenIds(id);
+  const children = childrenIds.map((id) => nodeMap[id]);
+  return children;
+}
+
+export function useNodeFileChildren(id: string | null): Node[] {
+  const nodeChildren = useNodeChildren(id);
+  return nodeChildren.filter((n) => isFileNodeKind(n));
+}
+
+export function useNodeFolderChildren(id: string | null): Node[] {
+  const nodeChildren = useNodeChildren(id);
+  return nodeChildren.filter((n) => isFolderNodeKind(n));
+}
+
+export function sortNodesByName(nodes: Node[]): Node[] {
+  return nodes.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function useNodeFileChildrenIds(id: string | null): string[] {
+  const nodeFileChildren = useNodeFileChildren(id);
+  // memoize the childrenIds because this is used to render a list of react nodes
+  return useMemo(
+    () => sortNodesByName(nodeFileChildren).map((n) => n.id),
+    [nodeFileChildren],
+  );
+}
+
+export function useNodeFolderChildrenIds(id: string | null): string[] {
+  const nodeFolderChildren = useNodeFolderChildren(id);
+  // memoize the childrenIds because this is used to render a list of react nodes
+  return useMemo(
+    () => sortNodesByName(nodeFolderChildren).map((n) => n.id),
+    [nodeFolderChildren],
+  );
+}
+
+export function isFileNodeKind(node: Node | null): node is FileNode {
+  if (!node) return false;
+  return node.kind.toUpperCase() === "FILE";
+}
+
+export function isFolderNodeKind(node: Node | null): node is FolderNode {
+  if (!node) return false;
+  return node.kind.toUpperCase() === "FOLDER";
+}
+
+export function isDriveNodeKind(node: Node | null): node is FolderNode {
+  if (!node) return false;
+  return node.kind.toUpperCase() === "DRIVE";
+}
+
+type NodeKind = "FILE" | "FOLDER" | "DRIVE";
+export function getNodeKind(node: Node | null): NodeKind | null {
+  if (isDriveNodeKind(node)) return "DRIVE";
+  if (isFolderNodeKind(node)) return "FOLDER";
+  if (isFileNodeKind(node)) return "FILE";
+  return null;
+}
+
+export function getDriveSharingType(
+  drive: DocumentDriveDocument | ReadDrive | undefined | null,
+) {
+  if (!drive) return PUBLIC;
+  const isReadDrive = "readContext" in drive;
+  const { sharingType: _sharingType, availableOffline } = !isReadDrive
+    ? drive.state.local
+    : { sharingType: PUBLIC, availableOffline: false };
+  const __sharingType = _sharingType?.toUpperCase();
+  return (__sharingType === "PRIVATE" ? LOCAL : __sharingType) as SharingType;
+}
+
+export function useNodeNameForId(id: string | null): string | null {
+  const node = useNodeById(id);
+  return node?.name ?? null;
+}
+
+export function useNodeKindForId(id: string | null): NodeKind | null {
+  const node = useNodeById(id);
+  return getNodeKind(node);
 }

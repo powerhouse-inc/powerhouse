@@ -2,32 +2,20 @@ import { makeNodeSlugFromNodeName } from '#utils';
 import {
     DRIVE,
     FILE,
-    FOLDER,
-    LOCAL,
     PUBLIC,
-    type SharingType,
     SUCCESS,
     type UiDriveNode,
     type UiFileNode,
     type UiFolderNode,
-    type UiNode,
 } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import {
+    getDriveSharingType,
+    useSelectedParentNodeId,
+    useSetSelectedNodeId,
+} from '@powerhousedao/reactor-browser';
 import { type DocumentDriveDocument, type ReadDrive } from 'document-drive';
 import { useCallback, useMemo } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
-
-export function getDriveSharingType(
-    drive: DocumentDriveDocument | ReadDrive | undefined | null,
-) {
-    if (!drive) return PUBLIC;
-    const isReadDrive = 'readContext' in drive;
-    const { sharingType: _sharingType, availableOffline } = !isReadDrive
-        ? drive.state.local
-        : { sharingType: PUBLIC, availableOffline: false };
-    const __sharingType = _sharingType?.toUpperCase();
-    return (__sharingType === 'PRIVATE' ? LOCAL : __sharingType) as SharingType;
-}
 
 export function useMakeUiDriveNode() {
     const { getSyncStatus } = useDocumentDriveServer();
@@ -196,109 +184,91 @@ export function useDebugHandlers() {
 }
 
 export function useUiNodes() {
-    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
+    const selectedParentNodeId = useSelectedParentNodeId();
+    const setSelectedNodeId = useSetSelectedNodeId();
     const { addFolder, addFile, renameNode, copyNode, moveNode } =
         useDocumentDriveServer();
 
     const onAddFile = useCallback(
-        async (file: File, parentNode: UiNode | null) => {
-            if (!parentNode) {
-                throw new Error('Parent node is required');
+        async (
+            file: File,
+            parentNodeId: string | null,
+            driveId: string | null,
+        ) => {
+            if (!driveId) {
+                throw new Error('Drive id is required');
             }
-            if (parentNode.kind === FILE) {
-                throw new Error('Cannot add file to a file');
+            if (!parentNodeId) {
+                throw new Error('Parent node is required');
             }
 
             const fileName = file.name.replace(/\.zip$/gim, '');
 
-            return await addFile(
-                file,
-                parentNode.driveId,
-                fileName,
-                parentNode.id,
-            );
+            return await addFile(file, driveId, fileName, parentNodeId);
         },
         [addFile],
     );
 
     const onAddFolder = useCallback(
-        async (name: string, parentNode: UiNode | null) => {
-            if (!parentNode) {
+        async (
+            name: string,
+            parentNodeId: string | null,
+            driveId: string | null,
+        ) => {
+            if (!driveId) {
+                throw new Error('Drive id is required');
+            }
+            if (!parentNodeId) {
                 throw new Error('Parent node is required');
             }
-            if (parentNode.kind === FILE) {
-                throw new Error('Cannot add folder to a file');
-            }
-            return await addFolder(parentNode.driveId, name, parentNode.id);
+            return await addFolder(driveId, name, parentNodeId);
         },
         [addFolder],
     );
 
     const onRenameNode = useCallback(
-        async (name: string, uiNode: UiNode) => {
-            if (uiNode.kind === DRIVE) {
-                throw new Error(
-                    'Drive can only be renamed from the drive settings modal',
-                );
-            }
-            return await renameNode(uiNode.driveId, uiNode.id, name);
+        async (name: string, nodeId: string, driveId: string) => {
+            return await renameNode(driveId, nodeId, name);
         },
         [renameNode],
     );
 
     const onCopyNode = useCallback(
-        async (uiNode: UiNode, targetNode: UiNode) => {
-            if (uiNode.kind === DRIVE) {
-                throw new Error('Drive cannot be duplicated');
-            }
-
-            await copyNode(uiNode, targetNode);
+        async (nodeId: string, targetNodeId: string, driveId: string) => {
+            return await copyNode(nodeId, targetNodeId, driveId);
         },
         [copyNode],
     );
 
     const onMoveNode = useCallback(
-        async (uiNode: UiNode, targetNode: UiNode) => {
-            if (uiNode.kind === DRIVE) {
-                throw new Error('Drive cannot be moved');
-            }
-
-            await moveNode(uiNode, targetNode);
+        async (nodeId: string, targetNodeId: string, driveId: string) => {
+            return await moveNode(nodeId, targetNodeId, driveId);
         },
         [moveNode],
     );
 
     const onDuplicateNode = useCallback(
-        async (uiNode: UiNode) => {
-            if (!selectedParentNode) return;
+        async (nodeId: string, driveId: string) => {
+            if (!selectedParentNodeId) return;
 
-            if (uiNode.kind === DRIVE) {
-                throw new Error('Drive cannot be duplicated');
-            }
-
-            await copyNode(uiNode, selectedParentNode);
+            await copyNode(nodeId, selectedParentNodeId, driveId);
         },
-        [copyNode, selectedParentNode],
+        [copyNode, selectedParentNodeId],
     );
 
     const onAddAndSelectNewFolder = useCallback(
-        async (name: string) => {
-            if (!name || !selectedParentNode) return;
+        async (name: string, driveId: string) => {
+            if (!name || !selectedParentNodeId) return;
 
-            const newFolder = await onAddFolder(name, selectedParentNode);
+            const newFolder = await onAddFolder(
+                name,
+                selectedParentNodeId,
+                driveId,
+            );
 
-            setSelectedNode({
-                ...newFolder,
-                kind: FOLDER,
-                slug: makeNodeSlugFromNodeName(newFolder.name),
-                parentFolder: selectedParentNode.id,
-                syncStatus: selectedParentNode.syncStatus,
-                driveId: selectedParentNode.driveId,
-                sharingType: selectedParentNode.sharingType,
-                children: [],
-            });
+            setSelectedNodeId(newFolder.id);
         },
-        [onAddFolder, selectedParentNode, setSelectedNode],
+        [onAddFolder, selectedParentNodeId, setSelectedNodeId],
     );
 
     return useMemo(

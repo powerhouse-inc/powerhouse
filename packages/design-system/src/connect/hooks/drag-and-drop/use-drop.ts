@@ -1,17 +1,35 @@
-import { FILE, UI_NODE, type UiNode } from "#connect";
+import {
+  FILE,
+  isFileNodeKind,
+  useNodeKindForId,
+} from "@powerhousedao/reactor-browser";
+import { type Node } from "document-drive";
 import { type DragEvent, useCallback, useMemo, useState } from "react";
-
+import { UI_NODE_ID } from "../../constants/nodes.js";
 type Props = {
-  uiNode: UiNode | null;
-  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
-  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
-  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  nodeId: string | null;
+  driveId: string | null;
+  onAddFile: (
+    file: File,
+    parentNodeId: string | null,
+    driveId: string | null,
+  ) => Promise<void>;
+  onMoveNode: (
+    nodeId: string,
+    targetNodeId: string,
+    driveId: string,
+  ) => Promise<void>;
+  onCopyNode: (
+    nodeId: string,
+    targetNodeId: string,
+    driveId: string,
+  ) => Promise<void>;
 };
 export function useDrop(props: Props) {
-  const { uiNode, onAddFile, onCopyNode, onMoveNode } = props;
+  const { nodeId, driveId, onAddFile, onCopyNode, onMoveNode } = props;
+  const nodeKind = useNodeKindForId(nodeId);
   const [isDropTarget, setIsDropTarget] = useState(false);
-  const allowedToBeDropTarget = !!uiNode && uiNode.kind !== FILE;
-
+  const allowedToBeDropTarget = !!nodeKind && nodeKind !== FILE;
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDropTarget(true);
@@ -25,7 +43,7 @@ export function useDrop(props: Props) {
     async (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.stopPropagation();
-      if (!uiNode) return;
+      if (!nodeId || !driveId) return;
 
       const droppedFiles = getDroppedFiles(event.dataTransfer.items).filter(
         Boolean,
@@ -33,24 +51,23 @@ export function useDrop(props: Props) {
       if (droppedFiles.length) {
         for (const file of droppedFiles) {
           if (file) {
-            await onAddFile(file, uiNode);
+            await onAddFile(file, nodeId, driveId);
           }
         }
       } else {
         const altOrOptionKeyPressed = event.getModifierState("Alt");
-        const data = event.dataTransfer.getData(UI_NODE);
-        const droppedNode = JSON.parse(data) as UiNode;
+        const droppedNodeId = event.dataTransfer.getData(UI_NODE_ID);
 
         if (altOrOptionKeyPressed) {
-          await onCopyNode(droppedNode, uiNode);
+          await onCopyNode(droppedNodeId, nodeId, driveId);
         } else {
-          await onMoveNode(droppedNode, uiNode);
+          await onMoveNode(droppedNodeId, nodeId, driveId);
         }
       }
 
       setIsDropTarget(false);
     },
-    [onAddFile, onCopyNode, onMoveNode, uiNode],
+    [onAddFile, onCopyNode, onMoveNode, nodeId, driveId],
   );
 
   return useMemo(() => {

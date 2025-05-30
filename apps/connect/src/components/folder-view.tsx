@@ -1,77 +1,34 @@
-import { useShowDeleteNodeModal, type TUiNodes } from '#hooks';
-import { sortUiNodesByName } from '#utils';
+import { useShowDeleteNodeModal, useUiNodes } from '#hooks';
+import { FolderItem, useDrop } from '@powerhousedao/design-system';
 import {
-    FILE,
-    FOLDER,
-    FolderItem,
-    useDrop,
-    type BaseUiFolderNode,
-    type BaseUiNode,
-    type UiFolderNode,
-} from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+    useNodeFileChildrenIds,
+    useNodeFolderChildrenIds,
+    useSelectedDriveId,
+    useSelectedParentNodeId,
+} from '@powerhousedao/reactor-browser';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content/index.js';
 import FileContentView from './file-content-view.js';
 
-export function FolderView(
-    props: TUiNodes & { isAllowedToCreateDocuments?: boolean },
-) {
+export function FolderView(props: { isAllowedToCreateDocuments?: boolean }) {
     const { t } = useTranslation();
-    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
+    const { isAllowedToCreateDocuments = false } = props;
+    const selectedParentNodeId = useSelectedParentNodeId();
+    const selectedDriveId = useSelectedDriveId();
+    const { onAddFile, onMoveNode, onCopyNode, onRenameNode, onDuplicateNode } =
+        useUiNodes();
     const showDeleteNodeModal = useShowDeleteNodeModal();
     const { isDropTarget, dropProps } = useDrop({
-        ...props,
-        uiNode: selectedParentNode,
+        nodeId: selectedParentNodeId,
+        driveId: selectedDriveId,
+        onAddFile,
+        onMoveNode,
+        onCopyNode,
     });
 
-    const handleSelectNode = (node: BaseUiFolderNode) => {
-        setSelectedNode(node as unknown as UiFolderNode);
-    };
-
-    const handleRenameNode = (name: string, node: BaseUiFolderNode) => {
-        props.onRenameNode(name, node as unknown as UiFolderNode);
-    };
-
-    const handleDuplicateNode = (node: BaseUiFolderNode) => {
-        props.onDuplicateNode(node as unknown as UiFolderNode);
-    };
-
-    const handleDeleteNode = (node: BaseUiFolderNode) => {
-        showDeleteNodeModal(node as unknown as UiFolderNode);
-    };
-
-    const handleAddFile = async (file: File, parentNode: BaseUiNode | null) => {
-        await props.onAddFile(
-            file,
-            parentNode as unknown as UiFolderNode | null,
-        );
-    };
-
-    const handleCopyNode = async (node: BaseUiNode, targetNode: BaseUiNode) => {
-        await props.onCopyNode(
-            node as unknown as UiFolderNode,
-            targetNode as unknown as UiFolderNode,
-        );
-    };
-
-    const handleMoveNode = async (node: BaseUiNode, targetNode: BaseUiNode) => {
-        await props.onMoveNode(
-            node as unknown as UiFolderNode,
-            targetNode as unknown as UiFolderNode,
-        );
-    };
-
-    const folderNodes =
-        selectedParentNode?.children
-            .filter(node => node.kind === FOLDER)
-            .sort(sortUiNodesByName) ?? [];
-
-    const fileNodes =
-        selectedParentNode?.children
-            .filter(node => node.kind === FILE)
-            .sort(sortUiNodesByName) ?? [];
+    const folderNodeIds = useNodeFolderChildrenIds(selectedParentNodeId);
+    const fileNodeIds = useNodeFileChildrenIds(selectedParentNodeId);
 
     return (
         <div
@@ -85,20 +42,19 @@ export function FolderView(
                 title={t('folderView.sections.folders.title')}
                 className="mb-4"
             >
-                {folderNodes.length > 0 ? (
-                    folderNodes.map(folderNode => (
+                {folderNodeIds.length > 0 ? (
+                    folderNodeIds.map(folderNodeId => (
                         <FolderItem
-                            key={folderNode.id}
-                            uiNode={folderNode}
-                            onSelectNode={handleSelectNode}
-                            onRenameNode={handleRenameNode}
-                            onDuplicateNode={handleDuplicateNode}
-                            onDeleteNode={handleDeleteNode}
-                            onAddFile={handleAddFile}
-                            onCopyNode={handleCopyNode}
-                            onMoveNode={handleMoveNode}
+                            key={folderNodeId}
+                            nodeId={folderNodeId}
+                            onRenameNode={onRenameNode}
+                            onDuplicateNode={onDuplicateNode}
+                            onAddFile={onAddFile}
+                            onCopyNode={onCopyNode}
+                            onMoveNode={onMoveNode}
+                            showDeleteNodeModal={showDeleteNodeModal}
                             isAllowedToCreateDocuments={
-                                props.isAllowedToCreateDocuments ?? false
+                                isAllowedToCreateDocuments
                             }
                         />
                     ))
@@ -112,10 +68,12 @@ export function FolderView(
                 <div
                     className={twMerge(
                         'w-full',
-                        fileNodes.length > 0 ? 'min-h-[400px]' : 'min-h-14',
+                        fileNodeIds.length > 0 ? 'min-h-[400px]' : 'min-h-14',
                     )}
                 >
-                    <FileContentView {...props} fileNodes={fileNodes} />
+                    <FileContentView
+                        isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                    />
                 </div>
             </ContentSection>
         </div>

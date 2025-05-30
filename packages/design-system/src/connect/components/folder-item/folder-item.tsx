@@ -1,6 +1,4 @@
 import {
-  type BaseUiFolderNode,
-  type BaseUiNode,
   ConnectDropdownMenu,
   defaultFolderOptions,
   DELETE,
@@ -10,47 +8,78 @@ import {
   nodeOptionsMap,
   READ,
   RENAME,
+  type SharingType,
   SyncStatusIcon,
-  type UiFolderNode,
   useDrag,
   useDrop,
   WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import { useState } from "react";
+import {
+  useDriveIdForNode,
+  useNodeNameForId,
+  useSetSelectedNodeId,
+} from "@powerhousedao/reactor-browser";
+import type { Node, SyncStatus } from "document-drive";
+import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
-
 export type FolderItemProps = {
-  readonly uiNode: BaseUiFolderNode;
-  readonly className?: string;
-  onAddFile: (file: File, parentNode: BaseUiNode | null) => Promise<void>;
-  onCopyNode: (uiNode: BaseUiNode, targetNode: BaseUiNode) => Promise<void>;
-  onMoveNode: (uiNode: BaseUiNode, targetNode: BaseUiNode) => Promise<void>;
-  onSelectNode: (uiNode: BaseUiFolderNode) => void;
-  onRenameNode: (name: string, uiNode: BaseUiFolderNode) => void;
-  onDuplicateNode: (uiNode: BaseUiFolderNode) => void;
-  onDeleteNode: (uiNode: BaseUiFolderNode) => void;
+  nodeId: string;
   isAllowedToCreateDocuments: boolean;
+  sharingType: SharingType;
+  className?: string;
+  getSyncStatusSync: (
+    syncId: string,
+    sharingType: SharingType,
+  ) => SyncStatus | undefined;
+  onAddFile: (
+    file: File,
+    parentNodeId: string | null,
+    driveId: string | null,
+  ) => Promise<void>;
+  onMoveNode: (
+    nodeId: string,
+    targetNodeId: string,
+    driveId: string,
+  ) => Promise<void>;
+  onCopyNode: (
+    nodeId: string,
+    targetNodeId: string,
+    driveId: string,
+  ) => Promise<void>;
+  onRenameNode: (
+    name: string,
+    nodeId: string,
+    driveId: string,
+  ) => Promise<Node>;
+  onDuplicateNode: (nodeId: string, driveId: string) => Promise<void>;
+  showDeleteNodeModal: (nodeId: string) => void;
 };
 
 export function FolderItem(props: FolderItemProps) {
   const {
-    uiNode,
+    nodeId,
+    sharingType,
     isAllowedToCreateDocuments,
     className,
+    getSyncStatusSync,
     onRenameNode,
     onDuplicateNode,
-    onDeleteNode,
-    onSelectNode,
     onAddFile,
     onCopyNode,
     onMoveNode,
+    showDeleteNodeModal,
   } = props;
+  const driveId = useDriveIdForNode(nodeId);
+  const nodeName = useNodeNameForId(nodeId);
+  const syncStatus = getSyncStatusSync(nodeId, sharingType);
+  const setSelectedNodeId = useSetSelectedNodeId();
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag({ ...props, uiNode: uiNode as UiFolderNode });
+  const { dragProps } = useDrag({ nodeId });
   const { isDropTarget, dropProps } = useDrop({
-    uiNode: uiNode as UiFolderNode,
+    nodeId,
+    driveId,
     onAddFile,
     onCopyNode,
     onMoveNode,
@@ -58,23 +87,39 @@ export function FolderItem(props: FolderItemProps) {
 
   const isReadMode = mode === READ;
 
-  function onCancel() {
+  const onCancel = useCallback(() => {
     setMode(READ);
-  }
+  }, []);
 
-  function onSubmit(name: string) {
-    onRenameNode(name, uiNode);
-    setMode(READ);
-  }
+  const onSubmit = useCallback(
+    (name: string) => {
+      if (!driveId) {
+        throw new Error("Drive id is required");
+      }
+      onRenameNode(name, nodeId, driveId)
+        .then(() => {
+          setMode(READ);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    },
+    [driveId, nodeId, onRenameNode],
+  );
 
-  function onClick() {
-    onSelectNode(uiNode);
-  }
+  const onClick = useCallback(() => {
+    setSelectedNodeId(nodeId);
+  }, [nodeId, setSelectedNodeId]);
 
   const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
-    [DUPLICATE]: () => onDuplicateNode(uiNode),
+    [DUPLICATE]: () => {
+      if (!driveId) {
+        throw new Error("Drive id is required");
+      }
+      onDuplicateNode(nodeId, driveId);
+    },
     [RENAME]: () => setMode(WRITE),
-    [DELETE]: () => onDeleteNode(uiNode),
+    [DELETE]: () => showDeleteNodeModal(nodeId),
   } as const;
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
@@ -101,12 +146,12 @@ export function FolderItem(props: FolderItemProps) {
   const content =
     isReadMode || !isAllowedToCreateDocuments ? (
       <div className="ml-3 max-h-6 truncate font-medium text-gray-600 group-hover:text-gray-800">
-        {uiNode.name}
+        {nodeName}
       </div>
     ) : (
       <NodeInput
         className="ml-3 font-medium"
-        defaultValue={uiNode.name}
+        defaultValue={nodeName ?? undefined}
         onCancel={onCancel}
         onSubmit={onSubmit}
       />
@@ -125,14 +170,14 @@ export function FolderItem(props: FolderItemProps) {
           <div className="p-1">
             <div className="relative">
               <Icon name="FolderClose" size={24} />
-              {isReadMode && uiNode.syncStatus ? (
+              {isReadMode && syncStatus ? (
                 <div className="absolute bottom-[-3px] right-[-2px] size-3 rounded-full bg-white">
                   <div className="absolute left-[-2px] top-[-2px]">
                     <SyncStatusIcon
                       overrideSyncIcons={{
                         SUCCESS: "CheckCircleFill",
                       }}
-                      syncStatus={uiNode.syncStatus}
+                      syncStatus={syncStatus}
                     />
                   </div>
                 </div>

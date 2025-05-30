@@ -1,5 +1,4 @@
 import {
-  type BaseUiFileNode,
   ConnectDropdownMenu,
   defaultFileOptions,
   DELETE,
@@ -10,47 +9,74 @@ import {
   nodeOptionsMap,
   READ,
   RENAME,
-  type UiFileNode,
+  type SharingType,
+  type SyncStatus,
   useDrag,
   WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import { useState } from "react";
+import {
+  useDriveIdForNode,
+  useNodeDocumentType,
+  useNodeNameForId,
+  useSetSelectedNodeId,
+} from "@powerhousedao/reactor-browser";
+import type { Node } from "document-drive";
+import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { SyncStatusIcon } from "../status-icon/index.js";
-
 export type FileItemProps = {
-  uiNode: BaseUiFileNode;
+  nodeId: string;
   customDocumentIconSrc?: string;
-  className?: string;
-  onSelectNode: (uiNode: BaseUiFileNode) => void;
-  onRenameNode: (name: string, uiNode: BaseUiFileNode) => void;
-  onDuplicateNode: (uiNode: BaseUiFileNode) => void;
-  onDeleteNode: (uiNode: BaseUiFileNode) => void;
   isAllowedToCreateDocuments: boolean;
+  sharingType: SharingType;
+  className?: string;
+  getSyncStatusSync: (
+    syncId: string,
+    sharingType: SharingType,
+  ) => SyncStatus | undefined;
+  onRenameNode: (
+    name: string,
+    nodeId: string,
+    driveId: string,
+  ) => Promise<Node>;
+  onDuplicateNode: (nodeId: string, driveId: string) => Promise<void>;
+  showDeleteNodeModal: (nodeId: string) => void;
 };
 
 export function FileItem(props: FileItemProps) {
   const {
-    uiNode,
+    nodeId,
+    isAllowedToCreateDocuments,
     className,
     customDocumentIconSrc,
-    onSelectNode,
+    sharingType,
+    getSyncStatusSync,
     onRenameNode,
     onDuplicateNode,
-    onDeleteNode,
-    isAllowedToCreateDocuments,
+    showDeleteNodeModal,
   } = props;
+  const documentType = useNodeDocumentType(nodeId);
+  const nodeName = useNodeNameForId(nodeId);
+  const setSelectedNodeId = useSetSelectedNodeId();
+  const driveId = useDriveIdForNode(nodeId);
+  const syncStatus = getSyncStatusSync(nodeId, sharingType);
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag({ uiNode: uiNode as UiFileNode });
+  const { dragProps } = useDrag({ nodeId });
 
   const isReadMode = mode === READ;
 
   const dropdownMenuHandlers = {
-    [DUPLICATE]: () => onDuplicateNode(uiNode),
+    [DUPLICATE]: () => {
+      if (!driveId) {
+        console.error("No driveId found for nodeId", nodeId);
+        return;
+      }
+      onDuplicateNode(nodeId, driveId);
+    },
     [RENAME]: () => setMode(WRITE),
-    [DELETE]: () => onDeleteNode(uiNode),
+    [DELETE]: () => showDeleteNodeModal(nodeId),
   } as const;
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
@@ -64,18 +90,25 @@ export function FileItem(props: FileItemProps) {
       ),
     );
 
-  function onSubmit(name: string) {
-    onRenameNode(name, uiNode);
-    setMode(READ);
-  }
+  const onSubmit = useCallback(
+    (name: string) => {
+      if (!driveId) {
+        console.error("No driveId found for nodeId", nodeId);
+        return;
+      }
+      onRenameNode(name, nodeId, driveId);
+      setMode(READ);
+    },
+    [onRenameNode, nodeId, driveId],
+  );
 
-  function onCancel() {
+  const onCancel = useCallback(() => {
     setMode(READ);
-  }
+  }, []);
 
-  function onClick() {
-    onSelectNode(uiNode);
-  }
+  const onClick = useCallback(() => {
+    setSelectedNodeId(nodeId);
+  }, [nodeId]);
 
   function onDropdownMenuOptionClick(itemId: NodeOption) {
     const handler =
@@ -88,10 +121,7 @@ export function FileItem(props: FileItemProps) {
     setIsDropdownMenuOpen(false);
   }
 
-  const iconSrc = getDocumentIconSrc(
-    uiNode.documentType,
-    customDocumentIconSrc,
-  );
+  const iconSrc = getDocumentIconSrc(documentType, customDocumentIconSrc);
 
   const iconNode = (
     <div className="relative">
@@ -102,12 +132,12 @@ export function FileItem(props: FileItemProps) {
         src={iconSrc}
         width={32}
       />
-      {isReadMode && uiNode.syncStatus && (
+      {isReadMode && syncStatus && (
         <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
           <div className="absolute left-[-2px] top-[-2px]">
             <SyncStatusIcon
               overrideSyncIcons={{ SUCCESS: "CheckCircleFill" }}
-              syncStatus={uiNode.syncStatus}
+              syncStatus={syncStatus}
             />
           </div>
         </div>
@@ -124,10 +154,10 @@ export function FileItem(props: FileItemProps) {
     <div className="flex w-52 items-center justify-between">
       <div className="mr-2 truncate group-hover:mr-0">
         <div className="max-h-6 truncate text-sm font-medium group-hover:text-gray-800">
-          {uiNode.name}
+          {nodeName}
         </div>
         <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800">
-          {uiNode.documentType}
+          {documentType}
         </div>
       </div>
       {isAllowedToCreateDocuments ? (
@@ -155,7 +185,7 @@ export function FileItem(props: FileItemProps) {
   ) : (
     <NodeInput
       className="ml-3 flex-1 font-medium"
-      defaultValue={uiNode.name}
+      defaultValue={nodeName ?? undefined}
       onCancel={onCancel}
       onSubmit={onSubmit}
     />

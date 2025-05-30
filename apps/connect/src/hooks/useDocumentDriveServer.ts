@@ -10,13 +10,7 @@ import {
     signOperation,
     uploadDocumentOperations,
 } from '#utils';
-import {
-    ERROR,
-    FILE,
-    LOCAL,
-    type SharingType,
-    type UiNode,
-} from '@powerhousedao/design-system';
+import { ERROR, LOCAL, type SharingType } from '@powerhousedao/design-system';
 import {
     type DocumentDriveAction,
     type DocumentDriveDocument,
@@ -423,18 +417,16 @@ export function useDocumentDriveServer() {
     );
 
     const handleMoveNode = useCallback(
-        async (src: UiNode, target: UiNode) => {
+        async (srcNodeId: string, targetNodeId: string, driveId: string) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to move documents');
             }
 
-            if (target.kind === FILE || src.parentFolder === target.id) return;
-
             await _addDriveOperation(
-                target.driveId,
+                driveId,
                 moveNode({
-                    srcFolder: src.id,
-                    targetParentFolder: target.id,
+                    srcFolder: srcNodeId,
+                    targetParentFolder: targetNodeId,
                 }),
             );
         },
@@ -442,7 +434,7 @@ export function useDocumentDriveServer() {
     );
 
     const handleCopyNode = useCallback(
-        async (src: UiNode, target: UiNode) => {
+        async (srcNodeId: string, targetNodeId: string, driveId: string) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -450,19 +442,16 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to copy documents');
             }
 
-            if (target.kind === FILE) return;
-
-            const drive = documentDrives.find(
-                drive => drive.id === src.driveId,
-            );
-
-            if (!drive) return;
+            const drive = documentDrives.find(drive => drive.id === driveId);
+            if (!drive) {
+                throw new Error(`Drive with id ${driveId} not found`);
+            }
 
             const copyNodesInput = generateNodesCopy(
                 {
-                    srcId: src.id,
-                    targetParentFolder: target.id,
-                    targetName: src.name,
+                    srcId: srcNodeId,
+                    targetParentFolder: targetNodeId,
+                    targetName: srcNodeId,
                 },
                 () => generateId(),
                 drive.state.global.nodes,
@@ -472,10 +461,7 @@ export function useDocumentDriveServer() {
                 copyNode(copyNodeInput),
             );
 
-            const result = await reactor.addDriveActions(
-                src.driveId,
-                copyActions,
-            );
+            const result = await reactor.addDriveActions(driveId, copyActions);
             if (result.operations.length) {
                 await refreshDocumentDrives();
             } else if (result.status !== 'SUCCESS') {

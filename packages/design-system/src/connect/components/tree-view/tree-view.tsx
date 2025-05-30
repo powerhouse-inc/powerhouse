@@ -1,43 +1,51 @@
 import {
-  ADD_INVALID_TRIGGER,
-  ADD_TRIGGER,
-  CLOUD,
-  CREATE,
-  ConnectDropdownMenu,
-  DEFAULT,
-  DELETE,
-  DRIVE,
-  DUPLICATE,
-  FILE,
-  LOCAL,
-  NodeInput,
-  type NodeOption,
-  type NodeProps,
-  PUBLIC,
-  READ,
-  REMOVE_TRIGGER,
-  RENAME,
-  SETTINGS,
-  type TNodeOptions,
-  type UiDriveNode,
-  type UiNode,
-  WRITE,
-  getDocumentIconSrc,
-  nodeOptionsMap,
-  useDrag,
-  useDrop,
+    ADD_INVALID_TRIGGER,
+    ADD_TRIGGER,
+    CLOUD,
+    CREATE,
+    ConnectDropdownMenu,
+    DEFAULT,
+    DELETE,
+    DUPLICATE,
+    LOCAL,
+    NodeInput,
+    type NodeOption,
+    type NodeProps,
+    PUBLIC,
+    READ,
+    REMOVE_TRIGGER,
+    RENAME,
+    SETTINGS,
+    type SharingType,
+    type TNodeOptions,
+    type UiDriveNode,
+    WRITE,
+    getDocumentIconSrc,
+    nodeOptionsMap,
+    useDrag,
+    useDrop,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import { useUiNodesContext } from "@powerhousedao/reactor-browser";
+import {
+    getNodeKind,
+    isDriveNodeKind,
+    isFileNodeKind,
+    useIsInSelectedNodePath,
+    useIsSelected,
+    useNodeById,
+    useNodeChildrenIds,
+    useSelectedDriveId,
+} from "@powerhousedao/reactor-browser";
 import { type MouseEventHandler, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { DropIndicator } from "./drop-indicator.js";
-
 export type ConnectTreeViewProps = NodeProps & {
-  uiNode: UiNode;
+  nodeId: string;
+  sharingType: SharingType;
   nodeOptions: TNodeOptions;
   isAllowedToCreateDocuments: boolean;
   level?: number;
+  driveIconSrc?: string | null;
   customDocumentIconSrc?: string;
   onClick?: MouseEventHandler<HTMLDivElement>;
   showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
@@ -48,8 +56,10 @@ export type ConnectTreeViewProps = NodeProps & {
 
 export function ConnectTreeView(props: ConnectTreeViewProps) {
   const {
-    uiNode,
+    nodeId,
+    sharingType,
     level = 0,
+    driveIconSrc,
     customDocumentIconSrc,
     nodeOptions,
     isAllowedToCreateDocuments,
@@ -67,31 +77,34 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     onRemoveTrigger,
     onAddInvalidTrigger,
   } = props;
+  const uiNode = useNodeById(nodeId);
+  const selectedDriveId = useSelectedDriveId();
   const [mode, setMode] = useState<typeof READ | typeof WRITE | typeof CREATE>(
     READ,
   );
   const [touched, setTouched] = useState(false);
   const [internalExpandedState, setInternalExpandedState] = useState(true);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag(props);
-  const {
-    getParentNode,
-    getIsSelected,
-    setSelectedNode,
-    getIsInSelectedNodePath,
-  } = useUiNodesContext();
-  const { isDropTarget, dropProps } = useDrop(props);
-
+  const { dragProps } = useDrag({
+    uiNode,
+  });
+  const { isDropTarget, dropProps } = useDrop({
+    uiNode,
+    onAddFile,
+    onMoveNode,
+    onCopyNode,
+  });
+  const children = useNodeChildrenIds(nodeId);
   const levelPadding = 10;
-  const children = uiNode.kind !== FILE ? uiNode.children : null;
-  const hasChildren = !!children && children.length > 0;
-  const isSelected = getIsSelected(uiNode);
-  const isInExpandedNodePath = getIsInSelectedNodePath(uiNode);
+  const hasChildren = children.length > 0;
+  const isSelected = useIsSelected(nodeId);
+  const isInExpandedNodePath = useIsInSelectedNodePath(nodeId);
   const isExpanded = touched ? internalExpandedState : isInExpandedNodePath;
-  const isDrive = uiNode.kind === DRIVE;
-  const isLocalDrive = isDrive && uiNode.sharingType === LOCAL;
-  const isCloudDrive = isDrive && uiNode.sharingType === CLOUD;
-  const isPublicDrive = isDrive && uiNode.sharingType === PUBLIC;
+  const nodeKind = getNodeKind(uiNode);
+  const isDrive = isDriveNodeKind(uiNode);
+  const isLocalDrive = isDrive && sharingType === LOCAL;
+  const isCloudDrive = isDrive && sharingType === CLOUD;
+  const isPublicDrive = isDrive && sharingType === PUBLIC;
   const isHighlighted = getIsHighlighted();
   const sharedIconStyles = twMerge(
     "text-gray-600 transition-colors group-hover/node:text-gray-900",
@@ -102,22 +115,22 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     [DUPLICATE]: () => onDuplicateNode(uiNode),
     [RENAME]: () => setMode(WRITE),
     [DELETE]: () => {
-      if (uiNode.kind === DRIVE) {
+      if (isDrive) {
         onDeleteDrive(uiNode);
       } else {
         onDeleteNode(uiNode);
       }
     },
     [SETTINGS]: () => {
-      if (uiNode.kind !== DRIVE) return;
+      if (!isDrive) return;
       showDriveSettingsModal(uiNode);
     },
-    [ADD_TRIGGER]: () => onAddTrigger(uiNode.driveId),
-    [REMOVE_TRIGGER]: () => onRemoveTrigger(uiNode.driveId),
-    [ADD_INVALID_TRIGGER]: () => onAddInvalidTrigger(uiNode.driveId),
+    [ADD_TRIGGER]: () => onAddTrigger(selectedDriveId),
+    [REMOVE_TRIGGER]: () => onRemoveTrigger(selectedDriveId),
+    [ADD_INVALID_TRIGGER]: () => onAddInvalidTrigger(selectedDriveId),
   } as const;
 
-  const nodeOptionsForKind = nodeOptions[uiNode.sharingType][uiNode.kind];
+  const nodeOptionsForKind = nodeKind ? nodeOptions[sharingType][nodeKind] : [];
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
     .map(([id, option]) => ({
@@ -175,7 +188,7 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
     if (isLocalDrive) {
       return localDriveIcon;
     }
-    if (uiNode.kind === FILE) {
+    if (isFileNodeKind(uiNode)) {
       return documentTypeFileIcon;
     }
 
@@ -203,7 +216,7 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
       alt="file icon"
       className="size-7 object-contain"
       src={getDocumentIconSrc(
-        uiNode.kind === FILE ? uiNode.documentType : DEFAULT,
+        isFileNodeKind(uiNode) ? uiNode.documentType : DEFAULT,
         customDocumentIconSrc,
       )}
     />
@@ -213,16 +226,15 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
 
   const cloudDriveIcon = <Icon name="Server" />;
 
-  const publicDriveIcon =
-    "icon" in uiNode && !!uiNode.icon ? (
-      <img
-        alt="drive icon"
-        className="size-6 object-contain"
-        src={uiNode.icon}
-      />
-    ) : (
-      <Icon name="M" />
-    );
+  const publicDriveIcon = driveIconSrc ? (
+    <img
+      alt="drive icon"
+      className="size-6 object-contain"
+      src={driveIconSrc}
+    />
+  ) : (
+    <Icon name="M" />
+  );
 
   const caretIcon = (
     <Icon
@@ -236,7 +248,7 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
 
   const nodeIcon = <div className="mr-2 w-5 flex-none">{getNodeIcon()}</div>;
 
-  const readModeContent = (
+  const readModeContent = uiNode ? (
     <div className="group/node grid w-full grid-cols-[1fr,auto] items-center justify-between">
       <p className="mr-1 truncate">{uiNode.name}</p>
       {isAllowedToCreateDocuments ? (
@@ -261,15 +273,15 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
         </ConnectDropdownMenu>
       ) : null}
     </div>
-  );
+  ) : null;
 
-  const writeModeContent = (
+  const writeModeContent = uiNode ? (
     <NodeInput
       defaultValue={uiNode.name}
       onCancel={onCancel}
       onSubmit={onSubmit}
     />
-  );
+  ) : null;
 
   const createModeContent = (
     <div
@@ -286,6 +298,8 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
       />
     </div>
   );
+
+  if (!uiNode) return null;
 
   return (
     <>
@@ -325,12 +339,12 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
         )}
       >
         {mode === CREATE && createModeContent}
-        {children?.map((uiNode) => (
+        {children?.map((uiNodeId) => (
           <ConnectTreeView
             {...props}
-            key={uiNode.id}
+            key={uiNodeId}
             level={level + 1}
-            uiNode={uiNode}
+            nodeId={uiNodeId}
           />
         ))}
       </div>

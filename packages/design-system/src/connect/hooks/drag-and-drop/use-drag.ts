@@ -1,25 +1,27 @@
-import { DRIVE, UI_NODE, type UiNode } from "#connect";
+import { DRIVE, UI_NODE_ID } from "#connect";
+import { useNodeKindForId } from "@powerhousedao/reactor-browser";
 import { type DragEvent, useCallback, useMemo, useState } from "react";
-
 type Props = {
-  uiNode: UiNode | null;
+  nodeId: string | null;
 };
 export function useDrag(props: Props) {
-  const { uiNode } = props;
+  const { nodeId } = props;
   const [isDragging, setIsDragging] = useState(false);
-
+  const nodeKind = useNodeKindForId(nodeId);
+  const allowedToDragNode = !!nodeKind && nodeKind !== DRIVE;
   const onDragStart = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
-      event.dataTransfer.setData(UI_NODE, JSON.stringify(uiNode));
+      if (!nodeId) {
+        return;
+      }
+      event.dataTransfer.setData(UI_NODE_ID, nodeId);
     },
-    [uiNode],
+    [nodeId],
   );
 
   const onDragEnd = useCallback(() => {
     setIsDragging(false);
   }, []);
-
-  const allowedToDragNode = !!uiNode && uiNode.kind !== DRIVE;
 
   return useMemo(() => {
     const dragProps = allowedToDragNode

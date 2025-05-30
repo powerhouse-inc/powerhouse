@@ -13,6 +13,9 @@
       "path": "../document-model"
     },
     {
+      "path": "../document-drive"
+    },
+    {
       "path": "../config"
     },
     {

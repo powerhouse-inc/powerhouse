@@ -20,11 +20,9 @@ export * from "../uiNodes/constants.js";
 export * from "../uiNodes/types.js";
 
 export type TUiNodesContext = {
-  driveNodes: UiDriveNode[];
   selectedNode: UiNode | null;
   selectedNodePath: UiNode[];
   selectedParentNode: UiDriveNode | UiFolderNode | null;
-  setDriveNodes: (driveNodes: UiDriveNode[]) => void;
   setSelectedNode: (node: UiNode | null) => void;
   getNodeById: (id: string) => UiNode | null;
   getParentNode: (uiNode: UiNode) => UiNode | null;
@@ -34,11 +32,9 @@ export type TUiNodesContext = {
 };
 
 const defaultTreeItemContextValue: TUiNodesContext = {
-  driveNodes: [],
   selectedNode: null,
   selectedNodePath: [],
   selectedParentNode: null,
-  setDriveNodes: () => {},
   setSelectedNode: () => {},
   getNodeById: () => null,
   getParentNode: () => null,
@@ -226,7 +222,6 @@ export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({
 
   const value = useMemo(
     () => ({
-      driveNodes,
       selectedNode,
       selectedNodePath,
       selectedParentNode,
@@ -239,7 +234,6 @@ export const UiNodesContextProvider: FC<UiNodesContextProviderProps> = ({
       getSiblings,
     }),
     [
-      driveNodes,
       selectedNode,
       selectedNodePath,
       selectedParentNode,

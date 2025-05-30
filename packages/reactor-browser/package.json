@@ -50,13 +50,19 @@
     "@powerhousedao/analytics-engine-browser": "0.5.0",
     "@powerhousedao/analytics-engine-core": "0.4.0",
     "@powerhousedao/analytics-engine-knex": "0.5.1",
+    "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
+    "did-jwt": "^8.0.15",
+    "did-jwt-vc": "^4.0.13",
     "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "fast-deep-equal": "^3.1.3",
     "jotai": "^2.10.3",
+    "jotai-effect": "^1.1.6",
     "jotai-optics": "^0.4.0",
-    "luxon": "^3.6.1"
+    "luxon": "^3.6.1",
+    "uint8arrays": "^5.1.0",
+    "viem": "^2.30.5"
   }
 }

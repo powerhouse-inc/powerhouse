@@ -6,11 +6,13 @@ import {
   type UiDriveNode,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import { useUiNodesContext } from "@powerhousedao/reactor-browser";
+import { getDriveSharingType } from "@powerhousedao/reactor-browser";
+import type { DocumentDriveDocument } from "document-drive";
 import { type ReactNode } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 export type DriveViewProps = NodeProps & {
+  documentDrives: DocumentDriveDocument[];
   label: ReactNode;
   groupSharingType: SharingType;
   disableAddDrives: boolean;
@@ -26,6 +28,7 @@ export type DriveViewProps = NodeProps & {
 
 export function DriveView(props: DriveViewProps) {
   const {
+    documentDrives,
     groupSharingType,
     disableAddDrives,
     label,
@@ -33,8 +36,7 @@ export function DriveView(props: DriveViewProps) {
     isAllowedToCreateDocuments,
     showAddDriveModal,
   } = props;
-  const { driveNodes } = useUiNodesContext();
-  const hasDriveNodes = driveNodes.length > 0;
+  const hasDrives = documentDrives.length > 0;
   const isContainerHighlighted = true;
 
   function onShowAddDriveModal() {
@@ -45,7 +47,7 @@ export function DriveView(props: DriveViewProps) {
     <div
       className={twMerge(
         "border-y border-gray-100 pl-4 pr-1 first-of-type:border-b-0 last-of-type:border-t-0",
-        hasDriveNodes && "pb-2",
+        hasDrives && "pb-2",
         isContainerHighlighted && "bg-gray-100",
         className,
       )}
@@ -63,8 +65,14 @@ export function DriveView(props: DriveViewProps) {
           ) : null}
         </div>
       </div>
-      {driveNodes.map((driveNode) => (
-        <ConnectTreeView {...props} key={driveNode.id} uiNode={driveNode} />
+      {documentDrives.map((documentDrive) => (
+        <ConnectTreeView
+          {...props}
+          sharingType={getDriveSharingType(documentDrive)}
+          driveIconSrc={documentDrive.state.global.icon}
+          key={documentDrive.id}
+          nodeId={documentDrive.id}
+        />
       ))}
     </div>
   );
