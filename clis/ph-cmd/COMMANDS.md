@@ -91,9 +91,9 @@ Options:
 
 Project Structure:
   The command will set up a project with the following structure:
-  - Proper configuration files for TypeScript and ESLint
-  - Dependencies for Powerhouse packages
-  - Build and development scripts
+  - Proper configuration files for TypeScript and ESLint.
+  - Dependencies for Powerhouse packages.
+  - Build and development scripts.
 
 Examples:
   $ ph setup-globals my-project          # Create a new project named "my-project"
