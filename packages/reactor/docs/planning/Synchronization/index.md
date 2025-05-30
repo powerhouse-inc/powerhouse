@@ -73,7 +73,59 @@ graph
 
 Since both `Push-to-Switchboard` and `Pull-from-Switchboard` are one-way flows, we combine them into a ping-pong pattern. This is where both reactors are pushing and pulling through the `IChannel` interface.
 
+The schedulers are "smart" and understand how to optimimally set intervals based on a number of factors, including:
+
+- Operation characteristics (size, frequency, etc.)
+- Network characteristics (latency, bandwidth, etc.)
+- Reactor characteristics (CPU, memory, etc.)
+- Recent pushes from other reactor
+
 ```mermaid
+graph
+    %% === Reactor A ===
+    subgraph "IReactor A"
+        AQueue["IQueue"] --> AJobs["IJobExecutor"] --> AOS["IOperationsStore"]
+        AOS --> APub
+
+        subgraph AEventBus["IEventBus"]
+            APub["emit()"]
+            ASub["on()"]
+        end
+
+        subgraph ASyncManager["Synchronization"]
+            AScheduler["Scheduler"] --> ASync["ISyncManager"]
+            ASync --> ASyncStore["ISyncStorage"]
+        end
+
+        ASub --> ASync
+        ASync --> AQueue
+    end
+
+    %% Network
+    ASync <--> AIChannel["IChannel"]
+    AIChannel <--> Transport["Memory / HTTP / WebSocket / etc."]
+    Transport <--> BAIChannel["IChannel"]
+    BAIChannel <--> BSync
+
+    %% === Reactor B ===
+    subgraph "IReactor B"
+        BQueue["IQueue"] --> BJobs["IJobExecutor"] --> BOS["IOperationsStore"]
+        BOS --> BPub
+
+        subgraph BEventBus["IEventBus"]
+            BPub["emit()"]
+            BSub["on()"]
+        end
+
+        subgraph BSyncManager["Synchronization"]
+            BScheduler["Scheduler"] --> BSync["ISyncManager"]
+            BSync --> BSyncStore["ISyncStorage"]
+        end
+        
+        BSub --> BSync
+        BSync --> BQueue
+    end
+
 
 ```
 
