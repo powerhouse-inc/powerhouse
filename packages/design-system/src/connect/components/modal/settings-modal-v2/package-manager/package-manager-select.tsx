@@ -1,4 +1,4 @@
-import { SelectFieldRaw, type SelectOption } from "#scalars";
+import { Select, type SelectOption } from "#ui";
 import { useCallback } from "react";
 
 export type PackageManagerReactorSelectProps = {
@@ -23,7 +23,7 @@ export const PackageManagerReactorSelect: React.FC<
   return (
     <div {...rest}>
       <h3 className="mb-4 font-semibold text-gray-900">Select Reactor</h3>
-      <SelectFieldRaw
+      <Select
         className="min-w-36 max-w-fit"
         name="reactor"
         required

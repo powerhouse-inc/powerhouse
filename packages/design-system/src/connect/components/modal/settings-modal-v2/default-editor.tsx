@@ -1,5 +1,4 @@
-import type { SelectOption } from "#scalars";
-import { SelectFieldRaw } from "#scalars";
+import { Select, type SelectOption } from "#ui";
 import { twMerge } from "tailwind-merge";
 
 type Props = {
@@ -31,7 +30,7 @@ export function DefaultEditorSelect(props: Props) {
       <h3 className="mb-4 font-semibold text-gray-900">
         Default Editor Selection
       </h3>
-      <SelectFieldRaw
+      <Select
         className={twMerge("min-w-36 max-w-fit", className)}
         name="default-editor"
         required

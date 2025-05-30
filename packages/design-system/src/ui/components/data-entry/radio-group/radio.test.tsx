@@ -1,24 +1,24 @@
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { RadioGroup } from "./radio-group.js";
+import { CustomizableRadioGroup } from "./customizable-radio-group.js";
 import { Radio } from "./radio.js";
 
 describe("Radio Component", () => {
   it("should match snapshot", () => {
     const { asFragment } = render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         <Radio label="Test Label" value="test" />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     expect(asFragment()).toMatchSnapshot();
   });
 
   it("should render with label and value", () => {
     render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         <Radio label="Test Label" value="test" />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     expect(screen.getByText("Test Label")).toBeInTheDocument();
     expect(screen.getByRole("radio")).toHaveAttribute("value", "test");
@@ -26,9 +26,9 @@ describe("Radio Component", () => {
 
   it("should render with description", () => {
     render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         <Radio label="Test Label" value="test" description="Test Description" />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     // Check that the info icon fallback is rendered
     const iconFallback = screen.getByTestId("icon-fallback");
@@ -38,9 +38,9 @@ describe("Radio Component", () => {
 
   it("should apply error styles when hasError is true", () => {
     render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         <Radio label="Test Label" value="test" hasError />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     const radio = screen.getByRole("radio");
     expect(radio).toHaveAttribute("aria-invalid", "true");
@@ -49,9 +49,9 @@ describe("Radio Component", () => {
 
   it("should apply disabled styles and attributes", () => {
     render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         <Radio label="Test Label" value="test" disabled />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     const radio = screen.getByRole("radio");
     expect(radio).toHaveAttribute("aria-disabled", "true");
@@ -60,28 +60,28 @@ describe("Radio Component", () => {
 
   it("should render with custom className", () => {
     render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         {/* Custom className for testing purposes */}
         <Radio label="Test Label" value="test" className="custom-class" />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     expect(screen.getByRole("radio")).toHaveClass("custom-class");
   });
 
   it("should use provided id when specified", () => {
     render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         <Radio label="Test Label" value="test" id="custom-id" />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     expect(screen.getByRole("radio")).toHaveAttribute("id", "custom-id");
   });
 
   it("should generate unique id when not provided", () => {
     render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         <Radio label="Test Label" value="test" />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     const radio = screen.getByRole("radio");
     // Check that the id ends with -radio
@@ -91,9 +91,9 @@ describe("Radio Component", () => {
   it("should select the radio when the label is clicked", async () => {
     const user = userEvent.setup();
     render(
-      <RadioGroup name="radio-group">
+      <CustomizableRadioGroup name="radio-group">
         <Radio label="Test Label" value="test" />
-      </RadioGroup>,
+      </CustomizableRadioGroup>,
     );
     const label = screen.getByText("Test Label");
     const radio = screen.getByRole("radio");

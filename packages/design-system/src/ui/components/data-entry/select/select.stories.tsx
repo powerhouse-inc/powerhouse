@@ -1,17 +1,42 @@
 import { Icon, type IconName } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { withForm } from "../../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "../../../lib/storybook-arg-types.js";
-import { SelectField } from "./select-field.js";
+} from "../../../../scalars/lib/storybook-arg-types.js";
+import { Select } from "./select.js";
 
-const meta: Meta<typeof SelectField> = {
-  title: "Document Engineering/Fragments/SelectField",
-  component: SelectField,
+/**
+ * The `Select` component provides a dropdown selection field.
+ * It supports multiple configuration properties like:
+ * - label
+ * - description
+ * - placeholder
+ * - options
+ * - multiple
+ * - searchable
+ * - selectionIcon
+ * - selectionIconPosition
+ * - contentAlign
+ *
+ * Features include:
+ * - Single and multiple selection modes
+ * - Option icons
+ * - Searchable dropdown
+ * - Different selection indicators (radio, checkbox, checkmark)
+ * - Customizable content alignment
+ * - Disabled options support
+ *
+ * > **Note:** This component does not have built-in validation. If you need built-in validation
+ * > you can use the [EnumField](?path=/docs/document-engineering-scalars-enum-field--readme)
+ * > component.
+ */
+
+const meta: Meta<typeof Select> = {
+  title: "Document Engineering/Data Entry/Select",
+  component: Select,
   parameters: {
     layout: "padded",
     chromatic: {
@@ -19,9 +44,8 @@ const meta: Meta<typeof SelectField> = {
     },
   },
   decorators: [
-    withForm,
     (Story) => (
-      <div style={{ maxWidth: "280px", margin: "1rem auto 0" }}>
+      <div style={{ width: "280px", margin: "1rem auto 0" }}>
         <Story />
       </div>
     ),
@@ -106,17 +130,37 @@ const meta: Meta<typeof SelectField> = {
         category: StorybookControlCategory.COMPONENT_SPECIFIC,
       },
     },
-    ...getValidationArgTypes(),
+
+    ...getValidationArgTypes({
+      enabledArgTypes: {
+        validators: false,
+        showErrorOnBlur: false,
+        showErrorOnChange: false,
+      },
+    }),
+
+    ...PrebuiltArgTypes.viewMode,
+    diffMode: {
+      control: "select",
+      description: "The mode of the input field",
+      options: ["sentences"],
+      table: {
+        type: { summary: "sentences" },
+        defaultValue: { summary: "sentences" },
+        category: StorybookControlCategory.DIFF,
+      },
+    },
+    ...PrebuiltArgTypes.baseValue,
   },
   args: {
-    name: "select-field",
+    name: "select",
     errors: [],
     warnings: [],
   },
-} satisfies Meta<typeof SelectField>;
+} satisfies Meta<typeof Select>;
 
 export default meta;
-type Story = StoryObj<typeof SelectField>;
+type Story = StoryObj<typeof Select>;
 
 const IconComponent = (
   name: IconName,
@@ -260,7 +304,7 @@ export const Multiple: Story = {
 export const WithCheckmark: Story = {
   args: {
     label: "With checkmark",
-    description: "This select field shows a checkmark icon for selected option",
+    description: "This select shows a checkmark icon for selected option",
     options: defaultOptions,
     selectionIcon: "checkmark",
     placeholder: "Select an icon name",
@@ -281,7 +325,7 @@ export const WithIcon: Story = {
 export const WithLongOptionLabel: Story = {
   args: {
     label: "With long option label",
-    description: "The Select field handles long option labels",
+    description: "The Select handles long option labels",
     options: [
       {
         value: "very-long-option-1",

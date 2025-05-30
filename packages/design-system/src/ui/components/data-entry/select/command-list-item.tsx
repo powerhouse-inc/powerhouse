@@ -1,8 +1,8 @@
 import { Icon, type IconName } from "#powerhouse";
 import { cn } from "#scalars";
 import type React from "react";
-import { type SelectProps } from "../../../enum-field/types.js";
-import { CommandItem } from "../../command/command.js";
+import { CommandItem } from "../../../../scalars/components/fragments/command/index.js";
+import type { SelectProps } from "./types.js";
 
 interface FavoriteOptionsProps {
   options: SelectProps["options"];
@@ -39,7 +39,7 @@ const renderIcon = (
   );
 };
 
-export const CommandItemList: React.FC<FavoriteOptionsProps> = ({
+export const CommandListItem: React.FC<FavoriteOptionsProps> = ({
   options = [],
   selectedValues,
   multiple,
