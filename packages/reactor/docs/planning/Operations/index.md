@@ -84,7 +84,11 @@ There is also one special scope that is always populated:
 3. Execution - Operations are passed through reducers and executed in the order dictated by the queue.
 4. Storage - Once applied, operations are persisted in the `IOperationStore` with atomic transactions.
 
-> TODO: We need to document idempotency guarantees. Document exactly how the system prevents duplicate events from causing inconsistent state (e.g., using deterministic operation IDs or hash checks).
+### Idempotency
+
+Reducers are not guaranteed to be idempotent. That is, if a reducer is called with the same input twice, it may produce different results.
+
+However, `Operation`s _are_ idempotent. This is because the `Operation` type includes a unique operation `id`-- so if the system receives the same operation more than once, it will discard subsequent operations.
 
 ### Indexing
 
