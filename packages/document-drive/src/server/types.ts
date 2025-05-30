@@ -300,7 +300,7 @@ export type RemoveOldRemoteDrivesOption =
     };
 
 export type DocumentDriveServerOptions = {
-  defaultDrives: {
+  defaultDrives?: {
     loadOnInit?: boolean; // defaults to true
     remoteDrives?: Array<DefaultRemoteDriveInput>;
     removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
