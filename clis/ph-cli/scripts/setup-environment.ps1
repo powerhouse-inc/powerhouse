@@ -33,10 +33,8 @@ if (-not (Test-Path $installPath)) {
 Set-Location $installPath
 
 # Initialize Powerhouse project
-ph init powerhouse
+ph init powerhouse --$TARGET_TAG
 Set-Location powerhouse
-ph use $TARGET_TAG
-ph connect build
 
 # Interactive package installation loop
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -49,6 +47,9 @@ while ($true) {
     }
     ph install $package_name
 }
+
+# Build Connect
+ph connect build
 
 # Database Configuration
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -296,7 +297,6 @@ if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
 
 # Run database migrations
 pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
-pnpm add @powerhousedao/switchboard@dev
 
 # Start services with PM2
 Write-Host "Starting services with PM2..."
