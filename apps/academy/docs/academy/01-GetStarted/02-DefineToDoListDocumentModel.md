@@ -60,7 +60,7 @@ input DeleteTodoItemInput {
 ```
 </details>
 
-## Define the Document Model
+## Define the Document Model Specification
 
 To be able to define the document model, you need to open the document model editor in Connect. 
 

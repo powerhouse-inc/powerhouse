@@ -1,4 +1,4 @@
-# Configuration & Feature Toggles (PLACEHOLDER)
+# Configuration (WIP)
 
 This section describes the configuration options and feature flags available in the application. These settings allow you to customize the behavior of the app for your environment.
 
