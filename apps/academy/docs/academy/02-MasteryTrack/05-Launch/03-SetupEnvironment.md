@@ -1,4 +1,4 @@
-# Powerhouse Setup Guide
+# Powerhouse Setup Guide (WIP)
 
 ## Introduction
 Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently. This guide will walk you through the process of setting up both the Powerhouse CLI and configuring your server machine to run Powerhouse services. Whether you're setting up a development environment or preparing for production deployment, this guide provides all the necessary steps and considerations.

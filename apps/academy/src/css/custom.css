@@ -448,3 +448,14 @@ html[data-theme='dark'] .DocSearch-Hits > *:empty {
   border-radius: 8px;
   border: none;
 }
+
+/* Styles for DocCardList as a list */
+.doc-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ifm-spacing-vertical);
+}
+
+.doc-card-list-item {
+  width: 100%; /* Ensure items take full width */
+}

@@ -4,7 +4,7 @@ Packages of document models are a core structuring mechanism in the Powerhouse f
 
 By packaging document models together, developers can create well-organized, interoperable sets of data structures that capture the specific needs of various operational processes. Whether used for financial operations, governance, or contributor management, these packages streamline development and integration within Powerhouse's decentralized framework.
 
-### Key Features
+### Key Features of Packages
 
 - **Modular Structure** – Packages encapsulate related document models, making it easier to manage and deploy them as a cohesive unit.
 - **Standardized Definitions** – Each document model within a package follows Powerhouse's structured schema approach, ensuring consistency in data representation.
@@ -12,7 +12,7 @@ By packaging document models together, developers can create well-organized, int
 - **Dependency Management** – Developers can define dependencies between document models, ensuring proper relationships and data flows between interconnected components.
 - **Automated Schema Evolution** – Versioning mechanisms allow document models within a package to evolve over time without breaking existing functionality.
 
-### Example Use Cases
+### Example Use Cases of Packages
 
 - **Finance Package** – A set of document models handling invoices, payments, budgets, and financial reporting. link
 - **Contributor Billing Package** – Defines document models for tracking work, invoicing, and facilitating payments (in both fiat and crypto) for contributors in decentralized organizations. link

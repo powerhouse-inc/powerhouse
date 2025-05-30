@@ -194,7 +194,7 @@ export default function Editor({ document, dispatch }: IProps) {
 ### Implementing Components
 The editor we are about to implement makes use of some components from **Powerhouse Document Engineering**. 
 When you add the editor code, you'll see it makes use of two components, the `Checkbox` and `InputField`.
-These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/design-system/scalars`).   
+These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/document-engineering/scalars`).   
 
 This system provides a library of reusable components to ensure consistency and speed up development.  
 You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance. For a detailed guide on how to leverage the Document Engineering design system and Storybook, see [Using the Powerhouse Document Engineering](/academy/ComponentLibrary/PowerhouseDesignSystem) page.
@@ -205,7 +205,7 @@ For this tutorial, create a `components` folder inside `editors/to-do-list`. The
 <details>
 <summary>Checkbox</summary>
 ```typescript
-import { Form, BooleanField } from "@powerhousedao/design-system/scalars";
+import { Form, BooleanField } from "@powerhousedao/document-engineering/scalars";
 
 interface CheckboxProps {
   value: boolean;
@@ -230,7 +230,7 @@ export const Checkbox = ({ value, onChange }: CheckboxProps) => {
 <details>
 <summary>Inputfield</summary>
 ```typescript
-import { Form, StringField } from "@powerhousedao/design-system/scalars";
+import { Form, StringField } from "@powerhousedao/document-engineering/scalars";
 
 interface InputFieldProps {
   input: string;

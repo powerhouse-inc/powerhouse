@@ -1,6 +1,7 @@
 # Cookbook
 
 ## Powerhouse CLI Recipes
+This section covers recipes related to the `ph-cmd`, the command-line tool for Powerhouse project initialization, code generation, package management, and running local development environments.
 
 <details id="installing-ph-cmd">
 <summary>Installing 'ph-cmd'</summary>
@@ -154,7 +155,6 @@ ph use staging
 
 ## Further Reading
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
-- [Domain Modeling Guide](/domain-modeling)
 - [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
 </details>
 
@@ -338,6 +338,7 @@ ph init --package-manager pnpm
 </details>
 
 ## Powerhouse Project Recipes
+This section focuses on creating, configuring, and managing Powerhouse projects, which are collections of document models, editors, and other resources.
 
 <details id="initializing-a-new-project-and-document-model">
 <summary>Initializing a New Project & Document Model</summary>
@@ -550,6 +551,7 @@ You might encounter a browser warning about the self-signed certificate; you may
 
 
 ## Document & Drive Editor recipes
+This section provides guidance on generating and customizing editors for Document Models and custom interfaces for Drives.
 
 <details id="generating-a-document-editor">
 <summary>Generating a Document Editor</summary>
@@ -721,6 +723,7 @@ Use the constructed URL to add or access the drive in your Connect environment.
 
 
 ## Reactor Recipes
+Learn how to manage the Powerhouse Reactor, the local service for processing document model operations and state.
 
 <details id="starting-the-reactor">
 <summary>Starting the Reactor</summary>
@@ -768,6 +771,7 @@ ph reactor
 </details>
 
 ## Package Development Recipes
+These recipes guide you through creating, installing, and managing Powerhouse Packages, which are reusable collections of document models and editors.
 
 <details id="installing-a-custom-powerhouse-package">
 <summary>Installing a Custom Powerhouse Package</summary>
@@ -924,6 +928,7 @@ You need to understand and manage different types of dependencies in your Powerh
 </details>
 
 ## Data Synchronisation Recipes
+This section helps troubleshoot and understand data synchronization within the Powerhouse ecosystem, including interactions between different services and components.
 
 <details id="troubleshooting-document-syncing">
 <summary>Troubleshooting Document Syncing: Supergraph vs. Drive Endpoints</summary>

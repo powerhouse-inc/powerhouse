@@ -1,4 +1,4 @@
-# Run it on a EC2 instance
+# Run on a EC2 instance (WIP)
 
 ## Tutorial Workflow
 

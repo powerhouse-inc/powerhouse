@@ -125,7 +125,7 @@ ph generate --editor YourModelName --document-types powerhouse/YourModelName
 This creates a template file, typically at `editors/your-model-name/editor.tsx`.
 -   Customize this React component to build your UI.
 -   You can use standard HTML, Tailwind CSS (available in Connect), or import custom CSS.
--   Utilize components from `@powerhousedao/design-system` for consistency and rapid development. @Callmet Reference back to document engineering
+-   Utilize components from `@powerhousedao/document-engineering` for consistency and rapid development. @Callmet Reference back to document engineering
 
 
 ### 3.5. Test the Editor

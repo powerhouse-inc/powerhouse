@@ -23,10 +23,10 @@ type MyType {
 
 ## React Component Implementation in the Frontend
 
-All of our reusable components are available in the design system library or package.
+All of our reusable components are available in the Document-Engineering design system library or package.
 This package comes as a dependency in your project when creating a new document model project.
 ````
-import PHIDField from 'design-system'
+import PHIDField from 'document-engineering'
 const reactComponent = () => {
 
 return (
