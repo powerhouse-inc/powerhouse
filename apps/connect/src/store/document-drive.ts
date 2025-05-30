@@ -1,12 +1,17 @@
 import { useReadModeContext } from '#context';
 import {
     documentToHash,
-    getDriveSharingType,
     useDocumentDriveById,
     useDocumentDriveServer,
 } from '#hooks';
-import { useSelectedDriveId } from '@powerhousedao/reactor-browser/atoms';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import {
+    getDriveSharingType,
+    useSelectedDriveId,
+    useSelectedNodeDocumentType,
+    useSelectedNodeId,
+    useSelectedNodeKind,
+    useSelectedNodeName,
+} from '@powerhousedao/reactor-browser/atoms';
 import { logger } from 'document-drive';
 import {
     hashDocumentStateForScope,
@@ -155,25 +160,20 @@ const useSetSelectedDocument = () => useSetAtom(selectedDocumentAtom);
 
 export function useFileNodeDocument() {
     useDebugValue('useFileNodeDocument');
-    const { selectedNode } = useUiNodesContext();
+    const selectedNodeId = useSelectedNodeId();
     const selectedDriveId = useSelectedDriveId();
-    const documentDrive = useDocumentDriveById(selectedDriveId);
-    const sharingType = getDriveSharingType(documentDrive.drive);
+    const { drive } = useDocumentDriveById(selectedDriveId);
+    const sharingType = getDriveSharingType(drive);
     const { openFile, addOperations, onStrandUpdate, getSyncStatus } =
         useDocumentDriveServer();
-    const syncStatus = documentDrive.drive
-        ? getSyncStatus(documentDrive.drive.id, sharingType)
-        : undefined;
+    const syncStatus = drive ? getSyncStatus(drive.id, sharingType) : undefined;
     const { fetchDocument: fetchReadDocument } = useReadModeContext();
     const [fileNodeDocument, setFileNodeDocument] =
         useAtom(fileNodeDocumentAtom);
     const isReadMode = sharingType !== 'LOCAL' && syncStatus === undefined;
-    const driveId = selectedNode?.driveId;
-    const documentId = selectedNode?.id;
-    const name = selectedNode?.name;
-    const kind = selectedNode?.kind;
-    const documentType =
-        kind === 'FILE' ? selectedNode?.documentType : undefined;
+    const name = useSelectedNodeName();
+    const kind = useSelectedNodeKind();
+    const documentType = useSelectedNodeDocumentType();
 
     const setSelectedDocument = useSetSelectedDocument();
     const fetchDocument = useCallback(
@@ -191,7 +191,7 @@ export function useFileNodeDocument() {
 
     useEffect(() => {
         // if selected node is undefine then clears fileNodeDocument
-        if (!driveId || !documentId || !documentType) {
+        if (!selectedDriveId || !selectedNodeId || !documentType) {
             if (fileNodeDocument) {
                 setFileNodeDocument(undefined);
             }
@@ -200,14 +200,14 @@ export function useFileNodeDocument() {
 
         // if selectedNode changes then fetches fileNodeDocument
         if (
-            driveId !== fileNodeDocument?.driveId ||
-            documentId !== fileNodeDocument.documentId ||
+            selectedDriveId !== fileNodeDocument?.driveId ||
+            selectedNodeId !== fileNodeDocument.documentId ||
             documentType !== fileNodeDocument.documentType ||
             name !== fileNodeDocument.name
         ) {
             const changed = setFileNodeDocument({
-                driveId,
-                documentId,
+                driveId: selectedDriveId,
+                documentId: selectedNodeId,
                 documentType,
                 name: name || '',
                 document: undefined,
@@ -216,21 +216,21 @@ export function useFileNodeDocument() {
 
             // if the selected file node changed then fetches the new document
             if (changed) {
-                fetchDocument(driveId, documentId, documentType)
+                fetchDocument(selectedDriveId, selectedNodeId, documentType)
                     .then(document =>
                         setFileNodeDocument(
                             document
                                 ? {
-                                      driveId,
-                                      documentId,
+                                      driveId: selectedDriveId,
+                                      documentId: selectedNodeId,
                                       documentType,
                                       document,
                                       name: name || '',
                                       status: 'LOADED',
                                   }
                                 : {
-                                      driveId,
-                                      documentId,
+                                      driveId: selectedDriveId,
+                                      documentId: selectedNodeId,
                                       documentType,
                                       document,
                                       name: name || '',
@@ -241,8 +241,8 @@ export function useFileNodeDocument() {
                     .catch(error => {
                         logger.error(error);
                         setFileNodeDocument({
-                            driveId,
-                            documentId,
+                            driveId: selectedDriveId,
+                            documentId: selectedNodeId,
                             documentType,
                             name: name || '',
                             document: undefined,
@@ -252,11 +252,10 @@ export function useFileNodeDocument() {
             }
         }
     }, [
-        selectedNode,
-        documentId,
+        selectedDriveId,
+        selectedNodeId,
         documentType,
         name,
-        driveId,
         fetchDocument,
         fileNodeDocument,
         setFileNodeDocument,
@@ -298,12 +297,12 @@ export function useFileNodeDocument() {
     ]);
 
     const addOperationToSelectedDocument = useMemo(() => {
-        if (driveId && documentId && kind === 'FILE') {
+        if (selectedDriveId && selectedNodeId && kind === 'FILE') {
             return debounceOperations(operations =>
-                addOperations(driveId, documentId, operations),
+                addOperations(selectedDriveId, selectedNodeId, operations),
             );
         }
-    }, [addOperations, driveId, documentId, kind]);
+    }, [addOperations, selectedDriveId, selectedNodeId, kind]);
 
     const addOperationToSelectedDrive = useCallback(
         (operation: Operation) => {
@@ -319,8 +318,8 @@ export function useFileNodeDocument() {
 
     const isSelectedDocument =
         kind === 'FILE' &&
-        fileNodeDocument?.driveId === driveId &&
-        fileNodeDocument?.documentId === documentId;
+        fileNodeDocument?.driveId === selectedDriveId &&
+        fileNodeDocument?.documentId === selectedNodeId;
     const selectedDocument = isSelectedDocument
         ? fileNodeDocument?.document
         : undefined;

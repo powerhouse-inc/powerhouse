@@ -4,12 +4,7 @@ import {
   mockNodeOptions,
   mockPublicDrive,
 } from "#connect";
-import {
-  UiNodesContextProvider,
-  useUiNodesContext,
-} from "@powerhousedao/reactor-browser";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useEffect } from "react";
 import { DriveView } from "./drive-view.js";
 
 const meta: Meta<typeof DriveView> = {
@@ -18,15 +13,6 @@ const meta: Meta<typeof DriveView> = {
   parameters: {
     layout: "centered",
   },
-  decorators: [
-    (Story) => (
-      <UiNodesContextProvider>
-        <div className="w-[420px] bg-gray-50 p-10">
-          <Story />
-        </div>
-      </UiNodesContextProvider>
-    ),
-  ],
 };
 
 export default meta;
@@ -34,15 +20,9 @@ type Story = StoryObj<typeof meta>;
 
 const Template: Story = {
   render: function Wrapper(args) {
-    const uiNodesContext = useUiNodesContext();
-    const { setDriveNodes } = uiNodesContext;
-    useEffect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      setDriveNodes(args.driveNodes);
-    }, []);
     return (
       // @ts-expect-error - mock
-      <DriveView {...args} {...uiNodesContext} nodeOptions={mockNodeOptions} />
+      <DriveView {...args} nodeOptions={mockNodeOptions} />
     );
   },
 };

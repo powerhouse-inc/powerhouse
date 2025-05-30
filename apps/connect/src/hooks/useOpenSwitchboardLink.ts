@@ -1,20 +1,24 @@
 import { getSwitchboardUrl, openUrl } from '#utils';
-import { FILE, type UiNode } from '@powerhousedao/design-system';
+import { useNodeDocumentType } from '@powerhousedao/reactor-browser';
 import { useDocumentDriveById } from './useDocumentDriveById.js';
 
-export const useOpenSwitchboardLink = (driveId: string | undefined | null) => {
+export const useOpenSwitchboardLink = (
+    driveId: string | undefined | null,
+    nodeId: string | null,
+) => {
     const { isRemoteDrive, remoteUrl } = useDocumentDriveById(driveId);
+    const documentType = useNodeDocumentType(nodeId);
 
-    return async (uiNode?: UiNode | null) => {
-        if (uiNode?.kind !== FILE || !remoteUrl || !isRemoteDrive) return;
+    return async () => {
+        if (!nodeId || !documentType || !remoteUrl || !isRemoteDrive) return;
 
         const url = new URL(remoteUrl);
         const baseUrl = url.origin;
 
         const switchboardUrl = getSwitchboardUrl(
             remoteUrl,
-            uiNode.documentType,
-            uiNode.id,
+            documentType,
+            nodeId,
         );
 
         await openUrl(switchboardUrl);

@@ -23,14 +23,6 @@ export interface IDriveContext {
 
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
-  /** Currently selected node (file/folder) in the drive */
-  selectedNode: Node | null;
-
-  /**
-   * Callback to update the selected node in the drive
-   * @param node - The node to be selected
-   */
-  selectNode: (node: UiNode | null) => void;
 
   /**
    * Adds a new file to the drive
@@ -63,15 +55,6 @@ export interface IDriveContext {
     parentFolder?: string,
     document?: PHDocument,
   ) => Promise<FileNode>;
-
-  /**
-   * Shows a modal for creating a new document
-   * @param documentModel - Document model of the document to be created
-   * @returns Promise resolving to an object containing the document name
-   */
-  showCreateDocumentModal: (
-    documentModel: DocumentModelModule,
-  ) => Promise<{ name: string }>;
 
   /**
    * Retrieves the sync status of a document or drive

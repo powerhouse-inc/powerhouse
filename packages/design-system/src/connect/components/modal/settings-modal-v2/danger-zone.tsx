@@ -1,13 +1,17 @@
-import { CLOUD, PUBLIC, type UiDriveNode } from "#connect";
+import { CLOUD, PUBLIC } from "#connect";
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
+import {
+  getDriveSharingType,
+  useDocumentDrives,
+} from "@powerhousedao/reactor-browser";
 import { capitalCase } from "change-case";
+import { type DocumentDriveDocument } from "document-drive";
 import { useState } from "react";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 type ModifyDrivesProps = {
-  drives: UiDriveNode[];
-  onDeleteDrive: (uiDriveNode: UiDriveNode) => void;
+  onDeleteDrive: (driveId: string) => void;
   className?: string;
 };
 
@@ -41,38 +45,39 @@ function ModifyDrives(props: ModifyDrivesProps) {
 
 function DriveList(props: ModifyDrivesProps) {
   const { className, ...rest } = props;
+  const [drives] = useDocumentDrives();
   return (
     <div className={className}>
-      {props.drives.map((drive) => (
+      {drives.map((drive) => (
         <Drive key={drive.id} drive={drive} {...rest} />
       ))}
     </div>
   );
 }
 
-function Drive(props: ModifyDrivesProps & { drive: UiDriveNode }) {
+function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
   const { drive, className, onDeleteDrive } = props;
+  const sharingType = getDriveSharingType(drive);
+  const driveName = drive.state.global.name;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const localDriveIcon = <Icon name="Hdd" size={16} className="flex-none" />;
-
   const cloudDriveIcon = <Icon name="Server" size={16} className="flex-none" />;
-
-  const publicDriveIcon =
-    "icon" in drive && !!drive.icon ? (
-      <img
-        alt="drive icon"
-        className="size-4 flex-none object-contain"
-        src={drive.icon}
-      />
-    ) : (
-      <Icon name="M" size={16} className="flex-none" />
-    );
+  const iconSrc = drive.state.global.icon ?? undefined;
+  const publicDriveIcon = !iconSrc ? (
+    <img
+      alt="drive icon"
+      className="size-4 flex-none object-contain"
+      src={iconSrc}
+    />
+  ) : (
+    <Icon name="M" size={16} className="flex-none" />
+  );
 
   function getNodeIcon() {
-    if (drive.sharingType === PUBLIC) {
+    if (sharingType === PUBLIC) {
       return publicDriveIcon;
     }
-    if (drive.sharingType === CLOUD) {
+    if (sharingType === CLOUD) {
       return cloudDriveIcon;
     }
     return localDriveIcon;
@@ -90,11 +95,11 @@ function Drive(props: ModifyDrivesProps & { drive: UiDriveNode }) {
       {icon}
       <div>
         <span className="block text-sm font-medium leading-[18px]">
-          {capitalCase(drive.name)}
+          {capitalCase(driveName)}
         </span>
         <div className="flex items-baseline gap-x-2 leading-[18px]">
           <span className="text-sm text-gray-600">
-            {capitalCase(drive.sharingType)} App
+            {capitalCase(sharingType)} App
           </span>
           <a className="group flex items-center gap-x-2 text-sm text-slate-500 transition-colors hover:text-[#9896FF]">
             By Powerhouse
@@ -122,7 +127,7 @@ function Drive(props: ModifyDrivesProps & { drive: UiDriveNode }) {
         ]}
         onItemClick={(id) => {
           if (id === "delete-drive") {
-            onDeleteDrive(drive);
+            onDeleteDrive(drive.id);
           }
         }}
         onOpenChange={setIsDropdownMenuOpen}

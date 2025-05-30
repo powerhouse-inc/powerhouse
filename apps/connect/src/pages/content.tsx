@@ -3,8 +3,10 @@ import { useFileNodeDocument } from '#store';
 import { FILE } from '@powerhousedao/design-system';
 import {
     useSelectedDriveId,
+    useSelectedNodeId,
+    useSelectedNodeKind,
+    useSelectedParentNodeId,
     useSetSelectedNodeId,
-    useUiNodesContext,
 } from '@powerhousedao/reactor-browser';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,8 +20,10 @@ export default function Content() {
     const { driveId } = useParams();
     const [documentDrives, , , status] = useDocumentDrives();
     const selectedDriveId = useSelectedDriveId();
+    const selectedNodeId = useSelectedNodeId();
+    const selectedParentNodeId = useSelectedParentNodeId();
+    const selectedNodeKind = useSelectedNodeKind();
     const setSelectedNodeId = useSetSelectedNodeId();
-    const { selectedNode } = useUiNodesContext();
     const { addFile } = useDocumentDriveServer();
     const { fileNodeDocument } = useFileNodeDocument();
     const firstDriveId = documentDrives[0]?.id;
@@ -33,7 +37,11 @@ export default function Content() {
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
-            if (!selectedDriveId || selectedNode?.kind !== FILE) {
+            if (
+                !selectedDriveId ||
+                !selectedParentNodeId ||
+                selectedNodeKind !== FILE
+            ) {
                 return;
             }
 
@@ -41,10 +49,10 @@ export default function Content() {
                 file.content,
                 selectedDriveId,
                 file.name,
-                selectedNode.parentFolder,
+                selectedParentNodeId,
             );
         });
-    }, [selectedDriveId, selectedNode, addFile]);
+    }, [selectedDriveId, selectedParentNodeId, addFile]);
 
     // if drives are loaded and route driveId is not found
     // then redirects to homepage

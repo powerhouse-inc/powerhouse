@@ -1,17 +1,13 @@
-import { type BreadcrumbNode, type UiNode } from "#connect";
+import { type BreadcrumbNode } from "#connect";
+import {
+  useSelectedNodePath,
+  useSetSelectedNodeId,
+} from "@powerhousedao/reactor-browser";
 import { useCallback, useMemo } from "react";
 
-interface UseBreadcrumbsProps {
-  selectedNodePath: UiNode[];
-  getNodeById: (id: string) => UiNode | null;
-  setSelectedNode: (node: UiNode | null) => void;
-}
-
-export function useBreadcrumbs({
-  selectedNodePath,
-  getNodeById,
-  setSelectedNode,
-}: UseBreadcrumbsProps) {
+export function useBreadcrumbs() {
+  const selectedNodePath = useSelectedNodePath();
+  const setSelectedNodeId = useSetSelectedNodeId();
   const breadcrumbs = useMemo(
     () =>
       selectedNodePath.map((node) => ({
@@ -23,14 +19,9 @@ export function useBreadcrumbs({
 
   const onBreadcrumbSelected = useCallback(
     (breadcrumb: BreadcrumbNode) => {
-      const node = getNodeById(breadcrumb.id);
-      if (node) {
-        setSelectedNode(node);
-      } else {
-        console.error(`Node with id ${breadcrumb.id} not found`, breadcrumb);
-      }
+      setSelectedNodeId(breadcrumb.id);
     },
-    [getNodeById, setSelectedNode],
+    [setSelectedNodeId],
   );
 
   return {

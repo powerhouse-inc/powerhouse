@@ -7,7 +7,10 @@ import {
 import { useFileNodeDocument, useGetDocumentModelModule } from '#store';
 import {
     useSelectedDriveId,
-    useUiNodesContext,
+    useSelectedNodeId,
+    useSelectedNodeName,
+    useSelectedParentNodeId,
+    useSetSelectedNodeId,
 } from '@powerhousedao/reactor-browser';
 import { type GetDocumentOptions } from 'document-drive';
 import {
@@ -32,11 +35,16 @@ export function DocumentEditorContainer() {
         addOperationToSelectedDocument,
     } = useFileNodeDocument();
     const { renameNode } = useDocumentDriveServer();
-    const { selectedNode, selectedParentNode, setSelectedNode } =
-        useUiNodesContext();
+    const selectedNodeId = useSelectedNodeId();
+    const selectedParentNodeId = useSelectedParentNodeId();
+    const setSelectedNodeId = useSetSelectedNodeId();
     const selectedDriveId = useSelectedDriveId();
+    const selectedNodeName = useSelectedNodeName();
     const { isRemoteDrive } = useDocumentDriveById(selectedDriveId);
-    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveId);
+    const openSwitchboardLink = useOpenSwitchboardLink(
+        selectedDriveId,
+        selectedNodeId,
+    );
     const getDocumentModelModule = useGetDocumentModelModule();
 
     const getDocument = useGetDocument();
@@ -62,13 +70,14 @@ export function DocumentEditorContainer() {
             setSelectedDocument(document);
 
             if (
-                !!selectedNode &&
+                !!selectedNodeId &&
+                !!selectedDriveId &&
                 document.name !== '' &&
-                selectedNode.name !== document.name
+                selectedNodeName !== document.name
             ) {
                 return renameNode(
-                    selectedNode.driveId,
-                    selectedNode.id,
+                    selectedDriveId,
+                    selectedNodeId,
                     document.name,
                 );
             }
@@ -76,14 +85,16 @@ export function DocumentEditorContainer() {
         [
             fileNodeDocument?.documentId,
             renameNode,
-            selectedNode,
+            selectedNodeId,
+            selectedNodeName,
+            selectedDriveId,
             setSelectedDocument,
         ],
     );
 
     const onClose = useCallback(() => {
-        setSelectedNode(selectedParentNode);
-    }, [selectedParentNode, setSelectedNode]);
+        setSelectedNodeId(selectedParentNodeId);
+    }, [setSelectedNodeId, selectedParentNodeId]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
@@ -122,17 +133,17 @@ export function DocumentEditorContainer() {
     const onGetDocumentRevision: EditorContext['getDocumentRevision'] =
         useCallback(
             (options?: GetDocumentOptions) => {
-                if (!selectedNode) {
+                if (!selectedNodeId) {
                     console.error('No selected node');
                     return Promise.reject(new Error('No selected node'));
                 }
-                return getDocument(
-                    selectedNode.driveId,
-                    selectedNode.id,
-                    options,
-                );
+                if (!selectedDriveId) {
+                    console.error('No selected drive');
+                    return Promise.reject(new Error('No selected drive'));
+                }
+                return getDocument(selectedDriveId, selectedNodeId, options);
             },
-            [getDocument, selectedNode],
+            [getDocument, selectedDriveId, selectedNodeId],
         );
 
     const onExport = useCallback(() => {
@@ -142,10 +153,8 @@ export function DocumentEditorContainer() {
     }, [exportDocument, selectedDocument]);
 
     const onOpenSwitchboardLink = useMemo(() => {
-        return isRemoteDrive
-            ? () => openSwitchboardLink(selectedNode)
-            : undefined;
-    }, [isRemoteDrive, openSwitchboardLink, selectedNode]);
+        return isRemoteDrive ? () => openSwitchboardLink() : undefined;
+    }, [isRemoteDrive, openSwitchboardLink]);
 
     if (!fileNodeDocument) return null;
 

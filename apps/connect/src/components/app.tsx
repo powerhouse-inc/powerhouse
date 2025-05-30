@@ -2,7 +2,6 @@ import { CookieBanner } from '#components';
 import { ReadModeContextProvider, RootProvider } from '#context';
 import { atoms, atomStore } from '#store';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
-import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Provider, useAtomValue } from 'jotai';
 import React, { lazy, Suspense } from 'react';
 import { useProcessorManager } from '../store/processors.js';
@@ -39,11 +38,9 @@ const App = () => (
                                     position="bottom-right"
                                     containerId="connect"
                                 />
-                                <UiNodesContextProvider>
-                                    <Router />
-                                    <CookieBanner />
-                                    <Analytics />
-                                </UiNodesContextProvider>
+                                <Router />
+                                <CookieBanner />
+                                <Analytics />
                             </ReactorAnalyticsProvider>
                         </ReadModeContextProvider>
                     </RootProvider>

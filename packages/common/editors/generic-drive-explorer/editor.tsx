@@ -9,10 +9,6 @@ import {
   DriveContextProvider,
   useDriveContext,
 } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
-import {
-  FILE,
-  useUiNodesContext,
-} from "@powerhousedao/reactor-browser/hooks/useUiNodesContext";
 import { type DocumentDriveDocument } from "document-drive";
 import { type DocumentModelModule } from "document-model";
 import type React from "react";
@@ -33,25 +29,8 @@ export type IProps = DriveEditorProps<DocumentDriveDocument> &
 export function BaseEditor(props: IProps) {
   const { document, dispatch, className, children } = props;
 
-  const { id: driveId } = document;
-  const {
-    showSearchBar,
-    isAllowedToCreateDocuments,
-    documentModels,
-    showCreateDocumentModal,
-  } = useDriveContext();
-  const {
-    driveNodes,
-    selectedNode,
-    selectedNodePath,
-    getNodeById,
-    setSelectedNode,
-  } = useUiNodesContext();
-
-  const driveNode = useMemo(
-    () => driveNodes.find((n) => n.id === driveId),
-    [driveNodes, driveId],
-  );
+  const { showSearchBar, isAllowedToCreateDocuments, documentModels } =
+    useDriveContext();
 
   const {
     addDocument,
@@ -111,8 +90,6 @@ export function BaseEditor(props: IProps) {
       </DriveLayout.Header>
       <DriveLayout.Content>
         <FolderView
-          node={selectedNode || driveNode}
-          onSelectNode={setSelectedNode}
           onRenameNode={renameNode}
           onDuplicateNode={duplicateNode}
           onDeleteNode={deleteNode}

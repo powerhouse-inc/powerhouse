@@ -7,25 +7,23 @@ import {
 } from '@powerhousedao/design-system';
 import {
     FOLDER,
+    useSelectedParentNodeId,
     useSetSelectedNodeId,
-    useUiNodesContext,
     type SharingType,
     type UiDriveNode,
     type UiFileNode,
     type UiFolderNode,
 } from '@powerhousedao/reactor-browser';
+import { type DocumentModelModule } from 'document-model';
 import { t } from 'i18next';
 import { useCallback } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
-import { useMakeUiDriveNode } from './useUiNodes';
 
 export function useShowAddDriveModal() {
     const { showModal } = useModal();
     const { addDrive, addRemoteDrive } = useDocumentDriveServer();
-    const { setSelectedNode } = useUiNodesContext();
     const setSelectedNodeId = useSetSelectedNodeId();
     const apps = useApps();
-    const makeUiDriveNode = useMakeUiDriveNode();
     const onAddLocalDrive = useCallback(
         async (data: AddLocalDriveInput) => {
             try {
@@ -52,15 +50,12 @@ export function useShowAddDriveModal() {
                     type: 'connect-success',
                 });
 
-                const newDriveNode = await makeUiDriveNode(newDrive);
-
-                setSelectedNode(newDriveNode);
-                setSelectedNodeId(newDriveNode.id);
+                setSelectedNodeId(newDrive.id);
             } catch (e) {
                 console.error(e);
             }
         },
-        [addDrive, makeUiDriveNode, setSelectedNode, t],
+        [addDrive, setSelectedNodeId, t],
     );
 
     const onAddRemoteDrive = useCallback(
@@ -95,21 +90,12 @@ export function useShowAddDriveModal() {
                     type: 'connect-success',
                 });
 
-                const newDriveNode = await makeUiDriveNode(newDrive);
-
-                setSelectedNode(newDriveNode);
-                setSelectedNodeId(newDriveNode.id);
+                setSelectedNodeId(newDrive.id);
             } catch (e) {
                 console.error(e);
             }
         },
-        [
-            addRemoteDrive,
-            makeUiDriveNode,
-            setSelectedNode,
-            setSelectedNodeId,
-            t,
-        ],
+        [addRemoteDrive, setSelectedNodeId, t],
     );
     const showAddDriveModal = useCallback(
         () =>
@@ -131,7 +117,6 @@ export function useShowDriveSettingsModal() {
         setDriveSharingType,
         deleteDrive,
     } = useDocumentDriveServer();
-    const { driveNodes, setSelectedNode } = useUiNodesContext();
     const setSelectedNodeId = useSetSelectedNodeId();
     const onRenameDrive = useCallback(
         async (uiDriveNode: UiDriveNode, newName: string) => {
@@ -161,8 +146,7 @@ export function useShowDriveSettingsModal() {
                     closeModal();
                     await deleteDrive(uiDriveNode.id);
 
-                    setSelectedNode(driveNodes[0]);
-                    setSelectedNodeId(driveNodes[0].id);
+                    setSelectedNodeId(null);
 
                     toast(t('notifications.deleteDriveSuccess'), {
                         type: 'connect-deleted',
@@ -170,7 +154,7 @@ export function useShowDriveSettingsModal() {
                 },
             });
         },
-        [deleteDrive, driveNodes, setSelectedNode, showModal, t],
+        [deleteDrive, setSelectedNodeId, showModal, t],
     );
     const showDriveSettingsModal = useCallback(
         (uiDriveNode: UiDriveNode) => {
@@ -196,8 +180,9 @@ export function useShowDriveSettingsModal() {
 
 export function useShowDeleteNodeModal() {
     const { showModal } = useModal();
-    const { setSelectedNode, getParentNode } = useUiNodesContext();
     const { deleteNode } = useDocumentDriveServer();
+    const setSelectedNodeId = useSetSelectedNodeId();
+    const selectedParentNodeId = useSelectedParentNodeId();
     const showDeleteNodeModal = useCallback(
         (uiNode: UiFileNode | UiFolderNode) => {
             showModal('deleteItem', {
@@ -210,18 +195,29 @@ export function useShowDeleteNodeModal() {
                             ? 'notifications.deleteFolderSuccess'
                             : 'notifications.fileDeleteSuccess';
 
-                    const parentNode = getParentNode(uiNode);
-
                     await deleteNode(uiNode.driveId, uiNode.id);
 
-                    setSelectedNode(parentNode);
+                    setSelectedNodeId(selectedParentNodeId);
 
                     toast(t(i18nKey), { type: 'connect-deleted' });
                 },
             });
         },
-        [deleteNode, getParentNode, setSelectedNode, showModal, t],
+        [deleteNode, setSelectedNodeId, selectedParentNodeId, showModal, t],
     );
 
     return showDeleteNodeModal;
+}
+
+export function useShowCreateDocumentModal() {
+    const { showModal } = useModal();
+    const showCreateDocumentModal = useCallback(
+        (documentModel: DocumentModelModule) =>
+            showModal('createDocument', {
+                documentModel,
+            }),
+        [showModal],
+    );
+
+    return showCreateDocumentModal;
 }

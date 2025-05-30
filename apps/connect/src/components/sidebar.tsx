@@ -1,14 +1,18 @@
-import { useConnectConfig, useLogin, useShowAddDriveModal } from '#hooks';
+import {
+    useConnectConfig,
+    useDocumentDrives,
+    useLogin,
+    useShowAddDriveModal,
+} from '#hooks';
 import {
     ConnectSidebar,
     Icon,
     SidebarAddDriveItem,
     SidebarItem,
-    type UiDriveNode,
 } from '@powerhousedao/design-system';
 import {
+    useSelectedDriveId,
     useSetSelectedNodeId,
-    useUiNodesContext,
 } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import { useCallback } from 'react';
@@ -19,10 +23,10 @@ import { useModal } from './modal/index.js';
 export default function Sidebar() {
     const { showModal } = useModal();
     const navigate = useNavigate();
-
     const { user, openRenown, logout } = useLogin();
-    const { driveNodes, setSelectedNode, selectedNode } = useUiNodesContext();
+    const [documentDrives] = useDocumentDrives();
     const setSelectedNodeId = useSetSelectedNodeId();
+    const selectedDriveId = useSelectedDriveId();
     const [config] = useConnectConfig();
     const showAddDriveModal = useShowAddDriveModal();
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
@@ -32,10 +36,9 @@ export default function Sidebar() {
     };
 
     const onRootClick = useCallback(() => {
-        setSelectedNode(null);
         setSelectedNodeId(null);
         navigate('/');
-    }, [navigate, setSelectedNode, setSelectedNodeId]);
+    }, [navigate, setSelectedNodeId]);
 
     const onAddDriveClick = useCallback(() => {
         showAddDriveModal();
@@ -61,11 +64,10 @@ export default function Sidebar() {
     );
 
     const handleDriveClick = useCallback(
-        (driveNode: UiDriveNode) => {
-            setSelectedNode(driveNode);
-            setSelectedNodeId(driveNode.id);
+        (driveId: string) => {
+            setSelectedNodeId(driveId);
         },
-        [setSelectedNode, setSelectedNodeId],
+        [setSelectedNodeId],
     );
 
     const etherscanUrl = user?.address
@@ -91,17 +93,17 @@ export default function Sidebar() {
                 }
                 onError={logger.error}
             >
-                {driveNodes.map((node, index) => (
+                {documentDrives.map((drive, index) => (
                     <SidebarItem
                         key={index}
-                        title={node.name}
-                        onClick={() => handleDriveClick(node)}
-                        active={selectedNode?.id === node.id}
+                        title={drive.name}
+                        onClick={() => handleDriveClick(drive.id)}
+                        active={selectedDriveId === drive.id}
                         icon={
-                            node.icon ? (
+                            drive.state.global.icon ? (
                                 <img
-                                    src={node.icon}
-                                    alt={node.name}
+                                    src={drive.state.global.icon}
+                                    alt={drive.name}
                                     width={32}
                                     height={32}
                                 />

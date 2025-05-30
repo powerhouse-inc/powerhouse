@@ -13,8 +13,11 @@ import {
     signOperation,
     validateDocument,
 } from '#utils';
-import { type UiNode } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import {
+    useNodeDocumentType,
+    useParentNodeId,
+    useSetSelectedNodeId,
+} from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import {
     type Action,
@@ -45,20 +48,14 @@ export interface EditorProps {
 }
 
 export function useEditorDispatch(
-    node: UiNode | null,
+    nodeId: string | null,
     documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
+    const documentType = useNodeDocumentType(nodeId);
     const { sign } = useConnectCrypto();
-
-    const documentType =
-        node?.kind === 'DRIVE'
-            ? 'powerhouse/document-drive'
-            : !!node && 'documentType' in node
-              ? node.documentType
-              : undefined;
     const getDocumentModelModule = useGetDocumentModelModule();
     const documentModelModule = useMemo(
         () => (documentType ? getDocumentModelModule(documentType) : undefined),
@@ -71,14 +68,14 @@ export function useEditorDispatch(
                 operation,
                 state,
             ) => {
-                if (!node?.id) return;
+                if (!nodeId) return;
 
                 const { prevState } = state;
 
                 signOperation(
                     operation,
                     sign,
-                    node.id,
+                    nodeId,
                     prevState,
                     documentModelModule?.reducer,
                     user,
@@ -103,7 +100,7 @@ export function useEditorDispatch(
             connectDid,
             documentModelModule?.reducer,
             onAddOperation,
-            node,
+            nodeId,
             sign,
             user,
         ],
@@ -114,19 +111,20 @@ export function useEditorDispatch(
 
 export function useEditorProps(
     document: PHDocument | undefined,
-    node: UiNode | null,
+    nodeId: string | null,
     documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
     const { t } = useTranslation();
     const { showModal } = useModal();
+    const parentNodeId = useParentNodeId(nodeId);
+    const setSelectedNodeId = useSetSelectedNodeId();
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
     const userPermissions = useUserPermissions();
 
     const context = useMemo(() => ({ theme, user }), [theme, user]);
     const { selectedDocument } = useFileNodeDocument();
-    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
     const getDocumentModelModule = useGetDocumentModelModule();
 
     const canUndo =
@@ -134,7 +132,11 @@ export function useEditorProps(
         (document.revision.global > 0 || document.revision.local > 0);
     const canRedo = !!document?.clipboard.length;
 
-    const dispatch = useEditorDispatch(node, documentDispatch, onAddOperation);
+    const dispatch = useEditorDispatch(
+        nodeId,
+        documentDispatch,
+        onAddOperation,
+    );
 
     const handleUndo = useCallback(() => {
         dispatch(undo());
@@ -145,8 +147,8 @@ export function useEditorProps(
     }, [dispatch]);
 
     const onClose = useCallback(() => {
-        setSelectedNode(selectedParentNode);
-    }, [selectedParentNode, setSelectedNode]);
+        setSelectedNodeId(parentNodeId);
+    }, [parentNodeId, setSelectedNodeId]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {

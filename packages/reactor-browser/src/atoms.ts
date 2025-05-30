@@ -3,7 +3,6 @@ import {
   type FileNode,
   type FolderNode,
   type Node,
-  type ReadDrive,
 } from "document-drive";
 import deepEqual from "fast-deep-equal";
 import { atom, useAtomValue, useSetAtom } from "jotai";
@@ -102,6 +101,12 @@ export function useSetSelectedNodeId() {
   return setSelectedNodeId;
 }
 
+export function useSelectedNodeName() {
+  const selectedNodeId = useSelectedNodeId();
+  const node = useNodeById(selectedNodeId);
+  return node?.name ?? null;
+}
+
 export function useUpdateNodeMap() {
   const update = useSetAtom(bulkUpdateNodeMapAtom);
   return (drives: DocumentDriveDocument[]) => {
@@ -112,6 +117,21 @@ export function useUpdateNodeMap() {
 
 export function useNodeById(id: string | null): Node | null {
   return useAtomValue(nodeAtomFamily(id));
+}
+
+function makeNodeSlugFromNodeName(name: string) {
+  return name.replaceAll(/\s/g, "-");
+}
+
+export function useNodeBySlug(slug: string | null): Node | null {
+  const nodeMap = useAtomValue(nodeMapAtom);
+  if (!slug) return null;
+  const nodes = Object.values(nodeMap);
+  const node = nodes.find((node) => {
+    const slugFromName = makeNodeSlugFromNodeName(node.name);
+    return slugFromName === slug;
+  });
+  return node ?? null;
 }
 
 export function useParentNode(id: string | null): Node | null {
@@ -146,22 +166,33 @@ export function useNodeDocumentType(id: string | null): string | null {
   const node = useNodeById(id);
   if (!node) return null;
   if (isFileNodeKind(node)) return node.documentType;
+  if (isDriveNodeKind(node)) return "powerhouse/document-drive";
   return null;
 }
 
-export function useNodePath(id: string | null): string[] {
+export function useSelectedNodeDocumentType() {
+  const selectedNodeId = useSelectedNodeId();
+  return useNodeDocumentType(selectedNodeId);
+}
+
+export function useNodePath(id: string | null): Node[] {
   const nodeMap = useAtomValue(nodeMapAtom);
   if (!id) return [];
-  const path: string[] = [];
+  const path: Node[] = [];
   let current = nodeMap[id];
 
   while (current) {
-    path.unshift(current.id);
+    path.unshift(current);
     if (!current.parentFolder) break;
     current = nodeMap[current.parentFolder];
   }
 
   return path;
+}
+
+export function useNodePathIds(id: string | null): string[] {
+  const nodePath = useNodePath(id);
+  return nodePath.map((n) => n.id);
 }
 
 export function useSelectedNode(): Node | null {
@@ -180,9 +211,14 @@ export function useSelectedNodePath() {
   return useNodePath(selectedNodeId);
 }
 
-export function useIsInSelectedNodePath(id: string) {
+export function useSelectedNodePathIds() {
   const selectedNodePath = useSelectedNodePath();
-  return selectedNodePath.includes(id);
+  return selectedNodePath.map((n) => n.id);
+}
+
+export function useIsInSelectedNodePath(id: string) {
+  const selectedNodePathIds = useSelectedNodePathIds();
+  return selectedNodePathIds.includes(id);
 }
 
 export function useIsSelected(id: string | null) {
@@ -275,13 +311,25 @@ export function getNodeKind(node: Node | null): NodeKind | null {
 }
 
 export function getDriveSharingType(
-  drive: DocumentDriveDocument | ReadDrive | undefined | null,
+  drive:
+    | {
+        state: {
+          local: {
+            sharingType?: string | null;
+          };
+        };
+        readContext?: {
+          sharingType?: string | null;
+        };
+      }
+    | undefined
+    | null,
 ) {
   if (!drive) return PUBLIC;
   const isReadDrive = "readContext" in drive;
-  const { sharingType: _sharingType, availableOffline } = !isReadDrive
+  const { sharingType: _sharingType } = !isReadDrive
     ? drive.state.local
-    : { sharingType: PUBLIC, availableOffline: false };
+    : { sharingType: PUBLIC };
   const __sharingType = _sharingType?.toUpperCase();
   return (__sharingType === "PRIVATE" ? LOCAL : __sharingType) as SharingType;
 }
@@ -291,7 +339,22 @@ export function useNodeNameForId(id: string | null): string | null {
   return node?.name ?? null;
 }
 
-export function useNodeKindForId(id: string | null): NodeKind | null {
+export function useNodeKind(id: string | null): NodeKind | null {
   const node = useNodeById(id);
   return getNodeKind(node);
+}
+
+export function useSelectedNodeKind() {
+  const selectedNodeId = useSelectedNodeId();
+  return useNodeKind(selectedNodeId);
+}
+
+export function useDriveNodes() {
+  const nodeMap = useAtomValue(nodeMapAtom);
+  return Object.values(nodeMap).filter((n) => isDriveNodeKind(n));
+}
+
+export function useDriveIds() {
+  const driveNodes = useDriveNodes();
+  return useMemo(() => driveNodes.map((n) => n.id), [driveNodes]);
 }

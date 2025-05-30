@@ -1,7 +1,6 @@
 import {
   type FileNode,
   type GetDocumentOptions,
-  type Node,
   type SyncStatus,
 } from "document-drive";
 import {
@@ -17,7 +16,6 @@ import { type FC } from "react";
 
 import { type HookState } from "../hooks/document-state.js";
 import { type User } from "../renown/types.js";
-import type { UiNode } from "../uiNodes/types.js";
 
 export interface DriveEditorContext
   extends Omit<EditorContext, "getDocumentRevision"> {
@@ -29,15 +27,6 @@ export interface DriveEditorContext
 
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
-
-  /** Currently selected node (file/folder) in the drive */
-  selectedNode: Node | null;
-
-  /**
-   * Callback to update the selected node in the drive
-   * @param node - The node to be selected
-   */
-  selectNode: (node: UiNode | null) => void;
 
   /**
    * Adds a new file to the drive
@@ -74,11 +63,8 @@ export interface DriveEditorContext
   /**
    * Shows a modal for creating a new document
    * @param documentModel - Document model of the document to be created
-   * @returns Promise resolving to an object containing the document name
    */
-  showCreateDocumentModal: (
-    documentModel: DocumentModelModule,
-  ) => Promise<{ name: string }>;
+  showCreateDocumentModal: (documentModel: DocumentModelModule) => void;
 
   /**
    * Retrieves the sync status of a document or drive

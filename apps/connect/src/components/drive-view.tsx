@@ -1,16 +1,13 @@
 import {
     useConnectConfig,
     useDocumentDriveServer,
+    useShowCreateDocumentModal,
     useUiNodes,
     useUserPermissions,
 } from '#hooks';
 import { useFilteredDocumentModels } from '#store';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
-import {
-    useSelectedDriveId,
-    useUiNodesContext,
-} from '@powerhousedao/reactor-browser';
-import { type DocumentModelModule } from 'document-model';
+import { useSelectedDriveId } from '@powerhousedao/reactor-browser';
 import { useCallback } from 'react';
 import Button from './button.js';
 import FolderView from './folder-view.js';
@@ -29,12 +26,6 @@ export function DriveView() {
     const { showModal } = useModal();
     const { addFolder } = useDocumentDriveServer();
     const selectedDriveId = useSelectedDriveId();
-    const {
-        selectedParentNode,
-        setSelectedNode,
-        selectedNodePath,
-        getNodeById,
-    } = useUiNodesContext();
     const { isAllowedToCreateDocuments } = useUserPermissions() ?? {};
     const documentModels = useFilteredDocumentModels();
     const {
@@ -56,22 +47,9 @@ export function DriveView() {
         [selectedDriveId, addFolder],
     );
 
-    const { breadcrumbs, onBreadcrumbSelected } = useBreadcrumbs({
-        selectedNodePath,
-        getNodeById,
-        setSelectedNode,
-    });
+    const showCreateDocumentModal = useShowCreateDocumentModal();
 
-    const createDocument = useCallback(
-        (documentModel: DocumentModelModule) => {
-            showModal('createDocument', {
-                documentModel,
-                selectedParentNode,
-                setSelectedNode,
-            });
-        },
-        [selectedParentNode, setSelectedNode, showModal],
-    );
+    const { breadcrumbs, onBreadcrumbSelected } = useBreadcrumbs();
 
     return (
         <div className="grow overflow-auto rounded-2xl p-2">
@@ -85,13 +63,7 @@ export function DriveView() {
             <div className="px-4">
                 <div className="mb-5">
                     <FolderView
-                        onAddFile={onAddFile}
-                        onAddFolder={onAddFolder}
-                        onRenameNode={onRenameNode}
-                        onCopyNode={onCopyNode}
-                        onMoveNode={onMoveNode}
-                        onAddAndSelectNewFolder={onAddAndSelectNewFolder}
-                        onDuplicateNode={onDuplicateNode}
+                        isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                     />
                 </div>
                 {isAllowedToCreateDocuments && (
@@ -105,7 +77,7 @@ export function DriveView() {
                                     key={doc.documentModel.id}
                                     aria-details={doc.documentModel.description}
                                     className="bg-gray-200 text-slate-800"
-                                    onClick={() => createDocument(doc)}
+                                    onClick={() => showCreateDocumentModal(doc)}
                                 >
                                     <span className="text-sm">
                                         {getDocumentModelName(
