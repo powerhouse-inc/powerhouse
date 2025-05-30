@@ -125,8 +125,86 @@ graph
         BSub --> BSync
         BSync --> BQueue
     end
+```
 
+### Ping-Pong: Sequence
+
+```mermaid
+sequenceDiagram
+    participant EBA as Event Bus A
+    participant QA as Queue A
+    participant SMA as Sync Manager A
+    participant SMB as Sync Manager B
+    participant QB as Queue B
+    participant EBB as Event Bus B
+
+    Note over EBA, EBB: Push sync
+
+    %% Reactor A initiates sync
+    EBA->>SMA: operations added
+    SMA->>SMB: push(operations)
+    SMB->>QB: enqueue(operations)
+    
+    %% Reactor B responds with its operations
+    EBB->>SMB: operations added
+    SMB->>SMA: push(operations)
+    SMA->>QA: enqueue(operations)
+    
+    %% Continued ping-pong
+    EBA->>SMA: operations added
+    SMA->>SMB: push(operations)
+    SMB->>QB: enqueue(operations)
+    
+    Note over EBA, EBB: Pull sync
+
+    %% Pull-based sync (scheduled)
+    SMA->>SMB: pull() request
+    SMB-->>SMA: return(latest operations)
+    SMA->>QA: enqueue(operations)
+    
+    SMB->>SMA: pull() request  
+    SMA-->>SMB: return(latest operations)
+    SMB->>QB: enqueue(operations)
+```
+
+### IChannel
+
+The `IChannel` interface is a bi-directional interface for sending and receiving operations.
+
+```tsx
+
+interface IChannel {
+    /**
+     * Push operations through to a remote reactor.
+     */
+    push(operations: Operation[]): void;
+
+    /**
+     * Pull operations from a remote reactor.
+     */
+    pull(): Promise<Operation[]>;
+}
 
 ```
 
+Note that the `IChannel` interface allows for easy composition, when we want to sync with multiple reactors. This is a naive example:
 
+```tsx
+
+class ChannelCollection<T extends IChannel> implements IChannel {
+    constructor(private channels: T[]) {}
+
+    push(operations: Operation[]): void {
+        this.channels.forEach(channel => channel.push(operations));
+    }
+
+    pull(): Promise<Operation[]> {
+        return this.channels.reduce((acc, channel) => acc.then(channel.pull()), Promise.resolve([]));
+    }
+}
+
+```
+
+### IChannel: Optimization
+
+The `IChannel` implementation is free to batch `push` operations and send them in the `pull` request. Over HTTP, for example, this would result in a single `pull` request that will decompose nicely when there is no socket available.
