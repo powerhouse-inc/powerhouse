@@ -8,6 +8,8 @@ Operations are the fundamental units of change in the Reactor system. They repre
 
 An Operation is an Action extended with metadata for storage, ordering, and execution tracking:
 
+> TODO: Specify how operations/events will be versioned so that future refactors don't break things. Include guidelines for backward compatibility and event upcasting.
+
 ```tsx
 /**
  * Core Operation type that combines action data with execution metadata
@@ -81,6 +83,8 @@ There is also one special scope that is always populated:
 2. Queueing - Operations are queued by document ID, scope, and branch to ensure proper ordering.
 3. Execution - Operations are passed through reducers and executed in the order dictated by the queue.
 4. Storage - Once applied, operations are persisted in the `IOperationStore` with atomic transactions.
+
+> TODO: We need to document idempotency guarantees. Document exactly how the system prevents duplicate events from causing inconsistent state (e.g., using deterministic operation IDs or hash checks).
 
 ### Indexing
 

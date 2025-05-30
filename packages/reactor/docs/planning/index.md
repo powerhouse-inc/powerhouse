@@ -2,6 +2,7 @@
 
 * [Reactor](Reactor/index.md)
 * [ReactorClient](ReactorClient/index.md)
+* [Auth](Auth/index.md)
 
 ### Components
 
