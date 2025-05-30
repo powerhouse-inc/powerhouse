@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-commit hook..."
+
+# The following command assumes that this hook is run from the root of the 'apps/academy' package.
+# If you run 'git commit' from the monorepo root, ensure your husky setup correctly changes directory or calls scripts relative to the package.
+
+echo "Generating CLI docs..."
+# Use pnpm from the context of the current package (apps/academy)
+pnpm generate:cli-docs
+
+# Check if the target file was modified by the script
+doc_file_path="docs/academy/04-APIReferences/00-PowerhouseCLI.md"
+git_status_output=$(git status --porcelain "$doc_file_path")
+
+if [ -n "$git_status_output" ]; then
+  echo "CLI documentation updated by pre-commit hook. Staging changes..."
+  git add "$doc_file_path"
+else
+  echo "CLI documentation is up-to-date."
+fi
+
+echo "Pre-commit hook finished."

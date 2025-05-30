@@ -14,7 +14,8 @@ This document provides detailed information about the available commands in the 
 ```
 Command Overview:
   The init command creates a new Powerhouse project with optimal defaults. It sets up a fully 
-  configured project structure with all necessary dependencies, configurations, and boilerplate.
+  configured project structure with all necessary dependencies, configurations, and boilerplate.   
+
 
   This command:
   1. Creates a new project with the specified name
