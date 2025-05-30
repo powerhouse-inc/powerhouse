@@ -4,6 +4,10 @@
 
 The `IJobExecutor` listens for 'jobAvailable' events from the event bus and pulls jobs from the queue when capacity allows. It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities. The executor ensures jobs are processed in the correct order per document/scope/branch combination.
 
+### Error Handling
+
+> TODO: Define structured error events and typical metrics (queue lag, failure counts). Clarify how retries interact with the event log.
+
 ### Dependencies
 
 - [IQueue](../Queue/index.md)

@@ -11,6 +11,10 @@ Key points:
     - In this diagram, this object is not an exact mapping to the current `SyncManager`.
     - The `SyncManager` has its own storage mechanism and rather than being tied so the internal mechanisms of the Reactor, propagates from the event bus.
 
+### Push
+
+Describes a one-way flow of data from one Reactor to another, pushing operations through an `IChannel` interface.
+
 ```mermaid
 graph 
     subgraph "IReactor A"
@@ -25,7 +29,7 @@ graph
 
     ASub -->|"(4)"| ASync["ISyncManager"]
     ASync -->|"(5)"| ISyncStorage
-    ASync -->|"(6)"| Trigger -->|"(7)"| GQL -->|"(8)"| BQueue
+    ASync -->|"(6)"| Trigger -->|"(7)"| IChannel -->|"(8)"| BQueue
 
     subgraph "Reactor B"
         BQueue["IQueue"] -->|"(9)"| BJobs["IJobExecutor"] -->|"(10) Write"| BOS["IOperationsStore"]
@@ -37,3 +41,40 @@ graph
         end
     end
 ```
+
+### Pull
+
+Describes a one-way flow of data from one Reactor to another, pulling operations through an `IChannel` interface on an interval.
+
+```mermaid
+graph 
+    subgraph "IReactor A"
+        ADV["IDocumentView"]
+    end
+
+    subgraph "Reactor B"
+        BQueue --> BJobs["IJobExecutor"] --> BOS["IOperationsStore"]
+        BOS --> BPub
+
+        subgraph BEvents["IEventBus"]
+            BPub["emit()"]
+            BSub["on()"]
+        end
+    end
+
+    BScheduler["Scheduler Interval"] -->|"(1) Interval"| BSync["ISyncManager"]
+    BSync -->|"(2) Query"| IChannel
+    IChannel -->|"(3) Read"| ADV
+    IChannel -->|"(4) Operations"| BSync
+    BSync -->|"(5) Enqueue"| BQueue["IQueue"]
+```
+
+### Ping-Pong
+
+Since both `Push-to-Switchboard` and `Pull-from-Switchboard` are one-way flows, we combine them into a ping-pong pattern. This is where both reactors are pushing and pulling through the `IChannel` interface.
+
+```mermaid
+
+```
+
+
