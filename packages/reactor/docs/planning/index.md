@@ -6,6 +6,7 @@
 ### Components
 
 * [PHDocument](PHDocument/index.md)
+* [Operations](Operations/index.md)
 * [Queue](Queue/index.md)
 * [Events](Events/index.md)
 * [Jobs](Jobs/index.md)
