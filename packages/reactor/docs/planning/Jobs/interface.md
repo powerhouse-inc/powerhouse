@@ -120,4 +120,55 @@ export interface IJobExecutor {
     handler: (data: any) => void
   ): () => void;
 }
+
+/**
+ * Event types for the job executor
+ */
+export const JobExecutorEventTypes = {
+  JOB_STARTED: 20000,
+  JOB_COMPLETED: 20001,
+  JOB_RETRY: 20003,
+  JOB_FAILED: 20004,
+  EXECUTOR_STARTED: 20005,
+  EXECUTOR_STOPPED: 20006,
+} as const;
+
+/** Event payload when a job begins execution */
+export type JobStartedEvent = {
+  job: Job;
+  startedAt: string;
+};
+
+/** Event payload when a job completes successfully */
+export type JobCompletedEvent = {
+  job: Job;
+  result: JobResult;
+};
+
+/** Event payload when a job is retried */
+export type JobRetryEvent = {
+  job: Job;
+  error: string;
+  retryCount: number;
+};
+
+/** Event payload when a job fails */
+export type JobFailedEvent = {
+  job: Job;
+  error: string;
+  willRetry: boolean;
+  retryCount: number;
+};
+
+/** Event emitted when the executor starts */
+export type ExecutorStartedEvent = {
+  config: JobExecutorConfig;
+  startedAt: string;
+};
+
+/** Event emitted when the executor stops */
+export type ExecutorStoppedEvent = {
+  stoppedAt: string;
+  graceful: boolean;
+};
 ```
