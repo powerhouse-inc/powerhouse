@@ -4,6 +4,7 @@
 # Configuration
 # =============================================================================
 TARGET_TAG=${1:-"latest"}
+PROJECT_NAME=${2:-"global"}
 
 # =============================================================================
 # OS Detection and Windows Handling
@@ -22,17 +23,15 @@ else
     sudo apt install -y postgresql postgresql-contrib nginx
 
     # =============================================================================
-    # Global Project Setup
+    # Project Setup
     # =============================================================================
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  Setting up global project"
+    echo "  Setting up project: $PROJECT_NAME"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    sudo mkdir -p /var/www
-    cd /var/www
-
-    ph init powerhouse --$TARGET_TAG
-    cd powerhouse
+    ph init $PROJECT_NAME --$TARGET_TAG
+    cd $PROJECT_NAME
+    ph use $TARGET_TAG
 
     # =============================================================================
     # Interactive Package Installation
@@ -70,11 +69,30 @@ else
         # Generate database credentials
         DB_PASSWORD="powerhouse"
         DB_USER="powerhouse"
-        DB_NAME="powerhouse"
+        DB_NAME="powerhouse_${PROJECT_NAME}"
         
-        # Create database and user
+        # Check if database already exists
+        if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
+            echo "Database $DB_NAME already exists"
+            read -p "Do you want to recreate it? (y/n): " recreate_db
+            if [ "$recreate_db" = "y" ]; then
+                sudo -u postgres psql -c "DROP DATABASE $DB_NAME;"
+            else
+                echo "Using existing database"
+            fi
+        fi
+        
+        # Create database and user if they don't exist
         sudo -u postgres psql << EOF
-CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
+DO
+\$do\$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$DB_USER') THEN
+      CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
+   END IF;
+END
+\$do\$;
+
 CREATE DATABASE $DB_NAME OWNER $DB_USER;
 GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
 EOF
@@ -95,7 +113,7 @@ EOF
     fi
 
     # Save DATABASE_URL to .env file
-    echo "DATABASE_URL=$DATABASE_URL" | sudo tee -a /var/www/powerhouse/.env
+    echo "DATABASE_URL=$DATABASE_URL" | sudo tee -a .env
 
     # =============================================================================
     # SSL Configuration
@@ -118,17 +136,8 @@ EOF
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "  Domain Setup"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        read -p "Enter base domain (e.g. powerhouse.xyz): " base_domain
-        read -p "Enter subdomain for Connect service (default: connect): " connect_subdomain
-        read -p "Enter subdomain for Switchboard service (default: switchboard): " switchboard_subdomain
-
-        # Set default subdomains
-        connect_subdomain=${connect_subdomain:-connect}
-        switchboard_subdomain=${switchboard_subdomain:-switchboard}
-
-        # Construct full domains
-        connect_domain="${connect_subdomain}.${base_domain}"
-        switchboard_domain="${switchboard_subdomain}.${base_domain}"
+        read -p "Enter Connect domain (e.g. connect.google.com): " connect_domain
+        read -p "Enter Switchboard domain (e.g. switchboard.google.com): " switchboard_domain
 
         echo "Using domains:"
         echo "Connect: $connect_domain"
@@ -140,12 +149,19 @@ EOF
         sudo openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
             -keyout /etc/nginx/ssl/temp.key \
             -out /etc/nginx/ssl/temp.crt \
-            -subj "/CN=$base_domain" \
+            -subj "/CN=$connect_domain" \
             -addext "subjectAltName = DNS:$connect_domain,DNS:$switchboard_domain"
 
-        # Create Nginx configuration for domains
-        echo "Creating Nginx configuration..."
-        sudo tee /etc/nginx/sites-available/powerhouse > /dev/null << EOF
+        # Check if Nginx configuration already exists
+        if [ -f "/etc/nginx/sites-available/$PROJECT_NAME" ]; then
+            echo "Nginx configuration for $PROJECT_NAME already exists"
+            read -p "Do you want to overwrite it? (y/n): " overwrite_nginx
+            if [ "$overwrite_nginx" != "y" ]; then
+                echo "Keeping existing Nginx configuration"
+            else
+                # Create Nginx configuration for domains
+                echo "Creating Nginx configuration..."
+                sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
 # Security headers
 add_header Strict-Transport-Security "max-age=63072000" always;
 add_header X-Frame-Options DENY;
@@ -209,9 +225,78 @@ server {
     }
 }
 EOF
+            fi
+        else
+            # Create Nginx configuration for domains
+            echo "Creating Nginx configuration..."
+            sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
+# Security headers
+add_header Strict-Transport-Security "max-age=63072000" always;
+add_header X-Frame-Options DENY;
+add_header X-Content-Type-Options nosniff;
+add_header X-XSS-Protection "1; mode=block";
+
+server {
+    listen 80;
+    server_name $connect_domain $switchboard_domain;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name $connect_domain;
+    
+    ssl_certificate /etc/nginx/ssl/temp.crt;
+    ssl_certificate_key /etc/nginx/ssl/temp.key;
+    
+    # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    if (\$http_x_forwarded_proto = "http") {
+        return 301 https://\$server_name\$request_uri;
+    }
+    
+    location / {
+        root /var/www/powerhouse/.ph/connect-build/dist;
+        try_files \$uri \$uri/ /index.html;
+        add_header Cache-Control "no-cache";
+        add_header X-Forwarded-Proto \$scheme;
+        add_header X-Forwarded-Host \$host;
+        add_header X-Forwarded-Port \$server_port;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name $switchboard_domain;
+    
+    ssl_certificate /etc/nginx/ssl/temp.crt;
+    ssl_certificate_key /etc/nginx/ssl/temp.key;
+    
+    location / {
+        proxy_pass http://localhost:4001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+        fi
 
         # Enable the site
-        sudo ln -sf /etc/nginx/sites-available/powerhouse /etc/nginx/sites-enabled/
+        sudo ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
         sudo rm -f /etc/nginx/sites-enabled/default
 
         # Test and restart Nginx
@@ -220,7 +305,7 @@ EOF
 
         # Obtain SSL certificates
         echo "Obtaining SSL certificates..."
-        sudo certbot --nginx -d $connect_domain -d $switchboard_domain --non-interactive --agree-tos --email admin@$base_domain
+        sudo certbot --nginx -d $connect_domain -d $switchboard_domain --non-interactive --agree-tos --email admin@$connect_domain
 
         # Remove temporary certificates
         sudo rm -f /etc/nginx/ssl/temp.*
@@ -239,7 +324,7 @@ EOF
 
         # Create Nginx configuration for self-signed
         echo "Creating Nginx configuration..."
-        sudo tee /etc/nginx/sites-available/powerhouse > /dev/null << EOF
+        sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
 # Security headers
 add_header Strict-Transport-Security "max-age=63072000" always;
 add_header X-Frame-Options DENY;
@@ -286,7 +371,7 @@ server {
 EOF
 
         # Enable the site
-        sudo ln -sf /etc/nginx/sites-available/powerhouse /etc/nginx/sites-enabled/
+        sudo ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
         sudo rm -f /etc/nginx/sites-enabled/default
 
         # Test and restart Nginx
@@ -304,14 +389,26 @@ EOF
 
     pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
 
+    # Check if PM2 process already exists and handle accordingly
+    if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+        echo "PM2 process switchboard_${PROJECT_NAME} already exists"
+        read -p "Do you want to restart it? (y/n): " restart_pm2
+        if [ "$restart_pm2" = "y" ]; then
+            pm2 delete "switchboard_${PROJECT_NAME}"
+        else
+            echo "Keeping existing PM2 process"
+            exit 0
+        fi
+    fi
+
     # Start services with PM2
     echo "Starting services with PM2..."
     if [ "$ssl_choice" = "2" ]; then
         # Self-signed certificate - use base paths
-        pm2 start pnpm switchboard --name "switchboard" -- --base-path /switchboard
+        pm2 start pnpm switchboard --name "switchboard_${PROJECT_NAME}" -- --base-path /switchboard
     else
         # Let's Encrypt - no base paths needed
-        pm2 start "pnpm switchboard" --name "switchboard" 
+        pm2 start "pnpm switchboard" --name "switchboard_${PROJECT_NAME}"
     fi
 
     # Save PM2 process list and setup startup script
