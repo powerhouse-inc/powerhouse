@@ -178,7 +178,7 @@ The Powerhouse Design System is a collection of reusable front-end components ba
 - Automatic inclusion as a dependency in new Document Model projects
 - Customization options using CSS variables
 
-We cover some of these topics in our design system documentation. Read more about the [design system here](/academy/ComponentLibrary/PowerhouseDesignSystem)
+We cover some of these topics in our design system documentation. Read more about the [design system here](/academy/ComponentLibrary/DocumentEngineering)
 
 ## Reactor Libraries
 ___

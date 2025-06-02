@@ -197,7 +197,7 @@ When you add the editor code, you'll see it makes use of two components, the `Ch
 These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/document-engineering/scalars`).   
 
 This system provides a library of reusable components to ensure consistency and speed up development.  
-You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance. For a detailed guide on how to leverage the Document Engineering design system and Storybook, see [Using the Powerhouse Document Engineering](/academy/ComponentLibrary/PowerhouseDesignSystem) page.
+You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance. For a detailed guide on how to leverage the Document Engineering design system and Storybook, see [Using the Powerhouse Document Engineering](/academy/ComponentLibrary/DocumentEngineering) page.
 
 For this tutorial, create a `components` folder inside `editors/to-do-list`. Then, within this new `components` folder, create the files for the `Checkbox` and `InputField` components (e.g., `Checkbox.tsx` and `InputField.tsx`) with the following code:
 :::
