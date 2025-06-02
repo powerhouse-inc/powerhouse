@@ -27,3 +27,13 @@ const doc = await retry(
   ExponentialBackoffAndJitter,
 );
 ```
+
+### downloadAttachment()
+
+Downloads an attachment.
+
+```tsx
+const { header, body } = await downloadAttachment(ref, (progress) => {
+  console.log(`Downloaded ${progress * 100}%`);
+});
+```

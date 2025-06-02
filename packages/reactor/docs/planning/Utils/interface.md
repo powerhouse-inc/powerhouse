@@ -25,4 +25,17 @@ function retry<T>(
 	times: number,
   behavior: RetryBehavior,
 ): Promise<T>;
+
+/**
+ * Utility function that downloads an attachment.
+ * 
+ * @param ref - The attachment reference.
+ * @param progressHandler - A function that is called with the progress of the download.
+ * @returns The attachment response.
+ */
+function downloadAttachment(
+  ref: AttachmentRef,
+  progressHandler?: (t: number) => void,
+): Promise<AttachmentResponse>;
+
 ```

@@ -33,6 +33,9 @@ export interface CreateAttachmentOptions {
   /** The file name of the attachment */
   fileName: string;
 
+  /** The size of the attachment in bytes */
+  sizeBytes: number;
+
   /** Optional file-name extension (no leading “.”) */
   extension?: string | null;
 }
