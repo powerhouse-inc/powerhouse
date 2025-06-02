@@ -1,6 +1,0 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-echo "HUSKY PRE-COMMIT HOOK IN APPS/ACADEMY IS RUNNING!"
-
-exit 0 # Always exit successfully for this test
