@@ -81,11 +81,4 @@ type PagedResults<T> = {
   nextCursor?: string;
 }
 
-/**
- * Token used to cancel an async operation.
- */
-type CancellationToken {
-	cancel(): void;
-	throwIfCancelled():void;	
-}
 ```

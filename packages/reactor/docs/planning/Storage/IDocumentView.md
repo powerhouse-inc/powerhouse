@@ -28,35 +28,48 @@ interface IDocumentView {
    *
    * @param ids - Required, the list of document ids
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    * @returns The parallel list of slugs
    */
-  resolveIds(ids: string[], view?: ViewFilter): Promise<string[]>;
+  resolveIds(
+    ids: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
 
   /**
    * Resolves a list of ids from a list of slugs.
    *
    * @param ids - Required, the list of document ids
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    * @returns The parallel list of ids
    */
-  resolveSlugs(slugs: string[], view?: ViewFilter): Promise<string[]>;
+  resolveSlugs(
+    slugs: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
 
   /**
    * Returns true if and only if the documents exist.
    *
    * @param documentIds - The list of document ids to check.
+   * @param signal - Optional abort signal to cancel the request
    */
-  exists(documentIds: string[]): Promise<boolean[]>;
+  exists(documentIds: string[], signal?: AbortSignal): Promise<boolean[]>;
 
   /**
    * Returns the documents with the given ids.
    *
    * @param documentIds - The list of document ids to get.
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    */
   getMany<TDocument extends PHDocument>(
     documentIds: string[],
     view: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<TDocument[]>;
 
   /**
@@ -64,10 +77,12 @@ interface IDocumentView {
    *
    * @param slugs - The list of document slugs to get.
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    */
   getManyBySlugs<TDocument extends PHDocument>(
     slugs: string[],
     view: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<TDocument[]>;
 
   /**
@@ -76,26 +91,30 @@ interface IDocumentView {
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param signal - Optional abort signal to cancel the request
    * @returns List of documents matching criteria and pagination cursor
    */
   find<TDocument extends PHDocument>(
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
+    signal?: AbortSignal,
   ): Promise<PagedResults<TDocument>>;
 
   /**
    * Returns the children of the given documents.
    *
    * @param parentIds - The list of parent document ids.
+   * @param signal - Optional abort signal to cancel the request
    */
-  getChildren(parentIds: string[]): Promise<string[][]>;
+  getChildren(parentIds: string[], signal?: AbortSignal): Promise<string[][]>;
 
   /**
    * Returns the parents of the given documents.
    *
    * @param childIds - The list of child document ids.
+   * @param signal - Optional abort signal to cancel the request
    */
-  getParents(childIds: string[]): Promise<string[][]>;
+  getParents(childIds: string[], signal?: AbortSignal): Promise<string[][]>;
 }
 ```

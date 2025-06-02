@@ -51,30 +51,34 @@ export interface IJobExecutor {
    * Begins listening for 'jobAvailable' events from the event bus and executing jobs when capacity allows.
    * 
    * @param config - Configuration options for the executor
+   * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves when the executor is started
    */
-  start(config?: JobExecutorConfig): Promise<void>;
+  start(config?: JobExecutorConfig, signal?: AbortSignal): Promise<void>;
   
   /**
    * Stop the job executor.
    * Gracefully stops listening for events and waits for current jobs to complete.
    * @param graceful - Whether to wait for current jobs to complete
+   * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves when the executor is stopped
    */
-  stop(graceful?: boolean): Promise<void>;
+  stop(graceful?: boolean, signal?: AbortSignal): Promise<void>;
   
   /**
    * Execute a single job immediately.
    * @param job - The job to execute
+   * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves to the job result
    */
-  executeJob(job: Job): Promise<JobResult>;
+  executeJob(job: Job, signal?: AbortSignal): Promise<JobResult>;
   
   /**
    * Get the current status of the job executor.
+   * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves to the executor status
    */
-  getStatus(): Promise<{
+  getStatus(signal?: AbortSignal): Promise<{
     isRunning: boolean;
     activeJobs: number;
     totalJobsProcessed: number;
@@ -86,9 +90,10 @@ export interface IJobExecutor {
   
   /**
    * Get statistics about job execution performance.
+   * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves to execution statistics
    */
-  getStats(): Promise<{
+  getStats(signal?: AbortSignal): Promise<{
     averageExecutionTime: number;
     successRate: number;
     jobsPerSecond: number;
@@ -98,16 +103,18 @@ export interface IJobExecutor {
   /**
    * Pause job execution.
    * Stops processing new jobs but keeps the executor running.
+   * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves when execution is paused
    */
-  pause(): Promise<void>;
+  pause(signal?: AbortSignal): Promise<void>;
   
   /**
    * Resume job execution.
    * Resumes processing jobs from the queue.
+   * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves when execution is resumed
    */
-  resume(): Promise<void>;
+  resume(signal?: AbortSignal): Promise<void>;
   
   /**
    * Subscribe to job execution events.

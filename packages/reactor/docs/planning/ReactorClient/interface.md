@@ -6,12 +6,14 @@ interface IReactorClient {
    * Retrieves a list of document model specifications
    * 
    * @param namespace - Optional namespace like "powerhouse" or "sky", defaults to ""
-   * 
+   * @param signal - Optional abort signal to cancel the request
+   *
    * @returns List of document models
    */
   getDocumentModels(
     namespace?: string,
     paging?: PagingOptions,
+    signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelState>>;
 
   /**
@@ -19,12 +21,14 @@ interface IReactorClient {
    * 
    * @param identifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
-   * 
+   * @param signal - Optional abort signal to cancel the request
+   *
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   get<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
     childIds: string[];
@@ -35,13 +39,15 @@ interface IReactorClient {
    * 
    * @param parentIdentifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
-   * 
+   * @param signal - Optional abort signal to cancel the request
+   *
    * @returns The up-to-date PHDocument and paging cursor
    */
   getChildren(
     parentIdentifier: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
@@ -49,13 +55,15 @@ interface IReactorClient {
    * 
    * @param childIdentifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
-   * 
+   * @param signal - Optional abort signal to cancel the request
+   *
    * @returns The up-to-date PHDocument and paging cursor
    */
   getParents(
     childIdentifier: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
@@ -64,13 +72,15 @@ interface IReactorClient {
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
-   * 
+   * @param signal - Optional abort signal to cancel the request
+   *
    * @returns List of documents matching criteria and pagination cursor
    */
   find(
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
+    signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
@@ -78,11 +88,13 @@ interface IReactorClient {
    * 
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param parentIdentifier - Optional "id" or "slug" of parent document
+   * @param signal - Optional abort signal to cancel the request
    * @returns The created document
    */
   create(
     document: PHDocument,
     parentIdentifier?: string,
+    signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
@@ -90,10 +102,12 @@ interface IReactorClient {
    * 
    * @param documentType - Type of document to create.
    * @param parentIdentifier - Optional "id" or "slug" of parent document
+   * @param signal - Optional abort signal to cancel the request
    */
   createEmpty<TDocument extends PHDocument>(
     documentType: string,
     parentIdentifier?: string,
+    signal?: AbortSignal,
   ): Promise<TDocument>;
 
   /**
@@ -102,12 +116,14 @@ interface IReactorClient {
    * @param documentIdentifier - Target document id or slug
    * @param operations - List of operations to apply
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    * @returns The updated document
    */
   mutate<TDocument extends PHDocument>(
     documentIdentifier: string,
     operations: Operation[],
     view?: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<TDocument>;
 
   /**
@@ -116,12 +132,14 @@ interface IReactorClient {
    * @param documentIdentifier - Target document id or slug
    * @param operations - List of operations to apply
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    * @returns The job
    */
   mutateAsync<TDocument extends PHDocument>(
     documentIdentifier: string,
     operations: Operation[],
     view?: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<JobInfo>;
 
   /**
@@ -130,12 +148,14 @@ interface IReactorClient {
    * @param documentIdentifier - Target document id or slug
    * @param name - The new name of the document
    * @param view - Optional filter
+   * @param signal - Optional abort signal to cancel the request
    * @returns The updated document.
    */
   rename(
     documentIdentifier: string,
     name: string,
     view?: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
@@ -144,12 +164,14 @@ interface IReactorClient {
    * @param parentIdentifier - Parent document id or slug
    * @param documentIdentifiers - List of document identifiers to add as children
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    * @returns The updated parent document
    */
   addChildren(
     parentIdentifier: string,
     documentIdentifiers: string[],
     view?: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
@@ -158,12 +180,14 @@ interface IReactorClient {
    * @param parentIdentifier - Parent document identifiers
    * @param documentIdentifiers - List of document ids to remove as children
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    * @returns The updated parent document
    */
   removeChildren(
     parentIdentifier: string,
     documentIdentifiers: string[],
     view?: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
@@ -173,6 +197,7 @@ interface IReactorClient {
    * @param targetParentIdentifier - Target parent document id or slug
    * @param documentIdentifiers - List of document identifiers to move
    * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
    * @returns The updated source and target documents
    */
   moveChildren(
@@ -180,6 +205,7 @@ interface IReactorClient {
     targetParentIdentifier: string,
     documentIdentifiers: string[],
     view?: ViewFilter,
+    signal?: AbortSignal,
   ): Promise<{
     source: PHDocument,
     target: PHDocument,
@@ -190,11 +216,13 @@ interface IReactorClient {
    * 
    * @param identifier - Document identifier (id or slug)
    * @param propagate - Optional mode for handling children, CASCADE deletes child documents
+   * @param signal - Optional abort signal to cancel the request
    * @returns a promise, resolving on deletion confirmation
    */
   deleteDocument(
     identifier: string,
     propagate?: PropagationMode,
+    signal?: AbortSignal,
   ): Promise<void>;
 
   /**
@@ -202,28 +230,32 @@ interface IReactorClient {
    * 
    * @param identifiers - Document identifiers (ids or slugs)
    * @param propagate - Optional mode for handling children, CASCADE deletes child documents
+   * @param signal - Optional abort signal to cancel the request
    * @returns a promise, resolving on deletion confirmation
    */
   deleteDocuments(
     identifiers: string[],
     propagate?: PropagationMode,
+    signal?: AbortSignal,
   ): Promise<void>;
 
   /**
    * Retrieves the status of a job
    * 
    * @param jobId - The job id
+   * @param signal - Optional abort signal to cancel the request
    * @returns The job status
    */
-  getJobStatus(jobId: string): Promise<JobInfo>;
+  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo>;
 
   /**
    * Waits for a job to complete
    * 
    * @param jobId - The job id or job object
+   * @param signal - Optional abort signal to cancel the request
    * @returns The result of the job
    */
-  waitForJob(jobId: string | JobInfo): Promise<JobInfo>;
+  waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
 
   /**
    * Subscribes to changes for documents matching specified filters

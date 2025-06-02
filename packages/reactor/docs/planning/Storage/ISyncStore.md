@@ -43,9 +43,11 @@ type StorageUnitFilter = {
  *
  * @param filter - The filter to apply.
  * @param paging - Paging options to use.
+ * @param signal - Optional abort signal to cancel the request
  */
 async findStorageUnitsBy(
   filter: StorageUnitFilter,
   paging: PagingOptions,
+  signal?: AbortSignal,
 ): Promise<PagedResults<StorageUnit>>;
 ```

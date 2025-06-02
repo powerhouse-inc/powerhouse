@@ -181,8 +181,9 @@ interface IChannel {
 
     /**
      * Pull operations from a remote reactor.
+     * @param signal - Optional abort signal to cancel the request
      */
-    pull(): Promise<Operation[]>;
+    pull(signal?: AbortSignal): Promise<Operation[]>;
 }
 
 ```

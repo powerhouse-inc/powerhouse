@@ -91,37 +91,42 @@ interface IOperationStore {
   // this function throws named exceptions when it can't
   // acquire a lock, there are revision mismatches, or 
   // the changes cannot be applied atomically
-	apply(
+        apply(
     documentId: string,
     scope: string,
     branch: string,
     revision: number,
     (txn: AtomicTxn) => void,
+    signal?: AbortSignal,
   ): Promise<void>;
   
   getHeader(
     documentId: string,
     branch: string,
     revision: number,
+    signal?: AbortSignal,
   ): Promise<DocumentHeader>;
   
   get(
-	  documentId: string,
-	  scope: string,
-	  branch: string,
-	  index: number): Promise<Operation>;
+          documentId: string,
+          scope: string,
+          branch: string,
+          index: number,
+          signal?: AbortSignal): Promise<Operation>;
 	
-	getSince(
-		documentId: string,
-		scope: string,
-		branch: string,
-		index: number): Promise<Operation[]>;
+        getSince(
+                documentId: string,
+                scope: string,
+                branch: string,
+                index: number,
+                signal?: AbortSignal): Promise<Operation[]>;
 	
-	getSinceTimestamp(
-		documentId: string,
-		scope: string,
-		branch: string,
-		timestampUtcMs: number): Promise<Operation[]>;
+        getSinceTimestamp(
+                documentId: string,
+                scope: string,
+                branch: string,
+                timestampUtcMs: number,
+                signal?: AbortSignal): Promise<Operation[]>;
 }
 
 interface AtomicTxn {
