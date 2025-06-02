@@ -5,6 +5,7 @@
 - Append only: read/append access to raw operations.
 - No dependencies on `PHDocument`.
 - All writes are atomic.
+- Deterministic hashing.
 
 ### Interface
 
@@ -24,7 +25,7 @@ export type ActionSigner = {
     chainId: number; // CAIP-10
   };
   app: {
-    name: string; // eg "Connect" or "Powerhouse"
+    name: string; // eg "Connect"
     key: string;
   };
   signatures: Signature[];
@@ -76,7 +77,7 @@ export type Operation<TAction extends Action = Action> = TAction & {
   /** Hash of the resulting document data after the operation */
   hash: string;
 
-  /** The number of operations skipped with this Operation */
+  /** For reordering: The number of operations skipped with this Operation */
   skip: number;
 
   /** Error message for a failed action */

@@ -121,6 +121,10 @@ model Operation {
 }
 ```
 
+### Attachments
+
+See the [Attachments doc](../Attachments/index.md) for more information on attachments.
+
 ### Signature and Security
 
 Operations include cryptographic signatures for verification:
