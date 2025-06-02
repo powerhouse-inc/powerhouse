@@ -16,7 +16,7 @@ $ npm install
 $ npm run dev
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server. The server will break upon broken links or big table of content changes. Fixing these links will restart the server automatically. 
+This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server. The server will break upon broken links or big navigation/relinking. 
 
 ### Build
 
