@@ -13,7 +13,7 @@ interface PackageJson {
   [key: string]: unknown;
 }
 
-const actions = ["start", "stop", "status", "setup"];
+const actions = ["start", "stop", "status", "setup", "restart"];
 
 export const manageService: CommandActionType<[string]> = async (action) => {
   try {
