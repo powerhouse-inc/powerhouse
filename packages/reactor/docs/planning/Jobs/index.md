@@ -2,7 +2,9 @@
 
 ### Summary
 
-The `IJobExecutor` listens for 'jobAvailable' events from the event bus and pulls jobs from the queue when capacity allows. It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities. The executor ensures jobs are processed in the correct order per document/scope/branch combination.
+The `IJobExecutor` listens for `jobAvailable` events from the event bus and pulls jobs from the queue when capacity allows. It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities. The executor ensures jobs are processed in the correct order per document/scope/branch combination.
+
+Jobs are made up of a set of `Action`s. Job execution creates one or more `Operation` objects (note that `Action` and `Operation` do not necessarily have a 1:1 relationship).
 
 ### Reshuffle Logic
 
@@ -10,7 +12,7 @@ The `IJobExecutor` will proactively reshuffle jobs to prevent as many revision m
 
 This can be done by invoking the merge helper with `reshuffleByTimestamp`. This rearranges the operations and introduces a skip offset for the newly inserted operations:
 
-```
+```tsx
 const trunk = garbageCollect(sortOperations(storageDocumentOperations));
 const [invertedTrunk, tail] = attachBranch(trunk, branch);
 const newHistory =
@@ -21,7 +23,7 @@ const newHistory =
 
 `merge` sets up a `startIndex` with a `skip` value and passes it to `reshuffle` (e.g., `reshuffleByTimestamp`). This function assigns new indices and updates the skip field for the reordered operations:
 
-```
+```tsx
 const newOperationHistory = reshuffle(
   {
     index: nextIndex,
@@ -34,7 +36,7 @@ const newOperationHistory = reshuffle(
 
 `reshuffleByTimestamp` then walks through the combined operations, reassigning indices and handling the skip value:
 
-```
+```tsx
 return [...opsA, ...opsB]
   .sort((a, b) =>
     new Date(a.timestamp || "").getTime() -

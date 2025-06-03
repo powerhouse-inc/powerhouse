@@ -36,11 +36,11 @@ type BaseAction<
   /** The version of the document model */
   version: string;
 
-  /** The payload of the action */
-  input: TInput;
-
   /** The scope of the action, like 'global' or 'local' */
   scope: TScope;
+
+  /** The payload of the action */
+  input: TInput;
 
   /** The context of the action */
   context: ActionContext;

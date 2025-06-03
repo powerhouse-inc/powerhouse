@@ -12,7 +12,7 @@ Operations are then decoupled from versioning, as the `Action` holds this inform
 
 ### Flow
 
-Suppose we have a document of type `ph/todo`.
+Suppose we have a Document Model of type `ph/todo`.
 
 1. First, we create a new document:
 
