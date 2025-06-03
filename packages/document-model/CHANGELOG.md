@@ -1,3 +1,23 @@
+## 2.28.1-dev.18 (2025-06-03)
+
+### 🚀 Features
+
+- **academy:** centralize husky & auto-update cli docs ([8c92e0bb1](https://github.com/powerhouse-inc/powerhouse/commit/8c92e0bb1))
+- **ph-cli:** added setup-service command ([dfa082aa6](https://github.com/powerhouse-inc/powerhouse/commit/dfa082aa6))
+- **scripts:** updated setup scripts ([9f7fa7644](https://github.com/powerhouse-inc/powerhouse/commit/9f7fa7644))
+
+### 🩹 Fixes
+
+- **pre-commit:** use bash syntax and shebang ([da00ff581](https://github.com/powerhouse-inc/powerhouse/commit/da00ff581))
+- added missing dep to academy ([4ec6c8278](https://github.com/powerhouse-inc/powerhouse/commit/4ec6c8278))
+- **academy:** clean up husky script ([e18e26cd8](https://github.com/powerhouse-inc/powerhouse/commit/e18e26cd8))
+
+### ❤️ Thank You
+
+- Callme-T
+- Frank
+- Guillermo Puente @gpuente
+
 ## 2.28.1-dev.17 (2025-05-27)
 
 ### 🚀 Features
