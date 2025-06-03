@@ -1,3 +1,15 @@
+## 0.1.0-dev.5 (2025-06-03)
+
+### 🩹 Fixes
+
+- **academy:** lockfile issue second time' ([6208fe614](https://github.com/powerhouse-inc/powerhouse/commit/6208fe614))
+- **academy:** fix frozen lockfile issue' ([80f18ec73](https://github.com/powerhouse-inc/powerhouse/commit/80f18ec73))
+- **academy:** fix frozen lockfile issue ([bfc3dcd21](https://github.com/powerhouse-inc/powerhouse/commit/bfc3dcd21))
+
+### ❤️ Thank You
+
+- Callme-T
+
 ## 0.1.0-dev.4 (2025-06-03)
 
 ### 🚀 Features
