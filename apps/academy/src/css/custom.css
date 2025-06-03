@@ -459,3 +459,8 @@ html[data-theme='dark'] .DocSearch-Hits > *:empty {
 .doc-card-list-item {
   width: 100%; /* Ensure items take full width */
 }
+
+/* Attempt to hide icons in DocCard titles */
+.doc-card-list .card h2 svg {
+  display: none !important;
+}

@@ -6,21 +6,10 @@ To export the document model specification, follow the steps in the [Define ToDo
 
 ## Understanding Reducers in Document Models
 
-Reducers are a core concept in Powerhouse document models. They implement the state transition logic for each operation defined in your schema:
+Reducers are a core concept in Powerhouse document models. They implement the state transition logic for each operation defined in your schema.
 
-1. **Connection to Schema Definition Language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema? The reducers provide the actual implementation of what happens when those operations are performed.
-
-2. **Event Sourcing Pattern**: Document models in Powerhouse follow event sourcing principles, where each operation is recorded in the document's history. The current state of the document is derived by applying all operations in sequence.
-
-3. **Immutable Updates**: While the reducer code appears to modify the state directly, Powerhouse handles immutability behind the scenes. Each operation produces a new document state without modifying the previous one.
-
-4. **Type Safety**: Powerhouse generates TypeScript types from your SDL, ensuring that your reducers and operations are type-safe.
-
-5. **Pure Functions**: Reducers should be pure functions that depend only on the current state and the operation input, making them predictable and testable.
-
-Let's see how these concepts are implemented in our **ToDoList** document model.
-
-## Importing the Document Model Specification and Generating Code
+**Connection to Schema Definition Language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?   
+The reducers provide the actual implementation of what happens when those operations are performed.
 
 To import the document model specification into your Powerhouse project, you can either:
  

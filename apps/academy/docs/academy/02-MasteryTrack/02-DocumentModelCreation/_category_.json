@@ -1,7 +1,7 @@
 {
     "label": "Document Model Creation",
     "link": {
-      "type": "generated-index",
-      "description": "This tutorial will guide you through the process of creating an advanced to-do list document model in Powerhouse, while getting you familiar with the Powerhouse document model framework."
+      "type": "doc",
+      "id": "academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel"
     }
   }

@@ -1,21 +1,20 @@
 # Define the ToDoList document specification 
 
-In this tutorial, you will learn how to define the specifications for a `ToDoList` document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
+In this tutorial, you will learn how to define the specifications for a **ToDoList** document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
 If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.
 
 Before you start, make sure you have the Connect application running locally with the command `ph connect`
 
 ## ToDoList Document Specification
 
-Likely you have called your project 'ToDoList'. If you've used a different name, please create a new document specification named 'ToDoList'. Pay close attention to capitalization, as it influences our code.
+Likely you have called your project 'ToDoList'. If you've used a different name, please create a new document specification named 'ToDoList'. **Pay close attention to capitalization, as it influences our code.**  
+
 We'll continue with this project to teach you how to create a document model specification and later an editor for your document model. We use the **GraphQL Schema Definition Language** (SDL) to define the schema for the document model. Below, you can see the SDL for the `ToDoList` document model.
 
 :::info
 This schema defines the **data structure** of the document model and the types involved in its operations, which are detailed further as input types.
-Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions. The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands, supporting **CQRS** (Command Query Responsibility Segregation) patterns.
+Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions. The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands.
 :::
-
-
 
 <details>
 <summary>State Schema of our ToDoList</summary>

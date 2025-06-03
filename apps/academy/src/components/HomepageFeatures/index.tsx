@@ -164,7 +164,7 @@ export default function HomepageFeatures() {
             </div>
             <div className={styles.cardContent}>
               <a href="/docs/academy/GetStarted/BuildToDoListEditor" className={styles.pathButton}>Building a Todo-list Editor</a>
-              <a href="/docs/academy/BuildingUserExperiences/BuildingBeautifulDocumentEditors" className={styles.pathButton}>Building Beautiful Document Editors</a>
+              <a href="/docs/academy/BuildingUserExperiences/BuildingDocumentEditors" className={styles.pathButton}>Building Beautiful Document Editors</a>
               <a href="/docs/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer" className={styles.pathButton}>Building Custom Drive Explorers</a>
             </div>
           </div>

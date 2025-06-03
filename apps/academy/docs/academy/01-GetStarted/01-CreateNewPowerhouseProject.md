@@ -1,7 +1,7 @@
-# Create a new ToDoList Document
+# Create a ToDoList Document
 
 ## Overview
-This tutorial guides you through creating a 'Powerhouse project' for a ToDoList. A Powerhouse project primarily consists of a document model and its editor. You'll be using Connect locally, known as 'Studio mode'.
+This tutorial guides you through creating a 'Powerhouse project' for a **ToDoList**. A Powerhouse project primarily consists of a document model and its editor. You'll be using Connect locally, known as 'Studio mode'.
 
 ## Prerequisites
 - Powerhouse CLI installed: `pnpm install -g ph-cmd`

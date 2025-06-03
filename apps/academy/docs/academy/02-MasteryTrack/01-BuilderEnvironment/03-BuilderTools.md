@@ -1,6 +1,7 @@
 # Powerhouse Builder Tooling
 
 This page provides an overview of all the builder tooling offered by the Powerhouse ecosystem.
+This list will be maintained and updated as our toolkit grows.
 
 ## Powerhouse Command Line Interface
 ___

@@ -181,7 +181,7 @@ Document Models offer a range of features that can be leveraged to create sophis
 
 - **API Integration**: Document Models can be integrated with Switchboard API or external APIs, allowing for the exchange of data between Connect and other systems or services.
 
-- **Data Analysi**s**: The structured nature of Document Models makes them ideal for data analysis and reporting. Users can extract insights and generate reports based on the data captured within the models which is accessible through read models. (Operational data + Analytics data which takes into account time series of the data). 
+- **Data Analysis**: The structured nature of Document Models makes them ideal for data analysis and reporting. Users can extract insights and generate reports based on the data captured within the models which is accessible through read models. (Operational data + Analytics data which takes into account time series of the data). 
 
 - **Version Control**: Similar to how Git manages changes to source code, Document Models in Connect will support version control, enabling users to track changes, compare different versions, and ensure data integrity over time.
 

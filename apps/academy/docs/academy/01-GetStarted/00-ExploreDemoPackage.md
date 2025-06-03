@@ -33,13 +33,19 @@ This command downloads and sets up the Contributor Billing package, making its f
 
 You have now successfully installed `ph-cmd` and added your first package! 
 
+:::info 
+WORK IN PROGRESS @callmet
+Let's explore what exactly you can do with this package
+- Document model
+- Drive App
+:::
+
 ## Step 3: Run the Connect App in Studio mode
 To run the package locally in Connect Studio (our collaboration and contributor app), run the `ph connect` command. 
 
 ## Step 4: Log in with Renown
 
 Renown is Powerhouse's decentralized identity and reputation system designed to address the challenge of trust within DAOs, where contributors often operate under pseudonyms. In traditional organizations, personal identity and reputation are key to establishing trust and accountability. Renown replicates this dynamic in the digital space, allowing contributors to earn experience and build reputation without revealing their real-world identities.
-
 
 :::tip
 When signing in with Renown, use an Ethereum or blockchain address that can function as your \'identity\', as this address will accrue more experience and history over time.
