@@ -1,0 +1,28 @@
+name: CI Release TEST
+
+on: 
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+      tag:
+        type: string
+        default: "dev"
+
+env:
+  NX_ISOLATE_PLUGINS: false
+  VERSION: ${{ inputs.version }}
+  TAG: ${{ inputs.tag ||  'dev'  }}
+
+jobs:
+  build-and-publish:
+    name: Build and Publish Package
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    timeout-minutes: 10
+    steps:
+      - name: Print branch name
+        run: echo "Branch name is ${{ github.ref_name }}"
