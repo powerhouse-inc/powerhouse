@@ -185,7 +185,7 @@ server {
     }
     
     location / {
-        root /var/www/powerhouse/.ph/connect-build/dist;
+        root $PWD/.ph/connect-build/dist;
         try_files \$uri \$uri/ /index.html;
         add_header Cache-Control "no-cache";
         add_header X-Forwarded-Proto \$scheme;
@@ -253,7 +253,7 @@ server {
     }
     
     location / {
-        root /var/www/powerhouse/.ph/connect-build/dist;
+        root $PWD/.ph/connect-build/dist;
         try_files \$uri \$uri/ /index.html;
         add_header Cache-Control "no-cache";
         add_header X-Forwarded-Proto \$scheme;
