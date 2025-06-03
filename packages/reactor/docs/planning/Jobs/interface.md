@@ -8,11 +8,19 @@ export type Job = {
   /** The document id that the job is operating on */
   documentId: string;
 
+  /** The scopes affected by the actions */
+  scopes: string[];
+
   /** The branch that the job is operating on */
   branch: string;
 
   /** The list of actions to apply */
   actions: Action[];
+};
+
+export type JobExecutionConfig = {
+  /** Maximum number of retries allowed */
+  maxRetries?: number;
 };
 
 /**
@@ -85,10 +93,11 @@ export interface IJobExecutor {
   /**
    * Execute a single job immediately.
    * @param job - The job to execute
+   * @param config - Configuration options for the job execution
    * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves to the job result
    */
-  executeJob(job: Job, signal?: AbortSignal): Promise<JobResult>;
+  executeJob(job: Job, config?: JobExecutionConfig, signal?: AbortSignal): Promise<JobResult>;
   
   /**
    * Get the current status of the job executor.
@@ -132,17 +141,6 @@ export interface IJobExecutor {
    * @returns Promise that resolves when execution is resumed
    */
   resume(signal?: AbortSignal): Promise<void>;
-  
-  /**
-   * Subscribe to job execution events.
-   * @param event - The event type to subscribe to
-   * @param handler - The event handler function
-   * @returns Function to unsubscribe from the event
-   */
-  on(
-    event: 'jobStarted' | 'jobCompleted' | 'jobFailed' | 'executorStarted' | 'executorStopped',
-    handler: (data: any) => void
-  ): () => void;
 }
 
 /**
