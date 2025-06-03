@@ -59,9 +59,9 @@ jobs:
         run: pnpm install
         shell: bash
 
-      # - name: Build packages and studio
-      #   run: pnpm nx run-many --target='build' --all --no-cloud
-      #   shell: bash
+      - name: Build packages and studio
+        run: pnpm nx run-many --target='build' --all --no-cloud
+        shell: bash
 
       - name: Print Environment Info
         run: pnpm nx report
@@ -73,8 +73,8 @@ jobs:
           git config user.name "Github Actions Bot"
           git config user.email "-"
 
-      - name: Update pkg version
-        run: npx tsx tools/scripts/release.ts --version=${{ inputs.version }} --tag=${{ inputs.tag }} --dry-run --skip-publish=${{ inputs.skip-publish }} --publish-only={{ inputs.publish-only }} --verbose={{ inputs.verbose }}
+      - name: Update pkg version and publish to npm
+        run: npx tsx tools/scripts/release.ts --version=${{ inputs.version }} --tag=${{ inputs.tag }} --dry-run --skip-publish=${{ inputs.skip-publish }} --publish-only=${{ inputs.publish-only }} --verbose=${{ inputs.verbose }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
