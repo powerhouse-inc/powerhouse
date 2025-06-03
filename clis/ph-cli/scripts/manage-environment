@@ -48,7 +48,7 @@ else
         fi
 
         # Check if database is configured
-        if ! grep -q "DATABASE_URL" "$project_name/.env"; then
+        if ! grep -q "DATABASE_URL" ".env"; then
             echo "Error: Database configuration not found in .env file"
             error=1
         fi
