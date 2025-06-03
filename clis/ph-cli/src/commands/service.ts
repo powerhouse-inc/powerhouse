@@ -21,11 +21,13 @@ export const manageService: CommandActionType<[string]> = async (action) => {
     const manageScriptPath = path.join(
       dirname,
       "..",
+      "..",
       "scripts",
       "manage-environment",
     );
     const setupScriptPath = path.join(
       dirname,
+      "..",
       "..",
       "scripts",
       "setup-environment",
