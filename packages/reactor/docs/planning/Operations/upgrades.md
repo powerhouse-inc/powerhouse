@@ -2,63 +2,41 @@
 
 ### Summary
 
-Document model upgrades provide a systematic approach to versioning and backward compatibility. Unlike traditional ES approaches, operations are not upcasted. Every operation must be matched and executed by a specific version of the document model.
+Document Model upgrades provide a systematic approach to versioning and backward compatibility.
 
-### Version Immutability
+In Reactor, Actions act much like typical Command objects in the Event Sourcing architecture and Operations act much like Events.
 
-Once a document model version is released (e.g., v.1), it becomes immutable with no further changes allowed. This guarantees stability and ensures that operations remain executable by their specific document model version.
+However, unlike typical ES approaches, Operations _are never upcasted_. That is, version upgrades never mutate Operations. Instead, every `Action` must be executed by a specific version of the corresponding document model library to result in the expected `Operation`.
 
-### Development Versioning with v.next
+Operations are then decoupled from versioning, as the `Action` holds this information.
 
-- **v.next as Development Sandbox**: Every document model includes a special mutable version labeled `v.next` for ongoing development.
+### Flow
 
-- **No Backward Compatibility Guarantees**: During development phase, `v.next` allows rapid iteration without backward compatibility constraints.
+Suppose we have a document of type `ph/todo`.
 
-- **Initial Structure**: New document models begin with version 0 (immutable) and `v.next` (mutable).
-
-### Version Release Cycle
-
-When finalizing enhancements in `v.next`:
-
-1. **Transition to Formal Release**: `v.next` becomes the next version number (e.g., `v.next` → `v.1` or `v.2`)
-2. **Create New v.next**: A new `v.next` is created, mirroring the newly released version
-3. **Upgrade Operation Replacement**: The upgrade operation is replaced with a placeholder for the next version upgrade
-4. **Operation Copying**: All other operations from the released version are copied to new `v.next` without modifications
-
-### Document Model Upgradability
-
-- **No Initial State**: Documents start with empty objects as initial state
-- **Bundled Operations**: Version specifications bundle operations with upgrade operations that construct initial state from previous versions
-- **Version-Specific Execution**: Every document starts as `v.0` with empty object, then uses version-specific upgrade operations to transform to target versions
-- **Operation-Version Matching**: Each operation must be executed by its corresponding document model version
-
-### Upgrade Operation Structure
+1. First, we create a new document:
 
 ```tsx
-// Example upgrade flow
-// Documents start as v.0 with empty initial state
-// First operation: upgrade to v.1 transforms empty state to v.1 structure  
-// Each version contains upgrade operation to next version
-// Operations are not upcasted - they execute against their specific version
+import { createDocument } from "ph/todo";
+
+const doc = await createDocument({
+  title: "My Todo List",
+});
 ```
 
-### Version Compatibility
+This creates a new document with one action:
 
-Documents maintain compatibility through explicit upgrade operations rather than automatic upcasting:
+```tsx
+[
+  {
+    type: "ACTION_UPGRADE",
+    version: "0",
+    input: {
+      
+    },
+    scope: "global",
+  }
+]
+```
 
-- **Explicit Version Targeting**: Operations target specific document model versions
-- **Controlled Upgrades**: Documents can be upgraded through explicit version-specific upgrade operations
-- **Version Chain Execution**: Upgrade operations form a chain from `v.0` through successive versions
 
-### Implementation Requirements
-
-- **Document Model Editor Support**: Must handle operations for multiple versions and execute them against correct version
-- **Code Generator Updates**: Must support the versioned system with version-specific operation execution
-- **NPM Package Structure**: Each document model package contains all versions and their corresponding operations
-- **Version Matching**: System must match operations to their correct document model version for execution
-
-### Scope and Versioning
-
-- **Per-Scope Versioning**: Version changes apply per scope
-- **Most Recent Version**: Latest version serves as development version
-- **Version-Specific Operations**: Each version supports operations like `Mutations.v1.op()` that execute only against that version

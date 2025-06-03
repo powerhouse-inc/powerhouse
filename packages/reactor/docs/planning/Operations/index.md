@@ -2,42 +2,21 @@
 
 ### Summary
 
-Operations are the fundamental units of change in the Reactor system. They represent atomic actions that transform document state and provide the foundation for the event-sourced architecture. Operations are immutable, ordered (though sometimes reshuffled), and provide complete auditability of all document changes.
+An `Operation` is the fundamental unit of change in the Reactor system. These represent atomic facts about document state. That is, Operations are mutations that have already been applied.
 
-### Core Structure
+In a typical Event Sourcing architecture, Operations are the "Events".
 
-An Operation is an Action extended with metadata for storage, ordering, and execution tracking:
+An `Operation` is immutable, ordered (though sometimes reshuffled), and provides complete auditability of all document changes.
 
-> TODO: Specify how operations/events will be versioned so that future refactors don't break things. Include guidelines for backward compatibility and event upcasting.
+An `Operation` always applies to a specific scope. See [PHDocument](../PHDocument/index.md) for more information on scopes.
 
-```tsx
-/**
- * Core Operation type that combines action data with execution metadata
- */
-type Operation<TAction extends Action = Action> = TAction & {
-  /** Position of the operation in the history */
-  index: number;
+### Actions
 
-  /** Timestamp of when the operation was added */
-  timestamp: string;
+Before an `Operation` exists, an `Action` must be created. An `Action` is a plain object that represents the intent of the Operation. It can be mutated before it is submitted to the Reactor.
 
-  /** Hash of the resulting document data after the operation */
-  hash: string;
+In a typical Event Sourcing architecture, Actions are the "Commands".
 
-  /** The number of operations skipped with this Operation */
-  skip: number;
-
-  /** Error message for a failed action */
-  error?: string;
-	
-  /** Unique operation id */
-  id?: string;
-};
-```
-
-### Action Structure
-
-Actions define the intent and input data for operations:
+The data structure for an `Action` is as follows:
 
 ```tsx
 /**
@@ -48,8 +27,14 @@ type BaseAction<
   TInput,
   TScope extends OperationScope = OperationScope,
 > = {
+  /** The unique id of the action */
+  id: string;
+
   /** The name of the action */
   type: TType;
+
+  /** The version of the document model */
+  version: string;
 
   /** The payload of the action */
   input: TInput;
@@ -57,175 +42,182 @@ type BaseAction<
   /** The scope of the action, like 'global' or 'local' */
   scope: TScope;
 
-  /** The attachments included in the action */
-  attachments?: AttachmentInput[] | undefined;
-
   /** The context of the action */
-  context?: ActionContext;
+  context: ActionContext;
+
+  /** The attachments used in the action */
+  attachments: AttachmentRef[];
 };
 ```
 
-### Operation Scopes
+#### Action Signing
 
-Operations are organized by one or more scopes that determine their visibility and access patterns. An arbitrary number of scopes can be used to organize operations. The most common scopes are:
+Actions include cryptographic signatures on the `ActionContext` to verify that they originated from a specific user.
 
-- **`global`** - Publicly visible operations
-- **`local`** - Private operations for the current user/session
-- **`public`** - Operations visible to specific groups
-
-There is also one special scope that is always populated:
-
-- **`header`** - Special scope for document metadata
-
-### Operation Lifecycle
-
-1. Creation - Operations are created through the mutation API.
-2. Queueing - Operations are queued by `(documentId, scope, branch)` to ensure proper ordering.
-3. Execution - Operations are passed through reducers and executed in the order dictated by the queue.
-4. Storage - Once applied, operations are persisted in the `IOperationStore` with atomic transactions.
-
-### Idempotency
-
-Reducers are not guaranteed to be idempotent. That is, if a reducer is called with the same input twice, it may produce different results.
-
-Instead, we guarantee idempotency at the `Operation` level, with deterministic identifiers. Each operation has an `opId` derived from stable properties such as the document id, scope, branch, type and serialized input.
-
-Submitting the same mutation twice results in the same `opId`, so the store can safely ignore duplicates.
-
-The `hash` field stores the expected document state after applying the operation; reducers compute the state hash during execution and compare it to this value to detect divergence. Along with the unique `(documentId, scope, branch, index)` constraint in the storage schema, these identifiers ensure that replaying operations cannot introduce inconsistent state.
-
-### Indexing
-
-Operations are indexed by several keys for efficient retrieval:
-
-```prisma
-model Operation {
-  id          String       @id @default(uuid())
-  opId        String?
-  documentId  String
-  scope       String
-  branch      String
-  index       Int
-  skip        Int
-  hash        String
-  timestamp   DateTime
-  input       String
-  type        String
-  attachments Attachment[]
-  syncId      String?
-  clipboard   Boolean?     @default(false)
-  context     Json?
-  resultingState Bytes?
-
-  @@unique([documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
-}
-```
-
-### Attachments
-
-See the [Attachments doc](../Attachments/index.md) for more information on attachments.
-
-### Signature and Security
-
-Operations include cryptographic signatures for verification:
+- Cryptographic signatures are verified using the Web Crypto API.
+- Signatures need: a public key, a payload, and a signature.
+- The signature payload is generated from the `SignedPaylodParameters` and the `Action` using a stable, JSON-encoding.
+  - This allows us to dedupe information.
+  - Allows for wrapping signatures in other signatures.
+  - Allows for different payloads, depending on the use case. [Upgrade Actions](./upgrades.md), for instance, may have a different payload than a regular Action.
 
 ```tsx
-type ActionSigner = {
-  user: {
-    address: string;
-    networkId: string; // CAIP-2
-    chainId: number; // CAIP-10
-  };
-  app: {
-    name: string; // eg "Connect" or "Powerhouse"
-    key: string;
-  };
-  signatures: Signature[];
+
+type PublicKey {
+  /**
+   * The name of the algorithm used to sign the action.
+   * 
+   * See: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/verify#algorithm
+   */
+  algorithm: string;
+
+  /**
+   * The format of the public key.
+   * 
+   * https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/exportKey#format
+   */
+  format: string;
+
+  /**
+   * The exported public key used to sign the action, in Base64 format.
+   */
+  data: string;
+}
+
+type Signer = {
+  /**
+   * The public key used to sign the action.
+   */
+  publicKey: PublicKey;  // public key
+
+  /**
+   * The name of the signer, used to identify a signing application.
+   * 
+   * Eg: "Connect", "Powerhouse", etc
+   */
+  app?: string;
+  
+  /**
+   * EVM address of the signer, used to identify a user.
+   */
+  address?: string;
+
+  /**
+   * The CAIP-2 network id of the signer, used to identify a user.
+   */
+  networkId?: string;
+
+  /**
+   * The CAIP-10 chain id of the signer, used to identify a user.
+   */
+  chainId?: number;
+
+  // todo: other claims?
+};
+
+type SignedPayloadParameters = {
+  /**
+   * Additional signatures to append to the payload.
+   */
+  signatures: string[];
+};
+
+type Signature = {
+  /**
+   * The signer of the action.
+   */
+  signer: Signer;
+
+  /**
+   * Parameters for the signed payload.
+   */
+  payload: SignedPayloadParameters;
+
+  /**
+   * Base64 encoded signature of the payload.
+   */
+  signature: string;
 };
 
 type ActionContext = {
-  signer?: ActionSigner;
+  /**
+   * The signature of the action.
+   */
+  signature: Signature;
 };
 ```
 
-### Query Operations
+### Operations
 
-#### Retrieving Operations
+An `Operation` represents the result of an `Action` being executed. It is a "fact", not an "intent".
 
-Operations can be queried by various criteria:
+Unlike a typical ES approach, where Actions are generally discarded or stored in an outbox pattern, each `Action` is stored with the `Operation` that is produced from it. This allows every client to re-execute each `Action` and verify the resulting `Operation`.
 
-```tsx
-// Get single operation
-const operation = await operationStore.get(documentId, scope, branch, index);
-
-// Get operations since an index
-const operations = await operationStore.getSince(documentId, scope, branch, 10);
-
-// Get operations since timestamp
-const recentOps = await operationStore.getSinceTimestamp(
-  documentId, scope, branch, timestampUtcMs
-);
-```
-
-#### Document History API
-
-Access operations through the document's history API:
+The lack of `previousState` is simply an optimization. As the previous state is always known, it is not necessary to store it (but perhaps could be necessary for debugging).
 
 ```tsx
-// Fetch operations for a scope
-await document.history.global.fetch();
-
-console.log(`Operations count: ${document.history.global.operations.length}`);
-
-// Fetch operations up to a specific revision
-const history = await document.history.global.fetch(10);
-```
-
-### Synchronization
-
-Operations are synchronized using synchronization units:
-
-```tsx
-type SynchronizationUnit = {
+/**
+ * Core Operation type that combines action data with execution metadata
+ */
+type Operation<T extends Action = Action> = {
+  /** Unique operation id */
   id: string;
-  documentId: string;
-  scope: string;
-  branch: string;
-  operations: Operation[];
-};
-```
-
-### Error Handling
-
-Operations can fail during execution:
-
-```tsx
-type Operation = {
-  // ... other fields
   
-  /** Error message for a failed action */
-  error?: string;
-};
-```
+  /** Position of the operation in the history */
+  index: number;
+  
+  /** The number of operations skipped with this Operation */
+  skip: number;
 
-Failed operations are retained in history for debugging and potential replay.
+  /** Timestamp of when the operation was added */
+  timestampUtcMs: number;
 
-### Attachments
+  /** The action that was executed to produce this operation */
+  action: T;
 
-Operations can include binary attachments:
+  /** The resulting state after the operation is executed */
+  resultingState: string;
 
-```tsx
-type Attachment = {
-  id: string;
-  operationId: string;
-  mimeType: string;
-  data: string;
-  filename?: string;
-  extension?: string;
+  /** Hash of the resulting state */
   hash: string;
 };
 ```
 
-### Dependencies
+### Schema
 
-- None
+See the `[IOperationStore](../Storage/IOperationStore.md)` doc for explicit db schema.
+
+### Operation Lifecycle
+
+```mermaid
+graph TD
+    Action --> IQueue --> IJobExecutor --> Operation
+```
+
+1. Action creation - An `Action` is created by the user using the document model API.
+
+2. Queueing - Actions are queued by `(documentId, scope, branch)` to ensure proper ordering.
+
+3. Execution - Actions are passed through reducers to mutate state. Operations are created from the resulting state.
+
+4. Storage - Once applied, operations are persisted in the `IOperationStore` with atomic transactions.
+
+### Idempotency
+
+Reducers are not guaranteed to be idempotent. That is, if a reducer is called with the same input twice, it may produce different results. This is intended behavior.
+
+However, we do guarantee idempotency at the `Operation` level, with deterministic identifiers. Each operation has an `opId` derived from stable properties such as: document id, scope, branch, type, action id.
+
+Submitting the same action twice results in the same `opId`, so the store can safely ignore duplicates.
+
+The `hash` field stores the expected document state after applying the operation; reducers compute the state hash during execution and compare it to this value to detect divergence. Along with the unique `(documentId, scope, branch, index)` constraint in the storage schema, these identifiers ensure that replaying operations cannot introduce inconsistent state.
+
+### Attachments
+
+See the [Attachments doc](../Attachments/index.md) for more information on attachments. These are not stored with `Operation`s directly, but with the `Action` that consumes them.
+
+### Action Error Handling
+
+Operations cannot be in a failure state, as they represent facts about the document state. Instead, the `Action` that produced the `Operation` may fail.
+
+Failed `Action`s are not retained in the `IOperationStore` in any way, but are bubbled up in named Error objects.
