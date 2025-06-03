@@ -118,3 +118,93 @@ interface IDocumentView {
   getParents(childIds: string[], signal?: AbortSignal): Promise<string[][]>;
 }
 ```
+
+### Schema
+
+The `IDocumentView` is a smart, materialized view of the operations store.
+
+```prisma
+model DocumentSnapshot {
+  id                String   @id @default(cuid())
+  
+  // Document identity
+  documentId        String
+  slug              String?
+  name              String?
+  
+  // View filtering
+  scope             String
+  branch            String
+  
+  // Document state
+  content           Json     // The materialized document state
+  documentType      String   // Document type for filtering
+  
+  // Hierarchy (for getChildren/getParents - not general relationships)
+  parentId          String?
+  
+  // Cache invalidation & staleness detection
+  lastOperationIndex Int     // Last operation index this snapshot includes
+  lastOperationHash  String  // Hash of the last operation for integrity
+  lastUpdatedAt     DateTime @default(now()) @updatedAt
+  snapshotVersion   Int      @default(1) // Incremented on each rebuild
+  
+  // Metadata for search/filtering
+  identifiers       Json?    // Custom identifiers for find() queries
+  metadata          Json?    // Additional searchable metadata
+  
+  // Soft delete support
+  isDeleted         Boolean  @default(false)
+  deletedAt         DateTime?
+  
+  // Relations
+  parent            DocumentSnapshot? @relation("DocumentHierarchy", fields: [parentId], references: [documentId])
+  children          DocumentSnapshot[] @relation("DocumentHierarchy")
+  
+  // Indexes for efficient queries
+  @@unique([documentId, scope, branch]) // One snapshot per document+scope+branch
+  @@index([slug, scope, branch]) // Fast slug resolution
+  @@index([documentType, scope, branch]) // Type filtering
+  @@index([parentId]) // Hierarchy queries
+  @@index([lastUpdatedAt]) // Staleness detection
+  @@index([isDeleted]) // Active documents only
+  @@index([documentId, lastOperationIndex]) // Staleness check by operation index
+}
+
+model DocumentViewCache {
+  id              String   @id @default(cuid())
+  
+  // Cache key components
+  documentId      String
+  viewFilterHash  String   // Hash of the ViewFilter for this cached entry
+  
+  // Cache data
+  cachedResult    Json     // The cached query result
+  resultType      String   // Type of cached result (e.g., "document", "children", "search")
+  
+  // Cache invalidation
+  lastValidAt     DateTime @default(now())
+  expiresAt       DateTime? // Optional TTL
+  hitCount        Int      @default(0)
+  
+  // LRU tracking
+  lastAccessedAt  DateTime @default(now())
+  
+  @@unique([documentId, viewFilterHash, resultType])
+  @@index([lastAccessedAt]) // LRU eviction
+  @@index([expiresAt]) // TTL cleanup
+  @@index([documentId]) // Invalidation by document
+}
+
+model SlugMapping {
+  slug        String   @id
+  documentId  String
+  scope       String
+  branch      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([documentId, scope, branch])
+  @@index([documentId])
+}
+```
