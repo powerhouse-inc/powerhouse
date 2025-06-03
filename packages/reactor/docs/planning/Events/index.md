@@ -2,7 +2,14 @@
 
 ### Summary
 
-The `IEventBus` is an async pub/sub mechanism. We can use an event bus to de-duplicate logic. It allows for both async and sync subscriptions to keep operations consistent. This is an in-memory implementation that does not persist events. Each emit() call guarantees each corresponding handler is called, serially.
+The `IEventBus` is an async pub/sub mechanism. We can use an event bus to de-duplicate logic.
+
+- It allows for both async and sync subscriptions to keep operations consistent.
+- This is an in-memory implementation that does not persist events.
+- Stack-safe -- meaning that subscribes and unsubscribes may be called safely from within event handlers but do not affect the current emit() call.
+- Each emit() call guarantees every corresponding handler is called, serially.
+- Does NOT require idempotent subscribers.
+- Does NOT retry.
 
 ### Dependencies
 
