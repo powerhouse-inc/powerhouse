@@ -138,16 +138,44 @@ else
             
         "status")
             check_setup "$PROJECT_NAME"
-            echo "Checking service status..."
-            echo "Nginx site status:"
-            if [ -L "/etc/nginx/sites-enabled/$PROJECT_NAME" ]; then
-                echo "Site is enabled"
-            else
-                echo "Site is disabled"
-            fi
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  Service Status for $PROJECT_NAME"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             
-            echo -e "\nSwitchboard status:"
-            pm2 list | grep "switchboard_${PROJECT_NAME}"
+            # Create table header
+            printf "%-15s %-10s %-15s %-10s %-10s\n" "Service" "Status" "Memory" "Uptime" "Health"
+            echo "────────────────────────────────────────────────────────────────────"
+            
+            # Check Connect status
+            connect_status="Disabled"
+            connect_health="❌"
+            connect_memory="N/A"
+            connect_uptime="N/A"
+            if [ -L "/etc/nginx/sites-enabled/$PROJECT_NAME" ]; then
+                connect_status="Enabled"
+                # Check if Connect is reachable
+                if curl -s -f "http://localhost/$PROJECT_NAME" > /dev/null; then
+                    connect_health="✅"
+                fi
+                # Get Nginx memory usage for the site
+                connect_memory=$(ps -o rss= -p $(pgrep -f "nginx.*$PROJECT_NAME") 2>/dev/null | awk '{printf "%.1fmb", $1/1024}')
+                # Get Nginx uptime
+                connect_uptime=$(ps -o etime= -p $(pgrep -f "nginx.*$PROJECT_NAME") 2>/dev/null || echo "N/A")
+            fi
+            printf "%-15s %-10s %-15s %-10s %-10s\n" "Connect" "$connect_status" "$connect_memory" "$connect_uptime" "$connect_health"
+            
+            # Check Switchboard status
+            switchboard_info=$(pm2 list | grep "switchboard_${PROJECT_NAME}")
+            if [ -n "$switchboard_info" ]; then
+                switchboard_status=$(echo "$switchboard_info" | awk '{print $10}')
+                switchboard_memory=$(echo "$switchboard_info" | awk '{print $12}')
+                switchboard_uptime=$(echo "$switchboard_info" | awk '{print $7}')
+                switchboard_health="✅"
+                printf "%-15s %-10s %-15s %-10s %-10s\n" "Switchboard" "$switchboard_status" "$switchboard_memory" "$switchboard_uptime" "$switchboard_health"
+            else
+                printf "%-15s %-10s %-15s %-10s %-10s\n" "Switchboard" "Stopped" "N/A" "N/A" "❌"
+            fi
+            echo "────────────────────────────────────────────────────────────────────"
             ;;
             
         *)
