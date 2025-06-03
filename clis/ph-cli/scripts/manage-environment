@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+
+# =============================================================================
+# Configuration
+# =============================================================================
+PROJECT_NAME=${1:-"global"}
+ACTION=${2:-"status"}
+
+# =============================================================================
+# OS Detection and Windows Handling
+# =============================================================================
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    if [ -f "$0.ps1" ]; then
+        powershell -ExecutionPolicy Bypass -File "$0.ps1" -PROJECT_NAME "$PROJECT_NAME" -ACTION "$ACTION"
+    else
+        echo "Error: Windows management script (manage-environment.ps1) not found"
+        exit 1
+    fi
+else
+    # =============================================================================
+    # Service Management
+    # =============================================================================
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Managing project: $PROJECT_NAME"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # Function to enable/disable Nginx site
+    manage_nginx_site() {
+        local action=$1
+        local site_path="/etc/nginx/sites-available/$PROJECT_NAME"
+        local enabled_path="/etc/nginx/sites-enabled/$PROJECT_NAME"
+        
+        if [ ! -f "$site_path" ]; then
+            echo "Error: Nginx site configuration for $PROJECT_NAME not found"
+            return 1
+        fi
+        
+        case "$action" in
+            "enable")
+                if [ ! -L "$enabled_path" ]; then
+                    sudo ln -sf "$site_path" "$enabled_path"
+                    sudo nginx -t && sudo nginx -s reload
+                fi
+                ;;
+            "disable")
+                if [ -L "$enabled_path" ]; then
+                    sudo rm -f "$enabled_path"
+                    sudo nginx -t && sudo nginx -s reload
+                fi
+                ;;
+        esac
+    }
+
+    case "$ACTION" in
+        "start")
+            echo "Starting services..."
+            # Build Connect
+            echo "Building Connect..."
+            ph connect build
+            
+            # Enable Nginx site
+            manage_nginx_site "enable"
+            
+            # Start Switchboard via PM2
+            if ! pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+                cd $PROJECT_NAME
+                pm2 start "pnpm switchboard" --name "switchboard_${PROJECT_NAME}"
+                pm2 save
+            else
+                pm2 start "switchboard_${PROJECT_NAME}"
+            fi
+            ;;
+            
+        "stop")
+            echo "Stopping services..."
+            # Stop Switchboard via PM2
+            if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+                pm2 stop "switchboard_${PROJECT_NAME}"
+            fi
+            
+            # Disable Nginx site
+            manage_nginx_site "disable"
+            ;;
+            
+        "restart")
+            echo "Restarting services..."
+            # Build Connect
+            echo "Building Connect..."
+            ph connect build
+            
+            # Restart Nginx site
+            manage_nginx_site "disable"
+            manage_nginx_site "enable"
+            
+            # Restart Switchboard via PM2
+            if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+                pm2 restart "switchboard_${PROJECT_NAME}"
+            else
+                cd $PROJECT_NAME
+                pm2 start "pnpm switchboard" --name "switchboard_${PROJECT_NAME}"
+                pm2 save
+            fi
+            ;;
+            
+        "status")
+            echo "Checking service status..."
+            echo "Nginx site status:"
+            if [ -L "/etc/nginx/sites-enabled/$PROJECT_NAME" ]; then
+                echo "Site is enabled"
+            else
+                echo "Site is disabled"
+            fi
+            
+            echo -e "\nSwitchboard status:"
+            pm2 list | grep "switchboard_${PROJECT_NAME}"
+            ;;
+            
+        *)
+            echo "Usage: $0 [project_name] {start|stop|restart|status}"
+            echo "Default project_name: global"
+            echo "Default action: status"
+            exit 1
+            ;;
+    esac
+fi 

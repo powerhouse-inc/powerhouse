@@ -299,9 +299,8 @@ EOF
         sudo ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
         sudo rm -f /etc/nginx/sites-enabled/default
 
-        # Test and restart Nginx
+        # Test Nginx configuration
         sudo nginx -t
-        sudo systemctl restart nginx
 
         # Obtain SSL certificates
         echo "Obtaining SSL certificates..."
@@ -374,44 +373,17 @@ EOF
         sudo ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
         sudo rm -f /etc/nginx/sites-enabled/default
 
-        # Test and restart Nginx
+        # Test Nginx configuration
         sudo nginx -t
-        sudo systemctl restart nginx
     fi
 
     # =============================================================================
-    # Service Setup
+    # Database Schema Setup
     # =============================================================================
-    # Install PM2 globally if not already installed
-    if ! command -v pm2 &> /dev/null; then
-        pnpm install -g pm2
-    fi
-
     pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
 
-    # Check if PM2 process already exists and handle accordingly
-    if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
-        echo "PM2 process switchboard_${PROJECT_NAME} already exists"
-        read -p "Do you want to restart it? (y/n): " restart_pm2
-        if [ "$restart_pm2" = "y" ]; then
-            pm2 delete "switchboard_${PROJECT_NAME}"
-        else
-            echo "Keeping existing PM2 process"
-            exit 0
-        fi
-    fi
-
-    # Start services with PM2
-    echo "Starting services with PM2..."
-    if [ "$ssl_choice" = "2" ]; then
-        # Self-signed certificate - use base paths
-        pm2 start pnpm switchboard --name "switchboard_${PROJECT_NAME}" -- --base-path /switchboard
-    else
-        # Let's Encrypt - no base paths needed
-        pm2 start "pnpm switchboard" --name "switchboard_${PROJECT_NAME}"
-    fi
-
-    # Save PM2 process list and setup startup script
-    pm2 save
-    pm2 startup
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Environment setup complete!"
+    echo "  Use 'ph service start' to start services"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 fi 
