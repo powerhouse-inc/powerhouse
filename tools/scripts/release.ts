@@ -90,7 +90,7 @@ async function checkAvailableChanges(specifier?: string, preid?: string) {
   let specifier = version;
   let preid = tag;
 
-  if (branchRelease) {
+  if (branchRelease && branchRelease !== "") {
     if (!branchRegexp.test(branchRelease)) {
       console.error('>>> Invalid branch name', branchRelease);
       process.exit(1);
