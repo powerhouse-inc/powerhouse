@@ -7,12 +7,24 @@ on:
         type: string
       tag:
         type: string
-        default: "dev"
+      dry-run:
+        type: boolean
+        default: true
+      verbose:
+        type: boolean
+        default: false
+      skip-publish:
+        type: boolean
+        default: false
+      publish-only:
+        type: boolean
+        default: false
 
 env:
   NX_ISOLATE_PLUGINS: false
   VERSION: ${{ inputs.version }}
   TAG: ${{ inputs.tag ||  'dev'  }}
+  DRYRUN: ${{ inputs.dry-run ||  true  }}
 
 jobs:
   build-and-publish:
@@ -47,9 +59,9 @@ jobs:
         run: pnpm install
         shell: bash
 
-      - name: Build packages and studio
-        run: pnpm nx run-many --target='build' --all --no-cloud
-        shell: bash
+      # - name: Build packages and studio
+      #   run: pnpm nx run-many --target='build' --all --no-cloud
+      #   shell: bash
 
       - name: Print Environment Info
         run: pnpm nx report
@@ -62,7 +74,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version
-        run: npx tsx tools/scripts/release.ts --version=${{ env.VERSION }} --tag=${{ env.TAG }} --dry-run --skip-publish
+        run: npx tsx tools/scripts/release.ts --version=${{ inputs.version }} --tag=${{ inputs.tag }} --dry-run --skip-publish=${{ inputs.skip-publish }} --publish-only={{ inputs.publish-only }} --verbose={{ inputs.verbose }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
