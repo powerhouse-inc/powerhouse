@@ -87,11 +87,7 @@ else
             # Build Connect
             echo "Building Connect..."
             ph connect build
-            
-            # Fix permissions for Connect build
-            echo "Fixing permissions for Connect build..."
-            sudo chown -R www-data:www-data .ph/connect-build/dist
-            sudo chmod -R 755 .ph/connect-build/dist
+            sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
             
             # Enable Nginx site
             manage_nginx_site "enable"
@@ -124,11 +120,7 @@ else
             # Build Connect
             echo "Building Connect..."
             ph connect build
-            
-            # Fix permissions for Connect build
-            echo "Fixing permissions for Connect build..."
-            sudo chown -R www-data:www-data .ph/connect-build/dist
-            sudo chmod -R 755 .ph/connect-build/dist
+            sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
             
             # Restart Nginx site
             manage_nginx_site "disable"

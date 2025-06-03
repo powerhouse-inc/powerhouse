@@ -40,6 +40,7 @@ else
     # Connect Build
     # =============================================================================
     ph connect build
+    cp -r .ph/connect-build/dist /var/www/html/$PROJECT_NAME
 
     # =============================================================================
     # Database Configuration
@@ -253,7 +254,7 @@ server {
     }
     
     location / {
-        root $PWD/.ph/connect-build/dist;
+        root /var/www/html/$PROJECT_NAME;
         try_files \$uri \$uri/ /index.html;
         add_header Cache-Control "no-cache";
         add_header X-Forwarded-Proto \$scheme;
