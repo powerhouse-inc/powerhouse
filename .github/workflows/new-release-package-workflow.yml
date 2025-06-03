@@ -1,4 +1,4 @@
-name: [DO NOT USE] New Release Workflow
+name: Test Release Workflow
 
 on: 
   workflow_dispatch:
@@ -11,14 +11,10 @@ on:
 
 env:
   NX_ISOLATE_PLUGINS: false
-  TAG: ${{ inputs.tag ||  'dev'  }}
   VERSION: ${{ inputs.version }}
+  TAG: ${{ inputs.tag ||  'dev'  }}
 
 jobs:
-  branch-name:
-    name: Print branch name
-    run: echo "Branch name is ${{ github.ref_name }}"
-
   build-and-publish:
     name: Build and Publish Package
     needs: validate-tag
@@ -28,6 +24,9 @@ jobs:
       id-token: write
     timeout-minutes: 10
     steps:
+      - name: Print branch name
+        run: echo "Branch name is ${{ github.ref_name }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -65,7 +64,6 @@ jobs:
 
       - name: Update pkg version
         run: npx tsx tools/scripts/release.ts --version=${{ env.VERSION }} --tag=${{ env.TAG }} --dry-run --skip-publish
-        # run: pnpm nx release --projects='packages/*,apps/*,clis/*' --skip-publish --preid=${{ env.TAG }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
