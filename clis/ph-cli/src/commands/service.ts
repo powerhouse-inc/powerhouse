@@ -43,21 +43,28 @@ export const manageService: CommandActionType<[string]> = async (action) => {
     switch (action) {
       case "start":
         console.log("Starting environment...");
-        execSync(`bash ${manageScriptPath} start ${projectName}`, {
+        execSync(`bash ${manageScriptPath} ${projectName} start`, {
           stdio: "inherit",
         });
         break;
 
       case "stop":
         console.log("Stopping environment...");
-        execSync(`bash ${manageScriptPath} stop ${projectName}`, {
+        execSync(`bash ${manageScriptPath} ${projectName} stop`, {
+          stdio: "inherit",
+        });
+        break;
+
+      case "restart":
+        console.log("Restarting environment...");
+        execSync(`bash ${manageScriptPath} ${projectName} restart`, {
           stdio: "inherit",
         });
         break;
 
       case "status":
         console.log("Checking environment status...");
-        execSync(`bash ${manageScriptPath} status ${projectName}`, {
+        execSync(`bash ${manageScriptPath} ${projectName} status`, {
           stdio: "inherit",
         });
         break;
