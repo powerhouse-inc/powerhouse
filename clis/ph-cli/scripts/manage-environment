@@ -29,14 +29,8 @@ else
         local project_name=$1
         local error=0
 
-        # Check if project directory exists
-        if [ ! -d "$project_name" ]; then
-            echo "Error: Project directory '$project_name' not found"
-            error=1
-        fi
-
         # Check if .env file exists
-        if [ ! -f "$project_name/.env" ]; then
+        if [ ! -f ".env" ]; then
             echo "Error: .env file not found in project directory"
             error=1
         fi
