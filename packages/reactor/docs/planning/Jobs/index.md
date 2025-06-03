@@ -6,6 +6,10 @@ The `IJobExecutor` listens for `jobAvailable` events from the event bus and pull
 
 Jobs are made up of a set of `Action`s. Job execution creates one or more `Operation` objects (note that `Action` and `Operation` do not necessarily have a 1:1 relationship).
 
+Jobs may be persisted in the `IQueue` for later execution, but the `IJobExecutor` does not worry about this. It will pull jobs from the queue and execute them.
+
+The `IJobExecutor` is responsible for verifying signatures on `Action` objects before executing them.
+
 ### Reshuffle Logic
 
 The `IJobExecutor` will proactively reshuffle jobs to prevent as many revision mismatches as possible.
@@ -48,6 +52,18 @@ return [...opsA, ...opsB]
     skip: i === 0 ? startIndex.skip : 0,
   }));
 ```
+
+### Signature Verification
+
+In all cases, the `IJobExecutor` will verify that the `Action` signatures are valid.
+
+If the `Action` signature is not valid, the `IJobExecutor` will emit a `jobFailed` event and the job will not be retried.
+
+### Operation Verification 
+
+Optionally, a `Job` may contain information about expected `Operation` data. In this case, the executor will verify that resulting `Operation` hash matches the expected `Operation` hash.
+
+This is useful for the synchronization flow, where we receive `operation` objects over a network and need to apply them locally.
 
 ### Error Handling
 

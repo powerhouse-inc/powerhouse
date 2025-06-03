@@ -5,6 +5,7 @@ graph TD
 
     subgraph "IReactor"
         AQueue["IQueue"] --> AJobs["IJobExecutor"] -->|"Write"| AOS["IOperationStore"]
+        AJobs -->|"Validate"| ISigner
         AOS --> APub
 
         subgraph AEvents["IEventBus"]
@@ -16,4 +17,5 @@ graph TD
         ASub --> ARM["IDocumentView"] <-->|"Read/Write"| IDocumentIndexer
         ARM -->|"Read"| AOS
     end
+
 ```
