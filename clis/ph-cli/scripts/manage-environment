@@ -24,6 +24,41 @@ else
     echo "  Managing project: $PROJECT_NAME"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+    # Function to check if service is properly set up
+    check_setup() {
+        local project_name=$1
+        local error=0
+
+        # Check if project directory exists
+        if [ ! -d "$project_name" ]; then
+            echo "Error: Project directory '$project_name' not found"
+            error=1
+        fi
+
+        # Check if .env file exists
+        if [ ! -f "$project_name/.env" ]; then
+            echo "Error: .env file not found in project directory"
+            error=1
+        fi
+
+        # Check if Nginx configuration exists
+        if [ ! -f "/etc/nginx/sites-available/$project_name" ]; then
+            echo "Error: Nginx configuration not found"
+            error=1
+        fi
+
+        # Check if database is configured
+        if ! grep -q "DATABASE_URL" "$project_name/.env"; then
+            echo "Error: Database configuration not found in .env file"
+            error=1
+        fi
+
+        if [ $error -eq 1 ]; then
+            echo "Please run 'ph setup-environment' first to set up the service"
+            exit 1
+        fi
+    }
+
     # Function to enable/disable Nginx site
     manage_nginx_site() {
         local action=$1
@@ -53,6 +88,7 @@ else
 
     case "$ACTION" in
         "start")
+            check_setup "$PROJECT_NAME"
             echo "Starting services..."
             # Build Connect
             echo "Building Connect..."
@@ -72,6 +108,7 @@ else
             ;;
             
         "stop")
+            check_setup "$PROJECT_NAME"
             echo "Stopping services..."
             # Stop Switchboard via PM2
             if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
@@ -83,6 +120,7 @@ else
             ;;
             
         "restart")
+            check_setup "$PROJECT_NAME"
             echo "Restarting services..."
             # Build Connect
             echo "Building Connect..."
@@ -103,6 +141,7 @@ else
             ;;
             
         "status")
+            check_setup "$PROJECT_NAME"
             echo "Checking service status..."
             echo "Nginx site status:"
             if [ -L "/etc/nginx/sites-enabled/$PROJECT_NAME" ]; then

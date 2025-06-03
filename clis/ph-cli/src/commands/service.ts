@@ -1,10 +1,17 @@
 import { Argument, type Command } from "commander";
 import { execSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { serviceHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
+
+interface PackageJson {
+  name: string;
+  version: string;
+  [key: string]: unknown;
+}
 
 const actions = ["start", "stop", "status", "setup"];
 
@@ -24,34 +31,40 @@ export const manageService: CommandActionType<[string]> = async (action) => {
       "setup-environment",
     );
 
-    // Get the current directory name as project name
-    const projectName = path.basename(process.cwd());
+    // Read project name from package.json
+    const packageJsonPath = path.join(process.cwd(), "package.json");
+    const packageJson = JSON.parse(
+      fs.readFileSync(packageJsonPath, "utf-8"),
+    ) as PackageJson;
+    const projectName = packageJson.name;
 
     switch (action) {
       case "start":
         console.log("Starting environment...");
-        execSync(`bash ${manageScriptPath} ${projectName} start`, {
+        execSync(`bash ${manageScriptPath} start ${projectName}`, {
           stdio: "inherit",
         });
         break;
 
       case "stop":
         console.log("Stopping environment...");
-        execSync(`bash ${manageScriptPath} ${projectName} stop`, {
+        execSync(`bash ${manageScriptPath} stop ${projectName}`, {
           stdio: "inherit",
         });
         break;
 
       case "status":
         console.log("Checking environment status...");
-        execSync(`bash ${manageScriptPath} ${projectName} status`, {
+        execSync(`bash ${manageScriptPath} status ${projectName}`, {
           stdio: "inherit",
         });
         break;
 
       case "setup":
         console.log("Setting up environment...");
-        execSync(`bash ${setupScriptPath}`, { stdio: "inherit" });
+        execSync(`bash ${setupScriptPath} "dev" ${projectName}`, {
+          stdio: "inherit",
+        });
         break;
 
       default:

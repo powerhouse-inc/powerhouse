@@ -1,7 +1,6 @@
 # Powerhouse CLI Commands
 
 This document provides detailed information about the available commands in the Powerhouse CLI.
-This document auto updates the documentation on Academy. 
 
 ## Table of Contents
 
