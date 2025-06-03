@@ -23,13 +23,13 @@ This tool will be fundamental on your journey when creating, building, and runni
 ```
 Command Overview:
   The init command creates a new Powerhouse project with optimal defaults. It sets up a fully 
-  configured project structure with all necessary dependencies, configurations, and boilerplate.   
+  configured project structure with all necessary dependencies, configurations, and boilerplate.
 
   This command:
-  1. Creates a new project with the specified name.
-  2. Installs all required dependencies for Powerhouse development.
-  3. Sets up a proper project structure and configuration files.
-  4. Can run in interactive mode for customized setup.
+  1. Creates a new project with the specified name
+  2. Installs all required dependencies for Powerhouse development
+  3. Sets up a proper project structure and configuration files
+  4. Can run in interactive mode for customized setup
 
 Arguments:
   [project-name]        Optional. Name of the project to create. If not provided,
@@ -100,9 +100,9 @@ Options:
 
 Project Structure:
   The command will set up a project with the following structure:
-  - Proper configuration files for TypeScript and ESLint.
-  - Dependencies for Powerhouse packages.
-  - Build and development scripts.
+  - Proper configuration files for TypeScript and ESLint
+  - Dependencies for Powerhouse packages
+  - Build and development scripts
 
 Examples:
   $ ph setup-globals my-project          # Create a new project named "my-project"

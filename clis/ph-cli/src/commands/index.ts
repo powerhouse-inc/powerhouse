@@ -8,7 +8,6 @@ import { installCommand } from "./install.js";
 import { listCommand } from "./list.js";
 import { reactorCommand } from "./reactor.js";
 import { serviceCommand } from "./service.js";
-import { setupServiceCommand } from "./setup-service.js";
 import { switchboardCommand } from "./switchboard.js";
 import { uninstallCommand } from "./uninstall.js";
 
@@ -24,7 +23,6 @@ export const commands = [
   listCommand,
   inspectCommand,
   switchboardCommand,
-  setupServiceCommand,
 ];
 
 export default function registerCommands(program: Command) {
