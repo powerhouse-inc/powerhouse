@@ -32,6 +32,28 @@ function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionD
   return version;
 }
 
+async function checkAvailableChanges(specifier?: string, preid?: string) {
+  const { workspaceVersion, projectsVersionData } = await releaseVersion({
+    specifier,
+    preid,
+    dryRun: true,
+    verbose: false,
+  });
+
+  const changelogResult = await releaseChangelog({
+    version: workspaceVersion || getVersionFromProjectsVersionData(projectsVersionData as ProjectsVersionData),
+    versionData: projectsVersionData,
+    dryRun: true,
+    verbose: false,
+    createRelease: false,
+  });
+  
+  return !changelogResult
+    .workspaceChangelog
+    ?.contents
+    .includes('This was a version bump only, there were no code changes')
+}
+
 (async () => {
   const options = yargs(hideBin(process.argv))
     .version(false)
@@ -79,6 +101,13 @@ function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionD
     
     preid = validProductionBranches.includes(branchTag) ? undefined : branchTag;
     specifier =  preid ? `${normalizedBranchVersion}-${preid}.0` : normalizedBranchVersion;
+  }
+
+  const availableChanges = await checkAvailableChanges(specifier, preid);
+
+  if (!availableChanges) {
+    console.error('>>> There are no available changes to release');
+    process.exit(0);
   }
 
   if (!publishOnly) {
