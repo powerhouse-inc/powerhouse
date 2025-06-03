@@ -1,4 +1,6 @@
 import connectConfig from '#connect-config';
+import { type PGlite } from '@electric-sql/pglite';
+import { PGliteWorker } from '@electric-sql/pglite/worker';
 import { type IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
     AnalyticsProvider,
@@ -7,6 +9,7 @@ import {
 import { logger } from 'document-drive';
 import { type ProcessorManager } from 'document-drive/processors/processor-manager';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
+import PGWorker from '../pglite-worker.js?worker';
 import { useUnwrappedProcessorManager } from '../store/processors';
 
 async function registerDiffAnalyzer(
@@ -21,6 +24,24 @@ async function registerDiffAnalyzer(
         '@powerhousedao/diff-analyzer',
         processorFactory({ analyticsStore }),
     );
+}
+
+function createPgLiteFactory(databaseName: string) {
+    return () => {
+        return Promise.resolve(
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+            new PGliteWorker(
+                new PGWorker({
+                    name: 'pglite-worker',
+                }),
+                {
+                    meta: {
+                        databaseName,
+                    },
+                },
+            ) as unknown as PGlite,
+        );
+    };
 }
 
 export function DiffAnalyzerProcessor() {
@@ -42,7 +63,12 @@ export function DiffAnalyzerProcessor() {
 
 export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
     return (
-        <AnalyticsProvider databaseName={connectConfig.analyticsDatabaseName}>
+        <AnalyticsProvider
+            pgLiteFactory={createPgLiteFactory(
+                connectConfig.analyticsDatabaseName,
+            )}
+            databaseName={connectConfig.analyticsDatabaseName}
+        >
             <DiffAnalyzerProcessor />
             {children}
         </AnalyticsProvider>

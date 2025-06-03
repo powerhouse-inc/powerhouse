@@ -20,11 +20,11 @@ export const analyticsOptionsKey = ["analytics", "options"] as const;
 export const analyticsStoreKey = ["analytics", "store"] as const;
 export const analyticsEngineKey = ["analytics", "store"] as const;
 
-export async function createAnalyticsStore({
-  databaseName,
-}: CreateStoreOptions): Promise<IAnalyticsStore> {
+export async function createAnalyticsStore(
+  options: CreateStoreOptions,
+): Promise<IAnalyticsStore> {
   const globalAnalytics = getGlobal("analytics");
-  if (databaseName === globalAnalytics?.options.databaseName) {
+  if (options.databaseName === globalAnalytics?.options.databaseName) {
     logger.warn(
       "Analytics store already initialized with the same database name. Returning existing store.",
     );
@@ -32,10 +32,10 @@ export async function createAnalyticsStore({
   }
 
   const { BrowserAnalyticsStore } = await import("./store/browser.js");
-  const store = new BrowserAnalyticsStore({ databaseName });
+  const store = new BrowserAnalyticsStore(options);
   await store.init();
   const engine = new AnalyticsQueryEngine(store);
-  setGlobal("analytics", { store, engine, options: { databaseName } });
+  setGlobal("analytics", { store, engine, options });
   return store;
 }
 
@@ -80,8 +80,17 @@ export function useAnalyticsStore() {
   return store.data;
 }
 
-interface AnalyticsProviderProps extends PropsWithChildren {
-  databaseName: string;
+interface BaseAnalyticsProviderProps
+  extends PropsWithChildren,
+    BrowserAnalyticsStoreOptions {
+  /**
+   * Custom QueryClient instance
+   * @default undefined
+   */
+  queryClient?: QueryClient;
+}
+
+interface AnalyticsProviderProps extends BaseAnalyticsProviderProps {
   /**
    * Custom QueryClient instance
    * @default undefined
@@ -91,10 +100,10 @@ interface AnalyticsProviderProps extends PropsWithChildren {
 
 export function AnalyticsProvider({
   children,
-  databaseName,
   queryClient = defaultQueryClient,
+  ...options
 }: AnalyticsProviderProps) {
-  useCreateAnalyticsStore(queryClient, { databaseName });
+  useCreateAnalyticsStore(queryClient, options);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

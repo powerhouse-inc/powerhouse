@@ -11,5 +11,5 @@
         "skipLibCheck": true,
         "outDir": "./dist"
     },
-    "files": ["./src/service-worker.ts"]
+    "files": ["./src/service-worker.ts", "./src/service-worker.ts"]
 }

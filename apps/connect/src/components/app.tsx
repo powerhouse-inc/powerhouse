@@ -35,15 +35,17 @@ const App = () => (
                 <WagmiContext>
                     <RootProvider>
                         <ReadModeContextProvider>
-                            <ToastContainer
-                                position="bottom-right"
-                                containerId="connect"
-                            />
-                            <UiNodesContextProvider>
-                                <Router />
-                                <CookieBanner />
-                                <Analytics />
-                            </UiNodesContextProvider>
+                            <ReactorAnalyticsProvider>
+                                <ToastContainer
+                                    position="bottom-right"
+                                    containerId="connect"
+                                />
+                                <UiNodesContextProvider>
+                                    <Router />
+                                    <CookieBanner />
+                                    <Analytics />
+                                </UiNodesContextProvider>
+                            </ReactorAnalyticsProvider>
                         </ReadModeContextProvider>
                     </RootProvider>
                 </WagmiContext>

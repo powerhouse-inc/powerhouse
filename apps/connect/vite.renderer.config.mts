@@ -188,6 +188,9 @@ export default defineConfig(({ mode }) => {
             include: ['did-key-creator'],
             exclude: externalAndExclude,
         },
+        worker: {
+            format: 'es',
+        },
         resolve: {
             alias: {
                 ...(mode !== 'development' && {

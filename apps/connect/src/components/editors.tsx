@@ -18,7 +18,7 @@ import {
     signOperation,
     useDocumentDispatch,
 } from '#utils';
-import { getRevisionFromDate } from '@powerhousedao/common';
+import { getRevisionFromDate, useTimelineItems } from '@powerhousedao/common';
 import {
     Button,
     DocumentToolbar,
@@ -120,16 +120,10 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     );
     const userPermissions = useUserPermissions();
 
-    // TODO: enable this after Web Worker implementation
-    // const timelineItems = useTimelineItems(
-    //     documentId,
-    //     initialDocument?.created,
-    // );
-
-    // TODO: remove this after Web Worker implementation
-    const timelineItems = {
-        data: [] as TimelineItem[],
-    };
+    const timelineItems = useTimelineItems(
+        documentId,
+        initialDocument?.created,
+    );
 
     const currentDocument = useRef({ ...fileNodeDocument, document });
     useEffect(() => {

@@ -15,6 +15,8 @@ import {
   type StrandUpdate,
 } from "#server/types";
 import { logger } from "#utils/logger";
+import { runAsapAsync } from "#utils/misc";
+import { RunAsap } from "#utils/run-asap";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
@@ -39,10 +41,17 @@ export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
   protected processor: IProcessor;
+  protected taskQueueMethod: RunAsap.RunAsap<unknown> | null;
 
-  constructor(drive: IDocumentDriveServer, processor: IProcessor) {
+  constructor(
+    drive: IDocumentDriveServer,
+    processor: IProcessor,
+    taskQueueMethod?: RunAsap.RunAsap<unknown> | null,
+  ) {
     this.drive = drive;
     this.processor = processor;
+    this.taskQueueMethod =
+      taskQueueMethod === undefined ? RunAsap.runAsap : taskQueueMethod;
   }
 
   async #buildInternalOperationUpdate<TDocument extends PHDocument>(
@@ -80,12 +89,25 @@ export class InternalTransmitter implements ITransmitter {
       }
       return stateByIndex.get(index);
     };
+
     for (const operation of strand.operations) {
+      performance.mark("buildStateStart");
+      const stateTask = () => getStateByIndex(operation.index);
+      const state = await (this.taskQueueMethod
+        ? runAsapAsync(stateTask, this.taskQueueMethod)
+        : stateTask());
+
+      const previousStateTask = () => getStateByIndex(operation.index - 1);
+      const previousState = await (this.taskQueueMethod
+        ? runAsapAsync(previousStateTask, this.taskQueueMethod)
+        : previousStateTask());
       operations.push({
         ...operation,
-        state: await getStateByIndex(operation.index),
-        previousState: await getStateByIndex(operation.index - 1),
+        state,
+        previousState,
       });
+      performance.mark("buildStateEnd");
+      performance.measure("buildState", "buildStateStart", "buildStateEnd");
     }
     return operations;
   }
@@ -96,6 +118,8 @@ export class InternalTransmitter implements ITransmitter {
     _source: StrandUpdateSource,
   ): Promise<ListenerRevision[]> {
     const updates = [];
+
+    performance.mark("buildInternalOperationUpdateStart");
     for (const strand of strands) {
       const operations = await this.#buildInternalOperationUpdate(strand);
       const state = operations.at(-1)?.state ?? {};
@@ -105,9 +129,18 @@ export class InternalTransmitter implements ITransmitter {
         state,
       });
     }
+    performance.mark("buildInternalOperationUpdateEnd");
+    performance.measure(
+      "buildInternalOperationUpdate",
+      "buildInternalOperationUpdateStart",
+      "buildInternalOperationUpdateEnd",
+    );
 
     try {
+      performance.mark("transmitStart");
       await this.processor.onStrands(updates);
+      performance.mark("transmitEnd");
+      performance.measure("transmit", "transmitStart", "transmitEnd");
       return strands.map(({ operations, ...s }) => ({
         ...s,
         status: "SUCCESS",
