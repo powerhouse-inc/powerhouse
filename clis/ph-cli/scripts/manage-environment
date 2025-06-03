@@ -158,22 +158,24 @@ else
                     connect_health="✅"
                 fi
                 # Get Nginx memory usage for the site
-                connect_memory=$(ps -o rss= -p $(pgrep -f "nginx.*$PROJECT_NAME") 2>/dev/null | awk '{printf "%.1fmb", $1/1024}')
-                # Get Nginx uptime
-                connect_uptime=$(ps -o etime= -p $(pgrep -f "nginx.*$PROJECT_NAME") 2>/dev/null || echo "N/A")
+                nginx_pid=$(pgrep -f "nginx.*$PROJECT_NAME" | head -n 1)
+                if [ -n "$nginx_pid" ]; then
+                    connect_memory=$(ps -o rss= -p "$nginx_pid" 2>/dev/null | awk '{printf "%.1fmb", $1/1024}')
+                    connect_uptime=$(ps -o etime= -p "$nginx_pid" 2>/dev/null)
+                fi
             fi
             printf "%-15s %-10s %-15s %-10s %-10s\n" "Connect" "$connect_status" "$connect_memory" "$connect_uptime" "$connect_health"
             
             # Check Switchboard status
             switchboard_info=$(pm2 list | grep "switchboard_${PROJECT_NAME}")
             if [ -n "$switchboard_info" ]; then
-                switchboard_status=$(echo "$switchboard_info" | awk '{print $10}')
+                switchboard_status="Enabled"
                 switchboard_memory=$(echo "$switchboard_info" | awk '{print $12}')
                 switchboard_uptime=$(echo "$switchboard_info" | awk '{print $7}')
                 switchboard_health="✅"
                 printf "%-15s %-10s %-15s %-10s %-10s\n" "Switchboard" "$switchboard_status" "$switchboard_memory" "$switchboard_uptime" "$switchboard_health"
             else
-                printf "%-15s %-10s %-15s %-10s %-10s\n" "Switchboard" "Stopped" "N/A" "N/A" "❌"
+                printf "%-15s %-10s %-15s %-10s %-10s\n" "Switchboard" "Disabled" "N/A" "N/A" "❌"
             fi
             echo "────────────────────────────────────────────────────────────────────"
             ;;
