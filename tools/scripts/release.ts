@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-floating-promises */
+import fs from "fs";
 import { releaseChangelog, releasePublish, releaseVersion } from "nx/release";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
@@ -19,6 +20,7 @@ type PreReleaseResult = {
   isChangelogTooLong: boolean;
   isEmptyRelease: boolean;
   currentTag: string | undefined;
+  isUsingOlderVersion: boolean;
 };
 
 function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionData) {
@@ -49,6 +51,7 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     isChangelogTooLong: false,
     isEmptyRelease: false,
     currentTag: undefined,
+    isUsingOlderVersion: false,
   };
   
   const { workspaceVersion, projectsVersionData } = await releaseVersion({
@@ -63,6 +66,15 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     console.warn("You're using the current version, no changes will be released");
     result.isUsingCurrentVersion = true;
   }
+
+  // Read connect package.json version
+  const connectPackageJson = JSON.parse(fs.readFileSync('apps/connect/package.json', 'utf8'));
+  const connectVersion = connectPackageJson.version;
+
+  result.isUsingOlderVersion = Object.values(projectsVersionData).some((project) => {
+    if (!project.newVersion) return true;
+    return project.newVersion < connectVersion;
+  });
 
   const changelogResult = await releaseChangelog({
     version: workspaceVersion || getVersionFromProjectsVersionData(projectsVersionData as ProjectsVersionData),
@@ -155,8 +167,11 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
   }
 
   const preReleaseResult = await getPreReleaseResults(specifier, preid);
-  console.log('>>> preReleaseResult', preReleaseResult);
-  // process.exit(0);
+
+  if (preReleaseResult.isUsingOlderVersion) {
+    console.error('>>> The version calculated for the release is older thatn the current version, check that there are no missing tags');
+    process.exit(1);
+  }
 
   if (preReleaseResult.isUsingCurrentVersion) {
     console.error('>>> You\'re using the current version, no changes will be released');
@@ -211,5 +226,6 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     }
   }
 
+  console.log('>>> Release successfuly completed 🚀');
   process.exit(0);
 })();
