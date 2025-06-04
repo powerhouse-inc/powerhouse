@@ -145,6 +145,19 @@ export interface IJobExecutor {
    * @returns Promise that resolves when execution is resumed
    */
   resume(signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Watch for a job to complete.
+   * 
+   * If the job is already completed, the promise will resolve immediately.
+   * 
+   * If the job does not exist, the promise will reject.
+   * 
+   * @param jobId - The id of the job to watch
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Promise that resolves to the job result
+   */
+  watch(jobId: string, signal?: AbortSignal): Promise<JobResult>;
 }
 
 /**
