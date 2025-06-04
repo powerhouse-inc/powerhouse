@@ -17,9 +17,13 @@ This document explains the two release workflows available in this monorepo.
   - [⚡ Full Managed Release (Advanced)](#2--full-managed-release-advanced)
     - [🛠️ Features](#️-features)
     - [⚠️ Usage Guidelines](#️-usage-guidelines)
+  - [🕒 Release Cron (Automated)](#3--release-cron-automated)
+    - [⏰ Schedule](#-schedule)
+    - [🔧 Configuration](#-configuration)
 - [⚙️ Workflow Configuration](#️-workflow-configuration)
   - [📦 Release Branch Workflow](#-release-branch-workflow)
   - [⚡ Full Managed Release Workflow](#-full-managed-release-workflow)
+  - [🕒 Release Cron Workflow](#-release-cron-workflow)
 - [✅ Best Practices](#-best-practices)
 - [🔍 Troubleshooting](#-troubleshooting)
 
@@ -92,6 +96,20 @@ This is a fully customizable release workflow for specific scenarios.
 - Example use case: Aligning all package versions in `main`
 - **Always run with `dry-run: true` first**
 
+### 3. 🕒 Release Cron (Automated)
+
+This is an automated release workflow that runs daily to keep the main branch up to date.
+
+#### ⏰ Schedule
+- Runs automatically every day at 6:00 AM UTC
+- Can be manually triggered from the main branch
+- Uses semantic versioning to determine the next version
+
+#### 🔧 Configuration
+- Automatically runs on the main branch
+- Supports dry-run mode for testing
+- Uses the same versioning logic as the Release Branch workflow
+
 ## ⚙️ Workflow Configuration
 
 ### 📦 Release Branch Workflow
@@ -118,6 +136,15 @@ Inputs:
   verbose: boolean
   skip-publish: boolean
   publish-only: boolean
+```
+
+### 🕒 Release Cron Workflow
+```yaml
+Inputs:
+  dry-run:
+    type: boolean
+    default: false
+    description: 'Run in dry-run mode to preview changes without publishing'
 ```
 
 ## ✅ Best Practices
