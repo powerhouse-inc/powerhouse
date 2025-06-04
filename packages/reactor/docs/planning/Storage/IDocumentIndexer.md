@@ -23,6 +23,41 @@ interface DocumentRelationship {
   updatedAt: Date;
 }
 
+interface IDocumentGraph {
+  get all(): string[];
+
+  /**
+   * Traverses the graph using breadth-first or depth-first search.
+   * 
+   * @param startDocumentId - The ID of the starting document.
+   * @param strategy - The traversal strategy: 'breadth-first' or 'depth-first'.
+   * @param visitor - Function called for each visited document.
+   * 
+   * @returns Array of document IDs in traversal order.
+   */
+  traverse(
+    startDocumentId: string, 
+    strategy: 'breadth-first' | 'depth-first',
+    visitor?: (documentId: string) => void
+  ): string[];
+
+  /**
+   * Aggregates the graph into a single value by combining parent and child values.
+   * Similar to Array.reduce, but for hierarchical graph structures.
+   * 
+   * @param reducer - Function that combines a parent value with a child value.
+   * @param initialValue - The initial value for the aggregation.
+   * @param rootDocumentId - The root document to start aggregation from (optional, uses first root if not provided).
+   * 
+   * @returns The aggregated result.
+   */
+  aggregate<T>(
+    reducer: (parentValue: T, childDocumentId: string, parentDocumentId?: string) => T,
+    initialValue: T,
+    rootDocumentId?: string
+  ): T;
+}
+
 interface IDocumentIndexer {
   /**
    * Retrieves all relationships between two documents.
@@ -79,7 +114,17 @@ interface IDocumentIndexer {
    * @returns The path between the two documents, or null if no path exists.
    */
   findPath(sourceId: string, targetId: string, types?: string[]): Promise<string[] | null>;
-  
+
+  /**
+   * Finds the ancestor graph of a document.
+   * 
+   * @param documentId - The ID of the document.
+   * @param types - The types of relationships to check for, or all if not provided
+   * 
+   * @returns The ancestor graph of the document.
+   */
+  findAncestors(documentId: string, types?: string[]): Promise<IDocumentGraph>;
+
   /**
    * Checks if a relationship exists between two documents.
    * 

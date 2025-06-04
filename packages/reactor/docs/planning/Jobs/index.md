@@ -59,6 +59,14 @@ In all cases, the `IJobExecutor` will verify that the `Action` signatures are va
 
 If the `Action` signature is not valid, the `IJobExecutor` will emit a `jobFailed` event and the job will not be retried.
 
+### Authorization Verification
+
+The job executor will verify that the `Action` is authorized to be applied to the document.
+
+This is heavily dependent on the current state of the document and the specific `Action`s to be applied.
+
+See the [Auth](../Auth/index.md) documentation for more information.
+
 ### Operation Verification 
 
 Optionally, a `Job` may contain information about expected `Operation` data. In this case, the executor will verify that resulting `Operation` hash matches the expected `Operation` hash.

@@ -74,3 +74,6 @@ These accept a `VersionedDocument` instead of a `PHDocument`, which contain side
 
 Each document model NPM package contains all the code necessary to move from version to version. This means that it must include multiple versions of the same model.
 
+### Supported Versions
+
+The `[IReactor](../Reactor/interface.md)` interface provides a `getDocumentModels` method that returns `DocumentModelState` objects. These objects contain a list of supported versions for a given document model.
