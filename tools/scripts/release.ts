@@ -7,6 +7,10 @@ import { hideBin } from "yargs/helpers";
 
 type ProjectsVersionData = Record<string, { newVersion?: string }>;
 
+const MAX_COMMITS_PER_RELEASE = 200;
+const MAX_RELEASE_CONTENTS_LENGTH = 200000;
+const FROM = `HEAD~${MAX_COMMITS_PER_RELEASE}`;
+const TO = "HEAD";
 const branchRegexp = /^release\/[^\/\s]+\/v?\d+\.\d+\.\d+$/;
 const validProductionBranches = ['prod', 'production'];
 
@@ -32,7 +36,13 @@ function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionD
   return version;
 }
 
-async function checkAvailableChanges(specifier?: string, preid?: string) {
+async function getPreReleaseResults(specifier?: string, preid?: string) {
+  const result = {
+    isUsingCurrentVersion: false,
+    isChangelogTooLong: false,
+    isEmptyRelease: false,
+  };
+  
   const { workspaceVersion, projectsVersionData } = await releaseVersion({
     specifier,
     preid,
@@ -43,7 +53,7 @@ async function checkAvailableChanges(specifier?: string, preid?: string) {
   const isUsingCurrentVersion = Object.values(projectsVersionData).some((project) => project.newVersion === project.currentVersion);
   if (isUsingCurrentVersion) {
     console.warn("You're using the current version, no changes will be released");
-    return false;
+    result.isUsingCurrentVersion = true;
   }
 
   const changelogResult = await releaseChangelog({
@@ -53,11 +63,17 @@ async function checkAvailableChanges(specifier?: string, preid?: string) {
     verbose: false,
     createRelease: false,
   });
-  
-  return !changelogResult
+
+  if (changelogResult.workspaceChangelog?.contents.length && changelogResult.workspaceChangelog?.contents.length > MAX_RELEASE_CONTENTS_LENGTH) {
+    result.isChangelogTooLong = true;
+  }
+
+  result.isEmptyRelease = !!changelogResult
     .workspaceChangelog
     ?.contents
     .includes('This was a version bump only, there were no code changes')
+
+  return result;
 }
 
 (async () => {
@@ -95,6 +111,8 @@ async function checkAvailableChanges(specifier?: string, preid?: string) {
   
   let specifier = version;
   let preid = tag;
+  let to: string | undefined = undefined;
+  let from: string | undefined = undefined;
   
   const isBranchRelease = branchRelease && branchRelease !== "";
 
@@ -111,11 +129,22 @@ async function checkAvailableChanges(specifier?: string, preid?: string) {
     specifier =  preid ? `${normalizedBranchVersion}-${preid}.0` : normalizedBranchVersion;
   }
 
-  const availableChanges = await checkAvailableChanges(specifier, preid);
+  const preReleaseResult = await getPreReleaseResults(specifier, preid);
 
-  if (!availableChanges) {
+  if (preReleaseResult.isUsingCurrentVersion) {
+    console.error('>>> You\'re using the current version, no changes will be released');
+    process.exit(1);
+  }
+
+  if (preReleaseResult.isEmptyRelease) {
     console.error('>>> There are no available changes to release');
-    process.exit(0);
+    process.exit(1);
+  }
+
+  if (preReleaseResult.isChangelogTooLong) {
+    console.warn(`>>> Release changelog is too long, limiting to last ${MAX_COMMITS_PER_RELEASE} commits`);
+    to = TO;
+    from = FROM;
   }
 
   if (!publishOnly) {
@@ -126,13 +155,16 @@ async function checkAvailableChanges(specifier?: string, preid?: string) {
       verbose,
     });
   
-    await releaseChangelog({
+    releaseChangelog({
       version: workspaceVersion || getVersionFromProjectsVersionData(projectsVersionData as ProjectsVersionData),
       versionData: projectsVersionData,
       dryRun,
       verbose,
+      to,
+      from,
     });
   }
+
   
   if (!skipPublish || publishOnly) {
     const publishResult = await releasePublish({
