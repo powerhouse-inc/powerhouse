@@ -6,7 +6,7 @@ Synchronization refers to synchronizing the operations of one reactor with anoth
     - This allows us to decouple sync and Document View updates.
     - This consolidates `IListenerManager`, `ISyncManager`, and `IDocumentView` update flows into a single dispatch pattern.
 
-### ISyncManager
+## ISyncManager
 
 This object manages the synchronization of operations between reactors.
 
@@ -14,7 +14,7 @@ This object manages the synchronization of operations between reactors.
     - In the following diagrams, this object is not an exact mapping to the current `ISyncManager`.
     - The `ISyncManager` has its own storage mechanism and rather than being tied so the internal mechanisms of the Reactor, propagates from the event bus.
 
-#### Push
+### Push
 
 Describes a one-way flow of data from one Reactor to another, pushing operations through an `IChannel` interface.
 
@@ -45,7 +45,7 @@ graph
     end
 ```
 
-#### Pull
+### Pull
 
 Describes a one-way flow of data from one Reactor to another, pulling operations through an `IChannel` interface on an interval.
 
@@ -72,7 +72,7 @@ graph
     BSync -->|"(5) Enqueue"| BQueue["IQueue"]
 ```
 
-#### Ping-Pong
+### Ping-Pong
 
 Since both `Push-to-Switchboard` and `Pull-from-Switchboard` are one-way flows, we combine them into a ping-pong pattern. This is where both reactors are pushing and pulling through the `IChannel` interface.
 
@@ -130,7 +130,7 @@ graph
     end
 ```
 
-#### Ping-Pong: Sequence
+### Ping-Pong: Sequence
 
 ```mermaid
 sequenceDiagram
@@ -170,11 +170,11 @@ sequenceDiagram
     SMB->>QB: enqueue(operations)
 ```
 
-### IChannel
+## IChannel
 
 The `IChannel` interface is a bi-directional interface for sending, receiving, and tracking operations. We do this with `inbox` and `outbox` queues of `JobHandle` objects. Each handle tracks a job that is being applied by a server (local or remote, depending on the mailbox).
 
-#### Interface
+### Interface
 
 ```tsx
 
@@ -343,7 +343,7 @@ interface IChannel {
 
 ```
 
-#### Usage
+### Usage
 
 ```tsx
 
@@ -405,21 +405,21 @@ events.on(JobExecutorEventTypes.JOB_COMPLETED, (job, result) => {
 
 ```
 
-#### Retries
+### Retries
 
 The `IChannel` implementation is responsible for retrying failed push and pull operations due to network conditions. Implementations should use exponential backoff with jitter when applicable, according to a retry policy.
 
 Network errors should not bubble up from the `IChannel` unless the retry policy is exhausted.
 
-#### Optimization
+### Optimization
 
 The `IChannel` implementation is free to optimize in a number of ways. For instance, it may batch `push` operations and send them in the `pull` request. Over HTTP, for example, this would result in a single `pull` request that will decompose nicely when there is no socket available.
 
-### Error Handling
+## Error Handling
 
 The synchronization system must have a robust error handling strategy. All possible errors must be explicitly defined here with a clear description of the error, the conditions under which it occurs, and recovery strategies.
 
-#### `IChannel`
+### `IChannel`
 
 `IChannel` implementations communicate errors in one single way: the `error` object on `JobHandle` objects in the `deadLetter` mailbox. Every error that can occur in a channel is communicated to the consumer of the channel through this mailbox.
 
@@ -444,78 +444,92 @@ The `error` property can be one of two types:
 - **JobError** - these are propagated job execution errors, documented in the [Jobs interface](../Jobs/interface.md).
 - **InternalChannelError** - these are errors from the channel itself, not the job.
 
-#### Job Errors
+### Job Errors
 
-##### `SIGNATURE_MISMATCH`
+#### `SIGNATURE_MISMATCH`
 
-**ChannelErrorSource.None**
+##### ChannelErrorSource.None
 
 This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
 
 * The job will be discarded.
 
-**ChannelErrorSource.Inbox**
+##### ChannelErrorSource.Inbox
 
 This indicates that a remote operation could not be applied to the local reactor because of a signature mismatch. This should never happen _except in the case of a malicious actor_, as remote reactors are already validating signatures. However, in the case that this does happen:
 
-* >>>>> The error will be pushed to the remote reactor. <<-- how?
+* The remote will be marked as invalid and no further operations will be sent to or received from it.
 * The job will be discarded.
 
-**ChannelErrorSource.Outbox**
+##### ChannelErrorSource.Outbox
 
 This indicates that a local operation could not be applied to the remote reactor because of a signature mismatch. This means that we were able to verify a signature, but the remote was not. In this case, there is an unrecoverable error with a remote reactor itself:
 
-* The remote will be marked as invalid and no further operations will be sent to it.
+* The remote will be marked as invalid and no further operations will be sent to or received from it.
 * The job will be removed from the outbox queue.
 
-##### `HASH_MISMATCH`
+#### `HASH_MISMATCH`
 
-**ChannelErrorSource.None**
+##### ChannelErrorSource.None
 
 This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
 
 * The job will be discarded.
 
-**ChannelErrorSource.Inbox**
+##### ChannelErrorSource.Inbox
 
-This indicates that a remote operation could not be applied to the local reactor because of an unrecoverable hash mismatch (note that reshuffling was already attempted). In this case:
+This indicates that a remote operation could not be applied to the local reactor because of an unrecoverable hash mismatch (note that retry/reshuffle has already been attempted). In this case:
 
-* Re-attempt to apply the operation after all other inbox operations have been applied.
-* >>>>>> If the operation still fails, the error will be pushed to the remote reactor. <<--- how?
+* Create a branch at the last known good state.
+* Re-apply the operation to the branch.
+* Push the branch to the remote reactor.
 
-**ChannelErrorSource.Outbox**
+##### ChannelErrorSource.Outbox
 
-This indicates that a local operation could not be applied to the remote reactor because of a hash mismatch. In this case:
+This indicates that a local operation could not be applied to the remote reactor because of a hash mismatch. This case should be handled by the receiving Reactor. In this case:
 
-* The remote will be marked as invalid and no further operations will be sent to it.
-* The job will be removed from the outbox queue.
+* The job will be discarded.
 
-##### `LIBRARY_ERROR`
+#### `LIBRARY_ERROR`
 
-**ChannelErrorSource.None**
+##### ChannelErrorSource.None
 
 This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
 
 * The job will be discarded.
 
-**ChannelErrorSource.Inbox**
+##### ChannelErrorSource.Inbox
 
 This indicates that an error occurred in job execution locally, but not remotely. In this case:
 
-* >>>>> The error will be pushed to the remote reactor. <<--- how?
+* Create a branch at the last known good state.
+* Re-apply the operation to the branch.
+* Push the branch to the remote reactor.
+
+##### ChannelErrorSource.Outbox
+
+This indicates that an error occurred in job execution remotely, but not locally. The receiving Reactor should handle this case. In this case:
+
 * The job will be discarded.
 
-**ChannelErrorSource.Outbox**
-
-This indicates that an error occurred in job execution remotely, but not locally. In this case:
-
-* The remote will be marked as invalid and no further operations will be sent to it.
-* The job will be removed from the outbox queue.
-
-##### `GRACEFUL_ABORT`
+#### `GRACEFUL_ABORT`
 
 For all sources, the `ISyncManager` will either write the mailboxes to disk (for processing later) or simply ignore and discard.
 
-#### Channel Errors
+### Channel Errors
 
-...?
+Channel errors will be documented here, depending on the implementation of the `IChannel` interface.
+
+```tsx
+class UnrecoverableRemoteError extends Error {
+    /**
+     * The name of the remote that is unrecoverable.
+     */
+    remote: string;
+
+    /**
+     * The error that occurred.
+     */
+    error: Error;
+}
+```
