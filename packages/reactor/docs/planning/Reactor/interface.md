@@ -109,17 +109,17 @@ interface IReactor {
   ): Promise<JobInfo>;
 
   /**
-   * Applies a list of operations to a document
+   * Applies a list of actions to a document.
    *
    * @param id - Document id
-   * @param operations - List of operations to apply
+   * @param actions - List of actions to apply
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
   mutate(
     id: string,
-    operations: Operation[],
+    actions: Action[],
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo>;

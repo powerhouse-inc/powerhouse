@@ -111,33 +111,33 @@ interface IReactorClient {
   ): Promise<TDocument>;
 
   /**
-   * Applies a list of operations to a document and waits for completion
+   * Applies a list of actions to a document and waits for completion
    * 
    * @param documentIdentifier - Target document id or slug
-   * @param operations - List of operations to apply
+   * @param actions - List of actions to apply
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated document
    */
   mutate<TDocument extends PHDocument>(
     documentIdentifier: string,
-    operations: Operation[],
+    actions: Action[],
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 
   /**
-   * Submits a list of operations to a document
+   * Submits a list of actions to a document
    * 
    * @param documentIdentifier - Target document id or slug
-   * @param operations - List of operations to apply
+   * @param actions - List of actions to apply
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
    * @returns The job
    */
   mutateAsync<TDocument extends PHDocument>(
     documentIdentifier: string,
-    operations: Operation[],
+    actions: Action[],
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
