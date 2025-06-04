@@ -90,4 +90,48 @@ This is a fully customizable release workflow for specific scenarios.
 #### ⚠️ Usage Guidelines
 - **Only use when absolutely necessary**
 - Example use case: Aligning all package versions in `main`
-- **Always run with `dry-run: true`
+- **Always run with `dry-run: true` first**
+
+## ⚙️ Workflow Configuration
+
+### 📦 Release Branch Workflow
+```yaml
+Inputs:
+  version:
+    type: choice
+    options:
+      - semantic-versioning
+      - prerelease
+      - patch
+      - minor
+      - major
+  dry-run: boolean
+  verbose: boolean
+```
+
+### ⚡ Full Managed Release Workflow
+```yaml
+Inputs:
+  version: string
+  tag: string
+  dry-run: boolean
+  verbose: boolean
+  skip-publish: boolean
+  publish-only: boolean
+```
+
+## ✅ Best Practices
+
+1. **Always use Release Branch workflow** for regular releases
+2. Use `dry-run` to verify changes before publishing
+3. Follow semantic versioning when possible
+4. Use production branches for stable releases
+5. Keep release branches clean and focused
+
+## 🔍 Troubleshooting
+
+If you encounter issues:
+1. Check the prerequisites are met
+2. Verify branch naming follows conventions
+3. Use `dry-run` to debug version calculations
+4. Check GitHub Actions logs for detailed error messages
