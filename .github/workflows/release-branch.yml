@@ -5,8 +5,9 @@ on:
     inputs:
       version:
         type: choice
-        description: 'Select version type (empty will use semantic versioning)'
+        description: 'Select version type (semantic-versioning will use calculated version from commit messages)'
         options:
+          - semantic-versioning
           - prerelease
           - patch
           - minor
@@ -20,9 +21,6 @@ on:
 
 env:
   NX_ISOLATE_PLUGINS: false
-  VERSION: ${{ inputs.version }}
-  DRYRUN: ${{ inputs.dry-run ||  true  }}
-  BRANCH_RELEASE: ""
 
 jobs:
   build-and-publish:
@@ -35,13 +33,15 @@ jobs:
     steps:
       - name: Set version and tag if branch is main or release
         run: |
+          if [[ "${{ inputs.version }}" == "semantic-versioning" ]]; then
+            echo "VERSION=" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+          fi
+          
           if [[ "${{ github.ref_name }}" == release* ]]; then
             echo "VERSION=" >> $GITHUB_ENV
-            echo "TAG=" >> $GITHUB_ENV
             echo "BRANCH_RELEASE=${{ github.ref_name }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref_name }}" == "main" ]]; then
-            echo "VERSION=prerelease" >> $GITHUB_ENV
-            echo "TAG=dev" >> $GITHUB_ENV
           fi
 
       - name: Checkout repository
@@ -80,7 +80,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version and publish to npm
-        run: npx tsx tools/scripts/release.ts --dry-run=${{ inputs.dry-run }} --version=${{ env.VERSION }} --tag=${{ env.TAG }} --branch-release=${{ env.BRANCH_RELEASE }} --verbose=${{ inputs.verbose }}
+        run: npx tsx tools/scripts/release.ts --dry-run=${{ inputs.dry-run }} --version=${{ env.VERSION }} --branch-release=${{ env.BRANCH_RELEASE }} --verbose=${{ inputs.verbose }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
