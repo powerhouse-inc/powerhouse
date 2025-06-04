@@ -24,7 +24,7 @@ env:
   NX_ISOLATE_PLUGINS: false
   VERSION: ${{ inputs.version }}
   TAG: ${{ inputs.tag ||  'dev'  }}
-  DRYRUN: ${{ inputs.dry-run ||  true  }}
+  DRYRUN: ${{ inputs.dry-run }}
 
 jobs:
   build-and-publish:
@@ -74,7 +74,7 @@ jobs:
           git config user.email "-"
 
       - name: Update pkg version and publish to npm
-        run: npx tsx tools/scripts/release.ts --version=${{ inputs.version }} --tag=${{ inputs.tag }} --dry-run --skip-publish=${{ inputs.skip-publish }} --publish-only=${{ inputs.publish-only }} --verbose=${{ inputs.verbose }}
+        run: npx tsx tools/scripts/release.ts --version=${{ inputs.version }} --tag=${{ inputs.tag }} --dry-run=${{ inputs.dry-run }} --skip-publish=${{ inputs.skip-publish }} --publish-only=${{ inputs.publish-only }} --verbose=${{ inputs.verbose }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
