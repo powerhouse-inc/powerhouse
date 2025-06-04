@@ -128,6 +128,17 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
   let to: string | undefined = undefined;
   let from: string | undefined = undefined;
   
+  /**
+   * Handle version and tag combination:
+   * 
+   * When version is a specific version (x.y.z) and tag is provided:
+   *    - Input: version="1.0.0", tag="dev"
+   *    - Result: specifier="1.0.0-dev.0"
+   */
+  if (version && tag && /^\d+\.\d+\.\d+$/.test(version)) {
+    specifier = `${version}-${tag}.0`;
+  }
+  
   const isBranchRelease = branchRelease && branchRelease !== "";
 
   if (isBranchRelease) {
