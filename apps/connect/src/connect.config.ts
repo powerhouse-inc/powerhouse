@@ -72,7 +72,7 @@ export default {
             HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS !== 'true',
     },
     drives: {
-        addDriveEnabled: DISABLE_ADD_DRIVE !== 'true',
+        addDriveEnabled: DISABLE_ADD_DRIVE === 'true' ? false : true,
         sections: {
             [LOCAL]: {
                 enabled: LOCAL_DRIVES_ENABLED !== 'false',
