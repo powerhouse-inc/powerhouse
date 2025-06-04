@@ -1,3 +1,13 @@
+## 0.1.0-dev.6 (2025-06-04)
+
+### 🩹 Fixes
+
+- **academy:** docker build ([58e83be09](https://github.com/powerhouse-inc/powerhouse/commit/58e83be09))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 0.1.0-dev.5 (2025-06-03)
 
 ### 🩹 Fixes
