@@ -56,10 +56,15 @@ Actions include cryptographic signatures on the `ActionContext` to verify that t
 
 - Cryptographic signatures are verified using the Web Crypto API.
 - Signatures need: a public key, a payload, and a signature.
-- The signature payload is generated from the `SignedPaylodParameters` and the `Action` using a stable, JSON-encoding.
+- The signature payload is generated from the `SignedPayloadParameters` and the `Action` using a stable, JSON-encoding.
   - This allows us to dedupe information.
   - Allows for wrapping signatures in other signatures.
   - Allows for different payloads, depending on the use case. [Upgrade Actions](./upgrades.md), for instance, may have a different payload than a regular Action.
+- In general, when submitting a new action, the signature payload will include:
+  - The action itself
+  - The application information
+  - The hash of the latest operation for the `(documentId, scope, branch)`
+- In the case or reshuffling, the `ISigner` will wrap the signature of an action in a new signature. This is because the previously signed state hash may not be valid so a new one must be generated.
 
 ```tsx
 
@@ -88,7 +93,7 @@ type Signer = {
   /**
    * The public key used to sign the action.
    */
-  publicKey: PublicKey;  // public key
+  publicKey: PublicKey;
 
   /**
    * The name of the signer, used to identify a signing application.
@@ -119,7 +124,7 @@ type SignedPayloadParameters = {
   /**
    * Additional signatures to append to the payload.
    */
-  signatures: string[];
+  signatures: Signature[];
 };
 
 type Signature = {
