@@ -59,7 +59,8 @@ else
         # Generate database credentials
         DB_PASSWORD="powerhouse"
         DB_USER="powerhouse"
-        DB_NAME="powerhouse_${PROJECT_NAME//-/_}"
+        # Convert to lowercase, replace special chars with underscore, ensure starts with letter
+        DB_NAME="powerhouse_$(echo "${PROJECT_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g' | sed 's/^[^a-z]/p_/' | cut -c1-63)"
         
         # Check if database already exists
         if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
