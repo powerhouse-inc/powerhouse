@@ -40,6 +40,12 @@ async function checkAvailableChanges(specifier?: string, preid?: string) {
     verbose: false,
   });
 
+  const isUsingCurrentVersion = Object.values(projectsVersionData).some((project) => project.newVersion === project.currentVersion);
+  if (isUsingCurrentVersion) {
+    console.warn("You're using the current version, no changes will be released");
+    return false;
+  }
+
   const changelogResult = await releaseChangelog({
     version: workspaceVersion || getVersionFromProjectsVersionData(projectsVersionData as ProjectsVersionData),
     versionData: projectsVersionData,
@@ -86,11 +92,13 @@ async function checkAvailableChanges(specifier?: string, preid?: string) {
 
   console.log('>>> options', options);
   const { version, tag, dryRun, verbose, skipPublish, publishOnly, branchRelease } = options;
-
+  
   let specifier = version;
   let preid = tag;
+  
+  const isBranchRelease = branchRelease && branchRelease !== "";
 
-  if (branchRelease) {
+  if (isBranchRelease) {
     if (!branchRegexp.test(branchRelease)) {
       console.error('>>> Invalid branch name', branchRelease);
       process.exit(1);
