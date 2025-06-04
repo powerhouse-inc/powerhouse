@@ -14,6 +14,13 @@ const TO = "HEAD";
 const branchRegexp = /^release\/[^\/\s]+\/v?\d+\.\d+\.\d+$/;
 const validProductionBranches = ['prod', 'production'];
 
+type PreReleaseResult = {
+  isUsingCurrentVersion: boolean;
+  isChangelogTooLong: boolean;
+  isEmptyRelease: boolean;
+  currentTag: string | undefined;
+};
+
 function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionData) {
   let version: null | string = null;
   
@@ -37,10 +44,11 @@ function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionD
 }
 
 async function getPreReleaseResults(specifier?: string, preid?: string) {
-  const result = {
+  const result: PreReleaseResult = {
     isUsingCurrentVersion: false,
     isChangelogTooLong: false,
     isEmptyRelease: false,
+    currentTag: undefined,
   };
   
   const { workspaceVersion, projectsVersionData } = await releaseVersion({
@@ -73,6 +81,12 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     ?.contents
     .includes('This was a version bump only, there were no code changes')
 
+
+  const matchTag = changelogResult.workspaceChangelog?.releaseVersion.rawVersion.match(/v?\d+\.\d+\.\d+-([a-zA-Z]+)\.\d+/);
+
+  const prefix = matchTag ? matchTag[1] : undefined;
+  result.currentTag = prefix;
+  
   return result;
 }
 
@@ -130,6 +144,8 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
   }
 
   const preReleaseResult = await getPreReleaseResults(specifier, preid);
+  console.log('>>> preReleaseResult', preReleaseResult);
+  // process.exit(0);
 
   if (preReleaseResult.isUsingCurrentVersion) {
     console.error('>>> You\'re using the current version, no changes will be released');
@@ -145,6 +161,10 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     console.warn(`>>> Release changelog is too long, limiting to last ${MAX_COMMITS_PER_RELEASE} commits`);
     to = TO;
     from = FROM;
+  }
+
+  if (!version && !tag) {
+    preid = preReleaseResult.currentTag;
   }
 
   if (!publishOnly) {
