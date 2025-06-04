@@ -25,7 +25,7 @@ This document explains the two release workflows available in this monorepo.
 
 ## ⚙️ Prerequisites
 
-Before using the Release Branch workflow, ensure your branch includes these changes:
+Before running the Release Branch workflow, ensure the target branch includes these changes:
 
 1. In `nx.json`:
    - Set `projectsRelationship` to `managed`
