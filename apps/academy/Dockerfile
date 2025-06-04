@@ -11,7 +11,7 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /app
 COPY . .
 RUN chmod +x entrypoint.sh
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 RUN pnpm build
 ENV PORT=3000
 EXPOSE $PORT
