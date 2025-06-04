@@ -38,10 +38,6 @@ function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionD
     }
   }
 
-  if (!version) {
-    throw new Error('No version found in projectsVersionData');
-  }
-
   return version;
 }
 
@@ -62,6 +58,7 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
   });
 
   const isUsingCurrentVersion = Object.values(projectsVersionData).some((project) => project.newVersion === project.currentVersion);
+
   if (isUsingCurrentVersion) {
     console.warn("You're using the current version, no changes will be released");
     result.isUsingCurrentVersion = true;
@@ -72,12 +69,19 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
   const connectVersion = connectPackageJson.version;
 
   result.isUsingOlderVersion = Object.values(projectsVersionData).some((project) => {
-    if (!project.newVersion) return true;
+    if (!project.newVersion) return false;
     return project.newVersion < connectVersion;
   });
 
+  const version = workspaceVersion || getVersionFromProjectsVersionData(projectsVersionData as ProjectsVersionData);
+
+  if (!version) {
+    result.isEmptyRelease = true;
+    return result;
+  }
+
   const changelogResult = await releaseChangelog({
-    version: workspaceVersion || getVersionFromProjectsVersionData(projectsVersionData as ProjectsVersionData),
+    version: version,
     versionData: projectsVersionData,
     dryRun: true,
     verbose: false,
@@ -179,8 +183,8 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
   }
 
   if (preReleaseResult.isEmptyRelease) {
-    console.error('>>> There are no available changes to release');
-    process.exit(1);
+    console.warn('>>> There are no available changes to release');
+    process.exit(0);
   }
 
   if (preReleaseResult.isChangelogTooLong) {
